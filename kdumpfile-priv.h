@@ -65,6 +65,10 @@ struct _tag_kdump_ctx {
 kdump_status kdump_open_lkcd_le(kdump_ctx *ctx);
 kdump_status kdump_open_lkcd_be(kdump_ctx *ctx);
 
+/* diskdump/compressed kdump */
+kdump_status kdump_open_diskdump(kdump_ctx *ctx);
+kdump_status kdump_open_kdump(kdump_ctx *ctx);
+
 /* provide our own definition of new_utsname */
 struct new_utsname {
 	char sysname[65];
@@ -92,6 +96,13 @@ int kdump_uncompress_rle(unsigned char *dst, size_t *pdstlen,
 			 const unsigned char *src, size_t srclen);
 
 /* Inline utility functions */
+
+static inline unsigned
+bitcount(unsigned x)
+{
+	return (uint32_t)((((x * 0x08040201) >> 3) & 0x11111111) * 0x11111111)
+		>> 28;
+}
 
 static inline uint16_t
 dump16toh(kdump_ctx *ctx, uint16_t x)

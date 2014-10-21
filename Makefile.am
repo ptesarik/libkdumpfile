@@ -23,6 +23,7 @@ ACLOCAL_AMFLAGS = -I m4
 
 lib_LTLIBRARIES = libkdumpfile.la
 libkdumpfile_la_SOURCES = \
+	diskdump.c \
 	lkcd.c \
 	open.c \
 	read.c \

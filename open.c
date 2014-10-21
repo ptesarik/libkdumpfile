@@ -119,22 +119,6 @@ kdump_open_xc_core_hvm(kdump_ctx *ctx)
 }
 
 static kdump_status
-kdump_open_diskdump(kdump_ctx *ctx)
-{
-	/* Diskdump not yet implemented */
-	ctx->format = "diskdump";
-	return kdump_unsupported;
-}
-
-static kdump_status
-kdump_open_kdump(kdump_ctx *ctx)
-{
-	/* Compressed kdump not yet implemented */
-	ctx->format = "compressed kdump";
-	return kdump_unsupported;
-}
-
-static kdump_status
 kdump_open_mclxcd(kdump_ctx *ctx)
 {
 	/* MCLXCD dump not yet implemented */
