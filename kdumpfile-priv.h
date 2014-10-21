@@ -41,6 +41,20 @@
 #define MIN_PAGE_SIZE	(1UL << 12)
 #define MAX_PAGE_SIZE	(1UL << 18)
 
+enum kdump_arch {
+	ARCH_UNKNOWN = 0,
+	ARCH_ALPHA,
+	ARCH_ARM,
+	ARCH_IA64,
+	ARCH_PPC,
+	ARCH_PPC64,
+	ARCH_PPC64LE,
+	ARCH_S390,
+	ARCH_S390X,
+	ARCH_X86,
+	ARCH_X86_64,
+};
+
 typedef kdump_status (*readpage_fn)(kdump_ctx *, kdump_paddr_t);
 
 struct _tag_kdump_ctx {
