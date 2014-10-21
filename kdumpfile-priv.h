@@ -32,7 +32,18 @@
 #include "config.h"
 #include "kdumpfile.h"
 
+/* This should cover all possibilities:
+ * - no supported architecture has less than 4K pages.
+ * - PowerPC can have up to 256K large pages.
+ */
+#define MIN_PAGE_SIZE	(1UL << 12)
+#define MAX_PAGE_SIZE	(1UL << 18)
+
 struct _tag_kdump_ctx {
+	int fd;			/* dump file descriptor */
+	const char *format;	/* file format (descriptive name) */
+
+	void *buffer;		/* temporary buffer */
 };
 
 #endif	/* kdumpfile-priv.h */
