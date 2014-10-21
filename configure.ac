@@ -32,6 +32,9 @@ AM_PROG_AR
 
 LT_INIT
 
+AC_SEARCH_LIBS([uncompress],[z],[],[
+	AC_MSG_ERROR([zlib decompression not found])])
+
 AC_CONFIG_FILES([
 	Makefile
 ])

@@ -53,7 +53,17 @@ struct _tag_kdump_ctx {
 	size_t page_size;	/* target page size */
 	readpage_fn read_page;	/* method to read dump pages */
 	kdump_paddr_t last_pfn;	/* last read PFN */
+	kdump_paddr_t max_pfn;	/* max PFN for read_page */
+
+	char machine[66];	/* arch name (utsname machine) */
+	char ver[66];		/* version (utsname release) */
+
+	void *fmtdata;		/* format-specific private data */
 };
+
+/* LKCD */
+kdump_status kdump_open_lkcd_le(kdump_ctx *ctx);
+kdump_status kdump_open_lkcd_be(kdump_ctx *ctx);
 
 /* provide our own definition of new_utsname */
 struct new_utsname {
@@ -63,6 +73,16 @@ struct new_utsname {
 	char version[65];
 	char machine[65];
 	char domainname[65];
+};
+
+/* struct timeval has a different layout on 32-bit and 64-bit */
+struct timeval_32 {
+	int32_t tv_sec;
+	int32_t tv_usec;
+};
+struct timeval_64 {
+	int64_t tv_sec;
+	int64_t tv_usec;
 };
 
 void kdump_copy_uts_string(char *dest, const char *src);

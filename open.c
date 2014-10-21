@@ -135,22 +135,6 @@ kdump_open_kdump(kdump_ctx *ctx)
 }
 
 static kdump_status
-kdump_open_lkcd_le(kdump_ctx *ctx)
-{
-	/* LKCD not yet implemented */
-	ctx->format = "LKCD";
-	return kdump_unsupported;
-}
-
-static kdump_status
-kdump_open_lkcd_be(kdump_ctx *ctx)
-{
-	/* LKCD not yet implemented */
-	ctx->format = "LKCD";
-	return kdump_unsupported;
-}
-
-static kdump_status
 kdump_open_mclxcd(kdump_ctx *ctx)
 {
 	/* MCLXCD dump not yet implemented */
