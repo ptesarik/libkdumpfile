@@ -71,14 +71,6 @@ static const char magic_devmem[0];
 
 
 static kdump_status
-kdump_open_elfdump(kdump_ctx *ctx)
-{
-	/* ELF dump not yet implemented */
-	ctx->format = "ELF dump";
-	return kdump_unsupported;
-}
-
-static kdump_status
 kdump_open_kvm(kdump_ctx *ctx)
 {
 	/* KVM dump not yet implemented */

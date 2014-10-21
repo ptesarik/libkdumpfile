@@ -60,6 +60,9 @@ typedef kdump_status (*readpage_fn)(kdump_ctx *, kdump_paddr_t);
 struct _tag_kdump_ctx {
 	int fd;			/* dump file descriptor */
 	const char *format;	/* file format (descriptive name) */
+	unsigned long flags;	/* see DIF_XXX below */
+
+	enum kdump_arch arch;	/* architecture (if known) */
 	int endian;		/* __LITTLE_ENDIAN or __BIG_ENDIAN */
 
 	void *buffer;		/* temporary buffer */
@@ -75,6 +78,9 @@ struct _tag_kdump_ctx {
 	void *fmtdata;		/* format-specific private data */
 };
 
+/* kdump_ctx flags */
+#define DIF_XEN		(1UL<<1)
+
 /* LKCD */
 kdump_status kdump_open_lkcd_le(kdump_ctx *ctx);
 kdump_status kdump_open_lkcd_be(kdump_ctx *ctx);
@@ -82,6 +88,9 @@ kdump_status kdump_open_lkcd_be(kdump_ctx *ctx);
 /* diskdump/compressed kdump */
 kdump_status kdump_open_diskdump(kdump_ctx *ctx);
 kdump_status kdump_open_kdump(kdump_ctx *ctx);
+
+/* ELF dumps */
+kdump_status kdump_open_elfdump(kdump_ctx *ctx);
 
 /* provide our own definition of new_utsname */
 struct new_utsname {
