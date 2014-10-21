@@ -333,7 +333,7 @@ find_page(kdump_ctx *ctx, off_t off, unsigned pfn, struct dump_page *dp)
 	return off;
 }
 
-static int
+static kdump_status
 fill_level1(kdump_ctx *ctx, unsigned endidx)
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
@@ -352,20 +352,18 @@ fill_level1(kdump_ctx *ctx, unsigned endidx)
 		uint32_t pfn;
 
 		*p = calloc(PFN_IDX2_SIZE, sizeof(struct pfn_level2));
-		if (!*p) {
-			perror("Cannot allocate PFN mapping");
-			return -1;
-		}
+		if (!*p)
+			return kdump_syserr;
 		pfn = idx << (PFN_IDX3_BITS + PFN_IDX2_BITS);
 		if ( (off = find_page(ctx, off, pfn, &dp)) < 0)
-			return -1;
+			return kdump_syserr;
 		(*p)->off = off;
 	}
 
-	return 0;
+	return kdump_ok;
 }
 
-static int
+static kdump_status
 fill_level2(kdump_ctx *ctx, unsigned idx1, unsigned endidx)
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
@@ -386,21 +384,19 @@ fill_level2(kdump_ctx *ctx, unsigned idx1, unsigned endidx)
 	pfn = ((idx1 << PFN_IDX2_BITS) + idx) << PFN_IDX3_BITS;
 	for ( ; idx < endidx; ++p, ++idx) {
 		if ( (baseoff = find_page(ctx, baseoff, pfn, &dp)) < 0)
-			return -1;
+			return kdump_syserr;
 		p->off = baseoff;
 		pfn += PFN_IDX3_SIZE;
 	}
 	if (idx) {
 		if ( (baseoff = find_page(ctx, baseoff, pfn, &dp)) < 0)
-			return -1;
+			return kdump_syserr;
 		p->off = baseoff;
 	}
 
 	pp = malloc(PFN_IDX3_SIZE * sizeof(uint32_t));
-	if (!pp) {
-		perror("Cannot allocate PFN mapping");
-		return -1;
-	}
+	if (!pp)
+		return kdump_syserr;
 	p->pfn_level3 = pp;
 	memset(pp, -1, PFN_IDX3_SIZE * sizeof(uint32_t));
 
@@ -413,7 +409,7 @@ fill_level2(kdump_ctx *ctx, unsigned idx1, unsigned endidx)
 		pfn++;
 	}
 
-	return 0;
+	return kdump_ok;
 }
 
 static kdump_status
