@@ -37,3 +37,22 @@ kdump_format(kdump_ctx *ctx)
 {
 	return ctx->format;
 }
+
+/* utsname strings are 65 characters long.
+ * Final NUL may be missing (i.e. corrupted dump data)
+ */
+void
+kdump_copy_uts_string(char *dest, const char *src)
+{
+	if (!*dest) {
+		memcpy(dest, src, 65);
+		dest[65] = 0;
+	}
+}
+
+int
+kdump_uts_looks_sane(struct new_utsname *uts)
+{
+	return uts->sysname[0] && uts->nodename[0] && uts->release[0] &&
+		uts->version[0] && uts->machine[0];
+}

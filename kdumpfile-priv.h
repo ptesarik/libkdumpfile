@@ -46,4 +46,17 @@ struct _tag_kdump_ctx {
 	void *buffer;		/* temporary buffer */
 };
 
+/* provide our own definition of new_utsname */
+struct new_utsname {
+	char sysname[65];
+	char nodename[65];
+	char release[65];
+	char version[65];
+	char machine[65];
+	char domainname[65];
+};
+
+void kdump_copy_uts_string(char *dest, const char *src);
+int kdump_uts_looks_sane(struct new_utsname *uts);
+
 #endif	/* kdumpfile-priv.h */
