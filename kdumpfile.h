@@ -31,6 +31,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <unistd.h>
 
 #ifdef  __cplusplus
 extern "C" {
@@ -49,8 +50,8 @@ typedef enum _tag_kdump_status {
 kdump_status kdump_fdopen(kdump_ctx **pctx, int fd);
 void kdump_free(kdump_ctx *ctx);
 
-kdump_status kdump_read(kdump_ctx *ctx, kdump_paddr_t paddr,
-			unsigned char *buffer, size_t length);
+ssize_t kdump_read(kdump_ctx *ctx, kdump_paddr_t paddr,
+		   unsigned char *buffer, size_t length);
 
 const char *kdump_format(kdump_ctx *ctx);
 

@@ -244,8 +244,16 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 		if (ret == kdump_ok)
 			break;
 	}
-	if (ret == kdump_ok)
-		return ret;
+	if (ret != kdump_ok)
+		goto err_ctx;
+
+	ctx->page = malloc(ctx->page_size);
+	if (!ctx->page) {
+		ret = kdump_syserr;
+		goto err_ctx;
+	}
+
+	return kdump_ok;
 
   err_ctx:
 	kdump_free(ctx);
@@ -256,6 +264,8 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 void
 kdump_free(kdump_ctx *ctx)
 {
+	if (ctx->page)
+		free(ctx->page);
 	if (ctx->buffer)
 		free(ctx->buffer);
 	free(ctx);

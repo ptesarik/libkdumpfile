@@ -28,11 +28,50 @@
 
 #define _GNU_SOURCE
 
+#include <string.h>
+
 #include "kdumpfile-priv.h"
 
-kdump_status
+static kdump_status
+read_page(kdump_ctx *ctx, kdump_paddr_t pfn)
+{
+	if (pfn == ctx->last_pfn)
+		return kdump_ok;
+	ctx->last_pfn = pfn;
+	return ctx->read_page(ctx, pfn);
+}
+
+ssize_t
 kdump_read(kdump_ctx *ctx, kdump_paddr_t paddr,
 	   unsigned char *buffer, size_t length)
 {
-	return kdump_unsupported;
+	size_t remain;
+	kdump_status ret;
+
+	if (!ctx->read_page)
+		return kdump_unsupported;
+
+	ret = kdump_ok;
+	remain = length;
+	while (remain) {
+		size_t off, partlen;
+
+		ret = read_page(ctx, paddr / ctx->page_size);
+		if (ret != kdump_ok)
+			break;
+
+		off = paddr % ctx->page_size;
+		partlen = ctx->page_size - off;
+		if (partlen > remain)
+			partlen = remain;
+		memcpy(buffer, ctx->page + off, partlen);
+		paddr += partlen;
+		buffer += partlen;
+		remain -= partlen;
+	}
+
+	if (ret == kdump_syserr)
+		return -1;
+
+	return length - remain;
 }

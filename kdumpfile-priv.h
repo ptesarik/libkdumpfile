@@ -41,12 +41,18 @@
 #define MIN_PAGE_SIZE	(1UL << 12)
 #define MAX_PAGE_SIZE	(1UL << 18)
 
+typedef kdump_status (*readpage_fn)(kdump_ctx *, kdump_paddr_t);
+
 struct _tag_kdump_ctx {
 	int fd;			/* dump file descriptor */
 	const char *format;	/* file format (descriptive name) */
 	int endian;		/* __LITTLE_ENDIAN or __BIG_ENDIAN */
 
 	void *buffer;		/* temporary buffer */
+	void *page;		/* page data buffer */
+	size_t page_size;	/* target page size */
+	readpage_fn read_page;	/* method to read dump pages */
+	kdump_paddr_t last_pfn;	/* last read PFN */
 };
 
 /* provide our own definition of new_utsname */
