@@ -56,3 +56,38 @@ kdump_uts_looks_sane(struct new_utsname *uts)
 	return uts->sysname[0] && uts->nodename[0] && uts->release[0] &&
 		uts->version[0] && uts->machine[0];
 }
+
+int
+kdump_uncompress_rle(unsigned char *dst, size_t *pdstlen,
+		     const unsigned char *src, size_t srclen)
+{
+	const unsigned char *srcend = src + srclen;
+	size_t remain = *pdstlen;
+
+	while (src < srcend) {
+		unsigned char byte, cnt;
+
+		if (! (byte = *src++)) {
+			if (src >= srcend)
+				return -1;
+			if ( (cnt = *src++) ) {
+				if (remain < cnt)
+					return -1;
+				if (src >= srcend)
+					return -1;
+				memset(dst, *src++, cnt);
+				dst += cnt;
+				remain -= cnt;
+				continue;
+			}
+		}
+
+		if (!remain)
+			return -1;
+		*dst++ = byte;
+		--remain;
+	}
+
+	*pdstlen -= remain;
+	return 0;
+}

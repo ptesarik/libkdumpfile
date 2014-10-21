@@ -62,6 +62,9 @@ struct new_utsname {
 void kdump_copy_uts_string(char *dest, const char *src);
 int kdump_uts_looks_sane(struct new_utsname *uts);
 
+int kdump_uncompress_rle(unsigned char *dst, size_t *pdstlen,
+			 const unsigned char *src, size_t srclen);
+
 /* Inline utility functions */
 
 static inline uint16_t
