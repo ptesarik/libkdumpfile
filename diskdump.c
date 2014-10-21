@@ -30,7 +30,7 @@
 
 #include <stdlib.h>
 
-#include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 #include <zlib.h>
 #include <lzo/lzo1x.h>
