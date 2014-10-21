@@ -103,6 +103,10 @@ struct timeval_64 {
 	int64_t tv_usec;
 };
 
+/* utils */
+
+const size_t kdump_arch_ptr_size(enum kdump_arch arch);
+
 void kdump_copy_uts_string(char *dest, const char *src);
 int kdump_uts_looks_sane(struct new_utsname *uts);
 

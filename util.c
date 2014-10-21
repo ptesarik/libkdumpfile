@@ -38,6 +38,28 @@ kdump_format(kdump_ctx *ctx)
 	return ctx->format;
 }
 
+const size_t
+kdump_arch_ptr_size(enum kdump_arch arch)
+{
+	switch (arch) {
+	case ARCH_ALPHA:
+	case ARCH_IA64:
+	case ARCH_PPC64:
+	case ARCH_PPC64LE:
+	case ARCH_S390X:
+	case ARCH_X86_64:
+		return 8;	/* 64 bits */
+
+	case ARCH_ARM:
+	case ARCH_PPC:
+	case ARCH_S390:
+	case ARCH_X86:
+	default:
+		return 4;	/* 32 bits */
+	}
+
+}
+
 /* utsname strings are 65 characters long.
  * Final NUL may be missing (i.e. corrupted dump data)
  */
