@@ -24,6 +24,7 @@ ACLOCAL_AMFLAGS = -I m4
 lib_LTLIBRARIES = libkdumpfile.la
 libkdumpfile_la_SOURCES = \
 	open.c \
-	read.c
+	read.c \
+	util.c
 
 libkdumpfile_la_LDFLAGS = -version-info 0:0:0

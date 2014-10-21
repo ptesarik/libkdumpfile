@@ -1,4 +1,4 @@
-/* Interfaces for libkdumpfile (kernel coredump file access).
+/* Utility functions.
    Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
 
    This file is free software; you can redistribute it and/or modify
@@ -26,36 +26,14 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _KDUMPFILE_H
-#define _KDUMPFILE_H	1
+#define _GNU_SOURCE
 
-#include <stddef.h>
-#include <stdint.h>
+#include <string.h>
 
-#ifdef  __cplusplus
-extern "C" {
-#endif
+#include "kdumpfile-priv.h"
 
-typedef uint_fast64_t kdump_paddr_t;
-typedef struct _tag_kdump_ctx kdump_ctx;
-typedef enum _tag_kdump_status {
-	kdump_ok = 0,
-	kdump_syserr,		/* OS error, see errno */
-	kdump_unsupported,	/* unsupported file format */
-	kdump_nodata,		/* data is not stored in the dump file */
-	kdump_dataerr,		/* corrupted file data */
-} kdump_status;
-
-kdump_status kdump_fdopen(kdump_ctx **pctx, int fd);
-void kdump_free(kdump_ctx *ctx);
-
-kdump_status kdump_read(kdump_ctx *ctx, kdump_paddr_t paddr,
-			unsigned char *buffer, size_t length);
-
-const char *kdump_format(kdump_ctx *ctx);
-
-#ifdef  __cplusplus
+const char *
+kdump_format(kdump_ctx *ctx)
+{
+	return ctx->format;
 }
-#endif
-
-#endif	/* kdumpfile.h */
