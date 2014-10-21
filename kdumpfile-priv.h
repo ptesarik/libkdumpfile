@@ -32,6 +32,8 @@
 #include "config.h"
 #include "kdumpfile.h"
 
+#include <endian.h>
+
 /* This should cover all possibilities:
  * - no supported architecture has less than 4K pages.
  * - PowerPC can have up to 256K large pages.
@@ -42,6 +44,7 @@
 struct _tag_kdump_ctx {
 	int fd;			/* dump file descriptor */
 	const char *format;	/* file format (descriptive name) */
+	int endian;		/* __LITTLE_ENDIAN or __BIG_ENDIAN */
 
 	void *buffer;		/* temporary buffer */
 };
@@ -58,5 +61,31 @@ struct new_utsname {
 
 void kdump_copy_uts_string(char *dest, const char *src);
 int kdump_uts_looks_sane(struct new_utsname *uts);
+
+/* Inline utility functions */
+
+static inline uint16_t
+dump16toh(kdump_ctx *ctx, uint16_t x)
+{
+	return ctx->endian == __BIG_ENDIAN
+		? be16toh(x)
+		: le16toh(x);
+}
+
+static inline uint32_t
+dump32toh(kdump_ctx *ctx, uint32_t x)
+{
+	return ctx->endian == __BIG_ENDIAN
+		? be32toh(x)
+		: le32toh(x);
+}
+
+static inline uint64_t
+dump64toh(kdump_ctx *ctx, uint64_t x)
+{
+	return ctx->endian == __BIG_ENDIAN
+		? be64toh(x)
+		: le64toh(x);
+}
 
 #endif	/* kdumpfile-priv.h */
