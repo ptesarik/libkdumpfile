@@ -28,7 +28,7 @@
 
 #define _GNU_SOURCE
 
-#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <elf.h>
 
@@ -130,41 +130,31 @@ process_xc_xen_note(kdump_ctx *ctx, uint32_t type,
 	return kdump_ok;
 }
 
-static void
+static kdump_status
 process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
 {
-	char *p = desc;
+	kdump_status ret;
+	const char *val;
 
-	while (descsz) {
-		char *eol, *eq;
+	ret = kdump_store_vmcoreinfo(&ctx->vmcoreinfo, desc, descsz);
+	if (ret != kdump_ok)
+		return ret;
 
-		if (! (eol = memchr(p, '\n', descsz)) )
-			eol = p + descsz;
-		descsz -= eol - p;
+	val = kdump_vmcoreinfo_row(ctx, "PAGESIZE");
+	if (val) {
+		char *endp;
+		unsigned long page_size = strtoul(val, &endp, 10);
+		if (*endp)
+			return kdump_dataerr;
 
-		if ( (eq = memchr(p, '=', eol - p)) ) {
-			size_t namesz = eq - p;
-
-			++eq;
-			if (namesz == sizeof("PAGESIZE") - 1 &&
-			    !strncmp(p, "PAGESIZE", namesz)) {
-				unsigned long page_size;
-				sscanf(eq, "%ul", &page_size);
-				ctx->page_size = page_size;
-			} else if (namesz == sizeof("OSRELEASE") - 1 &&
-				 !strncmp(p, "OSRELEASE", namesz)) {
-				size_t valsz = eol - eq;
-				if (valsz > NEW_UTS_LEN)
-					valsz = NEW_UTS_LEN;
-				memcpy(&ctx->utsname.release, eq, valsz);
-				ctx->utsname.release[NEW_UTS_LEN] = 0;
-			}
-		}
-
-		p = eol;
-		while (descsz && *p == '\n')
-			++p, --descsz;
+		ctx->page_size = page_size;
 	}
+
+	val = kdump_vmcoreinfo_row(ctx, "OSRELEASE");
+	if (val)
+		strncpy(ctx->utsname.release, val, NEW_UTS_LEN);
+
+	return kdump_ok;
 }
 
 static int
@@ -201,11 +191,9 @@ kdump_process_notes(kdump_ctx *ctx, void *data, size_t size)
 			process_xen_note(ctx, type, desc, descsz);
 		else if (note_equal(".note.Xen", name, namesz))
 			ret = process_xc_xen_note(ctx, type, desc, descsz);
-		else if (note_equal("VMCOREINFO", name, namesz)) {
-			process_vmcoreinfo(ctx, desc, descsz);
-			ret = kdump_store_vmcoreinfo(&ctx->vmcoreinfo,
-						     desc, descsz);
-		} else if (note_equal("VMCOREINFO_XEN", name, namesz))
+		else if (note_equal("VMCOREINFO", name, namesz))
+			ret = process_vmcoreinfo(ctx, desc, descsz);
+		else if (note_equal("VMCOREINFO_XEN", name, namesz))
 			ret = kdump_store_vmcoreinfo(&ctx->vmcoreinfo_xen,
 						     desc, descsz);
 	}
