@@ -604,6 +604,9 @@ open_common(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		goto err_free;
 
+	ctx->arch = kdump_machine_arch(ctx->utsname.machine);
+	ctx->ptr_size = kdump_arch_ptr_size(ctx->arch);
+
 	ret = kdump_syserr;
 	max_idx1 = pfn_idx1(ctx->max_pfn - 1) + 1;
 	lkcdp->pfn_level1 = calloc(max_idx1, sizeof(struct pfn_level2*));

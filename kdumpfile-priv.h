@@ -176,6 +176,7 @@ struct timeval_64 {
 /* utils */
 
 const size_t kdump_arch_ptr_size(enum kdump_arch arch);
+enum kdump_arch kdump_machine_arch(const char *machine);
 
 void kdump_copy_uts_string(char *dest, const char *src);
 void kdump_copy_uts(struct new_utsname *dest, const struct new_utsname *src);

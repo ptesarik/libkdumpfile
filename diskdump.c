@@ -297,6 +297,9 @@ open_common(kdump_ctx *ctx)
 	else if (kdump_uts_looks_sane(&dh64->utsname))
 		kdump_copy_uts(&ctx->utsname, &dh64->utsname);
 
+	ctx->arch = kdump_machine_arch(ctx->utsname.machine);
+	ctx->ptr_size = kdump_arch_ptr_size(ctx->arch);
+
 	if ( (ctx->endian = header_looks_sane_32(dh32)) ) {
 		ctx->page_size = dump32toh(ctx, dh32->block_size);
 		if (read_bitmap(ctx,

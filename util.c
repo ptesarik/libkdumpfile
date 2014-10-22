@@ -54,6 +54,35 @@ kdump_arch_ptr_size(enum kdump_arch arch)
 
 }
 
+enum kdump_arch
+kdump_machine_arch(const char *machine)
+{
+	if (!strcmp(machine, "alpha"))
+		return ARCH_ALPHA;
+	else if (!strcmp(machine, "ia64"))
+		return ARCH_IA64;
+	else if (!strcmp(machine, "ppc"))
+		return ARCH_PPC;
+	else if (!strcmp(machine, "ppc64"))
+		return ARCH_PPC64;
+	else if (!strcmp(machine, "ppc64le"))
+		return ARCH_PPC64LE;
+	else if (!strcmp(machine, "s390"))
+		return ARCH_S390;
+	else if (!strcmp(machine, "s390x"))
+		return ARCH_S390X;
+	else if (!strcmp(machine, "i386") ||
+		 !strcmp(machine, "i586") ||
+		 !strcmp(machine, "i686"))
+		return ARCH_X86;
+	else if (!strcmp(machine, "x86_64"))
+		return ARCH_X86_64;
+	else if (!strncmp(machine, "arm", 3))
+		return ARCH_ARM;
+	else
+		return ARCH_UNKNOWN;
+}
+
 /* Final NUL may be missing in the source (i.e. corrupted dump data),
  * but let's make sure that it is present in the destination.
  */
