@@ -77,6 +77,9 @@ kdump_machine_arch(const char *machine)
 		return ARCH_X86;
 	else if (!strcmp(machine, "x86_64"))
 		return ARCH_X86_64;
+	else if (!strcmp(machine, "arm64") ||
+		 !strcmp(machine, "aarch64"))
+		return ARCH_AARCH64;
 	else if (!strncmp(machine, "arm", 3))
 		return ARCH_ARM;
 	else

@@ -43,6 +43,7 @@
 
 enum kdump_arch {
 	ARCH_UNKNOWN = 0,
+	ARCH_AARCH64,
 	ARCH_ALPHA,
 	ARCH_ARM,
 	ARCH_IA64,
