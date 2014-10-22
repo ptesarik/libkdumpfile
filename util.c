@@ -86,6 +86,12 @@ kdump_vmcoreinfo(kdump_ctx *ctx)
 	return ctx->vmcoreinfo;
 }
 
+const char *
+kdump_vmcoreinfo_xen(kdump_ctx *ctx)
+{
+	return ctx->vmcoreinfo_xen;
+}
+
 const size_t
 kdump_arch_ptr_size(enum kdump_arch arch)
 {
@@ -182,6 +188,19 @@ kdump_store_vmcoreinfo(kdump_ctx *ctx, void *info, size_t len)
 
 	memcpy(ctx->vmcoreinfo, info, len);
 	ctx->vmcoreinfo[len] = '\0';
+
+	return kdump_ok;
+}
+
+kdump_status
+kdump_store_vmcoreinfo_xen(kdump_ctx *ctx, void *info, size_t len)
+{
+	ctx->vmcoreinfo_xen = malloc(len + 1);
+	if (!ctx->vmcoreinfo_xen)
+		return kdump_syserr;
+
+	memcpy(ctx->vmcoreinfo_xen, info, len);
+	ctx->vmcoreinfo_xen[len] = '\0';
 
 	return kdump_ok;
 }

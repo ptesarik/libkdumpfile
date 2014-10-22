@@ -64,6 +64,7 @@ const char *kdump_machine(kdump_ctx *ctx);
 const char *kdump_domainname(kdump_ctx *ctx);
 
 const char *kdump_vmcoreinfo(kdump_ctx *ctx);
+const char *kdump_vmcoreinfo_xen(kdump_ctx *ctx);
 
 #ifdef  __cplusplus
 }
