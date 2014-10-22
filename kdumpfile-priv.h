@@ -64,6 +64,7 @@ struct kdump_ops {
 	 *   ctx->format     descriptive name of the file format
 	 *   ctx->arch       target architecture (if known)
 	 *   ctx->endian     dump file endianness
+	 *   ctx->ptr_size   target pointer size (in bytes)
 	 *   ctx->page_size  target page size
 	 *   ctx->utsname    filled in as much as possible
 	 *   ctx->ops        possibly modified
@@ -126,6 +127,7 @@ struct _tag_kdump_ctx {
 
 	enum kdump_arch arch;	/* architecture (if known) */
 	int endian;		/* __LITTLE_ENDIAN or __BIG_ENDIAN */
+	size_t ptr_size;	/* arch pointer size */
 
 	const struct kdump_ops *ops;
 

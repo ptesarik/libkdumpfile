@@ -99,8 +99,6 @@ struct section {
 };
 
 struct elfdump_priv {
-	size_t ptr_size;	/* arch pointer size */
-
 	int num_load_segments;
 	struct load_segment *load_segments;
 	int num_note_segments;
@@ -207,7 +205,7 @@ static kdump_status
 elf_read_xen_dom0(kdump_ctx *ctx, kdump_paddr_t pfn)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
-	unsigned fpp = ctx->page_size / edp->ptr_size;
+	unsigned fpp = ctx->page_size / ctx->ptr_size;
 	uint64_t mfn_idx, frame_idx;
 	kdump_status ret;
 
@@ -216,14 +214,14 @@ elf_read_xen_dom0(kdump_ctx *ctx, kdump_paddr_t pfn)
 	if (mfn_idx >= edp->xen_map_size)
 		return kdump_nodata;
 
-	pfn = (edp->ptr_size == 8)
+	pfn = (ctx->ptr_size == 8)
 		? ((uint64_t*)edp->xen_map)[mfn_idx]
 		: ((uint32_t*)edp->xen_map)[mfn_idx];
 	ret = elf_read_page(ctx, pfn);
 	if (ret != kdump_ok)
 		return ret;
 
-	pfn = (edp->ptr_size == 8)
+	pfn = (ctx->ptr_size == 8)
 		? ((uint64_t*)ctx->page)[frame_idx]
 		: ((uint32_t*)ctx->page)[frame_idx];
 	return elf_read_page(ctx, pfn);
@@ -488,16 +486,16 @@ static void
 process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
-	unsigned words = len / edp->ptr_size;
+	unsigned words = len / ctx->ptr_size;
 
-	if (edp->ptr_size == 8 &&
+	if (ctx->ptr_size == 8 &&
 	    len >= sizeof(struct xen_crash_info_64)) {
 		struct xen_crash_info_64 *info = data;
 		ctx->xen_ver.major = dump64toh(ctx, info->xen_major_version);
 		ctx->xen_ver.minor = dump64toh(ctx, info->xen_minor_version);
 		ctx->xen_extra_ver = dump64toh(ctx, info->xen_extra_version);
 		ctx->xen_p2m_mfn = dump64toh(ctx, ((uint64_t*)data)[words-1]);
-	} else if (edp->ptr_size == 4 &&
+	} else if (ctx->ptr_size == 4 &&
 		   len >= sizeof(struct xen_crash_info_32)){
 		struct xen_crash_info_32 *info = data;
 		ctx->xen_ver.major = dump32toh(ctx, info->xen_major_version);
@@ -624,7 +622,7 @@ static kdump_status
 initialize_xen_map64(kdump_ctx *ctx, void *dir)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
-	unsigned fpp = ctx->page_size / edp->ptr_size;
+	unsigned fpp = ctx->page_size / ctx->ptr_size;
 	uint64_t *dirp, *p, *map;
 	uint64_t pfn;
 	unsigned mfns;
@@ -670,7 +668,7 @@ static kdump_status
 initialize_xen_map32(kdump_ctx *ctx, void *dir)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
-	unsigned fpp = ctx->page_size / edp->ptr_size;
+	unsigned fpp = ctx->page_size / ctx->ptr_size;
 	uint32_t *dirp, *p, *map;
 	uint32_t pfn;
 	unsigned mfns;
@@ -734,7 +732,7 @@ initialize_xen_map(kdump_ctx *ctx)
 		goto free_dir;
 	}
 
-	ret = (edp->ptr_size == 8)
+	ret = (ctx->ptr_size == 8)
 		? initialize_xen_map64(ctx, dir)
 		: initialize_xen_map32(ctx, dir);
 
@@ -758,7 +756,7 @@ open_common(kdump_ctx *ctx)
 	if (!edp->num_load_segments && !edp->num_sections)
 		return kdump_unsupported;
 
-	edp->ptr_size = kdump_arch_ptr_size(ctx->arch);
+	ctx->ptr_size = kdump_arch_ptr_size(ctx->arch);
 
 	/* read notes */
 	for (i = 0; i < edp->num_note_segments; ++i) {

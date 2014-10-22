@@ -57,6 +57,7 @@ devmem_probe(kdump_ctx *ctx)
 		return kdump_unsupported;
 
 	ctx->format = "live source";
+	ctx->ptr_size = sizeof(void*);
 	ctx->page_size = sysconf(_SC_PAGESIZE);
 
 	return kdump_ok;
