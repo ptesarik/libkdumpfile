@@ -28,6 +28,7 @@ libkdumpfile_la_SOURCES = \
 	diskdump.c \
 	elfdump.c \
 	lkcd.c \
+	notes.c \
 	open.c \
 	read.c \
 	todo.c \

@@ -191,6 +191,10 @@ kdump_status kdump_store_vmcoreinfo(struct vmcoreinfo **pinfo,
 
 kdump_status kdump_read_xenver(kdump_ctx *ctx);
 
+/* ELF notes */
+
+kdump_status kdump_process_notes(kdump_ctx *ctx, void *data, size_t size);
+
 /* Older glibc didn't have the byteorder macros */
 #ifndef be16toh
 
