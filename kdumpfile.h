@@ -47,6 +47,12 @@ typedef enum _tag_kdump_status {
 	kdump_dataerr,		/* corrupted file data */
 } kdump_status;
 
+typedef struct _tag_kdump_xen_version {
+	unsigned long major;
+	unsigned long minor;
+	const char *extra;
+} kdump_xen_version_t;
+
 kdump_status kdump_fdopen(kdump_ctx **pctx, int fd);
 void kdump_free(kdump_ctx *ctx);
 
@@ -71,6 +77,8 @@ const char *kdump_domainname(kdump_ctx *ctx);
 
 const char *kdump_vmcoreinfo(kdump_ctx *ctx);
 const char *kdump_vmcoreinfo_xen(kdump_ctx *ctx);
+
+void kdump_xen_version(kdump_ctx *ctx, kdump_xen_version_t *version);
 
 #ifdef  __cplusplus
 }

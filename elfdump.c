@@ -62,6 +62,30 @@ struct xen_elfnote_header {
 	uint64_t xch_page_size;
 }; 
 
+struct xen_crash_info_32 {
+	uint32_t xen_major_version;
+	uint32_t xen_minor_version;
+	uint32_t xen_extra_version;
+	uint32_t xen_changeset;
+	uint32_t xen_compiler;
+	uint32_t xen_compile_date;
+	uint32_t xen_compile_time;
+	uint32_t tainted;
+	/* Additional arch-dependent and version-dependent fields  */
+};
+
+struct xen_crash_info_64 {
+	uint64_t xen_major_version;
+	uint64_t xen_minor_version;
+	uint64_t xen_extra_version;
+	uint64_t xen_changeset;
+	uint64_t xen_compiler;
+	uint64_t xen_compile_date;
+	uint64_t xen_compile_time;
+	uint64_t tainted;
+	/* Additional arch-dependent and version-dependent fields  */
+};
+
 struct load_segment {
 	off_t file_offset;
 	uint64_t phys_start;
@@ -462,17 +486,34 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 }
 
 static void
+process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
+{
+	struct elfdump_priv *edp = ctx->fmtdata;
+	unsigned words = len / edp->ptr_size;
+
+	if (edp->ptr_size == 8 &&
+	    len >= sizeof(struct xen_crash_info_64)) {
+		struct xen_crash_info_64 *info = data;
+		ctx->xen_ver.major = dump64toh(ctx, info->xen_major_version);
+		ctx->xen_ver.minor = dump64toh(ctx, info->xen_minor_version);
+		ctx->xen_extra_ver = dump64toh(ctx, info->xen_extra_version);
+		edp->xen_p2m_mfn = dump64toh(ctx, ((uint64_t*)data)[words-1]);
+	} else if (edp->ptr_size == 4 &&
+		   len >= sizeof(struct xen_crash_info_32)){
+		struct xen_crash_info_32 *info = data;
+		ctx->xen_ver.major = dump32toh(ctx, info->xen_major_version);
+		ctx->xen_ver.minor = dump32toh(ctx, info->xen_minor_version);
+		ctx->xen_extra_ver = dump32toh(ctx, info->xen_extra_version);
+		edp->xen_p2m_mfn = dump32toh(ctx, ((uint32_t*)data)[words-1]);
+	}
+}
+
+static void
 process_xen_note(kdump_ctx *ctx, uint32_t type,
 		 void *desc, size_t descsz)
 {
-	struct elfdump_priv *edp = ctx->fmtdata;
-	unsigned words = descsz / edp->ptr_size;
-
-	if (type == XEN_ELFNOTE_CRASH_INFO) {
-		edp->xen_p2m_mfn = (edp->ptr_size == 8)
-			? dump64toh(ctx, ((uint64_t*)desc)[words-1])
-			: dump32toh(ctx, ((uint32_t*)desc)[words-1]);
-	}
+	if (type == XEN_ELFNOTE_CRASH_INFO)
+		process_xen_crash_info(ctx, desc, descsz);
 
 	ctx->flags |= DIF_XEN;
 }

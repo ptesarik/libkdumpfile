@@ -130,6 +130,9 @@ struct _tag_kdump_ctx {
 	char *vmcoreinfo;
 	char *vmcoreinfo_xen;
 
+	kdump_xen_version_t xen_ver; /* Xen hypervisor version */
+	kdump_paddr_t xen_extra_ver;
+
 	void *fmtdata;		/* format-specific private data */
 };
 
@@ -170,6 +173,8 @@ int kdump_uncompress_rle(unsigned char *dst, size_t *pdstlen,
 
 kdump_status kdump_store_vmcoreinfo(kdump_ctx *ctx, void *info, size_t len);
 kdump_status kdump_store_vmcoreinfo_xen(kdump_ctx *ctx, void *info, size_t len);
+
+kdump_status kdump_read_xenver(kdump_ctx *ctx);
 
 /* Older glibc didn't have the byteorder macros */
 #ifndef be16toh

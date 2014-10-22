@@ -92,6 +92,12 @@ kdump_vmcoreinfo_xen(kdump_ctx *ctx)
 	return ctx->vmcoreinfo_xen;
 }
 
+void
+kdump_xen_version(kdump_ctx *ctx, kdump_xen_version_t *version)
+{
+	memcpy(version, &ctx->xen_ver, sizeof(kdump_xen_version_t));
+}
+
 const size_t
 kdump_arch_ptr_size(enum kdump_arch arch)
 {

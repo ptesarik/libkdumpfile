@@ -116,6 +116,12 @@ kdump_open_known(kdump_ctx *ctx)
 		return kdump_syserr;
 	}
 
+	if (ctx->xen_extra_ver)
+		/* Return value ignored: if this fails, it is not fatal. */
+		kdump_read_string(ctx, ctx->xen_extra_ver,
+				  (char**)&ctx->xen_ver.extra,
+				  KDUMP_XENMACHADDR);
+
 	return kdump_ok;
 }
 
