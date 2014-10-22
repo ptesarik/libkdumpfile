@@ -102,6 +102,9 @@ kdump_status kdump_open_kdump(kdump_ctx *ctx);
 /* ELF dumps */
 kdump_status kdump_open_elfdump(kdump_ctx *ctx);
 
+/* live sources */
+kdump_status kdump_open_devmem(kdump_ctx *ctx);
+
 /* struct timeval has a different layout on 32-bit and 64-bit */
 struct timeval_32 {
 	int32_t tv_sec;

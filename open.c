@@ -126,14 +126,6 @@ kdump_open_s390(kdump_ctx *ctx)
 	return kdump_unsupported;
 }
 
-static kdump_status
-kdump_open_devmem(kdump_ctx *ctx)
-{
-	/* Live source not yet implemented */
-	ctx->format = "live source";
-	return kdump_unsupported;
-}
-
 #define FORMAT(x)	\
 	{ magic_ ## x, sizeof(magic_ ## x), kdump_open_ ## x }
 static const struct crash_file formats[] = {
