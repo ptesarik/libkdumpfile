@@ -293,13 +293,10 @@ open_common(kdump_ctx *ctx)
 	ctx->read_page = diskdump_read_page;
 	ctx->fmtdata = ddp;
 
-	if (kdump_uts_looks_sane(&dh32->utsname)) {
-		kdump_copy_uts_string(ctx->machine, dh32->utsname.machine);
-		kdump_copy_uts_string(ctx->ver, dh32->utsname.release);
-	} else if (kdump_uts_looks_sane(&dh64->utsname)) {
-		kdump_copy_uts_string(ctx->machine, dh64->utsname.machine);
-		kdump_copy_uts_string(ctx->ver, dh64->utsname.release);
-	}
+	if (kdump_uts_looks_sane(&dh32->utsname))
+		kdump_copy_uts(&ctx->utsname, &dh32->utsname);
+	else if (kdump_uts_looks_sane(&dh64->utsname))
+		kdump_copy_uts(&ctx->utsname, &dh64->utsname);
 
 	if ( (ctx->endian = header_looks_sane_32(dh32)) ) {
 		ctx->page_size = dump32toh(ctx, dh32->block_size);

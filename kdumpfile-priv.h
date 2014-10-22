@@ -57,6 +57,17 @@ enum kdump_arch {
 
 typedef kdump_status (*readpage_fn)(kdump_ctx *, kdump_paddr_t);
 
+/* provide our own definition of new_utsname */
+#define NEW_UTS_LEN 64
+struct new_utsname {
+	char sysname[NEW_UTS_LEN + 1];
+	char nodename[NEW_UTS_LEN + 1];
+	char release[NEW_UTS_LEN + 1];
+	char version[NEW_UTS_LEN + 1];
+	char machine[NEW_UTS_LEN + 1];
+	char domainname[NEW_UTS_LEN + 1];
+};
+
 struct _tag_kdump_ctx {
 	int fd;			/* dump file descriptor */
 	const char *format;	/* file format (descriptive name) */
@@ -72,8 +83,7 @@ struct _tag_kdump_ctx {
 	kdump_paddr_t last_pfn;	/* last read PFN */
 	kdump_paddr_t max_pfn;	/* max PFN for read_page */
 
-	char machine[66];	/* arch name (utsname machine) */
-	char ver[66];		/* version (utsname release) */
+	struct new_utsname utsname;
 
 	void *fmtdata;		/* format-specific private data */
 };
@@ -92,16 +102,6 @@ kdump_status kdump_open_kdump(kdump_ctx *ctx);
 /* ELF dumps */
 kdump_status kdump_open_elfdump(kdump_ctx *ctx);
 
-/* provide our own definition of new_utsname */
-struct new_utsname {
-	char sysname[65];
-	char nodename[65];
-	char release[65];
-	char version[65];
-	char machine[65];
-	char domainname[65];
-};
-
 /* struct timeval has a different layout on 32-bit and 64-bit */
 struct timeval_32 {
 	int32_t tv_sec;
@@ -117,6 +117,7 @@ struct timeval_64 {
 const size_t kdump_arch_ptr_size(enum kdump_arch arch);
 
 void kdump_copy_uts_string(char *dest, const char *src);
+void kdump_copy_uts(struct new_utsname *dest, const struct new_utsname *src);
 int kdump_uts_looks_sane(struct new_utsname *uts);
 
 int kdump_uncompress_rle(unsigned char *dst, size_t *pdstlen,

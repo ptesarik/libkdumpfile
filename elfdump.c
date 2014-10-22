@@ -521,10 +521,10 @@ process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
 			else if (namesz == sizeof("OSRELEASE") - 1 &&
 				 !strncmp(p, "OSRELEASE", namesz)) {
 				size_t valsz = eol - eq;
-				if (valsz > 65)
-					valsz = 65;
-				memcpy(&ctx->ver, eq, valsz);
-				ctx->ver[65] = 0;
+				if (valsz > NEW_UTS_LEN)
+					valsz = NEW_UTS_LEN;
+				memcpy(&ctx->utsname.release, eq, valsz);
+				ctx->utsname.release[NEW_UTS_LEN] = 0;
 			}
 		}
 

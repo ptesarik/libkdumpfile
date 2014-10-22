@@ -60,16 +60,27 @@ kdump_arch_ptr_size(enum kdump_arch arch)
 
 }
 
-/* utsname strings are 65 characters long.
- * Final NUL may be missing (i.e. corrupted dump data)
+/* Final NUL may be missing in the source (i.e. corrupted dump data),
+ * but let's make sure that it is present in the destination.
  */
 void
 kdump_copy_uts_string(char *dest, const char *src)
 {
 	if (!*dest) {
-		memcpy(dest, src, 65);
-		dest[65] = 0;
+		memcpy(dest, src, NEW_UTS_LEN);
+		dest[NEW_UTS_LEN] = 0;
 	}
+}
+
+void
+kdump_copy_uts(struct new_utsname *dest, const struct new_utsname *src)
+{
+	kdump_copy_uts_string(dest->sysname, src->sysname);
+	kdump_copy_uts_string(dest->nodename, src->nodename);
+	kdump_copy_uts_string(dest->release, src->release);
+	kdump_copy_uts_string(dest->version, src->version);
+	kdump_copy_uts_string(dest->machine, src->machine);
+	kdump_copy_uts_string(dest->domainname, src->domainname);
 }
 
 int
