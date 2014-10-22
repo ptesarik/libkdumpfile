@@ -78,6 +78,9 @@ const char *kdump_domainname(kdump_ctx *ctx);
 const char *kdump_vmcoreinfo(kdump_ctx *ctx);
 const char *kdump_vmcoreinfo_xen(kdump_ctx *ctx);
 
+const char *kdump_vmcoreinfo_row(kdump_ctx *ctx, const char *key);
+const char *kdump_vmcoreinfo_row_xen(kdump_ctx *ctx, const char *key);
+
 void kdump_xen_version(kdump_ctx *ctx, kdump_xen_version_t *version);
 
 #ifdef  __cplusplus

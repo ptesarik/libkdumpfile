@@ -92,6 +92,30 @@ kdump_vmcoreinfo_xen(kdump_ctx *ctx)
 	return ctx->vmcoreinfo_xen ? ctx->vmcoreinfo_xen->raw : NULL;
 }
 
+static const char*
+vmcoreinfo_row(struct vmcoreinfo *info, const char *key)
+{
+	unsigned i;
+	if (!info)
+		return NULL;
+	for (i = 0; i < info->n; ++i)
+		if (!strcmp(key, info->row[i].key))
+			return info->row[i].val;
+	return NULL;
+}
+
+const char *
+kdump_vmcoreinfo_row(kdump_ctx *ctx, const char *key)
+{
+	return vmcoreinfo_row(ctx->vmcoreinfo, key);
+}
+
+const char *
+kdump_vmcoreinfo_row_xen(kdump_ctx *ctx, const char *key)
+{
+	return vmcoreinfo_row(ctx->vmcoreinfo_xen, key);
+}
+
 void
 kdump_xen_version(kdump_ctx *ctx, kdump_xen_version_t *version)
 {
