@@ -56,8 +56,36 @@ enum kdump_arch {
 };
 
 struct kdump_ops {
+	/* Probe for a given file format.
+	 * Input:
+	 *   ctx->buffer     MAX_PAGE_SIZE bytes from the file beginning
+	 *   ctx->ops        ops with the probe function
+	 * Output:
+	 *   ctx->format     descriptive name of the file format
+	 *   ctx->arch       target architecture (if known)
+	 *   ctx->endian     dump file endianness
+	 *   ctx->page_size  target page size
+	 *   ctx->utsname    filled in as much as possible
+	 *   ctx->ops        possibly modified
+	 * Return:
+	 *   kdump_ok        can be handled by these ops
+	 *   kdump_unsupported dump file format does not match
+	 *   kdump_syserr    OS error (e.g. read or memory allocation)
+	 *   kdump_dataerr   file data is not valid
+	 */
 	kdump_status (*probe)(kdump_ctx *);
+
+	/* Read a page from the dump file.
+	 * Input:
+	 *   ctx->page       pointer to a page-sized buffer
+	 * Return:
+	 *   kdump_ok        buffer is filled with page data
+	 *   kdump_nodata    data for the given page is not present
+	 */
 	kdump_status (*read_page)(kdump_ctx *, kdump_paddr_t);
+
+	/* Free all private data.
+	 */
 	void (*free)(kdump_ctx *);
 };
 
