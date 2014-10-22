@@ -3,6 +3,7 @@ LIBKDUMPFILE_0 {
     kdump_fdopen;
     kdump_free;
     kdump_read;
+    kdump_read_string;
     kdump_format;
     kdump_pagesize;
     kdump_sysname;
@@ -13,6 +14,7 @@ LIBKDUMPFILE_0 {
     kdump_domainname;
     kdump_vmcoreinfo;
     kdump_vmcoreinfo_xen;
+    kdump_xen_version;
 
   local:
     *;
