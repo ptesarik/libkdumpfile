@@ -535,9 +535,11 @@ note_equal(const char *name, const char *notename, size_t notenamesz)
 	return 0;
 }
 
-static void
+static kdump_status
 process_notes(kdump_ctx *ctx, Elf32_Nhdr *hdr, size_t size)
 {
+	kdump_status ret;
+
 	while (size >= sizeof(Elf32_Nhdr)) {
 		char *name, *desc;
 		Elf32_Word namesz = dump32toh(ctx, hdr->n_namesz);
@@ -557,9 +559,15 @@ process_notes(kdump_ctx *ctx, Elf32_Nhdr *hdr, size_t size)
 			process_xen_note(ctx, type, desc, descsz);
 		else if (note_equal(".note.Xen", name, namesz))
 			process_xc_xen_note(ctx, type, desc, descsz);
-		else if (note_equal("VMCOREINFO", name, namesz))
+		else if (note_equal("VMCOREINFO", name, namesz)) {
 			process_vmcoreinfo(ctx, desc, descsz);
+			ret = kdump_store_vmcoreinfo(ctx, desc, descsz);
+			if (ret != kdump_ok)
+				return ret;
+		}
 	}
+
+	return kdump_ok;
 }
 
 static kdump_status
@@ -708,8 +716,10 @@ open_common(kdump_ctx *ctx)
 		Elf32_Nhdr *hdr = read_elf_seg(ctx, seg);
 		if (!hdr)
 			return kdump_syserr;
-		process_notes(ctx, hdr, seg->phys_end - seg->phys_start);
+		ret = process_notes(ctx, hdr, seg->phys_end - seg->phys_start);
 		free(hdr);
+		if (ret != kdump_ok)
+			return ret;
 	}
 
 	set_page_size(ctx);

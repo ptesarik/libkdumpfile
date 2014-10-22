@@ -118,6 +118,8 @@ struct _tag_kdump_ctx {
 
 	struct new_utsname utsname;
 
+	char *vmcoreinfo;
+
 	void *fmtdata;		/* format-specific private data */
 };
 
@@ -155,6 +157,8 @@ int kdump_uts_looks_sane(struct new_utsname *uts);
 
 int kdump_uncompress_rle(unsigned char *dst, size_t *pdstlen,
 			 const unsigned char *src, size_t srclen);
+
+kdump_status kdump_store_vmcoreinfo(kdump_ctx *ctx, void *info, size_t len);
 
 /* Older glibc didn't have the byteorder macros */
 #ifndef be16toh

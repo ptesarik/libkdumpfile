@@ -11,6 +11,7 @@ LIBKDUMPFILE_0 {
     kdump_version;
     kdump_machine;
     kdump_domainname;
+    kdump_vmcoreinfo;
 
   local:
     *;

@@ -80,6 +80,12 @@ kdump_domainname(kdump_ctx *ctx)
 	return ctx->utsname.domainname;
 }
 
+const char *
+kdump_vmcoreinfo(kdump_ctx *ctx)
+{
+	return ctx->vmcoreinfo;
+}
+
 const size_t
 kdump_arch_ptr_size(enum kdump_arch arch)
 {
@@ -165,4 +171,17 @@ kdump_uncompress_rle(unsigned char *dst, size_t *pdstlen,
 
 	*pdstlen -= remain;
 	return 0;
+}
+
+kdump_status
+kdump_store_vmcoreinfo(kdump_ctx *ctx, void *info, size_t len)
+{
+	ctx->vmcoreinfo = malloc(len + 1);
+	if (!ctx->vmcoreinfo)
+		return kdump_syserr;
+
+	memcpy(ctx->vmcoreinfo, info, len);
+	ctx->vmcoreinfo[len] = '\0';
+
+	return kdump_ok;
 }
