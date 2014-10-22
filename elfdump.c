@@ -517,18 +517,27 @@ process_xen_note(kdump_ctx *ctx, uint32_t type,
 	ctx->flags |= DIF_XEN;
 }
 
-static void
+static kdump_status
 process_xc_xen_note(kdump_ctx *ctx, uint32_t type,
 		    void *desc, size_t descsz)
 {
 	if (type == XEN_ELFNOTE_DUMPCORE_HEADER) {
 		struct xen_elfnote_header *header = desc;
-		ctx->page_size = dump64toh(ctx, header->xch_page_size);
+		uint64_t page_size = dump64toh(ctx, header->xch_page_size);
+
+		/* It must be a power of 2 */
+		if (page_size != (page_size & ~(page_size - 1)))
+			return kdump_dataerr;
+
+		ctx->page_size = page_size;
 	} else if (type == XEN_ELFNOTE_DUMPCORE_FORMAT_VERSION) {
 		uint64_t version = dump64toh(ctx, *(uint64_t*)desc);
 
-		/* TODO: check that version == 1 */
+		if (version != 1)
+			return kdump_unsupported;
 	}
+
+	return kdump_ok;
 }
 
 static void
@@ -598,7 +607,7 @@ process_notes(kdump_ctx *ctx, Elf32_Nhdr *hdr, size_t size)
 		if (note_equal("Xen", name, namesz))
 			process_xen_note(ctx, type, desc, descsz);
 		else if (note_equal(".note.Xen", name, namesz))
-			process_xc_xen_note(ctx, type, desc, descsz);
+			ret = process_xc_xen_note(ctx, type, desc, descsz);
 		else if (note_equal("VMCOREINFO", name, namesz)) {
 			process_vmcoreinfo(ctx, desc, descsz);
 			ret = kdump_store_vmcoreinfo(ctx, desc, descsz);
