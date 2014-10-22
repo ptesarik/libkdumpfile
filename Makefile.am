@@ -29,6 +29,7 @@ libkdumpfile_la_SOURCES = \
 	lkcd.c \
 	open.c \
 	read.c \
+	todo.c \
 	util.c
 
 libkdumpfile_la_LDFLAGS = -version-info 0:0:0
