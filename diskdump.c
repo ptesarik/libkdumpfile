@@ -296,6 +296,26 @@ header_looks_sane_64(struct disk_dump_header_64 *dh)
 }
 
 static kdump_status
+read_vmcoreinfo(kdump_ctx *ctx, off_t off, size_t size)
+{
+	void *info;
+	kdump_status ret = kdump_ok;
+
+	info = malloc(size);
+	if (!info)
+		return kdump_syserr;
+
+	if (pread(ctx->fd, info, size, off) != size)
+		ret = kdump_syserr;
+
+	if (ret == kdump_ok)
+		ret = kdump_process_vmcoreinfo(ctx, info, size);
+	free(info);
+
+	return ret;
+}
+
+static kdump_status
 read_notes(kdump_ctx *ctx, off_t off, size_t size)
 {
 	void *notes;
@@ -331,6 +351,10 @@ read_sub_hdr_32(kdump_ctx *ctx, int32_t header_version)
 	if (header_version >= 4)
 		ret = read_notes(ctx, dump64toh(ctx, subhdr.offset_note),
 				 dump32toh(ctx, subhdr.size_note));
+	else if (header_version >= 3)
+		ret = read_vmcoreinfo(ctx,
+				      dump64toh(ctx, subhdr.offset_vmcoreinfo),
+				      dump32toh(ctx, subhdr.size_vmcoreinfo));
 }
 
 static kdump_status
@@ -349,6 +373,10 @@ read_sub_hdr_64(kdump_ctx *ctx, int32_t header_version)
 	if (header_version >= 4)
 		ret = read_notes(ctx, dump64toh(ctx, subhdr.offset_note),
 				 dump64toh(ctx, subhdr.size_note));
+	else if (header_version >= 3)
+		ret = read_vmcoreinfo(ctx,
+				      dump64toh(ctx, subhdr.offset_vmcoreinfo),
+				      dump64toh(ctx, subhdr.size_vmcoreinfo));
 
 	return ret;
 }

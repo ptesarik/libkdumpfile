@@ -130,8 +130,8 @@ process_xc_xen_note(kdump_ctx *ctx, uint32_t type,
 	return kdump_ok;
 }
 
-static kdump_status
-process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
+kdump_status
+kdump_process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
 {
 	kdump_status ret;
 	const char *val;
@@ -192,7 +192,7 @@ kdump_process_notes(kdump_ctx *ctx, void *data, size_t size)
 		else if (note_equal(".note.Xen", name, namesz))
 			ret = process_xc_xen_note(ctx, type, desc, descsz);
 		else if (note_equal("VMCOREINFO", name, namesz))
-			ret = process_vmcoreinfo(ctx, desc, descsz);
+			ret = kdump_process_vmcoreinfo(ctx, desc, descsz);
 		else if (note_equal("VMCOREINFO_XEN", name, namesz))
 			ret = kdump_store_vmcoreinfo(&ctx->vmcoreinfo_xen,
 						     desc, descsz);
