@@ -32,31 +32,54 @@
 
 #include "kdumpfile-priv.h"
 
+typedef kdump_status (*read_page_fn)(kdump_ctx *, kdump_paddr_t);
+
 static kdump_status
-read_page(kdump_ctx *ctx, kdump_paddr_t pfn)
+read_page(kdump_ctx *ctx, kdump_paddr_t pfn, read_page_fn fn)
 {
 	if (pfn == ctx->last_pfn)
 		return kdump_ok;
 	ctx->last_pfn = pfn;
-	return ctx->ops->read_page(ctx, pfn);
+	return fn(ctx, pfn);
+}
+
+static kdump_status
+setup_readfn(kdump_ctx *ctx, long flags, read_page_fn *fn)
+{
+	if (!ctx->ops)
+		return kdump_unsupported;
+
+	if (flags & KDUMP_PHYSADDR)
+		*fn = ctx->ops->read_page;
+	else if (flags & KDUMP_XENMACHADDR)
+		*fn = ctx->ops->read_xenmach_page;
+	else
+		return kdump_unsupported;
+
+	if (!*fn)
+		return kdump_unsupported;
+
+	return kdump_ok;
 }
 
 ssize_t
 kdump_read(kdump_ctx *ctx, kdump_paddr_t paddr,
-	   unsigned char *buffer, size_t length)
+	   unsigned char *buffer, size_t length,
+	   long flags)
 {
+	read_page_fn readfn;
 	size_t remain;
 	kdump_status ret;
 
-	if (!ctx->ops || !ctx->ops->read_page)
-		return kdump_unsupported;
+	ret = setup_readfn(ctx, flags, &readfn);
+	if (ret != kdump_ok)
+		return ret;
 
-	ret = kdump_ok;
 	remain = length;
 	while (remain) {
 		size_t off, partlen;
 
-		ret = read_page(ctx, paddr / ctx->page_size);
+		ret = read_page(ctx, paddr / ctx->page_size, readfn);
 		if (ret != kdump_ok)
 			break;
 

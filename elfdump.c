@@ -834,10 +834,12 @@ const struct kdump_ops kdump_elfdump_ops = {
 
 static const struct kdump_ops xen_dom0_ops = {
 	.read_page = elf_read_xen_dom0,
+	.read_xenmach_page = elf_read_page,
 	.free = elf_free,
 };
 
 static const struct kdump_ops xen_domU_ops = {
 	.read_page = elf_read_xen_domU,
+	.read_xenmach_page = elf_read_page,
 	.free = elf_free,
 };

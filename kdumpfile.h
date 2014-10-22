@@ -50,8 +50,12 @@ typedef enum _tag_kdump_status {
 kdump_status kdump_fdopen(kdump_ctx **pctx, int fd);
 void kdump_free(kdump_ctx *ctx);
 
+#define KDUMP_PHYSADDR		(1UL<<0)
+#define KDUMP_XENMACHADDR	(1UL<<1)
+
 ssize_t kdump_read(kdump_ctx *ctx, kdump_paddr_t paddr,
-		   unsigned char *buffer, size_t length);
+		   unsigned char *buffer, size_t length,
+		   long flags);
 
 const char *kdump_format(kdump_ctx *ctx);
 size_t kdump_pagesize(kdump_ctx *ctx);

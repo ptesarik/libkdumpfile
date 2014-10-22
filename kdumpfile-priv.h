@@ -84,6 +84,15 @@ struct kdump_ops {
 	 */
 	kdump_status (*read_page)(kdump_ctx *, kdump_paddr_t);
 
+	/* Read a page from the dump file using Xen machine addresses.
+	 * Input:
+	 *   ctx->page       pointer to a page-sized buffer
+	 * Return:
+	 *   kdump_ok        buffer is filled with page data
+	 *   kdump_nodata    data for the given page is not present
+	 */
+	kdump_status (*read_xenmach_page)(kdump_ctx *, kdump_paddr_t);
+
 	/* Free all private data.
 	 */
 	void (*free)(kdump_ctx *);
