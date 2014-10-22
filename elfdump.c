@@ -375,19 +375,17 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 
 	ret = init_segments(edp, dump16toh(ctx, ehdr->e_phnum));
 	if (ret != kdump_ok)
-		goto fail;
+		return ret;
 
 	ret = init_sections(edp, dump16toh(ctx, ehdr->e_shnum));
 	if (ret != kdump_ok)
-		goto fail;
-
-	ret = kdump_syserr;
+		return ret;
 
 	if (lseek(ctx->fd, dump32toh(ctx, ehdr->e_phoff), SEEK_SET) < 0)
-		goto fail;
+		return kdump_syserr;
 	for (i = 0; i < dump16toh(ctx, ehdr->e_phnum); ++i) {
 		if (read(ctx->fd, &prog, sizeof prog) != sizeof prog)
-			goto fail;
+			return kdump_syserr;
 		store_phdr(edp,
 			   dump32toh(ctx, prog.p_type),
 			   dump32toh(ctx, prog.p_offset),
@@ -396,10 +394,10 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 	}
 
 	if (lseek(ctx->fd, dump32toh(ctx, ehdr->e_shoff), SEEK_SET) < 0)
-		goto fail;
+		return kdump_syserr;
 	for (i = 0; i < dump16toh(ctx, ehdr->e_shnum); ++i) {
 		if (read(ctx->fd, &sect, sizeof sect) != sizeof sect)
-			goto fail;
+			return kdump_syserr;
 		store_sect(edp,
 			   dump32toh(ctx, sect.sh_offset),
 			   dump32toh(ctx, sect.sh_size),
@@ -408,12 +406,8 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 
 	ret = init_strtab(ctx, dump16toh(ctx, ehdr->e_shstrndx));
 	if (ret != kdump_ok)
-		goto fail;
+		return ret;
 
-	return kdump_ok;
-
- fail:
-	cleanup(edp);
 	return ret;
 }
 
@@ -430,19 +424,18 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 
 	ret = init_segments(edp, dump16toh(ctx, ehdr->e_phnum));
 	if (ret != kdump_ok)
-		goto fail;
+		return ret;
 
 	ret = init_sections(edp, dump16toh(ctx, ehdr->e_shnum));
 	if (ret != kdump_ok)
-		goto fail;
+		return ret;
 
-	ret = kdump_syserr;
 
 	if (lseek(ctx->fd, dump64toh(ctx, ehdr->e_phoff), SEEK_SET) < 0)
-		goto fail;
+		return kdump_syserr;
 	for (i = 0; i < dump16toh(ctx, ehdr->e_phnum); ++i) {
 		if (read(ctx->fd, &prog, sizeof prog) != sizeof prog)
-			goto fail;
+			return kdump_syserr;
 		store_phdr(edp,
 			   dump32toh(ctx, prog.p_type),
 			   dump64toh(ctx, prog.p_offset),
@@ -451,10 +444,10 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 	}
 
 	if (lseek(ctx->fd, dump32toh(ctx, ehdr->e_shoff), SEEK_SET) < 0)
-		goto fail;
+		return kdump_syserr;
 	for (i = 0; i < dump16toh(ctx, ehdr->e_shnum); ++i) {
 		if (read(ctx->fd, &sect, sizeof sect) != sizeof sect)
-			goto fail;
+			return kdump_syserr;
 		store_sect(edp,
 			   dump64toh(ctx, sect.sh_offset),
 			   dump64toh(ctx, sect.sh_size),
@@ -463,12 +456,8 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 
 	ret = init_strtab(ctx, dump16toh(ctx, ehdr->e_shstrndx));
 	if (ret != kdump_ok)
-		goto fail;
+		return ret;
 
-	return kdump_ok;
-
- fail:
-	cleanup(edp);
 	return ret;
 }
 
@@ -713,14 +702,12 @@ open_common(kdump_ctx *ctx)
 
 	edp->ptr_size = kdump_arch_ptr_size(ctx->arch);
 
-	ret = kdump_syserr;
-
 	/* read notes */
 	for (i = 0; i < edp->num_note_segments; ++i) {
 		struct load_segment *seg = edp->note_segments + i;
 		Elf32_Nhdr *hdr = read_elf_seg(ctx, seg);
 		if (!hdr)
-			goto fail;
+			return kdump_syserr;
 		process_notes(ctx, hdr, seg->phys_end - seg->phys_start);
 		free(hdr);
 	}
@@ -743,13 +730,13 @@ open_common(kdump_ctx *ctx)
 		else if (!strcmp(name, ".xen_p2m")) {
 			edp->xen_map = read_elf_sect(ctx, sect);
 			if (!edp->xen_map)
-				goto fail;
+				return kdump_syserr;
 			edp->xen_map_type = xen_map_p2m;
 			edp->xen_map_size = sect->size /sizeof(struct xen_p2m);
 		} else if (!strcmp(name, ".xen_pfn")) {
 			edp->xen_map = read_elf_sect(ctx, sect);
 			if (!edp->xen_map)
-				goto fail;
+				return kdump_syserr;
 			edp->xen_map_type = xen_map_pfn;
 			edp->xen_map_size = sect->size / sizeof(uint64_t);
 		}
@@ -758,23 +745,17 @@ open_common(kdump_ctx *ctx)
 	if (edp->xen_p2m_mfn) {
 		ret = initialize_xen_map(ctx);
 		if (ret != kdump_ok)
-			goto fail;
+			return ret;
 	}
 
 	if (edp->xen_pages_offset) {
-		if (!edp->xen_map) {
-			ret = kdump_unsupported;
-			goto fail;
-		}
+		if (!edp->xen_map)
+			return kdump_unsupported;
 		ctx->flags |= DIF_XEN;
 		ctx->ops = &xen_domU_ops;
 	}
 
 	return kdump_ok;
-
- fail:
-	cleanup(edp);
-	return ret;
 }
 
 static kdump_status
@@ -806,20 +787,24 @@ elf_probe(kdump_ctx *ctx)
 	    (dump32toh(ctx, elf32->e_version) == EV_CURRENT)) {
 		ctx->format = "ELF dump, 32-bit";
 		ret = init_elf32(ctx, elf32);
-		if (ret != kdump_ok)
-			return ret;
-		return open_common(ctx);
+		if (ret == kdump_ok)
+			ret = open_common(ctx);
 	} else if ((elf64->e_ident[EI_CLASS] == ELFCLASS64) &&
 		   (dump16toh(ctx, elf64->e_type) == ET_CORE) &&
 		   (dump32toh(ctx, elf64->e_version) == EV_CURRENT)) {
 		ctx->format = "ELF dump, 64-bit";
 		ret = init_elf64(ctx, elf64);
-		if (ret != kdump_ok)
-			return ret;
-		return open_common(ctx);
+		if (ret == kdump_ok)
+			ret = open_common(ctx);
+	} else
+		return kdump_unsupported;
+
+	if (ret != kdump_ok) {
+		cleanup(edp);
+		free(edp);
 	}
 
-	return kdump_unsupported;
+	return ret;
 }
 
 static void
