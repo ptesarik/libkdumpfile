@@ -56,6 +56,8 @@ void kdump_free(kdump_ctx *ctx);
 ssize_t kdump_read(kdump_ctx *ctx, kdump_paddr_t paddr,
 		   unsigned char *buffer, size_t length,
 		   long flags);
+kdump_status kdump_read_string(kdump_ctx *ctx, kdump_paddr_t paddr,
+			       char **pstr, long flags);
 
 const char *kdump_format(kdump_ctx *ctx);
 size_t kdump_pagesize(kdump_ctx *ctx);

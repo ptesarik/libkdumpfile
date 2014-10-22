@@ -29,6 +29,7 @@
 #define _GNU_SOURCE
 
 #include <string.h>
+#include <stdlib.h>
 
 #include "kdumpfile-priv.h"
 
@@ -97,4 +98,52 @@ kdump_read(kdump_ctx *ctx, kdump_paddr_t paddr,
 		return -1;
 
 	return length - remain;
+}
+
+kdump_status
+kdump_read_string(kdump_ctx *ctx, kdump_paddr_t paddr,
+		  char **pstr, long flags)
+{
+	read_page_fn readfn;
+	char *str = NULL, *newstr, *endp;
+	size_t length = 0, newlength;
+	kdump_status ret;
+
+	ret = setup_readfn(ctx, flags, &readfn);
+	if (ret != kdump_ok)
+		return ret;
+
+	do {
+		size_t off, partlen;
+
+		ret = read_page(ctx, paddr / ctx->page_size, readfn);
+		if (ret != kdump_ok)
+			break;
+
+		off = paddr % ctx->page_size;
+		partlen = ctx->page_size - off;
+		endp = memchr(ctx->page + off, 0, partlen);
+		if (endp)
+			partlen = endp - ((char*)ctx->page + off);
+
+		newlength = length + partlen;
+		newstr = realloc(str, newlength + 1);
+		if (!newstr) {
+			if (str)
+				free(str);
+			return kdump_syserr;
+		}
+		memcpy(newstr + length, ctx->page + off, partlen);
+		length = newlength;
+		str = newstr;
+
+		paddr += partlen;
+	} while (!endp);
+
+	if (ret == kdump_ok) {
+		str[length] = 0;
+		*pstr = str;
+	}
+
+	return ret;
 }
