@@ -34,6 +34,9 @@
 
 #include "kdumpfile-priv.h"
 
+static kdump_status kdump_open_known(kdump_ctx *pctx);
+
+
 static kdump_status
 kvm_probe(kdump_ctx *ctx)
 {
@@ -210,20 +213,11 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 	for (i = 0; i < NFORMATS; ++i) {
 		ctx->ops = formats[i];
 		ret = ctx->ops->probe(ctx);
-		if (ret == kdump_ok)
-			break;
+		if (ret == kdump_ok) {
+			*pctx = ctx;
+			return kdump_open_known(ctx);
+		}
 	}
-	if (ret != kdump_ok)
-		goto err_ctx;
-
-	ctx->page = malloc(ctx->page_size);
-	if (!ctx->page) {
-		ret = kdump_syserr;
-		goto err_ctx;
-	}
-
-	*pctx = ctx;
-	return kdump_ok;
 
   err_ctx:
 	kdump_free(ctx);
@@ -231,10 +225,22 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 	return ret;
 }
 
+static kdump_status
+kdump_open_known(kdump_ctx *ctx)
+{
+	ctx->page = malloc(ctx->page_size);
+	if (!ctx->page) {
+		kdump_free(ctx);
+		return kdump_syserr;
+	}
+
+	return kdump_ok;
+}
+
 void
 kdump_free(kdump_ctx *ctx)
 {
-	if (ctx->ops->free)
+	if (ctx->ops && ctx->ops->free)
 		ctx->ops->free(ctx);
 	if (ctx->page)
 		free(ctx->page);
