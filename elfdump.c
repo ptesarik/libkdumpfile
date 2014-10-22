@@ -610,9 +610,11 @@ process_notes(kdump_ctx *ctx, Elf32_Nhdr *hdr, size_t size)
 			ret = process_xc_xen_note(ctx, type, desc, descsz);
 		else if (note_equal("VMCOREINFO", name, namesz)) {
 			process_vmcoreinfo(ctx, desc, descsz);
-			ret = kdump_store_vmcoreinfo(ctx, desc, descsz);
+			ret = kdump_store_vmcoreinfo(&ctx->vmcoreinfo,
+						     desc, descsz);
 		} else if (note_equal("VMCOREINFO_XEN", name, namesz))
-			ret = kdump_store_vmcoreinfo_xen(ctx, desc, descsz);
+			ret = kdump_store_vmcoreinfo(&ctx->vmcoreinfo_xen,
+						     desc, descsz);
 	}
 
 	return ret;

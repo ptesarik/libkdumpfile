@@ -109,6 +109,16 @@ struct new_utsname {
 	char domainname[NEW_UTS_LEN + 1];
 };
 
+struct vmcoreinfo_row {
+	const char *key, *val;
+};
+
+struct vmcoreinfo {
+	char *raw;		/* raw content */
+	unsigned n;		/* number of rows */
+	struct vmcoreinfo_row row[]; /* parsed rows */
+};
+
 struct _tag_kdump_ctx {
 	int fd;			/* dump file descriptor */
 	const char *format;	/* file format (descriptive name) */
@@ -127,8 +137,8 @@ struct _tag_kdump_ctx {
 
 	struct new_utsname utsname;
 
-	char *vmcoreinfo;
-	char *vmcoreinfo_xen;
+	struct vmcoreinfo *vmcoreinfo;
+	struct vmcoreinfo *vmcoreinfo_xen;
 
 	kdump_xen_version_t xen_ver; /* Xen hypervisor version */
 	kdump_paddr_t xen_extra_ver;
@@ -172,8 +182,8 @@ int kdump_uts_looks_sane(struct new_utsname *uts);
 int kdump_uncompress_rle(unsigned char *dst, size_t *pdstlen,
 			 const unsigned char *src, size_t srclen);
 
-kdump_status kdump_store_vmcoreinfo(kdump_ctx *ctx, void *info, size_t len);
-kdump_status kdump_store_vmcoreinfo_xen(kdump_ctx *ctx, void *info, size_t len);
+kdump_status kdump_store_vmcoreinfo(struct vmcoreinfo **pinfo,
+				    void *data, size_t len);
 
 kdump_status kdump_read_xenver(kdump_ctx *ctx);
 

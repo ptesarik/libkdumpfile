@@ -119,28 +119,72 @@ kdump_uncompress_rle(unsigned char *dst, size_t *pdstlen,
 	return 0;
 }
 
-kdump_status
-kdump_store_vmcoreinfo(kdump_ctx *ctx, void *info, size_t len)
+static unsigned
+count_lines(char *buf, size_t len)
 {
-	ctx->vmcoreinfo = malloc(len + 1);
-	if (!ctx->vmcoreinfo)
-		return kdump_syserr;
+	size_t remain;
+	unsigned ret = 0;
 
-	memcpy(ctx->vmcoreinfo, info, len);
-	ctx->vmcoreinfo[len] = '\0';
+	for (remain = len; *buf && remain > 0; ++buf, --remain)
+		if (*buf == '\n')
+			++ret;
 
-	return kdump_ok;
+	/* Possibly incomplete last line */
+	if (len && buf[-1] != '\n')
+		++ret;
+	return ret;
 }
 
 kdump_status
-kdump_store_vmcoreinfo_xen(kdump_ctx *ctx, void *info, size_t len)
+kdump_store_vmcoreinfo(struct vmcoreinfo **pinfo, void *data, size_t len)
 {
-	ctx->vmcoreinfo_xen = malloc(len + 1);
-	if (!ctx->vmcoreinfo_xen)
+	struct vmcoreinfo *info;
+	struct vmcoreinfo_row *row;
+	char *p, *q, *q0;
+	unsigned n;
+
+	n = count_lines(data, len);
+	info = malloc(sizeof(struct vmcoreinfo) +
+		      n * sizeof(struct vmcoreinfo_row) +
+		      2 * (len + 1));
+	if (!info)
 		return kdump_syserr;
 
-	memcpy(ctx->vmcoreinfo_xen, info, len);
-	ctx->vmcoreinfo_xen[len] = '\0';
+	info->raw = (char*)info->row + n * sizeof(struct vmcoreinfo_row);
+	memcpy(info->raw, data, len);
+	info->raw[len] = '\0';
 
+	p = info->raw;
+	q = p + len + 1;
+	row = info->row;
+	info->n = 0;
+	while (*p) {
+		char *endp, *eq;
+
+		endp = strchr(p, '\n');
+		if (!endp)
+			endp = p + strlen(p);
+
+		memcpy(q, p, endp - p);
+
+		row->key = q;
+
+		eq = memchr(q, '=', endp - p);
+		if (eq) {
+			*eq = 0;
+			row->val = eq + 1;
+		} else
+			row->val = NULL;
+		++row;
+		++info->n;
+
+		q += endp - p;
+		*q++ = '\0';
+		p = endp;
+		if (*p)
+			++p;
+	}
+
+	*pinfo = info;
 	return kdump_ok;
 }

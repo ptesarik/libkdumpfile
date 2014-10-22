@@ -83,13 +83,13 @@ kdump_domainname(kdump_ctx *ctx)
 const char *
 kdump_vmcoreinfo(kdump_ctx *ctx)
 {
-	return ctx->vmcoreinfo;
+	return ctx->vmcoreinfo ? ctx->vmcoreinfo->raw : NULL;
 }
 
 const char *
 kdump_vmcoreinfo_xen(kdump_ctx *ctx)
 {
-	return ctx->vmcoreinfo_xen;
+	return ctx->vmcoreinfo_xen ? ctx->vmcoreinfo_xen->raw : NULL;
 }
 
 void
