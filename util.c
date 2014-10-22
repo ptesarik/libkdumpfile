@@ -38,6 +38,42 @@ kdump_format(kdump_ctx *ctx)
 	return ctx->format;
 }
 
+const char *
+kdump_sysname(kdump_ctx *ctx)
+{
+	return ctx->utsname.sysname;
+}
+
+const char *
+kdump_nodename(kdump_ctx *ctx)
+{
+	return ctx->utsname.nodename;
+}
+
+const char *
+kdump_release(kdump_ctx *ctx)
+{
+	return ctx->utsname.release;
+}
+
+const char *
+kdump_version(kdump_ctx *ctx)
+{
+	return ctx->utsname.version;
+}
+
+const char *
+kdump_machine(kdump_ctx *ctx)
+{
+	return ctx->utsname.machine;
+}
+
+const char *
+kdump_domainname(kdump_ctx *ctx)
+{
+	return ctx->utsname.domainname;
+}
+
 const size_t
 kdump_arch_ptr_size(enum kdump_arch arch)
 {

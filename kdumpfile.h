@@ -55,6 +55,13 @@ ssize_t kdump_read(kdump_ctx *ctx, kdump_paddr_t paddr,
 
 const char *kdump_format(kdump_ctx *ctx);
 
+const char *kdump_sysname(kdump_ctx *ctx);
+const char *kdump_nodename(kdump_ctx *ctx);
+const char *kdump_release(kdump_ctx *ctx);
+const char *kdump_version(kdump_ctx *ctx);
+const char *kdump_machine(kdump_ctx *ctx);
+const char *kdump_domainname(kdump_ctx *ctx);
+
 #ifdef  __cplusplus
 }
 #endif
