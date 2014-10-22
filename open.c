@@ -213,6 +213,7 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 		goto err_ctx;
 	}
 
+	*pctx = ctx;
 	return kdump_ok;
 
   err_ctx:
