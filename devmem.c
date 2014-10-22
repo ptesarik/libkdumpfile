@@ -43,8 +43,8 @@ devmem_read_page(kdump_ctx *ctx, kdump_paddr_t pfn)
 	return kdump_ok;
 }
 
-kdump_status
-kdump_open_devmem(kdump_ctx *ctx)
+static kdump_status
+devmem_probe(kdump_ctx *ctx)
 {
 	struct stat st;
 
@@ -58,7 +58,11 @@ kdump_open_devmem(kdump_ctx *ctx)
 
 	ctx->format = "live source";
 	ctx->page_size = sysconf(_SC_PAGESIZE);
-	ctx->read_page = devmem_read_page;
 
 	return kdump_ok;
 }
+
+const struct kdump_ops kdump_devmem_ops = {
+	.probe = devmem_probe,
+	.read_page = devmem_read_page,
+};

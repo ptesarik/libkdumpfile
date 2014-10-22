@@ -34,114 +34,134 @@
 
 #include "kdumpfile-priv.h"
 
-typedef kdump_status (*open_fn)(kdump_ctx *ctx);
-
-struct crash_file {
-	const char *magic;
-	size_t magicsz;
-	open_fn handler;
-};
-
-static const char magic_elfdump[] =
-	{ '\177', 'E', 'L', 'F' };
-static const char magic_kvm[] =
-	{ 'Q', 'E', 'V', 'M' };
-static const char magic_libvirt[] =
-	{ 'L', 'i', 'b', 'v' };
-static const char magic_xc_save[] =
-	{ 'L', 'i', 'n', 'u', 'x', 'G', 'u', 'e',
-	  's', 't', 'R', 'e', 'c', 'o', 'r', 'd' };
-static const char magic_xc_core[] =
-	{ 0xed, 0xeb, 0x0f, 0xf0 };
-static const char magic_xc_core_hvm[] =
-	{ 0xee, 0xeb, 0x0f, 0xf0 };
-static const char magic_diskdump[] =
-	{ 'D', 'I', 'S', 'K', 'D', 'U', 'M', 'P' };
-static const char magic_kdump[] =
-	{ 'K', 'D', 'U', 'M', 'P', ' ', ' ', ' ' };
-static const char magic_lkcd_le[] =
-	{ 0xed, 0x23, 0x8f, 0x61, 0x73, 0x01, 0x19, 0xa8 };
-static const char magic_lkcd_be[] =
-	{ 0xa8, 0x19, 0x01, 0x73, 0x61, 0x8f, 0x23, 0xed };
-static const char magic_mclxcd[] =
-	{ 0xdd, 0xcc, 0x8b, 0x9a };
-static const char magic_s390[] =
-	{ 0xa8, 0x19, 0x01, 0x73, 0x61, 0x8f, 0x23, 0xfd };
-static const char magic_devmem[0];
-
-
 static kdump_status
-kdump_open_kvm(kdump_ctx *ctx)
+kvm_probe(kdump_ctx *ctx)
 {
+	static const char magic[] =
+		{ 'Q', 'E', 'V', 'M' };
+
+	if (memcmp(ctx->buffer, magic, sizeof magic))
+		return kdump_unsupported;
+
 	/* KVM dump not yet implemented */
 	ctx->format = "KVM";
 	return kdump_unsupported;
 }
 
+const struct kdump_ops kdump_kvm_ops = {
+	.probe = kvm_probe,
+};
+
 static kdump_status
-kdump_open_libvirt(kdump_ctx *ctx)
+libvirt_probe(kdump_ctx *ctx)
 {
+	static const char magic[] =
+		{ 'L', 'i', 'b', 'v' };
+
+	if (memcmp(ctx->buffer, magic, sizeof magic))
+		return kdump_unsupported;
+
 	/* Libvirt dump not yet implemented */
 	ctx->format = "Libvirt";
 	return kdump_unsupported;
 }
 
+const struct kdump_ops kdump_libvirt_ops = {
+	.probe = libvirt_probe,
+};
+
 static kdump_status
-kdump_open_xc_save(kdump_ctx *ctx)
+xc_save_probe(kdump_ctx *ctx)
 {
+	static const char magic[] =
+		{ 'L', 'i', 'n', 'u', 'x', 'G', 'u', 'e',
+		  's', 't', 'R', 'e', 'c', 'o', 'r', 'd' };
+
+	if (memcmp(ctx->buffer, magic, sizeof magic))
+		return kdump_unsupported;
+
 	/* Xen xc_save not yet implemented */
 	ctx->format = "Xen xc_save";
 	return kdump_unsupported;
 }
 
+const struct kdump_ops kdump_xc_save_ops = {
+	.probe = xc_save_probe,
+};
+
 static kdump_status
-kdump_open_xc_core(kdump_ctx *ctx)
+xc_core_probe(kdump_ctx *ctx)
 {
+	static const char magic[] =
+		{ 0xeb, 0x0f, 0xf0 };
+	unsigned char firstbyte;
+
+	if (memcmp(ctx->buffer + 1, magic, sizeof magic))
+		return kdump_unsupported;
+
+	firstbyte = *(unsigned char*)ctx->buffer;
+	if (firstbyte == 0xed)
+		ctx->format = "Xen xc_core";
+	else if (firstbyte = 0xee)
+		ctx->format = "Xen xc_core hvm";
+	else
+		return kdump_unsupported;
+
 	/* Xen xc_core not yet implemented */
-	ctx->format = "Xen xc_core";
 	return kdump_unsupported;
 }
 
-static kdump_status
-kdump_open_xc_core_hvm(kdump_ctx *ctx)
-{
-	/* Xen xc_core HVM not yet implemented */
-	ctx->format = "Xen xc_core hvm";
-	return kdump_unsupported;
-}
+const struct kdump_ops kdump_xc_core_ops = {
+	.probe = xc_core_probe,
+};
 
 static kdump_status
-kdump_open_mclxcd(kdump_ctx *ctx)
+mclxcd_probe(kdump_ctx *ctx)
 {
+	static const char magic[] =
+		{ 0xdd, 0xcc, 0x8b, 0x9a };
+
+	if (memcmp(ctx->buffer, magic, sizeof magic))
+		return kdump_unsupported;
+
 	/* MCLXCD dump not yet implemented */
 	ctx->format = "MCLXCD";
 	return kdump_unsupported;
 }
 
+const struct kdump_ops kdump_mclxcd_ops = {
+	.probe = mclxcd_probe,
+};
+
 static kdump_status
-kdump_open_s390(kdump_ctx *ctx)
+s390_probe(kdump_ctx *ctx)
 {
+	static const char magic[] =
+		{ 0xa8, 0x19, 0x01, 0x73, 0x61, 0x8f, 0x23, 0xfd };
+
+	if (memcmp(ctx->buffer, magic, sizeof magic))
+		return kdump_unsupported;
+
 	/* S/390 dump not yet implemented */
 	ctx->format = "S390";
 	return kdump_unsupported;
 }
 
-#define FORMAT(x)	\
-	{ magic_ ## x, sizeof(magic_ ## x), kdump_open_ ## x }
-static const struct crash_file formats[] = {
-	FORMAT(elfdump),
-	FORMAT(kvm),
-	FORMAT(libvirt),
-	FORMAT(xc_save),
-	FORMAT(xc_core),
-	FORMAT(xc_core_hvm),
-	FORMAT(diskdump),
-	FORMAT(kdump),
-	FORMAT(lkcd_le),
-	FORMAT(lkcd_be),
-	FORMAT(mclxcd),
-	FORMAT(s390),
-	FORMAT(devmem),
+const struct kdump_ops kdump_s390_ops = {
+	.probe = s390_probe,
+};
+
+static const struct kdump_ops *formats[] = {
+	&kdump_elfdump_ops,
+	&kdump_kvm_ops,
+	&kdump_libvirt_ops,
+	&kdump_xc_save_ops,
+	&kdump_xc_core_ops,
+	&kdump_diskdump_ops,
+	&kdump_lkcd_ops,
+	&kdump_mclxcd_ops,
+	&kdump_s390_ops,
+	&kdump_devmem_ops
 };
 
 #define NFORMATS	(sizeof formats / sizeof formats[0])
@@ -188,11 +208,8 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 		goto err_ctx;
 
 	for (i = 0; i < NFORMATS; ++i) {
-		ret = kdump_unsupported;
-		if (memcmp(ctx->buffer, formats[i].magic, formats[i].magicsz))
-			continue;
-
-		ret = formats[i].handler(ctx);
+		ctx->ops = formats[i];
+		ret = ctx->ops->probe(ctx);
 		if (ret == kdump_ok)
 			break;
 	}

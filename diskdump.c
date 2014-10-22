@@ -290,7 +290,6 @@ open_common(kdump_ctx *ctx)
 	if (!ddp)
 		return kdump_syserr;
 
-	ctx->read_page = diskdump_read_page;
 	ctx->fmtdata = ddp;
 
 	if (kdump_uts_looks_sane(&dh32->utsname))
@@ -320,16 +319,25 @@ open_common(kdump_ctx *ctx)
 	return kdump_ok;
 }
 
-kdump_status
-kdump_open_diskdump(kdump_ctx *ctx)
+static kdump_status
+diskdump_probe(kdump_ctx *ctx)
 {
-	ctx->format = "diskdump";
+	static const char magic_diskdump[] =
+		{ 'D', 'I', 'S', 'K', 'D', 'U', 'M', 'P' };
+	static const char magic_kdump[] =
+		{ 'K', 'D', 'U', 'M', 'P', ' ', ' ', ' ' };
+
+	if (!memcmp(ctx->buffer, magic_diskdump, sizeof magic_diskdump))
+		ctx->format = "diskdump";
+	else if (!memcmp(ctx->buffer, magic_kdump, sizeof magic_kdump))
+		ctx->format = "compressed kdump";
+	else
+		return kdump_unsupported;
+
 	return open_common(ctx);
 }
 
-kdump_status
-kdump_open_kdump(kdump_ctx *ctx)
-{
-	ctx->format = "compressed kdump";
-	return open_common(ctx);
-}
+const struct kdump_ops kdump_diskdump_ops = {
+	.probe = diskdump_probe,
+	.read_page = diskdump_read_page,
+};

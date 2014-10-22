@@ -38,7 +38,7 @@ read_page(kdump_ctx *ctx, kdump_paddr_t pfn)
 	if (pfn == ctx->last_pfn)
 		return kdump_ok;
 	ctx->last_pfn = pfn;
-	return ctx->read_page(ctx, pfn);
+	return ctx->ops->read_page(ctx, pfn);
 }
 
 ssize_t
@@ -48,7 +48,7 @@ kdump_read(kdump_ctx *ctx, kdump_paddr_t paddr,
 	size_t remain;
 	kdump_status ret;
 
-	if (!ctx->read_page)
+	if (!ctx->ops || !ctx->ops->read_page)
 		return kdump_unsupported;
 
 	ret = kdump_ok;

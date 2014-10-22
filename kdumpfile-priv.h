@@ -55,7 +55,11 @@ enum kdump_arch {
 	ARCH_X86_64,
 };
 
-typedef kdump_status (*readpage_fn)(kdump_ctx *, kdump_paddr_t);
+struct kdump_ops {
+	kdump_status (*probe)(kdump_ctx *);
+	kdump_status (*read_page)(kdump_ctx *, kdump_paddr_t);
+	void (*free)(kdump_ctx *);
+};
 
 /* provide our own definition of new_utsname */
 #define NEW_UTS_LEN 64
@@ -76,10 +80,11 @@ struct _tag_kdump_ctx {
 	enum kdump_arch arch;	/* architecture (if known) */
 	int endian;		/* __LITTLE_ENDIAN or __BIG_ENDIAN */
 
+	const struct kdump_ops *ops;
+
 	void *buffer;		/* temporary buffer */
 	void *page;		/* page data buffer */
 	size_t page_size;	/* target page size */
-	readpage_fn read_page;	/* method to read dump pages */
 	kdump_paddr_t last_pfn;	/* last read PFN */
 	kdump_paddr_t max_pfn;	/* max PFN for read_page */
 
@@ -91,19 +96,16 @@ struct _tag_kdump_ctx {
 /* kdump_ctx flags */
 #define DIF_XEN		(1UL<<1)
 
-/* LKCD */
-kdump_status kdump_open_lkcd_le(kdump_ctx *ctx);
-kdump_status kdump_open_lkcd_be(kdump_ctx *ctx);
-
-/* diskdump/compressed kdump */
-kdump_status kdump_open_diskdump(kdump_ctx *ctx);
-kdump_status kdump_open_kdump(kdump_ctx *ctx);
-
-/* ELF dumps */
-kdump_status kdump_open_elfdump(kdump_ctx *ctx);
-
-/* live sources */
-kdump_status kdump_open_devmem(kdump_ctx *ctx);
+const struct kdump_ops kdump_elfdump_ops;
+const struct kdump_ops kdump_kvm_ops;
+const struct kdump_ops kdump_libvirt_ops;
+const struct kdump_ops kdump_xc_save_ops;
+const struct kdump_ops kdump_xc_core_ops;
+const struct kdump_ops kdump_diskdump_ops;
+const struct kdump_ops kdump_lkcd_ops;
+const struct kdump_ops kdump_mclxcd_ops;
+const struct kdump_ops kdump_s390_ops;
+const struct kdump_ops kdump_devmem_ops;
 
 /* struct timeval has a different layout on 32-bit and 64-bit */
 struct timeval_32 {

@@ -574,7 +574,6 @@ open_common(kdump_ctx *ctx)
 	lkcdp->data_offset = LKCD_OFFSET_TO_FIRST_PAGE;
 
 	ctx->format = lkcdp->format;
-	ctx->read_page = lkcd_read_page;
 	ctx->page_size = dump32toh(ctx, dh->dh_page_size);
 	ctx->max_pfn = dump64toh(ctx, dh->dh_memory_size);
 	ctx->fmtdata = lkcdp;
@@ -618,16 +617,25 @@ open_common(kdump_ctx *ctx)
 	return ret;
 }
 
-kdump_status
-kdump_open_lkcd_le(kdump_ctx *ctx)
+static kdump_status
+lkcd_probe(kdump_ctx *ctx)
 {
-	ctx->endian = __LITTLE_ENDIAN;
+	static const char magic_le[] =
+		{ 0xed, 0x23, 0x8f, 0x61, 0x73, 0x01, 0x19, 0xa8 };
+	static const char magic_be[] =
+		{ 0xa8, 0x19, 0x01, 0x73, 0x61, 0x8f, 0x23, 0xed };
+
+	if (!memcmp(ctx->buffer, magic_le, sizeof magic_le))
+		ctx->endian = __LITTLE_ENDIAN;
+	else if (!memcmp(ctx->buffer, magic_be, sizeof magic_be))
+		ctx->endian = __BIG_ENDIAN;
+	else
+		return kdump_unsupported;
+
 	return open_common(ctx);
 }
 
-kdump_status
-kdump_open_lkcd_be(kdump_ctx *ctx)
-{
-	ctx->endian = __BIG_ENDIAN;
-	return open_common(ctx);
-}
+const struct kdump_ops kdump_lkcd_ops = {
+	.probe = lkcd_probe,
+	.read_page = lkcd_read_page,
+};

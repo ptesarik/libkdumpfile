@@ -47,6 +47,9 @@
 #define XEN_ELFNOTE_DUMPCORE_XEN_VERSION     0x2000002
 #define XEN_ELFNOTE_DUMPCORE_FORMAT_VERSION  0x2000003
 
+static const struct kdump_ops xen_dom0_ops;
+static const struct kdump_ops xen_domU_ops;
+
 struct xen_p2m {
 	uint64_t pfn;
 	uint64_t gmfn; 
@@ -689,7 +692,7 @@ initialize_xen_map(kdump_ctx *ctx)
 		: initialize_xen_map32(ctx, dir);
 
 	if (ret == kdump_ok)
-		ctx->read_page = elf_read_xen_dom0;
+		ctx->ops = &xen_dom0_ops;
 
 	free(ctx->page);
  free_dir:
@@ -764,7 +767,7 @@ open_common(kdump_ctx *ctx)
 			goto fail;
 		}
 		ctx->flags |= DIF_XEN;
-		ctx->read_page = elf_read_xen_domU;
+		ctx->ops = &xen_domU_ops;
 	}
 
 	return kdump_ok;
@@ -774,8 +777,8 @@ open_common(kdump_ctx *ctx)
 	return ret;
 }
 
-kdump_status
-kdump_open_elfdump(kdump_ctx *ctx)
+static kdump_status
+elf_probe(kdump_ctx *ctx)
 {
 	unsigned char *eheader = ctx->buffer;
 	Elf32_Ehdr *elf32 = ctx->buffer;
@@ -783,11 +786,12 @@ kdump_open_elfdump(kdump_ctx *ctx)
 	struct elfdump_priv *edp;
 	kdump_status ret;
 
+	if (memcmp(eheader, ELFMAG, SELFMAG))
+		return kdump_unsupported;
+
 	edp = calloc(1, sizeof *edp);
 	if (!edp)
 		return kdump_syserr;
-
-	ctx->read_page = elf_read_page;
 	ctx->fmtdata = edp;
 
 	switch (eheader[EI_DATA]) {
@@ -817,3 +821,16 @@ kdump_open_elfdump(kdump_ctx *ctx)
 
 	return kdump_unsupported;
 }
+
+const struct kdump_ops kdump_elfdump_ops = {
+	.probe = elf_probe,
+	.read_page = elf_read_page,
+};
+
+static const struct kdump_ops xen_dom0_ops = {
+	.read_page = elf_read_xen_dom0,
+};
+
+static const struct kdump_ops xen_domU_ops = {
+	.read_page = elf_read_xen_domU,
+};
