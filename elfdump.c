@@ -119,7 +119,6 @@ struct elfdump_priv {
 		xen_map_pfn,
 		xen_map_p2m,
 	} xen_map_type;
-	unsigned long xen_p2m_mfn;
 };
 
 static enum kdump_arch
@@ -497,14 +496,14 @@ process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 		ctx->xen_ver.major = dump64toh(ctx, info->xen_major_version);
 		ctx->xen_ver.minor = dump64toh(ctx, info->xen_minor_version);
 		ctx->xen_extra_ver = dump64toh(ctx, info->xen_extra_version);
-		edp->xen_p2m_mfn = dump64toh(ctx, ((uint64_t*)data)[words-1]);
+		ctx->xen_p2m_mfn = dump64toh(ctx, ((uint64_t*)data)[words-1]);
 	} else if (edp->ptr_size == 4 &&
 		   len >= sizeof(struct xen_crash_info_32)){
 		struct xen_crash_info_32 *info = data;
 		ctx->xen_ver.major = dump32toh(ctx, info->xen_major_version);
 		ctx->xen_ver.minor = dump32toh(ctx, info->xen_minor_version);
 		ctx->xen_extra_ver = dump32toh(ctx, info->xen_extra_version);
-		edp->xen_p2m_mfn = dump32toh(ctx, ((uint32_t*)data)[words-1]);
+		ctx->xen_p2m_mfn = dump32toh(ctx, ((uint32_t*)data)[words-1]);
 	}
 }
 
@@ -715,7 +714,7 @@ initialize_xen_map(kdump_ctx *ctx)
 	}
 	ctx->page = dir;
 
-	ret = elf_read_page(ctx, edp->xen_p2m_mfn);
+	ret = elf_read_page(ctx, ctx->xen_p2m_mfn);
 	if (ret != kdump_ok)
 		goto free_dir;
 
@@ -792,7 +791,7 @@ open_common(kdump_ctx *ctx)
 		}
 	}
 
-	if (edp->xen_p2m_mfn) {
+	if (ctx->xen_p2m_mfn) {
 		ret = initialize_xen_map(ctx);
 		if (ret != kdump_ok)
 			return ret;
