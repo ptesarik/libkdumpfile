@@ -635,7 +635,41 @@ lkcd_probe(kdump_ctx *ctx)
 	return open_common(ctx);
 }
 
+static void
+free_level2(struct pfn_level2 *level2)
+{
+	if (level2) {
+		unsigned i;
+		for (i = 0; i < PFN_IDX2_SIZE; ++i)
+			if (level2[i].pfn_level3)
+				free(level2[i].pfn_level3);
+		free(level2);
+	}
+}
+
+static void
+free_level1(struct pfn_level2 **level1, unsigned long n)
+{
+	if (level1) {
+		unsigned long i;
+		for (i = 0; i < n; ++i)
+			free_level2(level1[i]);
+		free(level1);
+	}
+}
+
+static void
+lkcd_free(kdump_ctx *ctx)
+{
+	struct lkcd_priv *lkcdp = ctx->fmtdata;
+
+	free_level1(lkcdp->pfn_level1, pfn_idx1(ctx->max_pfn - 1) + 1);
+	free(lkcdp);
+	ctx->fmtdata = NULL;
+}
+
 const struct kdump_ops kdump_lkcd_ops = {
 	.probe = lkcd_probe,
 	.read_page = lkcd_read_page,
+	.free = lkcd_free,
 };

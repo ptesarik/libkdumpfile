@@ -822,15 +822,28 @@ elf_probe(kdump_ctx *ctx)
 	return kdump_unsupported;
 }
 
+static void
+elf_free(kdump_ctx *ctx)
+{
+	struct elfdump_priv *edp = ctx->fmtdata;
+
+	cleanup(edp);
+	free(edp);
+	ctx->fmtdata = NULL;
+};
+
 const struct kdump_ops kdump_elfdump_ops = {
 	.probe = elf_probe,
 	.read_page = elf_read_page,
+	.free = elf_free,
 };
 
 static const struct kdump_ops xen_dom0_ops = {
 	.read_page = elf_read_xen_dom0,
+	.free = elf_free,
 };
 
 static const struct kdump_ops xen_domU_ops = {
 	.read_page = elf_read_xen_domU,
+	.free = elf_free,
 };

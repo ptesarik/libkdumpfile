@@ -234,6 +234,8 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 void
 kdump_free(kdump_ctx *ctx)
 {
+	if (ctx->ops->free)
+		ctx->ops->free(ctx);
 	if (ctx->page)
 		free(ctx->page);
 	if (ctx->buffer)

@@ -337,7 +337,19 @@ diskdump_probe(kdump_ctx *ctx)
 	return open_common(ctx);
 }
 
+static void
+diskdump_free(kdump_ctx *ctx)
+{
+	struct disk_dump_priv *ddp = ctx->fmtdata;
+
+	if (ddp->bitmap)
+		free(ddp->bitmap);
+	free(ddp);
+	ctx->fmtdata = NULL;
+}
+
 const struct kdump_ops kdump_diskdump_ops = {
 	.probe = diskdump_probe,
 	.read_page = diskdump_read_page,
+	.free = diskdump_free,
 };
