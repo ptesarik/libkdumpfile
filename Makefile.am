@@ -31,6 +31,7 @@ libkdumpfile_la_SOURCES = \
 	read.c \
 	todo.c \
 	util.c
+EXTRA_libkdumpfile_la_DEPENDENCIES = libkdumpfile.map
 
 libkdumpfile_la_LDFLAGS = -version-info 0:0:0
 libkdumpfile_la_LDFLAGS += -Wl,--version-script=$(srcdir)/libkdumpfile.map
