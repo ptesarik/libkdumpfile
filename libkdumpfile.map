@@ -1,0 +1,17 @@
+LIBKDUMPFILE_0 {
+  global:
+    kdump_fdopen;
+    kdump_free;
+    kdump_read;
+    kdump_format;
+    kdump_pagesize;
+    kdump_sysname;
+    kdump_nodename;
+    kdump_release;
+    kdump_version;
+    kdump_machine;
+    kdump_domainname;
+
+  local:
+    *;
+};
