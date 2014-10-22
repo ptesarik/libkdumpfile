@@ -54,6 +54,7 @@ ssize_t kdump_read(kdump_ctx *ctx, kdump_paddr_t paddr,
 		   unsigned char *buffer, size_t length);
 
 const char *kdump_format(kdump_ctx *ctx);
+size_t kdump_pagesize(kdump_ctx *ctx);
 
 const char *kdump_sysname(kdump_ctx *ctx);
 const char *kdump_nodename(kdump_ctx *ctx);

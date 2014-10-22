@@ -38,6 +38,12 @@ kdump_format(kdump_ctx *ctx)
 	return ctx->format;
 }
 
+size_t
+kdump_pagesize(kdump_ctx *ctx)
+{
+	return ctx->page_size;
+}
+
 const char *
 kdump_sysname(kdump_ctx *ctx)
 {
