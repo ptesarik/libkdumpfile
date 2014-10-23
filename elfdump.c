@@ -47,8 +47,8 @@ struct xen_p2m {
 
 struct load_segment {
 	off_t file_offset;
-	uint64_t phys_start;
-	uint64_t phys_end;
+	kdump_paddr_t phys_start;
+	kdump_paddr_t phys_end;
 };
 
 struct section {
@@ -134,7 +134,7 @@ static kdump_status
 elf_read_page(kdump_ctx *ctx, kdump_paddr_t pfn)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
-	uint64_t addr = pfn * ctx->page_size;
+	kdump_paddr_t addr = pfn * ctx->page_size;
 	off_t pos;
 
 	if (edp->num_load_segments == 1) {
@@ -256,7 +256,7 @@ init_sections(struct elfdump_priv *edp, unsigned snum)
 
 static void
 store_phdr(struct elfdump_priv *edp, unsigned type,
-	   off_t offset, uint64_t addr, uint64_t size)
+	   off_t offset, kdump_paddr_t addr, off_t size)
 {
 	struct load_segment *pls;
 
