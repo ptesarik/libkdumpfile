@@ -355,6 +355,8 @@ read_sub_hdr_32(kdump_ctx *ctx, int32_t header_version)
 		ret = read_vmcoreinfo(ctx,
 				      dump64toh(ctx, subhdr.offset_vmcoreinfo),
 				      dump32toh(ctx, subhdr.size_vmcoreinfo));
+
+	return ret;
 }
 
 static kdump_status
