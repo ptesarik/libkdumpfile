@@ -348,6 +348,8 @@ read_sub_hdr_32(kdump_ctx *ctx, int32_t header_version)
 	    != sizeof subhdr)
 		return kdump_syserr;
 
+	ctx->phys_base = dump32toh(ctx, subhdr.phys_base);
+
 	if (header_version >= 4)
 		ret = read_notes(ctx, dump64toh(ctx, subhdr.offset_note),
 				 dump32toh(ctx, subhdr.size_note));
@@ -368,12 +370,14 @@ read_sub_hdr_64(kdump_ctx *ctx, int32_t header_version)
 	struct kdump_sub_header_64 subhdr;
 	kdump_status ret = kdump_ok;
 
-	if (header_version < 1)
-		return header_version < 0 ? kdump_dataerr : kdump_ok;
+	if (header_version < 0)
+		return kdump_dataerr;
 
 	if (pread(ctx->fd, &subhdr, sizeof subhdr, ctx->page_size)
 	    != sizeof subhdr)
 		return kdump_syserr;
+
+	ctx->phys_base = dump64toh(ctx, subhdr.phys_base);
 
 	if (header_version >= 4)
 		ret = read_notes(ctx, dump64toh(ctx, subhdr.offset_note),

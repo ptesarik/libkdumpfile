@@ -50,6 +50,12 @@ kdump_pagesize(kdump_ctx *ctx)
 	return ctx->page_size;
 }
 
+size_t
+kdump_phys_base(kdump_ctx *ctx)
+{
+	return ctx->phys_base;
+}
+
 const char *
 kdump_sysname(kdump_ctx *ctx)
 {

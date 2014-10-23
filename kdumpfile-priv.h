@@ -137,6 +137,7 @@ struct _tag_kdump_ctx {
 	size_t page_size;	/* target page size */
 	kdump_paddr_t last_pfn;	/* last read PFN */
 	kdump_paddr_t max_pfn;	/* max PFN for read_page */
+	kdump_paddr_t phys_base; /* kernel physical base offset */
 
 	struct new_utsname utsname;
 

@@ -7,6 +7,7 @@ LIBKDUMPFILE_0 {
     kdump_format;
     kdump_is_xen;
     kdump_pagesize;
+    kdump_phys_base;
     kdump_sysname;
     kdump_nodename;
     kdump_release;
