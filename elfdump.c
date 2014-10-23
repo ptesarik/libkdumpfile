@@ -82,6 +82,8 @@ static enum kdump_arch
 mach2arch(unsigned mach)
 {
 	switch(mach) {
+	case EM_AARCH64:
+			return ARCH_AARCH64;
 	case EM_ARM:	return ARCH_ARM;
 	case EM_ALPHA:
 	case EM_FAKE_ALPHA:
