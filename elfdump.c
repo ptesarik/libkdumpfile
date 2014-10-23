@@ -368,13 +368,25 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 	if (lseek(ctx->fd, dump32toh(ctx, ehdr->e_phoff), SEEK_SET) < 0)
 		return kdump_syserr;
 	for (i = 0; i < dump16toh(ctx, ehdr->e_phnum); ++i) {
+		unsigned type;
+		off_t offset, filesz;
+		kdump_paddr_t vaddr, paddr;
+
 		if (read(ctx->fd, &prog, sizeof prog) != sizeof prog)
 			return kdump_syserr;
-		store_phdr(edp,
-			   dump32toh(ctx, prog.p_type),
-			   dump32toh(ctx, prog.p_offset),
-			   dump32toh(ctx, prog.p_paddr),
-			   dump32toh(ctx, prog.p_filesz));
+
+		type = dump32toh(ctx, prog.p_type);
+		offset = dump32toh(ctx, prog.p_offset);
+		vaddr = dump32toh(ctx, prog.p_vaddr);
+		paddr = dump32toh(ctx, prog.p_paddr);
+		filesz = dump32toh(ctx, prog.p_filesz);
+
+		store_phdr(edp, type, offset, paddr, filesz);
+		if (ctx->arch_ops && ctx->arch_ops->process_load) {
+			ret = ctx->arch_ops->process_load(ctx, vaddr, paddr);
+			if (ret != kdump_ok)
+				return ret;
+		}
 	}
 
 	if (lseek(ctx->fd, dump32toh(ctx, ehdr->e_shoff), SEEK_SET) < 0)
@@ -420,13 +432,25 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 	if (lseek(ctx->fd, dump64toh(ctx, ehdr->e_phoff), SEEK_SET) < 0)
 		return kdump_syserr;
 	for (i = 0; i < dump16toh(ctx, ehdr->e_phnum); ++i) {
+		unsigned type;
+		off_t offset, filesz;
+		kdump_paddr_t vaddr, paddr;
+
 		if (read(ctx->fd, &prog, sizeof prog) != sizeof prog)
 			return kdump_syserr;
-		store_phdr(edp,
-			   dump32toh(ctx, prog.p_type),
-			   dump64toh(ctx, prog.p_offset),
-			   dump64toh(ctx, prog.p_paddr),
-			   dump64toh(ctx, prog.p_filesz));
+
+		type = dump32toh(ctx, prog.p_type);
+		offset = dump64toh(ctx, prog.p_offset);
+		vaddr = dump64toh(ctx, prog.p_vaddr);
+		paddr = dump64toh(ctx, prog.p_paddr);
+		filesz = dump64toh(ctx, prog.p_filesz);
+
+		store_phdr(edp, type, offset, paddr, filesz);
+		if (ctx->arch_ops && ctx->arch_ops->process_load) {
+			ret = ctx->arch_ops->process_load(ctx, vaddr, paddr);
+			if (ret != kdump_ok)
+				return ret;
+		}
 	}
 
 	if (lseek(ctx->fd, dump32toh(ctx, ehdr->e_shoff), SEEK_SET) < 0)

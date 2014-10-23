@@ -118,6 +118,10 @@ struct arch_ops {
 	kdump_status (*read_reg)(kdump_ctx *ctx, unsigned cpu, unsigned index,
 				 kdump_reg_t *value);
 
+	/* Process a LOAD segment
+	 */
+	kdump_status (*process_load)(kdump_ctx *ctx, kdump_paddr_t vaddr,
+				     kdump_paddr_t paddr);
 	/* Clean up any arch-specific data
 	 */
 	void (*cleanup)(kdump_ctx *);
