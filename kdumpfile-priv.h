@@ -109,6 +109,15 @@ struct arch_ops {
 	 */
 	kdump_status (*process_prstatus)(kdump_ctx *, void *, size_t);
 
+	/* Read a register value:
+	 *   cpu    CPU number (in dumpfile order)
+	 *   index  CPU index (arch-dependent)
+	 *          no guarantees - return kdump_nodata if out of range
+	 *   value  will contain register value on success
+	 */
+	kdump_status (*read_reg)(kdump_ctx *ctx, unsigned cpu, unsigned index,
+				 kdump_reg_t *value);
+
 	/* Clean up any arch-specific data
 	 */
 	void (*cleanup)(kdump_ctx *);

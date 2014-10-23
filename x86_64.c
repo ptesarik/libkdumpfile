@@ -94,6 +94,25 @@ process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 	return kdump_ok;
 }
 
+static kdump_status
+x86_64_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
+		kdump_reg_t *value)
+{
+	struct cpu_state *cs;
+	int i;
+
+	if (index >= ELF_NGREG)
+		return kdump_nodata;
+
+	for (i = 0, cs = ctx->archdata; i < cpu && cs; ++i)
+		cs = cs->next;
+	if (!cs)
+		return kdump_nodata;
+
+	*value = cs->reg[index];
+	return kdump_ok;
+}
+
 static void
 x86_64_cleanup(kdump_ctx *ctx)
 {
@@ -111,5 +130,6 @@ x86_64_cleanup(kdump_ctx *ctx)
 
 const struct arch_ops kdump_x86_64_ops = {
 	.process_prstatus = process_x86_64_prstatus,
+	.read_reg = x86_64_read_reg,
 	.cleanup = x86_64_cleanup,
 };

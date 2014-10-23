@@ -98,6 +98,16 @@ kdump_num_cpus(kdump_ctx *ctx)
 	return ctx->num_cpus;
 }
 
+kdump_status
+kdump_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
+	       kdump_reg_t *value)
+{
+	if (!ctx->arch_ops || !ctx->arch_ops->read_reg)
+		return kdump_nodata;
+
+	return ctx->arch_ops->read_reg(ctx, cpu, index, value);
+}
+
 const char *
 kdump_vmcoreinfo(kdump_ctx *ctx)
 {

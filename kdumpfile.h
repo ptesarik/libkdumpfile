@@ -38,6 +38,8 @@ extern "C" {
 #endif
 
 typedef uint_fast64_t kdump_paddr_t;
+typedef uint_fast64_t kdump_reg_t;
+
 typedef struct _tag_kdump_ctx kdump_ctx;
 typedef enum _tag_kdump_status {
 	kdump_ok = 0,
@@ -78,6 +80,8 @@ const char *kdump_machine(kdump_ctx *ctx);
 const char *kdump_domainname(kdump_ctx *ctx);
 
 unsigned kdump_num_cpus(kdump_ctx *ctx);
+kdump_status kdump_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
+			    kdump_reg_t *value);
 
 const char *kdump_vmcoreinfo(kdump_ctx *ctx);
 const char *kdump_vmcoreinfo_xen(kdump_ctx *ctx);
