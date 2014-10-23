@@ -37,8 +37,8 @@
 
 #include "kdumpfile-priv.h"
 
-static const struct kdump_ops xen_dom0_ops;
-static const struct kdump_ops xen_domU_ops;
+static const struct format_ops xen_dom0_ops;
+static const struct format_ops xen_domU_ops;
 
 struct xen_p2m {
 	uint64_t pfn;
@@ -699,19 +699,19 @@ elf_free(kdump_ctx *ctx)
 	ctx->fmtdata = NULL;
 };
 
-const struct kdump_ops kdump_elfdump_ops = {
+const struct format_ops kdump_elfdump_ops = {
 	.probe = elf_probe,
 	.read_page = elf_read_page,
 	.free = elf_free,
 };
 
-static const struct kdump_ops xen_dom0_ops = {
+static const struct format_ops xen_dom0_ops = {
 	.read_page = elf_read_xen_dom0,
 	.read_xenmach_page = elf_read_page,
 	.free = elf_free,
 };
 
-static const struct kdump_ops xen_domU_ops = {
+static const struct format_ops xen_domU_ops = {
 	.read_page = elf_read_xen_domU,
 	.read_xenmach_page = elf_read_page,
 	.free = elf_free,

@@ -56,7 +56,7 @@ enum kdump_arch {
 	ARCH_X86_64,
 };
 
-struct kdump_ops {
+struct format_ops {
 	/* Probe for a given file format.
 	 * Input:
 	 *   ctx->buffer     MAX_PAGE_SIZE bytes from the file beginning
@@ -130,7 +130,7 @@ struct _tag_kdump_ctx {
 	int endian;		/* __LITTLE_ENDIAN or __BIG_ENDIAN */
 	size_t ptr_size;	/* arch pointer size */
 
-	const struct kdump_ops *ops;
+	const struct format_ops *ops;
 
 	void *buffer;		/* temporary buffer */
 	void *page;		/* page data buffer */
@@ -153,16 +153,16 @@ struct _tag_kdump_ctx {
 /* kdump_ctx flags */
 #define DIF_XEN		(1UL<<1)
 
-const struct kdump_ops kdump_elfdump_ops;
-const struct kdump_ops kdump_kvm_ops;
-const struct kdump_ops kdump_libvirt_ops;
-const struct kdump_ops kdump_xc_save_ops;
-const struct kdump_ops kdump_xc_core_ops;
-const struct kdump_ops kdump_diskdump_ops;
-const struct kdump_ops kdump_lkcd_ops;
-const struct kdump_ops kdump_mclxcd_ops;
-const struct kdump_ops kdump_s390_ops;
-const struct kdump_ops kdump_devmem_ops;
+const struct format_ops kdump_elfdump_ops;
+const struct format_ops kdump_kvm_ops;
+const struct format_ops kdump_libvirt_ops;
+const struct format_ops kdump_xc_save_ops;
+const struct format_ops kdump_xc_core_ops;
+const struct format_ops kdump_diskdump_ops;
+const struct format_ops kdump_lkcd_ops;
+const struct format_ops kdump_mclxcd_ops;
+const struct format_ops kdump_s390_ops;
+const struct format_ops kdump_devmem_ops;
 
 /* struct timeval has a different layout on 32-bit and 64-bit */
 struct timeval_32 {

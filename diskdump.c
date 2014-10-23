@@ -486,7 +486,7 @@ diskdump_free(kdump_ctx *ctx)
 	ctx->fmtdata = NULL;
 }
 
-const struct kdump_ops kdump_diskdump_ops = {
+const struct format_ops kdump_diskdump_ops = {
 	.probe = diskdump_probe,
 	.read_page = diskdump_read_page,
 	.free = diskdump_free,

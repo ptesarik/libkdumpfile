@@ -671,7 +671,7 @@ lkcd_free(kdump_ctx *ctx)
 	ctx->fmtdata = NULL;
 }
 
-const struct kdump_ops kdump_lkcd_ops = {
+const struct format_ops kdump_lkcd_ops = {
 	.probe = lkcd_probe,
 	.read_page = lkcd_read_page,
 	.free = lkcd_free,

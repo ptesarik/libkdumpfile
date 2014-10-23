@@ -36,7 +36,7 @@
 
 static kdump_status kdump_open_known(kdump_ctx *pctx);
 
-static const struct kdump_ops *formats[] = {
+static const struct format_ops *formats[] = {
 	&kdump_elfdump_ops,
 	&kdump_kvm_ops,
 	&kdump_libvirt_ops,

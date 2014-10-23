@@ -91,7 +91,7 @@ devmem_probe(kdump_ctx *ctx)
 	return kdump_ok;
 }
 
-const struct kdump_ops kdump_devmem_ops = {
+const struct format_ops kdump_devmem_ops = {
 	.probe = devmem_probe,
 	.read_page = devmem_read_page,
 };
