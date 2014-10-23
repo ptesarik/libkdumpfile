@@ -86,11 +86,21 @@ kdump_machine_arch(const char *machine)
 		return ARCH_UNKNOWN;
 }
 
+static const struct arch_ops*
+arch_ops(enum kdump_arch arch)
+{
+	return NULL;
+}
+
 kdump_status
 kdump_set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 {
 	ctx->arch = arch;
 	ctx->ptr_size = arch_ptr_size(arch);
+	ctx->arch_ops = arch_ops(arch);
+
+	if (ctx->arch_ops && ctx->arch_ops->init)
+		return ctx->arch_ops->init(ctx);
 
 	return kdump_ok;
 }

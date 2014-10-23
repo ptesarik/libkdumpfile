@@ -100,6 +100,16 @@ struct format_ops {
 	void (*free)(kdump_ctx *);
 };
 
+struct arch_ops {
+	/* Initialize any arch-specific data
+	 */
+	kdump_status (*init)(kdump_ctx *);
+
+	/* Clean up any arch-specific data
+	 */
+	void (*cleanup)(kdump_ctx *);
+};
+
 /* provide our own definition of new_utsname */
 #define NEW_UTS_LEN 64
 struct new_utsname {
@@ -131,6 +141,7 @@ struct _tag_kdump_ctx {
 	size_t ptr_size;	/* arch pointer size */
 
 	const struct format_ops *ops;
+	const struct arch_ops *arch_ops;
 
 	void *buffer;		/* temporary buffer */
 	void *page;		/* page data buffer */
@@ -149,6 +160,7 @@ struct _tag_kdump_ctx {
 	kdump_paddr_t xen_p2m_mfn;
 
 	void *fmtdata;		/* format-specific private data */
+	void *archdata;		/* arch-specific private data */
 };
 
 /* kdump_ctx flags */
