@@ -356,6 +356,9 @@ read_sub_hdr_32(kdump_ctx *ctx, int32_t header_version)
 				      dump64toh(ctx, subhdr.offset_vmcoreinfo),
 				      dump32toh(ctx, subhdr.size_vmcoreinfo));
 
+	if (header_version >= 6)
+		ctx->max_pfn = dump64toh(ctx, subhdr.max_mapnr_64);
+
 	return ret;
 }
 
@@ -380,20 +383,25 @@ read_sub_hdr_64(kdump_ctx *ctx, int32_t header_version)
 				      dump64toh(ctx, subhdr.offset_vmcoreinfo),
 				      dump64toh(ctx, subhdr.size_vmcoreinfo));
 
+	if (header_version >= 6)
+		ctx->max_pfn = dump64toh(ctx, subhdr.max_mapnr_64);
+
 	return ret;
 }
 
 static kdump_status
 read_bitmap(kdump_ctx *ctx, int32_t sub_hdr_size,
-	    int32_t bitmap_blocks, int32_t max_mapnr)
+	    int32_t bitmap_blocks)
 {
 	struct disk_dump_priv *ddp = ctx->fmtdata;
 	off_t off = (1 + sub_hdr_size) * ctx->page_size;
 	size_t bitmapsize;
+	kdump_paddr_t max_bitmap_pfn;
 
 	ddp->descoff = off + bitmap_blocks * ctx->page_size;
 
-	if (8 * bitmap_blocks * ctx->page_size >= max_mapnr * 2) {
+	max_bitmap_pfn = (kdump_paddr_t)ctx->page_size * bitmap_blocks * 8;
+	if (ctx->max_pfn <= max_bitmap_pfn / 2) {
 		/* partial dump */
 		bitmap_blocks /= 2;
 		off += bitmap_blocks * ctx->page_size;
@@ -402,8 +410,6 @@ read_bitmap(kdump_ctx *ctx, int32_t sub_hdr_size,
 	bitmapsize = bitmap_blocks * ctx->page_size;
 	if (! (ddp->bitmap = malloc(bitmapsize)) )
 		return kdump_syserr;
-
-	ctx->max_pfn = bitmapsize * 8;
 
 	if (pread(ctx->fd, ddp->bitmap, bitmapsize, off) != bitmapsize)
 		return kdump_syserr;
@@ -438,23 +444,24 @@ open_common(kdump_ctx *ctx)
 
 	if ( (ctx->endian = header_looks_sane_32(dh32)) ) {
 		ctx->page_size = dump32toh(ctx, dh32->block_size);
+		ctx->max_pfn = dump32toh(ctx, dh32->max_mapnr);
 		header_version = dump32toh(ctx, dh32->header_version);
 		sub_hdr_size = dump32toh(ctx, dh32->sub_hdr_size);
 		bitmap_blocks = dump32toh(ctx, dh32->bitmap_blocks);
-		max_mapnr = dump32toh(ctx, dh32->max_mapnr);
 		ret = read_sub_hdr_32(ctx, header_version);
 	} else if ( (ctx->endian = header_looks_sane_64(dh64)) ) {
 		ctx->page_size = dump32toh(ctx, dh64->block_size);
+		ctx->max_pfn = dump32toh(ctx, dh64->max_mapnr);
 		header_version = dump32toh(ctx, dh32->header_version);
 		sub_hdr_size = dump32toh(ctx, dh64->sub_hdr_size);
 		bitmap_blocks = dump32toh(ctx, dh64->bitmap_blocks);
-		max_mapnr = dump32toh(ctx, dh64->max_mapnr);
 		ret = read_sub_hdr_64(ctx, header_version);
 	} else
 		return kdump_unsupported;
 
 	if (ret == kdump_ok)
-		ret = read_bitmap(ctx, sub_hdr_size, bitmap_blocks, max_mapnr);
+		ret = read_bitmap(ctx, sub_hdr_size, bitmap_blocks);
+
 	return ret;
 }
 
