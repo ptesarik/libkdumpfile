@@ -32,8 +32,8 @@
 
 #include "kdumpfile-priv.h"
 
-const size_t
-kdump_arch_ptr_size(enum kdump_arch arch)
+static size_t
+arch_ptr_size(enum kdump_arch arch)
 {
 	switch (arch) {
 	case ARCH_ALPHA:
@@ -84,6 +84,13 @@ kdump_machine_arch(const char *machine)
 		return ARCH_ARM;
 	else
 		return ARCH_UNKNOWN;
+}
+
+void
+kdump_set_arch(kdump_ctx *ctx, enum kdump_arch arch)
+{
+	ctx->arch = arch;
+	ctx->ptr_size = arch_ptr_size(arch);
 }
 
 /* Final NUL may be missing in the source (i.e. corrupted dump data),

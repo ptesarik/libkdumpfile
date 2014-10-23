@@ -353,7 +353,7 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 	kdump_status ret;
 	int i;
 
-	ctx->arch = mach2arch(dump16toh(ctx, ehdr->e_machine));
+	kdump_set_arch(ctx, mach2arch(dump16toh(ctx, ehdr->e_machine)));
 
 	ret = init_segments(edp, dump16toh(ctx, ehdr->e_phnum));
 	if (ret != kdump_ok)
@@ -580,8 +580,6 @@ open_common(kdump_ctx *ctx)
 
 	if (!edp->num_load_segments && !edp->num_sections)
 		return kdump_unsupported;
-
-	ctx->ptr_size = kdump_arch_ptr_size(ctx->arch);
 
 	/* read notes */
 	for (i = 0; i < edp->num_note_segments; ++i) {
