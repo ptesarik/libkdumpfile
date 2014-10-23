@@ -155,6 +155,7 @@ struct _tag_kdump_ctx {
 	kdump_paddr_t phys_base; /* kernel physical base offset */
 
 	struct new_utsname utsname;
+	unsigned num_cpus;	/* number of CPUs in the system  */
 
 	struct vmcoreinfo *vmcoreinfo;
 	struct vmcoreinfo *vmcoreinfo_xen;

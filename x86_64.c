@@ -78,6 +78,8 @@ process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 	if (size < sizeof(struct elf_prstatus))
 		return kdump_dataerr;
 
+	++ctx->num_cpus;
+
 	cs = malloc(sizeof *cs);
 	if (!cs)
 		return kdump_syserr;

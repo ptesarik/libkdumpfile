@@ -92,6 +92,12 @@ kdump_domainname(kdump_ctx *ctx)
 	return ctx->utsname.domainname;
 }
 
+unsigned
+kdump_num_cpus(kdump_ctx *ctx)
+{
+	return ctx->num_cpus;
+}
+
 const char *
 kdump_vmcoreinfo(kdump_ctx *ctx)
 {

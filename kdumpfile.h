@@ -77,6 +77,8 @@ const char *kdump_version(kdump_ctx *ctx);
 const char *kdump_machine(kdump_ctx *ctx);
 const char *kdump_domainname(kdump_ctx *ctx);
 
+unsigned kdump_num_cpus(kdump_ctx *ctx);
+
 const char *kdump_vmcoreinfo(kdump_ctx *ctx);
 const char *kdump_vmcoreinfo_xen(kdump_ctx *ctx);
 
