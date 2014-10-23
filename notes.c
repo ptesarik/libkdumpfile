@@ -74,6 +74,19 @@ struct xen_crash_info_64 {
 	/* Additional arch-dependent and version-dependent fields  */
 };
 
+static kdump_status
+process_core_note(kdump_ctx *ctx, uint32_t type,
+		  void *desc, size_t descsz)
+{
+	if (type == NT_PRSTATUS) {
+		if (ctx->arch_ops && ctx->arch_ops->process_prstatus)
+			return ctx->arch_ops->process_prstatus(
+				ctx, desc, descsz);
+	}
+
+	return kdump_ok;
+}
+
 static void
 process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 {
@@ -187,7 +200,9 @@ kdump_process_notes(kdump_ctx *ctx, void *data, size_t size)
 		desc = (char*)hdr + descoff;
 		hdr = (Elf32_Nhdr*) (desc + ((descsz + 3) & ~3));
 
-		if (note_equal("Xen", name, namesz))
+		if (note_equal("CORE", name, namesz))
+			ret = process_core_note(ctx, type, desc, descsz);
+		else if (note_equal("Xen", name, namesz))
 			process_xen_note(ctx, type, desc, descsz);
 		else if (note_equal(".note.Xen", name, namesz))
 			ret = process_xc_xen_note(ctx, type, desc, descsz);
