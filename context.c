@@ -38,6 +38,12 @@ kdump_format(kdump_ctx *ctx)
 	return ctx->format;
 }
 
+int
+kdump_is_xen(kdump_ctx *ctx)
+{
+	return !!(ctx->flags & DIF_XEN);
+}
+
 size_t
 kdump_pagesize(kdump_ctx *ctx)
 {

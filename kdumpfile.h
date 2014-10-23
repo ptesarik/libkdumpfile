@@ -66,6 +66,7 @@ kdump_status kdump_read_string(kdump_ctx *ctx, kdump_paddr_t paddr,
 			       char **pstr, long flags);
 
 const char *kdump_format(kdump_ctx *ctx);
+int kdump_is_xen(kdump_ctx *ctx);
 size_t kdump_pagesize(kdump_ctx *ctx);
 
 const char *kdump_sysname(kdump_ctx *ctx);
