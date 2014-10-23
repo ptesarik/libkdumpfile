@@ -86,11 +86,13 @@ kdump_machine_arch(const char *machine)
 		return ARCH_UNKNOWN;
 }
 
-void
+kdump_status
 kdump_set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 {
 	ctx->arch = arch;
 	ctx->ptr_size = arch_ptr_size(arch);
+
+	return kdump_ok;
 }
 
 /* Final NUL may be missing in the source (i.e. corrupted dump data),

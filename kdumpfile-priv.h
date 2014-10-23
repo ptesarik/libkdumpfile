@@ -178,7 +178,7 @@ struct timeval_64 {
 /* utils */
 
 enum kdump_arch kdump_machine_arch(const char *machine);
-void kdump_set_arch(kdump_ctx *ctx, enum kdump_arch arch);
+kdump_status kdump_set_arch(kdump_ctx *ctx, enum kdump_arch arch);
 
 void kdump_copy_uts_string(char *dest, const char *src);
 void kdump_copy_uts(struct new_utsname *dest, const struct new_utsname *src);

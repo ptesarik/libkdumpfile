@@ -604,7 +604,9 @@ open_common(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		goto err_free;
 
-	kdump_set_arch(ctx, kdump_machine_arch(ctx->utsname.machine));
+	ret = kdump_set_arch(ctx, kdump_machine_arch(ctx->utsname.machine));
+	if (ret != kdump_ok)
+		goto err_free;
 
 	ret = kdump_syserr;
 	max_idx1 = pfn_idx1(ctx->max_pfn - 1) + 1;

@@ -353,7 +353,9 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 	kdump_status ret;
 	int i;
 
-	kdump_set_arch(ctx, mach2arch(dump16toh(ctx, ehdr->e_machine)));
+	ret = kdump_set_arch(ctx, mach2arch(dump16toh(ctx, ehdr->e_machine)));
+	if (ret != kdump_ok)
+		return ret;
 
 	ret = init_segments(edp, dump16toh(ctx, ehdr->e_phnum));
 	if (ret != kdump_ok)
@@ -402,7 +404,9 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 	kdump_status ret;
 	int i;
 
-	kdump_set_arch(ctx, mach2arch(dump16toh(ctx, ehdr->e_machine)));
+	ret = kdump_set_arch(ctx, mach2arch(dump16toh(ctx, ehdr->e_machine)));
+	if (ret != kdump_ok)
+		return ret;
 
 	ret = init_segments(edp, dump16toh(ctx, ehdr->e_phnum));
 	if (ret != kdump_ok)
