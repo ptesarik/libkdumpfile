@@ -181,6 +181,8 @@ const struct format_ops kdump_mclxcd_ops;
 const struct format_ops kdump_s390_ops;
 const struct format_ops kdump_devmem_ops;
 
+const struct arch_ops kdump_x86_64_ops;
+
 /* struct timeval has a different layout on 32-bit and 64-bit */
 struct timeval_32 {
 	int32_t tv_sec;

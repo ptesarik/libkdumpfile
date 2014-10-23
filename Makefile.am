@@ -32,7 +32,9 @@ libkdumpfile_la_SOURCES = \
 	open.c \
 	read.c \
 	todo.c \
-	util.c
+	util.c \
+	x86_64.c
+
 EXTRA_libkdumpfile_la_DEPENDENCIES = libkdumpfile.map
 
 libkdumpfile_la_LDFLAGS = -version-info 0:0:0

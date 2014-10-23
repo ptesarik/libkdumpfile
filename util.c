@@ -89,6 +89,23 @@ kdump_machine_arch(const char *machine)
 static const struct arch_ops*
 arch_ops(enum kdump_arch arch)
 {
+	switch (arch) {
+	case ARCH_AARCH64:
+	case ARCH_ALPHA:
+	case ARCH_ARM:
+	case ARCH_IA64:
+	case ARCH_PPC:
+	case ARCH_PPC64:
+	case ARCH_PPC64LE:
+	case ARCH_S390:
+	case ARCH_S390X:
+	case ARCH_X86:
+		/* TODO */
+		break;
+
+	case ARCH_X86_64:	return &kdump_x86_64_ops;
+	}
+
 	return NULL;
 }
 
