@@ -35,6 +35,7 @@
 #include "kdumpfile-priv.h"
 
 static kdump_status kdump_open_known(kdump_ctx *pctx);
+static kdump_status use_kernel_utsname(kdump_ctx *ctx);
 
 static const struct format_ops *formats[] = {
 	&kdump_elfdump_ops,
@@ -116,11 +117,62 @@ kdump_open_known(kdump_ctx *ctx)
 		return kdump_syserr;
 	}
 
+	if (!(ctx->flags & DIF_UTSNAME))
+		/* If this fails, it is not fatal. */
+		use_kernel_utsname(ctx);
+
 	if (ctx->xen_extra_ver)
 		/* Return value ignored: if this fails, it is not fatal. */
 		kdump_read_string(ctx, ctx->xen_extra_ver,
 				  (char**)&ctx->xen_ver.extra,
 				  KDUMP_XENMACHADDR);
+
+	return kdump_ok;
+}
+
+static kdump_status
+use_kernel_utsname(kdump_ctx *ctx)
+{
+	const char *sym_init_uts_ns;
+	kdump_paddr_t init_uts_ns, uts_name;
+	struct new_utsname uts;
+	ssize_t rd;
+	char *p;
+
+	sym_init_uts_ns = kdump_vmcoreinfo_row(ctx, "SYMBOL(init_uts_ns)");
+	if (!sym_init_uts_ns || !sym_init_uts_ns[0])
+		return kdump_nodata;
+
+	init_uts_ns = strtoull(sym_init_uts_ns, &p, 16);
+	if (*p)
+		return kdump_dataerr;
+
+	rd = kdump_read(ctx, init_uts_ns, (unsigned char*)&uts, sizeof uts,
+			KDUMP_KVADDR);
+	if (rd != sizeof uts)
+		return kdump_dataerr;
+
+	/* struct new_utsname is inside struct uts_namespace, preceded
+	 * by a struct kref, but the offset is not stored in VMCOREINFO
+	 * So, search some sane amount of memory for UTS_SYSNAME, which
+	 * can be used as kind of a magic signature.
+	 */
+	for (p = uts.sysname; p <= uts.nodename; ++p)
+		if (!memcmp(p, UTS_SYSNAME, sizeof(UTS_SYSNAME)))
+			break;
+	if (p > uts.nodename)
+		return kdump_dataerr;
+
+	uts_name = init_uts_ns + p - uts.sysname;
+	rd = kdump_read(ctx, uts_name, (unsigned char*)&uts, sizeof uts,
+			KDUMP_KVADDR);
+	if (rd != sizeof uts)
+		return kdump_dataerr;
+
+	if (!kdump_uts_looks_sane(&uts))
+		return kdump_dataerr;
+
+	kdump_set_uts(ctx, &uts);
 
 	return kdump_ok;
 }
