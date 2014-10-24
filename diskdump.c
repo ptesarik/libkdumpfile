@@ -173,9 +173,7 @@ pfn_to_pdpos(kdump_ctx *ctx, unsigned long pfn)
 	n = 0;
 	for (i = 0; i < pfn >> 3; ++i)
 		n += bitcount(ddp->bitmap[i]);
-	for (i = 0; i < (pfn & 0x7); ++i)
-		if (page_is_dumpable(ctx, pfn - i))
-		    ++n;
+	n += bitcount(ddp->bitmap[i] & (((1 << (pfn & 0x7)) - 1)));
 
 	return ddp->descoff + n * sizeof(struct page_desc);
 }
