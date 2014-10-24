@@ -510,9 +510,9 @@ init_v1(kdump_ctx *ctx)
 
 	if (!kdump_uts_looks_sane(&dh32->dh_utsname) &&
 	    kdump_uts_looks_sane(&dh64->dh_utsname))
-		kdump_copy_uts(&ctx->utsname, &dh64->dh_utsname);
+		kdump_set_uts(ctx, &dh64->dh_utsname);
 	else
-		kdump_copy_uts(&ctx->utsname, &dh32->dh_utsname);
+		kdump_set_uts(ctx, &dh32->dh_utsname);
 	lkcdp->compression = DUMP_COMPRESS_RLE;
 
 	return kdump_ok;
@@ -527,12 +527,12 @@ init_v2(kdump_ctx *ctx)
 
 	if (!kdump_uts_looks_sane(&dh32->dh_utsname) &&
 	    kdump_uts_looks_sane(&dh64->dh_utsname)) {
-		kdump_copy_uts(&ctx->utsname, &dh64->dh_utsname);
+		kdump_set_uts(ctx, &dh64->dh_utsname);
 		lkcdp->compression = (lkcdp->version >= LKCD_DUMP_V5)
 			? dump32toh(ctx, dh64->dh_dump_compress)
 			: DUMP_COMPRESS_RLE;
 	} else {
-		kdump_copy_uts(&ctx->utsname, &dh32->dh_utsname);
+		kdump_set_uts(ctx, &dh32->dh_utsname);
 		lkcdp->compression = (lkcdp->version >= LKCD_DUMP_V5)
 			? dump32toh(ctx, dh32->dh_dump_compress)
 			: DUMP_COMPRESS_RLE;
@@ -547,7 +547,7 @@ init_v8(kdump_ctx *ctx)
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
 	struct dump_header_v8 *dh = ctx->buffer;
 
-	kdump_copy_uts(&ctx->utsname, &dh->dh_utsname);
+	kdump_set_uts(ctx, &dh->dh_utsname);
 	lkcdp->compression = dump32toh(ctx, dh->dh_dump_compress);
 	if (lkcdp->version >= LKCD_DUMP_V9)
 		lkcdp->data_offset = dump64toh(ctx, dh->dh_dump_buffer_size);

@@ -438,9 +438,9 @@ open_common(kdump_ctx *ctx)
 	ctx->fmtdata = ddp;
 
 	if (kdump_uts_looks_sane(&dh32->utsname))
-		kdump_copy_uts(&ctx->utsname, &dh32->utsname);
+		kdump_set_uts(ctx, &dh32->utsname);
 	else if (kdump_uts_looks_sane(&dh64->utsname))
-		kdump_copy_uts(&ctx->utsname, &dh64->utsname);
+		kdump_set_uts(ctx, &dh64->utsname);
 
 	ret = kdump_set_arch(ctx, kdump_machine_arch(ctx->utsname.machine));
 	if (ret != kdump_ok)

@@ -135,14 +135,15 @@ kdump_copy_uts_string(char *dest, const char *src)
 }
 
 void
-kdump_copy_uts(struct new_utsname *dest, const struct new_utsname *src)
+kdump_set_uts(kdump_ctx *ctx, const struct new_utsname *src)
 {
-	kdump_copy_uts_string(dest->sysname, src->sysname);
-	kdump_copy_uts_string(dest->nodename, src->nodename);
-	kdump_copy_uts_string(dest->release, src->release);
-	kdump_copy_uts_string(dest->version, src->version);
-	kdump_copy_uts_string(dest->machine, src->machine);
-	kdump_copy_uts_string(dest->domainname, src->domainname);
+	kdump_copy_uts_string(ctx->utsname.sysname, src->sysname);
+	kdump_copy_uts_string(ctx->utsname.nodename, src->nodename);
+	kdump_copy_uts_string(ctx->utsname.release, src->release);
+	kdump_copy_uts_string(ctx->utsname.version, src->version);
+	kdump_copy_uts_string(ctx->utsname.machine, src->machine);
+	kdump_copy_uts_string(ctx->utsname.domainname, src->domainname);
+	ctx->flags |= DIF_UTSNAME;
 }
 
 int

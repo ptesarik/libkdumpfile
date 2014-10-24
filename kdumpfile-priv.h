@@ -184,6 +184,7 @@ struct _tag_kdump_ctx {
 /* kdump_ctx flags */
 #define DIF_XEN		(1UL<<1)
 #define DIF_PHYS_BASE	(1UL<<2) /* phys_base is valid */
+#define DIF_UTSNAME	(1UL<<3) /* utsname is complete */
 
 const struct format_ops kdump_elfdump_ops;
 const struct format_ops kdump_kvm_ops;
@@ -214,7 +215,7 @@ enum kdump_arch kdump_machine_arch(const char *machine);
 kdump_status kdump_set_arch(kdump_ctx *ctx, enum kdump_arch arch);
 
 void kdump_copy_uts_string(char *dest, const char *src);
-void kdump_copy_uts(struct new_utsname *dest, const struct new_utsname *src);
+void kdump_set_uts(kdump_ctx *ctx, const struct new_utsname *src);
 int kdump_uts_looks_sane(struct new_utsname *uts);
 
 int kdump_uncompress_rle(unsigned char *dst, size_t *pdstlen,
