@@ -161,9 +161,6 @@ x86_64_cleanup(kdump_ctx *ctx)
 static kdump_status
 x86_64_vtop(kdump_ctx *ctx, kdump_paddr_t vaddr, kdump_paddr_t *paddr)
 {
-	if (! (ctx->flags & DIF_PHYS_BASE) )
-		return kdump_nodata;
-
 	if (vaddr >= __START_KERNEL_map) {
 		*paddr = vaddr - __START_KERNEL_map + ctx->phys_base;
 		return kdump_ok;
