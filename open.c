@@ -136,8 +136,9 @@ use_kernel_utsname(kdump_ctx *ctx)
 	const char *sym_init_uts_ns;
 	kdump_paddr_t init_uts_ns, uts_name;
 	struct new_utsname uts;
-	ssize_t rd;
+	size_t rd;
 	char *p;
+	kdump_status ret;
 
 	sym_init_uts_ns = kdump_vmcoreinfo_row(ctx, "SYMBOL(init_uts_ns)");
 	if (!sym_init_uts_ns || !sym_init_uts_ns[0])
@@ -147,10 +148,11 @@ use_kernel_utsname(kdump_ctx *ctx)
 	if (*p)
 		return kdump_dataerr;
 
-	rd = kdump_read(ctx, init_uts_ns, (unsigned char*)&uts, sizeof uts,
-			KDUMP_KVADDR);
-	if (rd != sizeof uts)
-		return kdump_dataerr;
+	rd = sizeof uts;
+	ret = kdump_readp(ctx, init_uts_ns, (unsigned char*)&uts, &rd,
+			  KDUMP_KVADDR);
+	if (ret != kdump_ok)
+		return ret;
 
 	/* struct new_utsname is inside struct uts_namespace, preceded
 	 * by a struct kref, but the offset is not stored in VMCOREINFO
@@ -164,10 +166,11 @@ use_kernel_utsname(kdump_ctx *ctx)
 		return kdump_dataerr;
 
 	uts_name = init_uts_ns + p - uts.sysname;
-	rd = kdump_read(ctx, uts_name, (unsigned char*)&uts, sizeof uts,
-			KDUMP_KVADDR);
-	if (rd != sizeof uts)
-		return kdump_dataerr;
+	rd = sizeof uts;
+	ret = kdump_readp(ctx, uts_name, (unsigned char*)&uts, &rd,
+			  KDUMP_KVADDR);
+	if (ret != kdump_ok)
+		return ret;
 
 	if (!kdump_uts_looks_sane(&uts))
 		return kdump_dataerr;
