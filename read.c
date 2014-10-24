@@ -36,6 +36,19 @@
 typedef kdump_status (*read_page_fn)(kdump_ctx *, kdump_paddr_t);
 
 static kdump_status
+read_kvpage(kdump_ctx *ctx, kdump_paddr_t pfn)
+{
+	kdump_paddr_t vaddr, paddr;
+	kdump_status ret;
+
+	vaddr = pfn * ctx->page_size;
+	ret = ctx->arch_ops->vtop(ctx, vaddr, &paddr);
+	if (ret != kdump_ok)
+		return ret;
+	return ctx->ops->read_page(ctx, paddr / ctx->page_size);
+}
+
+static kdump_status
 read_page(kdump_ctx *ctx, kdump_paddr_t pfn, read_page_fn fn)
 {
 	if (pfn == ctx->last_pfn)
@@ -54,6 +67,9 @@ setup_readfn(kdump_ctx *ctx, long flags, read_page_fn *fn)
 		*fn = ctx->ops->read_page;
 	else if (flags & KDUMP_XENMACHADDR)
 		*fn = ctx->ops->read_xenmach_page;
+	else if (flags & KDUMP_KVADDR && ctx->ops->read_page &&
+		ctx->arch_ops && ctx->arch_ops->vtop)
+		*fn = read_kvpage;
 	else
 		return kdump_unsupported;
 

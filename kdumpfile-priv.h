@@ -122,6 +122,12 @@ struct arch_ops {
 	 */
 	kdump_status (*process_load)(kdump_ctx *ctx, kdump_paddr_t vaddr,
 				     kdump_paddr_t paddr);
+
+	/* Translate a virtual address to a physical address
+	 */
+	kdump_status (*vtop)(kdump_ctx *ctx, kdump_paddr_t vaddr,
+			     kdump_paddr_t *paddr);
+
 	/* Clean up any arch-specific data
 	 */
 	void (*cleanup)(kdump_ctx *);

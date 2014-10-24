@@ -60,6 +60,7 @@ void kdump_free(kdump_ctx *ctx);
 
 #define KDUMP_PHYSADDR		(1UL<<0)
 #define KDUMP_XENMACHADDR	(1UL<<1)
+#define KDUMP_KVADDR		(1UL<<2)
 
 ssize_t kdump_read(kdump_ctx *ctx, kdump_paddr_t paddr,
 		   unsigned char *buffer, size_t length,
