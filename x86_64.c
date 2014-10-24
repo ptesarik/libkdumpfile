@@ -35,6 +35,26 @@
 
 #define ELF_NGREG 27
 
+#define __START_KERNEL_map	0xffffffff80000000ULL
+
+/* This constant is not the maximum physical load offset. This is the
+ * maximum expected value of the PHYSICAL_START config option, which
+ * defaults to 0x1000000. A relocatable kernel can be loaded anywhere
+ * regardless of this config option. It is useful only for non-relocatable
+ * kernels, and it moves the kernel text both in physical and virtual
+ * address spaces. That means, the kernel must never overlap with the
+ * following area in virtual address space (kernel modules). The virtual
+ * memory layout has changed several times, but the minimum distance from
+ * kernel modules has been 128M (the following constants). On kernel
+ * versions where the distance is 512M, PHYSICAL_START can be higher than
+ * this value. The check in process_load() will fail in such configurations.
+ *
+ * In other words, this constant is a safe value that will prevent
+ * mistaking a kernel module LOAD for kernel text even on kernels
+ * where the gap is only 128M.
+ */
+#define MAX_PHYSICAL_START	0x0000000008000000ULL
+
 struct elf_siginfo
 {
 	int32_t si_signo;	/* signal number */
@@ -113,6 +133,15 @@ x86_64_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 	return kdump_ok;
 }
 
+static kdump_status
+x86_64_process_load(kdump_ctx *ctx, kdump_paddr_t vaddr, kdump_paddr_t paddr)
+{
+	if (vaddr >= __START_KERNEL_map &&
+	    vaddr < __START_KERNEL_map + MAX_PHYSICAL_START)
+		ctx->phys_base = paddr - (vaddr - __START_KERNEL_map);
+	return kdump_ok;
+}
+
 static void
 x86_64_cleanup(kdump_ctx *ctx)
 {
@@ -131,5 +160,6 @@ x86_64_cleanup(kdump_ctx *ctx)
 const struct arch_ops kdump_x86_64_ops = {
 	.process_prstatus = process_x86_64_prstatus,
 	.read_reg = x86_64_read_reg,
+	.process_load = x86_64_process_load,
 	.cleanup = x86_64_cleanup,
 };
