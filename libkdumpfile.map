@@ -6,6 +6,7 @@ LIBKDUMPFILE_0 {
     kdump_readp;
     kdump_read_string;
     kdump_format;
+    kdump_arch_name;
     kdump_is_xen;
     kdump_pagesize;
     kdump_phys_base;

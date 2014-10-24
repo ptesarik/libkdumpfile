@@ -38,6 +38,28 @@ kdump_format(kdump_ctx *ctx)
 	return ctx->format;
 }
 
+
+const char *
+kdump_arch_name(kdump_ctx *ctx)
+{
+	static const char *const names[] = {
+		[ARCH_AARCH64] = "aarch64",
+		[ARCH_ALPHA] = "alpha",
+		[ARCH_ARM] = "arm",
+		[ARCH_IA64] = "ia64",
+		[ARCH_PPC] = "ppc",
+		[ARCH_PPC64] = "ppc64",
+		[ARCH_PPC64LE] = "ppc64le",
+		[ARCH_S390] = "s390",
+		[ARCH_S390X] = "s390x",
+		[ARCH_X86] = "i386",
+		[ARCH_X86_64] = "x86_64",
+	};
+	if (ctx->arch < sizeof(names) / sizeof(names[0]))
+		return names[ctx->arch];
+	return NULL;
+}
+
 int
 kdump_is_xen(kdump_ctx *ctx)
 {

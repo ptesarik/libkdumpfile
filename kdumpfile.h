@@ -72,6 +72,19 @@ kdump_status kdump_read_string(kdump_ctx *ctx, kdump_paddr_t paddr,
 			       char **pstr, long flags);
 
 const char *kdump_format(kdump_ctx *ctx);
+
+/* Return the name of the architecture.
+ * Unlike kdump_machine, which may contain the name of a particular
+ * platform (e.g. "i586" v. "i686") or may not even be initialised,
+ * this function always returns the detected architecture from a fixed
+ * list below:
+ *   aarch64, alpha, arm, ia64, ppc, ppc64, ppc64le,
+ *   s390, s390x, i386, x86_64
+ * Note: this function may return NULL if the target architecture
+ *       was not detected for some reason.
+ */
+const char *kdump_arch_name(kdump_ctx *ctx);
+
 int kdump_is_xen(kdump_ctx *ctx);
 size_t kdump_pagesize(kdump_ctx *ctx);
 kdump_paddr_t kdump_phys_base(kdump_ctx *ctx);
