@@ -79,10 +79,10 @@ setup_readfn(kdump_ctx *ctx, long flags, read_page_fn *fn)
 	return kdump_ok;
 }
 
-ssize_t
-kdump_read(kdump_ctx *ctx, kdump_paddr_t paddr,
-	   unsigned char *buffer, size_t length,
-	   long flags)
+kdump_status
+kdump_readp(kdump_ctx *ctx, kdump_paddr_t paddr,
+	    unsigned char *buffer, size_t *plength,
+	    long flags)
 {
 	read_page_fn readfn;
 	size_t remain;
@@ -92,7 +92,7 @@ kdump_read(kdump_ctx *ctx, kdump_paddr_t paddr,
 	if (ret != kdump_ok)
 		return ret;
 
-	remain = length;
+	remain = *plength;
 	while (remain) {
 		size_t off, partlen;
 
@@ -110,10 +110,23 @@ kdump_read(kdump_ctx *ctx, kdump_paddr_t paddr,
 		remain -= partlen;
 	}
 
-	if (ret == kdump_syserr)
-		return -1;
+	*plength -= remain;
+	return ret;
+}
 
-	return length - remain;
+ssize_t
+kdump_read(kdump_ctx *ctx, kdump_paddr_t paddr,
+	   unsigned char *buffer, size_t length,
+	   long flags)
+{
+	size_t sz;
+	kdump_status ret;
+
+	sz = length;
+	ret = kdump_readp(ctx, paddr, buffer, &sz, flags);
+	if (!sz && ret == kdump_syserr)
+		return -1;
+	return sz;
 }
 
 kdump_status
