@@ -183,6 +183,7 @@ struct _tag_kdump_ctx {
 
 /* kdump_ctx flags */
 #define DIF_XEN		(1UL<<1)
+#define DIF_PHYS_BASE	(1UL<<2) /* phys_base is valid */
 
 const struct format_ops kdump_elfdump_ops;
 const struct format_ops kdump_kvm_ops;
@@ -298,6 +299,13 @@ dump64toh(kdump_ctx *ctx, uint64_t x)
 	return ctx->endian == __BIG_ENDIAN
 		? be64toh(x)
 		: le64toh(x);
+}
+
+static void
+kdump_set_phys_base(kdump_ctx *ctx, kdump_paddr_t base)
+{
+	ctx->phys_base = base;
+	ctx->flags |= DIF_PHYS_BASE;
 }
 
 #endif	/* kdumpfile-priv.h */

@@ -136,9 +136,10 @@ x86_64_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 static kdump_status
 x86_64_process_load(kdump_ctx *ctx, kdump_paddr_t vaddr, kdump_paddr_t paddr)
 {
-	if (vaddr >= __START_KERNEL_map &&
+	if (!(ctx->flags & DIF_PHYS_BASE) &&
+	    vaddr >= __START_KERNEL_map &&
 	    vaddr < __START_KERNEL_map + MAX_PHYSICAL_START)
-		ctx->phys_base = paddr - (vaddr - __START_KERNEL_map);
+		kdump_set_phys_base(ctx, paddr - (vaddr - __START_KERNEL_map));
 	return kdump_ok;
 }
 

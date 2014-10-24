@@ -346,7 +346,7 @@ read_sub_hdr_32(kdump_ctx *ctx, int32_t header_version)
 	    != sizeof subhdr)
 		return kdump_syserr;
 
-	ctx->phys_base = dump32toh(ctx, subhdr.phys_base);
+	kdump_set_phys_base(ctx, dump32toh(ctx, subhdr.phys_base));
 
 	if (header_version >= 4)
 		ret = read_notes(ctx, dump64toh(ctx, subhdr.offset_note),
@@ -375,7 +375,7 @@ read_sub_hdr_64(kdump_ctx *ctx, int32_t header_version)
 	    != sizeof subhdr)
 		return kdump_syserr;
 
-	ctx->phys_base = dump64toh(ctx, subhdr.phys_base);
+	kdump_set_phys_base(ctx, dump64toh(ctx, subhdr.phys_base));
 
 	if (header_version >= 4)
 		ret = read_notes(ctx, dump64toh(ctx, subhdr.offset_note),
