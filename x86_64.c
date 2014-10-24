@@ -158,9 +158,24 @@ x86_64_cleanup(kdump_ctx *ctx)
 	ctx->archdata = NULL;
 }
 
+static kdump_status
+x86_64_vtop(kdump_ctx *ctx, kdump_paddr_t vaddr, kdump_paddr_t *paddr)
+{
+	if (! (ctx->flags & DIF_PHYS_BASE) )
+		return kdump_nodata;
+
+	if (vaddr >= __START_KERNEL_map) {
+		*paddr = vaddr - __START_KERNEL_map + ctx->phys_base;
+		return kdump_ok;
+	}
+
+	return kdump_unsupported;
+}
+
 const struct arch_ops kdump_x86_64_ops = {
 	.process_prstatus = process_x86_64_prstatus,
 	.read_reg = x86_64_read_reg,
 	.process_load = x86_64_process_load,
+	.vtop = x86_64_vtop,
 	.cleanup = x86_64_cleanup,
 };
