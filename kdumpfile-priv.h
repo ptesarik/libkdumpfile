@@ -135,6 +135,7 @@ struct arch_ops {
 
 /* provide our own definition of new_utsname */
 #define NEW_UTS_LEN 64
+#define UTS_SYSNAME "Linux"
 struct new_utsname {
 	char sysname[NEW_UTS_LEN + 1];
 	char nodename[NEW_UTS_LEN + 1];

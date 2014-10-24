@@ -149,8 +149,20 @@ kdump_set_uts(kdump_ctx *ctx, const struct new_utsname *src)
 int
 kdump_uts_looks_sane(struct new_utsname *uts)
 {
-	return uts->sysname[0] && uts->nodename[0] && uts->release[0] &&
-		uts->version[0] && uts->machine[0];
+	/* Since all strings are NUL-terminated, the last byte in
+	 * the array must be always zero; domainname may be missing.
+	 */
+	if (uts->sysname[NEW_UTS_LEN] || uts->nodename[NEW_UTS_LEN] ||
+	    uts->release[NEW_UTS_LEN] || uts->version[NEW_UTS_LEN] ||
+	    uts->machine[NEW_UTS_LEN])
+		return 0;
+
+	/* release, version and machine cannot be empty */
+	if (!uts->release[0] || !uts->version[0] || !uts->machine[0])
+		return 0;
+
+	/* sysname is kind of a magic signature */
+	return !strcmp(uts->sysname, UTS_SYSNAME);
 }
 
 int
