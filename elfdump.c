@@ -137,6 +137,9 @@ elf_read_page(kdump_ctx *ctx, kdump_paddr_t pfn)
 	kdump_paddr_t addr = pfn * ctx->page_size;
 	off_t pos;
 
+	if (pfn == ctx->last_pfn)
+		return kdump_ok;
+
 	if (edp->num_load_segments == 1) {
 		pos = (off_t)addr + (off_t)edp->load_segments[0].file_offset;
 	} else {
@@ -159,6 +162,7 @@ elf_read_page(kdump_ctx *ctx, kdump_paddr_t pfn)
 	if (pread(ctx->fd, ctx->page, ctx->page_size, pos) != ctx->page_size)
 		return kdump_syserr;
 
+	ctx->last_pfn = pfn;
 	return kdump_ok;
 }
 

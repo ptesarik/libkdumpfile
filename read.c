@@ -49,15 +49,6 @@ read_kvpage(kdump_ctx *ctx, kdump_paddr_t pfn)
 }
 
 static kdump_status
-read_page(kdump_ctx *ctx, kdump_paddr_t pfn, read_page_fn fn)
-{
-	if (pfn == ctx->last_pfn)
-		return kdump_ok;
-	ctx->last_pfn = pfn;
-	return fn(ctx, pfn);
-}
-
-static kdump_status
 setup_readfn(kdump_ctx *ctx, long flags, read_page_fn *fn)
 {
 	if (!ctx->ops)
@@ -96,7 +87,7 @@ kdump_readp(kdump_ctx *ctx, kdump_paddr_t paddr,
 	while (remain) {
 		size_t off, partlen;
 
-		ret = read_page(ctx, paddr / ctx->page_size, readfn);
+		ret = readfn(ctx, paddr / ctx->page_size);
 		if (ret != kdump_ok)
 			break;
 
@@ -145,7 +136,7 @@ kdump_read_string(kdump_ctx *ctx, kdump_paddr_t paddr,
 	do {
 		size_t off, partlen;
 
-		ret = read_page(ctx, paddr / ctx->page_size, readfn);
+		ret = readfn(ctx, paddr / ctx->page_size);
 		if (ret != kdump_ok)
 			break;
 

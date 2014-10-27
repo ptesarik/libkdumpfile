@@ -185,6 +185,9 @@ diskdump_read_page(kdump_ctx *ctx, kdump_paddr_t pfn)
 	off_t pd_pos;
 	void *buf;
 
+	if (pfn == ctx->last_pfn)
+		return kdump_ok;
+
 	if (!page_is_dumpable(ctx, pfn)) {
 		memset(ctx->page, 0, ctx->page_size);
 		return kdump_ok;
@@ -235,6 +238,7 @@ diskdump_read_page(kdump_ctx *ctx, kdump_paddr_t pfn)
 			return kdump_dataerr;
 	}
 
+	ctx->last_pfn = pfn;
 	return kdump_ok;
 }
 

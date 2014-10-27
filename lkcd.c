@@ -425,6 +425,9 @@ lkcd_read_page(kdump_ctx *ctx, kdump_paddr_t pfn)
 	void *buf;
 	kdump_status ret;
 
+	if (pfn == ctx->last_pfn)
+		return kdump_ok;
+
 	if (pfn >= ctx->max_pfn)
 		return kdump_nodata;
 
@@ -475,7 +478,7 @@ lkcd_read_page(kdump_ctx *ctx, kdump_paddr_t pfn)
 		return kdump_syserr;
 
 	if (type == DUMP_RAW)
-		return kdump_ok;
+		goto out;
 
 	if (lkcdp->compression == DUMP_COMPRESS_RLE) {
 		size_t retlen = ctx->page_size;
@@ -492,6 +495,8 @@ lkcd_read_page(kdump_ctx *ctx, kdump_paddr_t pfn)
 	} else
 		return kdump_unsupported;
 
+  out:
+	ctx->last_pfn = pfn;
 	return kdump_ok;
 }
 
