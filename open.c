@@ -134,20 +134,15 @@ kdump_open_known(kdump_ctx *ctx)
 static kdump_status
 use_kernel_utsname(kdump_ctx *ctx)
 {
-	const char *sym_init_uts_ns;
-	kdump_paddr_t init_uts_ns, uts_name;
+	kdump_vaddr_t init_uts_ns, uts_name;
 	struct new_utsname uts;
 	size_t rd;
 	char *p;
 	kdump_status ret;
 
-	sym_init_uts_ns = kdump_vmcoreinfo_row(ctx, "SYMBOL(init_uts_ns)");
-	if (!sym_init_uts_ns || !sym_init_uts_ns[0])
-		return kdump_nodata;
-
-	init_uts_ns = strtoull(sym_init_uts_ns, &p, 16);
-	if (*p)
-		return kdump_dataerr;
+	ret = kdump_vmcoreinfo_symbol(ctx, "init_uts_ns", &init_uts_ns);
+	if (ret != kdump_ok)
+		return ret;
 
 	rd = sizeof uts;
 	ret = kdump_readp(ctx, init_uts_ns, (unsigned char*)&uts, &rd,
