@@ -179,7 +179,7 @@ pfn_to_pdpos(kdump_ctx *ctx, unsigned long pfn)
 }
 
 static kdump_status
-diskdump_read_page(kdump_ctx *ctx, kdump_paddr_t pfn)
+diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	struct page_desc pd;
 	off_t pd_pos;
@@ -402,11 +402,11 @@ read_bitmap(kdump_ctx *ctx, int32_t sub_hdr_size,
 	struct disk_dump_priv *ddp = ctx->fmtdata;
 	off_t off = (1 + sub_hdr_size) * ctx->page_size;
 	size_t bitmapsize;
-	kdump_paddr_t max_bitmap_pfn;
+	kdump_pfn_t max_bitmap_pfn;
 
 	ddp->descoff = off + bitmap_blocks * ctx->page_size;
 
-	max_bitmap_pfn = (kdump_paddr_t)ctx->page_size * bitmap_blocks * 8;
+	max_bitmap_pfn = (kdump_pfn_t)ctx->page_size * bitmap_blocks * 8;
 	if (ctx->max_pfn <= max_bitmap_pfn / 2) {
 		/* partial dump */
 		bitmap_blocks /= 2;

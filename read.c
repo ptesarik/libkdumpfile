@@ -33,12 +33,13 @@
 
 #include "kdumpfile-priv.h"
 
-typedef kdump_status (*read_page_fn)(kdump_ctx *, kdump_paddr_t);
+typedef kdump_status (*read_page_fn)(kdump_ctx *, kdump_pfn_t);
 
 static kdump_status
-read_kvpage(kdump_ctx *ctx, kdump_paddr_t pfn)
+read_kvpage(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
-	kdump_paddr_t vaddr, paddr;
+	kdump_vaddr_t vaddr;
+	kdump_paddr_t paddr;
 	kdump_status ret;
 
 	vaddr = pfn * ctx->page_size;
@@ -71,7 +72,7 @@ setup_readfn(kdump_ctx *ctx, long flags, read_page_fn *fn)
 }
 
 kdump_status
-kdump_readp(kdump_ctx *ctx, kdump_paddr_t paddr,
+kdump_readp(kdump_ctx *ctx, kdump_addr_t addr,
 	    unsigned char *buffer, size_t *plength,
 	    long flags)
 {
@@ -87,16 +88,16 @@ kdump_readp(kdump_ctx *ctx, kdump_paddr_t paddr,
 	while (remain) {
 		size_t off, partlen;
 
-		ret = readfn(ctx, paddr / ctx->page_size);
+		ret = readfn(ctx, addr / ctx->page_size);
 		if (ret != kdump_ok)
 			break;
 
-		off = paddr % ctx->page_size;
+		off = addr % ctx->page_size;
 		partlen = ctx->page_size - off;
 		if (partlen > remain)
 			partlen = remain;
 		memcpy(buffer, ctx->page + off, partlen);
-		paddr += partlen;
+		addr += partlen;
 		buffer += partlen;
 		remain -= partlen;
 	}
@@ -106,7 +107,7 @@ kdump_readp(kdump_ctx *ctx, kdump_paddr_t paddr,
 }
 
 ssize_t
-kdump_read(kdump_ctx *ctx, kdump_paddr_t paddr,
+kdump_read(kdump_ctx *ctx, kdump_addr_t addr,
 	   unsigned char *buffer, size_t length,
 	   long flags)
 {
@@ -114,14 +115,14 @@ kdump_read(kdump_ctx *ctx, kdump_paddr_t paddr,
 	kdump_status ret;
 
 	sz = length;
-	ret = kdump_readp(ctx, paddr, buffer, &sz, flags);
+	ret = kdump_readp(ctx, addr, buffer, &sz, flags);
 	if (!sz && ret == kdump_syserr)
 		return -1;
 	return sz;
 }
 
 kdump_status
-kdump_read_string(kdump_ctx *ctx, kdump_paddr_t paddr,
+kdump_read_string(kdump_ctx *ctx, kdump_addr_t addr,
 		  char **pstr, long flags)
 {
 	read_page_fn readfn;
@@ -136,11 +137,11 @@ kdump_read_string(kdump_ctx *ctx, kdump_paddr_t paddr,
 	do {
 		size_t off, partlen;
 
-		ret = readfn(ctx, paddr / ctx->page_size);
+		ret = readfn(ctx, addr / ctx->page_size);
 		if (ret != kdump_ok)
 			break;
 
-		off = paddr % ctx->page_size;
+		off = addr % ctx->page_size;
 		partlen = ctx->page_size - off;
 		endp = memchr(ctx->page + off, 0, partlen);
 		if (endp)
@@ -157,7 +158,7 @@ kdump_read_string(kdump_ctx *ctx, kdump_paddr_t paddr,
 		length = newlength;
 		str = newstr;
 
-		paddr += partlen;
+		addr += partlen;
 	} while (!endp);
 
 	if (ret == kdump_ok) {

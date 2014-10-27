@@ -134,7 +134,7 @@ x86_64_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 }
 
 static kdump_status
-x86_64_process_load(kdump_ctx *ctx, kdump_paddr_t vaddr, kdump_paddr_t paddr)
+x86_64_process_load(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t paddr)
 {
 	if (!(ctx->flags & DIF_PHYS_BASE) &&
 	    vaddr >= __START_KERNEL_map &&
@@ -159,7 +159,7 @@ x86_64_cleanup(kdump_ctx *ctx)
 }
 
 static kdump_status
-x86_64_vtop(kdump_ctx *ctx, kdump_paddr_t vaddr, kdump_paddr_t *paddr)
+x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	if (vaddr >= __START_KERNEL_map) {
 		*paddr = vaddr - __START_KERNEL_map + ctx->phys_base;

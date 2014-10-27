@@ -413,7 +413,7 @@ fill_level2(kdump_ctx *ctx, unsigned idx1, unsigned endidx)
 }
 
 static kdump_status
-lkcd_read_page(kdump_ctx *ctx, kdump_paddr_t pfn)
+lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
 	struct pfn_level2 *pfn_level2;

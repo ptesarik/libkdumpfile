@@ -35,7 +35,7 @@
 #include "kdumpfile-priv.h"
 
 static kdump_status
-devmem_read_page(kdump_ctx *ctx, kdump_paddr_t pfn)
+devmem_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	off_t pos = pfn * ctx->page_size;
 	if (pread(ctx->fd, ctx->page, ctx->page_size, pos) != ctx->page_size)

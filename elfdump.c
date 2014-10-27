@@ -131,7 +131,7 @@ set_page_size(kdump_ctx *ctx)
 }
 
 static kdump_status
-elf_read_page(kdump_ctx *ctx, kdump_paddr_t pfn)
+elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
 	kdump_paddr_t addr = pfn * ctx->page_size;
@@ -167,7 +167,7 @@ elf_read_page(kdump_ctx *ctx, kdump_paddr_t pfn)
 }
 
 static kdump_status
-elf_read_xen_dom0(kdump_ctx *ctx, kdump_paddr_t pfn)
+elf_read_xen_dom0(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
 	unsigned fpp = ctx->page_size / ctx->ptr_size;
@@ -374,7 +374,8 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 	for (i = 0; i < dump16toh(ctx, ehdr->e_phnum); ++i) {
 		unsigned type;
 		off_t offset, filesz;
-		kdump_paddr_t vaddr, paddr;
+		kdump_vaddr_t vaddr;
+		kdump_paddr_t paddr;
 
 		if (read(ctx->fd, &prog, sizeof prog) != sizeof prog)
 			return kdump_syserr;
@@ -438,7 +439,8 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 	for (i = 0; i < dump16toh(ctx, ehdr->e_phnum); ++i) {
 		unsigned type;
 		off_t offset, filesz;
-		kdump_paddr_t vaddr, paddr;
+		kdump_vaddr_t vaddr;
+		kdump_paddr_t paddr;
 
 		if (read(ctx->fd, &prog, sizeof prog) != sizeof prog)
 			return kdump_syserr;

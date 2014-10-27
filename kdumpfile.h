@@ -37,7 +37,13 @@
 extern "C" {
 #endif
 
-typedef uint_fast64_t kdump_paddr_t;
+/* Must be large enough to hold any possible address type */
+typedef uint_fast64_t kdump_addr_t;
+
+/* Provide two types to convey phys/virt semantics where possible */
+typedef kdump_addr_t kdump_paddr_t;
+typedef kdump_addr_t kdump_vaddr_t;
+
 typedef uint_fast64_t kdump_reg_t;
 
 typedef struct _tag_kdump_ctx kdump_ctx;
@@ -62,13 +68,13 @@ void kdump_free(kdump_ctx *ctx);
 #define KDUMP_XENMACHADDR	(1UL<<1)
 #define KDUMP_KVADDR		(1UL<<2)
 
-ssize_t kdump_read(kdump_ctx *ctx, kdump_paddr_t paddr,
+ssize_t kdump_read(kdump_ctx *ctx, kdump_addr_t addr,
 		   unsigned char *buffer, size_t length,
 		   long flags);
-kdump_status kdump_readp(kdump_ctx *ctx, kdump_paddr_t paddr,
+kdump_status kdump_readp(kdump_ctx *ctx, kdump_addr_t addr,
 			 unsigned char *buffer, size_t *plength,
 			 long flags);
-kdump_status kdump_read_string(kdump_ctx *ctx, kdump_paddr_t paddr,
+kdump_status kdump_read_string(kdump_ctx *ctx, kdump_addr_t addr,
 			       char **pstr, long flags);
 
 const char *kdump_format(kdump_ctx *ctx);

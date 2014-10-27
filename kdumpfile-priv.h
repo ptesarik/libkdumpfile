@@ -41,6 +41,8 @@
 #define MIN_PAGE_SIZE	(1UL << 12)
 #define MAX_PAGE_SIZE	(1UL << 18)
 
+typedef kdump_addr_t kdump_pfn_t;
+
 enum kdump_arch {
 	ARCH_UNKNOWN = 0,
 	ARCH_AARCH64,
@@ -84,7 +86,7 @@ struct format_ops {
 	 *   kdump_ok        buffer is filled with page data
 	 *   kdump_nodata    data for the given page is not present
 	 */
-	kdump_status (*read_page)(kdump_ctx *, kdump_paddr_t);
+	kdump_status (*read_page)(kdump_ctx *, kdump_pfn_t);
 
 	/* Read a page from the dump file using Xen machine addresses.
 	 * Input:
@@ -93,7 +95,7 @@ struct format_ops {
 	 *   kdump_ok        buffer is filled with page data
 	 *   kdump_nodata    data for the given page is not present
 	 */
-	kdump_status (*read_xenmach_page)(kdump_ctx *, kdump_paddr_t);
+	kdump_status (*read_xenmach_page)(kdump_ctx *, kdump_pfn_t);
 
 	/* Free all private data.
 	 */
@@ -120,12 +122,12 @@ struct arch_ops {
 
 	/* Process a LOAD segment
 	 */
-	kdump_status (*process_load)(kdump_ctx *ctx, kdump_paddr_t vaddr,
+	kdump_status (*process_load)(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 				     kdump_paddr_t paddr);
 
 	/* Translate a virtual address to a physical address
 	 */
-	kdump_status (*vtop)(kdump_ctx *ctx, kdump_paddr_t vaddr,
+	kdump_status (*vtop)(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 			     kdump_paddr_t *paddr);
 
 	/* Clean up any arch-specific data
@@ -170,8 +172,8 @@ struct _tag_kdump_ctx {
 	void *buffer;		/* temporary buffer */
 	void *page;		/* page data buffer */
 	size_t page_size;	/* target page size */
-	kdump_paddr_t last_pfn;	/* last read PFN */
-	kdump_paddr_t max_pfn;	/* max PFN for read_page */
+	kdump_pfn_t last_pfn;	/* last read PFN */
+	kdump_pfn_t max_pfn;	/* max PFN for read_page */
 	kdump_paddr_t phys_base; /* kernel physical base offset */
 
 	struct new_utsname utsname;
@@ -181,8 +183,8 @@ struct _tag_kdump_ctx {
 	struct vmcoreinfo *vmcoreinfo_xen;
 
 	kdump_xen_version_t xen_ver; /* Xen hypervisor version */
-	kdump_paddr_t xen_extra_ver;
-	kdump_paddr_t xen_p2m_mfn;
+	kdump_vaddr_t xen_extra_ver;
+	kdump_pfn_t xen_p2m_mfn;
 
 	void *fmtdata;		/* format-specific private data */
 	void *archdata;		/* arch-specific private data */
