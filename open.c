@@ -197,8 +197,8 @@ use_kernel_utsname(kdump_ctx *ctx)
 void
 kdump_free(kdump_ctx *ctx)
 {
-	if (ctx->ops && ctx->ops->free)
-		ctx->ops->free(ctx);
+	if (ctx->ops && ctx->ops->cleanup)
+		ctx->ops->cleanup(ctx);
 	if (ctx->arch_ops && ctx->arch_ops->cleanup)
 		ctx->arch_ops->cleanup(ctx);
 	if (ctx->page)

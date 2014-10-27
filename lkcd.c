@@ -668,7 +668,7 @@ free_level1(struct pfn_level2 **level1, unsigned long n)
 }
 
 static void
-lkcd_free(kdump_ctx *ctx)
+lkcd_cleanup(kdump_ctx *ctx)
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
 
@@ -680,5 +680,5 @@ lkcd_free(kdump_ctx *ctx)
 const struct format_ops kdump_lkcd_ops = {
 	.probe = lkcd_probe,
 	.read_page = lkcd_read_page,
-	.free = lkcd_free,
+	.cleanup = lkcd_cleanup,
 };

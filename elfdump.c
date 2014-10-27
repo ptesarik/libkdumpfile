@@ -724,7 +724,7 @@ elf_probe(kdump_ctx *ctx)
 }
 
 static void
-elf_free(kdump_ctx *ctx)
+elf_cleanup(kdump_ctx *ctx)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
 
@@ -736,17 +736,17 @@ elf_free(kdump_ctx *ctx)
 const struct format_ops kdump_elfdump_ops = {
 	.probe = elf_probe,
 	.read_page = elf_read_page,
-	.free = elf_free,
+	.cleanup = elf_cleanup,
 };
 
 static const struct format_ops xen_dom0_ops = {
 	.read_page = elf_read_xen_dom0,
 	.read_xenmach_page = elf_read_page,
-	.free = elf_free,
+	.cleanup = elf_cleanup,
 };
 
 static const struct format_ops xen_domU_ops = {
 	.read_page = elf_read_xen_domU,
 	.read_xenmach_page = elf_read_page,
-	.free = elf_free,
+	.cleanup = elf_cleanup,
 };

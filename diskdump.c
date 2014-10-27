@@ -492,7 +492,7 @@ diskdump_probe(kdump_ctx *ctx)
 }
 
 static void
-diskdump_free(kdump_ctx *ctx)
+diskdump_cleanup(kdump_ctx *ctx)
 {
 	struct disk_dump_priv *ddp = ctx->fmtdata;
 
@@ -505,5 +505,5 @@ diskdump_free(kdump_ctx *ctx)
 const struct format_ops kdump_diskdump_ops = {
 	.probe = diskdump_probe,
 	.read_page = diskdump_read_page,
-	.free = diskdump_free,
+	.cleanup = diskdump_cleanup,
 };

@@ -97,9 +97,9 @@ struct format_ops {
 	 */
 	kdump_status (*read_xenmach_page)(kdump_ctx *, kdump_pfn_t);
 
-	/* Free all private data.
+	/* Clean up all private data.
 	 */
-	void (*free)(kdump_ctx *);
+	void (*cleanup)(kdump_ctx *);
 };
 
 struct arch_ops {
