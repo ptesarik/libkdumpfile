@@ -83,6 +83,7 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 	ctx = calloc(1, sizeof *ctx);
 	if (!ctx)
 		goto err;
+	ctx->last_pfn = -(kdump_paddr_t)1;
 
 	ctx->buffer = malloc(MAX_PAGE_SIZE);
 	if (!ctx->buffer)
