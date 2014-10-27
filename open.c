@@ -102,6 +102,7 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 			return kdump_open_known(ctx);
 		}
 	}
+	ctx->ops = NULL;
 
   err_ctx:
 	kdump_free(ctx);
