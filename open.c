@@ -173,7 +173,9 @@ use_kernel_utsname(kdump_ctx *ctx)
 	char *p;
 	kdump_status ret;
 
-	ret = uts_name_from_init_uts_ns(ctx, &uts_name);
+	ret = kdump_vmcoreinfo_symbol(ctx, "system_utsname", &uts_name);
+	if (ret == kdump_nodata)
+		ret = uts_name_from_init_uts_ns(ctx, &uts_name);
 	if (ret != kdump_ok)
 		return ret;
 
