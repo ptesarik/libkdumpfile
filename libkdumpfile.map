@@ -22,6 +22,8 @@ LIBKDUMPFILE_0 {
     kdump_vmcoreinfo_xen;
     kdump_vmcoreinfo_row;
     kdump_vmcoreinfo_row_xen;
+    kdump_vmcoreinfo_symbol;
+    kdump_vmcoreinfo_symbol_xen;
     kdump_xen_version;
 
   local:

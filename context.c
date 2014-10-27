@@ -29,6 +29,7 @@
 #define _GNU_SOURCE
 
 #include <string.h>
+#include <stdio.h>
 
 #include "kdumpfile-priv.h"
 
@@ -170,4 +171,40 @@ void
 kdump_xen_version(kdump_ctx *ctx, kdump_xen_version_t *version)
 {
 	memcpy(version, &ctx->xen_ver, sizeof(kdump_xen_version_t));
+}
+
+static kdump_status
+vmcoreinfo_symbol(struct vmcoreinfo *info, const char *symname,
+		  kdump_addr_t *symvalue)
+{
+	char key[sizeof("SYMBOL()") + strlen(symname)];
+	const char *valstr;
+	unsigned long long val;
+	char *p;
+
+	sprintf(key, "SYMBOL(%s)", symname);
+	valstr = vmcoreinfo_row(info, key);
+	if (!valstr || !*valstr)
+		return kdump_nodata;
+
+	val = strtoull(valstr, &p, 16);
+	if (*p)
+		return kdump_dataerr;
+
+	*symvalue = val;
+	return kdump_ok;
+}
+
+kdump_status
+kdump_vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname,
+			kdump_addr_t *symvalue)
+{
+	return vmcoreinfo_symbol(ctx->vmcoreinfo, symname, symvalue);
+}
+
+kdump_status
+kdump_vmcoreinfo_symbol_xen(kdump_ctx *ctx, const char *symname,
+			    kdump_addr_t *symvalue)
+{
+	return vmcoreinfo_symbol(ctx->vmcoreinfo_xen, symname, symvalue);
 }
