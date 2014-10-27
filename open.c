@@ -131,37 +131,52 @@ kdump_open_known(kdump_ctx *ctx)
 	return kdump_ok;
 }
 
+/* struct new_utsname is inside struct uts_namespace, preceded by a struct
+ * kref, but the offset is not stored in VMCOREINFO. So, search some sane
+ * amount of memory for UTS_SYSNAME, which can be used as kind of a magic
+ * signature.
+ */
 static kdump_status
-use_kernel_utsname(kdump_ctx *ctx)
+uts_name_from_init_uts_ns(kdump_ctx *ctx, kdump_vaddr_t *uts_name)
 {
-	kdump_vaddr_t init_uts_ns, uts_name;
-	struct new_utsname uts;
-	size_t rd;
+	kdump_vaddr_t init_uts_ns;
+	char buf[2 * NEW_UTS_LEN + sizeof(UTS_SYSNAME)];
 	char *p;
+	size_t rd;
 	kdump_status ret;
 
 	ret = kdump_vmcoreinfo_symbol(ctx, "init_uts_ns", &init_uts_ns);
 	if (ret != kdump_ok)
 		return ret;
 
-	rd = sizeof uts;
-	ret = kdump_readp(ctx, init_uts_ns, (unsigned char*)&uts, &rd,
-			  KDUMP_KVADDR);
+	rd = sizeof buf;
+	ret = kdump_readp(ctx, init_uts_ns, buf, &rd, KDUMP_KVADDR);
 	if (ret != kdump_ok)
 		return ret;
 
-	/* struct new_utsname is inside struct uts_namespace, preceded
-	 * by a struct kref, but the offset is not stored in VMCOREINFO
-	 * So, search some sane amount of memory for UTS_SYSNAME, which
-	 * can be used as kind of a magic signature.
-	 */
-	for (p = uts.sysname; p <= uts.nodename; ++p)
+	for (p = buf; p <= &buf[2 * NEW_UTS_LEN]; ++p)
 		if (!memcmp(p, UTS_SYSNAME, sizeof(UTS_SYSNAME)))
 			break;
-	if (p > uts.nodename)
+	if (p > &buf[2 * NEW_UTS_LEN])
 		return kdump_dataerr;
 
-	uts_name = init_uts_ns + p - uts.sysname;
+	*uts_name = init_uts_ns + p - buf;
+	return kdump_ok;
+}
+
+static kdump_status
+use_kernel_utsname(kdump_ctx *ctx)
+{
+	kdump_vaddr_t uts_name;
+	struct new_utsname uts;
+	size_t rd;
+	char *p;
+	kdump_status ret;
+
+	ret = uts_name_from_init_uts_ns(ctx, &uts_name);
+	if (ret != kdump_ok)
+		return ret;
+
 	rd = sizeof uts;
 	ret = kdump_readp(ctx, uts_name, (unsigned char*)&uts, &rd,
 			  KDUMP_KVADDR);
