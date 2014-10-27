@@ -447,23 +447,23 @@ lkcd_read_page(kdump_ctx *ctx, kdump_paddr_t pfn)
 
 	idx3 = pfn_idx3(pfn);
 	if (pfn_level3[idx3] == (uint32_t)-1)
-		return -1;
+		return kdump_nodata;
 	off += pfn_level3[idx3];
 
 	if (find_page(ctx, off, pfn, &dp) < 0)
-		return -1;
+		return kdump_syserr;
 	off += sizeof(struct dump_page);
 
 	type = dp.dp_flags & (DUMP_COMPRESSED|DUMP_RAW);
 	switch (type) {
 	case DUMP_COMPRESSED:
 		if (dp.dp_size > MAX_PAGE_SIZE)
-			return -1;
+			return kdump_dataerr;
 		buf = ctx->buffer;
 		break;
 	case DUMP_RAW:
 		if (dp.dp_size != ctx->page_size)
-			return -1;
+			return kdump_dataerr;
 		buf = ctx->page;
 		break;
 	default:
@@ -472,7 +472,7 @@ lkcd_read_page(kdump_ctx *ctx, kdump_paddr_t pfn)
 
 	/* read page data */
 	if (pread(ctx->fd, buf, dp.dp_size, off) != dp.dp_size)
-		return -1;
+		return kdump_syserr;
 
 	if (type == DUMP_RAW)
 		return kdump_ok;
