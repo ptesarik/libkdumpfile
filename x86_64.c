@@ -89,6 +89,13 @@ struct cpu_state {
 };
 
 static kdump_status
+x86_64_init(kdump_ctx *ctx)
+{
+	return kdump_set_region(ctx, __START_KERNEL_map, KDUMP_ADDR_MAX,
+				KDUMP_XLAT_KTEXT, __START_KERNEL_map);
+}
+
+static kdump_status
 process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 {
 	struct elf_prstatus *status = data;
@@ -161,15 +168,11 @@ x86_64_cleanup(kdump_ctx *ctx)
 static kdump_status
 x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	if (vaddr >= __START_KERNEL_map) {
-		*paddr = vaddr - __START_KERNEL_map + ctx->phys_base;
-		return kdump_ok;
-	}
-
 	return kdump_unsupported;
 }
 
 const struct arch_ops kdump_x86_64_ops = {
+	.init = x86_64_init,
 	.process_prstatus = process_x86_64_prstatus,
 	.read_reg = x86_64_read_reg,
 	.process_load = x86_64_process_load,
