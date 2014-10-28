@@ -43,7 +43,7 @@ read_kvpage(kdump_ctx *ctx, kdump_pfn_t pfn)
 	kdump_status ret;
 
 	vaddr = pfn * ctx->page_size;
-	ret = ctx->arch_ops->vtop(ctx, vaddr, &paddr);
+	ret = kdump_vtop(ctx, vaddr, &paddr);
 	if (ret != kdump_ok)
 		return ret;
 	return ctx->ops->read_page(ctx, paddr / ctx->page_size);
