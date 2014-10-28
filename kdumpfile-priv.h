@@ -157,6 +157,29 @@ struct vmcoreinfo {
 	struct vmcoreinfo_row row[]; /* parsed rows */
 };
 
+typedef enum _tag_kdump_xlat {
+	/* No mapping set */
+	KDUMP_XLAT_NONE,
+
+	/* Invalid virtual addresses */
+	KDUMP_XLAT_INVALID,
+
+	/* Arbitrary: use vtop to map between virtual and physical */
+	KDUMP_XLAT_VTOP,
+
+	/* Direct mapping: virtual = physical + phys_off */
+	KDUMP_XLAT_DIRECT,
+
+	/* Kernel text: virtual = physical + phys_off + ctx->phys_base */
+	KDUMP_XLAT_KTEXT,
+} kdump_xlat_t;
+
+struct kdump_vaddr_region {
+	kdump_vaddr_t max_off;	/* max offset inside the range */
+	kdump_addr_t phys_off;	/* offset from physical addresses */
+	kdump_xlat_t xlat;	/* vaddr->paddr translation method */
+};
+
 struct _tag_kdump_ctx {
 	int fd;			/* dump file descriptor */
 	const char *format;	/* file format (descriptive name) */
@@ -175,6 +198,9 @@ struct _tag_kdump_ctx {
 	kdump_pfn_t last_pfn;	/* last read PFN */
 	kdump_pfn_t max_pfn;	/* max PFN for read_page */
 	kdump_paddr_t phys_base; /* kernel physical base offset */
+
+	struct kdump_vaddr_region *region;
+	unsigned num_regions;	/* number of elements in ->region */
 
 	struct new_utsname utsname;
 	unsigned num_cpus;	/* number of CPUs in the system  */
@@ -239,6 +265,14 @@ kdump_status kdump_read_xenver(kdump_ctx *ctx);
 
 kdump_status kdump_process_notes(kdump_ctx *ctx, void *data, size_t size);
 kdump_status kdump_process_vmcoreinfo(kdump_ctx *ctx, void *data, size_t size);
+
+/* Virtual address space regions */
+
+kdump_status kdump_set_region(kdump_ctx *ctx,
+			      kdump_vaddr_t first, kdump_vaddr_t last,
+			      kdump_xlat_t xlat, kdump_vaddr_t phys_off);
+kdump_xlat_t kdump_get_xlat(kdump_ctx *ctx, kdump_vaddr_t vaddr,
+			    kdump_paddr_t *phys_off);
 
 /* Older glibc didn't have the byteorder macros */
 #ifndef be16toh

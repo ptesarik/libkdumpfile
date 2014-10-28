@@ -33,6 +33,7 @@ libkdumpfile_la_SOURCES = \
 	read.c \
 	todo.c \
 	util.c \
+	vtop.c \
 	x86_64.c
 
 EXTRA_libkdumpfile_la_DEPENDENCIES = libkdumpfile.map
