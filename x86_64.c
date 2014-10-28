@@ -35,6 +35,9 @@
 
 #define ELF_NGREG 27
 
+/* Maximum virtual address bits (architecture limit) */
+#define VIRTUAL_ADDRESS_SHIFT	47
+
 #define __START_KERNEL_map	0xffffffff80000000ULL
 
 /* This constant is not the maximum physical load offset. This is the
@@ -91,8 +94,18 @@ struct cpu_state {
 static kdump_status
 x86_64_init(kdump_ctx *ctx)
 {
-	return kdump_set_region(ctx, __START_KERNEL_map, KDUMP_ADDR_MAX,
-				KDUMP_XLAT_KTEXT, __START_KERNEL_map);
+	kdump_status ret;
+
+	ret = kdump_set_region(ctx, (1ULL<<VIRTUAL_ADDRESS_SHIFT) - 1,
+			       ~(1ULL << VIRTUAL_ADDRESS_SHIFT),
+			       KDUMP_XLAT_INVALID, 0);
+	if (ret != kdump_ok)
+		return ret;
+
+	ret = kdump_set_region(ctx, __START_KERNEL_map, KDUMP_ADDR_MAX,
+			       KDUMP_XLAT_KTEXT, __START_KERNEL_map);
+	if (ret != kdump_ok)
+		return ret;
 }
 
 static kdump_status
