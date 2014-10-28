@@ -271,6 +271,7 @@ kdump_status kdump_process_vmcoreinfo(kdump_ctx *ctx, void *data, size_t size);
 kdump_status kdump_set_region(kdump_ctx *ctx,
 			      kdump_vaddr_t first, kdump_vaddr_t last,
 			      kdump_xlat_t xlat, kdump_vaddr_t phys_off);
+void kdump_flush_regions(kdump_ctx *ctx);
 kdump_xlat_t kdump_get_xlat(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 			    kdump_paddr_t *phys_off);
 

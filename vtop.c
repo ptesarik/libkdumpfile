@@ -112,6 +112,15 @@ kdump_set_region(kdump_ctx *ctx, kdump_vaddr_t first, kdump_vaddr_t last,
 	return kdump_ok;
 }
 
+void
+kdump_flush_regions(kdump_ctx *ctx)
+{
+	if (ctx->region)
+		free(ctx->region);
+	ctx->region = NULL;
+	ctx->num_regions = 0;
+}
+
 kdump_xlat_t
 kdump_get_xlat(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 	       kdump_paddr_t *phys_off)
