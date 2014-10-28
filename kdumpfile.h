@@ -66,6 +66,9 @@ typedef struct _tag_kdump_xen_version {
 kdump_status kdump_fdopen(kdump_ctx **pctx, int fd);
 void kdump_free(kdump_ctx *ctx);
 
+kdump_status kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
+			kdump_paddr_t *paddr);
+
 #define KDUMP_PHYSADDR		(1UL<<0)
 #define KDUMP_XENMACHADDR	(1UL<<1)
 #define KDUMP_KVADDR		(1UL<<2)

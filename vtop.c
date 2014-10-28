@@ -134,3 +134,36 @@ kdump_get_xlat(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 	*phys_off = rgn->phys_off;
 	return rgn->xlat;
 }
+
+kdump_status
+kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
+{
+	kdump_xlat_t xlat;
+	kdump_paddr_t phys_off;
+
+	xlat = kdump_get_xlat(ctx, vaddr, &phys_off);
+	switch (xlat) {
+	case KDUMP_XLAT_NONE:
+		return kdump_unsupported;
+
+	case KDUMP_XLAT_INVALID:
+		return kdump_nodata;
+
+	case KDUMP_XLAT_VTOP:
+		if (!ctx->arch_ops || !ctx->arch_ops->vtop)
+			return kdump_unsupported;
+		return ctx->arch_ops->vtop(ctx, vaddr, paddr);
+
+		/* fall through */
+	case KDUMP_XLAT_DIRECT:
+		*paddr = vaddr - phys_off;
+		return kdump_ok;
+
+	case KDUMP_XLAT_KTEXT:
+		*paddr = vaddr - ctx->phys_base - phys_off;
+		return kdump_ok;
+	};
+
+	/* unknown translation method */
+	return kdump_dataerr;
+}
