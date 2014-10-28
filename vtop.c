@@ -82,7 +82,7 @@ kdump_set_region(kdump_ctx *ctx, kdump_vaddr_t first, kdump_vaddr_t last,
 
 			if (!rgn) {
 				rgn = prevrgn = newrgn;
-				rgn->max_off = ~(kdump_vaddr_t)0;
+				rgn->max_off = KDUMP_ADDR_MAX;
 				rgn->xlat = KDUMP_XLAT_NONE;
 				++ctx->num_regions;
 				++left;

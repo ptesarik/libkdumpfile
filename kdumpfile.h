@@ -40,6 +40,8 @@ extern "C" {
 /* Must be large enough to hold any possible address type */
 typedef uint_fast64_t kdump_addr_t;
 
+#define KDUMP_ADDR_MAX	(~(kdump_addr_t)0)
+
 /* Provide two types to convey phys/virt semantics where possible */
 typedef kdump_addr_t kdump_paddr_t;
 typedef kdump_addr_t kdump_vaddr_t;
