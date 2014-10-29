@@ -106,6 +106,8 @@ x86_64_init(kdump_ctx *ctx)
 			       KDUMP_XLAT_KTEXT, __START_KERNEL_map);
 	if (ret != kdump_ok)
 		return ret;
+
+	return kdump_ok;
 }
 
 static kdump_status
