@@ -188,6 +188,9 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	if (pfn == ctx->last_pfn)
 		return kdump_ok;
 
+	if (pfn >= ctx->max_pfn)
+		return kdump_nodata;
+
 	if (!page_is_dumpable(ctx, pfn)) {
 		memset(ctx->page, 0, ctx->page_size);
 		return kdump_ok;
