@@ -104,6 +104,9 @@ arch_ops(enum kdump_arch arch)
 		break;
 
 	case ARCH_X86_64:	return &kdump_x86_64_ops;
+
+	default:
+		break;
 	}
 
 	return NULL;
