@@ -40,3 +40,16 @@ EXTRA_libkdumpfile_la_DEPENDENCIES = libkdumpfile.map
 
 libkdumpfile_la_LDFLAGS = -version-info 0:0:0
 libkdumpfile_la_LDFLAGS += -Wl,--version-script=$(srcdir)/libkdumpfile.map
+
+include_HEADERS = \
+	kdumpfile.h
+
+noinst_HEADERS = \
+	kdumpfile-priv.h
+
+dist_noinst_DATA = \
+	COPYING.GPLv2 \
+	COPYING.GPLv3 \
+	COPYING.LGPLv3 \
+	README.md \
+	libkdumpfile.map
