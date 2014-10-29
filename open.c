@@ -31,11 +31,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <linux/version.h>
 
 #include "kdumpfile-priv.h"
 
 static kdump_status kdump_open_known(kdump_ctx *pctx);
 static kdump_status use_kernel_utsname(kdump_ctx *ctx);
+static kdump_status get_version_code(kdump_ctx *ctx);
 
 static const struct format_ops *formats[] = {
 	&kdump_elfdump_ops,
@@ -131,6 +133,8 @@ kdump_open_known(kdump_ctx *ctx)
 				  (char**)&ctx->xen_ver.extra,
 				  KDUMP_XENMACHADDR);
 
+	get_version_code(ctx);
+
 	if (ctx->arch_ops && ctx->arch_ops->late_init) {
 		ret = ctx->arch_ops->late_init(ctx);
 		if (ret != kdump_ok)
@@ -198,6 +202,37 @@ use_kernel_utsname(kdump_ctx *ctx)
 
 	kdump_set_uts(ctx, &uts);
 
+	return kdump_ok;
+}
+
+static kdump_status
+get_version_code(kdump_ctx *ctx)
+{
+	const char *p;
+	char *endp;
+	long a, b, c;
+
+	p = ctx->utsname.release;
+	a = strtoul(p, &endp, 10);
+	if (endp == p || *endp != '.')
+		return kdump_dataerr;
+
+	b = c = 0L;
+	if (*endp) {
+		p = endp + 1;
+		b = strtoul(p, &endp, 10);
+		if (endp == p || *endp != '.')
+			return kdump_dataerr;
+
+		if (*endp) {
+			p = endp + 1;
+			c = strtoul(p, &endp, 10);
+			if (endp == p)
+				return kdump_dataerr;
+		}
+	}
+
+	ctx->version_code = KERNEL_VERSION(a, b, c);
 	return kdump_ok;
 }
 

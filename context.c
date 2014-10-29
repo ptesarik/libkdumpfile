@@ -117,6 +117,12 @@ kdump_domainname(kdump_ctx *ctx)
 }
 
 unsigned
+kdump_version_code(kdump_ctx *ctx)
+{
+	return ctx->version_code;
+}
+
+unsigned
 kdump_num_cpus(kdump_ctx *ctx)
 {
 	return ctx->num_cpus;

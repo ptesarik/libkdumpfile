@@ -207,6 +207,7 @@ struct _tag_kdump_ctx {
 	unsigned num_regions;	/* number of elements in ->region */
 
 	struct new_utsname utsname;
+	unsigned version_code;	/* version as produced by KERNEL_VERSION() */
 	unsigned num_cpus;	/* number of CPUs in the system  */
 
 	struct vmcoreinfo *vmcoreinfo;

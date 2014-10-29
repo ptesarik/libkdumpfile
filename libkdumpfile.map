@@ -17,6 +17,7 @@ LIBKDUMPFILE_0 {
     kdump_version;
     kdump_machine;
     kdump_domainname;
+    kdump_version_code;
     kdump_num_cpus;
     kdump_read_reg;
     kdump_vmcoreinfo;

@@ -104,6 +104,7 @@ const char *kdump_release(kdump_ctx *ctx);
 const char *kdump_version(kdump_ctx *ctx);
 const char *kdump_machine(kdump_ctx *ctx);
 const char *kdump_domainname(kdump_ctx *ctx);
+unsigned kdump_version_code (kdump_ctx *ctx);
 
 unsigned kdump_num_cpus(kdump_ctx *ctx);
 kdump_status kdump_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
