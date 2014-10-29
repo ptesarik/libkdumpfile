@@ -96,7 +96,7 @@ x86_64_init(kdump_ctx *ctx)
 {
 	kdump_status ret;
 
-	ret = kdump_set_region(ctx, (1ULL<<VIRTUAL_ADDRESS_SHIFT) - 1,
+	ret = kdump_set_region(ctx, (1ULL<<VIRTUAL_ADDRESS_SHIFT),
 			       ~(1ULL << VIRTUAL_ADDRESS_SHIFT),
 			       KDUMP_XLAT_INVALID, 0);
 	if (ret != kdump_ok)
