@@ -50,3 +50,7 @@ stamp-h1
 *.i*86
 *.x86_64
 *.hex
+
+# Distribution tarballs
+libkdumpfile-*.tar.gz
+libkdumpfile-*.tar.bz2
