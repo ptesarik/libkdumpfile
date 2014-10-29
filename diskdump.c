@@ -406,14 +406,19 @@ read_bitmap(kdump_ctx *ctx, int32_t sub_hdr_size,
 
 	ddp->descoff = off + bitmap_blocks * ctx->page_size;
 
-	max_bitmap_pfn = (kdump_pfn_t)ctx->page_size * bitmap_blocks * 8;
+	bitmapsize = bitmap_blocks * ctx->page_size;
+	max_bitmap_pfn = (kdump_pfn_t)bitmapsize * 8;
 	if (ctx->max_pfn <= max_bitmap_pfn / 2) {
 		/* partial dump */
 		bitmap_blocks /= 2;
-		off += bitmap_blocks * ctx->page_size;
+		bitmapsize = bitmap_blocks * ctx->page_size;
+		off += bitmapsize;
+		max_bitmap_pfn = (kdump_pfn_t)bitmapsize * 8;
 	}
 
-	bitmapsize = bitmap_blocks * ctx->page_size;
+	if (ctx->max_pfn > max_bitmap_pfn)
+		ctx->max_pfn = max_bitmap_pfn;
+
 	if (! (ddp->bitmap = malloc(bitmapsize)) )
 		return kdump_syserr;
 
