@@ -91,10 +91,18 @@ struct cpu_state {
 	struct cpu_state *next;
 };
 
+struct x86_64_data {
+	struct cpu_state *cpu_state;
+};
+
 static kdump_status
 x86_64_init(kdump_ctx *ctx)
 {
 	kdump_status ret;
+
+	ctx->archdata = calloc(1, sizeof(struct x86_64_data));
+	if (!ctx->archdata)
+		return kdump_syserr;
 
 	ret = kdump_set_region(ctx, (1ULL<<VIRTUAL_ADDRESS_SHIFT),
 			       ~(1ULL << VIRTUAL_ADDRESS_SHIFT),
@@ -113,6 +121,7 @@ x86_64_init(kdump_ctx *ctx)
 static kdump_status
 process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 {
+	struct x86_64_data *archdata = ctx->archdata;
 	struct elf_prstatus *status = data;
 	struct cpu_state *cs;
 	int i;
@@ -130,8 +139,8 @@ process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 	for (i = 0; i < ELF_NGREG; ++i)
 		cs->reg[i] = dump64toh(ctx, status->pr_reg[i]);
 
-	cs->next = ctx->archdata;
-	ctx->archdata = cs;
+	cs->next = archdata->cpu_state;
+	archdata->cpu_state = cs;
 
 	return kdump_ok;
 }
@@ -140,13 +149,14 @@ static kdump_status
 x86_64_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 		kdump_reg_t *value)
 {
+	struct x86_64_data *archdata = ctx->archdata;
 	struct cpu_state *cs;
 	int i;
 
 	if (index >= ELF_NGREG)
 		return kdump_nodata;
 
-	for (i = 0, cs = ctx->archdata; i < cpu && cs; ++i)
+	for (i = 0, cs = archdata->cpu_state; i < cpu && cs; ++i)
 		cs = cs->next;
 	if (!cs)
 		return kdump_nodata;
@@ -168,15 +178,17 @@ x86_64_process_load(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t paddr)
 static void
 x86_64_cleanup(kdump_ctx *ctx)
 {
+	struct x86_64_data *archdata = ctx->archdata;
 	struct cpu_state *cs, *oldcs;
 
-	cs = ctx->archdata;
+	cs = archdata->cpu_state;
 	while (cs) {
 		oldcs = cs;
 		cs = cs->next;
 		free(oldcs);
 	}
 
+	free(archdata);
 	ctx->archdata = NULL;
 }
 
