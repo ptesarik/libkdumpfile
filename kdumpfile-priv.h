@@ -346,7 +346,7 @@ dump64toh(kdump_ctx *ctx, uint64_t x)
 		: le64toh(x);
 }
 
-static void
+static inline void
 kdump_set_phys_base(kdump_ctx *ctx, kdump_paddr_t base)
 {
 	ctx->phys_base = base;
