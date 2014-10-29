@@ -119,7 +119,7 @@ x86_64_init(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		return ret;
 
-	ret = kdump_set_region(ctx, __START_KERNEL_map, KDUMP_ADDR_MAX,
+	ret = kdump_set_region(ctx, __START_KERNEL_map, VIRTADDR_MAX,
 			       KDUMP_XLAT_KTEXT, __START_KERNEL_map);
 	if (ret != kdump_ok)
 		return ret;
