@@ -113,6 +113,8 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 static kdump_status
 kdump_open_known(kdump_ctx *ctx)
 {
+	kdump_status ret;
+
 	ctx->page = malloc(ctx->page_size);
 	if (!ctx->page) {
 		kdump_free(ctx);
@@ -128,6 +130,12 @@ kdump_open_known(kdump_ctx *ctx)
 		kdump_read_string(ctx, ctx->xen_extra_ver,
 				  (char**)&ctx->xen_ver.extra,
 				  KDUMP_XENMACHADDR);
+
+	if (ctx->arch_ops && ctx->arch_ops->late_init) {
+		ret = ctx->arch_ops->late_init(ctx);
+		if (ret != kdump_ok)
+			return ret;
+	}
 
 	return kdump_ok;
 }

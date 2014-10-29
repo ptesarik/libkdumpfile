@@ -107,6 +107,10 @@ struct arch_ops {
 	 */
 	kdump_status (*init)(kdump_ctx *);
 
+	/* Late initialisation (just before returning a newly created
+	 * kdump_ctx to the library user)  */
+	kdump_status (*late_init)(kdump_ctx *);
+
 	/* Process an NT_PRSTATUS note
 	 */
 	kdump_status (*process_prstatus)(kdump_ctx *, void *, size_t);
