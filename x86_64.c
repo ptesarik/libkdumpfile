@@ -36,7 +36,11 @@
 #define ELF_NGREG 27
 
 /* Maximum virtual address bits (architecture limit) */
-#define VIRTUAL_ADDRESS_SHIFT	47
+#define VIRTADDR_BITS_MAX	48
+
+#define NONCANONICAL_START	((uint64_t)1<<(VIRTADDR_BITS_MAX-1))
+#define NONCANONICAL_END	(~NONCANONICAL_START)
+#define VIRTADDR_MAX		UINT64_MAX
 
 #define __START_KERNEL_map	0xffffffff80000000ULL
 
@@ -96,6 +100,13 @@ struct x86_64_data {
 };
 
 static kdump_status
+add_noncanonical_region(kdump_ctx *ctx)
+{
+	return kdump_set_region(ctx, NONCANONICAL_START, NONCANONICAL_END,
+				KDUMP_XLAT_INVALID, 0);
+}
+
+static kdump_status
 x86_64_init(kdump_ctx *ctx)
 {
 	kdump_status ret;
@@ -104,9 +115,7 @@ x86_64_init(kdump_ctx *ctx)
 	if (!ctx->archdata)
 		return kdump_syserr;
 
-	ret = kdump_set_region(ctx, (1ULL<<VIRTUAL_ADDRESS_SHIFT),
-			       ~(1ULL << VIRTUAL_ADDRESS_SHIFT),
-			       KDUMP_XLAT_INVALID, 0);
+	ret = add_noncanonical_region(ctx);
 	if (ret != kdump_ok)
 		return ret;
 
