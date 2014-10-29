@@ -221,7 +221,7 @@ kdump_store_vmcoreinfo(struct vmcoreinfo **pinfo, void *data, size_t len)
 {
 	struct vmcoreinfo *info;
 	struct vmcoreinfo_row *row;
-	char *p, *q, *q0;
+	char *p, *q;
 	unsigned n;
 
 	n = count_lines(data, len);

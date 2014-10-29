@@ -90,7 +90,6 @@ process_core_note(kdump_ctx *ctx, uint32_t type,
 static void
 process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 {
-	struct elfdump_priv *edp = ctx->fmtdata;
 	unsigned words = len / ctx->ptr_size;
 
 	if (ctx->ptr_size == 8 &&

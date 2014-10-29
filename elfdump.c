@@ -572,7 +572,6 @@ initialize_xen_map32(kdump_ctx *ctx, void *dir)
 static kdump_status
 initialize_xen_map(kdump_ctx *ctx)
 {
-	struct elfdump_priv *edp = ctx->fmtdata;
 	void *dir;
 	kdump_status ret;
 

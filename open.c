@@ -171,7 +171,6 @@ use_kernel_utsname(kdump_ctx *ctx)
 	kdump_vaddr_t uts_name;
 	struct new_utsname uts;
 	size_t rd;
-	char *p;
 	kdump_status ret;
 
 	ret = kdump_vmcoreinfo_symbol(ctx, "system_utsname", &uts_name);

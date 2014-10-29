@@ -440,7 +440,6 @@ open_common(kdump_ctx *ctx)
 	int32_t header_version;
 	int32_t sub_hdr_size;
 	int32_t bitmap_blocks;
-	int32_t max_mapnr;
 	kdump_status ret;
 
 	ddp = malloc(sizeof *ddp);
