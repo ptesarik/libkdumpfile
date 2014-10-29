@@ -73,8 +73,7 @@ setup_readfn(kdump_ctx *ctx, long flags, read_page_fn *fn)
 
 kdump_status
 kdump_readp(kdump_ctx *ctx, kdump_addr_t addr,
-	    unsigned char *buffer, size_t *plength,
-	    long flags)
+	    void *buffer, size_t *plength, long flags)
 {
 	read_page_fn readfn;
 	size_t remain;
@@ -108,8 +107,7 @@ kdump_readp(kdump_ctx *ctx, kdump_addr_t addr,
 
 ssize_t
 kdump_read(kdump_ctx *ctx, kdump_addr_t addr,
-	   unsigned char *buffer, size_t length,
-	   long flags)
+	   void *buffer, size_t length, long flags)
 {
 	size_t sz;
 	kdump_status ret;

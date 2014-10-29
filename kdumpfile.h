@@ -74,11 +74,9 @@ kdump_status kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 #define KDUMP_KVADDR		(1UL<<2)
 
 ssize_t kdump_read(kdump_ctx *ctx, kdump_addr_t addr,
-		   unsigned char *buffer, size_t length,
-		   long flags);
+		   void *buffer, size_t length, long flags);
 kdump_status kdump_readp(kdump_ctx *ctx, kdump_addr_t addr,
-			 unsigned char *buffer, size_t *plength,
-			 long flags);
+			 void *buffer, size_t *plength, long flags);
 kdump_status kdump_read_string(kdump_ctx *ctx, kdump_addr_t addr,
 			       char **pstr, long flags);
 
