@@ -25,7 +25,7 @@ AC_CONFIG_SRCDIR([diskdump.c])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADER([config.h])
 
-AM_INIT_AUTOMAKE([foreign -Wall])
+AM_INIT_AUTOMAKE([foreign dist-bzip2 -Wall])
 
 AC_PROG_CC
 AM_PROG_AR
