@@ -100,7 +100,7 @@ xc_core_probe(kdump_ctx *ctx)
 	firstbyte = *(unsigned char*)ctx->buffer;
 	if (firstbyte == 0xed)
 		ctx->format = "Xen xc_core";
-	else if (firstbyte = 0xee)
+	else if (firstbyte == 0xee)
 		ctx->format = "Xen xc_core hvm";
 	else
 		return kdump_unsupported;
