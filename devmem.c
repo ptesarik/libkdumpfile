@@ -28,11 +28,11 @@
 
 #define _GNU_SOURCE
 
+#include "kdumpfile-priv.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#include "kdumpfile-priv.h"
 
 static kdump_status
 devmem_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)

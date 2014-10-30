@@ -28,10 +28,10 @@
 
 #define _GNU_SOURCE
 
+#include "kdumpfile-priv.h"
+
 #include <string.h>
 #include <stdlib.h>
-
-#include "kdumpfile-priv.h"
 
 #define RGN_ALLOC_INC 32
 

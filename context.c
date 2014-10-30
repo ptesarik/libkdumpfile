@@ -28,11 +28,11 @@
 
 #define _GNU_SOURCE
 
+#include "kdumpfile-priv.h"
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-
-#include "kdumpfile-priv.h"
 
 const char *
 kdump_format(kdump_ctx *ctx)

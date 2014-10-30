@@ -28,9 +28,9 @@
 
 #define _GNU_SOURCE
 
-#include <string.h>
-
 #include "kdumpfile-priv.h"
+
+#include <string.h>
 
 static kdump_status
 kvm_probe(kdump_ctx *ctx)

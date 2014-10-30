@@ -28,12 +28,12 @@
 
 #define _GNU_SOURCE
 
+#include "kdumpfile-priv.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <linux/version.h>
-
-#include "kdumpfile-priv.h"
 
 static kdump_status kdump_open_known(kdump_ctx *pctx);
 static kdump_status use_kernel_utsname(kdump_ctx *ctx);

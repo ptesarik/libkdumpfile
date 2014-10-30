@@ -28,10 +28,10 @@
 
 #define _GNU_SOURCE
 
+#include "kdumpfile-priv.h"
+
 #include <stdint.h>
 #include <stdlib.h>
-
-#include "kdumpfile-priv.h"
 
 #define ELF_NGREG 27
 

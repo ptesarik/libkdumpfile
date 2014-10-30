@@ -28,11 +28,11 @@
 
 #define _GNU_SOURCE
 
+#include "kdumpfile-priv.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <elf.h>
-
-#include "kdumpfile-priv.h"
 
 /* System information exported through crash notes. */
 #define XEN_ELFNOTE_CRASH_INFO 0x1000001

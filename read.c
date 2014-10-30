@@ -28,10 +28,10 @@
 
 #define _GNU_SOURCE
 
+#include "kdumpfile-priv.h"
+
 #include <string.h>
 #include <stdlib.h>
-
-#include "kdumpfile-priv.h"
 
 typedef kdump_status (*read_page_fn)(kdump_ctx *, kdump_pfn_t);
 

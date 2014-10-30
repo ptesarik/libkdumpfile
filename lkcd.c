@@ -28,13 +28,14 @@
 
 #define _GNU_SOURCE
 
+#include "kdumpfile-priv.h"
+
 #include <endian.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zlib.h>
 
-#include "kdumpfile-priv.h"
+#include <zlib.h>
 
 #define LKCD_DUMP_V1                  (0x1)  /* DUMP_VERSION_NUMBER */
 #define LKCD_DUMP_V2                  (0x2)  /* DUMP_VERSION_NUMBER */

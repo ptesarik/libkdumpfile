@@ -28,14 +28,13 @@
 
 #define _GNU_SOURCE
 
+#include "kdumpfile-priv.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
-
 #include <elf.h>
-
-#include "kdumpfile-priv.h"
 
 static const struct format_ops xen_dom0_ops;
 static const struct format_ops xen_domU_ops;

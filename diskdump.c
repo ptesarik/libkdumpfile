@@ -28,15 +28,15 @@
 
 #define _GNU_SOURCE
 
-#include <stdlib.h>
+#include "kdumpfile-priv.h"
 
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+
 #include <zlib.h>
 #include <lzo/lzo1x.h>
 #include <snappy-c.h>
-
-#include "kdumpfile-priv.h"
 
 #define SIG_LEN	8
 

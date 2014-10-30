@@ -28,9 +28,9 @@
 
 #define _GNU_SOURCE
 
-#include <string.h>
-
 #include "kdumpfile-priv.h"
+
+#include <string.h>
 
 static size_t
 arch_ptr_size(enum kdump_arch arch)
