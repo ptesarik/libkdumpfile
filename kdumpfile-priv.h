@@ -264,6 +264,8 @@ int kdump_uncompress_rle(unsigned char *dst, size_t *pdstlen,
 kdump_status kdump_store_vmcoreinfo(struct vmcoreinfo **pinfo,
 				    void *data, size_t len);
 
+size_t kdump_paged_cpin(int fd, void *buffer, size_t size);
+
 kdump_status kdump_read_xenver(kdump_ctx *ctx);
 
 /* ELF notes */

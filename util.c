@@ -272,3 +272,21 @@ kdump_store_vmcoreinfo(struct vmcoreinfo **pinfo, void *data, size_t len)
 	*pinfo = info;
 	return kdump_ok;
 }
+
+/* /dev/crash cannot handle reads larger than page size */
+size_t
+kdump_paged_cpin(int fd, void *buffer, size_t size)
+{
+	long page_size = sysconf(_SC_PAGESIZE);
+	while (size) {
+		size_t chunksize = (size > page_size)
+			? page_size
+			: size;
+		if (read(fd, buffer, chunksize) != chunksize)
+			return size;
+
+		buffer += chunksize;
+		size -= chunksize;
+	}
+	return 0;
+}

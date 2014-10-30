@@ -54,24 +54,6 @@ static const struct format_ops *formats[] = {
 
 #define NFORMATS	(sizeof formats / sizeof formats[0])
 
-/* /dev/crash cannot handle reads larger than page size */
-static int
-paged_cpin(int fd, void *buffer, size_t size)
-{
-	long page_size = sysconf(_SC_PAGESIZE);
-	while (size) {
-		size_t chunksize = (size > page_size)
-			? page_size
-			: size;
-		if (read(fd, buffer, chunksize) != chunksize)
-			return size;
-
-		buffer += chunksize;
-		size -= chunksize;
-	}
-	return 0;
-}
-
 kdump_status
 kdump_fdopen(kdump_ctx **pctx, int fd)
 {
@@ -93,7 +75,7 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 
 	ctx->fd = fd;
 
-	if (paged_cpin(ctx->fd, ctx->buffer, MAX_PAGE_SIZE))
+	if (kdump_paged_cpin(ctx->fd, ctx->buffer, MAX_PAGE_SIZE))
 		goto err_ctx;
 
 	for (i = 0; i < NFORMATS; ++i) {
