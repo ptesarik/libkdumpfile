@@ -34,9 +34,15 @@
 #include <unistd.h>
 #include <string.h>
 
-#include <zlib.h>
-#include <lzo/lzo1x.h>
-#include <snappy-c.h>
+#if USE_ZLIB
+# include <zlib.h>
+#endif
+#if USE_LZO
+# include <lzo/lzo1x.h>
+#endif
+#if USE_SNAPPY
+# include <snappy-c.h>
+#endif
 
 #define SIG_LEN	8
 
@@ -220,25 +226,37 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 		return kdump_syserr;
 
 	if (pd.flags & DUMP_DH_COMPRESSED_ZLIB) {
+#if USE_ZLIB
 		uLongf retlen = ctx->page_size;
 		int ret = uncompress(ctx->page, &retlen,
 				     buf, pd.size);
 		if ((ret != Z_OK) || (retlen != ctx->page_size))
 			return kdump_dataerr;
+#else
+		return kdump_unsupported;
+#endif
 	} else if (pd.flags & DUMP_DH_COMPRESSED_LZO) {
+#if USE_LZO
 		lzo_uint retlen = ctx->page_size;
 		int ret = lzo1x_decompress_safe((lzo_bytep)buf, pd.size,
 						(lzo_bytep)ctx->page, &retlen,
 						LZO1X_MEM_DECOMPRESS);
 		if ((ret != LZO_E_OK) || (retlen != ctx->page_size))
 			return kdump_dataerr;
+#else
+		return kdump_unsupported;
+#endif
 	} else if (pd.flags & DUMP_DH_COMPRESSED_SNAPPY) {
+#if USE_SNAPPY
 		size_t retlen = ctx->page_size;
 		snappy_status ret;
 		ret = snappy_uncompress((char *)buf, pd.size,
 					(char *)ctx->page, &retlen);
 		if ((ret != SNAPPY_OK) || (retlen != ctx->page_size))
 			return kdump_dataerr;
+#else
+		return kdump_unsupported;
+#endif
 	}
 
 	ctx->last_pfn = pfn;

@@ -32,12 +32,9 @@ AM_PROG_AR
 
 LT_INIT
 
-AC_SEARCH_LIBS([uncompress],[z],[],[
-	AC_MSG_ERROR([zlib decompression not found])])
-AC_SEARCH_LIBS([lzo1x_decompress_safe],[lzo2],[],[
-	AC_MSG_ERROR([lzo decompression not found])])
-AC_SEARCH_LIBS([snappy_uncompress],[snappy],[],[
-	AC_MSG_ERROR([snappy decompression not found])])
+kdump_COMPRESSION(zlib, ZLIB, z, uncompress)
+kdump_COMPRESSION(lzo, LZO, lzo2, lzo1x_decompress_safe)
+kdump_COMPRESSION(snappy, SNAPPY, snappy, snappy_uncompress)
 
 AC_CONFIG_FILES([
 	Makefile

@@ -35,7 +35,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <zlib.h>
+#if USE_ZLIB
+# include <zlib.h>
+#endif
 
 #define LKCD_DUMP_V1                  (0x1)  /* DUMP_VERSION_NUMBER */
 #define LKCD_DUMP_V2                  (0x2)  /* DUMP_VERSION_NUMBER */
@@ -488,11 +490,15 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 		if (ret)
 			return kdump_dataerr;
 	} else if (lkcdp->compression == DUMP_COMPRESS_GZIP) {
+#if USE_ZLIB
 		uLongf retlen = ctx->page_size;
 		int ret = uncompress(ctx->page, &retlen,
 				     buf, dp.dp_size);
 		if ((ret != Z_OK) || (retlen != ctx->page_size))
 			return kdump_dataerr;
+#else
+		return kdump_unsupported;
+#endif
 	} else
 		return kdump_unsupported;
 
