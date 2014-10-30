@@ -33,6 +33,50 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#define FN_VMCOREINFO	"/sys/kernel/vmcoreinfo"
+
+static kdump_status
+get_vmcoreinfo(kdump_ctx *ctx)
+{
+	FILE *f;
+	unsigned long long addr, length;
+	void *info;
+	kdump_status ret;
+
+	f = fopen(FN_VMCOREINFO, "r");
+	if (!f)
+		return kdump_syserr;
+
+	if (fscanf(f, "%llx %llx", &addr, &length) == 2)
+		ret = kdump_ok;
+	else if (ferror(f))
+		ret = kdump_syserr;
+	else
+		ret = kdump_dataerr;
+	fclose(f);
+	if (ret != kdump_ok)
+		return ret;
+
+	info = malloc(length);
+	if (!info)
+		return kdump_syserr;
+
+	ret = kdump_syserr;
+	if (lseek(ctx->fd, addr, SEEK_SET) == (off_t)-1)
+		goto out;
+
+	if (kdump_paged_cpin(ctx->fd, info, length))
+		goto out;
+
+	ret = kdump_process_notes(ctx, info, length);
+
+  out:
+	free(info);
+	return ret;
+}
 
 static kdump_status
 devmem_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
@@ -90,6 +134,8 @@ devmem_probe(kdump_ctx *ctx)
 	ctx->format = "live source";
 	ctx->endian = __BYTE_ORDER;
 	ctx->page_size = sysconf(_SC_PAGESIZE);
+
+	get_vmcoreinfo(ctx);
 
 	return kdump_ok;
 }

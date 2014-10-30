@@ -1,6 +1,7 @@
 0.1.2
 -----
   * all compression libraries are now optional
+  * live source uses VMCOREINFO from the running kernel (if available)
 
 0.1.1
 -----
