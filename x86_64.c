@@ -217,6 +217,7 @@ struct cpu_state {
 
 struct x86_64_data {
 	struct cpu_state *cpu_state;
+	uint64_t *pgt;
 };
 
 static kdump_status
@@ -247,6 +248,33 @@ x86_64_init(kdump_ctx *ctx)
 	return kdump_ok;
 }
 
+static kdump_status
+read_pgt(kdump_ctx *ctx)
+{
+	struct x86_64_data *archdata = ctx->archdata;
+	kdump_vaddr_t pgtaddr;
+	uint64_t *pgt;
+	kdump_status ret;
+	size_t sz;
+
+	ret = kdump_vmcoreinfo_symbol(ctx, "init_level4_pgt", &pgtaddr);
+	if (ret != kdump_ok)
+		return ret;
+
+	pgt = malloc(ctx->page_size);
+	if (!pgt)
+		return kdump_syserr;
+
+	sz = ctx->page_size;
+	ret = kdump_readp(ctx, pgtaddr, pgt, &sz, KDUMP_KVADDR);
+	if (ret == kdump_ok)
+		archdata->pgt = pgt;
+	else
+		free(pgt);
+
+	return ret;
+}
+
 static struct layout_def*
 layout_by_version(kdump_ctx *ctx)
 {
@@ -266,6 +294,8 @@ x86_64_late_init(kdump_ctx *ctx)
 	struct layout_def *layout;
 	unsigned i;
 	kdump_status ret;
+
+	read_pgt(ctx);
 
 	layout = layout_by_version(ctx);
 	if (!layout) {
@@ -358,6 +388,9 @@ x86_64_cleanup(kdump_ctx *ctx)
 		cs = cs->next;
 		free(oldcs);
 	}
+
+	if (archdata->pgt)
+		free(archdata->pgt);
 
 	free(archdata);
 	ctx->archdata = NULL;
