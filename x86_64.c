@@ -312,12 +312,12 @@ read_pgt(kdump_ctx *ctx)
 }
 
 static struct layout_def*
-layout_by_version(kdump_ctx *ctx)
+layout_by_version(unsigned version_code)
 {
 	unsigned i;
 
 	for (i = 0; i < ARRAY_SIZE(mm_layouts); ++i)
-		if (mm_layouts[i].ver > ctx->version_code)
+		if (mm_layouts[i].ver > version_code)
 			break;
 	if (!i)
 		return NULL;
@@ -335,7 +335,7 @@ x86_64_vtop_init(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		return ret;
 
-	layout = layout_by_version(ctx);
+	layout = layout_by_version(ctx->version_code);
 	if (!layout)
 		return kdump_unsupported;
 
