@@ -247,6 +247,19 @@ x86_64_init(kdump_ctx *ctx)
 	return kdump_ok;
 }
 
+static struct layout_def*
+layout_by_version(kdump_ctx *ctx)
+{
+	unsigned i;
+
+	for (i = 0; i < ARRAY_SIZE(mm_layouts); ++i)
+		if (mm_layouts[i].ver > ctx->version_code)
+			break;
+	if (!i)
+		return NULL;
+	return &mm_layouts[i-1];
+}
+
 static kdump_status
 x86_64_late_init(kdump_ctx *ctx)
 {
@@ -254,14 +267,11 @@ x86_64_late_init(kdump_ctx *ctx)
 	unsigned i;
 	kdump_status ret;
 
-	for (i = 0; i < ARRAY_SIZE(mm_layouts); ++i)
-		if (mm_layouts[i].ver > ctx->version_code)
-			break;
-	if (!i) {
+	layout = layout_by_version(ctx);
+	if (!layout) {
 		/* Keep the temporary mapping from x86_64_init */
 		return kdump_ok;
 	}
-	layout = &mm_layouts[i-1];
 
 	kdump_flush_regions(ctx);
 	ret = add_noncanonical_region(ctx);
