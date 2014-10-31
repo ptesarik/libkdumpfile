@@ -261,12 +261,16 @@ read_pgt(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		return ret;
 
+	if (pgtaddr < __START_KERNEL_map)
+		return kdump_unsupported;
+
 	pgt = malloc(ctx->page_size);
 	if (!pgt)
 		return kdump_syserr;
 
 	sz = ctx->page_size;
-	ret = kdump_readp(ctx, pgtaddr, pgt, &sz, KDUMP_KVADDR);
+	ret = kdump_readp(ctx, pgtaddr - __START_KERNEL_map + ctx->phys_base,
+			  pgt, &sz, KDUMP_PHYSADDR);
 	if (ret == kdump_ok)
 		archdata->pgt = pgt;
 	else
