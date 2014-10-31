@@ -295,13 +295,13 @@ x86_64_vtop_init(kdump_ctx *ctx)
 	unsigned i;
 	kdump_status ret;
 
-	read_pgt(ctx);
+	ret = read_pgt(ctx);
+	if (ret != kdump_ok)
+		return ret;
 
 	layout = layout_by_version(ctx);
-	if (!layout) {
-		/* Keep the temporary mapping from x86_64_init */
-		return kdump_ok;
-	}
+	if (!layout)
+		return kdump_unsupported;
 
 	kdump_flush_regions(ctx);
 	ret = add_noncanonical_region(ctx);
