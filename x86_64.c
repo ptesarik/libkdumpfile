@@ -296,11 +296,11 @@ read_pgt(kdump_ctx *ctx)
 	if (pgtaddr < __START_KERNEL_map)
 		return kdump_unsupported;
 
-	pgt = malloc(ctx->page_size);
+	pgt = malloc(PAGE_SIZE);
 	if (!pgt)
 		return kdump_syserr;
 
-	sz = ctx->page_size;
+	sz = PAGE_SIZE;
 	ret = kdump_readp(ctx, pgtaddr - __START_KERNEL_map + ctx->phys_base,
 			  pgt, &sz, KDUMP_PHYSADDR);
 	if (ret == kdump_ok)
