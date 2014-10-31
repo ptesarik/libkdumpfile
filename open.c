@@ -52,8 +52,6 @@ static const struct format_ops *formats[] = {
 	&kdump_devmem_ops
 };
 
-#define NFORMATS	(sizeof formats / sizeof formats[0])
-
 kdump_status
 kdump_fdopen(kdump_ctx **pctx, int fd)
 {
@@ -78,7 +76,7 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 	if (kdump_paged_cpin(ctx->fd, ctx->buffer, MAX_PAGE_SIZE))
 		goto err_ctx;
 
-	for (i = 0; i < NFORMATS; ++i) {
+	for (i = 0; i < ARRAY_SIZE(formats); ++i) {
 		ctx->ops = formats[i];
 		ret = ctx->ops->probe(ctx);
 		if (ret == kdump_ok) {

@@ -57,7 +57,7 @@ kdump_arch_name(kdump_ctx *ctx)
 		[ARCH_X86] = "i386",
 		[ARCH_X86_64] = "x86_64",
 	};
-	if (ctx->arch < sizeof(names) / sizeof(names[0]))
+	if (ctx->arch < ARRAY_SIZE(names))
 		return names[ctx->arch];
 	return NULL;
 }

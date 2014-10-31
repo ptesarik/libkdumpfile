@@ -41,6 +41,9 @@
 #define MIN_PAGE_SIZE	(1UL << 12)
 #define MAX_PAGE_SIZE	(1UL << 18)
 
+/* General macros */
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+
 typedef kdump_addr_t kdump_pfn_t;
 
 enum kdump_arch {
