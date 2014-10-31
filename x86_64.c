@@ -43,6 +43,38 @@
 #define NONCANONICAL_END	(~NONCANONICAL_START)
 #define VIRTADDR_MAX		UINT64_MAX
 
+/* Maximum physical addrss bits (architectural limit) */
+#define PHYSADDR_BITS_MAX	52
+#define PHYSADDR_SIZE		((uint64_t)1 << PHYSADDR_BITS_MAX)
+#define PHYSADDR_MASK		(~(PHYSADDR_SIZE-1))
+
+#define PGDIR_SHIFT	39
+
+#define PUD_SHIFT	30
+#define PUD_PSE_SIZE	((uint64_t)1 << PUD_SHIFT)
+#define PUD_PSE_MASK	(~(PUD_PSE_SIZE-1))
+
+#define PMD_SHIFT	21
+#define PMD_PSE_SIZE	((uint64_t)1 << PMD_SHIFT)
+#define PMD_PSE_MASK	(~(PMD_PSE_SIZE-1))
+
+#define PAGE_SHIFT	12
+#define PAGE_SIZE	((uint64_t)1 << PAGE_SHIFT)
+#define PAGE_MASK	(~(PAGE_SIZE-1))
+
+#define PTRS_PER_PAGE	(PAGE_SIZE/sizeof(uint64_t))
+
+#define pgd_index(addr)	(((addr) >> PGDIR_SHIFT) & (PTRS_PER_PAGE - 1))
+#define pud_index(addr)	(((addr) >> PUD_SHIFT) & (PTRS_PER_PAGE - 1))
+#define pmd_index(addr)	(((addr) >> PMD_SHIFT) & (PTRS_PER_PAGE - 1))
+#define pte_index(addr)	(((addr) >> PAGE_SHIFT) & (PTRS_PER_PAGE - 1))
+
+#define _PAGE_BIT_PRESENT	0
+#define _PAGE_BIT_PSE		7
+
+#define _PAGE_PRESENT	(1UL << _PAGE_BIT_PRESENT)
+#define _PAGE_PSE	(1UL << _PAGE_BIT_PSE)
+
 #define __START_KERNEL_map	0xffffffff80000000ULL
 
 /* This constant is not the maximum physical load offset. This is the
@@ -403,7 +435,61 @@ x86_64_cleanup(kdump_ctx *ctx)
 static kdump_status
 x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	return kdump_unsupported;
+	struct x86_64_data *archdata = ctx->archdata;
+	uint64_t tbl[PTRS_PER_PAGE];
+	uint64_t pgd, pud, pmd, pte;
+	kdump_paddr_t base;
+	size_t sz;
+	kdump_status ret;
+
+	if (!archdata->pgt)
+		return kdump_unsupported;
+
+	pgd = archdata->pgt[pgd_index(vaddr)];
+	if (!(pgd & _PAGE_PRESENT))
+		return kdump_nodata;
+	base = pgd & ~PHYSADDR_MASK & PAGE_MASK;
+
+	sz = PAGE_SIZE;
+	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_PHYSADDR);
+	if (ret != kdump_ok)
+		return ret;
+
+	pud = tbl[pud_index(vaddr)];
+	if (!(pud & _PAGE_PRESENT))
+		return kdump_nodata;
+	base = pud & ~PHYSADDR_MASK & PAGE_MASK;
+	if (pud & _PAGE_PSE) {
+		*paddr = base + (vaddr & ~PUD_PSE_MASK);
+		return kdump_ok;
+	}
+
+	sz = PAGE_SIZE;
+	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_PHYSADDR);
+	if (ret != kdump_ok)
+		return ret;
+
+	pmd = tbl[pmd_index(vaddr)];
+	if (!(pmd & _PAGE_PRESENT))
+		return kdump_nodata;
+	base = pmd & ~PHYSADDR_MASK & PAGE_MASK;
+	if (pmd & _PAGE_PSE) {
+		*paddr = base + (vaddr & ~PMD_PSE_MASK);
+		return kdump_ok;
+	}
+
+	sz = PAGE_SIZE;
+	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_PHYSADDR);
+	if (ret != kdump_ok)
+		return ret;
+
+	pte = tbl[pte_index(vaddr)];
+	if (!(pte & _PAGE_PRESENT))
+		return kdump_nodata;
+	base = pte & ~PHYSADDR_MASK & PAGE_MASK;
+	*paddr = base + (vaddr & ~PAGE_MASK);
+
+	return kdump_ok;
 }
 
 const struct arch_ops kdump_x86_64_ops = {

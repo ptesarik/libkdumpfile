@@ -2,6 +2,7 @@
 -----
   * all compression libraries are now optional
   * live source uses VMCOREINFO from the running kernel (if available)
+  * full vtop translation for x86_64
 
 0.1.1
 -----
