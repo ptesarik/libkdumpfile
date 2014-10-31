@@ -38,7 +38,7 @@ libkdumpfile_la_SOURCES = \
 
 EXTRA_libkdumpfile_la_DEPENDENCIES = libkdumpfile.map
 
-libkdumpfile_la_LDFLAGS = -version-info 0:0:0
+libkdumpfile_la_LDFLAGS = -version-info 1:0:1
 libkdumpfile_la_LDFLAGS += -Wl,--version-script=$(srcdir)/libkdumpfile.map
 
 include_HEADERS = \
