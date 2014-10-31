@@ -110,9 +110,9 @@ struct arch_ops {
 	 */
 	kdump_status (*init)(kdump_ctx *);
 
-	/* Late initialisation (just before returning a newly created
-	 * kdump_ctx to the library user)  */
-	kdump_status (*late_init)(kdump_ctx *);
+	/* Initialise virtual-to-physical translation.
+	 */
+	kdump_status (*vtop_init)(kdump_ctx *);
 
 	/* Process an NT_PRSTATUS note
 	 */

@@ -36,6 +36,15 @@
 #define RGN_ALLOC_INC 32
 
 kdump_status
+kdump_vtop_init(kdump_ctx *ctx)
+{
+	if (ctx->arch_ops && ctx->arch_ops->vtop_init)
+		return ctx->arch_ops->vtop_init(ctx);
+
+	return kdump_ok;
+}
+
+kdump_status
 kdump_set_region(kdump_ctx *ctx, kdump_vaddr_t first, kdump_vaddr_t last,
 		 kdump_xlat_t xlat, kdump_vaddr_t phys_off)
 {

@@ -2,6 +2,7 @@ LIBKDUMPFILE_0 {
   global:
     kdump_fdopen;
     kdump_free;
+    kdump_vtop_init;
     kdump_vtop;
     kdump_read;
     kdump_readp;

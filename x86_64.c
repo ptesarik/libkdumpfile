@@ -289,7 +289,7 @@ layout_by_version(kdump_ctx *ctx)
 }
 
 static kdump_status
-x86_64_late_init(kdump_ctx *ctx)
+x86_64_vtop_init(kdump_ctx *ctx)
 {
 	struct layout_def *layout;
 	unsigned i;
@@ -404,7 +404,7 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 const struct arch_ops kdump_x86_64_ops = {
 	.init = x86_64_init,
-	.late_init = x86_64_late_init,
+	.vtop_init = x86_64_vtop_init,
 	.process_prstatus = process_x86_64_prstatus,
 	.read_reg = x86_64_read_reg,
 	.process_load = x86_64_process_load,
