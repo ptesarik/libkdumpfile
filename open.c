@@ -113,6 +113,8 @@ kdump_open_known(kdump_ctx *ctx)
 
 	get_version_code(ctx);
 
+	kdump_flush_regions(ctx);
+
 	return kdump_ok;
 }
 
