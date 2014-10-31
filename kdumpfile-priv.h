@@ -177,7 +177,7 @@ typedef enum _tag_kdump_xlat {
 	/* Direct mapping: virtual = physical + phys_off */
 	KDUMP_XLAT_DIRECT,
 
-	/* Kernel text: virtual = physical + phys_off + ctx->phys_base */
+	/* Kernel text: virtual = physical + phys_off - ctx->phys_base */
 	KDUMP_XLAT_KTEXT,
 } kdump_xlat_t;
 

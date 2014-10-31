@@ -169,7 +169,7 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 		return kdump_ok;
 
 	case KDUMP_XLAT_KTEXT:
-		*paddr = vaddr - ctx->phys_base - phys_off;
+		*paddr = vaddr - phys_off + ctx->phys_base;
 		return kdump_ok;
 	};
 
