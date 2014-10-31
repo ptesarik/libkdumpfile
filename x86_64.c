@@ -252,6 +252,9 @@ struct x86_64_data {
 	uint64_t *pgt;
 };
 
+static kdump_status x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
+				kdump_paddr_t *paddr);
+
 static kdump_status
 add_noncanonical_region(kdump_ctx *ctx)
 {
@@ -324,6 +327,43 @@ layout_by_version(unsigned version_code)
 	return &mm_layouts[i-1];
 }
 
+static struct layout_def*
+layout_by_pgt(kdump_ctx *ctx)
+{
+	kdump_paddr_t paddr;
+	kdump_status ret;
+
+	/* Only pre-2.6.11 kernels had this direct mapping */
+	ret = x86_64_vtop(ctx, 0x0000010000000000, &paddr);
+	if (ret == kdump_ok && paddr == 0)
+		return layout_by_version(KERNEL_VERSION(2, 6, 0));
+	if (ret != kdump_nodata)
+		return NULL;
+
+	/* Only kernels between 2.6.11 and 2.6.27 had this direct mapping */
+	ret = x86_64_vtop(ctx, 0xffff810000000000, &paddr);
+	if (ret == kdump_ok && paddr == 0)
+		return layout_by_version(KERNEL_VERSION(2, 6, 11));
+	if (ret != kdump_nodata)
+		return NULL;
+
+	/* Only 2.6.31+ kernels map VMEMMAP at this address */
+	ret = x86_64_vtop(ctx, 0xffffea0000000000, &paddr);
+	if (ret == kdump_ok)
+		return layout_by_version(KERNEL_VERSION(2, 6, 31));
+	if (ret != kdump_nodata)
+		return NULL;
+
+	/* Sanity check for 2.6.27+ direct mapping */
+	ret = x86_64_vtop(ctx, 0xffff880000000000, &paddr);
+	if (ret == kdump_ok && paddr == 0)
+		return layout_by_version(KERNEL_VERSION(2, 6, 27));
+	if (ret != kdump_nodata)
+		return NULL;
+
+	return NULL;
+}
+
 static kdump_status
 x86_64_vtop_init(kdump_ctx *ctx)
 {
@@ -335,7 +375,9 @@ x86_64_vtop_init(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		return ret;
 
-	layout = layout_by_version(ctx->version_code);
+	layout = layout_by_pgt(ctx);
+	if (!layout)
+		layout = layout_by_version(ctx->version_code);
 	if (!layout)
 		return kdump_unsupported;
 
