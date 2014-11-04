@@ -367,15 +367,16 @@ layout_by_pgt(kdump_ctx *ctx)
 static kdump_status
 x86_64_vtop_init(kdump_ctx *ctx)
 {
-	struct layout_def *layout;
+	struct layout_def *layout = NULL;
 	unsigned i;
 	kdump_status ret;
 
 	ret = read_pgt(ctx);
-	if (ret != kdump_ok)
+	if (ret == kdump_ok)
+		layout = layout_by_pgt(ctx);
+	else if (ret != kdump_nodata)
 		return ret;
 
-	layout = layout_by_pgt(ctx);
 	if (!layout)
 		layout = layout_by_version(ctx->version_code);
 	if (!layout)
