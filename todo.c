@@ -130,21 +130,3 @@ mclxcd_probe(kdump_ctx *ctx)
 const struct format_ops kdump_mclxcd_ops = {
 	.probe = mclxcd_probe,
 };
-
-static kdump_status
-s390_probe(kdump_ctx *ctx)
-{
-	static const char magic[] =
-		{ 0xa8, 0x19, 0x01, 0x73, 0x61, 0x8f, 0x23, 0xfd };
-
-	if (memcmp(ctx->buffer, magic, sizeof magic))
-		return kdump_unsupported;
-
-	/* S/390 dump not yet implemented */
-	ctx->format = "S390";
-	return kdump_unsupported;
-}
-
-const struct format_ops kdump_s390_ops = {
-	.probe = s390_probe,
-};
