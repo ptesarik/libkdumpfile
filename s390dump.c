@@ -113,6 +113,8 @@ s390_probe(kdump_ctx *ctx)
 {
 	struct dump_header *dh = ctx->buffer;
 	struct s390dump_priv *sdp;
+	struct end_marker marker;
+	off_t pos;
 
 	if (be64toh(dh->h1.magic) != S390_MAGIC)
 		return kdump_unsupported;
@@ -135,6 +137,14 @@ s390_probe(kdump_ctx *ctx)
 
 	ctx->page_size = dump32toh(ctx, dh->h1.page_size);
 	ctx->max_pfn = dump32toh(ctx, dh->h1.num_pages);
+
+	pos = dump32toh(ctx, dh->h1.hdr_size) +
+		dump64toh(ctx, dh->h1.mem_size);
+	if (pread(ctx->fd, &marker, sizeof marker, pos) != sizeof marker)
+		return kdump_syserr;
+	if (memcmp(marker.str, END_MARKER, sizeof END_MARKER - 1) ||
+	    dump64toh(ctx, marker.tod) < dump64toh(ctx, dh->h1.tod))
+		return kdump_dataerr;
 
 	sdp = malloc(sizeof *sdp);
 	if (!sdp)
