@@ -74,6 +74,10 @@ struct xen_crash_info_64 {
 	/* Additional arch-dependent and version-dependent fields  */
 };
 
+/* These fields in kdump_ctx must be initialised:
+ *
+ *   arch_ops
+ */
 static kdump_status
 process_core_note(kdump_ctx *ctx, uint32_t type,
 		  void *desc, size_t descsz)
@@ -87,6 +91,11 @@ process_core_note(kdump_ctx *ctx, uint32_t type,
 	return kdump_ok;
 }
 
+/* These fields in kdump_ctx must be initialised:
+ *
+ *   endian
+ *   ptr_size
+ */
 static void
 process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 {
@@ -109,6 +118,11 @@ process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 	}
 }
 
+/* These fields in kdump_ctx must be initialised:
+ *
+ *   endian
+ *   ptr_size
+ */
 static void
 process_xen_note(kdump_ctx *ctx, uint32_t type,
 		 void *desc, size_t descsz)
@@ -119,6 +133,10 @@ process_xen_note(kdump_ctx *ctx, uint32_t type,
 	ctx->flags |= DIF_XEN;
 }
 
+/* These fields in kdump_ctx must be initialised:
+ *
+ *   endian
+ */
 static kdump_status
 process_xc_xen_note(kdump_ctx *ctx, uint32_t type,
 		    void *desc, size_t descsz)
@@ -180,6 +198,13 @@ note_equal(const char *name, const char *notename, size_t notenamesz)
 	return 0;
 }
 
+/* These fields from kdump_ctx must be initialised:
+ *
+ *   endian
+ *   ptr_size
+ *   arch_ops
+ *
+ */
 kdump_status
 kdump_process_notes(kdump_ctx *ctx, void *data, size_t size)
 {
