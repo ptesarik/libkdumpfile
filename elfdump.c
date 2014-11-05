@@ -48,6 +48,7 @@ struct load_segment {
 	off_t file_offset;
 	kdump_paddr_t phys_start;
 	kdump_paddr_t phys_end;
+	kdump_vaddr_t virt_start;
 };
 
 struct section {
@@ -229,7 +230,7 @@ init_sections(struct elfdump_priv *edp, unsigned snum)
 
 static void
 store_phdr(struct elfdump_priv *edp, unsigned type,
-	   off_t offset, kdump_paddr_t addr, off_t size)
+	   off_t offset, kdump_vaddr_t vaddr, kdump_paddr_t paddr, off_t size)
 {
 	struct load_segment *pls;
 
@@ -243,8 +244,9 @@ store_phdr(struct elfdump_priv *edp, unsigned type,
 		return;
 
 	pls->file_offset = offset;
-	pls->phys_start = addr;
-	pls->phys_end = addr + size;
+	pls->phys_start = paddr;
+	pls->phys_end = paddr + size;
+	pls->virt_start = vaddr;
 }
 
 static void
@@ -355,12 +357,7 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 		paddr = dump32toh(ctx, prog.p_paddr);
 		filesz = dump32toh(ctx, prog.p_filesz);
 
-		store_phdr(edp, type, offset, paddr, filesz);
-		if (ctx->arch_ops && ctx->arch_ops->process_load) {
-			ret = ctx->arch_ops->process_load(ctx, vaddr, paddr);
-			if (ret != kdump_ok)
-				return ret;
-		}
+		store_phdr(edp, type, offset, vaddr, paddr, filesz);
 	}
 
 	if (lseek(ctx->fd, dump32toh(ctx, ehdr->e_shoff), SEEK_SET) < 0)
@@ -420,12 +417,7 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 		paddr = dump64toh(ctx, prog.p_paddr);
 		filesz = dump64toh(ctx, prog.p_filesz);
 
-		store_phdr(edp, type, offset, paddr, filesz);
-		if (ctx->arch_ops && ctx->arch_ops->process_load) {
-			ret = ctx->arch_ops->process_load(ctx, vaddr, paddr);
-			if (ret != kdump_ok)
-				return ret;
-		}
+		store_phdr(edp, type, offset, vaddr, paddr, filesz);
 	}
 
 	if (lseek(ctx->fd, dump32toh(ctx, ehdr->e_shoff), SEEK_SET) < 0)
@@ -588,12 +580,19 @@ open_common(kdump_ctx *ctx)
 			return ret;
 	}
 
-	/* get max PFN */
+	/* process LOAD segments */
 	for (i = 0; i < edp->num_load_segments; ++i) {
-		unsigned long pfn =
-			edp->load_segments[i].phys_end / ctx->page_size;
+		struct load_segment *seg = edp->load_segments + i;
+		unsigned long pfn = seg->phys_end / ctx->page_size;
 		if (pfn > ctx->max_pfn)
 			ctx->max_pfn = pfn;
+
+		if (ctx->arch_ops && ctx->arch_ops->process_load) {
+			ret = ctx->arch_ops->process_load(
+				ctx, seg->virt_start, seg->phys_start);
+			if (ret != kdump_ok)
+				return ret;
+		}
 	}
 
 	for (i = 0; i < edp->num_sections; ++i) {
