@@ -1,6 +1,8 @@
 0.1.3
 -----
   * support S390 dump format
+  * new API functions:
+    - kdump_pageshift
 
 0.1.2
 -----

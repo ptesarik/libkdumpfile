@@ -97,6 +97,7 @@ const char *kdump_arch_name(kdump_ctx *ctx);
 
 int kdump_is_xen(kdump_ctx *ctx);
 size_t kdump_pagesize(kdump_ctx *ctx);
+unsigned kdump_pageshift(kdump_ctx *ctx);
 kdump_paddr_t kdump_phys_base(kdump_ctx *ctx);
 
 const char *kdump_sysname(kdump_ctx *ctx);

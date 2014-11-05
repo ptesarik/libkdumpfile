@@ -74,6 +74,12 @@ kdump_pagesize(kdump_ctx *ctx)
 	return ctx->page_size;
 }
 
+unsigned
+kdump_pageshift(kdump_ctx *ctx)
+{
+	return ctx->page_shift;
+}
+
 kdump_paddr_t
 kdump_phys_base(kdump_ctx *ctx)
 {

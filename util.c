@@ -135,14 +135,26 @@ arch_ops(enum kdump_arch arch)
 	return NULL;
 }
 
+static kdump_status
+set_page_size_and_shift(kdump_ctx *ctx, size_t page_size, unsigned page_shift)
+{
+	void *page = realloc(ctx->page, page_size);
+	if (!page)
+		return kdump_syserr;
+	ctx->page = page;
+	ctx->page_size = page_size;
+	ctx->page_shift = page_shift;
+	return kdump_ok;
+}
+
 kdump_status
 kdump_set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 {
 	if (!ctx->page_size) {
-		int shift = default_page_shift(arch);
-		if (!shift)
+		int page_shift = default_page_shift(arch);
+		if (!page_shift)
 			return kdump_unsupported;
-		kdump_set_page_size(ctx, 1 << shift);
+		set_page_size_and_shift(ctx, 1UL << page_shift, page_shift);
 	}
 
 	ctx->arch = arch;
@@ -158,18 +170,14 @@ kdump_set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 kdump_status
 kdump_set_page_size(kdump_ctx *ctx, size_t page_size)
 {
-	void *page;
+	unsigned page_shift;
 
 	/* It must be a power of 2 */
 	if (page_size != (page_size & ~(page_size - 1)))
 		return kdump_dataerr;
 
-	page = realloc(ctx->page, page_size);
-	if (!page)
-		return kdump_syserr;
-	ctx->page = page;
-	ctx->page_size = page_size;
-	return kdump_ok;
+	page_shift = ffsl((unsigned long)page_size) - 1;
+	return set_page_size_and_shift(ctx, page_size, page_shift);
 }
 
 /* Final NUL may be missing in the source (i.e. corrupted dump data),
