@@ -31,6 +31,7 @@
 #include "kdumpfile-priv.h"
 
 #include <string.h>
+#include <stdlib.h>
 
 static size_t
 arch_ptr_size(enum kdump_arch arch)
@@ -122,6 +123,17 @@ kdump_set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 	if (ctx->arch_ops && ctx->arch_ops->init)
 		return ctx->arch_ops->init(ctx);
 
+	return kdump_ok;
+}
+
+kdump_status
+kdump_set_page_size(kdump_ctx *ctx, size_t page_size)
+{
+	void *page = realloc(ctx->page, page_size);
+	if (!page)
+		return kdump_syserr;
+	ctx->page = page;
+	ctx->page_size = page_size;
 	return kdump_ok;
 }
 

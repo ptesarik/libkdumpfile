@@ -115,6 +115,7 @@ s390_probe(kdump_ctx *ctx)
 	struct s390dump_priv *sdp;
 	struct end_marker marker;
 	off_t pos;
+	kdump_status ret;
 
 	if (be64toh(dh->h1.magic) != S390_MAGIC)
 		return kdump_unsupported;
@@ -135,7 +136,10 @@ s390_probe(kdump_ctx *ctx)
 		return kdump_unsupported;
 	}
 
-	ctx->page_size = dump32toh(ctx, dh->h1.page_size);
+	ret = kdump_set_page_size(ctx, dump32toh(ctx, dh->h1.page_size));
+	if (ret != kdump_ok)
+		return ret;
+
 	ctx->max_pfn = dump32toh(ctx, dh->h1.num_pages);
 
 	pos = dump32toh(ctx, dh->h1.hdr_size) +

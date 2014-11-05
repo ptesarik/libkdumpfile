@@ -586,7 +586,11 @@ open_common(kdump_ctx *ctx)
 	lkcdp->data_offset = LKCD_OFFSET_TO_FIRST_PAGE;
 
 	ctx->format = lkcdp->format;
-	ctx->page_size = dump32toh(ctx, dh->dh_page_size);
+
+	ret = kdump_set_page_size(ctx, dump32toh(ctx, dh->dh_page_size));
+	if (ret != kdump_ok)
+		return ret;
+
 	ctx->max_pfn = dump64toh(ctx, dh->dh_memory_size);
 	ctx->fmtdata = lkcdp;
 

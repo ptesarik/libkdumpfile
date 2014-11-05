@@ -109,7 +109,7 @@ cleanup(struct elfdump_priv *edp)
 }
 
 static void
-set_page_size(kdump_ctx *ctx)
+set_arch_default_page_size(kdump_ctx *ctx)
 {
 	static const int arch_page_shifts[] = {
 		[ARCH_ALPHA]= 13,
@@ -125,7 +125,7 @@ set_page_size(kdump_ctx *ctx)
 
 	if (!ctx->page_size) {
 		int shift = arch_page_shifts[ctx->arch];
-		ctx->page_size = 1 << shift;
+		kdump_set_page_size(ctx, 1 << shift);
 	}
 }
 
@@ -626,7 +626,7 @@ open_common(kdump_ctx *ctx)
 			return ret;
 	}
 
-	set_page_size(ctx);
+	set_arch_default_page_size(ctx);
 
 	/* get max PFN */
 	for (i = 0; i < edp->num_load_segments; ++i) {

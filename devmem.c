@@ -133,7 +133,9 @@ devmem_probe(kdump_ctx *ctx)
 
 	ctx->format = "live source";
 	ctx->endian = __BYTE_ORDER;
-	ctx->page_size = sysconf(_SC_PAGESIZE);
+	ret = kdump_set_page_size(ctx, sysconf(_SC_PAGESIZE));
+	if (ret != kdump_ok)
+		return ret;
 
 	get_vmcoreinfo(ctx);
 

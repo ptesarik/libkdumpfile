@@ -131,7 +131,7 @@ process_xc_xen_note(kdump_ctx *ctx, uint32_t type,
 		if (page_size != (page_size & ~(page_size - 1)))
 			return kdump_dataerr;
 
-		ctx->page_size = page_size;
+		return kdump_set_page_size(ctx, page_size);
 	} else if (type == XEN_ELFNOTE_DUMPCORE_FORMAT_VERSION) {
 		uint64_t version = dump64toh(ctx, *(uint64_t*)desc);
 
@@ -159,7 +159,9 @@ kdump_process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
 		if (*endp)
 			return kdump_dataerr;
 
-		ctx->page_size = page_size;
+		ret = kdump_set_page_size(ctx, page_size);
+		if (ret != kdump_ok)
+			return ret;
 	}
 
 	val = kdump_vmcoreinfo_row(ctx, "OSRELEASE");

@@ -260,6 +260,7 @@ struct timeval_64 {
 
 enum kdump_arch kdump_machine_arch(const char *machine);
 kdump_status kdump_set_arch(kdump_ctx *ctx, enum kdump_arch arch);
+kdump_status kdump_set_page_size(kdump_ctx *ctx, size_t page_size);
 
 void kdump_copy_uts_string(char *dest, const char *src);
 void kdump_set_uts(kdump_ctx *ctx, const struct new_utsname *src);

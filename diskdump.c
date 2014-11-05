@@ -455,6 +455,7 @@ open_common(kdump_ctx *ctx)
 	struct disk_dump_header_32 *dh32 = ctx->buffer;
 	struct disk_dump_header_64 *dh64 = ctx->buffer;
 	struct disk_dump_priv *ddp;
+	int32_t page_size;
 	int32_t header_version;
 	int32_t sub_hdr_size;
 	int32_t bitmap_blocks;
@@ -476,19 +477,25 @@ open_common(kdump_ctx *ctx)
 		return ret;
 
 	if ( (ctx->endian = header_looks_sane_32(dh32)) ) {
-		ctx->page_size = dump32toh(ctx, dh32->block_size);
+		page_size = dump32toh(ctx, dh32->block_size);
 		ctx->max_pfn = dump32toh(ctx, dh32->max_mapnr);
 		header_version = dump32toh(ctx, dh32->header_version);
 		sub_hdr_size = dump32toh(ctx, dh32->sub_hdr_size);
 		bitmap_blocks = dump32toh(ctx, dh32->bitmap_blocks);
-		ret = read_sub_hdr_32(ctx, header_version);
+
+		ret = kdump_set_page_size(ctx, page_size);
+		if (ret == kdump_ok)
+			ret = read_sub_hdr_32(ctx, header_version);
 	} else if ( (ctx->endian = header_looks_sane_64(dh64)) ) {
-		ctx->page_size = dump32toh(ctx, dh64->block_size);
+		page_size = dump32toh(ctx, dh64->block_size);
 		ctx->max_pfn = dump32toh(ctx, dh64->max_mapnr);
 		header_version = dump32toh(ctx, dh32->header_version);
 		sub_hdr_size = dump32toh(ctx, dh64->sub_hdr_size);
 		bitmap_blocks = dump32toh(ctx, dh64->bitmap_blocks);
-		ret = read_sub_hdr_64(ctx, header_version);
+
+		ret = kdump_set_page_size(ctx, page_size);
+		if (ret == kdump_ok)
+			ret = read_sub_hdr_64(ctx, header_version);
 	} else
 		return kdump_unsupported;
 

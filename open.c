@@ -95,12 +95,6 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 static kdump_status
 kdump_open_known(kdump_ctx *ctx)
 {
-	ctx->page = malloc(ctx->page_size);
-	if (!ctx->page) {
-		kdump_free(ctx);
-		return kdump_syserr;
-	}
-
 	if (!(ctx->flags & DIF_UTSNAME))
 		/* If this fails, it is not fatal. */
 		use_kernel_utsname(ctx);
