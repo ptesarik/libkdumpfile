@@ -571,23 +571,18 @@ initialize_xen_map32(kdump_ctx *ctx, void *dir)
 static kdump_status
 initialize_xen_map(kdump_ctx *ctx)
 {
-	void *dir;
+	void *dir, *page;
 	kdump_status ret;
-
-	if ( (dir = malloc(ctx->page_size)) == NULL) {
-		ret = kdump_syserr;
-		goto done;
-	}
-	ctx->page = dir;
 
 	ret = elf_read_page(ctx, ctx->xen_p2m_mfn);
 	if (ret != kdump_ok)
-		goto free_dir;
+		return ret;
 
-	if ( (ctx->page = malloc(ctx->page_size)) == NULL) {
-		ret = kdump_syserr;
-		goto free_dir;
-	}
+	dir = ctx->page;
+	page = malloc(ctx->page_size);
+	if (page == NULL)
+		return kdump_syserr;
+	ctx->page = page;
 
 	ret = (ctx->ptr_size == 8)
 		? initialize_xen_map64(ctx, dir)
@@ -596,10 +591,7 @@ initialize_xen_map(kdump_ctx *ctx)
 	if (ret == kdump_ok)
 		ctx->ops = &xen_dom0_ops;
 
-	free(ctx->page);
- free_dir:
 	free(dir);
- done:
 	return ret;
 }
 
