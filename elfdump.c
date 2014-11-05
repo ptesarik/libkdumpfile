@@ -46,9 +46,9 @@ struct xen_p2m {
 
 struct load_segment {
 	off_t file_offset;
-	kdump_paddr_t phys_start;
-	kdump_paddr_t phys_end;
-	kdump_vaddr_t virt_start;
+	kdump_paddr_t phys;
+	off_t size;
+	kdump_vaddr_t virt;
 };
 
 struct section {
@@ -105,6 +105,7 @@ elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
 	kdump_paddr_t addr = pfn * ctx->page_size;
+	kdump_paddr_t segoff;
 	off_t pos;
 
 	if (pfn == ctx->last_pfn)
@@ -117,10 +118,9 @@ elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 		int i;
 		for (i = 0; i < edp->num_load_segments; i++) {
 			pls = &edp->load_segments[i];
-			if ((addr >= pls->phys_start) &&
-			    (addr < pls->phys_end)) {
-				pos = (off_t)(addr - pls->phys_start) +
-					pls->file_offset;
+			segoff = addr - pls->phys;
+			if (segoff < pls->size) {
+				pos = pls->file_offset + segoff;
 				break;
 			}
 		}
@@ -244,9 +244,9 @@ store_phdr(struct elfdump_priv *edp, unsigned type,
 		return;
 
 	pls->file_offset = offset;
-	pls->phys_start = paddr;
-	pls->phys_end = paddr + size;
-	pls->virt_start = vaddr;
+	pls->phys = paddr;
+	pls->size = size;
+	pls->virt = vaddr;
 }
 
 static void
@@ -265,7 +265,7 @@ store_sect(struct elfdump_priv *edp, off_t offset,
 static void *
 read_elf_seg(kdump_ctx *ctx, struct load_segment *seg)
 {
-	size_t size = seg->phys_end - seg->phys_start;
+	size_t size = seg->size;
 	void *buf = malloc(size);
 	if (!buf)
 		return NULL;
@@ -573,8 +573,7 @@ open_common(kdump_ctx *ctx)
 		void *notes = read_elf_seg(ctx, seg);
 		if (!notes)
 			return kdump_syserr;
-		ret = kdump_process_notes(ctx, notes,
-					  seg->phys_end - seg->phys_start);
+		ret = kdump_process_notes(ctx, notes, seg->size);
 		free(notes);
 		if (ret != kdump_ok)
 			return ret;
@@ -583,13 +582,13 @@ open_common(kdump_ctx *ctx)
 	/* process LOAD segments */
 	for (i = 0; i < edp->num_load_segments; ++i) {
 		struct load_segment *seg = edp->load_segments + i;
-		unsigned long pfn = seg->phys_end / ctx->page_size;
+		unsigned long pfn = (seg->phys + seg->size) / ctx->page_size;
 		if (pfn > ctx->max_pfn)
 			ctx->max_pfn = pfn;
 
 		if (ctx->arch_ops && ctx->arch_ops->process_load) {
 			ret = ctx->arch_ops->process_load(
-				ctx, seg->virt_start, seg->phys_start);
+				ctx, seg->virt, seg->phys);
 			if (ret != kdump_ok)
 				return ret;
 		}
