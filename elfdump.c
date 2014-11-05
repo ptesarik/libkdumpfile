@@ -77,6 +77,8 @@ struct elfdump_priv {
 	} xen_map_type;
 };
 
+static void elf_cleanup(kdump_ctx *ctx);
+
 static enum kdump_arch
 mach2arch(unsigned mach)
 {
@@ -95,17 +97,6 @@ mach2arch(unsigned mach)
 	case EM_X86_64:	return ARCH_X86_64;
 	default:	return ARCH_UNKNOWN;
 	}
-}
-
-static void
-cleanup(struct elfdump_priv *edp)
-{
-	if (edp->load_segments)
-		free(edp->load_segments);
-	if (edp->sections)
-		free(edp->sections);
-	if (edp->strtab)
-		free(edp->strtab);
 }
 
 static void
@@ -705,10 +696,8 @@ elf_probe(kdump_ctx *ctx)
 	} else
 		return kdump_unsupported;
 
-	if (ret != kdump_ok) {
-		cleanup(edp);
-		free(edp);
-	}
+	if (ret != kdump_ok)
+		elf_cleanup(ctx);
 
 	return ret;
 }
@@ -718,7 +707,12 @@ elf_cleanup(kdump_ctx *ctx)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
 
-	cleanup(edp);
+	if (edp->load_segments)
+		free(edp->load_segments);
+	if (edp->sections)
+		free(edp->sections);
+	if (edp->strtab)
+		free(edp->strtab);
 	free(edp);
 	ctx->fmtdata = NULL;
 };
