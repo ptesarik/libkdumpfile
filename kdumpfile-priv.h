@@ -84,7 +84,9 @@ struct format_ops {
 
 	/* Read a page from the dump file.
 	 * Input:
+	 *   ctx->fd         core dump file descriptor open for reading
 	 *   ctx->page       pointer to a page-sized buffer
+	 *   ctx->buffer     temporary buffer of MAX_PAGE_SIZE bytes
 	 * Return:
 	 *   kdump_ok        buffer is filled with page data
 	 *   kdump_nodata    data for the given page is not present
@@ -93,7 +95,9 @@ struct format_ops {
 
 	/* Read a page from the dump file using Xen machine addresses.
 	 * Input:
+	 *   ctx->fd         core dump file descriptor open for reading
 	 *   ctx->page       pointer to a page-sized buffer
+	 *   ctx->buffer     temporary buffer of MAX_PAGE_SIZE bytes
 	 * Return:
 	 *   kdump_ok        buffer is filled with page data
 	 *   kdump_nodata    data for the given page is not present
