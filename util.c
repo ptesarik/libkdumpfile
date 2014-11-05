@@ -129,7 +129,13 @@ kdump_set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 kdump_status
 kdump_set_page_size(kdump_ctx *ctx, size_t page_size)
 {
-	void *page = realloc(ctx->page, page_size);
+	void *page;
+
+	/* It must be a power of 2 */
+	if (page_size != (page_size & ~(page_size - 1)))
+		return kdump_dataerr;
+
+	page = realloc(ctx->page, page_size);
 	if (!page)
 		return kdump_syserr;
 	ctx->page = page;

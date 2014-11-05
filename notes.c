@@ -145,10 +145,6 @@ process_xc_xen_note(kdump_ctx *ctx, uint32_t type,
 		struct xen_elfnote_header *header = desc;
 		uint64_t page_size = dump64toh(ctx, header->xch_page_size);
 
-		/* It must be a power of 2 */
-		if (page_size != (page_size & ~(page_size - 1)))
-			return kdump_dataerr;
-
 		return kdump_set_page_size(ctx, page_size);
 	} else if (type == XEN_ELFNOTE_DUMPCORE_FORMAT_VERSION) {
 		uint64_t version = dump64toh(ctx, *(uint64_t*)desc);
