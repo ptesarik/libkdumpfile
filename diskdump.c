@@ -489,7 +489,7 @@ open_common(kdump_ctx *ctx)
 	} else if ( (ctx->endian = header_looks_sane_64(dh64)) ) {
 		page_size = dump32toh(ctx, dh64->block_size);
 		ctx->max_pfn = dump32toh(ctx, dh64->max_mapnr);
-		header_version = dump32toh(ctx, dh32->header_version);
+		header_version = dump32toh(ctx, dh64->header_version);
 		sub_hdr_size = dump32toh(ctx, dh64->sub_hdr_size);
 		bitmap_blocks = dump32toh(ctx, dh64->bitmap_blocks);
 
