@@ -87,6 +87,8 @@ struct s390dump_priv {
 	off_t dataoff;		/* offset of data (size of s390 header) */
 };
 
+static void s390_cleanup(kdump_ctx *ctx);
+
 static kdump_status
 s390_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
@@ -123,6 +125,26 @@ s390_probe(kdump_ctx *ctx)
 	ctx->format = "S390";
 	ctx->endian = __BIG_ENDIAN;
 
+	pos = dump32toh(ctx, dh->h1.hdr_size) +
+		dump64toh(ctx, dh->h1.mem_size);
+	if (pread(ctx->fd, &marker, sizeof marker, pos) != sizeof marker)
+		return kdump_syserr;
+	if (memcmp(marker.str, END_MARKER, sizeof END_MARKER - 1) ||
+	    dump64toh(ctx, marker.tod) < dump64toh(ctx, dh->h1.tod))
+		return kdump_dataerr;
+
+	sdp = calloc(1, sizeof *sdp);
+	if (!sdp)
+		return kdump_syserr;
+	ctx->fmtdata = sdp;
+
+	sdp->dataoff = dump32toh(ctx, dh->h1.hdr_size);
+	ctx->max_pfn = dump32toh(ctx, dh->h1.num_pages);
+
+	ret = kdump_set_page_size(ctx, dump32toh(ctx, dh->h1.page_size));
+	if (ret != kdump_ok)
+		goto out;
+
 	switch (dump32toh(ctx, dh->h1.arch)) {
 	case S390_ARCH_32BIT:
 		kdump_set_arch(ctx, ARCH_S390);
@@ -133,31 +155,14 @@ s390_probe(kdump_ctx *ctx)
 		break;
 
 	default:
-		return kdump_unsupported;
+		ret = kdump_unsupported;
 	}
 
-	ret = kdump_set_page_size(ctx, dump32toh(ctx, dh->h1.page_size));
+ out:
 	if (ret != kdump_ok)
-		return ret;
+		s390_cleanup(ctx);
 
-	ctx->max_pfn = dump32toh(ctx, dh->h1.num_pages);
-
-	pos = dump32toh(ctx, dh->h1.hdr_size) +
-		dump64toh(ctx, dh->h1.mem_size);
-	if (pread(ctx->fd, &marker, sizeof marker, pos) != sizeof marker)
-		return kdump_syserr;
-	if (memcmp(marker.str, END_MARKER, sizeof END_MARKER - 1) ||
-	    dump64toh(ctx, marker.tod) < dump64toh(ctx, dh->h1.tod))
-		return kdump_dataerr;
-
-	sdp = malloc(sizeof *sdp);
-	if (!sdp)
-		return kdump_syserr;
-	ctx->fmtdata = sdp;
-
-	sdp->dataoff = dump32toh(ctx, dh->h1.hdr_size);
-
-	return kdump_ok;
+	return ret;
 }
 
 static void
