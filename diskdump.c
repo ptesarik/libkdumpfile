@@ -163,6 +163,8 @@ struct disk_dump_priv {
 	| DUMP_DH_COMPRESSED_SNAPPY	\
 		)
 
+static void diskdump_cleanup(kdump_ctx *ctx);
+
 static inline int
 page_is_dumpable(kdump_ctx *ctx, unsigned int nr)
 {
@@ -519,7 +521,7 @@ open_common(kdump_ctx *ctx)
 	struct disk_dump_priv *ddp;
 	kdump_status ret;
 
-	ddp = malloc(sizeof *ddp);
+	ddp = calloc(1, sizeof *ddp);
 	if (!ddp)
 		return kdump_syserr;
 
@@ -539,6 +541,9 @@ open_common(kdump_ctx *ctx)
 	if (ret == kdump_ok && ctx->arch == ARCH_UNKNOWN)
 		ret = kdump_set_arch(ctx, kdump_machine_arch(
 					     ctx->utsname.machine));
+
+	if (ret != kdump_ok)
+		diskdump_cleanup(ctx);
 
 	return ret;
 }
