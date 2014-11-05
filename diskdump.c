@@ -263,61 +263,6 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	return kdump_ok;
 }
 
-static int
-sane_header_values(int32_t block_size, uint32_t bitmap_blocks,
-		   uint32_t max_mapnr)
-{
-	uint64_t maxcovered;
-
-	/* Page size must be reasonable */
-	if (block_size < MIN_PAGE_SIZE || block_size > MAX_PAGE_SIZE)
-		return 0;
-
-	/* It must be a power of 2 */
-	if (block_size != (block_size & ~(block_size - 1)))
-		return 0;
-
-	/* Number of bitmap blocks should cover all pages in the system */
-	maxcovered = (uint64_t)8 * bitmap_blocks * block_size;
-	if (maxcovered < max_mapnr)
-		return 0;
-
-	/* basic sanity checks passed, return true: */
-	return 1;
-}
-
-static int
-header_looks_sane_32(struct disk_dump_header_32 *dh)
-{
-	if (sane_header_values(le32toh(dh->block_size),
-			       le32toh(dh->bitmap_blocks),
-			       le32toh(dh->max_mapnr)))
-		return __LITTLE_ENDIAN;
-
-	if (sane_header_values(be32toh(dh->block_size),
-			       be32toh(dh->bitmap_blocks),
-			       be32toh(dh->max_mapnr)))
-		return __BIG_ENDIAN;
-
-	return 0;
-}
-
-static int
-header_looks_sane_64(struct disk_dump_header_64 *dh)
-{
-	if (sane_header_values(le32toh(dh->block_size),
-			       le32toh(dh->bitmap_blocks),
-			       le32toh(dh->max_mapnr)))
-		return __LITTLE_ENDIAN;
-
-	if (sane_header_values(be32toh(dh->block_size),
-			       be32toh(dh->bitmap_blocks),
-			       be32toh(dh->max_mapnr)))
-		return __BIG_ENDIAN;
-
-	return 0;
-}
-
 static kdump_status
 read_vmcoreinfo(kdump_ctx *ctx, off_t off, size_t size)
 {
@@ -338,6 +283,7 @@ read_vmcoreinfo(kdump_ctx *ctx, off_t off, size_t size)
 	return ret;
 }
 
+/* This function also sets architecture */
 static kdump_status
 read_notes(kdump_ctx *ctx, off_t off, size_t size)
 {
@@ -351,67 +297,21 @@ read_notes(kdump_ctx *ctx, off_t off, size_t size)
 	if (pread(ctx->fd, notes, size, off) != size)
 		ret = kdump_syserr;
 
-	if (ret == kdump_ok)
-		ret = kdump_process_notes(ctx, notes, size);
+	if (ret != kdump_ok)
+		goto out;
+
+	ret = kdump_process_noarch_notes(ctx, notes, size);
+	if (ret != kdump_ok)
+		goto out;
+
+	ret = kdump_set_arch(ctx, kdump_machine_arch(ctx->utsname.machine));
+	if (ret != kdump_ok)
+		goto out;
+
+	ret = kdump_process_arch_notes(ctx, notes, size);
+
+ out:
 	free(notes);
-
-	return ret;
-}
-
-static kdump_status
-read_sub_hdr_32(kdump_ctx *ctx, int32_t header_version)
-{
-	struct kdump_sub_header_32 subhdr;
-	kdump_status ret = kdump_ok;
-
-	if (header_version < 1)
-		return header_version < 0 ? kdump_dataerr : kdump_ok;
-
-	if (pread(ctx->fd, &subhdr, sizeof subhdr, ctx->page_size)
-	    != sizeof subhdr)
-		return kdump_syserr;
-
-	kdump_set_phys_base(ctx, dump32toh(ctx, subhdr.phys_base));
-
-	if (header_version >= 4)
-		ret = read_notes(ctx, dump64toh(ctx, subhdr.offset_note),
-				 dump32toh(ctx, subhdr.size_note));
-	else if (header_version >= 3)
-		ret = read_vmcoreinfo(ctx,
-				      dump64toh(ctx, subhdr.offset_vmcoreinfo),
-				      dump32toh(ctx, subhdr.size_vmcoreinfo));
-
-	if (header_version >= 6)
-		ctx->max_pfn = dump64toh(ctx, subhdr.max_mapnr_64);
-
-	return ret;
-}
-
-static kdump_status
-read_sub_hdr_64(kdump_ctx *ctx, int32_t header_version)
-{
-	struct kdump_sub_header_64 subhdr;
-	kdump_status ret = kdump_ok;
-
-	if (header_version < 0)
-		return kdump_dataerr;
-
-	if (pread(ctx->fd, &subhdr, sizeof subhdr, ctx->page_size)
-	    != sizeof subhdr)
-		return kdump_syserr;
-
-	kdump_set_phys_base(ctx, dump64toh(ctx, subhdr.phys_base));
-
-	if (header_version >= 4)
-		ret = read_notes(ctx, dump64toh(ctx, subhdr.offset_note),
-				 dump64toh(ctx, subhdr.size_note));
-	else if (header_version >= 3)
-		ret = read_vmcoreinfo(ctx,
-				      dump64toh(ctx, subhdr.offset_vmcoreinfo),
-				      dump64toh(ctx, subhdr.size_vmcoreinfo));
-
-	if (header_version >= 6)
-		ctx->max_pfn = dump64toh(ctx, subhdr.max_mapnr_64);
 
 	return ret;
 }
@@ -450,15 +350,173 @@ read_bitmap(kdump_ctx *ctx, int32_t sub_hdr_size,
 }
 
 static kdump_status
+try_header(kdump_ctx *ctx, int32_t block_size,
+	   uint32_t bitmap_blocks, uint32_t max_mapnr)
+{
+	uint64_t maxcovered;
+	kdump_status ret;
+
+	/* Page size must be reasonable */
+	if (block_size < MIN_PAGE_SIZE || block_size > MAX_PAGE_SIZE)
+		return kdump_dataerr;
+
+	/* Number of bitmap blocks should cover all pages in the system */
+	maxcovered = (uint64_t)8 * bitmap_blocks * block_size;
+	if (maxcovered < max_mapnr)
+		return kdump_dataerr;
+
+	/* basic sanity checks passed */
+	ret = kdump_set_page_size(ctx, block_size);
+	if (ret != kdump_ok)
+		return ret;
+
+	ctx->max_pfn = max_mapnr;
+
+	return kdump_ok;
+}
+
+static kdump_status
+read_sub_hdr_32(kdump_ctx *ctx, int32_t header_version)
+{
+	struct kdump_sub_header_32 subhdr;
+	kdump_status ret = kdump_ok;
+
+	if (header_version < 1)
+		return header_version < 0 ? kdump_dataerr : kdump_ok;
+
+	if (pread(ctx->fd, &subhdr, sizeof subhdr, ctx->page_size)
+	    != sizeof subhdr)
+		return kdump_syserr;
+
+	kdump_set_phys_base(ctx, dump32toh(ctx, subhdr.phys_base));
+
+	if (header_version >= 4)
+		ret = read_notes(ctx, dump64toh(ctx, subhdr.offset_note),
+				 dump32toh(ctx, subhdr.size_note));
+	else if (header_version >= 3)
+		ret = read_vmcoreinfo(ctx,
+				      dump64toh(ctx, subhdr.offset_vmcoreinfo),
+				      dump32toh(ctx, subhdr.size_vmcoreinfo));
+
+	if (header_version >= 6)
+		ctx->max_pfn = dump64toh(ctx, subhdr.max_mapnr_64);
+
+	return ret;
+}
+
+static kdump_status
+do_header_32(kdump_ctx *ctx, struct disk_dump_header_32 *dh, int endian)
+{
+	kdump_status ret;
+
+	ctx->endian = endian;
+	ctx->ptr_size = 4;
+
+	ret = read_sub_hdr_32(ctx, dump32toh(ctx, dh->header_version));
+	if (ret != kdump_ok)
+		return ret;
+
+	return read_bitmap(ctx, dump32toh(ctx, dh->sub_hdr_size),
+			   dump32toh(ctx, dh->bitmap_blocks));
+}
+
+static kdump_status
+try_header_32(kdump_ctx *ctx, struct disk_dump_header_32 *dh)
+{
+	kdump_status ret;
+
+	ret = try_header(ctx, le32toh(dh->block_size),
+			 le32toh(dh->bitmap_blocks),
+			 le32toh(dh->max_mapnr));
+	if (ret == kdump_ok)
+		return do_header_32(ctx, dh, __LITTLE_ENDIAN);
+
+	if (ret != kdump_dataerr)
+		return ret;
+
+	ret = try_header(ctx, be32toh(dh->block_size),
+			 be32toh(dh->bitmap_blocks),
+			 be32toh(dh->max_mapnr));
+	if (ret == kdump_ok)
+		return do_header_32(ctx, dh, __BIG_ENDIAN);
+
+	return ret;
+}
+
+static kdump_status
+read_sub_hdr_64(kdump_ctx *ctx, int32_t header_version)
+{
+	struct kdump_sub_header_64 subhdr;
+	kdump_status ret = kdump_ok;
+
+	if (header_version < 0)
+		return kdump_dataerr;
+
+	if (pread(ctx->fd, &subhdr, sizeof subhdr, ctx->page_size)
+	    != sizeof subhdr)
+		return kdump_syserr;
+
+	kdump_set_phys_base(ctx, dump64toh(ctx, subhdr.phys_base));
+
+	if (header_version >= 4)
+		ret = read_notes(ctx, dump64toh(ctx, subhdr.offset_note),
+				 dump64toh(ctx, subhdr.size_note));
+	else if (header_version >= 3)
+		ret = read_vmcoreinfo(ctx,
+				      dump64toh(ctx, subhdr.offset_vmcoreinfo),
+				      dump64toh(ctx, subhdr.size_vmcoreinfo));
+
+	if (header_version >= 6)
+		ctx->max_pfn = dump64toh(ctx, subhdr.max_mapnr_64);
+
+	return ret;
+}
+
+static kdump_status
+do_header_64(kdump_ctx *ctx, struct disk_dump_header_64 *dh, int endian)
+{
+	kdump_status ret;
+
+	ctx->endian = endian;
+	ctx->ptr_size = 8;
+
+	ret = read_sub_hdr_64(ctx, dump32toh(ctx, dh->header_version));
+	if (ret != kdump_ok)
+		return ret;
+
+	return read_bitmap(ctx, dump32toh(ctx, dh->sub_hdr_size),
+			   dump32toh(ctx, dh->bitmap_blocks));
+}
+
+static kdump_status
+try_header_64(kdump_ctx *ctx, struct disk_dump_header_64 *dh)
+{
+	kdump_status ret;
+
+	ret = try_header(ctx, le32toh(dh->block_size),
+			 le32toh(dh->bitmap_blocks),
+			 le32toh(dh->max_mapnr));
+	if (ret == kdump_ok)
+		return do_header_64(ctx, dh, __LITTLE_ENDIAN);
+
+	if (ret != kdump_dataerr)
+		return ret;
+
+	ret = try_header(ctx, be32toh(dh->block_size),
+			 be32toh(dh->bitmap_blocks),
+			 be32toh(dh->max_mapnr));
+	if (ret == kdump_ok)
+		return do_header_64(ctx, dh, __BIG_ENDIAN);
+
+	return ret;
+}
+
+static kdump_status
 open_common(kdump_ctx *ctx)
 {
 	struct disk_dump_header_32 *dh32 = ctx->buffer;
 	struct disk_dump_header_64 *dh64 = ctx->buffer;
 	struct disk_dump_priv *ddp;
-	int32_t page_size;
-	int32_t header_version;
-	int32_t sub_hdr_size;
-	int32_t bitmap_blocks;
 	kdump_status ret;
 
 	ddp = malloc(sizeof *ddp);
@@ -472,35 +530,15 @@ open_common(kdump_ctx *ctx)
 	else if (kdump_uts_looks_sane(&dh64->utsname))
 		kdump_set_uts(ctx, &dh64->utsname);
 
-	ret = kdump_set_arch(ctx, kdump_machine_arch(ctx->utsname.machine));
-	if (ret != kdump_ok)
-		return ret;
+	ret = try_header_32(ctx, dh32);
+	if (ret == kdump_dataerr)
+		ret = try_header_64(ctx, dh64);
+	if (ret == kdump_dataerr)
+		ret = kdump_unsupported;
 
-	if ( (ctx->endian = header_looks_sane_32(dh32)) ) {
-		page_size = dump32toh(ctx, dh32->block_size);
-		ctx->max_pfn = dump32toh(ctx, dh32->max_mapnr);
-		header_version = dump32toh(ctx, dh32->header_version);
-		sub_hdr_size = dump32toh(ctx, dh32->sub_hdr_size);
-		bitmap_blocks = dump32toh(ctx, dh32->bitmap_blocks);
-
-		ret = kdump_set_page_size(ctx, page_size);
-		if (ret == kdump_ok)
-			ret = read_sub_hdr_32(ctx, header_version);
-	} else if ( (ctx->endian = header_looks_sane_64(dh64)) ) {
-		page_size = dump32toh(ctx, dh64->block_size);
-		ctx->max_pfn = dump32toh(ctx, dh64->max_mapnr);
-		header_version = dump32toh(ctx, dh64->header_version);
-		sub_hdr_size = dump32toh(ctx, dh64->sub_hdr_size);
-		bitmap_blocks = dump32toh(ctx, dh64->bitmap_blocks);
-
-		ret = kdump_set_page_size(ctx, page_size);
-		if (ret == kdump_ok)
-			ret = read_sub_hdr_64(ctx, header_version);
-	} else
-		return kdump_unsupported;
-
-	if (ret == kdump_ok)
-		ret = read_bitmap(ctx, sub_hdr_size, bitmap_blocks);
+	if (ret == kdump_ok && ctx->arch == ARCH_UNKNOWN)
+		ret = kdump_set_arch(ctx, kdump_machine_arch(
+					     ctx->utsname.machine));
 
 	return ret;
 }
