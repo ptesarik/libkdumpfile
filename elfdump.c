@@ -263,21 +263,6 @@ store_sect(struct elfdump_priv *edp, off_t offset,
 }
 
 static void *
-read_elf_seg(kdump_ctx *ctx, struct load_segment *seg)
-{
-	size_t size = seg->size;
-	void *buf = malloc(size);
-	if (!buf)
-		return NULL;
-
-	if (pread(ctx->fd, buf, size, seg->file_offset) == size)
-		return buf;
-
-	free(buf);
-	return NULL;
-}
-
-static void *
 read_elf_sect(kdump_ctx *ctx, struct section *sect)
 {
 	void *buf;
@@ -558,9 +543,45 @@ initialize_xen_map(kdump_ctx *ctx)
 }
 
 static kdump_status
+process_notes(kdump_ctx *ctx, void *notes)
+{
+	struct elfdump_priv *edp = ctx->fmtdata;
+	void *p;
+	unsigned i;
+	kdump_status ret;
+
+	p = notes;
+	for (i = 0; i < edp->num_note_segments; ++i) {
+		struct load_segment *seg = edp->note_segments + i;
+
+		if (pread(ctx->fd, p, seg->size, seg->file_offset) != seg->size)
+			return kdump_syserr;
+
+		ret = kdump_process_noarch_notes(ctx, p, seg->size);
+		if (ret != kdump_ok)
+			return ret;
+
+		p += seg->size;
+	}
+
+	p = notes;
+	for (i = 0; i < edp->num_note_segments; ++i) {
+		struct load_segment *seg = edp->note_segments + i;
+
+		ret = kdump_process_arch_notes(ctx, p, seg->size);
+		if (ret != kdump_ok)
+			return ret;
+	}
+
+	return kdump_ok;
+}
+
+static kdump_status
 open_common(kdump_ctx *ctx)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
+	size_t notesz;
+	void *notes;
 	kdump_status ret;
 	int i;
 
@@ -568,16 +589,17 @@ open_common(kdump_ctx *ctx)
 		return kdump_unsupported;
 
 	/* read notes */
-	for (i = 0; i < edp->num_note_segments; ++i) {
-		struct load_segment *seg = edp->note_segments + i;
-		void *notes = read_elf_seg(ctx, seg);
-		if (!notes)
-			return kdump_syserr;
-		ret = kdump_process_notes(ctx, notes, seg->size);
-		free(notes);
-		if (ret != kdump_ok)
-			return ret;
-	}
+	notesz = 0;
+	for (i = 0; i < edp->num_note_segments; ++i)
+		notesz += edp->note_segments[i].size;
+	notes = malloc(notesz);
+	if (!notes)
+		return kdump_syserr;
+
+	ret = process_notes(ctx, notes);
+	free(notes);
+	if (ret != kdump_ok)
+		return ret;
 
 	/* process LOAD segments */
 	for (i = 0; i < edp->num_load_segments; ++i) {
