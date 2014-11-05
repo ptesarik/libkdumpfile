@@ -277,6 +277,8 @@ size_t kdump_paged_cpin(int fd, void *buffer, size_t size);
 /* ELF notes */
 
 kdump_status kdump_process_notes(kdump_ctx *ctx, void *data, size_t size);
+kdump_status kdump_process_noarch_notes(kdump_ctx *ctx, void *data, size_t size);
+kdump_status kdump_process_arch_notes(kdump_ctx *ctx, void *data, size_t size);
 kdump_status kdump_process_vmcoreinfo(kdump_ctx *ctx, void *data, size_t size);
 
 /* Virtual address space regions */

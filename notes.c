@@ -74,6 +74,10 @@ struct xen_crash_info_64 {
 	/* Additional arch-dependent and version-dependent fields  */
 };
 
+typedef kdump_status do_note_fn(kdump_ctx *ctx, Elf32_Word type,
+				const char *name, size_t namesz,
+				void *desc, size_t descsz);
+
 /* These fields in kdump_ctx must be initialised:
  *
  *   arch_ops
@@ -194,6 +198,19 @@ note_equal(const char *name, const char *notename, size_t notenamesz)
 	return 0;
 }
 
+static kdump_status
+do_noarch_note(kdump_ctx *ctx, Elf32_Word type,
+	       const char *name, size_t namesz, void *desc, size_t descsz)
+{
+	if (note_equal("VMCOREINFO", name, namesz))
+		return kdump_process_vmcoreinfo(ctx, desc, descsz);
+	else if (note_equal("VMCOREINFO_XEN", name, namesz))
+		return kdump_store_vmcoreinfo(&ctx->vmcoreinfo_xen,
+					      desc, descsz);
+
+	return kdump_ok;
+}
+
 /* These fields from kdump_ctx must be initialised:
  *
  *   endian
@@ -201,8 +218,34 @@ note_equal(const char *name, const char *notename, size_t notenamesz)
  *   arch_ops
  *
  */
-kdump_status
-kdump_process_notes(kdump_ctx *ctx, void *data, size_t size)
+static kdump_status
+do_arch_note(kdump_ctx *ctx, Elf32_Word type,
+	     const char *name, size_t namesz, void *desc, size_t descsz)
+{
+	if (note_equal("CORE", name, namesz))
+		return process_core_note(ctx, type, desc, descsz);
+	else if (note_equal("Xen", name, namesz))
+		process_xen_note(ctx, type, desc, descsz);
+	else if (note_equal(".note.Xen", name, namesz))
+		return process_xc_xen_note(ctx, type, desc, descsz);
+
+	return kdump_ok;
+}
+
+static kdump_status
+do_any_note(kdump_ctx *ctx, Elf32_Word type,
+	    const char *name, size_t namesz, void *desc, size_t descsz)
+{
+	kdump_status ret;
+
+	ret = do_noarch_note(ctx, type, name, namesz, desc, descsz);
+	if (ret != kdump_ok)
+		return ret;
+	return do_arch_note(ctx, type, name, namesz, desc, descsz);
+}
+
+static kdump_status
+process_notes(kdump_ctx *ctx, void *data, size_t size, do_note_fn *do_note)
 {
 	Elf32_Nhdr *hdr = data;
 	kdump_status ret = kdump_ok;
@@ -222,18 +265,26 @@ kdump_process_notes(kdump_ctx *ctx, void *data, size_t size)
 		desc = (char*)hdr + descoff;
 		hdr = (Elf32_Nhdr*) (desc + ((descsz + 3) & ~3));
 
-		if (note_equal("CORE", name, namesz))
-			ret = process_core_note(ctx, type, desc, descsz);
-		else if (note_equal("Xen", name, namesz))
-			process_xen_note(ctx, type, desc, descsz);
-		else if (note_equal(".note.Xen", name, namesz))
-			ret = process_xc_xen_note(ctx, type, desc, descsz);
-		else if (note_equal("VMCOREINFO", name, namesz))
-			ret = kdump_process_vmcoreinfo(ctx, desc, descsz);
-		else if (note_equal("VMCOREINFO_XEN", name, namesz))
-			ret = kdump_store_vmcoreinfo(&ctx->vmcoreinfo_xen,
-						     desc, descsz);
+		ret = do_note(ctx, type, name, namesz, desc, descsz);
 	}
 
 	return ret;
+}
+
+kdump_status
+kdump_process_noarch_notes(kdump_ctx *ctx, void *data, size_t size)
+{
+	return process_notes(ctx, data, size, do_noarch_note);
+}
+
+kdump_status
+kdump_process_arch_notes(kdump_ctx *ctx, void *data, size_t size)
+{
+	return process_notes(ctx, data, size, do_arch_note);
+}
+
+kdump_status
+kdump_process_notes(kdump_ctx *ctx, void *data, size_t size)
+{
+	return process_notes(ctx, data, size, do_any_note);
 }
