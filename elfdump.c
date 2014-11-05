@@ -99,27 +99,6 @@ mach2arch(unsigned mach)
 	}
 }
 
-static void
-set_arch_default_page_size(kdump_ctx *ctx)
-{
-	static const int arch_page_shifts[] = {
-		[ARCH_ALPHA]= 13,
-		[ARCH_ARM] = 12,
-		[ARCH_IA64] = 0,
-		[ARCH_PPC] = 0,
-		[ARCH_PPC64] = 0,
-		[ARCH_S390] = 12,
-		[ARCH_S390X] = 12,
-		[ARCH_X86] = 12,
-		[ARCH_X86_64] = 12,
-	};
-
-	if (!ctx->page_size) {
-		int shift = arch_page_shifts[ctx->arch];
-		kdump_set_page_size(ctx, 1 << shift);
-	}
-}
-
 static kdump_status
 elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
@@ -608,8 +587,6 @@ open_common(kdump_ctx *ctx)
 		if (ret != kdump_ok)
 			return ret;
 	}
-
-	set_arch_default_page_size(ctx);
 
 	/* get max PFN */
 	for (i = 0; i < edp->num_load_segments; ++i) {

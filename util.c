@@ -87,6 +87,28 @@ kdump_machine_arch(const char *machine)
 		return ARCH_UNKNOWN;
 }
 
+static size_t
+default_page_shift(enum kdump_arch arch)
+{
+	static const int page_shifts[] = {
+		[ARCH_AARCH64] = 0,
+		[ARCH_ALPHA]= 13,
+		[ARCH_ARM] = 12,
+		[ARCH_IA64] = 0,
+		[ARCH_PPC] = 0,
+		[ARCH_PPC64] = 0,
+		[ARCH_PPC64LE] = 0,
+		[ARCH_S390] = 12,
+		[ARCH_S390X] = 12,
+		[ARCH_X86] = 12,
+		[ARCH_X86_64] = 12,
+	};
+
+	if (arch < ARRAY_SIZE(page_shifts))
+		return page_shifts[arch];
+	return 0;
+}
+
 static const struct arch_ops*
 arch_ops(enum kdump_arch arch)
 {
@@ -116,6 +138,13 @@ arch_ops(enum kdump_arch arch)
 kdump_status
 kdump_set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 {
+	if (!ctx->page_size) {
+		int shift = default_page_shift(arch);
+		if (!shift)
+			return kdump_unsupported;
+		kdump_set_page_size(ctx, 1 << shift);
+	}
+
 	ctx->arch = arch;
 	ctx->ptr_size = arch_ptr_size(arch);
 	ctx->arch_ops = arch_ops(arch);
