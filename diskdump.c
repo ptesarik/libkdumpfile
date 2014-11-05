@@ -267,7 +267,7 @@ static int
 sane_header_values(int32_t block_size, uint32_t bitmap_blocks,
 		   uint32_t max_mapnr)
 {
-	unsigned maxcovered;
+	uint64_t maxcovered;
 
 	/* Page size must be reasonable */
 	if (block_size < MIN_PAGE_SIZE || block_size > MAX_PAGE_SIZE)
@@ -278,7 +278,7 @@ sane_header_values(int32_t block_size, uint32_t bitmap_blocks,
 		return 0;
 
 	/* Number of bitmap blocks should cover all pages in the system */
-	maxcovered = 8 * bitmap_blocks * block_size;
+	maxcovered = (uint64_t)8 * bitmap_blocks * block_size;
 	if (maxcovered < max_mapnr)
 		return 0;
 
