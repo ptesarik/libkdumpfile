@@ -169,7 +169,7 @@ s390_cleanup(kdump_ctx *ctx)
 	ctx->fmtdata = NULL;
 }
 
-const struct format_ops kdump_s390_ops = {
+const struct format_ops kdump_s390dump_ops = {
 	.probe = s390_probe,
 	.read_page = s390_read_page,
 	.cleanup = s390_cleanup,

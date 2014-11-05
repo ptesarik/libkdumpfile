@@ -48,7 +48,7 @@ static const struct format_ops *formats[] = {
 	&kdump_diskdump_ops,
 	&kdump_lkcd_ops,
 	&kdump_mclxcd_ops,
-	&kdump_s390_ops,
+	&kdump_s390dump_ops,
 	&kdump_devmem_ops
 };
 
