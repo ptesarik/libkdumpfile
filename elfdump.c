@@ -76,6 +76,8 @@ struct elfdump_priv {
 		xen_map_pfn,
 		xen_map_p2m,
 	} xen_map_type;
+
+	uint32_t elfmach;	/* ELF e_machine field */
 };
 
 static void elf_cleanup(kdump_ctx *ctx);
@@ -313,9 +315,7 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 	kdump_status ret;
 	int i;
 
-	ret = kdump_set_arch(ctx, mach2arch(dump16toh(ctx, ehdr->e_machine)));
-	if (ret != kdump_ok)
-		return ret;
+	edp->elfmach = dump16toh(ctx, ehdr->e_machine);
 
 	ret = init_segments(edp, dump16toh(ctx, ehdr->e_phnum));
 	if (ret != kdump_ok)
@@ -372,9 +372,7 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 	kdump_status ret;
 	int i;
 
-	ret = kdump_set_arch(ctx, mach2arch(dump16toh(ctx, ehdr->e_machine)));
-	if (ret != kdump_ok)
-		return ret;
+	edp->elfmach = dump16toh(ctx, ehdr->e_machine);
 
 	ret = init_segments(edp, dump16toh(ctx, ehdr->e_phnum));
 	if (ret != kdump_ok)
@@ -563,6 +561,10 @@ process_notes(kdump_ctx *ctx, void *notes)
 
 		p += seg->size;
 	}
+
+	ret = kdump_set_arch(ctx, mach2arch(edp->elfmach));
+	if (ret != kdump_ok)
+		return ret;
 
 	p = notes;
 	for (i = 0; i < edp->num_note_segments; ++i) {
