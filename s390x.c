@@ -183,12 +183,19 @@ get_vmcoreinfo_from_lowcore(kdump_ctx *ctx)
 static kdump_status
 s390x_init(kdump_ctx *ctx)
 {
+	kdump_status ret;
+
 	ctx->archdata = calloc(1, sizeof(struct s390x_data));
 	if (!ctx->archdata)
 		return kdump_syserr;
 
 	get_vmcoreinfo_from_lowcore(ctx);
-	s390x_vtop_init(ctx);
+	if (s390x_vtop_init(ctx) != kdump_ok) {
+		ret = kdump_set_region(ctx, 0, VIRTADDR_MAX,
+				       KDUMP_XLAT_DIRECT, 0);
+		if (ret != kdump_ok)
+			return ret;
+	}
 
 	return kdump_ok;
 }
