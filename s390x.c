@@ -78,40 +78,11 @@ s390x_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 }
 
 static kdump_status
-read_pgt(kdump_ctx *ctx, kdump_vaddr_t pgtaddr)
-{
-	struct s390x_data *archdata = ctx->archdata;
-	uint64_t *pgt;
-	size_t sz;
-	kdump_status ret;
-
-	pgt = malloc(sizeof(uint64_t) * PTRS_PER_PGD);
-	if (!pgt)
-		return kdump_syserr;
-
-	sz = sizeof(uint64_t) * PTRS_PER_PGD;
-	ret = kdump_readp(ctx, pgtaddr, pgt, &sz, KDUMP_PHYSADDR);
-	if (ret == kdump_ok)
-		archdata->pgt = pgt;
-	else
-		free(pgt);
-
-	return ret;
-}
-
-static kdump_status
 s390x_vtop_init(kdump_ctx *ctx)
 {
 	struct s390x_data *archdata = ctx->archdata;
 	kdump_vaddr_t addr;
 	kdump_status ret;
-
-	if (!archdata->pgt && kdump_vmcoreinfo_symbol(ctx, "swapper_pg_dir",
-						      &addr) == kdump_ok) {
-		ret = read_pgt(ctx, addr);
-		if (ret != kdump_ok)
-			return ret;
-	}
 
 	if (archdata->pgt) {
 		ret = kdump_set_region(ctx, 0, VIRTADDR_MAX,
@@ -137,6 +108,28 @@ s390x_vtop_init(kdump_ctx *ctx)
 		return kdump_nodata;
 
 	return kdump_ok;
+}
+
+static kdump_status
+read_pgt(kdump_ctx *ctx, kdump_vaddr_t pgtaddr)
+{
+	struct s390x_data *archdata = ctx->archdata;
+	uint64_t *pgt;
+	size_t sz;
+	kdump_status ret;
+
+	pgt = malloc(sizeof(uint64_t) * PTRS_PER_PGD);
+	if (!pgt)
+		return kdump_syserr;
+
+	sz = sizeof(uint64_t) * PTRS_PER_PGD;
+	ret = kdump_readp(ctx, pgtaddr, pgt, &sz, KDUMP_PHYSADDR);
+	if (ret == kdump_ok)
+		archdata->pgt = pgt;
+	else
+		free(pgt);
+
+	return ret;
 }
 
 static kdump_status
@@ -183,6 +176,7 @@ get_vmcoreinfo_from_lowcore(kdump_ctx *ctx)
 static kdump_status
 s390x_init(kdump_ctx *ctx)
 {
+	kdump_vaddr_t pgtaddr;
 	kdump_status ret;
 
 	ctx->archdata = calloc(1, sizeof(struct s390x_data));
@@ -190,12 +184,17 @@ s390x_init(kdump_ctx *ctx)
 		return kdump_syserr;
 
 	get_vmcoreinfo_from_lowcore(ctx);
-	if (s390x_vtop_init(ctx) != kdump_ok) {
-		ret = kdump_set_region(ctx, 0, VIRTADDR_MAX,
-				       KDUMP_XLAT_DIRECT, 0);
+
+	ret = kdump_vmcoreinfo_symbol(ctx, "swapper_pg_dir", &pgtaddr);
+	if (ret == kdump_ok) {
+		ret = read_pgt(ctx, pgtaddr);
 		if (ret != kdump_ok)
 			return ret;
 	}
+
+	ret = kdump_set_region(ctx, 0, VIRTADDR_MAX, KDUMP_XLAT_DIRECT, 0);
+	if (ret != kdump_ok)
+		return ret;
 
 	return kdump_ok;
 }
