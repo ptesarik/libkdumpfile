@@ -30,7 +30,9 @@
 
 #include "kdumpfile-priv.h"
 
+#include <string.h>
 #include <stdlib.h>
+#include <elf.h>
 
 /* Maximum virtual address bits (architecture limit) */
 #define VIRTADDR_BITS_MAX	64
@@ -60,6 +62,10 @@
 #define PAGE_SIZE	((uint64_t)1 << PAGE_SHIFT)
 #define PAGE_MASK	(~(PAGE_SIZE-1))
 #define PTRS_PER_PTE	256
+
+/* Well-known lowcore addresses */
+#define LC_VMCORE_INFO	0x0e0c
+#define LC_OS_INFO	0x0e18
 
 struct s390x_data {
 	uint64_t *pgt;
@@ -134,12 +140,54 @@ s390x_vtop_init(kdump_ctx *ctx)
 }
 
 static kdump_status
+get_vmcoreinfo_from_lowcore(kdump_ctx *ctx)
+{
+	uint64_t addr;
+	Elf64_Nhdr hdr;
+	void *note;
+	size_t sz, notesz, descoff;
+	kdump_status ret;
+
+	sz = sizeof(addr);
+	ret = kdump_readp(ctx, LC_VMCORE_INFO, &addr, &sz, KDUMP_PHYSADDR);
+	if (ret != kdump_ok)
+		return ret;
+	addr = dump64toh(ctx, addr);
+	if (!addr)
+		return kdump_nodata;
+
+	sz = sizeof(hdr);
+	ret = kdump_readp(ctx, addr, &hdr, &sz, KDUMP_PHYSADDR);
+	if (ret != kdump_ok)
+		return ret;
+	hdr.n_namesz = dump32toh(ctx, hdr.n_namesz);
+	hdr.n_descsz = dump32toh(ctx, hdr.n_descsz);
+	hdr.n_type = dump32toh(ctx, hdr.n_type);
+
+	descoff = sizeof(Elf64_Nhdr) + ((hdr.n_namesz + 3) & ~3);
+	notesz = descoff + hdr.n_descsz;
+	note = malloc(notesz);
+	if (!note)
+		return kdump_syserr;
+
+	sz = notesz;
+	ret = kdump_readp(ctx, addr, note, &sz, KDUMP_PHYSADDR);
+	if (ret == kdump_ok &&
+	    !memcmp(note + sizeof(Elf64_Nhdr), "VMCOREINFO", hdr.n_namesz))
+		ret = kdump_process_notes(ctx, note, notesz);
+
+	free(note);
+	return ret;
+}
+
+static kdump_status
 s390x_init(kdump_ctx *ctx)
 {
 	ctx->archdata = calloc(1, sizeof(struct s390x_data));
 	if (!ctx->archdata)
 		return kdump_syserr;
 
+	get_vmcoreinfo_from_lowcore(ctx);
 	s390x_vtop_init(ctx);
 
 	return kdump_ok;
