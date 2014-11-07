@@ -63,18 +63,164 @@
 #define PAGE_MASK	(~(PAGE_SIZE-1))
 #define PTRS_PER_PTE	256
 
+#define PTRS_PER_PAGE	512
+
+/* Maximum size of a translation table */
+#define PTRS_PER_XLAT_MAX	2048
+
+#define reg1_index(addr) (((addr) >> REG1_SHIFT) & (PTRS_PER_REG1 - 1))
+#define pgd_index(addr)	(((addr) >> PGDIR_SHIFT) & (PTRS_PER_PGD - 1))
+#define pud_index(addr)	(((addr) >> PUD_SHIFT) & (PTRS_PER_PUD - 1))
+#define pmd_index(addr)	(((addr) >> PMD_SHIFT) & (PTRS_PER_PMD - 1))
+#define pte_index(addr)	(((addr) >> PAGE_SHIFT) & (PTRS_PER_PTE - 1))
+
+/* Bah, use IBM's official bit numbering... */
+#define PTE_MASK(bits)		(((uint64_t)1<<bits) - 1)
+#define PTE_VAL(x, shift, bits)	(((x) >> (64-(shift)-(bits))) & PTE_MASK(bits))
+
+#define PTE_FC(x)	PTE_VAL(x, 53, 1)
+#define PTE_I(x)	PTE_VAL(x, 58, 1)
+#define PTE_TF(x)	PTE_VAL(x, 56, 2)
+#define PTE_TT(x)	PTE_VAL(x, 60, 2)
+#define PTE_TL(x)	PTE_VAL(x, 62, 2)
+
+/* Page-Table Origin has 2K granularity in hardware */
+#define PTO_MASK	(~(((uint64_t)1 << 11) - 1))
+
 /* Well-known lowcore addresses */
 #define LC_VMCORE_INFO	0x0e0c
 #define LC_OS_INFO	0x0e18
 
 struct s390x_data {
 	uint64_t *pgt;
+	int pgttype;
 };
+
+struct vtop_control {
+	kdump_vaddr_t vaddr;
+	kdump_paddr_t paddr;
+
+	uint64_t *tbl;
+	int tbltype;
+	unsigned len, off;
+	uint64_t tmp[PTRS_PER_XLAT_MAX];
+};
+
+static kdump_status
+xlat(kdump_ctx *ctx, struct vtop_control *ctl)
+{
+	unsigned idx;
+	uint64_t entry;
+	size_t sz;
+
+	switch(ctl->tbltype) {
+	case 3: idx = reg1_index(ctl->vaddr); break;
+	case 2: idx = pgd_index(ctl->vaddr); break;
+	case 1: idx = pud_index(ctl->vaddr); break;
+	case 0: idx = pmd_index(ctl->vaddr); break;
+	default:
+		return kdump_unsupported;
+	}
+
+	if (idx < ctl->off || idx >= ctl->len)
+		return kdump_nodata;
+
+	entry = dump64toh(ctx, ctl->tbl[idx]);
+	if (PTE_I(entry))
+		return kdump_nodata;
+	if (PTE_TT(entry) != ctl->tbltype)
+			return kdump_dataerr;
+
+	if (ctl->tbltype <= 1 && PTE_FC(entry)) {
+		uint64_t mask = ctl->tbltype
+			? PUD_PSE_MASK
+			: PMD_PSE_MASK;
+
+		ctl->paddr = (entry & mask) | (ctl->vaddr & ~mask);
+		ctl->off = ctl->len = 0;
+		return kdump_ok;
+	}
+
+	if (ctl->tbltype >= 1) {
+		ctl->paddr = entry & PAGE_MASK;
+		ctl->off = PTE_TF(entry) * PTRS_PER_PAGE;
+		ctl->len = (PTE_TL(entry) + 1) * PTRS_PER_PAGE;
+	} else {
+		ctl->paddr = entry & PTO_MASK;
+		ctl->off = 0;
+		ctl->len = PTRS_PER_PTE;
+	}
+	ctl->tbl = ctl->tmp;
+	--ctl->tbltype;
+
+	sz = (ctl->len - ctl->off) * sizeof(uint64_t);
+	return kdump_readp(ctx, ctl->paddr + ctl->off * sizeof(uint64_t),
+			   ctl->tbl + ctl->off, &sz, KDUMP_PHYSADDR);
+}
 
 static kdump_status
 s390x_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	return kdump_unsupported;
+	struct s390x_data *archdata = ctx->archdata;
+	struct vtop_control ctl;
+	uint64_t entry;
+	kdump_status ret;
+
+	if (!archdata->pgt)
+		return kdump_unsupported;
+
+	/* TODO: This should be initialised from kernel_asce, but for
+	 * now, just assume that the top-level table is always maximum size.
+	 */
+	ctl.tbl = archdata->pgt;
+	ctl.tbltype = archdata->pgttype;
+	ctl.len = (3 + 1) * PTRS_PER_PAGE;
+	ctl.off = 0 * PTRS_PER_PAGE;
+	ctl.vaddr = vaddr;
+
+	if ((ctl.tbltype < 3 && reg1_index(vaddr)) ||
+	    (ctl.tbltype < 2 && pgd_index(vaddr)) ||
+	    (ctl.tbltype < 1 && pud_index(vaddr)))
+		return kdump_nodata;
+
+	while (ctl.tbltype >= 0) {
+		ret = xlat(ctx, &ctl);
+		if (ret != kdump_ok)
+			return ret;
+
+		if (!ctl.len) {
+			*paddr = ctl.paddr;
+			return kdump_ok;
+		}
+	}
+
+	entry = dump64toh(ctx, ctl.tbl[pte_index(vaddr)]);
+	if (PTE_I(entry))
+		return kdump_nodata;
+
+	*paddr = (entry & PAGE_MASK) | (vaddr & ~PAGE_MASK);
+	return kdump_ok;
+}
+
+/* TODO: This value should come from kernel_asce, but its lowcore
+ *       address is variable and not exported through VMCOREINFO...
+ */
+static int
+determine_pgttype(kdump_ctx *ctx)
+{
+	struct s390x_data *archdata = ctx->archdata;
+	unsigned i;
+
+	for (i = 0; i < PTRS_PER_PGD; ++i) {
+		uint64_t entry = dump64toh(ctx, archdata->pgt[i]);
+		if (!PTE_I(entry))
+			return PTE_TT(entry);
+	}
+
+	/* If there are no valid entries, the pgt cannot be used
+	 * for translation anyway, and this number does not matter.
+	 */
+	return 0;
 }
 
 static kdump_status
@@ -85,6 +231,7 @@ s390x_vtop_init(kdump_ctx *ctx)
 	kdump_status ret;
 
 	if (archdata->pgt) {
+		archdata->pgttype = determine_pgttype(ctx);
 		ret = kdump_set_region(ctx, 0, VIRTADDR_MAX,
 				       KDUMP_XLAT_VTOP, 0);
 		if (ret != kdump_ok)
