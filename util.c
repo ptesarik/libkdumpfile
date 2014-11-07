@@ -121,11 +121,11 @@ arch_ops(enum kdump_arch arch)
 	case ARCH_PPC64:
 	case ARCH_PPC64LE:
 	case ARCH_S390:
-	case ARCH_S390X:
 	case ARCH_X86:
 		/* TODO */
 		break;
 
+	case ARCH_S390X:	return &kdump_s390x_ops;
 	case ARCH_X86_64:	return &kdump_x86_64_ops;
 
 	default:

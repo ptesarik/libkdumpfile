@@ -31,6 +31,7 @@ libkdumpfile_la_SOURCES = \
 	notes.c \
 	open.c \
 	read.c \
+	s390x.c \
 	s390dump.c \
 	todo.c \
 	util.c \
