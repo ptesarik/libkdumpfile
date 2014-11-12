@@ -27,6 +27,7 @@ libkdumpfile_la_SOURCES = \
 	devmem.c \
 	diskdump.c \
 	elfdump.c \
+	ia32.c \
 	lkcd.c \
 	notes.c \
 	open.c \

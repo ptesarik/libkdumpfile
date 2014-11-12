@@ -245,6 +245,7 @@ const struct format_ops kdump_mclxcd_ops;
 const struct format_ops kdump_s390dump_ops;
 const struct format_ops kdump_devmem_ops;
 
+const struct arch_ops kdump_ia32_ops;
 const struct arch_ops kdump_s390x_ops;
 const struct arch_ops kdump_x86_64_ops;
 
