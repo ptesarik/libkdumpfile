@@ -203,7 +203,7 @@ static const struct region_def mm_layout_2_6_31[] = {
 	{ KERNEL_VERSION(a, b, c), LAYOUT_NAME(a, b, c),	\
 			ARRAY_SIZE(LAYOUT_NAME(a, b, c)) }
 
-struct layout_def {
+static struct layout_def {
 	unsigned ver;
 	const struct region_def *regions;
 	unsigned nregions;
