@@ -45,6 +45,10 @@
 #define PHYSADDR_SIZE_PAE	((uint64_t)1 << PHYSADDR_BITS_MAX_PAE)
 #define PHYSADDR_MASK_PAE	(~(PHYSADDR_SIZE_PAE-1))
 
+#define PGDIR_SHIFT_NONPAE	22
+#define PGD_PSE_SIZE_NONPAE	((uint64_t)1 << PGDIR_SHIFT_NONPAE)
+#define PGD_PSE_MASK_NONPAE	(~(PGD_PSE_SIZE_NONPAE-1))
+
 #define PGDIR_SHIFT_PAE		30
 #define PTRS_PER_PGD_PAE	4
 
@@ -58,7 +62,13 @@
 #define PAGE_MASK		(~(PAGE_SIZE-1))
 #define PTRS_PER_PTE_PAE	512
 
+#define PTRS_PER_PAGE_NONPAE	(PAGE_SIZE/sizeof(uint32_t))
 #define PTRS_PER_PAGE_PAE	(PAGE_SIZE/sizeof(uint64_t))
+
+#define pgd_index_nonpae(addr)	\
+	(((addr) >> PGDIR_SHIFT_NONPAE) & (PTRS_PER_PAGE_NONPAE - 1))
+#define pte_index_nonpae(addr)	\
+	(((addr) >> PAGE_SHIFT) & (PTRS_PER_PAGE_NONPAE - 1))
 
 #define pgd_index_pae(addr)	\
 	(((addr) >> PGDIR_SHIFT_PAE) & (PTRS_PER_PGD_PAE - 1))
@@ -110,7 +120,12 @@ struct cpu_state {
 
 struct ia32_data {
 	struct cpu_state *cpu_state;
-	uint64_t *pgt;
+	union {
+		void *pgt;
+		uint32_t *pgt_nonpae;
+		uint64_t *pgt_pae;
+	};
+	int pae_state;		/* <0 .. no, >0 .. yes, 0 .. undetermined */
 };
 
 static kdump_status
@@ -182,7 +197,7 @@ read_pgt(kdump_ctx *ctx)
 {
 	struct ia32_data *archdata = ctx->archdata;
 	kdump_vaddr_t pgtaddr;
-	uint64_t *pgt;
+	void *pgt;
 	kdump_status ret;
 	size_t sz;
 
@@ -193,11 +208,26 @@ read_pgt(kdump_ctx *ctx)
 	if (pgtaddr < __START_KERNEL_map)
 		return kdump_unsupported;
 
-	pgt = malloc(PAGE_SIZE);
+	if (!archdata->pae_state) {
+		kdump_vaddr_t addr = pgtaddr + 3 * sizeof(uint64_t);
+		uint64_t entry;
+
+		sz = sizeof addr;
+		ret = kdump_readp(ctx, addr - __START_KERNEL_map,
+				  &entry, &sz, KDUMP_PHYSADDR);
+		if (ret != kdump_ok)
+			return ret;
+		archdata->pae_state = entry ? 1 : -1;
+	}
+
+	sz = archdata->pae_state > 0
+		? PTRS_PER_PGD_PAE * sizeof(uint64_t)
+		: PAGE_SIZE;
+
+	pgt = malloc(sz);
 	if (!pgt)
 		return kdump_syserr;
 
-	sz = PAGE_SIZE;
 	ret = kdump_readp(ctx, pgtaddr - __START_KERNEL_map,
 			  pgt, &sz, KDUMP_PHYSADDR);
 	if (ret == kdump_ok)
@@ -246,6 +276,39 @@ ia32_cleanup(kdump_ctx *ctx)
 }
 
 static kdump_status
+ia32_vtop_nonpae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
+{
+	struct ia32_data *archdata = ctx->archdata;
+	uint32_t tbl[PTRS_PER_PAGE_NONPAE];
+	uint32_t pgd, pte;
+	kdump_paddr_t base;
+	size_t sz;
+	kdump_status ret;
+
+	pgd = archdata->pgt_nonpae[pgd_index_nonpae(vaddr)];
+	if (!(pgd & _PAGE_PRESENT))
+		return kdump_nodata;
+	base = pgd & PAGE_MASK;
+	if (pgd & _PAGE_PSE) {
+		*paddr = base + (vaddr & ~PGD_PSE_MASK_NONPAE);
+		return kdump_ok;
+	}
+
+	sz = PAGE_SIZE;
+	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_PHYSADDR);
+	if (ret != kdump_ok)
+		return ret;
+
+	pte = tbl[pte_index_nonpae(vaddr)];
+	if (!(pte & _PAGE_PRESENT))
+		return kdump_nodata;
+	base = pte & PAGE_MASK;
+	*paddr = base + (vaddr & ~PAGE_MASK);
+
+	return kdump_ok;
+}
+
+static kdump_status
 ia32_vtop_pae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	struct ia32_data *archdata = ctx->archdata;
@@ -255,7 +318,7 @@ ia32_vtop_pae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	size_t sz;
 	kdump_status ret;
 
-	pgd = archdata->pgt[pgd_index_pae(vaddr)];
+	pgd = archdata->pgt_pae[pgd_index_pae(vaddr)];
 	if (!(pgd & _PAGE_PRESENT))
 		return kdump_nodata;
 	base = pgd & ~PHYSADDR_MASK_PAE & PAGE_MASK;
@@ -296,7 +359,9 @@ ia32_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	if (!archdata->pgt)
 		return kdump_unsupported;
 
-	return ia32_vtop_pae(ctx, vaddr, paddr);
+	return archdata->pae_state > 0
+		? ia32_vtop_pae(ctx, vaddr, paddr)
+		: ia32_vtop_nonpae(ctx, vaddr, paddr);
 }
 
 const struct arch_ops kdump_ia32_ops = {
