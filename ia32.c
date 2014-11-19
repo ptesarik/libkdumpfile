@@ -32,6 +32,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <linux/version.h>
 
 #define ELF_NGREG 17
@@ -241,7 +242,13 @@ read_pgt(kdump_ctx *ctx)
 static kdump_status
 ia32_vtop_init(kdump_ctx *ctx)
 {
+	struct ia32_data *archdata = ctx->archdata;
+	const char *cfg;
 	kdump_status ret;
+
+	cfg = kdump_vmcoreinfo_row(ctx, "CONFIG_X86_PAE");
+	if (cfg && !strcmp(cfg, "y"))
+		archdata->pae_state = 1;
 
 	ret = read_pgt(ctx);
 	if (ret != kdump_ok)
