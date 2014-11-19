@@ -56,12 +56,10 @@
 #define PMD_SHIFT_PAE		21
 #define PMD_PSE_SIZE_PAE	((uint64_t)1 << PMD_SHIFT_PAE)
 #define PMD_PSE_MASK_PAE	(~(PMD_PSE_SIZE_PAE-1))
-#define PTRS_PER_PMD_PAE	512
 
 #define PAGE_SHIFT		12
 #define PAGE_SIZE		((uint64_t)1 << PAGE_SHIFT)
 #define PAGE_MASK		(~(PAGE_SIZE-1))
-#define PTRS_PER_PTE_PAE	512
 
 #define PTRS_PER_PAGE_NONPAE	(PAGE_SIZE/sizeof(uint32_t))
 #define PTRS_PER_PAGE_PAE	(PAGE_SIZE/sizeof(uint64_t))
@@ -74,7 +72,7 @@
 #define pgd_index_pae(addr)	\
 	(((addr) >> PGDIR_SHIFT_PAE) & (PTRS_PER_PGD_PAE - 1))
 #define pmd_index_pae(addr)	\
-	(((addr) >> PMD_SHIFT_PAE) & (PTRS_PER_PMD_PAE - 1))
+	(((addr) >> PMD_SHIFT_PAE) & (PTRS_PER_PAGE_PAE - 1))
 #define pte_index_pae(addr)	\
 	(((addr) >> PAGE_SHIFT) & (PTRS_PER_PAGE_PAE - 1))
 
