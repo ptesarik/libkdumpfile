@@ -40,6 +40,39 @@
 #define VIRTADDR_BITS_MAX	32
 #define VIRTADDR_MAX		UINT32_MAX
 
+/* Maximum physical addrss bits (architectural limit) */
+#define PHYSADDR_BITS_MAX_PAE	36
+#define PHYSADDR_SIZE_PAE	((uint64_t)1 << PHYSADDR_BITS_MAX_PAE)
+#define PHYSADDR_MASK_PAE	(~(PHYSADDR_SIZE_PAE-1))
+
+#define PGDIR_SHIFT_PAE		30
+#define PTRS_PER_PGD_PAE	4
+
+#define PMD_SHIFT_PAE		21
+#define PMD_PSE_SIZE_PAE	((uint64_t)1 << PMD_SHIFT_PAE)
+#define PMD_PSE_MASK_PAE	(~(PMD_PSE_SIZE_PAE-1))
+#define PTRS_PER_PMD_PAE	512
+
+#define PAGE_SHIFT		12
+#define PAGE_SIZE		((uint64_t)1 << PAGE_SHIFT)
+#define PAGE_MASK		(~(PAGE_SIZE-1))
+#define PTRS_PER_PTE_PAE	512
+
+#define PTRS_PER_PAGE_PAE	(PAGE_SIZE/sizeof(uint64_t))
+
+#define pgd_index_pae(addr)	\
+	(((addr) >> PGDIR_SHIFT_PAE) & (PTRS_PER_PGD_PAE - 1))
+#define pmd_index_pae(addr)	\
+	(((addr) >> PMD_SHIFT_PAE) & (PTRS_PER_PMD_PAE - 1))
+#define pte_index_pae(addr)	\
+	(((addr) >> PAGE_SHIFT) & (PTRS_PER_PAGE_PAE - 1))
+
+#define _PAGE_BIT_PRESENT	0
+#define _PAGE_BIT_PSE		7
+
+#define _PAGE_PRESENT	(1UL << _PAGE_BIT_PRESENT)
+#define _PAGE_PSE	(1UL << _PAGE_BIT_PSE)
+
 #define __START_KERNEL_map	0xc0000000UL
 
 struct elf_siginfo
@@ -77,6 +110,7 @@ struct cpu_state {
 
 struct ia32_data {
 	struct cpu_state *cpu_state;
+	uint64_t *pgt;
 };
 
 static kdump_status
@@ -143,6 +177,54 @@ ia32_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 	return kdump_ok;
 }
 
+static kdump_status
+read_pgt(kdump_ctx *ctx)
+{
+	struct ia32_data *archdata = ctx->archdata;
+	kdump_vaddr_t pgtaddr;
+	uint64_t *pgt;
+	kdump_status ret;
+	size_t sz;
+
+	ret = kdump_vmcoreinfo_symbol(ctx, "swapper_pg_dir", &pgtaddr);
+	if (ret != kdump_ok)
+		return ret;
+
+	if (pgtaddr < __START_KERNEL_map)
+		return kdump_unsupported;
+
+	pgt = malloc(PAGE_SIZE);
+	if (!pgt)
+		return kdump_syserr;
+
+	sz = PAGE_SIZE;
+	ret = kdump_readp(ctx, pgtaddr - __START_KERNEL_map,
+			  pgt, &sz, KDUMP_PHYSADDR);
+	if (ret == kdump_ok)
+		archdata->pgt = pgt;
+	else
+		free(pgt);
+
+	return ret;
+}
+
+static kdump_status
+ia32_vtop_init(kdump_ctx *ctx)
+{
+	kdump_status ret;
+
+	ret = read_pgt(ctx);
+	if (ret != kdump_ok)
+		return ret;
+
+	kdump_flush_regions(ctx);
+	ret = kdump_set_region(ctx, 0, VIRTADDR_MAX, KDUMP_XLAT_VTOP, 0);
+	if (ret != kdump_ok)
+		return ret;
+
+	return kdump_ok;
+}
+
 static void
 ia32_cleanup(kdump_ctx *ctx)
 {
@@ -156,13 +238,72 @@ ia32_cleanup(kdump_ctx *ctx)
 		free(oldcs);
 	}
 
+	if (archdata->pgt)
+		free(archdata->pgt);
+
 	free(archdata);
 	ctx->archdata = NULL;
 }
 
+static kdump_status
+ia32_vtop_pae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
+{
+	struct ia32_data *archdata = ctx->archdata;
+	uint64_t tbl[PTRS_PER_PAGE_PAE];
+	uint64_t pgd, pmd, pte;
+	kdump_paddr_t base;
+	size_t sz;
+	kdump_status ret;
+
+	pgd = archdata->pgt[pgd_index_pae(vaddr)];
+	if (!(pgd & _PAGE_PRESENT))
+		return kdump_nodata;
+	base = pgd & ~PHYSADDR_MASK_PAE & PAGE_MASK;
+
+	sz = PAGE_SIZE;
+	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_PHYSADDR);
+	if (ret != kdump_ok)
+		return ret;
+
+	pmd = tbl[pmd_index_pae(vaddr)];
+	if (!(pmd & _PAGE_PRESENT))
+		return kdump_nodata;
+	base = pmd & ~PHYSADDR_MASK_PAE & PAGE_MASK;
+	if (pmd & _PAGE_PSE) {
+		*paddr = base + (vaddr & ~PMD_PSE_MASK_PAE);
+		return kdump_ok;
+	}
+
+	sz = PAGE_SIZE;
+	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_PHYSADDR);
+	if (ret != kdump_ok)
+		return ret;
+
+	pte = tbl[pte_index_pae(vaddr)];
+	if (!(pte & _PAGE_PRESENT))
+		return kdump_nodata;
+	base = pte & ~PHYSADDR_MASK_PAE & PAGE_MASK;
+	*paddr = base + (vaddr & ~PAGE_MASK);
+
+	return kdump_ok;
+}
+
+static kdump_status
+ia32_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
+{
+	struct ia32_data *archdata = ctx->archdata;
+
+	if (!archdata->pgt)
+		return kdump_unsupported;
+
+	return ia32_vtop_pae(ctx, vaddr, paddr);
+}
+
 const struct arch_ops kdump_ia32_ops = {
 	.init = ia32_init,
+	.vtop_init = ia32_vtop_init,
 	.process_prstatus = process_ia32_prstatus,
 	.read_reg = ia32_read_reg,
+	.vtop = ia32_vtop,
 	.cleanup = ia32_cleanup,
 };
