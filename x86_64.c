@@ -501,11 +501,12 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	pud = tbl[pud_index(vaddr)];
 	if (!(pud & _PAGE_PRESENT))
 		return kdump_nodata;
-	base = pud & ~PHYSADDR_MASK & PAGE_MASK;
 	if (pud & _PAGE_PSE) {
+		base = pud & ~PHYSADDR_MASK & PUD_PSE_MASK;
 		*paddr = base + (vaddr & ~PUD_PSE_MASK);
 		return kdump_ok;
 	}
+	base = pud & ~PHYSADDR_MASK & PAGE_MASK;
 
 	sz = PAGE_SIZE;
 	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_PHYSADDR);
@@ -515,11 +516,12 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	pmd = tbl[pmd_index(vaddr)];
 	if (!(pmd & _PAGE_PRESENT))
 		return kdump_nodata;
-	base = pmd & ~PHYSADDR_MASK & PAGE_MASK;
 	if (pmd & _PAGE_PSE) {
+		base = pmd & ~PHYSADDR_MASK & PMD_PSE_MASK;
 		*paddr = base + (vaddr & ~PMD_PSE_MASK);
 		return kdump_ok;
 	}
+	base = pmd & ~PHYSADDR_MASK & PAGE_MASK;
 
 	sz = PAGE_SIZE;
 	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_PHYSADDR);
