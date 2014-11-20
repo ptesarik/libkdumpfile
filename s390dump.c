@@ -123,7 +123,7 @@ s390_probe(kdump_ctx *ctx)
 		return kdump_unsupported;
 
 	ctx->format = "S390";
-	ctx->endian = __BIG_ENDIAN;
+	ctx->byte_order = kdump_big_endian;
 
 	pos = dump32toh(ctx, dh->h1.hdr_size) +
 		dump64toh(ctx, dh->h1.mem_size);

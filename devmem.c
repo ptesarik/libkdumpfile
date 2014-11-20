@@ -35,6 +35,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <endian.h>
 
 #define FN_VMCOREINFO	"/sys/kernel/vmcoreinfo"
 
@@ -132,7 +133,11 @@ devmem_probe(kdump_ctx *ctx)
 		return ret;
 
 	ctx->format = "live source";
-	ctx->endian = __BYTE_ORDER;
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+	ctx->byte_order = kdump_little_endian;
+#else
+	ctx->byte_order = kdump_bit_endian;
+#endif
 	ret = kdump_set_page_size(ctx, sysconf(_SC_PAGESIZE));
 	if (ret != kdump_ok)
 		return ret;

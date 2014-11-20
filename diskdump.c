@@ -407,11 +407,12 @@ read_sub_hdr_32(kdump_ctx *ctx, int32_t header_version)
 }
 
 static kdump_status
-do_header_32(kdump_ctx *ctx, struct disk_dump_header_32 *dh, int endian)
+do_header_32(kdump_ctx *ctx, struct disk_dump_header_32 *dh,
+	     kdump_byte_order_t byte_order)
 {
 	kdump_status ret;
 
-	ctx->endian = endian;
+	ctx->byte_order = byte_order;
 	ctx->ptr_size = 4;
 
 	ret = read_sub_hdr_32(ctx, dump32toh(ctx, dh->header_version));
@@ -431,7 +432,7 @@ try_header_32(kdump_ctx *ctx, struct disk_dump_header_32 *dh)
 			 le32toh(dh->bitmap_blocks),
 			 le32toh(dh->max_mapnr));
 	if (ret == kdump_ok)
-		return do_header_32(ctx, dh, __LITTLE_ENDIAN);
+		return do_header_32(ctx, dh, kdump_little_endian);
 
 	if (ret != kdump_dataerr)
 		return ret;
@@ -440,7 +441,7 @@ try_header_32(kdump_ctx *ctx, struct disk_dump_header_32 *dh)
 			 be32toh(dh->bitmap_blocks),
 			 be32toh(dh->max_mapnr));
 	if (ret == kdump_ok)
-		return do_header_32(ctx, dh, __BIG_ENDIAN);
+		return do_header_32(ctx, dh, kdump_big_endian);
 
 	return ret;
 }
@@ -475,11 +476,12 @@ read_sub_hdr_64(kdump_ctx *ctx, int32_t header_version)
 }
 
 static kdump_status
-do_header_64(kdump_ctx *ctx, struct disk_dump_header_64 *dh, int endian)
+do_header_64(kdump_ctx *ctx, struct disk_dump_header_64 *dh,
+	     kdump_byte_order_t byte_order)
 {
 	kdump_status ret;
 
-	ctx->endian = endian;
+	ctx->byte_order = byte_order;
 	ctx->ptr_size = 8;
 
 	ret = read_sub_hdr_64(ctx, dump32toh(ctx, dh->header_version));
@@ -499,7 +501,7 @@ try_header_64(kdump_ctx *ctx, struct disk_dump_header_64 *dh)
 			 le32toh(dh->bitmap_blocks),
 			 le32toh(dh->max_mapnr));
 	if (ret == kdump_ok)
-		return do_header_64(ctx, dh, __LITTLE_ENDIAN);
+		return do_header_64(ctx, dh, kdump_little_endian);
 
 	if (ret != kdump_dataerr)
 		return ret;
@@ -508,7 +510,7 @@ try_header_64(kdump_ctx *ctx, struct disk_dump_header_64 *dh)
 			 be32toh(dh->bitmap_blocks),
 			 be32toh(dh->max_mapnr));
 	if (ret == kdump_ok)
-		return do_header_64(ctx, dh, __BIG_ENDIAN);
+		return do_header_64(ctx, dh, kdump_big_endian);
 
 	return ret;
 }

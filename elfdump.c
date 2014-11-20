@@ -672,8 +672,8 @@ elf_probe(kdump_ctx *ctx)
 	ctx->fmtdata = edp;
 
 	switch (eheader[EI_DATA]) {
-	case ELFDATA2LSB: ctx->endian = __LITTLE_ENDIAN; break;
-	case ELFDATA2MSB: ctx->endian = __BIG_ENDIAN; break;
+	case ELFDATA2LSB: ctx->byte_order = kdump_little_endian; break;
+	case ELFDATA2MSB: ctx->byte_order = kdump_big_endian; break;
 	default:
 		return kdump_unsupported;
 	}

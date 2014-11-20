@@ -57,6 +57,11 @@ typedef enum _tag_kdump_status {
 	kdump_dataerr,		/* corrupted file data */
 } kdump_status;
 
+typedef enum _tag_kdump_byte_order {
+	kdump_big_endian,
+	kdump_little_endian,
+} kdump_byte_order_t;
+
 typedef struct _tag_kdump_xen_version {
 	unsigned long major;
 	unsigned long minor;

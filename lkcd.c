@@ -30,7 +30,6 @@
 
 #include "kdumpfile-priv.h"
 
-#include <endian.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -646,9 +645,9 @@ lkcd_probe(kdump_ctx *ctx)
 		{ 0xa8, 0x19, 0x01, 0x73, 0x61, 0x8f, 0x23, 0xed };
 
 	if (!memcmp(ctx->buffer, magic_le, sizeof magic_le))
-		ctx->endian = __LITTLE_ENDIAN;
+		ctx->byte_order = kdump_little_endian;
 	else if (!memcmp(ctx->buffer, magic_be, sizeof magic_be))
-		ctx->endian = __BIG_ENDIAN;
+		ctx->byte_order = kdump_big_endian;
 	else
 		return kdump_unsupported;
 
