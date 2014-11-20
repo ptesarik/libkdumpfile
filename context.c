@@ -40,6 +40,11 @@ kdump_format(kdump_ctx *ctx)
 	return ctx->format;
 }
 
+kdump_byte_order_t
+kdump_byte_order(kdump_ctx *ctx)
+{
+	return ctx->byte_order;
+}
 
 const char *
 kdump_arch_name(kdump_ctx *ctx)
