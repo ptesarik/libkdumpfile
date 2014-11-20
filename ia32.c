@@ -41,14 +41,20 @@
 #define VIRTADDR_BITS_MAX	32
 #define VIRTADDR_MAX		UINT32_MAX
 
-/* Maximum physical addrss bits (architectural limit) */
-#define PHYSADDR_BITS_MAX_PAE	36
+/* Maximum physical address bits (architectural limit) */
+#define PHYSADDR_BITS_MAX_PAE	52
 #define PHYSADDR_SIZE_PAE	((uint64_t)1 << PHYSADDR_BITS_MAX_PAE)
 #define PHYSADDR_MASK_PAE	(~(PHYSADDR_SIZE_PAE-1))
 
 #define PGDIR_SHIFT_NONPAE	22
 #define PGD_PSE_SIZE_NONPAE	((uint64_t)1 << PGDIR_SHIFT_NONPAE)
 #define PGD_PSE_MASK_NONPAE	(~(PGD_PSE_SIZE_NONPAE-1))
+
+#define PGD_PSE_HIGH_SHIFT	13
+#define PGD_PSE_HIGH_BITS	8
+#define PGD_PSE_HIGH_MASK	(((uint64_t)1 << PGD_PSE_HIGH_BITS)-1)
+#define pgd_pse_high(pgd)	\
+	((((pgd) >> PGD_PSE_HIGH_SHIFT) & PGD_PSE_HIGH_MASK) << 32)
 
 #define PGDIR_SHIFT_PAE		30
 #define PTRS_PER_PGD_PAE	4
@@ -293,11 +299,12 @@ ia32_vtop_nonpae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	pgd = archdata->pgt_nonpae[pgd_index_nonpae(vaddr)];
 	if (!(pgd & _PAGE_PRESENT))
 		return kdump_nodata;
-	base = pgd & PAGE_MASK;
 	if (pgd & _PAGE_PSE) {
+		base = (pgd & PGD_PSE_MASK_NONPAE) | pgd_pse_high(pgd);
 		*paddr = base + (vaddr & ~PGD_PSE_MASK_NONPAE);
 		return kdump_ok;
 	}
+	base = pgd & PAGE_MASK;
 
 	sz = PAGE_SIZE;
 	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_PHYSADDR);
@@ -336,11 +343,12 @@ ia32_vtop_pae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	pmd = tbl[pmd_index_pae(vaddr)];
 	if (!(pmd & _PAGE_PRESENT))
 		return kdump_nodata;
-	base = pmd & ~PHYSADDR_MASK_PAE & PAGE_MASK;
 	if (pmd & _PAGE_PSE) {
+		base = pmd & ~PHYSADDR_MASK_PAE & PMD_PSE_MASK_PAE;
 		*paddr = base + (vaddr & ~PMD_PSE_MASK_PAE);
 		return kdump_ok;
 	}
+	base = pmd & ~PHYSADDR_MASK_PAE & PAGE_MASK;
 
 	sz = PAGE_SIZE;
 	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_PHYSADDR);
