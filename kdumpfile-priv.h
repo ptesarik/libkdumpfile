@@ -34,6 +34,9 @@
 
 #include <endian.h>
 
+/* Minimize chance of name clashes (in a static link) */
+#define INTERNAL_NAME(x)	_libkdump_priv_ ## x
+
 /* This should cover all possibilities:
  * - no supported architecture has less than 4K pages.
  * - PowerPC can have up to 256K large pages.
@@ -234,19 +237,47 @@ struct _tag_kdump_ctx {
 #define DIF_PHYS_BASE	(1UL<<2) /* phys_base is valid */
 #define DIF_UTSNAME	(1UL<<3) /* utsname is complete */
 
+/* File formats */
+
+#define kdump_elfdump_ops INTERNAL_NAME(kdump_elfdump_ops)
 const struct format_ops kdump_elfdump_ops;
+
+#define kdump_kvm_ops INTERNAL_NAME(kdump_kvm_ops)
 const struct format_ops kdump_kvm_ops;
+
+#define kdump_libvirt_ops INTERNAL_NAME(kdump_libvirt_ops)
 const struct format_ops kdump_libvirt_ops;
+
+#define kdump_xc_save_ops INTERNAL_NAME(kdump_xc_save_ops)
 const struct format_ops kdump_xc_save_ops;
+
+#define kdump_xc_core_ops INTERNAL_NAME(kdump_xc_core_ops)
 const struct format_ops kdump_xc_core_ops;
+
+#define kdump_diskdump_ops INTERNAL_NAME(kdump_diskdump_ops)
 const struct format_ops kdump_diskdump_ops;
+
+#define kdump_lkcd_ops INTERNAL_NAME(kdump_lkcd_ops)
 const struct format_ops kdump_lkcd_ops;
+
+#define kdump_mclxcd_ops INTERNAL_NAME(kdump_mclxcd_ops)
 const struct format_ops kdump_mclxcd_ops;
+
+#define kdump_s390dump_ops INTERNAL_NAME(kdump_s390dump_ops)
 const struct format_ops kdump_s390dump_ops;
+
+#define kdump_devmem_ops INTERNAL_NAME(kdump_devmem_ops)
 const struct format_ops kdump_devmem_ops;
 
+/* Architectures */
+
+#define kdump_ia32_ops INTERNAL_NAME(kdump_ia32_ops)
 const struct arch_ops kdump_ia32_ops;
+
+#define kdump_s390x_ops INTERNAL_NAME(kdump_s390x_ops)
 const struct arch_ops kdump_s390x_ops;
+
+#define kdump_x86_64_ops INTERNAL_NAME(kdump_x86_64_ops)
 const struct arch_ops kdump_x86_64_ops;
 
 /* struct timeval has a different layout on 32-bit and 64-bit */
@@ -261,35 +292,60 @@ struct timeval_64 {
 
 /* utils */
 
+#define kdump_machine_arch INTERNAL_NAME(kdump_machine_arch)
 enum kdump_arch kdump_machine_arch(const char *machine);
+
+#define kdump_set_arch INTERNAL_NAME(kdump_set_arch)
 kdump_status kdump_set_arch(kdump_ctx *ctx, enum kdump_arch arch);
+
+#define kdump_set_page_size INTERNAL_NAME(kdump_set_page_size)
 kdump_status kdump_set_page_size(kdump_ctx *ctx, size_t page_size);
 
+#define kdump_copy_uts_string INTERNAL_NAME(kdump_copy_uts_string)
 void kdump_copy_uts_string(char *dest, const char *src);
+
+#define kdump_set_uts INTERNAL_NAME(kdump_set_uts)
 void kdump_set_uts(kdump_ctx *ctx, const struct new_utsname *src);
+
+#define kdump_uts_looks_sane INTERNAL_NAME(kdump_uts_looks_sane)
 int kdump_uts_looks_sane(struct new_utsname *uts);
 
+#define kdump_uncompress_rle INTERNAL_NAME(kdump_uncompress_rle)
 int kdump_uncompress_rle(unsigned char *dst, size_t *pdstlen,
 			 const unsigned char *src, size_t srclen);
 
+#define kdump_store_vmcoreinfo INTERNAL_NAME(kdump_store_vmcoreinfo)
 kdump_status kdump_store_vmcoreinfo(struct vmcoreinfo **pinfo,
 				    void *data, size_t len);
 
+#define kdump_paged_cpin INTERNAL_NAME(kdump_paged_cpin)
 size_t kdump_paged_cpin(int fd, void *buffer, size_t size);
 
 /* ELF notes */
 
+#define kdump_process_notes INTERNAL_NAME(kdump_process_notes)
 kdump_status kdump_process_notes(kdump_ctx *ctx, void *data, size_t size);
+
+#define kdump_process_noarch_notes INTERNAL_NAME(kdump_process_noarch_notes)
 kdump_status kdump_process_noarch_notes(kdump_ctx *ctx, void *data, size_t size);
+
+#define kdump_process_arch_notes INTERNAL_NAME(kdump_process_arch_notes)
 kdump_status kdump_process_arch_notes(kdump_ctx *ctx, void *data, size_t size);
+
+#define kdump_process_vmcoreinfo INTERNAL_NAME(kdump_process_vmcoreinfo)
 kdump_status kdump_process_vmcoreinfo(kdump_ctx *ctx, void *data, size_t size);
 
 /* Virtual address space regions */
 
+#define kdump_set_region INTERNAL_NAME(kdump_set_region)
 kdump_status kdump_set_region(kdump_ctx *ctx,
 			      kdump_vaddr_t first, kdump_vaddr_t last,
 			      kdump_xlat_t xlat, kdump_vaddr_t phys_off);
+
+#define kdump_flush_regions INTERNAL_NAME(kdump_flush_regions)
 void kdump_flush_regions(kdump_ctx *ctx);
+
+#define kdump_get_xlat INTERNAL_NAME(kdump_get_xlat)
 kdump_xlat_t kdump_get_xlat(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 			    kdump_paddr_t *phys_off);
 
