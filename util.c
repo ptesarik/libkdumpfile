@@ -56,7 +56,7 @@ arch_ptr_size(enum kdump_arch arch)
 }
 
 enum kdump_arch
-kdump_machine_arch(const char *machine)
+machine_arch(const char *machine)
 {
 	if (!strcmp(machine, "alpha"))
 		return ARCH_ALPHA;
@@ -124,9 +124,9 @@ arch_ops(enum kdump_arch arch)
 		/* TODO */
 		break;
 
-	case ARCH_S390X:	return &kdump_s390x_ops;
-	case ARCH_X86:		return &kdump_ia32_ops;
-	case ARCH_X86_64:	return &kdump_x86_64_ops;
+	case ARCH_S390X:	return &s390x_ops;
+	case ARCH_X86:		return &ia32_ops;
+	case ARCH_X86_64:	return &x86_64_ops;
 
 	default:
 		break;
@@ -148,7 +148,7 @@ set_page_size_and_shift(kdump_ctx *ctx, size_t page_size, unsigned page_shift)
 }
 
 kdump_status
-kdump_set_arch(kdump_ctx *ctx, enum kdump_arch arch)
+set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 {
 	if (!ctx->page_size) {
 		int page_shift = default_page_shift(arch);
@@ -168,7 +168,7 @@ kdump_set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 }
 
 kdump_status
-kdump_set_page_size(kdump_ctx *ctx, size_t page_size)
+set_page_size(kdump_ctx *ctx, size_t page_size)
 {
 	unsigned page_shift;
 
@@ -184,7 +184,7 @@ kdump_set_page_size(kdump_ctx *ctx, size_t page_size)
  * but let's make sure that it is present in the destination.
  */
 void
-kdump_copy_uts_string(char *dest, const char *src)
+copy_uts_string(char *dest, const char *src)
 {
 	if (!*dest) {
 		memcpy(dest, src, NEW_UTS_LEN);
@@ -193,19 +193,19 @@ kdump_copy_uts_string(char *dest, const char *src)
 }
 
 void
-kdump_set_uts(kdump_ctx *ctx, const struct new_utsname *src)
+set_uts(kdump_ctx *ctx, const struct new_utsname *src)
 {
-	kdump_copy_uts_string(ctx->utsname.sysname, src->sysname);
-	kdump_copy_uts_string(ctx->utsname.nodename, src->nodename);
-	kdump_copy_uts_string(ctx->utsname.release, src->release);
-	kdump_copy_uts_string(ctx->utsname.version, src->version);
-	kdump_copy_uts_string(ctx->utsname.machine, src->machine);
-	kdump_copy_uts_string(ctx->utsname.domainname, src->domainname);
+	copy_uts_string(ctx->utsname.sysname, src->sysname);
+	copy_uts_string(ctx->utsname.nodename, src->nodename);
+	copy_uts_string(ctx->utsname.release, src->release);
+	copy_uts_string(ctx->utsname.version, src->version);
+	copy_uts_string(ctx->utsname.machine, src->machine);
+	copy_uts_string(ctx->utsname.domainname, src->domainname);
 	ctx->flags |= DIF_UTSNAME;
 }
 
 int
-kdump_uts_looks_sane(struct new_utsname *uts)
+uts_looks_sane(struct new_utsname *uts)
 {
 	/* Since all strings are NUL-terminated, the last byte in
 	 * the array must be always zero; domainname may be missing.
@@ -224,8 +224,8 @@ kdump_uts_looks_sane(struct new_utsname *uts)
 }
 
 int
-kdump_uncompress_rle(unsigned char *dst, size_t *pdstlen,
-		     const unsigned char *src, size_t srclen)
+uncompress_rle(unsigned char *dst, size_t *pdstlen,
+	       const unsigned char *src, size_t srclen)
 {
 	const unsigned char *srcend = src + srclen;
 	size_t remain = *pdstlen;
@@ -275,7 +275,7 @@ count_lines(char *buf, size_t len)
 }
 
 kdump_status
-kdump_store_vmcoreinfo(struct vmcoreinfo **pinfo, void *data, size_t len)
+store_vmcoreinfo(struct vmcoreinfo **pinfo, void *data, size_t len)
 {
 	struct vmcoreinfo *info;
 	struct vmcoreinfo_row *row;
@@ -330,7 +330,7 @@ kdump_store_vmcoreinfo(struct vmcoreinfo **pinfo, void *data, size_t len)
 
 /* /dev/crash cannot handle reads larger than page size */
 size_t
-kdump_paged_cpin(int fd, void *buffer, size_t size)
+paged_cpin(int fd, void *buffer, size_t size)
 {
 	long page_size = sysconf(_SC_PAGESIZE);
 	while (size) {

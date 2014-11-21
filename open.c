@@ -40,16 +40,16 @@ static kdump_status use_kernel_utsname(kdump_ctx *ctx);
 static kdump_status get_version_code(kdump_ctx *ctx);
 
 static const struct format_ops *formats[] = {
-	&kdump_elfdump_ops,
-	&kdump_kvm_ops,
-	&kdump_libvirt_ops,
-	&kdump_xc_save_ops,
-	&kdump_xc_core_ops,
-	&kdump_diskdump_ops,
-	&kdump_lkcd_ops,
-	&kdump_mclxcd_ops,
-	&kdump_s390dump_ops,
-	&kdump_devmem_ops
+	&elfdump_ops,
+	&kvm_ops,
+	&libvirt_ops,
+	&xc_save_ops,
+	&xc_core_ops,
+	&diskdump_ops,
+	&lkcd_ops,
+	&mclxcd_ops,
+	&s390dump_ops,
+	&devmem_ops
 };
 
 kdump_status
@@ -73,7 +73,7 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 
 	ctx->fd = fd;
 
-	if (kdump_paged_cpin(ctx->fd, ctx->buffer, MAX_PAGE_SIZE))
+	if (paged_cpin(ctx->fd, ctx->buffer, MAX_PAGE_SIZE))
 		goto err_ctx;
 
 	for (i = 0; i < ARRAY_SIZE(formats); ++i) {
@@ -107,7 +107,7 @@ kdump_open_known(kdump_ctx *ctx)
 
 	get_version_code(ctx);
 
-	kdump_flush_regions(ctx);
+	flush_regions(ctx);
 
 	return kdump_ok;
 }
@@ -165,10 +165,10 @@ use_kernel_utsname(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		return ret;
 
-	if (!kdump_uts_looks_sane(&uts))
+	if (!uts_looks_sane(&uts))
 		return kdump_dataerr;
 
-	kdump_set_uts(ctx, &uts);
+	set_uts(ctx, &uts);
 
 	return kdump_ok;
 }

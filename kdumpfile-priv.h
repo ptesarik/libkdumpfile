@@ -239,46 +239,46 @@ struct _tag_kdump_ctx {
 
 /* File formats */
 
-#define kdump_elfdump_ops INTERNAL_NAME(kdump_elfdump_ops)
-const struct format_ops kdump_elfdump_ops;
+#define elfdump_ops INTERNAL_NAME(elfdump_ops)
+const struct format_ops elfdump_ops;
 
-#define kdump_kvm_ops INTERNAL_NAME(kdump_kvm_ops)
-const struct format_ops kdump_kvm_ops;
+#define kvm_ops INTERNAL_NAME(kvm_ops)
+const struct format_ops kvm_ops;
 
-#define kdump_libvirt_ops INTERNAL_NAME(kdump_libvirt_ops)
-const struct format_ops kdump_libvirt_ops;
+#define libvirt_ops INTERNAL_NAME(libvirt_ops)
+const struct format_ops libvirt_ops;
 
-#define kdump_xc_save_ops INTERNAL_NAME(kdump_xc_save_ops)
-const struct format_ops kdump_xc_save_ops;
+#define xc_save_ops INTERNAL_NAME(xc_save_ops)
+const struct format_ops xc_save_ops;
 
-#define kdump_xc_core_ops INTERNAL_NAME(kdump_xc_core_ops)
-const struct format_ops kdump_xc_core_ops;
+#define xc_core_ops INTERNAL_NAME(xc_core_ops)
+const struct format_ops xc_core_ops;
 
-#define kdump_diskdump_ops INTERNAL_NAME(kdump_diskdump_ops)
-const struct format_ops kdump_diskdump_ops;
+#define diskdump_ops INTERNAL_NAME(diskdump_ops)
+const struct format_ops diskdump_ops;
 
-#define kdump_lkcd_ops INTERNAL_NAME(kdump_lkcd_ops)
-const struct format_ops kdump_lkcd_ops;
+#define lkcd_ops INTERNAL_NAME(lkcd_ops)
+const struct format_ops lkcd_ops;
 
-#define kdump_mclxcd_ops INTERNAL_NAME(kdump_mclxcd_ops)
-const struct format_ops kdump_mclxcd_ops;
+#define mclxcd_ops INTERNAL_NAME(mclxcd_ops)
+const struct format_ops mclxcd_ops;
 
-#define kdump_s390dump_ops INTERNAL_NAME(kdump_s390dump_ops)
-const struct format_ops kdump_s390dump_ops;
+#define s390dump_ops INTERNAL_NAME(s390dump_ops)
+const struct format_ops s390dump_ops;
 
-#define kdump_devmem_ops INTERNAL_NAME(kdump_devmem_ops)
-const struct format_ops kdump_devmem_ops;
+#define devmem_ops INTERNAL_NAME(devmem_ops)
+const struct format_ops devmem_ops;
 
 /* Architectures */
 
-#define kdump_ia32_ops INTERNAL_NAME(kdump_ia32_ops)
-const struct arch_ops kdump_ia32_ops;
+#define ia32_ops INTERNAL_NAME(ia32_ops)
+const struct arch_ops ia32_ops;
 
-#define kdump_s390x_ops INTERNAL_NAME(kdump_s390x_ops)
-const struct arch_ops kdump_s390x_ops;
+#define s390x_ops INTERNAL_NAME(s390x_ops)
+const struct arch_ops s390x_ops;
 
-#define kdump_x86_64_ops INTERNAL_NAME(kdump_x86_64_ops)
-const struct arch_ops kdump_x86_64_ops;
+#define x86_64_ops INTERNAL_NAME(x86_64_ops)
+const struct arch_ops x86_64_ops;
 
 /* struct timeval has a different layout on 32-bit and 64-bit */
 struct timeval_32 {
@@ -292,62 +292,62 @@ struct timeval_64 {
 
 /* utils */
 
-#define kdump_machine_arch INTERNAL_NAME(kdump_machine_arch)
-enum kdump_arch kdump_machine_arch(const char *machine);
+#define machine_arch INTERNAL_NAME(machine_arch)
+enum kdump_arch machine_arch(const char *machine);
 
-#define kdump_set_arch INTERNAL_NAME(kdump_set_arch)
-kdump_status kdump_set_arch(kdump_ctx *ctx, enum kdump_arch arch);
+#define set_arch INTERNAL_NAME(set_arch)
+kdump_status set_arch(kdump_ctx *ctx, enum kdump_arch arch);
 
-#define kdump_set_page_size INTERNAL_NAME(kdump_set_page_size)
-kdump_status kdump_set_page_size(kdump_ctx *ctx, size_t page_size);
+#define set_page_size INTERNAL_NAME(set_page_size)
+kdump_status set_page_size(kdump_ctx *ctx, size_t page_size);
 
-#define kdump_copy_uts_string INTERNAL_NAME(kdump_copy_uts_string)
-void kdump_copy_uts_string(char *dest, const char *src);
+#define copy_uts_string INTERNAL_NAME(copy_uts_string)
+void copy_uts_string(char *dest, const char *src);
 
-#define kdump_set_uts INTERNAL_NAME(kdump_set_uts)
-void kdump_set_uts(kdump_ctx *ctx, const struct new_utsname *src);
+#define set_uts INTERNAL_NAME(set_uts)
+void set_uts(kdump_ctx *ctx, const struct new_utsname *src);
 
-#define kdump_uts_looks_sane INTERNAL_NAME(kdump_uts_looks_sane)
-int kdump_uts_looks_sane(struct new_utsname *uts);
+#define uts_looks_sane INTERNAL_NAME(uts_looks_sane)
+int uts_looks_sane(struct new_utsname *uts);
 
-#define kdump_uncompress_rle INTERNAL_NAME(kdump_uncompress_rle)
-int kdump_uncompress_rle(unsigned char *dst, size_t *pdstlen,
-			 const unsigned char *src, size_t srclen);
+#define uncompress_rle INTERNAL_NAME(uncompress_rle)
+int uncompress_rle(unsigned char *dst, size_t *pdstlen,
+		   const unsigned char *src, size_t srclen);
 
-#define kdump_store_vmcoreinfo INTERNAL_NAME(kdump_store_vmcoreinfo)
-kdump_status kdump_store_vmcoreinfo(struct vmcoreinfo **pinfo,
-				    void *data, size_t len);
+#define store_vmcoreinfo INTERNAL_NAME(store_vmcoreinfo)
+kdump_status store_vmcoreinfo(struct vmcoreinfo **pinfo,
+			      void *data, size_t len);
 
-#define kdump_paged_cpin INTERNAL_NAME(kdump_paged_cpin)
-size_t kdump_paged_cpin(int fd, void *buffer, size_t size);
+#define paged_cpin INTERNAL_NAME(paged_cpin)
+size_t paged_cpin(int fd, void *buffer, size_t size);
 
 /* ELF notes */
 
-#define kdump_process_notes INTERNAL_NAME(kdump_process_notes)
-kdump_status kdump_process_notes(kdump_ctx *ctx, void *data, size_t size);
+#define process_notes INTERNAL_NAME(process_notes)
+kdump_status process_notes(kdump_ctx *ctx, void *data, size_t size);
 
-#define kdump_process_noarch_notes INTERNAL_NAME(kdump_process_noarch_notes)
-kdump_status kdump_process_noarch_notes(kdump_ctx *ctx, void *data, size_t size);
+#define process_noarch_notes INTERNAL_NAME(process_noarch_notes)
+kdump_status process_noarch_notes(kdump_ctx *ctx, void *data, size_t size);
 
-#define kdump_process_arch_notes INTERNAL_NAME(kdump_process_arch_notes)
-kdump_status kdump_process_arch_notes(kdump_ctx *ctx, void *data, size_t size);
+#define process_arch_notes INTERNAL_NAME(process_arch_notes)
+kdump_status process_arch_notes(kdump_ctx *ctx, void *data, size_t size);
 
-#define kdump_process_vmcoreinfo INTERNAL_NAME(kdump_process_vmcoreinfo)
-kdump_status kdump_process_vmcoreinfo(kdump_ctx *ctx, void *data, size_t size);
+#define process_vmcoreinfo INTERNAL_NAME(process_vmcoreinfo)
+kdump_status process_vmcoreinfo(kdump_ctx *ctx, void *data, size_t size);
 
 /* Virtual address space regions */
 
-#define kdump_set_region INTERNAL_NAME(kdump_set_region)
-kdump_status kdump_set_region(kdump_ctx *ctx,
-			      kdump_vaddr_t first, kdump_vaddr_t last,
-			      kdump_xlat_t xlat, kdump_vaddr_t phys_off);
+#define set_region INTERNAL_NAME(set_region)
+kdump_status set_region(kdump_ctx *ctx,
+			kdump_vaddr_t first, kdump_vaddr_t last,
+			kdump_xlat_t xlat, kdump_vaddr_t phys_off);
 
-#define kdump_flush_regions INTERNAL_NAME(kdump_flush_regions)
-void kdump_flush_regions(kdump_ctx *ctx);
+#define flush_regions INTERNAL_NAME(flush_regions)
+void flush_regions(kdump_ctx *ctx);
 
-#define kdump_get_xlat INTERNAL_NAME(kdump_get_xlat)
-kdump_xlat_t kdump_get_xlat(kdump_ctx *ctx, kdump_vaddr_t vaddr,
-			    kdump_paddr_t *phys_off);
+#define get_xlat INTERNAL_NAME(get_xlat)
+kdump_xlat_t get_xlat(kdump_ctx *ctx, kdump_vaddr_t vaddr,
+		      kdump_paddr_t *phys_off);
 
 /* Older glibc didn't have the byteorder macros */
 #ifndef be16toh
@@ -421,7 +421,7 @@ dump64toh(kdump_ctx *ctx, uint64_t x)
 }
 
 static inline void
-kdump_set_phys_base(kdump_ctx *ctx, kdump_paddr_t base)
+set_phys_base(kdump_ctx *ctx, kdump_paddr_t base)
 {
 	ctx->phys_base = base;
 	ctx->flags |= DIF_PHYS_BASE;

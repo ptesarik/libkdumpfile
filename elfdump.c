@@ -541,7 +541,7 @@ initialize_xen_map(kdump_ctx *ctx)
 }
 
 static kdump_status
-process_notes(kdump_ctx *ctx, void *notes)
+process_elf_notes(kdump_ctx *ctx, void *notes)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
 	void *p;
@@ -555,14 +555,14 @@ process_notes(kdump_ctx *ctx, void *notes)
 		if (pread(ctx->fd, p, seg->size, seg->file_offset) != seg->size)
 			return kdump_syserr;
 
-		ret = kdump_process_noarch_notes(ctx, p, seg->size);
+		ret = process_noarch_notes(ctx, p, seg->size);
 		if (ret != kdump_ok)
 			return ret;
 
 		p += seg->size;
 	}
 
-	ret = kdump_set_arch(ctx, mach2arch(edp->elfmach));
+	ret = set_arch(ctx, mach2arch(edp->elfmach));
 	if (ret != kdump_ok)
 		return ret;
 
@@ -570,7 +570,7 @@ process_notes(kdump_ctx *ctx, void *notes)
 	for (i = 0; i < edp->num_note_segments; ++i) {
 		struct load_segment *seg = edp->note_segments + i;
 
-		ret = kdump_process_arch_notes(ctx, p, seg->size);
+		ret = process_arch_notes(ctx, p, seg->size);
 		if (ret != kdump_ok)
 			return ret;
 	}
@@ -598,7 +598,7 @@ open_common(kdump_ctx *ctx)
 	if (!notes)
 		return kdump_syserr;
 
-	ret = process_notes(ctx, notes);
+	ret = process_elf_notes(ctx, notes);
 	free(notes);
 	if (ret != kdump_ok)
 		return ret;
@@ -716,7 +716,7 @@ elf_cleanup(kdump_ctx *ctx)
 	ctx->fmtdata = NULL;
 };
 
-const struct format_ops kdump_elfdump_ops = {
+const struct format_ops elfdump_ops = {
 	.probe = elf_probe,
 	.read_page = elf_read_page,
 	.cleanup = elf_cleanup,

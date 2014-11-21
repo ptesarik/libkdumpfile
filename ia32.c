@@ -142,8 +142,8 @@ ia32_init(kdump_ctx *ctx)
 	if (!ctx->archdata)
 		return kdump_syserr;
 
-	ret = kdump_set_region(ctx, __START_KERNEL_map, VIRTADDR_MAX,
-			       KDUMP_XLAT_DIRECT, __START_KERNEL_map);
+	ret = set_region(ctx, __START_KERNEL_map, VIRTADDR_MAX,
+			 KDUMP_XLAT_DIRECT, __START_KERNEL_map);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -258,8 +258,8 @@ ia32_vtop_init(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		return ret;
 
-	kdump_flush_regions(ctx);
-	ret = kdump_set_region(ctx, 0, VIRTADDR_MAX, KDUMP_XLAT_VTOP, 0);
+	flush_regions(ctx);
+	ret = set_region(ctx, 0, VIRTADDR_MAX, KDUMP_XLAT_VTOP, 0);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -377,7 +377,7 @@ ia32_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 		: ia32_vtop_nonpae(ctx, vaddr, paddr);
 }
 
-const struct arch_ops kdump_ia32_ops = {
+const struct arch_ops ia32_ops = {
 	.init = ia32_init,
 	.vtop_init = ia32_vtop_init,
 	.process_prstatus = process_ia32_prstatus,

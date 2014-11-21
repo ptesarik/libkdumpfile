@@ -279,7 +279,7 @@ read_vmcoreinfo(kdump_ctx *ctx, off_t off, size_t size)
 		ret = kdump_syserr;
 
 	if (ret == kdump_ok)
-		ret = kdump_process_vmcoreinfo(ctx, info, size);
+		ret = process_vmcoreinfo(ctx, info, size);
 	free(info);
 
 	return ret;
@@ -302,15 +302,15 @@ read_notes(kdump_ctx *ctx, off_t off, size_t size)
 	if (ret != kdump_ok)
 		goto out;
 
-	ret = kdump_process_noarch_notes(ctx, notes, size);
+	ret = process_noarch_notes(ctx, notes, size);
 	if (ret != kdump_ok)
 		goto out;
 
-	ret = kdump_set_arch(ctx, kdump_machine_arch(ctx->utsname.machine));
+	ret = set_arch(ctx, machine_arch(ctx->utsname.machine));
 	if (ret != kdump_ok)
 		goto out;
 
-	ret = kdump_process_arch_notes(ctx, notes, size);
+	ret = process_arch_notes(ctx, notes, size);
 
  out:
 	free(notes);
@@ -368,7 +368,7 @@ try_header(kdump_ctx *ctx, int32_t block_size,
 		return kdump_dataerr;
 
 	/* basic sanity checks passed */
-	ret = kdump_set_page_size(ctx, block_size);
+	ret = set_page_size(ctx, block_size);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -390,7 +390,7 @@ read_sub_hdr_32(kdump_ctx *ctx, int32_t header_version)
 	    != sizeof subhdr)
 		return kdump_syserr;
 
-	kdump_set_phys_base(ctx, dump32toh(ctx, subhdr.phys_base));
+	set_phys_base(ctx, dump32toh(ctx, subhdr.phys_base));
 
 	if (header_version >= 4)
 		ret = read_notes(ctx, dump64toh(ctx, subhdr.offset_note),
@@ -459,7 +459,7 @@ read_sub_hdr_64(kdump_ctx *ctx, int32_t header_version)
 	    != sizeof subhdr)
 		return kdump_syserr;
 
-	kdump_set_phys_base(ctx, dump64toh(ctx, subhdr.phys_base));
+	set_phys_base(ctx, dump64toh(ctx, subhdr.phys_base));
 
 	if (header_version >= 4)
 		ret = read_notes(ctx, dump64toh(ctx, subhdr.offset_note),
@@ -529,10 +529,10 @@ open_common(kdump_ctx *ctx)
 
 	ctx->fmtdata = ddp;
 
-	if (kdump_uts_looks_sane(&dh32->utsname))
-		kdump_set_uts(ctx, &dh32->utsname);
-	else if (kdump_uts_looks_sane(&dh64->utsname))
-		kdump_set_uts(ctx, &dh64->utsname);
+	if (uts_looks_sane(&dh32->utsname))
+		set_uts(ctx, &dh32->utsname);
+	else if (uts_looks_sane(&dh64->utsname))
+		set_uts(ctx, &dh64->utsname);
 
 	ret = try_header_32(ctx, dh32);
 	if (ret == kdump_dataerr)
@@ -541,8 +541,7 @@ open_common(kdump_ctx *ctx)
 		ret = kdump_unsupported;
 
 	if (ret == kdump_ok && ctx->arch == ARCH_UNKNOWN)
-		ret = kdump_set_arch(ctx, kdump_machine_arch(
-					     ctx->utsname.machine));
+		ret = set_arch(ctx, machine_arch(ctx->utsname.machine));
 
 	if (ret != kdump_ok)
 		diskdump_cleanup(ctx);
@@ -579,7 +578,7 @@ diskdump_cleanup(kdump_ctx *ctx)
 	ctx->fmtdata = NULL;
 }
 
-const struct format_ops kdump_diskdump_ops = {
+const struct format_ops diskdump_ops = {
 	.probe = diskdump_probe,
 	.read_page = diskdump_read_page,
 	.cleanup = diskdump_cleanup,

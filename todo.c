@@ -46,7 +46,7 @@ kvm_probe(kdump_ctx *ctx)
 	return kdump_unsupported;
 }
 
-const struct format_ops kdump_kvm_ops = {
+const struct format_ops kvm_ops = {
 	.probe = kvm_probe,
 };
 
@@ -64,7 +64,7 @@ libvirt_probe(kdump_ctx *ctx)
 	return kdump_unsupported;
 }
 
-const struct format_ops kdump_libvirt_ops = {
+const struct format_ops libvirt_ops = {
 	.probe = libvirt_probe,
 };
 
@@ -83,7 +83,7 @@ xc_save_probe(kdump_ctx *ctx)
 	return kdump_unsupported;
 }
 
-const struct format_ops kdump_xc_save_ops = {
+const struct format_ops xc_save_ops = {
 	.probe = xc_save_probe,
 };
 
@@ -109,7 +109,7 @@ xc_core_probe(kdump_ctx *ctx)
 	return kdump_unsupported;
 }
 
-const struct format_ops kdump_xc_core_ops = {
+const struct format_ops xc_core_ops = {
 	.probe = xc_core_probe,
 };
 
@@ -127,6 +127,6 @@ mclxcd_probe(kdump_ctx *ctx)
 	return kdump_unsupported;
 }
 
-const struct format_ops kdump_mclxcd_ops = {
+const struct format_ops mclxcd_ops = {
 	.probe = mclxcd_probe,
 };

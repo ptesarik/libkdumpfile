@@ -258,8 +258,8 @@ static kdump_status x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 static kdump_status
 add_noncanonical_region(kdump_ctx *ctx)
 {
-	return kdump_set_region(ctx, NONCANONICAL_START, NONCANONICAL_END,
-				KDUMP_XLAT_INVALID, 0);
+	return set_region(ctx, NONCANONICAL_START, NONCANONICAL_END,
+			  KDUMP_XLAT_INVALID, 0);
 }
 
 static kdump_status
@@ -275,8 +275,8 @@ x86_64_init(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		return ret;
 
-	ret = kdump_set_region(ctx, __START_KERNEL_map, VIRTADDR_MAX,
-			       KDUMP_XLAT_KTEXT, __START_KERNEL_map);
+	ret = set_region(ctx, __START_KERNEL_map, VIRTADDR_MAX,
+			 KDUMP_XLAT_KTEXT, __START_KERNEL_map);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -382,15 +382,15 @@ x86_64_vtop_init(kdump_ctx *ctx)
 	if (!layout)
 		return kdump_unsupported;
 
-	kdump_flush_regions(ctx);
+	flush_regions(ctx);
 	ret = add_noncanonical_region(ctx);
 	if (ret != kdump_ok)
 		return ret;
 
 	for (i = 0; i < layout->nregions; ++i) {
 		const struct region_def *def = &layout->regions[i];
-		ret = kdump_set_region(ctx, def->first, def->last,
-				       def->xlat, def->phys_off);
+		ret = set_region(ctx, def->first, def->last,
+				 def->xlat, def->phys_off);
 		if (ret != kdump_ok)
 			return ret;
 	}
@@ -451,7 +451,7 @@ x86_64_process_load(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t paddr)
 	if (!(ctx->flags & DIF_PHYS_BASE) &&
 	    vaddr >= __START_KERNEL_map &&
 	    vaddr < __START_KERNEL_map + MAX_PHYSICAL_START)
-		kdump_set_phys_base(ctx, paddr - (vaddr - __START_KERNEL_map));
+		set_phys_base(ctx, paddr - (vaddr - __START_KERNEL_map));
 	return kdump_ok;
 }
 
@@ -537,7 +537,7 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	return kdump_ok;
 }
 
-const struct arch_ops kdump_x86_64_ops = {
+const struct arch_ops x86_64_ops = {
 	.init = x86_64_init,
 	.vtop_init = x86_64_vtop_init,
 	.process_prstatus = process_x86_64_prstatus,

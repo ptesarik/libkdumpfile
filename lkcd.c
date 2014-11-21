@@ -484,8 +484,8 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 
 	if (lkcdp->compression == DUMP_COMPRESS_RLE) {
 		size_t retlen = ctx->page_size;
-		int ret = kdump_uncompress_rle(ctx->page, &retlen,
-					       buf, dp.dp_size);
+		int ret = uncompress_rle(ctx->page, &retlen,
+					 buf, dp.dp_size);
 		if (ret)
 			return kdump_dataerr;
 	} else if (lkcdp->compression == DUMP_COMPRESS_GZIP) {
@@ -519,11 +519,11 @@ init_v1(kdump_ctx *ctx)
 	struct dump_header_v1_32 *dh32 = ctx->buffer;
 	struct dump_header_v1_64 *dh64 = ctx->buffer;
 
-	if (!kdump_uts_looks_sane(&dh32->dh_utsname) &&
-	    kdump_uts_looks_sane(&dh64->dh_utsname))
-		kdump_set_uts(ctx, &dh64->dh_utsname);
+	if (!uts_looks_sane(&dh32->dh_utsname) &&
+	    uts_looks_sane(&dh64->dh_utsname))
+		set_uts(ctx, &dh64->dh_utsname);
 	else
-		kdump_set_uts(ctx, &dh32->dh_utsname);
+		set_uts(ctx, &dh32->dh_utsname);
 	lkcdp->compression = DUMP_COMPRESS_RLE;
 
 	return kdump_ok;
@@ -536,14 +536,14 @@ init_v2(kdump_ctx *ctx)
 	struct dump_header_v2_32 *dh32 = ctx->buffer;
 	struct dump_header_v2_64 *dh64 = ctx->buffer;
 
-	if (!kdump_uts_looks_sane(&dh32->dh_utsname) &&
-	    kdump_uts_looks_sane(&dh64->dh_utsname)) {
-		kdump_set_uts(ctx, &dh64->dh_utsname);
+	if (!uts_looks_sane(&dh32->dh_utsname) &&
+	    uts_looks_sane(&dh64->dh_utsname)) {
+		set_uts(ctx, &dh64->dh_utsname);
 		lkcdp->compression = (lkcdp->version >= LKCD_DUMP_V5)
 			? dump32toh(ctx, dh64->dh_dump_compress)
 			: DUMP_COMPRESS_RLE;
 	} else {
-		kdump_set_uts(ctx, &dh32->dh_utsname);
+		set_uts(ctx, &dh32->dh_utsname);
 		lkcdp->compression = (lkcdp->version >= LKCD_DUMP_V5)
 			? dump32toh(ctx, dh32->dh_dump_compress)
 			: DUMP_COMPRESS_RLE;
@@ -558,7 +558,7 @@ init_v8(kdump_ctx *ctx)
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
 	struct dump_header_v8 *dh = ctx->buffer;
 
-	kdump_set_uts(ctx, &dh->dh_utsname);
+	set_uts(ctx, &dh->dh_utsname);
 	lkcdp->compression = dump32toh(ctx, dh->dh_dump_compress);
 	if (lkcdp->version >= LKCD_DUMP_V9)
 		lkcdp->data_offset = dump64toh(ctx, dh->dh_dump_buffer_size);
@@ -586,7 +586,7 @@ open_common(kdump_ctx *ctx)
 
 	ctx->format = lkcdp->format;
 
-	ret = kdump_set_page_size(ctx, dump32toh(ctx, dh->dh_page_size));
+	ret = set_page_size(ctx, dump32toh(ctx, dh->dh_page_size));
 	if (ret != kdump_ok)
 		return ret;
 
@@ -619,7 +619,7 @@ open_common(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		goto err_free;
 
-	ret = kdump_set_arch(ctx, kdump_machine_arch(ctx->utsname.machine));
+	ret = set_arch(ctx, machine_arch(ctx->utsname.machine));
 	if (ret != kdump_ok)
 		goto err_free;
 
@@ -687,7 +687,7 @@ lkcd_cleanup(kdump_ctx *ctx)
 	ctx->fmtdata = NULL;
 }
 
-const struct format_ops kdump_lkcd_ops = {
+const struct format_ops lkcd_ops = {
 	.probe = lkcd_probe,
 	.read_page = lkcd_read_page,
 	.cleanup = lkcd_cleanup,

@@ -45,8 +45,8 @@ kdump_vtop_init(kdump_ctx *ctx)
 }
 
 kdump_status
-kdump_set_region(kdump_ctx *ctx, kdump_vaddr_t first, kdump_vaddr_t last,
-		 kdump_xlat_t xlat, kdump_vaddr_t phys_off)
+set_region(kdump_ctx *ctx, kdump_vaddr_t first, kdump_vaddr_t last,
+	   kdump_xlat_t xlat, kdump_vaddr_t phys_off)
 {
 	struct kdump_vaddr_region *rgn, *prevrgn;
 	kdump_vaddr_t rfirst, rlast;
@@ -122,7 +122,7 @@ kdump_set_region(kdump_ctx *ctx, kdump_vaddr_t first, kdump_vaddr_t last,
 }
 
 void
-kdump_flush_regions(kdump_ctx *ctx)
+flush_regions(kdump_ctx *ctx)
 {
 	if (ctx->region)
 		free(ctx->region);
@@ -131,8 +131,7 @@ kdump_flush_regions(kdump_ctx *ctx)
 }
 
 kdump_xlat_t
-kdump_get_xlat(kdump_ctx *ctx, kdump_vaddr_t vaddr,
-	       kdump_paddr_t *phys_off)
+get_xlat(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *phys_off)
 {
 	struct kdump_vaddr_region *rgn;
 	kdump_vaddr_t rfirst;
@@ -159,7 +158,7 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	kdump_xlat_t xlat;
 	kdump_paddr_t phys_off;
 
-	xlat = kdump_get_xlat(ctx, vaddr, &phys_off);
+	xlat = get_xlat(ctx, vaddr, &phys_off);
 	switch (xlat) {
 	case KDUMP_XLAT_NONE:
 		return kdump_unsupported;

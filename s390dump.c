@@ -141,17 +141,17 @@ s390_probe(kdump_ctx *ctx)
 	sdp->dataoff = dump32toh(ctx, dh->h1.hdr_size);
 	ctx->max_pfn = dump32toh(ctx, dh->h1.num_pages);
 
-	ret = kdump_set_page_size(ctx, dump32toh(ctx, dh->h1.page_size));
+	ret = set_page_size(ctx, dump32toh(ctx, dh->h1.page_size));
 	if (ret != kdump_ok)
 		goto out;
 
 	switch (dump32toh(ctx, dh->h1.arch)) {
 	case S390_ARCH_32BIT:
-		kdump_set_arch(ctx, ARCH_S390);
+		set_arch(ctx, ARCH_S390);
 		break;
 
 	case S390_ARCH_64BIT:
-		kdump_set_arch(ctx, ARCH_S390X);
+		set_arch(ctx, ARCH_S390X);
 		break;
 
 	default:
@@ -174,7 +174,7 @@ s390_cleanup(kdump_ctx *ctx)
 	ctx->fmtdata = NULL;
 }
 
-const struct format_ops kdump_s390dump_ops = {
+const struct format_ops s390dump_ops = {
 	.probe = s390_probe,
 	.read_page = s390_read_page,
 	.cleanup = s390_cleanup,

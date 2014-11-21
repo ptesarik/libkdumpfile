@@ -232,8 +232,7 @@ s390x_vtop_init(kdump_ctx *ctx)
 
 	if (archdata->pgt) {
 		archdata->pgttype = determine_pgttype(ctx);
-		ret = kdump_set_region(ctx, 0, VIRTADDR_MAX,
-				       KDUMP_XLAT_VTOP, 0);
+		ret = set_region(ctx, 0, VIRTADDR_MAX, KDUMP_XLAT_VTOP, 0);
 		if (ret != kdump_ok)
 			return ret;
 	}
@@ -248,7 +247,7 @@ s390x_vtop_init(kdump_ctx *ctx)
 			return ret;
 		highmem = dump64toh(ctx, highmem);
 
-		ret = kdump_set_region(ctx, 0, highmem, KDUMP_XLAT_DIRECT, 0);
+		ret = set_region(ctx, 0, highmem, KDUMP_XLAT_DIRECT, 0);
 		if (ret != kdump_ok)
 			return ret;
 	} else if (!archdata->pgt)
@@ -314,7 +313,7 @@ get_vmcoreinfo_from_lowcore(kdump_ctx *ctx)
 	ret = kdump_readp(ctx, addr, note, &sz, KDUMP_PHYSADDR);
 	if (ret == kdump_ok &&
 	    !memcmp(note + sizeof(Elf64_Nhdr), "VMCOREINFO", hdr.n_namesz))
-		ret = kdump_process_notes(ctx, note, notesz);
+		ret = process_notes(ctx, note, notesz);
 
 	free(note);
 	return ret;
@@ -339,7 +338,7 @@ s390x_init(kdump_ctx *ctx)
 			return ret;
 	}
 
-	ret = kdump_set_region(ctx, 0, VIRTADDR_MAX, KDUMP_XLAT_DIRECT, 0);
+	ret = set_region(ctx, 0, VIRTADDR_MAX, KDUMP_XLAT_DIRECT, 0);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -358,7 +357,7 @@ s390x_cleanup(kdump_ctx *ctx)
 	ctx->archdata = NULL;
 }
 
-const struct arch_ops kdump_s390x_ops = {
+const struct arch_ops s390x_ops = {
 	.init = s390x_init,
 	.vtop_init = s390x_vtop_init,
 	.vtop = s390x_vtop,

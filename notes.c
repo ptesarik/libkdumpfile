@@ -149,7 +149,7 @@ process_xc_xen_note(kdump_ctx *ctx, uint32_t type,
 		struct xen_elfnote_header *header = desc;
 		uint64_t page_size = dump64toh(ctx, header->xch_page_size);
 
-		return kdump_set_page_size(ctx, page_size);
+		return set_page_size(ctx, page_size);
 	} else if (type == XEN_ELFNOTE_DUMPCORE_FORMAT_VERSION) {
 		uint64_t version = dump64toh(ctx, *(uint64_t*)desc);
 
@@ -161,12 +161,12 @@ process_xc_xen_note(kdump_ctx *ctx, uint32_t type,
 }
 
 kdump_status
-kdump_process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
+process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
 {
 	kdump_status ret;
 	const char *val;
 
-	ret = kdump_store_vmcoreinfo(&ctx->vmcoreinfo, desc, descsz);
+	ret = store_vmcoreinfo(&ctx->vmcoreinfo, desc, descsz);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -177,7 +177,7 @@ kdump_process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
 		if (*endp)
 			return kdump_dataerr;
 
-		ret = kdump_set_page_size(ctx, page_size);
+		ret = set_page_size(ctx, page_size);
 		if (ret != kdump_ok)
 			return ret;
 	}
@@ -203,10 +203,9 @@ do_noarch_note(kdump_ctx *ctx, Elf32_Word type,
 	       const char *name, size_t namesz, void *desc, size_t descsz)
 {
 	if (note_equal("VMCOREINFO", name, namesz))
-		return kdump_process_vmcoreinfo(ctx, desc, descsz);
+		return process_vmcoreinfo(ctx, desc, descsz);
 	else if (note_equal("VMCOREINFO_XEN", name, namesz))
-		return kdump_store_vmcoreinfo(&ctx->vmcoreinfo_xen,
-					      desc, descsz);
+		return store_vmcoreinfo(&ctx->vmcoreinfo_xen, desc, descsz);
 
 	return kdump_ok;
 }
@@ -245,7 +244,7 @@ do_any_note(kdump_ctx *ctx, Elf32_Word type,
 }
 
 static kdump_status
-process_notes(kdump_ctx *ctx, void *data, size_t size, do_note_fn *do_note)
+do_notes(kdump_ctx *ctx, void *data, size_t size, do_note_fn *do_note)
 {
 	Elf32_Nhdr *hdr = data;
 	kdump_status ret = kdump_ok;
@@ -272,19 +271,19 @@ process_notes(kdump_ctx *ctx, void *data, size_t size, do_note_fn *do_note)
 }
 
 kdump_status
-kdump_process_noarch_notes(kdump_ctx *ctx, void *data, size_t size)
+process_noarch_notes(kdump_ctx *ctx, void *data, size_t size)
 {
-	return process_notes(ctx, data, size, do_noarch_note);
+	return do_notes(ctx, data, size, do_noarch_note);
 }
 
 kdump_status
-kdump_process_arch_notes(kdump_ctx *ctx, void *data, size_t size)
+process_arch_notes(kdump_ctx *ctx, void *data, size_t size)
 {
-	return process_notes(ctx, data, size, do_arch_note);
+	return do_notes(ctx, data, size, do_arch_note);
 }
 
 kdump_status
-kdump_process_notes(kdump_ctx *ctx, void *data, size_t size)
+process_notes(kdump_ctx *ctx, void *data, size_t size)
 {
-	return process_notes(ctx, data, size, do_any_note);
+	return do_notes(ctx, data, size, do_any_note);
 }
