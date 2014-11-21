@@ -240,45 +240,45 @@ struct _tag_kdump_ctx {
 /* File formats */
 
 #define elfdump_ops INTERNAL_NAME(elfdump_ops)
-const struct format_ops elfdump_ops;
+extern const struct format_ops elfdump_ops;
 
 #define kvm_ops INTERNAL_NAME(kvm_ops)
-const struct format_ops kvm_ops;
+extern const struct format_ops kvm_ops;
 
 #define libvirt_ops INTERNAL_NAME(libvirt_ops)
-const struct format_ops libvirt_ops;
+extern const struct format_ops libvirt_ops;
 
 #define xc_save_ops INTERNAL_NAME(xc_save_ops)
-const struct format_ops xc_save_ops;
+extern const struct format_ops xc_save_ops;
 
 #define xc_core_ops INTERNAL_NAME(xc_core_ops)
-const struct format_ops xc_core_ops;
+extern const struct format_ops xc_core_ops;
 
 #define diskdump_ops INTERNAL_NAME(diskdump_ops)
-const struct format_ops diskdump_ops;
+extern const struct format_ops diskdump_ops;
 
 #define lkcd_ops INTERNAL_NAME(lkcd_ops)
-const struct format_ops lkcd_ops;
+extern const struct format_ops lkcd_ops;
 
 #define mclxcd_ops INTERNAL_NAME(mclxcd_ops)
-const struct format_ops mclxcd_ops;
+extern const struct format_ops mclxcd_ops;
 
 #define s390dump_ops INTERNAL_NAME(s390dump_ops)
-const struct format_ops s390dump_ops;
+extern const struct format_ops s390dump_ops;
 
 #define devmem_ops INTERNAL_NAME(devmem_ops)
-const struct format_ops devmem_ops;
+extern const struct format_ops devmem_ops;
 
 /* Architectures */
 
 #define ia32_ops INTERNAL_NAME(ia32_ops)
-const struct arch_ops ia32_ops;
+extern const struct arch_ops ia32_ops;
 
 #define s390x_ops INTERNAL_NAME(s390x_ops)
-const struct arch_ops s390x_ops;
+extern const struct arch_ops s390x_ops;
 
 #define x86_64_ops INTERNAL_NAME(x86_64_ops)
-const struct arch_ops x86_64_ops;
+extern const struct arch_ops x86_64_ops;
 
 /* struct timeval has a different layout on 32-bit and 64-bit */
 struct timeval_32 {
