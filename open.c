@@ -83,6 +83,7 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 			*pctx = ctx;
 			return kdump_open_known(ctx);
 		}
+		clear_error();
 	}
 	ctx->ops = NULL;
 
@@ -109,6 +110,7 @@ kdump_open_known(kdump_ctx *ctx)
 
 	flush_regions(ctx);
 
+	clear_error(ctx);
 	return kdump_ok;
 }
 
