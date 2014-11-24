@@ -152,7 +152,7 @@ kdump_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 	clear_error(ctx);
 
 	if (!ctx->arch_ops || !ctx->arch_ops->read_reg)
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata, "Registers not available");
 
 	return ctx->arch_ops->read_reg(ctx, cpu, index, value);
 }
@@ -200,8 +200,8 @@ kdump_xen_version(kdump_ctx *ctx, kdump_xen_version_t *version)
 }
 
 static kdump_status
-vmcoreinfo_symbol(struct vmcoreinfo *info, const char *symname,
-		  kdump_addr_t *symvalue)
+vmcoreinfo_symbol(kdump_ctx *ctx, struct vmcoreinfo *info,
+		  const char *symname, kdump_addr_t *symvalue)
 {
 	char key[sizeof("SYMBOL()") + strlen(symname)];
 	const char *valstr;
@@ -211,11 +211,11 @@ vmcoreinfo_symbol(struct vmcoreinfo *info, const char *symname,
 	sprintf(key, "SYMBOL(%s)", symname);
 	valstr = vmcoreinfo_row(info, key);
 	if (!valstr || !*valstr)
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata, "Symbol not found");
 
 	val = strtoull(valstr, &p, 16);
 	if (*p)
-		return kdump_dataerr;
+		return set_error(ctx, kdump_dataerr, "Invalid number");
 
 	*symvalue = val;
 	return kdump_ok;
@@ -227,7 +227,7 @@ kdump_vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname,
 {
 	clear_error(ctx);
 
-	return vmcoreinfo_symbol(ctx->vmcoreinfo, symname, symvalue);
+	return vmcoreinfo_symbol(ctx, ctx->vmcoreinfo, symname, symvalue);
 }
 
 kdump_status
@@ -236,5 +236,5 @@ kdump_vmcoreinfo_symbol_xen(kdump_ctx *ctx, const char *symname,
 {
 	clear_error(ctx);
 
-	return vmcoreinfo_symbol(ctx->vmcoreinfo_xen, symname, symvalue);
+	return vmcoreinfo_symbol(ctx, ctx->vmcoreinfo_xen, symname, symvalue);
 }

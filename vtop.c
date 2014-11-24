@@ -32,6 +32,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #define RGN_ALLOC_INC 32
 
@@ -89,7 +90,8 @@ set_region(kdump_ctx *ctx, kdump_vaddr_t first, kdump_vaddr_t last,
 			newrgn = realloc(ctx->region,
 					 newalloc * sizeof(*newrgn));
 			if (!newrgn)
-				return kdump_syserr;
+				return set_error(ctx, kdump_syserr,
+						 strerror(errno));
 
 			if (!rgn) {
 				rgn = prevrgn = newrgn;
@@ -165,14 +167,17 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	xlat = get_xlat(ctx, vaddr, &phys_off);
 	switch (xlat) {
 	case KDUMP_XLAT_NONE:
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Uninitialized translation method");
 
 	case KDUMP_XLAT_INVALID:
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata,
+				 "Invalid virtual address");
 
 	case KDUMP_XLAT_VTOP:
 		if (!ctx->arch_ops || !ctx->arch_ops->vtop)
-			return kdump_unsupported;
+			return set_error(ctx, kdump_unsupported,
+					 "VTOP translation not initialized");
 		return ctx->arch_ops->vtop(ctx, vaddr, paddr);
 
 		/* fall through */
@@ -186,5 +191,5 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	};
 
 	/* unknown translation method */
-	return kdump_dataerr;
+	return set_error(ctx, kdump_dataerr, "Invalid translation method");
 }

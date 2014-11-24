@@ -33,6 +33,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <linux/version.h>
 
 #define ELF_NGREG 17
@@ -140,7 +141,7 @@ ia32_init(kdump_ctx *ctx)
 
 	ctx->archdata = calloc(1, sizeof(struct ia32_data));
 	if (!ctx->archdata)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	ret = set_region(ctx, __START_KERNEL_map, VIRTADDR_MAX,
 			 KDUMP_XLAT_DIRECT, __START_KERNEL_map);
@@ -159,13 +160,13 @@ process_ia32_prstatus(kdump_ctx *ctx, void *data, size_t size)
 	int i;
 
 	if (size < sizeof(struct elf_prstatus))
-		return kdump_dataerr;
+		return set_error(ctx, kdump_dataerr, "Wrong PRSTATUS size");
 
 	++ctx->num_cpus;
 
 	cs = malloc(sizeof *cs);
 	if (!cs)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	cs->pid = dump32toh(ctx, status->pr_pid);
 	for (i = 0; i < ELF_NGREG; ++i)
@@ -186,12 +187,14 @@ ia32_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 	int i;
 
 	if (index >= ELF_NGREG)
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata,
+				 "Out-of-bounds register number");
 
 	for (i = 0, cs = archdata->cpu_state; i < cpu && cs; ++i)
 		cs = cs->next;
 	if (!cs)
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata,
+				 "Out-of-bounds CPU number");
 
 	*value = cs->reg[index];
 	return kdump_ok;
@@ -211,7 +214,8 @@ read_pgt(kdump_ctx *ctx)
 		return ret;
 
 	if (pgtaddr < __START_KERNEL_map)
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Wrong page directory address");
 
 	if (!archdata->pae_state) {
 		kdump_vaddr_t addr = pgtaddr + 3 * sizeof(uint64_t);
@@ -231,7 +235,7 @@ read_pgt(kdump_ctx *ctx)
 
 	pgt = malloc(sz);
 	if (!pgt)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	ret = kdump_readp(ctx, pgtaddr - __START_KERNEL_map,
 			  pgt, &sz, KDUMP_PHYSADDR);
@@ -298,7 +302,8 @@ ia32_vtop_nonpae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	pgd = archdata->pgt_nonpae[pgd_index_nonpae(vaddr)];
 	if (!(pgd & _PAGE_PRESENT))
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata,
+				 "Page table not present");
 	if (pgd & _PAGE_PSE) {
 		base = (pgd & PGD_PSE_MASK_NONPAE) | pgd_pse_high(pgd);
 		*paddr = base + (vaddr & ~PGD_PSE_MASK_NONPAE);
@@ -313,7 +318,8 @@ ia32_vtop_nonpae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	pte = tbl[pte_index_nonpae(vaddr)];
 	if (!(pte & _PAGE_PRESENT))
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata,
+				 "Page not present");
 	base = pte & PAGE_MASK;
 	*paddr = base + (vaddr & ~PAGE_MASK);
 
@@ -332,7 +338,8 @@ ia32_vtop_pae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	pgd = archdata->pgt_pae[pgd_index_pae(vaddr)];
 	if (!(pgd & _PAGE_PRESENT))
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata,
+				 "Page directory not present");
 	base = pgd & ~PHYSADDR_MASK_PAE & PAGE_MASK;
 
 	sz = PAGE_SIZE;
@@ -342,7 +349,8 @@ ia32_vtop_pae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	pmd = tbl[pmd_index_pae(vaddr)];
 	if (!(pmd & _PAGE_PRESENT))
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata,
+				 "Page table not present");
 	if (pmd & _PAGE_PSE) {
 		base = pmd & ~PHYSADDR_MASK_PAE & PMD_PSE_MASK_PAE;
 		*paddr = base + (vaddr & ~PMD_PSE_MASK_PAE);
@@ -357,7 +365,8 @@ ia32_vtop_pae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	pte = tbl[pte_index_pae(vaddr)];
 	if (!(pte & _PAGE_PRESENT))
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata,
+				 "Page not present");
 	base = pte & ~PHYSADDR_MASK_PAE & PAGE_MASK;
 	*paddr = base + (vaddr & ~PAGE_MASK);
 
@@ -370,7 +379,8 @@ ia32_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	struct ia32_data *archdata = ctx->archdata;
 
 	if (!archdata->pgt)
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "VTOP translation not initialized");
 
 	return archdata->pae_state > 0
 		? ia32_vtop_pae(ctx, vaddr, paddr)

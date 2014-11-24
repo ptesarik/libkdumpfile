@@ -32,6 +32,8 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 #include <linux/version.h>
 
 #define ELF_NGREG 27
@@ -269,7 +271,7 @@ x86_64_init(kdump_ctx *ctx)
 
 	ctx->archdata = calloc(1, sizeof(struct x86_64_data));
 	if (!ctx->archdata)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	ret = add_noncanonical_region(ctx);
 	if (ret != kdump_ok)
@@ -297,11 +299,12 @@ read_pgt(kdump_ctx *ctx)
 		return ret;
 
 	if (pgtaddr < __START_KERNEL_map)
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Wrong page directory address");
 
 	pgt = malloc(PAGE_SIZE);
 	if (!pgt)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	sz = PAGE_SIZE;
 	ret = kdump_readp(ctx, pgtaddr - __START_KERNEL_map + ctx->phys_base,
@@ -380,7 +383,8 @@ x86_64_vtop_init(kdump_ctx *ctx)
 	if (!layout)
 		layout = layout_by_version(ctx->version_code);
 	if (!layout)
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Cannot determine virtual memory layout");
 
 	flush_regions(ctx);
 	ret = add_noncanonical_region(ctx);
@@ -407,13 +411,13 @@ process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 	int i;
 
 	if (size < sizeof(struct elf_prstatus))
-		return kdump_dataerr;
+		return set_error(ctx, kdump_dataerr, "Wrong PRSTATUS size");
 
 	++ctx->num_cpus;
 
 	cs = malloc(sizeof *cs);
 	if (!cs)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	cs->pid = dump32toh(ctx, status->pr_pid);
 	for (i = 0; i < ELF_NGREG; ++i)
@@ -434,12 +438,14 @@ x86_64_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 	int i;
 
 	if (index >= ELF_NGREG)
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata,
+				 "Out-of-bounds register number");
 
 	for (i = 0, cs = archdata->cpu_state; i < cpu && cs; ++i)
 		cs = cs->next;
 	if (!cs)
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata,
+				 "Out-of-bounds CPU number");
 
 	*value = cs->reg[index];
 	return kdump_ok;
@@ -486,11 +492,13 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	kdump_status ret;
 
 	if (!archdata->pgt)
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "VTOP translation not initialized");
 
 	pgd = archdata->pgt[pgd_index(vaddr)];
 	if (!(pgd & _PAGE_PRESENT))
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata,
+				 "Page directory pointer not present");
 	base = pgd & ~PHYSADDR_MASK & PAGE_MASK;
 
 	sz = PAGE_SIZE;
@@ -500,7 +508,8 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	pud = tbl[pud_index(vaddr)];
 	if (!(pud & _PAGE_PRESENT))
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata,
+				 "Page directory not present");
 	if (pud & _PAGE_PSE) {
 		base = pud & ~PHYSADDR_MASK & PUD_PSE_MASK;
 		*paddr = base + (vaddr & ~PUD_PSE_MASK);
@@ -515,7 +524,8 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	pmd = tbl[pmd_index(vaddr)];
 	if (!(pmd & _PAGE_PRESENT))
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata,
+				 "Page table not present");
 	if (pmd & _PAGE_PSE) {
 		base = pmd & ~PHYSADDR_MASK & PMD_PSE_MASK;
 		*paddr = base + (vaddr & ~PMD_PSE_MASK);
@@ -530,7 +540,8 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	pte = tbl[pte_index(vaddr)];
 	if (!(pte & _PAGE_PRESENT))
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata,
+				 "Page not present");
 	base = pte & ~PHYSADDR_MASK & PAGE_MASK;
 	*paddr = base + (vaddr & ~PAGE_MASK);
 

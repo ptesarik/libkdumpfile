@@ -35,6 +35,8 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 #include <endian.h>
 
 #define FN_VMCOREINFO	"/sys/kernel/vmcoreinfo"
@@ -49,34 +51,38 @@ get_vmcoreinfo(kdump_ctx *ctx)
 
 	f = fopen(FN_VMCOREINFO, "r");
 	if (!f)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	if (fscanf(f, "%llx %llx", &addr, &length) == 2)
 		ret = kdump_ok;
 	else if (ferror(f))
-		ret = kdump_syserr;
+		ret = set_error(ctx, kdump_syserr, strerror(errno));
 	else
-		ret = kdump_dataerr;
+		ret = set_error(ctx, kdump_dataerr, "Wrong file format");
 	fclose(f);
 	if (ret != kdump_ok)
 		return ret;
 
 	info = malloc(length);
 	if (!info)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
-	ret = kdump_syserr;
-	if (lseek(ctx->fd, addr, SEEK_SET) == (off_t)-1)
-		goto out;
 
-	if (paged_cpin(ctx->fd, info, length))
+	if (lseek(ctx->fd, addr, SEEK_SET) == (off_t)-1) {
+		ret = set_error(ctx, kdump_syserr, strerror(errno));
 		goto out;
+	}
+
+	if (paged_cpin(ctx->fd, info, length)) {
+		ret = set_error(ctx, kdump_syserr, strerror(errno));
+		goto out;
+	}
 
 	ret = process_notes(ctx, info, length);
 
   out:
 	free(info);
-	return ret;
+	return set_error(ctx, ret, strerror(errno));
 }
 
 static kdump_status
@@ -84,7 +90,7 @@ devmem_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	off_t pos = pfn * ctx->page_size;
 	if (pread(ctx->fd, ctx->page, ctx->page_size, pos) != ctx->page_size)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 	return kdump_ok;
 }
 
@@ -95,12 +101,13 @@ devmem_probe(kdump_ctx *ctx)
 	kdump_status ret;
 
 	if (fstat(ctx->fd, &st))
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	if (!S_ISCHR(st.st_mode) ||
 	    (st.st_rdev != makedev(1, 1) &&
 	    major(st.st_rdev) != 10))
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Not a memory dump character device");
 
 #if defined(__x86_64__)
 	ret = set_arch(ctx, ARCH_X86_64);

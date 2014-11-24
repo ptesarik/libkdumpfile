@@ -33,6 +33,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
 
 #define S390_CPU_MAX	512
 
@@ -100,11 +101,11 @@ s390_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 		return kdump_ok;
 
 	if (pfn >= ctx->max_pfn)
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 
 	pos = (off_t)addr + (off_t)sdp->dataoff;
 	if (pread(ctx->fd, ctx->page, ctx->page_size, pos) != ctx->page_size)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	ctx->last_pfn = pfn;
 	return kdump_ok;
@@ -120,7 +121,8 @@ s390_probe(kdump_ctx *ctx)
 	kdump_status ret;
 
 	if (be64toh(dh->h1.magic) != S390_MAGIC)
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Invalid S390DUMP signature");
 
 	ctx->format = "S390";
 	ctx->byte_order = kdump_big_endian;
@@ -128,14 +130,14 @@ s390_probe(kdump_ctx *ctx)
 	pos = dump32toh(ctx, dh->h1.hdr_size) +
 		dump64toh(ctx, dh->h1.mem_size);
 	if (pread(ctx->fd, &marker, sizeof marker, pos) != sizeof marker)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 	if (memcmp(marker.str, END_MARKER, sizeof END_MARKER - 1) ||
 	    dump64toh(ctx, marker.tod) < dump64toh(ctx, dh->h1.tod))
-		return kdump_dataerr;
+		return set_error(ctx, kdump_dataerr, "End marker not found");
 
 	sdp = calloc(1, sizeof *sdp);
 	if (!sdp)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 	ctx->fmtdata = sdp;
 
 	sdp->dataoff = dump32toh(ctx, dh->h1.hdr_size);
@@ -155,7 +157,8 @@ s390_probe(kdump_ctx *ctx)
 		break;
 
 	default:
-		ret = kdump_unsupported;
+		ret = set_error(ctx, kdump_unsupported,
+				"Unsupported dump architecture");
 	}
 
  out:

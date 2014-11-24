@@ -32,6 +32,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <elf.h>
 
 /* Maximum virtual address bits (architecture limit) */
@@ -119,17 +120,18 @@ xlat(kdump_ctx *ctx, struct vtop_control *ctl)
 	case 1: idx = pud_index(ctl->vaddr); break;
 	case 0: idx = pmd_index(ctl->vaddr); break;
 	default:
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Unknown translation table type");
 	}
 
 	if (idx < ctl->off || idx >= ctl->len)
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata, "Page table not present");
 
 	entry = dump64toh(ctx, ctl->tbl[idx]);
 	if (PTE_I(entry))
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata, "Page table not present");
 	if (PTE_TT(entry) != ctl->tbltype)
-			return kdump_dataerr;
+		return set_error(ctx, kdump_dataerr, "Table type mismatch");
 
 	if (ctl->tbltype <= 1 && PTE_FC(entry)) {
 		uint64_t mask = ctl->tbltype
@@ -167,7 +169,8 @@ s390x_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	kdump_status ret;
 
 	if (!archdata->pgt)
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "VTOP translation not initialized");
 
 	/* TODO: This should be initialised from kernel_asce, but for
 	 * now, just assume that the top-level table is always maximum size.
@@ -181,7 +184,8 @@ s390x_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	if ((ctl.tbltype < 3 && reg1_index(vaddr)) ||
 	    (ctl.tbltype < 2 && pgd_index(vaddr)) ||
 	    (ctl.tbltype < 1 && pud_index(vaddr)))
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata,
+				 "Out-of-bounds virtual address");
 
 	while (ctl.tbltype >= 0) {
 		ret = xlat(ctx, &ctl);
@@ -196,7 +200,7 @@ s390x_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	entry = dump64toh(ctx, ctl.tbl[pte_index(vaddr)]);
 	if (PTE_I(entry))
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata, "Page not present");
 
 	*paddr = (entry & PAGE_MASK) | (vaddr & ~PAGE_MASK);
 	return kdump_ok;
@@ -251,7 +255,8 @@ s390x_vtop_init(kdump_ctx *ctx)
 		if (ret != kdump_ok)
 			return ret;
 	} else if (!archdata->pgt)
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata,
+				 "Cannot determine size of direct mapping");
 
 	return kdump_ok;
 }
@@ -266,7 +271,7 @@ read_pgt(kdump_ctx *ctx, kdump_vaddr_t pgtaddr)
 
 	pgt = malloc(sizeof(uint64_t) * PTRS_PER_PGD);
 	if (!pgt)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	sz = sizeof(uint64_t) * PTRS_PER_PGD;
 	ret = kdump_readp(ctx, pgtaddr, pgt, &sz, KDUMP_PHYSADDR);
@@ -293,7 +298,8 @@ get_vmcoreinfo_from_lowcore(kdump_ctx *ctx)
 		return ret;
 	addr = dump64toh(ctx, addr);
 	if (!addr)
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata,
+				 "NULL VMCOREINFO pointer");
 
 	sz = sizeof(hdr);
 	ret = kdump_readp(ctx, addr, &hdr, &sz, KDUMP_PHYSADDR);
@@ -307,7 +313,7 @@ get_vmcoreinfo_from_lowcore(kdump_ctx *ctx)
 	notesz = descoff + hdr.n_descsz;
 	note = malloc(notesz);
 	if (!note)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	sz = notesz;
 	ret = kdump_readp(ctx, addr, note, &sz, KDUMP_PHYSADDR);
@@ -327,9 +333,10 @@ s390x_init(kdump_ctx *ctx)
 
 	ctx->archdata = calloc(1, sizeof(struct s390x_data));
 	if (!ctx->archdata)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	get_vmcoreinfo_from_lowcore(ctx);
+	clear_error(ctx);
 
 	ret = kdump_vmcoreinfo_symbol(ctx, "swapper_pg_dir", &pgtaddr);
 	if (ret == kdump_ok) {

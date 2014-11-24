@@ -127,12 +127,13 @@ elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 			}
 		}
 		if (i >= edp->num_load_segments) 
-	                return kdump_nodata;
+	                return set_error(ctx, kdump_nodata,
+					 "Page not found");
 	}
 
 	/* read page data */
 	if (pread(ctx->fd, ctx->page, ctx->page_size, pos) != ctx->page_size)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	ctx->last_pfn = pfn;
 	return kdump_ok;
@@ -149,7 +150,7 @@ elf_read_xen_dom0(kdump_ctx *ctx, kdump_pfn_t pfn)
 	mfn_idx = pfn / fpp;
 	frame_idx = pfn % fpp;
 	if (mfn_idx >= edp->xen_map_size)
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 
 	pfn = (ctx->ptr_size == 8)
 		? ((uint64_t*)edp->xen_map)[mfn_idx]
@@ -192,24 +193,26 @@ elf_read_xen_domU(kdump_ctx *ctx, unsigned long pfn)
 	off_t offset;
 
 	if ((mfn = pfn_to_mfn(edp, pfn)) == ~0UL)
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata, "Page not found");
 
 	offset = edp->xen_pages_offset + (off_t)mfn * ctx->page_size;
 	if (pread(ctx->fd, ctx->page, ctx->page_size, offset) != ctx->page_size)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	return 0;
 }
 
 static kdump_status
-init_segments(struct elfdump_priv *edp, unsigned phnum)
+init_segments(kdump_ctx *ctx, unsigned phnum)
 {
+	struct elfdump_priv *edp = ctx->fmtdata;
+
 	if (!phnum)
 		return kdump_ok;
 
 	edp->load_segments = malloc(2 * phnum * sizeof(struct load_segment));
 	if (!edp->load_segments)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 	edp->num_load_segments = 0;
 
 	edp->note_segments = edp->load_segments + phnum;
@@ -218,14 +221,16 @@ init_segments(struct elfdump_priv *edp, unsigned phnum)
 }
 
 static kdump_status
-init_sections(struct elfdump_priv *edp, unsigned snum)
+init_sections(kdump_ctx *ctx, unsigned snum)
 {
+	struct elfdump_priv *edp = ctx->fmtdata;
+
 	if (!snum)
 		return kdump_ok;
 
 	edp->sections = malloc(snum * sizeof(struct section));
 	if (!edp->sections)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 	edp->num_sections = 0;
 	return kdump_ok;
 }
@@ -293,7 +298,7 @@ init_strtab(kdump_ctx *ctx, unsigned strtabidx)
 	edp->strtab_size = ps->size;
 	edp->strtab = read_elf_sect(ctx, ps);
 	if (!edp->strtab)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	return kdump_ok;
 }
@@ -317,16 +322,16 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 
 	edp->elfmach = dump16toh(ctx, ehdr->e_machine);
 
-	ret = init_segments(edp, dump16toh(ctx, ehdr->e_phnum));
+	ret = init_segments(ctx, dump16toh(ctx, ehdr->e_phnum));
 	if (ret != kdump_ok)
 		return ret;
 
-	ret = init_sections(edp, dump16toh(ctx, ehdr->e_shnum));
+	ret = init_sections(ctx, dump16toh(ctx, ehdr->e_shnum));
 	if (ret != kdump_ok)
 		return ret;
 
 	if (lseek(ctx->fd, dump32toh(ctx, ehdr->e_phoff), SEEK_SET) < 0)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 	for (i = 0; i < dump16toh(ctx, ehdr->e_phnum); ++i) {
 		unsigned type;
 		off_t offset, filesz;
@@ -334,7 +339,7 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 		kdump_paddr_t paddr;
 
 		if (read(ctx->fd, &prog, sizeof prog) != sizeof prog)
-			return kdump_syserr;
+			return set_error(ctx, kdump_syserr, strerror(errno));
 
 		type = dump32toh(ctx, prog.p_type);
 		offset = dump32toh(ctx, prog.p_offset);
@@ -346,10 +351,10 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 	}
 
 	if (lseek(ctx->fd, dump32toh(ctx, ehdr->e_shoff), SEEK_SET) < 0)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 	for (i = 0; i < dump16toh(ctx, ehdr->e_shnum); ++i) {
 		if (read(ctx->fd, &sect, sizeof sect) != sizeof sect)
-			return kdump_syserr;
+			return set_error(ctx, kdump_syserr, strerror(errno));
 		store_sect(edp,
 			   dump32toh(ctx, sect.sh_offset),
 			   dump32toh(ctx, sect.sh_size),
@@ -374,17 +379,17 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 
 	edp->elfmach = dump16toh(ctx, ehdr->e_machine);
 
-	ret = init_segments(edp, dump16toh(ctx, ehdr->e_phnum));
+	ret = init_segments(ctx, dump16toh(ctx, ehdr->e_phnum));
 	if (ret != kdump_ok)
 		return ret;
 
-	ret = init_sections(edp, dump16toh(ctx, ehdr->e_shnum));
+	ret = init_sections(ctx, dump16toh(ctx, ehdr->e_shnum));
 	if (ret != kdump_ok)
 		return ret;
 
 
 	if (lseek(ctx->fd, dump64toh(ctx, ehdr->e_phoff), SEEK_SET) < 0)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 	for (i = 0; i < dump16toh(ctx, ehdr->e_phnum); ++i) {
 		unsigned type;
 		off_t offset, filesz;
@@ -392,7 +397,7 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 		kdump_paddr_t paddr;
 
 		if (read(ctx->fd, &prog, sizeof prog) != sizeof prog)
-			return kdump_syserr;
+			return set_error(ctx, kdump_syserr, strerror(errno));
 
 		type = dump32toh(ctx, prog.p_type);
 		offset = dump64toh(ctx, prog.p_offset);
@@ -404,10 +409,10 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 	}
 
 	if (lseek(ctx->fd, dump32toh(ctx, ehdr->e_shoff), SEEK_SET) < 0)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 	for (i = 0; i < dump16toh(ctx, ehdr->e_shnum); ++i) {
 		if (read(ctx->fd, &sect, sizeof sect) != sizeof sect)
-			return kdump_syserr;
+			return set_error(ctx, kdump_syserr, strerror(errno));
 		store_sect(edp,
 			   dump64toh(ctx, sect.sh_offset),
 			   dump64toh(ctx, sect.sh_size),
@@ -436,7 +441,8 @@ initialize_xen_map64(kdump_ctx *ctx, void *dir)
 	     ++dirp, pfn += fpp * fpp) {
 		ret = elf_read_page(ctx, *dirp);
 		if (ret == kdump_nodata)
-			return kdump_dataerr;
+			return set_error(ctx, kdump_dataerr,
+					 "Cannot read Xen P2M map");
 		else if (ret != kdump_ok)
 			return ret;
 
@@ -446,14 +452,15 @@ initialize_xen_map64(kdump_ctx *ctx, void *dir)
 	}
 
 	if (! (map = malloc(mfns * sizeof(uint64_t))) )
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 	edp->xen_map = map;
 	edp->xen_map_size = mfns;
 
 	for (dirp = dir; mfns; ++dirp) {
 		ret = elf_read_page(ctx, *dirp);
 		if (ret == kdump_nodata)
-			return kdump_dataerr;
+			return set_error(ctx, kdump_dataerr,
+					 "Cannot read Xen P2M map");
 		else if (ret != kdump_ok)
 			return ret;
 
@@ -482,7 +489,8 @@ initialize_xen_map32(kdump_ctx *ctx, void *dir)
 	     ++dirp, pfn += fpp * fpp) {
 		ret = elf_read_page(ctx, *dirp);
 		if (ret == kdump_nodata)
-			return kdump_dataerr;
+			return set_error(ctx, kdump_dataerr,
+					 "Cannot read Xen P2M map");
 		else if (ret != kdump_ok)
 			return ret;
 
@@ -492,14 +500,15 @@ initialize_xen_map32(kdump_ctx *ctx, void *dir)
 	}
 
 	if (! (map = malloc(mfns * sizeof(uint32_t))) )
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 	edp->xen_map = map;
 	edp->xen_map_size = mfns;
 
 	for (dirp = dir; mfns; ++dirp) {
 		ret = elf_read_page(ctx, *dirp);
 		if (ret == kdump_nodata)
-			return kdump_dataerr;
+			return set_error(ctx, kdump_dataerr,
+					 "Cannot read Xen P2M map");
 		else if (ret != kdump_ok)
 			return ret;
 
@@ -526,7 +535,7 @@ initialize_xen_map(kdump_ctx *ctx)
 	dir = ctx->page;
 	page = malloc(ctx->page_size);
 	if (page == NULL)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 	ctx->page = page;
 
 	ret = (ctx->ptr_size == 8)
@@ -553,7 +562,8 @@ process_elf_notes(kdump_ctx *ctx, void *notes)
 		struct load_segment *seg = edp->note_segments + i;
 
 		if (pread(ctx->fd, p, seg->size, seg->file_offset) != seg->size)
-			return kdump_syserr;
+			return set_error(ctx, kdump_syserr,
+					 strerror(errno));
 
 		ret = process_noarch_notes(ctx, p, seg->size);
 		if (ret != kdump_ok)
@@ -588,7 +598,7 @@ open_common(kdump_ctx *ctx)
 	int i;
 
 	if (!edp->num_load_segments && !edp->num_sections)
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported, "No content found");
 
 	/* read notes */
 	notesz = 0;
@@ -596,7 +606,7 @@ open_common(kdump_ctx *ctx)
 		notesz += edp->note_segments[i].size;
 	notes = malloc(notesz);
 	if (!notes)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	ret = process_elf_notes(ctx, notes);
 	free(notes);
@@ -626,13 +636,15 @@ open_common(kdump_ctx *ctx)
 		else if (!strcmp(name, ".xen_p2m")) {
 			edp->xen_map = read_elf_sect(ctx, sect);
 			if (!edp->xen_map)
-				return kdump_syserr;
+				return set_error(ctx, kdump_syserr,
+						 strerror(errno));
 			edp->xen_map_type = xen_map_p2m;
 			edp->xen_map_size = sect->size /sizeof(struct xen_p2m);
 		} else if (!strcmp(name, ".xen_pfn")) {
 			edp->xen_map = read_elf_sect(ctx, sect);
 			if (!edp->xen_map)
-				return kdump_syserr;
+				return set_error(ctx, kdump_syserr,
+						 strerror(errno));
 			edp->xen_map_type = xen_map_pfn;
 			edp->xen_map_size = sect->size / sizeof(uint64_t);
 		}
@@ -646,7 +658,8 @@ open_common(kdump_ctx *ctx)
 
 	if (edp->xen_pages_offset) {
 		if (!edp->xen_map)
-			return kdump_unsupported;
+			return set_error(ctx, kdump_unsupported,
+					 "Missing Xen P2M mapping");
 		ctx->flags |= DIF_XEN;
 		ctx->ops = &xen_domU_ops;
 	}
@@ -664,18 +677,20 @@ elf_probe(kdump_ctx *ctx)
 	kdump_status ret;
 
 	if (memcmp(eheader, ELFMAG, SELFMAG))
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Invalid ELF signature");
 
 	edp = calloc(1, sizeof *edp);
 	if (!edp)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 	ctx->fmtdata = edp;
 
 	switch (eheader[EI_DATA]) {
 	case ELFDATA2LSB: ctx->byte_order = kdump_little_endian; break;
 	case ELFDATA2MSB: ctx->byte_order = kdump_big_endian; break;
 	default:
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Unsupported ELF data format");
 	}
 
         if ((elf32->e_ident[EI_CLASS] == ELFCLASS32) &&
@@ -693,7 +708,8 @@ elf_probe(kdump_ctx *ctx)
 		if (ret == kdump_ok)
 			ret = open_common(ctx);
 	} else
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Unsupported ELF class");
 
 	if (ret != kdump_ok)
 		elf_cleanup(ctx);

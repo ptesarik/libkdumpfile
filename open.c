@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include <linux/version.h>
 
 static kdump_status kdump_open_known(kdump_ctx *pctx);
@@ -59,22 +60,26 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 	kdump_status ret;
 	int i;
 
-	ret = kdump_syserr;
-
 	/* Initialize context */
 	ctx = calloc(1, sizeof *ctx);
-	if (!ctx)
+	if (!ctx) {
+		ret = set_error(ctx, kdump_syserr, strerror(errno));
 		goto err;
+	}
 	ctx->last_pfn = -(kdump_paddr_t)1;
 
 	ctx->buffer = malloc(MAX_PAGE_SIZE);
-	if (!ctx->buffer)
+	if (!ctx->buffer) {
+		ret = set_error(ctx, kdump_syserr, strerror(errno));
 		goto err_ctx;
+	}
 
 	ctx->fd = fd;
 
-	if (paged_cpin(ctx->fd, ctx->buffer, MAX_PAGE_SIZE))
+	if (paged_cpin(ctx->fd, ctx->buffer, MAX_PAGE_SIZE)) {
+		ret = set_error(ctx, kdump_syserr, strerror(errno));
 		goto err_ctx;
+	}
 
 	for (i = 0; i < ARRAY_SIZE(formats); ++i) {
 		ctx->ops = formats[i];
@@ -83,7 +88,7 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 			*pctx = ctx;
 			return kdump_open_known(ctx);
 		}
-		clear_error();
+		clear_error(ctx);
 	}
 	ctx->ops = NULL;
 
@@ -141,7 +146,7 @@ uts_name_from_init_uts_ns(kdump_ctx *ctx, kdump_vaddr_t *uts_name)
 		if (!memcmp(p, UTS_SYSNAME, sizeof(UTS_SYSNAME)))
 			break;
 	if (p > &buf[2 * NEW_UTS_LEN])
-		return kdump_dataerr;
+		return set_error(ctx, kdump_dataerr, "UTS_SYSNAME not found");
 
 	*uts_name = init_uts_ns + p - buf;
 	return kdump_ok;
@@ -156,8 +161,10 @@ use_kernel_utsname(kdump_ctx *ctx)
 	kdump_status ret;
 
 	ret = kdump_vmcoreinfo_symbol(ctx, "system_utsname", &uts_name);
-	if (ret == kdump_nodata)
+	if (ret == kdump_nodata) {
+		clear_error(ctx);
 		ret = uts_name_from_init_uts_ns(ctx, &uts_name);
+	}
 	if (ret != kdump_ok)
 		return ret;
 
@@ -168,7 +175,8 @@ use_kernel_utsname(kdump_ctx *ctx)
 		return ret;
 
 	if (!uts_looks_sane(&uts))
-		return kdump_dataerr;
+		return set_error(ctx, kdump_dataerr,
+				 "Wrong utsname content");
 
 	set_uts(ctx, &uts);
 
@@ -185,20 +193,23 @@ get_version_code(kdump_ctx *ctx)
 	p = ctx->utsname.release;
 	a = strtoul(p, &endp, 10);
 	if (endp == p || *endp != '.')
-		return kdump_dataerr;
+		return set_error(ctx, kdump_dataerr,
+				 "Invalid kernel version");
 
 	b = c = 0L;
 	if (*endp) {
 		p = endp + 1;
 		b = strtoul(p, &endp, 10);
 		if (endp == p || *endp != '.')
-			return kdump_dataerr;
+			return set_error(ctx, kdump_dataerr,
+					 "Invalid kernel version");
 
 		if (*endp) {
 			p = endp + 1;
 			c = strtoul(p, &endp, 10);
 			if (endp == p)
-				return kdump_dataerr;
+				return set_error(ctx, kdump_dataerr,
+						 "Invalid kernel version");
 		}
 	}
 

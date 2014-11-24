@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #if USE_ZLIB
 # include <zlib.h>
@@ -355,10 +356,12 @@ fill_level1(kdump_ctx *ctx, unsigned endidx)
 
 		*p = calloc(PFN_IDX2_SIZE, sizeof(struct pfn_level2));
 		if (!*p)
-			return kdump_syserr;
+			return set_error(ctx, kdump_syserr,
+					 strerror(errno));
 		pfn = idx << (PFN_IDX3_BITS + PFN_IDX2_BITS);
 		if ( (off = find_page(ctx, off, pfn, &dp)) < 0)
-			return kdump_syserr;
+			return set_error(ctx, kdump_syserr,
+					 strerror(errno));
 		(*p)->off = off;
 	}
 
@@ -386,19 +389,22 @@ fill_level2(kdump_ctx *ctx, unsigned idx1, unsigned endidx)
 	pfn = ((idx1 << PFN_IDX2_BITS) + idx) << PFN_IDX3_BITS;
 	for ( ; idx < endidx; ++p, ++idx) {
 		if ( (baseoff = find_page(ctx, baseoff, pfn, &dp)) < 0)
-			return kdump_syserr;
+			return set_error(ctx, kdump_syserr,
+					 strerror(errno));
 		p->off = baseoff;
 		pfn += PFN_IDX3_SIZE;
 	}
 	if (idx) {
 		if ( (baseoff = find_page(ctx, baseoff, pfn, &dp)) < 0)
-			return kdump_syserr;
+			return set_error(ctx, kdump_syserr,
+					 strerror(errno));
 		p->off = baseoff;
 	}
 
 	pp = malloc(PFN_IDX3_SIZE * sizeof(uint32_t));
 	if (!pp)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr,
+				 strerror(errno));
 	p->pfn_level3 = pp;
 	memset(pp, -1, PFN_IDX3_SIZE * sizeof(uint32_t));
 
@@ -431,7 +437,7 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 		return kdump_ok;
 
 	if (pfn >= ctx->max_pfn)
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 
 	idx1 = pfn_idx1(pfn);
 	if (!lkcdp->pfn_level1[idx1]) {
@@ -452,32 +458,35 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 
 	idx3 = pfn_idx3(pfn);
 	if (pfn_level3[idx3] == (uint32_t)-1)
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata, "PFN not found");
 	off += pfn_level3[idx3];
 
 	if (find_page(ctx, off, pfn, &dp) < 0)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 	off += sizeof(struct dump_page);
 
 	type = dp.dp_flags & (DUMP_COMPRESSED|DUMP_RAW);
 	switch (type) {
 	case DUMP_COMPRESSED:
 		if (dp.dp_size > MAX_PAGE_SIZE)
-			return kdump_dataerr;
+			return set_error(ctx, kdump_dataerr,
+					 "Wrong compressed size");
 		buf = ctx->buffer;
 		break;
 	case DUMP_RAW:
 		if (dp.dp_size != ctx->page_size)
-			return kdump_dataerr;
+			return set_error(ctx, kdump_dataerr,
+					 "Wrong page size");
 		buf = ctx->page;
 		break;
 	default:
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Unsupported compression type");
 	}
 
 	/* read page data */
 	if (pread(ctx->fd, buf, dp.dp_size, off) != dp.dp_size)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	if (type == DUMP_RAW)
 		goto out;
@@ -487,19 +496,29 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 		int ret = uncompress_rle(ctx->page, &retlen,
 					 buf, dp.dp_size);
 		if (ret)
-			return kdump_dataerr;
+			return set_error(ctx, kdump_dataerr,
+					 "Decompression failed");
+		if (retlen != ctx->page_size)
+			return set_error(ctx, kdump_dataerr,
+					 "Wrong uncompressed size");
 	} else if (lkcdp->compression == DUMP_COMPRESS_GZIP) {
 #if USE_ZLIB
 		uLongf retlen = ctx->page_size;
 		int ret = uncompress(ctx->page, &retlen,
 				     buf, dp.dp_size);
-		if ((ret != Z_OK) || (retlen != ctx->page_size))
-			return kdump_dataerr;
+		if (ret != Z_OK)
+			return set_error(ctx, kdump_dataerr,
+					 "Decompression failed");
+		if (retlen != ctx->page_size)
+			return set_error(ctx, kdump_dataerr,
+					 "Wrong uncompressed size");
 #else
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Unsupported compression method");
 #endif
 	} else
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Unsupported compression method");
 
   out:
 	ctx->last_pfn = pfn;
@@ -552,7 +571,7 @@ init_v2(kdump_ctx *ctx)
 	return kdump_ok;
 }
 
-static int
+static kdump_status
 init_v8(kdump_ctx *ctx)
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
@@ -563,7 +582,7 @@ init_v8(kdump_ctx *ctx)
 	if (lkcdp->version >= LKCD_DUMP_V9)
 		lkcdp->data_offset = dump64toh(ctx, dh->dh_dump_buffer_size);
 
-	return 0;
+	return kdump_ok;
 }
 
 static kdump_status
@@ -576,7 +595,8 @@ open_common(kdump_ctx *ctx)
 
 	lkcdp = malloc(sizeof *lkcdp);
 	if (!lkcdp)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr,
+				 strerror(errno));
 
 	lkcdp->version = base_version(dump32toh(ctx, dh->dh_version));
 	snprintf(lkcdp->format, sizeof(lkcdp->format),
@@ -613,7 +633,8 @@ open_common(kdump_ctx *ctx)
 		break;
 
 	default:
-		ret = kdump_unsupported;
+		ret = set_error(ctx, kdump_unsupported,
+				"Unsupported LKCD version");
 	}
 
 	if (ret != kdump_ok)
@@ -623,11 +644,12 @@ open_common(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		goto err_free;
 
-	ret = kdump_syserr;
 	max_idx1 = pfn_idx1(ctx->max_pfn - 1) + 1;
 	lkcdp->pfn_level1 = calloc(max_idx1, sizeof(struct pfn_level2*));
-	if (!lkcdp->pfn_level1)
+	if (!lkcdp->pfn_level1) {
+		set_error(ctx, kdump_syserr, strerror(errno));
 		goto err_free;
+	}
 
 	return kdump_ok;
 
@@ -649,7 +671,8 @@ lkcd_probe(kdump_ctx *ctx)
 	else if (!memcmp(ctx->buffer, magic_be, sizeof magic_be))
 		ctx->byte_order = kdump_big_endian;
 	else
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Unknown LKCD signature");
 
 	return open_common(ctx);
 }

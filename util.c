@@ -32,6 +32,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
 
 static size_t
 arch_ptr_size(enum kdump_arch arch)
@@ -140,7 +141,7 @@ set_page_size_and_shift(kdump_ctx *ctx, size_t page_size, unsigned page_shift)
 {
 	void *page = realloc(ctx->page, page_size);
 	if (!page)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 	ctx->page = page;
 	ctx->page_size = page_size;
 	ctx->page_shift = page_shift;
@@ -153,7 +154,8 @@ set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 	if (!ctx->page_size) {
 		int page_shift = default_page_shift(arch);
 		if (!page_shift)
-			return kdump_unsupported;
+			return set_error(ctx, kdump_unsupported,
+					 "No default page size");
 		set_page_size_and_shift(ctx, 1UL << page_shift, page_shift);
 	}
 
@@ -174,7 +176,8 @@ set_page_size(kdump_ctx *ctx, size_t page_size)
 
 	/* It must be a power of 2 */
 	if (page_size != (page_size & ~(page_size - 1)))
-		return kdump_dataerr;
+		return set_error(ctx, kdump_dataerr,
+				 "Invalid page size");
 
 	page_shift = ffsl((unsigned long)page_size) - 1;
 	return set_page_size_and_shift(ctx, page_size, page_shift);
@@ -275,7 +278,8 @@ count_lines(char *buf, size_t len)
 }
 
 kdump_status
-store_vmcoreinfo(struct vmcoreinfo **pinfo, void *data, size_t len)
+store_vmcoreinfo(kdump_ctx *ctx, struct vmcoreinfo **pinfo,
+		 void *data, size_t len)
 {
 	struct vmcoreinfo *info;
 	struct vmcoreinfo_row *row;
@@ -287,7 +291,7 @@ store_vmcoreinfo(struct vmcoreinfo **pinfo, void *data, size_t len)
 		      n * sizeof(struct vmcoreinfo_row) +
 		      2 * (len + 1));
 	if (!info)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	info->raw = (char*)info->row + n * sizeof(struct vmcoreinfo_row);
 	memcpy(info->raw, data, len);

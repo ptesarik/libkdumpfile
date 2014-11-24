@@ -199,7 +199,7 @@ struct _tag_kdump_ctx {
 	const char *format;	/* file format (descriptive name) */
 	unsigned long flags;	/* see DIF_XXX below */
 
-	char *err_str;		/* error string */
+	const char *err_str;	/* error string */
 
 	enum kdump_arch arch;	/* architecture (if known) */
 	kdump_byte_order_t byte_order; /* little-endian or big-endian */
@@ -317,7 +317,7 @@ int uncompress_rle(unsigned char *dst, size_t *pdstlen,
 		   const unsigned char *src, size_t srclen);
 
 #define store_vmcoreinfo INTERNAL_NAME(store_vmcoreinfo)
-kdump_status store_vmcoreinfo(struct vmcoreinfo **pinfo,
+kdump_status store_vmcoreinfo(kdump_ctx *ctx, struct vmcoreinfo **pinfo,
 			      void *data, size_t len);
 
 #define paged_cpin INTERNAL_NAME(paged_cpin)
@@ -426,6 +426,13 @@ static inline void
 clear_error(kdump_ctx *ctx)
 {
 	ctx->err_str = NULL;
+}
+
+static inline kdump_status
+set_error(kdump_ctx *ctx, kdump_status ret, const char *msg)
+{
+	ctx->err_str = msg;
+	return ret;
 }
 
 static inline void

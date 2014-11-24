@@ -154,7 +154,8 @@ process_xc_xen_note(kdump_ctx *ctx, uint32_t type,
 		uint64_t version = dump64toh(ctx, *(uint64_t*)desc);
 
 		if (version != 1)
-			return kdump_unsupported;
+			return set_error(ctx, kdump_unsupported,
+					 "Unsupported Xen dumpcore format version");
 	}
 
 	return kdump_ok;
@@ -166,7 +167,7 @@ process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
 	kdump_status ret;
 	const char *val;
 
-	ret = store_vmcoreinfo(&ctx->vmcoreinfo, desc, descsz);
+	ret = store_vmcoreinfo(ctx, &ctx->vmcoreinfo, desc, descsz);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -175,7 +176,8 @@ process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
 		char *endp;
 		unsigned long page_size = strtoul(val, &endp, 10);
 		if (*endp)
-			return kdump_dataerr;
+			return set_error(ctx, kdump_dataerr,
+					 "Invalid PAGESIZE");
 
 		ret = set_page_size(ctx, page_size);
 		if (ret != kdump_ok)
@@ -205,7 +207,8 @@ do_noarch_note(kdump_ctx *ctx, Elf32_Word type,
 	if (note_equal("VMCOREINFO", name, namesz))
 		return process_vmcoreinfo(ctx, desc, descsz);
 	else if (note_equal("VMCOREINFO_XEN", name, namesz))
-		return store_vmcoreinfo(&ctx->vmcoreinfo_xen, desc, descsz);
+		return store_vmcoreinfo(ctx, &ctx->vmcoreinfo_xen,
+					desc, descsz);
 
 	return kdump_ok;
 }

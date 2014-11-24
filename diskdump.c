@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
 
 #if USE_ZLIB
 # include <zlib.h>
@@ -197,7 +198,7 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 		return kdump_ok;
 
 	if (pfn >= ctx->max_pfn)
-		return kdump_nodata;
+		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 
 	if (!page_is_dumpable(ctx, pfn)) {
 		memset(ctx->page, 0, ctx->page_size);
@@ -206,7 +207,7 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 
 	pd_pos = pfn_to_pdpos(ctx, pfn);
 	if (pread(ctx->fd, &pd, sizeof pd, pd_pos) != sizeof pd)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	pd.offset = dump64toh(ctx, pd.offset);
 	pd.size = dump32toh(ctx, pd.size);
@@ -215,27 +216,34 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 
 	if (pd.flags & DUMP_DH_COMPRESSED) {
 		if (pd.size > MAX_PAGE_SIZE)
-			return kdump_dataerr;
+			return set_error(ctx, kdump_dataerr,
+					 "Wrong compressed size");
 		buf = ctx->buffer;
 	} else {
 		if (pd.size != ctx->page_size)
-			return kdump_dataerr;
+			return set_error(ctx, kdump_dataerr,
+					 "Wrong page size");
 		buf = ctx->page;
 	}
 
 	/* read page data */
 	if (pread(ctx->fd, buf, pd.size, pd.offset) != pd.size)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	if (pd.flags & DUMP_DH_COMPRESSED_ZLIB) {
 #if USE_ZLIB
 		uLongf retlen = ctx->page_size;
 		int ret = uncompress(ctx->page, &retlen,
 				     buf, pd.size);
-		if ((ret != Z_OK) || (retlen != ctx->page_size))
-			return kdump_dataerr;
+		if (ret != Z_OK)
+			return set_error(ctx, kdump_dataerr,
+					 "Decompression failed");
+		if (retlen != ctx->page_size)
+			return set_error(ctx, kdump_dataerr,
+					 "Wrong uncompressed size");
 #else
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Unsupported compression method");
 #endif
 	} else if (pd.flags & DUMP_DH_COMPRESSED_LZO) {
 #if USE_LZO
@@ -243,10 +251,15 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 		int ret = lzo1x_decompress_safe((lzo_bytep)buf, pd.size,
 						(lzo_bytep)ctx->page, &retlen,
 						LZO1X_MEM_DECOMPRESS);
-		if ((ret != LZO_E_OK) || (retlen != ctx->page_size))
-			return kdump_dataerr;
+		if (ret != LZO_E_OK)
+			return set_error(ctx, kdump_dataerr,
+					 "Decompression failed");
+		if (retlen != ctx->page_size)
+			return set_error(ctx, kdump_dataerr,
+					 "Wrong uncompressed size");
 #else
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Unsupported compression method");
 #endif
 	} else if (pd.flags & DUMP_DH_COMPRESSED_SNAPPY) {
 #if USE_SNAPPY
@@ -254,10 +267,15 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 		snappy_status ret;
 		ret = snappy_uncompress((char *)buf, pd.size,
 					(char *)ctx->page, &retlen);
-		if ((ret != SNAPPY_OK) || (retlen != ctx->page_size))
-			return kdump_dataerr;
+		if (ret != SNAPPY_OK)
+			return set_error(ctx, kdump_dataerr,
+					 "Decompression failed");
+		if (retlen != ctx->page_size)
+			return set_error(ctx, kdump_dataerr,
+					 "Wrong uncompressed size");
 #else
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Unsupported compression method");
 #endif
 	}
 
@@ -273,10 +291,10 @@ read_vmcoreinfo(kdump_ctx *ctx, off_t off, size_t size)
 
 	info = malloc(size);
 	if (!info)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	if (pread(ctx->fd, info, size, off) != size)
-		ret = kdump_syserr;
+		ret = set_error(ctx, kdump_syserr, strerror(errno));
 
 	if (ret == kdump_ok)
 		ret = process_vmcoreinfo(ctx, info, size);
@@ -294,10 +312,10 @@ read_notes(kdump_ctx *ctx, off_t off, size_t size)
 
 	notes = malloc(size);
 	if (!notes)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	if (pread(ctx->fd, notes, size, off) != size)
-		ret = kdump_syserr;
+		ret = set_error(ctx, kdump_syserr, strerror(errno));
 
 	if (ret != kdump_ok)
 		goto out;
@@ -343,10 +361,10 @@ read_bitmap(kdump_ctx *ctx, int32_t sub_hdr_size,
 		ctx->max_pfn = max_bitmap_pfn;
 
 	if (! (ddp->bitmap = malloc(bitmapsize)) )
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	if (pread(ctx->fd, ddp->bitmap, bitmapsize, off) != bitmapsize)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	return kdump_ok;
 }
@@ -360,12 +378,14 @@ try_header(kdump_ctx *ctx, int32_t block_size,
 
 	/* Page size must be reasonable */
 	if (block_size < MIN_PAGE_SIZE || block_size > MAX_PAGE_SIZE)
-		return kdump_dataerr;
+		return set_error(ctx, kdump_dataerr,
+				 "Out-of-bounds page size");
 
 	/* Number of bitmap blocks should cover all pages in the system */
 	maxcovered = (uint64_t)8 * bitmap_blocks * block_size;
 	if (maxcovered < max_mapnr)
-		return kdump_dataerr;
+		return set_error(ctx, kdump_dataerr,
+				 "Page bitmap too small");
 
 	/* basic sanity checks passed */
 	ret = set_page_size(ctx, block_size);
@@ -388,7 +408,7 @@ read_sub_hdr_32(kdump_ctx *ctx, int32_t header_version)
 
 	if (pread(ctx->fd, &subhdr, sizeof subhdr, ctx->page_size)
 	    != sizeof subhdr)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	set_phys_base(ctx, dump32toh(ctx, subhdr.phys_base));
 
@@ -436,6 +456,7 @@ try_header_32(kdump_ctx *ctx, struct disk_dump_header_32 *dh)
 
 	if (ret != kdump_dataerr)
 		return ret;
+	clear_error(ctx);
 
 	ret = try_header(ctx, be32toh(dh->block_size),
 			 be32toh(dh->bitmap_blocks),
@@ -453,11 +474,12 @@ read_sub_hdr_64(kdump_ctx *ctx, int32_t header_version)
 	kdump_status ret = kdump_ok;
 
 	if (header_version < 0)
-		return kdump_dataerr;
+		return set_error(ctx, kdump_dataerr,
+				 "Invalid header version");
 
 	if (pread(ctx->fd, &subhdr, sizeof subhdr, ctx->page_size)
 	    != sizeof subhdr)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	set_phys_base(ctx, dump64toh(ctx, subhdr.phys_base));
 
@@ -505,6 +527,7 @@ try_header_64(kdump_ctx *ctx, struct disk_dump_header_64 *dh)
 
 	if (ret != kdump_dataerr)
 		return ret;
+	clear_error(ctx);
 
 	ret = try_header(ctx, be32toh(dh->block_size),
 			 be32toh(dh->bitmap_blocks),
@@ -525,7 +548,7 @@ open_common(kdump_ctx *ctx)
 
 	ddp = calloc(1, sizeof *ddp);
 	if (!ddp)
-		return kdump_syserr;
+		return set_error(ctx, kdump_syserr, strerror(errno));
 
 	ctx->fmtdata = ddp;
 
@@ -535,10 +558,15 @@ open_common(kdump_ctx *ctx)
 		set_uts(ctx, &dh64->utsname);
 
 	ret = try_header_32(ctx, dh32);
-	if (ret == kdump_dataerr)
+	if (ret == kdump_dataerr) {
+		clear_error(ctx);
 		ret = try_header_64(ctx, dh64);
-	if (ret == kdump_dataerr)
-		ret = kdump_unsupported;
+	}
+	if (ret == kdump_dataerr) {
+		clear_error(ctx);
+		ret = set_error(ctx, kdump_unsupported,
+				"Invalid diskdump header content");
+	}
 
 	if (ret == kdump_ok && ctx->arch == ARCH_UNKNOWN)
 		ret = set_arch(ctx, machine_arch(ctx->utsname.machine));
@@ -562,7 +590,8 @@ diskdump_probe(kdump_ctx *ctx)
 	else if (!memcmp(ctx->buffer, magic_kdump, sizeof magic_kdump))
 		ctx->format = "compressed kdump";
 	else
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Unknown diskdump signature");
 
 	return open_common(ctx);
 }

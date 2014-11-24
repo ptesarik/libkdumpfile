@@ -32,6 +32,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
 
 typedef kdump_status (*read_page_fn)(kdump_ctx *, kdump_pfn_t);
 
@@ -53,7 +54,8 @@ static kdump_status
 setup_readfn(kdump_ctx *ctx, long flags, read_page_fn *fn)
 {
 	if (!ctx->ops)
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "File format not initialized");
 
 	if (flags & KDUMP_PHYSADDR)
 		*fn = ctx->ops->read_page;
@@ -63,10 +65,12 @@ setup_readfn(kdump_ctx *ctx, long flags, read_page_fn *fn)
 		ctx->arch_ops && ctx->arch_ops->vtop)
 		*fn = read_kvpage;
 	else
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Invalid address type flags");
 
 	if (!*fn)
-		return kdump_unsupported;
+		return set_error(ctx, kdump_unsupported,
+				 "Read function not available");
 
 	return kdump_ok;
 }
@@ -154,7 +158,7 @@ kdump_read_string(kdump_ctx *ctx, kdump_addr_t addr,
 		if (!newstr) {
 			if (str)
 				free(str);
-			return kdump_syserr;
+			return set_error(ctx, kdump_syserr, strerror(errno));
 		}
 		memcpy(newstr + length, ctx->page + off, partlen);
 		length = newlength;
