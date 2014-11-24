@@ -79,6 +79,8 @@ kdump_readp(kdump_ctx *ctx, kdump_addr_t addr,
 	size_t remain;
 	kdump_status ret;
 
+	clear_error(ctx);
+
 	ret = setup_readfn(ctx, flags, &readfn);
 	if (ret != kdump_ok)
 		return ret;
@@ -127,6 +129,8 @@ kdump_read_string(kdump_ctx *ctx, kdump_addr_t addr,
 	char *str = NULL, *newstr, *endp;
 	size_t length = 0, newlength;
 	kdump_status ret;
+
+	clear_error(ctx);
 
 	ret = setup_readfn(ctx, flags, &readfn);
 	if (ret != kdump_ok)

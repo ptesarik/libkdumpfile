@@ -149,6 +149,8 @@ kdump_status
 kdump_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 	       kdump_reg_t *value)
 {
+	clear_error(ctx);
+
 	if (!ctx->arch_ops || !ctx->arch_ops->read_reg)
 		return kdump_nodata;
 
@@ -223,6 +225,8 @@ kdump_status
 kdump_vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname,
 			kdump_addr_t *symvalue)
 {
+	clear_error(ctx);
+
 	return vmcoreinfo_symbol(ctx->vmcoreinfo, symname, symvalue);
 }
 
@@ -230,5 +234,7 @@ kdump_status
 kdump_vmcoreinfo_symbol_xen(kdump_ctx *ctx, const char *symname,
 			    kdump_addr_t *symvalue)
 {
+	clear_error(ctx);
+
 	return vmcoreinfo_symbol(ctx->vmcoreinfo_xen, symname, symvalue);
 }

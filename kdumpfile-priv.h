@@ -423,6 +423,12 @@ dump64toh(kdump_ctx *ctx, uint64_t x)
 }
 
 static inline void
+clear_error(kdump_ctx *ctx)
+{
+	ctx->err_str = NULL;
+}
+
+static inline void
 set_phys_base(kdump_ctx *ctx, kdump_paddr_t base)
 {
 	ctx->phys_base = base;

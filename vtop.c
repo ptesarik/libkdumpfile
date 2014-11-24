@@ -38,6 +38,8 @@
 kdump_status
 kdump_vtop_init(kdump_ctx *ctx)
 {
+	clear_error(ctx);
+
 	if (ctx->arch_ops && ctx->arch_ops->vtop_init)
 		return ctx->arch_ops->vtop_init(ctx);
 
@@ -157,6 +159,8 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	kdump_xlat_t xlat;
 	kdump_paddr_t phys_off;
+
+	clear_error(ctx);
 
 	xlat = get_xlat(ctx, vaddr, &phys_off);
 	switch (xlat) {
