@@ -35,6 +35,12 @@
 #include <stdio.h>
 
 const char *
+kdump_err_str(kdump_ctx *ctx)
+{
+	return ctx->err_str;
+}
+
+const char *
 kdump_format(kdump_ctx *ctx)
 {
 	return ctx->format;
