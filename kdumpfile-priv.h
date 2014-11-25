@@ -188,6 +188,9 @@ typedef enum _tag_kdump_xlat {
 	KDUMP_XLAT_KTEXT,
 } kdump_xlat_t;
 
+/* Maximum length of the error message */
+#define ERRBUF	160
+
 struct kdump_vaddr_region {
 	kdump_vaddr_t max_off;	/* max offset inside the range */
 	kdump_addr_t phys_off;	/* offset from physical addresses */
@@ -198,8 +201,6 @@ struct _tag_kdump_ctx {
 	int fd;			/* dump file descriptor */
 	const char *format;	/* file format (descriptive name) */
 	unsigned long flags;	/* see DIF_XXX below */
-
-	const char *err_str;	/* error string */
 
 	enum kdump_arch arch;	/* architecture (if known) */
 	kdump_byte_order_t byte_order; /* little-endian or big-endian */
@@ -232,6 +233,9 @@ struct _tag_kdump_ctx {
 
 	void *fmtdata;		/* format-specific private data */
 	void *archdata;		/* arch-specific private data */
+
+	char *err_str;		/* error string */
+	char err_buf[ERRBUF];	/* buffer for error string */
 };
 
 /* kdump_ctx flags */
@@ -293,6 +297,11 @@ struct timeval_64 {
 };
 
 /* utils */
+
+#define set_error INTERNAL_NAME(set_error)
+kdump_status set_error(kdump_ctx *ctx, kdump_status ret,
+		       const char *msgfmt, ...)
+	__attribute__ ((format (printf, 3, 4)));
 
 #define machine_arch INTERNAL_NAME(machine_arch)
 enum kdump_arch machine_arch(const char *machine);
@@ -426,13 +435,6 @@ static inline void
 clear_error(kdump_ctx *ctx)
 {
 	ctx->err_str = NULL;
-}
-
-static inline kdump_status
-set_error(kdump_ctx *ctx, kdump_status ret, const char *msg)
-{
-	ctx->err_str = msg;
-	return ret;
 }
 
 static inline void

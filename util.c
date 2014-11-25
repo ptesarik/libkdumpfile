@@ -32,7 +32,58 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <errno.h>
+#include <stdarg.h>
+
+kdump_status
+set_error(kdump_ctx *ctx, kdump_status ret, const char *msgfmt, ...)
+{
+	static const char failure[] = "(set_error failed)";
+	static const char delim[] = { ':', ' ' };
+
+	va_list ap;
+	const char *msg;
+	int msglen;
+	size_t remain;
+
+	if (ret == kdump_ok)
+		return ret;
+
+	va_start(ap, msgfmt);
+	msglen = vasprintf((char**)&msg, msgfmt, ap);
+	if (msglen < 0) {
+		msg = failure;
+		msglen = sizeof(failure) - 1;
+	}
+
+	if (!ctx->err_str) {
+		ctx->err_str = ctx->err_buf + sizeof(ctx->err_buf) - 1;
+		*ctx->err_str = '\0';
+		remain = sizeof(ctx->err_buf) - 1;
+	} else {
+		remain = ctx->err_str - ctx->err_buf;
+		if (remain >= sizeof(delim)) {
+			ctx->err_str -= sizeof(delim);
+			memcpy(ctx->err_str, delim, sizeof(delim));
+			remain -= sizeof(delim);
+		}
+	}
+
+	if (remain >= msglen) {
+		ctx->err_str -= msglen;
+		memcpy(ctx->err_str, msg, msglen);
+	} else {
+		ctx->err_str = ctx->err_buf;
+		memcpy(ctx->err_str, msg + msglen - remain, remain);
+	}
+
+	if (remain < msglen)
+		memcpy(ctx->err_buf, "...", 3);
+
+	va_end(ap);
+	return ret;
+}
 
 static size_t
 arch_ptr_size(enum kdump_arch arch)
