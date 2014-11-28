@@ -215,7 +215,8 @@ vmcoreinfo_symbol(kdump_ctx *ctx, struct vmcoreinfo *info,
 
 	val = strtoull(valstr, &p, 16);
 	if (*p)
-		return set_error(ctx, kdump_dataerr, "Invalid number");
+		return set_error(ctx, kdump_dataerr,
+				 "Invalid number: %s", valstr);
 
 	*symvalue = val;
 	return kdump_ok;

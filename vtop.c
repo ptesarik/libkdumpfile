@@ -91,6 +91,8 @@ set_region(kdump_ctx *ctx, kdump_vaddr_t first, kdump_vaddr_t last,
 					 newalloc * sizeof(*newrgn));
 			if (!newrgn)
 				return set_error(ctx, kdump_syserr,
+						 "Cannot allocate translation"
+						 " region array: %s",
 						 strerror(errno));
 
 			if (!rgn) {
@@ -191,5 +193,6 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	};
 
 	/* unknown translation method */
-	return set_error(ctx, kdump_dataerr, "Invalid translation method");
+	return set_error(ctx, kdump_dataerr,
+			 "Invalid translation method: %d", (int)xlat);
 }

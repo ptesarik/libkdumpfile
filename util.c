@@ -192,7 +192,9 @@ set_page_size_and_shift(kdump_ctx *ctx, size_t page_size, unsigned page_shift)
 {
 	void *page = realloc(ctx->page, page_size);
 	if (!page)
-		return set_error(ctx, kdump_syserr, strerror(errno));
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate page buffer (%zu bytes): %s",
+				 page_size, strerror(errno));
 	ctx->page = page;
 	ctx->page_size = page_size;
 	ctx->page_shift = page_shift;
@@ -228,7 +230,7 @@ set_page_size(kdump_ctx *ctx, size_t page_size)
 	/* It must be a power of 2 */
 	if (page_size != (page_size & ~(page_size - 1)))
 		return set_error(ctx, kdump_dataerr,
-				 "Invalid page size");
+				 "Invalid page size: %zu", page_size);
 
 	page_shift = ffsl((unsigned long)page_size) - 1;
 	return set_page_size_and_shift(ctx, page_size, page_shift);
@@ -336,13 +338,17 @@ store_vmcoreinfo(kdump_ctx *ctx, struct vmcoreinfo **pinfo,
 	struct vmcoreinfo_row *row;
 	char *p, *q;
 	unsigned n;
+	size_t sz;
 
 	n = count_lines(data, len);
-	info = malloc(sizeof(struct vmcoreinfo) +
-		      n * sizeof(struct vmcoreinfo_row) +
-		      2 * (len + 1));
+	sz = sizeof(struct vmcoreinfo) +
+		n * sizeof(struct vmcoreinfo_row) +
+		2 * (len + 1);
+	info = malloc(sz);
 	if (!info)
-		return set_error(ctx, kdump_syserr, strerror(errno));
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate VMCOREINFO (%zu bytes): %s",
+				 sz, strerror(errno));
 
 	info->raw = (char*)info->row + n * sizeof(struct vmcoreinfo_row);
 	memcpy(info->raw, data, len);

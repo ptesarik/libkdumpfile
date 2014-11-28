@@ -121,17 +121,25 @@ xlat(kdump_ctx *ctx, struct vtop_control *ctl)
 	case 0: idx = pmd_index(ctl->vaddr); break;
 	default:
 		return set_error(ctx, kdump_unsupported,
-				 "Unknown translation table type");
+				 "Unknown translation table type: %d",
+				 ctl->tbltype);
 	}
 
 	if (idx < ctl->off || idx >= ctl->len)
-		return set_error(ctx, kdump_nodata, "Page table not present");
+		return set_error(ctx, kdump_nodata,
+				 "Page table index %u not within %u and %u",
+				 idx, ctl->off, ctl->len);
 
 	entry = dump64toh(ctx, ctl->tbl[idx]);
 	if (PTE_I(entry))
-		return set_error(ctx, kdump_nodata, "Page table not present");
+		return set_error(ctx, kdump_nodata,
+				 "Page table not present: tbl%u[%u] = 0x%llx",
+				 ctl->tbltype, idx,
+				 (unsigned long long) entry);
 	if (PTE_TT(entry) != ctl->tbltype)
-		return set_error(ctx, kdump_dataerr, "Table type mismatch");
+		return set_error(ctx, kdump_dataerr,
+				 "Table type field %d in table %d",
+				 (int) PTE_TT(entry), ctl->tbltype);
 
 	if (ctl->tbltype <= 1 && PTE_FC(entry)) {
 		uint64_t mask = ctl->tbltype
@@ -200,7 +208,10 @@ s390x_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	entry = dump64toh(ctx, ctl.tbl[pte_index(vaddr)]);
 	if (PTE_I(entry))
-		return set_error(ctx, kdump_nodata, "Page not present");
+		return set_error(ctx, kdump_nodata,
+				 "Page not present: pte[%u] = 0x%llx",
+				 (unsigned) pte_index(vaddr),
+				 (unsigned long long) entry);
 
 	*paddr = (entry & PAGE_MASK) | (vaddr & ~PAGE_MASK);
 	return kdump_ok;
@@ -271,7 +282,9 @@ read_pgt(kdump_ctx *ctx, kdump_vaddr_t pgtaddr)
 
 	pgt = malloc(sizeof(uint64_t) * PTRS_PER_PGD);
 	if (!pgt)
-		return set_error(ctx, kdump_syserr, strerror(errno));
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate page table: %s",
+				 strerror(errno));
 
 	sz = sizeof(uint64_t) * PTRS_PER_PGD;
 	ret = kdump_readp(ctx, pgtaddr, pgt, &sz, KDUMP_PHYSADDR);
@@ -313,7 +326,9 @@ get_vmcoreinfo_from_lowcore(kdump_ctx *ctx)
 	notesz = descoff + hdr.n_descsz;
 	note = malloc(notesz);
 	if (!note)
-		return set_error(ctx, kdump_syserr, strerror(errno));
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate VMCOREINFO (%zu bytes): %s",
+				 notesz, strerror(errno));
 
 	sz = notesz;
 	ret = kdump_readp(ctx, addr, note, &sz, KDUMP_PHYSADDR);
@@ -333,7 +348,9 @@ s390x_init(kdump_ctx *ctx)
 
 	ctx->archdata = calloc(1, sizeof(struct s390x_data));
 	if (!ctx->archdata)
-		return set_error(ctx, kdump_syserr, strerror(errno));
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate s390x private data: %s",
+				 strerror(errno));
 
 	get_vmcoreinfo_from_lowcore(ctx);
 	clear_error(ctx);

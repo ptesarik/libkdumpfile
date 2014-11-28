@@ -357,6 +357,7 @@ fill_level1(kdump_ctx *ctx, unsigned endidx)
 		*p = calloc(PFN_IDX2_SIZE, sizeof(struct pfn_level2));
 		if (!*p)
 			return set_error(ctx, kdump_syserr,
+					 "Cannot allocate level 2 cache: %s",
 					 strerror(errno));
 		pfn = idx << (PFN_IDX3_BITS + PFN_IDX2_BITS);
 		if ( (off = find_page(ctx, off, pfn, &dp)) < 0)
@@ -404,6 +405,7 @@ fill_level2(kdump_ctx *ctx, unsigned idx1, unsigned endidx)
 	pp = malloc(PFN_IDX3_SIZE * sizeof(uint32_t));
 	if (!pp)
 		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate level 3 cache: %s",
 				 strerror(errno));
 	p->pfn_level3 = pp;
 	memset(pp, -1, PFN_IDX3_SIZE * sizeof(uint32_t));
@@ -430,6 +432,7 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	struct dump_page dp;
 	unsigned type;
 	off_t off;
+	ssize_t rd;
 	void *buf;
 	kdump_status ret;
 
@@ -443,7 +446,9 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	if (!lkcdp->pfn_level1[idx1]) {
 		ret = fill_level1(ctx, idx1);
 		if (ret != kdump_ok)
-			return ret;
+			return set_error(ctx, ret,
+					 "Cannot fill level 2 cache (idx %u)",
+					 idx1);
 	}
 	pfn_level2 = lkcdp->pfn_level1[idx1];
 
@@ -451,7 +456,9 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	if (!pfn_level2[idx2].pfn_level3) {
 		ret = fill_level2(ctx, idx1, idx2);
 		if (ret != kdump_ok)
-			return ret;
+			return set_error(ctx, ret,
+					 "Cannot fill level 3 cache (idx %u)",
+					 idx2);
 	}
 	off = pfn_level2[idx2].off;
 	pfn_level3 = pfn_level2[idx2].pfn_level3;
@@ -470,23 +477,29 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	case DUMP_COMPRESSED:
 		if (dp.dp_size > MAX_PAGE_SIZE)
 			return set_error(ctx, kdump_dataerr,
-					 "Wrong compressed size");
+					 "Wrong compressed size: %lu",
+					 (unsigned long) dp.dp_size);
 		buf = ctx->buffer;
 		break;
 	case DUMP_RAW:
 		if (dp.dp_size != ctx->page_size)
 			return set_error(ctx, kdump_dataerr,
-					 "Wrong page size");
+					 "Wrong page size: %lu",
+					 (unsigned long) dp.dp_size);
 		buf = ctx->page;
 		break;
 	default:
 		return set_error(ctx, kdump_unsupported,
-				 "Unsupported compression type");
+				 "Unsupported compression type: 0x%x", type);
 	}
 
 	/* read page data */
-	if (pread(ctx->fd, buf, dp.dp_size, off) != dp.dp_size)
-		return set_error(ctx, kdump_syserr, strerror(errno));
+	rd = pread(ctx->fd, buf, dp.dp_size, off);
+	if (rd != dp.dp_size)
+		return set_error(ctx, read_error(rd),
+				 "Cannot read page data at %llu: %s",
+				 (unsigned long long) off,
+				 read_err_str(rd));
 
 	if (type == DUMP_RAW)
 		goto out;
@@ -497,10 +510,11 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 					 buf, dp.dp_size);
 		if (ret)
 			return set_error(ctx, kdump_dataerr,
-					 "Decompression failed");
+					 "Decompression failed: %d", ret);
 		if (retlen != ctx->page_size)
 			return set_error(ctx, kdump_dataerr,
-					 "Wrong uncompressed size");
+					 "Wrong uncompressed size: %lu",
+					 (unsigned long) retlen);
 	} else if (lkcdp->compression == DUMP_COMPRESS_GZIP) {
 #if USE_ZLIB
 		uLongf retlen = ctx->page_size;
@@ -508,17 +522,20 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 				     buf, dp.dp_size);
 		if (ret != Z_OK)
 			return set_error(ctx, kdump_dataerr,
-					 "Decompression failed");
+					 "Decompression failed: %d", ret);
 		if (retlen != ctx->page_size)
 			return set_error(ctx, kdump_dataerr,
-					 "Wrong uncompressed size");
+					 "Wrong uncompressed size: %lu",
+					 (unsigned long) retlen);
 #else
 		return set_error(ctx, kdump_unsupported,
-				 "Unsupported compression method");
+				 "Unsupported compression method: %s",
+				 "zlib");
 #endif
 	} else
 		return set_error(ctx, kdump_unsupported,
-				 "Unsupported compression method");
+				 "Unknown compression method: %d",
+				 lkcdp->compression);
 
   out:
 	ctx->last_pfn = pfn;
@@ -596,6 +613,7 @@ open_common(kdump_ctx *ctx)
 	lkcdp = malloc(sizeof *lkcdp);
 	if (!lkcdp)
 		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate LKCD private data: %s",
 				 strerror(errno));
 
 	lkcdp->version = base_version(dump32toh(ctx, dh->dh_version));
@@ -634,7 +652,8 @@ open_common(kdump_ctx *ctx)
 
 	default:
 		ret = set_error(ctx, kdump_unsupported,
-				"Unsupported LKCD version");
+				"Unsupported LKCD version: %u",
+				lkcdp->version);
 	}
 
 	if (ret != kdump_ok)
@@ -647,7 +666,9 @@ open_common(kdump_ctx *ctx)
 	max_idx1 = pfn_idx1(ctx->max_pfn - 1) + 1;
 	lkcdp->pfn_level1 = calloc(max_idx1, sizeof(struct pfn_level2*));
 	if (!lkcdp->pfn_level1) {
-		set_error(ctx, kdump_syserr, strerror(errno));
+		set_error(ctx, kdump_syserr,
+			  "Cannot allocate level 1 cache: %s",
+			  strerror(errno));
 		goto err_free;
 	}
 

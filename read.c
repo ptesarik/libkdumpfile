@@ -158,7 +158,10 @@ kdump_read_string(kdump_ctx *ctx, kdump_addr_t addr,
 		if (!newstr) {
 			if (str)
 				free(str);
-			return set_error(ctx, kdump_syserr, strerror(errno));
+			return set_error(ctx, kdump_syserr,
+					 "Cannot enlarge string to"
+					 " %zu bytes: %s",
+					 newlength + 1, strerror(errno));
 		}
 		memcpy(newstr + length, ctx->page + off, partlen);
 		length = newlength;

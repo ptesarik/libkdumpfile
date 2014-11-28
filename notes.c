@@ -155,7 +155,8 @@ process_xc_xen_note(kdump_ctx *ctx, uint32_t type,
 
 		if (version != 1)
 			return set_error(ctx, kdump_unsupported,
-					 "Unsupported Xen dumpcore format version");
+					 "Unsupported Xen dumpcore format version: %llu",
+					 (unsigned long long) version);
 	}
 
 	return kdump_ok;
@@ -177,7 +178,7 @@ process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
 		unsigned long page_size = strtoul(val, &endp, 10);
 		if (*endp)
 			return set_error(ctx, kdump_dataerr,
-					 "Invalid PAGESIZE");
+					 "Invalid PAGESIZE: %s", val);
 
 		ret = set_page_size(ctx, page_size);
 		if (ret != kdump_ok)

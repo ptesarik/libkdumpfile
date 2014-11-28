@@ -51,30 +51,42 @@ get_vmcoreinfo(kdump_ctx *ctx)
 
 	f = fopen(FN_VMCOREINFO, "r");
 	if (!f)
-		return set_error(ctx, kdump_syserr, strerror(errno));
+		return set_error(ctx, kdump_syserr,
+				 "Cannot open %s: %s",
+				 FN_VMCOREINFO, strerror(errno));
 
 	if (fscanf(f, "%llx %llx", &addr, &length) == 2)
 		ret = kdump_ok;
 	else if (ferror(f))
-		ret = set_error(ctx, kdump_syserr, strerror(errno));
+		ret = set_error(ctx, kdump_syserr,
+				"Error reading %s: %s",
+				FN_VMCOREINFO, strerror(errno));
 	else
-		ret = set_error(ctx, kdump_dataerr, "Wrong file format");
+		ret = set_error(ctx, kdump_dataerr,
+				"Error parsing %s: Wrong file format",
+				FN_VMCOREINFO);
 	fclose(f);
 	if (ret != kdump_ok)
 		return ret;
 
 	info = malloc(length);
 	if (!info)
-		return set_error(ctx, kdump_syserr, strerror(errno));
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate buffer for VMCOREINFO: %s",
+				 strerror(errno));
 
 
 	if (lseek(ctx->fd, addr, SEEK_SET) == (off_t)-1) {
-		ret = set_error(ctx, kdump_syserr, strerror(errno));
+		ret = set_error(ctx, kdump_syserr,
+				"Cannot seek to VMCOREINFO: %s",
+				strerror(errno));
 		goto out;
 	}
 
 	if (paged_cpin(ctx->fd, info, length)) {
-		ret = set_error(ctx, kdump_syserr, strerror(errno));
+		ret = set_error(ctx, kdump_syserr,
+				"Cannot read VMCOREINFO: %s",
+				strerror(errno));
 		goto out;
 	}
 
@@ -82,15 +94,20 @@ get_vmcoreinfo(kdump_ctx *ctx)
 
   out:
 	free(info);
-	return set_error(ctx, ret, strerror(errno));
+	return ret;
 }
 
 static kdump_status
 devmem_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	off_t pos = pfn * ctx->page_size;
-	if (pread(ctx->fd, ctx->page, ctx->page_size, pos) != ctx->page_size)
-		return set_error(ctx, kdump_syserr, strerror(errno));
+	ssize_t rd;
+
+	rd = pread(ctx->fd, ctx->page, ctx->page_size, pos);
+	if (rd != ctx->page_size)
+		return set_error(ctx, read_error(rd),
+				 "Cannot read memory device: %s",
+				 read_err_str(rd));
 	return kdump_ok;
 }
 
@@ -101,7 +118,9 @@ devmem_probe(kdump_ctx *ctx)
 	kdump_status ret;
 
 	if (fstat(ctx->fd, &st))
-		return set_error(ctx, kdump_syserr, strerror(errno));
+		return set_error(ctx, kdump_syserr,
+				 "Cannot stat file: %s",
+				 strerror(errno));
 
 	if (!S_ISCHR(st.st_mode) ||
 	    (st.st_rdev != makedev(1, 1) &&

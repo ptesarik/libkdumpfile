@@ -96,6 +96,7 @@ s390_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	struct s390dump_priv *sdp = ctx->fmtdata;
 	kdump_paddr_t addr = pfn * ctx->page_size;
 	off_t pos;
+	ssize_t rd;
 
 	if (pfn == ctx->last_pfn)
 		return kdump_ok;
@@ -104,8 +105,12 @@ s390_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 
 	pos = (off_t)addr + (off_t)sdp->dataoff;
-	if (pread(ctx->fd, ctx->page, ctx->page_size, pos) != ctx->page_size)
-		return set_error(ctx, kdump_syserr, strerror(errno));
+	rd = pread(ctx->fd, ctx->page, ctx->page_size, pos);
+	if (rd != ctx->page_size)
+		return set_error(ctx, read_error(rd),
+				 "Cannot read page data at %llu: %s",
+				 (unsigned long long) pos,
+				 read_err_str(rd));
 
 	ctx->last_pfn = pfn;
 	return kdump_ok;
@@ -118,6 +123,7 @@ s390_probe(kdump_ctx *ctx)
 	struct s390dump_priv *sdp;
 	struct end_marker marker;
 	off_t pos;
+	ssize_t rd;
 	kdump_status ret;
 
 	if (be64toh(dh->h1.magic) != S390_MAGIC)
@@ -129,15 +135,21 @@ s390_probe(kdump_ctx *ctx)
 
 	pos = dump32toh(ctx, dh->h1.hdr_size) +
 		dump64toh(ctx, dh->h1.mem_size);
-	if (pread(ctx->fd, &marker, sizeof marker, pos) != sizeof marker)
-		return set_error(ctx, kdump_syserr, strerror(errno));
+	rd = pread(ctx->fd, &marker, sizeof marker, pos);
+	if (rd != sizeof marker)
+		return set_error(ctx, read_error(rd),
+				 "Cannot read end marker at %llu: %s",
+				 (unsigned long long) pos,
+				 read_err_str(rd));
 	if (memcmp(marker.str, END_MARKER, sizeof END_MARKER - 1) ||
 	    dump64toh(ctx, marker.tod) < dump64toh(ctx, dh->h1.tod))
 		return set_error(ctx, kdump_dataerr, "End marker not found");
 
 	sdp = calloc(1, sizeof *sdp);
 	if (!sdp)
-		return set_error(ctx, kdump_syserr, strerror(errno));
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate s390dump private data: %s",
+				 strerror(errno));
 	ctx->fmtdata = sdp;
 
 	sdp->dataoff = dump32toh(ctx, dh->h1.hdr_size);
@@ -158,7 +170,8 @@ s390_probe(kdump_ctx *ctx)
 
 	default:
 		ret = set_error(ctx, kdump_unsupported,
-				"Unsupported dump architecture");
+				"Unsupported dump architecture: %lu",
+				(unsigned long) dump32toh(ctx, dh->h1.arch));
 	}
 
  out:

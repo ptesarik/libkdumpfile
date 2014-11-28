@@ -63,21 +63,27 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 	/* Initialize context */
 	ctx = calloc(1, sizeof *ctx);
 	if (!ctx) {
-		ret = set_error(ctx, kdump_syserr, strerror(errno));
+		ret = set_error(ctx, kdump_syserr,
+				"Cannot allocate kdump context: %s",
+				strerror(errno));
 		goto err;
 	}
 	ctx->last_pfn = -(kdump_paddr_t)1;
 
 	ctx->buffer = malloc(MAX_PAGE_SIZE);
 	if (!ctx->buffer) {
-		ret = set_error(ctx, kdump_syserr, strerror(errno));
+		ret = set_error(ctx, kdump_syserr,
+				"Cannot allocate temporary buffer: %s",
+				strerror(errno));
 		goto err_ctx;
 	}
 
 	ctx->fd = fd;
 
 	if (paged_cpin(ctx->fd, ctx->buffer, MAX_PAGE_SIZE)) {
-		ret = set_error(ctx, kdump_syserr, strerror(errno));
+		ret = set_error(ctx, kdump_syserr,
+				"Cannot read %lu bytes at 0: %s",
+				MAX_PAGE_SIZE, strerror(errno));
 		goto err_ctx;
 	}
 
@@ -194,7 +200,8 @@ get_version_code(kdump_ctx *ctx)
 	a = strtoul(p, &endp, 10);
 	if (endp == p || *endp != '.')
 		return set_error(ctx, kdump_dataerr,
-				 "Invalid kernel version");
+				 "Invalid kernel version: %s",
+				 ctx->utsname.release);
 
 	b = c = 0L;
 	if (*endp) {
@@ -202,14 +209,16 @@ get_version_code(kdump_ctx *ctx)
 		b = strtoul(p, &endp, 10);
 		if (endp == p || *endp != '.')
 			return set_error(ctx, kdump_dataerr,
-					 "Invalid kernel version");
+					 "Invalid kernel version: %s",
+					 ctx->utsname.release);
 
 		if (*endp) {
 			p = endp + 1;
 			c = strtoul(p, &endp, 10);
 			if (endp == p)
 				return set_error(ctx, kdump_dataerr,
-						 "Invalid kernel version");
+						 "Invalid kernel version: %s",
+						 ctx->utsname.release);
 		}
 	}
 
