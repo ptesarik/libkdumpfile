@@ -90,6 +90,7 @@ kdump_status kdump_read_string(kdump_ctx *ctx, kdump_addr_t addr,
 
 const char *kdump_format(kdump_ctx *ctx);
 kdump_byte_order_t kdump_byte_order(kdump_ctx *ctx);
+size_t kdump_ptr_size(kdump_ctx *ctx);
 
 /* Return the name of the architecture.
  * Unlike kdump_machine, which may contain the name of a particular

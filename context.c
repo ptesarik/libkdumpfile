@@ -52,6 +52,12 @@ kdump_byte_order(kdump_ctx *ctx)
 	return ctx->byte_order;
 }
 
+size_t
+kdump_ptr_size(kdump_ctx *ctx)
+{
+	return ctx->ptr_size;
+}
+
 const char *
 kdump_arch_name(kdump_ctx *ctx)
 {

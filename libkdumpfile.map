@@ -10,6 +10,7 @@ LIBKDUMPFILE_0 {
     kdump_read_string;
     kdump_format;
     kdump_byte_order;
+    kdump_ptr_size;
     kdump_arch_name;
     kdump_is_xen;
     kdump_pagesize;
