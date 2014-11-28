@@ -402,11 +402,10 @@ fill_level2(kdump_ctx *ctx, unsigned idx1, unsigned endidx)
 		p->off = baseoff;
 	}
 
-	pp = malloc(PFN_IDX3_SIZE * sizeof(uint32_t));
+	pp = ctx_malloc(PFN_IDX3_SIZE * sizeof(uint32_t),
+			ctx, "level 3 cache");
 	if (!pp)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate level 3 cache: %s",
-				 strerror(errno));
+		return kdump_syserr;
 	p->pfn_level3 = pp;
 	memset(pp, -1, PFN_IDX3_SIZE * sizeof(uint32_t));
 
@@ -610,11 +609,9 @@ open_common(kdump_ctx *ctx)
 	unsigned max_idx1;
 	kdump_status ret;
 
-	lkcdp = malloc(sizeof *lkcdp);
+	lkcdp = ctx_malloc(sizeof *lkcdp, ctx, "LKCD private data");
 	if (!lkcdp)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate LKCD private data: %s",
-				 strerror(errno));
+		return kdump_syserr;
 
 	lkcdp->version = base_version(dump32toh(ctx, dh->dh_version));
 	snprintf(lkcdp->format, sizeof(lkcdp->format),

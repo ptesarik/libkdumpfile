@@ -308,11 +308,9 @@ read_vmcoreinfo(kdump_ctx *ctx, off_t off, size_t size)
 	ssize_t rd;
 	kdump_status ret = kdump_ok;
 
-	info = malloc(size);
+	info = ctx_malloc(size, ctx, "VMCOREINFO buffer");
 	if (!info)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate VMCOREINFO (%zu bytes): %s",
-				 size, strerror(errno));
+		return kdump_syserr;
 
 	rd = pread(ctx->fd, info, size, off);
 	if (rd != size)
@@ -336,11 +334,9 @@ read_notes(kdump_ctx *ctx, off_t off, size_t size)
 	ssize_t rd;
 	kdump_status ret = kdump_ok;
 
-	notes = malloc(size);
+	notes = ctx_malloc(size, ctx, "notes");
 	if (!notes)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate notes (%zu bytes): %s",
-				 size, strerror(errno));
+		return kdump_syserr;
 
 	rd = pread(ctx->fd, notes, size, off);
 	if (rd != size) {
@@ -398,10 +394,8 @@ read_bitmap(kdump_ctx *ctx, int32_t sub_hdr_size,
 	if (ctx->max_pfn > max_bitmap_pfn)
 		ctx->max_pfn = max_bitmap_pfn;
 
-	if (! (ddp->bitmap = malloc(bitmapsize)) )
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate page bitmap (%zu bytes): %s",
-				 bitmapsize, strerror(errno));
+	if (! (ddp->bitmap = ctx_malloc(bitmapsize, ctx, "page bitmap")) )
+		return kdump_syserr;
 
 	rd = pread(ctx->fd, ddp->bitmap, bitmapsize, off);
 	if (rd != bitmapsize)

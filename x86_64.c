@@ -305,11 +305,9 @@ read_pgt(kdump_ctx *ctx)
 				 "Wrong page directory address: 0x%llx",
 				 (unsigned long long) pgtaddr);
 
-	pgt = malloc(PAGE_SIZE);
+	pgt = ctx_malloc(PAGE_SIZE, ctx, "page table");
 	if (!pgt)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate page table (%zu bytes): %s",
-				 PAGE_SIZE, strerror(errno));
+		return kdump_syserr;
 
 	sz = PAGE_SIZE;
 	ret = kdump_readp(ctx, pgtaddr - __START_KERNEL_map + ctx->phys_base,
@@ -421,11 +419,9 @@ process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 
 	++ctx->num_cpus;
 
-	cs = malloc(sizeof *cs);
+	cs = ctx_malloc(sizeof *cs, ctx, "x86_64 registers");
 	if (!cs)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate x86_64 registers: %s",
-				 strerror(errno));
+		return kdump_syserr;
 
 	cs->pid = dump32toh(ctx, status->pr_pid);
 	for (i = 0; i < ELF_NGREG; ++i)

@@ -280,11 +280,9 @@ read_pgt(kdump_ctx *ctx, kdump_vaddr_t pgtaddr)
 	size_t sz;
 	kdump_status ret;
 
-	pgt = malloc(sizeof(uint64_t) * PTRS_PER_PGD);
+	pgt = ctx_malloc(sizeof(uint64_t) * PTRS_PER_PGD, ctx, "page table");
 	if (!pgt)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate page table: %s",
-				 strerror(errno));
+		return kdump_syserr;
 
 	sz = sizeof(uint64_t) * PTRS_PER_PGD;
 	ret = kdump_readp(ctx, pgtaddr, pgt, &sz, KDUMP_PHYSADDR);
@@ -324,11 +322,9 @@ get_vmcoreinfo_from_lowcore(kdump_ctx *ctx)
 
 	descoff = sizeof(Elf64_Nhdr) + ((hdr.n_namesz + 3) & ~3);
 	notesz = descoff + hdr.n_descsz;
-	note = malloc(notesz);
+	note = ctx_malloc(notesz, ctx, "VMCOREINFO buffer");
 	if (!note)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate VMCOREINFO (%zu bytes): %s",
-				 notesz, strerror(errno));
+		return kdump_syserr;
 
 	sz = notesz;
 	ret = kdump_readp(ctx, addr, note, &sz, KDUMP_PHYSADDR);

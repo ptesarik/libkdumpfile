@@ -69,12 +69,9 @@ get_vmcoreinfo(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		return ret;
 
-	info = malloc(length);
+	info = ctx_malloc(length, ctx, "VMCOREINFO buffer");
 	if (!info)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate buffer for VMCOREINFO: %s",
-				 strerror(errno));
-
+		return kdump_syserr;
 
 	if (lseek(ctx->fd, addr, SEEK_SET) == (off_t)-1) {
 		ret = set_error(ctx, kdump_syserr,

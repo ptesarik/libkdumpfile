@@ -70,11 +70,9 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 	}
 	ctx->last_pfn = -(kdump_paddr_t)1;
 
-	ctx->buffer = malloc(MAX_PAGE_SIZE);
+	ctx->buffer = ctx_malloc(MAX_PAGE_SIZE, ctx, "scratch buffer");
 	if (!ctx->buffer) {
-		ret = set_error(ctx, kdump_syserr,
-				"Cannot allocate temporary buffer: %s",
-				strerror(errno));
+		ret = kdump_syserr;
 		goto err_ctx;
 	}
 

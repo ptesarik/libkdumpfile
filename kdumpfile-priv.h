@@ -303,6 +303,9 @@ kdump_status set_error(kdump_ctx *ctx, kdump_status ret,
 		       const char *msgfmt, ...)
 	__attribute__ ((format (printf, 3, 4)));
 
+#define ctx_malloc INTERNAL_NAME(ctx_malloc)
+void *ctx_malloc(size_t size, kdump_ctx *ctx, const char *desc);
+
 #define machine_arch INTERNAL_NAME(machine_arch)
 enum kdump_arch machine_arch(const char *machine);
 

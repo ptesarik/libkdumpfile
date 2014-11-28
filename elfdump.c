@@ -224,11 +224,11 @@ init_segments(kdump_ctx *ctx, unsigned phnum)
 	if (!phnum)
 		return kdump_ok;
 
-	edp->load_segments = malloc(2 * phnum * sizeof(struct load_segment));
+	edp->load_segments =
+		ctx_malloc(2 * phnum * sizeof(struct load_segment),
+			   ctx, "program headers");
 	if (!edp->load_segments)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate %u program headers: %s",
-				 phnum, strerror(errno));
+		return kdump_syserr;
 	edp->num_load_segments = 0;
 
 	edp->note_segments = edp->load_segments + phnum;
@@ -244,11 +244,11 @@ init_sections(kdump_ctx *ctx, unsigned snum)
 	if (!snum)
 		return kdump_ok;
 
-	edp->sections = malloc(snum * sizeof(struct section));
+	edp->sections =
+		ctx_malloc(snum * sizeof(struct section),
+			   ctx, "section headers");
 	if (!edp->sections)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate %u section headers: %s",
-				 snum, strerror(errno));
+		return kdump_syserr;
 	edp->num_sections = 0;
 	return kdump_ok;
 }
@@ -292,7 +292,7 @@ read_elf_sect(kdump_ctx *ctx, struct section *sect)
 {
 	void *buf;
 
-	buf = malloc(sect->size);
+	buf = ctx_malloc(sect->size, ctx, "ELF section buffer");
 	if (!buf)
 		return NULL;
 
@@ -505,10 +505,9 @@ initialize_xen_map64(kdump_ctx *ctx, void *dir)
 				++mfns;
 	}
 
-	if (! (map = malloc(mfns * sizeof(uint64_t))) )
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate Xen P2M map (%u mfns): %s",
-				 mfns, strerror(errno));
+	map = ctx_malloc(mfns * sizeof(uint64_t), ctx, "Xen P2M map");
+	if (!map)
+		return kdump_syserr;
 	edp->xen_map = map;
 	edp->xen_map_size = mfns;
 
@@ -557,10 +556,9 @@ initialize_xen_map32(kdump_ctx *ctx, void *dir)
 				++mfns;
 	}
 
-	if (! (map = malloc(mfns * sizeof(uint32_t))) )
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate Xen P2M map (%u mfns): %s",
-				 mfns, strerror(errno));
+	map = ctx_malloc(mfns * sizeof(uint32_t), ctx, "Xen P2M map");
+	if (!map)
+		return kdump_syserr;
 	edp->xen_map = map;
 	edp->xen_map_size = mfns;
 
@@ -596,11 +594,9 @@ initialize_xen_map(kdump_ctx *ctx)
 				 (unsigned long long) ctx->xen_p2m_mfn);
 
 	dir = ctx->page;
-	page = malloc(ctx->page_size);
+	page = ctx_malloc(ctx->page_size, ctx, "page buffer");
 	if (page == NULL)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate page buffer (%zu bytes): %s",
-				 ctx->page_size, strerror(errno));
+		return kdump_syserr;
 	ctx->page = page;
 
 	ret = (ctx->ptr_size == 8)
@@ -673,11 +669,9 @@ open_common(kdump_ctx *ctx)
 	notesz = 0;
 	for (i = 0; i < edp->num_note_segments; ++i)
 		notesz += edp->note_segments[i].size;
-	notes = malloc(notesz);
+	notes = ctx_malloc(notesz, ctx, "ELF notes");
 	if (!notes)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate notes (%zu bytes): %s",
-				 notesz, strerror(errno));
+		return kdump_syserr;
 
 	ret = process_elf_notes(ctx, notes);
 	free(notes);

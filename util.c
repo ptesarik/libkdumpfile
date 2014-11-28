@@ -85,6 +85,17 @@ set_error(kdump_ctx *ctx, kdump_status ret, const char *msgfmt, ...)
 	return ret;
 }
 
+void *
+ctx_malloc(size_t size, kdump_ctx *ctx, const char *desc)
+{
+	void *ret = malloc(size);
+	if (!ret)
+		set_error(ctx, kdump_syserr,
+			  "Cannot allocate %s (%zu bytes): %s",
+			  desc, size, strerror(errno));
+	return ret;
+}
+
 static size_t
 arch_ptr_size(enum kdump_arch arch)
 {
@@ -344,11 +355,9 @@ store_vmcoreinfo(kdump_ctx *ctx, struct vmcoreinfo **pinfo,
 	sz = sizeof(struct vmcoreinfo) +
 		n * sizeof(struct vmcoreinfo_row) +
 		2 * (len + 1);
-	info = malloc(sz);
+	info = ctx_malloc(sz, ctx, "VMCOREINFO");
 	if (!info)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate VMCOREINFO (%zu bytes): %s",
-				 sz, strerror(errno));
+		return kdump_syserr;
 
 	info->raw = (char*)info->row + n * sizeof(struct vmcoreinfo_row);
 	memcpy(info->raw, data, len);

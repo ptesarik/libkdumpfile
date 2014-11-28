@@ -167,11 +167,9 @@ process_ia32_prstatus(kdump_ctx *ctx, void *data, size_t size)
 
 	++ctx->num_cpus;
 
-	cs = malloc(sizeof *cs);
+	cs = ctx_malloc(sizeof *cs, ctx, "ia32 registers");
 	if (!cs)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate ia32 registers: %s",
-				 strerror(errno));
+		return kdump_syserr;
 
 	cs->pid = dump32toh(ctx, status->pr_pid);
 	for (i = 0; i < ELF_NGREG; ++i)
@@ -241,11 +239,9 @@ read_pgt(kdump_ctx *ctx)
 		? PTRS_PER_PGD_PAE * sizeof(uint64_t)
 		: PAGE_SIZE;
 
-	pgt = malloc(sz);
+	pgt = ctx_malloc(sz, ctx, "page table");
 	if (!pgt)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate page table (%zu bytes): %s",
-				 sz, strerror(errno));
+		return kdump_syserr;
 
 	ret = kdump_readp(ctx, pgtaddr - __START_KERNEL_map,
 			  pgt, &sz, KDUMP_PHYSADDR);
