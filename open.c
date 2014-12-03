@@ -62,12 +62,8 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 
 	/* Initialize context */
 	ctx = calloc(1, sizeof *ctx);
-	if (!ctx) {
-		ret = set_error(ctx, kdump_syserr,
-				"Cannot allocate kdump context: %s",
-				strerror(errno));
-		goto err;
-	}
+	if (!ctx)
+		return kdump_syserr;
 	ctx->last_pfn = -(kdump_paddr_t)1;
 
 	ctx->buffer = ctx_malloc(MAX_PAGE_SIZE, ctx, "scratch buffer");
@@ -98,7 +94,6 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 
   err_ctx:
 	kdump_free(ctx);
-  err:
 	return ret;
 }
 
