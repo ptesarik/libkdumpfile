@@ -1,6 +1,7 @@
 0.1.4
 -----
   * support for IA32 (32-bit x86) architecture
+  * verbose error reporting
 
 0.1.3
 -----

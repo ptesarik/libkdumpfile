@@ -53,48 +53,69 @@ static const struct format_ops *formats[] = {
 	&devmem_ops
 };
 
+kdump_ctx *
+kdump_init(void)
+{
+	kdump_ctx *ctx;
+
+	ctx = calloc(1, sizeof *ctx);
+	if (!ctx)
+		return NULL;
+
+	ctx->last_pfn = -(kdump_paddr_t)1;
+
+	return ctx;
+}
+
 kdump_status
 kdump_fdopen(kdump_ctx **pctx, int fd)
 {
 	kdump_ctx *ctx;
 	kdump_status ret;
-	int i;
 
 	/* Initialize context */
-	ctx = calloc(1, sizeof *ctx);
+	ctx = kdump_init();
 	if (!ctx)
 		return kdump_syserr;
-	ctx->last_pfn = -(kdump_paddr_t)1;
+
+	ret = kdump_set_fd(ctx, fd);
+	if (ret != kdump_ok) {
+		kdump_free(ctx);
+		return ret;
+	}
+
+	*pctx = ctx;
+	return kdump_ok;
+}
+
+kdump_status
+kdump_set_fd(kdump_ctx *ctx, int fd)
+{
+	kdump_status ret;
+	int i;
 
 	ctx->buffer = ctx_malloc(MAX_PAGE_SIZE, ctx, "scratch buffer");
-	if (!ctx->buffer) {
-		ret = kdump_syserr;
-		goto err_ctx;
-	}
+	if (!ctx->buffer)
+		return kdump_syserr;
 
 	ctx->fd = fd;
 
-	if (paged_cpin(ctx->fd, ctx->buffer, MAX_PAGE_SIZE)) {
-		ret = set_error(ctx, kdump_syserr,
-				"Cannot read %lu bytes at 0: %s",
-				MAX_PAGE_SIZE, strerror(errno));
-		goto err_ctx;
-	}
+	if (paged_cpin(ctx->fd, ctx->buffer, MAX_PAGE_SIZE))
+		return set_error(ctx, kdump_syserr,
+				 "Cannot read %lu bytes at 0: %s",
+				 MAX_PAGE_SIZE, strerror(errno));
 
 	for (i = 0; i < ARRAY_SIZE(formats); ++i) {
 		ctx->ops = formats[i];
 		ret = ctx->ops->probe(ctx);
-		if (ret == kdump_ok) {
-			*pctx = ctx;
+		if (ret == kdump_ok)
 			return kdump_open_known(ctx);
-		}
+
 		clear_error(ctx);
 	}
-	ctx->ops = NULL;
 
-  err_ctx:
-	kdump_free(ctx);
-	return ret;
+	ctx->ops = NULL;
+	return set_error(ctx, kdump_unsupported, "Unknown file format");
 }
 
 static kdump_status

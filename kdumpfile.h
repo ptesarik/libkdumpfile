@@ -68,10 +68,13 @@ typedef struct _tag_kdump_xen_version {
 	const char *extra;
 } kdump_xen_version_t;
 
-kdump_status kdump_fdopen(kdump_ctx **pctx, int fd);
+kdump_ctx *kdump_init(void);
 void kdump_free(kdump_ctx *ctx);
 
 const char *kdump_err_str(kdump_ctx *ctx);
+
+kdump_status kdump_set_fd(kdump_ctx *ctx, int fd);
+kdump_status kdump_fdopen(kdump_ctx **pctx, int fd);
 
 kdump_status kdump_vtop_init(kdump_ctx *ctx);
 kdump_status kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
