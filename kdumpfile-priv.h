@@ -332,8 +332,8 @@ int uncompress_rle(unsigned char *dst, size_t *pdstlen,
 kdump_status store_vmcoreinfo(kdump_ctx *ctx, struct vmcoreinfo **pinfo,
 			      void *data, size_t len);
 
-#define paged_cpin INTERNAL_NAME(paged_cpin)
-size_t paged_cpin(int fd, void *buffer, size_t size);
+#define paged_read INTERNAL_NAME(paged_read)
+ssize_t paged_read(int fd, void *buffer, size_t size);
 
 /* ELF notes */
 

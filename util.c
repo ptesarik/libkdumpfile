@@ -399,19 +399,23 @@ store_vmcoreinfo(kdump_ctx *ctx, struct vmcoreinfo **pinfo,
 }
 
 /* /dev/crash cannot handle reads larger than page size */
-size_t
-paged_cpin(int fd, void *buffer, size_t size)
+ssize_t
+paged_read(int fd, void *buffer, size_t size)
 {
 	long page_size = sysconf(_SC_PAGESIZE);
-	while (size) {
-		size_t chunksize = (size > page_size)
+	size_t todo = size;
+	while (todo) {
+		size_t chunksize = (todo > page_size)
 			? page_size
-			: size;
-		if (read(fd, buffer, chunksize) != chunksize)
-			return size;
+			: todo;
+		ssize_t rd = read(fd, buffer, chunksize);
+		if (rd < 0)
+			return rd;
+		if (rd != chunksize)
+			break;
 
 		buffer += chunksize;
-		size -= chunksize;
+		todo -= chunksize;
 	}
-	return 0;
+	return size - todo;
 }

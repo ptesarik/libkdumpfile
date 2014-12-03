@@ -47,6 +47,7 @@ get_vmcoreinfo(kdump_ctx *ctx)
 	FILE *f;
 	unsigned long long addr, length;
 	void *info;
+	ssize_t rd;
 	kdump_status ret;
 
 	f = fopen(FN_VMCOREINFO, "r");
@@ -80,10 +81,11 @@ get_vmcoreinfo(kdump_ctx *ctx)
 		goto out;
 	}
 
-	if (paged_cpin(ctx->fd, info, length)) {
-		ret = set_error(ctx, kdump_syserr,
+	rd = paged_read(ctx->fd, info, length);
+	if (rd != length) {
+		ret = set_error(ctx, read_error(rd),
 				"Cannot read VMCOREINFO: %s",
-				strerror(errno));
+				read_err_str(rd));
 		goto out;
 	}
 
