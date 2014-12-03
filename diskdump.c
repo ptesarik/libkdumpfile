@@ -152,6 +152,12 @@ struct disk_dump_priv {
 	off_t descoff;		/* position of page descriptor table */
 };
 
+struct setup_data {
+	kdump_ctx *ctx;
+	off_t note_off;
+	size_t note_sz;
+};
+
 /* flags */
 #define DUMP_DH_COMPRESSED_ZLIB	0x1	/* page is compressed with zlib */
 #define DUMP_DH_COMPRESSED_LZO	0x2	/* page is compressed with lzo */
@@ -441,8 +447,9 @@ try_header(kdump_ctx *ctx, int32_t block_size,
 }
 
 static kdump_status
-read_sub_hdr_32(kdump_ctx *ctx, int32_t header_version)
+read_sub_hdr_32(struct setup_data *sdp, int32_t header_version)
 {
+	kdump_ctx *ctx = sdp->ctx;
 	struct kdump_sub_header_32 subhdr;
 	ssize_t rd;
 	kdump_status ret = kdump_ok;
@@ -463,10 +470,10 @@ read_sub_hdr_32(kdump_ctx *ctx, int32_t header_version)
 
 	set_phys_base(ctx, dump32toh(ctx, subhdr.phys_base));
 
-	if (header_version >= 4)
-		ret = read_notes(ctx, dump64toh(ctx, subhdr.offset_note),
-				 dump32toh(ctx, subhdr.size_note));
-	else if (header_version >= 3)
+	if (header_version >= 4) {
+		sdp->note_off = dump64toh(ctx, subhdr.offset_note);
+		sdp->note_sz = dump32toh(ctx, subhdr.size_note);
+	} else if (header_version >= 3)
 		ret = read_vmcoreinfo(ctx,
 				      dump64toh(ctx, subhdr.offset_vmcoreinfo),
 				      dump32toh(ctx, subhdr.size_vmcoreinfo));
@@ -478,15 +485,16 @@ read_sub_hdr_32(kdump_ctx *ctx, int32_t header_version)
 }
 
 static kdump_status
-do_header_32(kdump_ctx *ctx, struct disk_dump_header_32 *dh,
+do_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh,
 	     kdump_byte_order_t byte_order)
 {
+	kdump_ctx *ctx = sdp->ctx;
 	kdump_status ret;
 
 	ctx->byte_order = byte_order;
 	ctx->ptr_size = 4;
 
-	ret = read_sub_hdr_32(ctx, dump32toh(ctx, dh->header_version));
+	ret = read_sub_hdr_32(sdp, dump32toh(ctx, dh->header_version));
 	if (ret != kdump_ok)
 		return ret;
 
@@ -495,15 +503,16 @@ do_header_32(kdump_ctx *ctx, struct disk_dump_header_32 *dh,
 }
 
 static kdump_status
-try_header_32(kdump_ctx *ctx, struct disk_dump_header_32 *dh)
+try_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh)
 {
+	kdump_ctx *ctx = sdp->ctx;
 	kdump_status ret;
 
 	ret = try_header(ctx, le32toh(dh->block_size),
 			 le32toh(dh->bitmap_blocks),
 			 le32toh(dh->max_mapnr));
 	if (ret == kdump_ok)
-		return do_header_32(ctx, dh, kdump_little_endian);
+		return do_header_32(sdp, dh, kdump_little_endian);
 
 	if (ret != kdump_dataerr)
 		return ret;
@@ -513,14 +522,15 @@ try_header_32(kdump_ctx *ctx, struct disk_dump_header_32 *dh)
 			 be32toh(dh->bitmap_blocks),
 			 be32toh(dh->max_mapnr));
 	if (ret == kdump_ok)
-		return do_header_32(ctx, dh, kdump_big_endian);
+		return do_header_32(sdp, dh, kdump_big_endian);
 
 	return ret;
 }
 
 static kdump_status
-read_sub_hdr_64(kdump_ctx *ctx, int32_t header_version)
+read_sub_hdr_64(struct setup_data *sdp, int32_t header_version)
 {
+	kdump_ctx *ctx = sdp->ctx;
 	struct kdump_sub_header_64 subhdr;
 	ssize_t rd;
 	kdump_status ret = kdump_ok;
@@ -541,10 +551,10 @@ read_sub_hdr_64(kdump_ctx *ctx, int32_t header_version)
 
 	set_phys_base(ctx, dump64toh(ctx, subhdr.phys_base));
 
-	if (header_version >= 4)
-		ret = read_notes(ctx, dump64toh(ctx, subhdr.offset_note),
-				 dump64toh(ctx, subhdr.size_note));
-	else if (header_version >= 3)
+	if (header_version >= 4) {
+		sdp->note_off = dump64toh(ctx, subhdr.offset_note);
+		sdp->note_sz = dump64toh(ctx, subhdr.size_note);
+	} else if (header_version >= 3)
 		ret = read_vmcoreinfo(ctx,
 				      dump64toh(ctx, subhdr.offset_vmcoreinfo),
 				      dump64toh(ctx, subhdr.size_vmcoreinfo));
@@ -556,15 +566,16 @@ read_sub_hdr_64(kdump_ctx *ctx, int32_t header_version)
 }
 
 static kdump_status
-do_header_64(kdump_ctx *ctx, struct disk_dump_header_64 *dh,
+do_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh,
 	     kdump_byte_order_t byte_order)
 {
+	kdump_ctx *ctx = sdp->ctx;
 	kdump_status ret;
 
 	ctx->byte_order = byte_order;
 	ctx->ptr_size = 8;
 
-	ret = read_sub_hdr_64(ctx, dump32toh(ctx, dh->header_version));
+	ret = read_sub_hdr_64(sdp, dump32toh(ctx, dh->header_version));
 	if (ret != kdump_ok)
 		return ret;
 
@@ -573,15 +584,16 @@ do_header_64(kdump_ctx *ctx, struct disk_dump_header_64 *dh,
 }
 
 static kdump_status
-try_header_64(kdump_ctx *ctx, struct disk_dump_header_64 *dh)
+try_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh)
 {
+	kdump_ctx *ctx = sdp->ctx;
 	kdump_status ret;
 
 	ret = try_header(ctx, le32toh(dh->block_size),
 			 le32toh(dh->bitmap_blocks),
 			 le32toh(dh->max_mapnr));
 	if (ret == kdump_ok)
-		return do_header_64(ctx, dh, kdump_little_endian);
+		return do_header_64(sdp, dh, kdump_little_endian);
 
 	if (ret != kdump_dataerr)
 		return ret;
@@ -591,7 +603,7 @@ try_header_64(kdump_ctx *ctx, struct disk_dump_header_64 *dh)
 			 be32toh(dh->bitmap_blocks),
 			 be32toh(dh->max_mapnr));
 	if (ret == kdump_ok)
-		return do_header_64(ctx, dh, kdump_big_endian);
+		return do_header_64(sdp, dh, kdump_big_endian);
 
 	return ret;
 }
@@ -602,7 +614,11 @@ open_common(kdump_ctx *ctx)
 	struct disk_dump_header_32 *dh32 = ctx->buffer;
 	struct disk_dump_header_64 *dh64 = ctx->buffer;
 	struct disk_dump_priv *ddp;
+	struct setup_data sd;
 	kdump_status ret;
+
+	memset(&sd, 0, sizeof sd);
+	sd.ctx = ctx;
 
 	ddp = calloc(1, sizeof *ddp);
 	if (!ddp)
@@ -617,23 +633,34 @@ open_common(kdump_ctx *ctx)
 	else if (uts_looks_sane(&dh64->utsname))
 		set_uts(ctx, &dh64->utsname);
 
-	ret = try_header_32(ctx, dh32);
+	ret = try_header_32(&sd, dh32);
 	if (ret == kdump_dataerr) {
 		clear_error(ctx);
-		ret = try_header_64(ctx, dh64);
+		ret = try_header_64(&sd, dh64);
 	}
 	if (ret == kdump_dataerr) {
 		clear_error(ctx);
 		ret = set_error(ctx, kdump_unsupported,
 				"Invalid diskdump header content");
 	}
-
-	if (ret == kdump_ok && ctx->arch == ARCH_UNKNOWN)
-		ret = set_arch(ctx, machine_arch(ctx->utsname.machine));
-
 	if (ret != kdump_ok)
-		diskdump_cleanup(ctx);
+		goto err_cleanup;
 
+	if (sd.note_sz) {
+		ret = read_notes(ctx, sd.note_off, sd.note_sz);
+		if (ret != kdump_ok)
+			goto err_cleanup;
+	}
+
+	if (ctx->arch == ARCH_UNKNOWN)
+		ret = set_arch(ctx, machine_arch(ctx->utsname.machine));
+	if (ret != kdump_ok)
+		goto err_cleanup;
+
+	return ret;
+
+ err_cleanup:
+	diskdump_cleanup(ctx);
 	return ret;
 }
 
