@@ -447,8 +447,13 @@ read_sub_hdr_32(kdump_ctx *ctx, int32_t header_version)
 	ssize_t rd;
 	kdump_status ret = kdump_ok;
 
+	if (header_version < 0)
+		return set_error(ctx, kdump_dataerr,
+				 "Invalid header version: %lu",
+				 (unsigned long) header_version);
+
 	if (header_version < 1)
-		return header_version < 0 ? kdump_dataerr : kdump_ok;
+		return kdump_ok;
 
 	rd = pread(ctx->fd, &subhdr, sizeof subhdr, ctx->page_size);
 	if (rd != sizeof subhdr)
@@ -524,6 +529,9 @@ read_sub_hdr_64(kdump_ctx *ctx, int32_t header_version)
 		return set_error(ctx, kdump_dataerr,
 				 "Invalid header version: %lu",
 				 (unsigned long) header_version);
+
+	if (header_version < 1)
+		return kdump_ok;
 
 	rd = pread(ctx->fd, &subhdr, sizeof subhdr, ctx->page_size);
 	if (rd != sizeof subhdr)
