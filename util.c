@@ -419,3 +419,30 @@ paged_read(int fd, void *buffer, size_t size)
 	}
 	return size - todo;
 }
+
+uint32_t
+cksum32(void *buffer, size_t size, uint32_t csum)
+{
+	uint32_t *p, prevsum;
+
+	for (p = buffer; size >= 4; ++p, size -= 4) {
+		prevsum = csum;
+		csum += be32toh(*p);
+		if (csum < prevsum)
+			++csum;
+	}
+
+	if (size) {
+		unsigned char *pbyte = (unsigned char*)p;
+		uint32_t val = 0;
+		while (size--)
+			val = (val >> 8) | (*pbyte++ << 24);
+
+		prevsum = csum;
+		csum += val;
+		if (csum < prevsum)
+			++csum;
+	}
+
+	return csum;
+}

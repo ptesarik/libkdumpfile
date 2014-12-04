@@ -335,6 +335,9 @@ kdump_status store_vmcoreinfo(kdump_ctx *ctx, struct vmcoreinfo **pinfo,
 #define paged_read INTERNAL_NAME(paged_read)
 ssize_t paged_read(int fd, void *buffer, size_t size);
 
+#define cksum32 INTERNAL_NAME(cksum32)
+uint32_t cksum32(void *buffer, size_t size, uint32_t csum);
+
 /* ELF notes */
 
 #define process_notes INTERNAL_NAME(process_notes)
