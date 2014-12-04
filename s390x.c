@@ -92,6 +92,28 @@
 #define LC_VMCORE_INFO	0x0e0c
 #define LC_OS_INFO	0x0e18
 
+#define OS_INFO_MAGIC	0x4f53494e464f535aULL
+
+#define OS_INFO_VMCOREINFO	0
+#define OS_INFO_REIPL_BLOCK	1
+
+struct os_info_entry {
+        uint64_t addr;
+	uint64_t size;
+        uint32_t csum;
+} __attribute__ ((packed));
+
+struct os_info {
+	uint64_t magic;
+	uint32_t csum;
+	uint16_t version_major;
+	uint16_t version_minor;
+	uint64_t crashkernel_addr;
+	uint64_t crashkernel_size;
+	struct os_info_entry entry[2];
+	/* possibly more fields up to PAGE_SIZE */
+} __attribute__ ((packed));
+
 struct s390x_data {
 	uint64_t *pgt;
 	int pgttype;
@@ -294,8 +316,88 @@ read_pgt(kdump_ctx *ctx, kdump_vaddr_t pgtaddr)
 	return ret;
 }
 
+kdump_status
+read_os_info_from_lowcore(kdump_ctx *ctx)
+{
+	unsigned char os_info_buf[PAGE_SIZE];
+	struct os_info *os_info;
+	size_t sz;
+	uint64_t addr;
+	uint64_t magic;
+	uint32_t csum, csum_expect;
+	void *vmcoreinfo;
+	kdump_status ret;
+
+	sz = sizeof(addr);
+	ret = kdump_readp(ctx, LC_OS_INFO, &addr, &sz, KDUMP_PHYSADDR);
+	if (ret != kdump_ok)
+		return set_error(ctx, ret, "Cannot read LC_OS_INFO pointer");
+	addr = dump64toh(ctx, addr);
+	if (!addr)
+		return set_error(ctx, kdump_nodata,
+				 "NULL os_info pointer");
+	if (addr % PAGE_SIZE != 0)
+		return set_error(ctx, kdump_dataerr,
+				 "Invalid os_info pointer: 0x%llx",
+				 (unsigned long long) addr);
+
+	sz = PAGE_SIZE;
+	ret = kdump_readp(ctx, addr, os_info_buf, &sz, KDUMP_PHYSADDR);
+	if (ret != kdump_ok)
+		return set_error(ctx, ret, "Cannot read os_info");
+	os_info = (struct os_info*) os_info_buf;
+
+	magic = dump64toh(ctx, os_info->magic);
+	if (magic != OS_INFO_MAGIC)
+		return set_error(ctx, kdump_nodata,
+				 "Invalid os_info magic: 0x%llx",
+				 (unsigned long long) magic);
+
+	sz = PAGE_SIZE - offsetof(struct os_info, version_major);
+	csum = cksum32(&os_info->version_major, sz, 0);
+	csum_expect = dump32toh(ctx, os_info->csum);
+	if (csum != csum_expect)
+		return set_error(ctx, kdump_dataerr,
+				 "Invalid os_info checksum: 0x%lx != 0x%lx",
+				 (unsigned long) csum,
+				 (unsigned long) csum_expect);
+
+	sz = dump64toh(ctx, os_info->entry[OS_INFO_VMCOREINFO].size);
+	addr = dump64toh(ctx, os_info->entry[OS_INFO_VMCOREINFO].addr);
+	if (!sz || !addr)
+		return set_error(ctx, kdump_nodata,
+				 "No VMCOREINFO found in os_info");
+
+	vmcoreinfo = ctx_malloc(sz, ctx, "VMCOREINFO buffer");
+	if (!vmcoreinfo)
+		return kdump_syserr;
+
+	ret = kdump_readp(ctx, addr, vmcoreinfo, &sz, KDUMP_PHYSADDR);
+	if (ret != kdump_ok) {
+		free(vmcoreinfo);
+		return set_error(ctx, ret, "Cannot read VMCOREINFO");
+	}
+
+	csum = cksum32(vmcoreinfo, sz, 0);
+	csum_expect = dump32toh(ctx, os_info->entry[OS_INFO_VMCOREINFO].csum);
+	if (csum != csum_expect) {
+		free(vmcoreinfo);
+		return set_error(ctx, kdump_dataerr,
+				 "Invalid VMCOREINFO checksum: 0x%lx != 0x%lx",
+				 (unsigned long) csum,
+				 (unsigned long) csum_expect);
+	}
+
+	ret = process_vmcoreinfo(ctx, vmcoreinfo, sz);
+	free(vmcoreinfo);
+	if (ret != kdump_ok)
+		return set_error(ctx, ret, "Cannot process VMCOREINFO");
+
+	return kdump_ok;
+}
+
 static kdump_status
-get_vmcoreinfo_from_lowcore(kdump_ctx *ctx)
+read_vmcoreinfo_from_lowcore(kdump_ctx *ctx)
 {
 	uint64_t addr;
 	Elf64_Nhdr hdr;
@@ -337,6 +439,19 @@ get_vmcoreinfo_from_lowcore(kdump_ctx *ctx)
 }
 
 static kdump_status
+process_lowcore_info(kdump_ctx *ctx)
+{
+	kdump_status ret;
+
+	ret = read_os_info_from_lowcore(ctx);
+	if (ret == kdump_nodata) {
+		clear_error(ctx);
+		ret = read_vmcoreinfo_from_lowcore(ctx);
+	}
+	return ret;
+}
+
+static kdump_status
 s390x_init(kdump_ctx *ctx)
 {
 	kdump_vaddr_t pgtaddr;
@@ -348,7 +463,7 @@ s390x_init(kdump_ctx *ctx)
 				 "Cannot allocate s390x private data: %s",
 				 strerror(errno));
 
-	get_vmcoreinfo_from_lowcore(ctx);
+	process_lowcore_info(ctx);
 	clear_error(ctx);
 
 	ret = kdump_vmcoreinfo_symbol(ctx, "swapper_pg_dir", &pgtaddr);
