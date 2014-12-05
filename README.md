@@ -1,4 +1,4 @@
-libkdumpfile                         {#mainpage}
+libkdumpfile
 ============
 
 Kernel coredump file access
