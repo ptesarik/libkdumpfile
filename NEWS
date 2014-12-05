@@ -2,6 +2,7 @@
 -----
   * support for IA32 (32-bit x86) architecture
   * verbose error reporting
+  * document the public API
 
 0.1.3
 -----

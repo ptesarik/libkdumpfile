@@ -38,6 +38,7 @@ kdump_COMPRESSION(snappy, SNAPPY, snappy, snappy_uncompress)
 
 AC_CONFIG_FILES([
 	Makefile
+	doc/Makefile
 ])
 
 AC_OUTPUT

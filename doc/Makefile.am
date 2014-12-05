@@ -19,42 +19,5 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-ACLOCAL_AMFLAGS = -I m4
-
-SUBDIRS = doc
-
-lib_LTLIBRARIES = libkdumpfile.la
-libkdumpfile_la_SOURCES = \
-	context.c \
-	devmem.c \
-	diskdump.c \
-	elfdump.c \
-	ia32.c \
-	lkcd.c \
-	notes.c \
-	open.c \
-	read.c \
-	s390x.c \
-	s390dump.c \
-	todo.c \
-	util.c \
-	vtop.c \
-	x86_64.c
-
-EXTRA_libkdumpfile_la_DEPENDENCIES = libkdumpfile.map
-
-libkdumpfile_la_LDFLAGS = -version-info 2:0:2
-libkdumpfile_la_LDFLAGS += -Wl,--version-script=$(srcdir)/libkdumpfile.map
-
-include_HEADERS = \
-	kdumpfile.h
-
-noinst_HEADERS = \
-	kdumpfile-priv.h
-
 dist_noinst_DATA = \
-	COPYING.GPLv2 \
-	COPYING.GPLv3 \
-	COPYING.LGPLv3 \
-	README.md \
-	libkdumpfile.map
+	doxygen.conf
