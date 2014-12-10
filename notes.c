@@ -74,6 +74,50 @@ struct xen_crash_info_64 {
 	/* Additional arch-dependent and version-dependent fields  */
 };
 
+#define XEN_EXTRA_VERSION_SZ	16
+#define XEN_COMPILER_SZ		64
+#define XEN_COMPILE_BY_SZ	16
+#define XEN_COMPLE_DOMAIN_SZ	32
+#define XEN_COMPILE_DATE_SZ	32
+#define XEN_CAPABILITIES_SZ	1024
+#define XEN_CHANGESET_SZ	64
+
+struct xen_dumpcore_elfnote_xen_version_32 {
+	uint64_t major_version;
+	uint64_t minor_version;
+	char     extra_version[XEN_EXTRA_VERSION_SZ];
+	struct {
+		char compiler[XEN_COMPILER_SZ];
+		char compile_by[XEN_COMPILE_BY_SZ];
+		char compile_domain[XEN_COMPLE_DOMAIN_SZ];
+		char compile_date[XEN_COMPILE_DATE_SZ];
+	} compile_info;
+	char capabilities[XEN_CAPABILITIES_SZ];
+	char changeset[XEN_CHANGESET_SZ];
+	struct   {
+		uint32_t virt_start;
+	} platform_parameters;
+	uint64_t pagesize;
+};
+
+struct xen_dumpcore_elfnote_xen_version_64 {
+	uint64_t major_version;
+	uint64_t minor_version;
+	char     extra_version[XEN_EXTRA_VERSION_SZ];
+	struct {
+		char compiler[XEN_COMPILER_SZ];
+		char compile_by[XEN_COMPILE_BY_SZ];
+		char compile_domain[XEN_COMPLE_DOMAIN_SZ];
+		char compile_date[XEN_COMPILE_DATE_SZ];
+	} compile_info;
+	char capabilities[XEN_CAPABILITIES_SZ];
+	char changeset[XEN_CHANGESET_SZ];
+	struct   {
+		uint64_t virt_start;
+	} platform_parameters;
+	uint64_t pagesize;
+};
+
 typedef kdump_status do_note_fn(kdump_ctx *ctx, Elf32_Word type,
 				const char *name, size_t namesz,
 				void *desc, size_t descsz);
@@ -124,6 +168,39 @@ process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 	return kdump_ok;
 }
 
+static kdump_status
+process_xen_dumpcore_version(kdump_ctx *ctx, void *data, size_t len)
+{
+	const char *ver_extra = NULL;
+
+	if (ctx->ptr_size == 8 &&
+	    len >= sizeof(struct xen_dumpcore_elfnote_xen_version_64)) {
+		struct xen_dumpcore_elfnote_xen_version_64 *ver = data;
+		ctx->xen_ver.major = dump64toh(ctx, ver->major_version);
+		ctx->xen_ver.minor = dump64toh(ctx, ver->minor_version);
+		ver_extra = ver->extra_version;
+	} else if(ctx->ptr_size == 4 &&
+		  len >= sizeof(struct xen_dumpcore_elfnote_xen_version_32)) {
+		struct xen_dumpcore_elfnote_xen_version_32 *ver = data;
+		ctx->xen_ver.major = dump64toh(ctx, ver->major_version);
+		ctx->xen_ver.minor = dump64toh(ctx, ver->minor_version);
+		ver_extra = ver->extra_version;
+	}
+
+	if (ver_extra) {
+		char *newextra;
+		newextra = ctx_malloc(XEN_EXTRA_VERSION_SZ + 1,
+				      ctx, "Xen extra version");
+		if (!newextra)
+			return kdump_syserr;
+		memcpy(newextra, ver_extra, XEN_EXTRA_VERSION_SZ);
+		newextra[XEN_EXTRA_VERSION_SZ] = '\0';
+		ctx->xen_ver.extra = newextra;
+	}
+
+	return kdump_ok;
+}
+
 /* These fields in kdump_ctx must be initialised:
  *
  *   endian
@@ -137,6 +214,8 @@ process_xen_note(kdump_ctx *ctx, uint32_t type,
 
 	if (type == XEN_ELFNOTE_CRASH_INFO)
 		ret = process_xen_crash_info(ctx, desc, descsz);
+	else if (type == XEN_ELFNOTE_DUMPCORE_XEN_VERSION)
+		process_xen_dumpcore_version(ctx, desc, descsz);
 
 	ctx->flags |= DIF_XEN;
 	return ret;
