@@ -712,6 +712,16 @@ open_common(kdump_ctx *ctx)
 						 strerror(errno));
 			edp->xen_map_type = xen_map_pfn;
 			edp->xen_map_size = sect->size / sizeof(uint64_t);
+		} else if (!strcmp(name, ".note.Xen")) {
+			notes = read_elf_sect(ctx, sect);
+			if (!notes)
+				return set_error(ctx, kdump_syserr,
+						 strerror(errno));
+			ret = process_notes(ctx, notes, sect->size);
+			free(notes);
+			if (ret != kdump_ok)
+				return set_error(ctx, ret,
+						 "Cannot process Xen notes");
 		}
 	}
 
