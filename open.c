@@ -261,5 +261,7 @@ kdump_free(kdump_ctx *ctx)
 		free(ctx->vmcoreinfo);
 	if (ctx->vmcoreinfo_xen)
 		free(ctx->vmcoreinfo_xen);
+	if (ctx->xen_ver.extra)
+		free((void*)ctx->xen_ver.extra);
 	free(ctx);
 }
