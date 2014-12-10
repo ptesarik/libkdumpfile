@@ -100,7 +100,7 @@ process_core_note(kdump_ctx *ctx, uint32_t type,
  *   endian
  *   ptr_size
  */
-static void
+static kdump_status
 process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 {
 	unsigned words = len / ctx->ptr_size;
@@ -120,6 +120,8 @@ process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 		ctx->xen_extra_ver = dump32toh(ctx, info->xen_extra_version);
 		ctx->xen_p2m_mfn = dump32toh(ctx, ((uint32_t*)data)[words-1]);
 	}
+
+	return kdump_ok;
 }
 
 /* These fields in kdump_ctx must be initialised:
@@ -127,14 +129,17 @@ process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
  *   endian
  *   ptr_size
  */
-static void
+static kdump_status
 process_xen_note(kdump_ctx *ctx, uint32_t type,
 		 void *desc, size_t descsz)
 {
+	kdump_status ret = kdump_ok;
+
 	if (type == XEN_ELFNOTE_CRASH_INFO)
-		process_xen_crash_info(ctx, desc, descsz);
+		ret = process_xen_crash_info(ctx, desc, descsz);
 
 	ctx->flags |= DIF_XEN;
+	return ret;
 }
 
 /* These fields in kdump_ctx must be initialised:
@@ -228,7 +233,7 @@ do_arch_note(kdump_ctx *ctx, Elf32_Word type,
 	if (note_equal("CORE", name, namesz))
 		return process_core_note(ctx, type, desc, descsz);
 	else if (note_equal("Xen", name, namesz))
-		process_xen_note(ctx, type, desc, descsz);
+		return process_xen_note(ctx, type, desc, descsz);
 	else if (note_equal(".note.Xen", name, namesz))
 		return process_xc_xen_note(ctx, type, desc, descsz);
 
