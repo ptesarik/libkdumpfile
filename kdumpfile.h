@@ -294,6 +294,7 @@ size_t kdump_ptr_size(kdump_ctx *ctx);
  *   - arm
  *   - i386
  *   - ia64
+ *   - mips
  *   - ppc
  *   - ppc64
  *   - ppc64le

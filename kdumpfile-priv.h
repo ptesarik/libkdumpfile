@@ -55,6 +55,7 @@ enum kdump_arch {
 	ARCH_ALPHA,
 	ARCH_ARM,
 	ARCH_IA64,
+	ARCH_MIPS,
 	ARCH_PPC,
 	ARCH_PPC64,
 	ARCH_PPC64LE,

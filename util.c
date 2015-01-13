@@ -110,6 +110,7 @@ arch_ptr_size(enum kdump_arch arch)
 
 	case ARCH_ARM:
 	case ARCH_PPC:
+	case ARCH_MIPS:
 	case ARCH_S390:
 	case ARCH_X86:
 	default:
@@ -125,6 +126,8 @@ machine_arch(const char *machine)
 		return ARCH_ALPHA;
 	else if (!strcmp(machine, "ia64"))
 		return ARCH_IA64;
+	else if (!strcmp(machine, "mips"))
+		return ARCH_MIPS;
 	else if (!strcmp(machine, "ppc"))
 		return ARCH_PPC;
 	else if (!strcmp(machine, "ppc64"))
@@ -158,6 +161,7 @@ default_page_shift(enum kdump_arch arch)
 		[ARCH_ALPHA]= 13,
 		[ARCH_ARM] = 12,
 		[ARCH_IA64] = 0,
+		[ARCH_MIPS] = 12,
 		[ARCH_PPC] = 0,
 		[ARCH_PPC64] = 0,
 		[ARCH_PPC64LE] = 0,
@@ -180,6 +184,7 @@ arch_ops(enum kdump_arch arch)
 	case ARCH_ALPHA:
 	case ARCH_ARM:
 	case ARCH_IA64:
+	case ARCH_MIPS:
 	case ARCH_PPC:
 	case ARCH_PPC64:
 	case ARCH_PPC64LE:

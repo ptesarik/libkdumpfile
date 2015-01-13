@@ -93,6 +93,7 @@ mach2arch(unsigned mach)
 	case EM_FAKE_ALPHA:
 			return ARCH_ALPHA;
 	case EM_IA_64:	return ARCH_IA64;
+	case EM_MIPS:	return ARCH_MIPS;
 	case EM_PPC:	return ARCH_PPC;
 	case EM_PPC64:	return ARCH_PPC64;
 	case EM_S390:	return ARCH_S390;

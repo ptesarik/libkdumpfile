@@ -66,6 +66,7 @@ kdump_arch_name(kdump_ctx *ctx)
 		[ARCH_ALPHA] = "alpha",
 		[ARCH_ARM] = "arm",
 		[ARCH_IA64] = "ia64",
+		[ARCH_MIPS] = "mips",
 		[ARCH_PPC] = "ppc",
 		[ARCH_PPC64] = "ppc64",
 		[ARCH_PPC64LE] = "ppc64le",

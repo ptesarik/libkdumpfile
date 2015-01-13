@@ -1,6 +1,7 @@
 0.1.5
 -----
   * improved support of Xen dumpcore files
+  * basic support for MIPS architecture
 
 0.1.4
 -----
