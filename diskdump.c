@@ -209,6 +209,7 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 
 	if (!page_is_dumpable(ctx, pfn)) {
 		memset(ctx->page, 0, ctx->page_size);
+		ctx->last_pfn =  -(kdump_paddr_t)1;
 		return kdump_ok;
 	}
 
