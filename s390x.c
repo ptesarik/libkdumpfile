@@ -274,7 +274,7 @@ s390x_vtop_init(kdump_ctx *ctx)
 			return ret;
 	}
 
-	ret = kdump_vmcoreinfo_symbol(ctx, "high_memory", &addr);
+	ret = get_symbol_val(ctx, "high_memory", &addr);
 	if (ret == kdump_ok) {
 		uint64_t highmem;
 		size_t sz = sizeof(highmem);
@@ -466,7 +466,7 @@ s390x_init(kdump_ctx *ctx)
 	process_lowcore_info(ctx);
 	clear_error(ctx);
 
-	ret = kdump_vmcoreinfo_symbol(ctx, "swapper_pg_dir", &pgtaddr);
+	ret = get_symbol_val(ctx, "swapper_pg_dir", &pgtaddr);
 	if (ret == kdump_ok) {
 		ret = read_pgt(ctx, pgtaddr);
 		if (ret != kdump_ok)

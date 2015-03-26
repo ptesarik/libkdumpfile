@@ -296,7 +296,7 @@ read_pgt(kdump_ctx *ctx)
 	kdump_status ret;
 	size_t sz;
 
-	ret = kdump_vmcoreinfo_symbol(ctx, "init_level4_pgt", &pgtaddr);
+	ret = get_symbol_val(ctx, "init_level4_pgt", &pgtaddr);
 	if (ret != kdump_ok)
 		return ret;
 

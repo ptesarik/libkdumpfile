@@ -339,6 +339,10 @@ ssize_t paged_read(int fd, void *buffer, size_t size);
 #define cksum32 INTERNAL_NAME(cksum32)
 uint32_t cksum32(void *buffer, size_t size, uint32_t csum);
 
+#define get_symbol_val INTERNAL_NAME(get_symbol_val)
+kdump_status get_symbol_val(kdump_ctx *ctx, const char *name,
+			    kdump_addr_t *val);
+
 /* ELF notes */
 
 #define process_notes INTERNAL_NAME(process_notes)

@@ -214,7 +214,7 @@ read_pgt(kdump_ctx *ctx)
 	kdump_status ret;
 	size_t sz;
 
-	ret = kdump_vmcoreinfo_symbol(ctx, "swapper_pg_dir", &pgtaddr);
+	ret = get_symbol_val(ctx, "swapper_pg_dir", &pgtaddr);
 	if (ret != kdump_ok)
 		return ret;
 

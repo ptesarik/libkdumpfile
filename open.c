@@ -157,7 +157,7 @@ uts_name_from_init_uts_ns(kdump_ctx *ctx, kdump_vaddr_t *uts_name)
 	size_t rd;
 	kdump_status ret;
 
-	ret = kdump_vmcoreinfo_symbol(ctx, "init_uts_ns", &init_uts_ns);
+	ret = get_symbol_val(ctx, "init_uts_ns", &init_uts_ns);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -184,7 +184,7 @@ use_kernel_utsname(kdump_ctx *ctx)
 	size_t rd;
 	kdump_status ret;
 
-	ret = kdump_vmcoreinfo_symbol(ctx, "system_utsname", &uts_name);
+	ret = get_symbol_val(ctx, "system_utsname", &uts_name);
 	if (ret == kdump_nodata) {
 		clear_error(ctx);
 		ret = uts_name_from_init_uts_ns(ctx, &uts_name);

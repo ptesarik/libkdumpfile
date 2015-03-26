@@ -451,3 +451,9 @@ cksum32(void *buffer, size_t size, uint32_t csum)
 
 	return csum;
 }
+
+kdump_status
+get_symbol_val(kdump_ctx *ctx, const char *name, kdump_addr_t *val)
+{
+	return kdump_vmcoreinfo_symbol(ctx, name, val);
+}
