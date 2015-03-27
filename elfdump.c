@@ -174,7 +174,7 @@ elf_read_xen_dom0(kdump_ctx *ctx, kdump_pfn_t pfn)
 }
 
 static unsigned long
-pfn_to_mfn(struct elfdump_priv *edp, unsigned long pfn)
+pfn_to_idx(struct elfdump_priv *edp, kdump_pfn_t pfn)
 {
 	unsigned long i;
 
@@ -194,19 +194,20 @@ pfn_to_mfn(struct elfdump_priv *edp, unsigned long pfn)
 }
 
 static kdump_status
-elf_read_xen_domU(kdump_ctx *ctx, unsigned long pfn)
+elf_read_xen_domU(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
-        unsigned long mfn;
+	unsigned long idx;
 	off_t offset;
 	ssize_t rd;
 
-	if ((mfn = pfn_to_mfn(edp, pfn)) == ~0UL)
+	idx = pfn_to_idx(edp, pfn);
+	if (idx == ~0UL)
 		return set_error(ctx, kdump_nodata,
 				 "No machine address for PFN: 0x%llx",
 				 (unsigned long long) pfn);
 
-	offset = edp->xen_pages_offset + (off_t)mfn * ctx->page_size;
+	offset = edp->xen_pages_offset + (off_t)idx * ctx->page_size;
 	rd = pread(ctx->fd, ctx->page, ctx->page_size, offset);
 	if (rd != ctx->page_size)
 		return set_error(ctx, read_error(rd),
@@ -487,7 +488,7 @@ initialize_xen_map64(kdump_ctx *ctx, void *dir)
 	unsigned fpp = ctx->page_size / ctx->ptr_size;
 	uint64_t *dirp, *p, *map;
 	uint64_t pfn;
-	unsigned mfns;
+	unsigned long mfns;
 	kdump_status ret;
 
 	mfns = 0;
@@ -538,7 +539,7 @@ initialize_xen_map32(kdump_ctx *ctx, void *dir)
 	unsigned fpp = ctx->page_size / ctx->ptr_size;
 	uint32_t *dirp, *p, *map;
 	uint32_t pfn;
-	unsigned mfns;
+	unsigned long mfns;
 	kdump_status ret;
 
 	mfns = 0;
