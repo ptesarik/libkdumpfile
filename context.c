@@ -246,3 +246,11 @@ kdump_vmcoreinfo_symbol_xen(kdump_ctx *ctx, const char *symname,
 
 	return vmcoreinfo_symbol(ctx, ctx->vmcoreinfo_xen, symname, symvalue);
 }
+
+kdump_get_symbol_val_fn *
+kdump_cb_get_symbol_val(kdump_ctx *ctx, kdump_get_symbol_val_fn *cb)
+{
+	kdump_get_symbol_val_fn *ret = ctx->cb_get_symbol_val;
+	ctx->cb_get_symbol_val = cb ?: kdump_vmcoreinfo_symbol;
+	return ret;
+}

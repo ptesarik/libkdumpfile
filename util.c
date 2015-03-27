@@ -455,5 +455,6 @@ cksum32(void *buffer, size_t size, uint32_t csum)
 kdump_status
 get_symbol_val(kdump_ctx *ctx, const char *name, kdump_addr_t *val)
 {
-	return kdump_vmcoreinfo_symbol(ctx, name, val);
+	kdump_status ret = ctx->cb_get_symbol_val(ctx, name, val);
+	return set_error(ctx, ret, "Cannot resolve \"%s\"", name);
 }

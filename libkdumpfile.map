@@ -34,6 +34,7 @@ LIBKDUMPFILE_0 {
     kdump_vmcoreinfo_symbol;
     kdump_vmcoreinfo_symbol_xen;
     kdump_xen_version;
+    kdump_cb_get_symbol_val;
 
   local:
     *;

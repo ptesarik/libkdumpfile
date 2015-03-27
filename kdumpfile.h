@@ -468,6 +468,25 @@ kdump_status kdump_vmcoreinfo_symbol_xen(kdump_ctx *ctx, const char *symname,
  */
 void kdump_xen_version(kdump_ctx *ctx, kdump_xen_version_t *version);
 
+/**  Type for the get_symbol_val callback function.
+ * @param ctx      Dump file object of the caller.
+ * @param[in] name Name of the symbol.
+ * @param[out] val Symbol value.
+ * @returns        Error status.
+ *
+ * This type is used for @ref kdump_cb_get_symbol_val.
+ */
+typedef kdump_status kdump_get_symbol_val_fn(
+	kdump_ctx *ctx, const char *name, kdump_addr_t *val);
+
+/**  Set the get_symbol_val callback
+ * @param ctx  Dump file object.
+ * @param cb   New callback function.
+ * @return the Previous callback function.
+ */
+kdump_get_symbol_val_fn *
+kdump_cb_get_symbol_val(kdump_ctx *ctx, kdump_get_symbol_val_fn *cb);
+
 #ifdef  __cplusplus
 }
 #endif

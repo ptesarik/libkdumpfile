@@ -235,6 +235,8 @@ struct _tag_kdump_ctx {
 	void *fmtdata;		/* format-specific private data */
 	void *archdata;		/* arch-specific private data */
 
+	kdump_get_symbol_val_fn *cb_get_symbol_val;
+
 	char *err_str;		/* error string */
 	char err_buf[ERRBUF];	/* buffer for error string */
 };
