@@ -231,6 +231,7 @@ struct _tag_kdump_ctx {
 	kdump_xen_version_t xen_ver; /* Xen hypervisor version */
 	kdump_vaddr_t xen_extra_ver;
 	kdump_pfn_t xen_p2m_mfn;
+	int xen_pte_is_mach;
 
 	void *fmtdata;		/* format-specific private data */
 	void *archdata;		/* arch-specific private data */

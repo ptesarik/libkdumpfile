@@ -218,6 +218,44 @@ elf_read_xen_domU(kdump_ctx *ctx, kdump_pfn_t pfn)
 	return 0;
 }
 
+static unsigned long
+mfn_to_idx(struct elfdump_priv *edp, kdump_pfn_t mfn)
+{
+	unsigned long i;
+
+	if (edp->xen_map_type == xen_map_p2m) {
+		struct xen_p2m *p = edp->xen_map;
+		for (i = 0; i < edp->xen_map_size; ++i, ++p)
+			if (p->gmfn == mfn)
+				return i;
+	}
+
+	return ~0UL;
+}
+
+static kdump_status
+elf_read_xenmach_domU(kdump_ctx *ctx, kdump_pfn_t mfn)
+{
+	struct elfdump_priv *edp = ctx->fmtdata;
+	unsigned long idx;
+	off_t offset;
+	ssize_t rd;
+
+	idx = mfn_to_idx(edp, mfn);
+	if (idx == ~0UL)
+		return set_error(ctx, kdump_nodata, "Page not found");
+
+	offset = edp->xen_pages_offset + (off_t)idx * ctx->page_size;
+	rd = pread(ctx->fd, ctx->page, ctx->page_size, offset);
+	if (rd != ctx->page_size)
+		return set_error(ctx, read_error(rd),
+				 "Cannot read page data at %llu: %s",
+				 (unsigned long long) offset,
+				 read_err_str(rd));
+
+	return 0;
+}
+
 static kdump_status
 init_segments(kdump_ctx *ctx, unsigned phnum)
 {
@@ -707,6 +745,7 @@ open_common(kdump_ctx *ctx)
 						 strerror(errno));
 			edp->xen_map_type = xen_map_p2m;
 			edp->xen_map_size = sect->size /sizeof(struct xen_p2m);
+			ctx->xen_pte_is_mach = 1;
 		} else if (!strcmp(name, ".xen_pfn")) {
 			edp->xen_map = read_elf_sect(ctx, sect);
 			if (!edp->xen_map)
@@ -714,6 +753,7 @@ open_common(kdump_ctx *ctx)
 						 strerror(errno));
 			edp->xen_map_type = xen_map_pfn;
 			edp->xen_map_size = sect->size / sizeof(uint64_t);
+			ctx->xen_pte_is_mach = 0;
 		} else if (!strcmp(name, ".note.Xen")) {
 			notes = read_elf_sect(ctx, sect);
 			if (!notes)
@@ -827,6 +867,6 @@ static const struct format_ops xen_dom0_ops = {
 
 static const struct format_ops xen_domU_ops = {
 	.read_page = elf_read_xen_domU,
-	.read_xenmach_page = elf_read_page,
+	.read_xenmach_page = elf_read_xenmach_domU,
 	.cleanup = elf_cleanup,
 };
