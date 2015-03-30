@@ -488,7 +488,8 @@ x86_64_cleanup(kdump_ctx *ctx)
 }
 
 static kdump_status
-x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
+x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
+	       int rdflags)
 {
 	struct x86_64_data *archdata = ctx->archdata;
 	uint64_t tbl[PTRS_PER_PAGE];
@@ -511,7 +512,7 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	base = pgd & ~PHYSADDR_MASK & PAGE_MASK;
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_PHYSADDR);
+	ret = kdump_readp(ctx, base, tbl, &sz, rdflags);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -530,7 +531,7 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	base = pud & ~PHYSADDR_MASK & PAGE_MASK;
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_PHYSADDR);
+	ret = kdump_readp(ctx, base, tbl, &sz, rdflags);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -548,7 +549,7 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	base = pmd & ~PHYSADDR_MASK & PAGE_MASK;
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_PHYSADDR);
+	ret = kdump_readp(ctx, base, tbl, &sz, rdflags);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -562,6 +563,38 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	*paddr = base + (vaddr & ~PAGE_MASK);
 
 	return kdump_ok;
+}
+
+static kdump_status
+x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
+{
+	kdump_status ret;
+
+	if (ctx->flags & DIF_XEN && ctx->xen_pte_is_mach) {
+		kdump_addr_t maddr;
+		kdump_pfn_t mfn, pfn;
+
+		if (!ctx->ops->mfn_to_pfn)
+			return set_error(ctx, kdump_nodata,
+					 "No MFN-to-PFN translation method");
+
+		ret = x86_64_pt_walk(ctx, vaddr, &maddr, KDUMP_XENMACHADDR);
+		if (ret != kdump_ok)
+			return ret;
+
+		mfn = maddr >> ctx->page_shift;
+		ret = ctx->ops->mfn_to_pfn(ctx, mfn, &pfn);
+		if (ret != kdump_ok)
+			return set_error(ctx, ret,
+					 "Cannot translate MFN 0x%llx",
+					 (unsigned long long) mfn);
+
+		*paddr = (pfn << ctx->page_shift) |
+			(maddr & (ctx->page_size - 1));
+		return kdump_ok;
+	}
+
+	return x86_64_pt_walk(ctx, vaddr, paddr, KDUMP_PHYSADDR);
 }
 
 const struct arch_ops x86_64_ops = {
