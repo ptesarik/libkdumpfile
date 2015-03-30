@@ -108,6 +108,14 @@ struct format_ops {
 	 */
 	kdump_status (*read_xenmach_page)(kdump_ctx *, kdump_pfn_t);
 
+	/* Translate a machine frame number to physical frame number.
+	 *   ctx->fmtdata    initialized in probe()
+	 * Return:
+	 *   kdump_ok        output variable contains translated PFN
+	 *   kdump_nodata    given MFN was not found
+	 */
+	kdump_status (*mfn_to_pfn)(kdump_ctx *, kdump_pfn_t, kdump_pfn_t *);
+
 	/* Clean up all private data.
 	 */
 	void (*cleanup)(kdump_ctx *);

@@ -234,6 +234,26 @@ mfn_to_idx(struct elfdump_priv *edp, kdump_pfn_t mfn)
 }
 
 static kdump_status
+elf_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
+{
+	struct elfdump_priv *edp = ctx->fmtdata;
+	unsigned long i;
+
+	if (edp->xen_map_type == xen_map_p2m) {
+		struct xen_p2m *p = edp->xen_map;
+		for (i = 0; i < edp->xen_map_size; ++i, ++p)
+			if (p->gmfn == mfn) {
+				*pfn = p->pfn;
+				return kdump_ok;
+			}
+	} else
+		return set_error(ctx, kdump_unsupported,
+				 "No MFN-to-PFN translation table");
+
+	return set_error(ctx, kdump_nodata, "MFN not found");
+}
+
+static kdump_status
 elf_read_xenmach_domU(kdump_ctx *ctx, kdump_pfn_t mfn)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
@@ -868,5 +888,6 @@ static const struct format_ops xen_dom0_ops = {
 static const struct format_ops xen_domU_ops = {
 	.read_page = elf_read_xen_domU,
 	.read_xenmach_page = elf_read_xenmach_domU,
+	.mfn_to_pfn = elf_mfn_to_pfn,
 	.cleanup = elf_cleanup,
 };
