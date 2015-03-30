@@ -182,7 +182,6 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 					 "VTOP translation not initialized");
 		return ctx->arch_ops->vtop(ctx, vaddr, paddr);
 
-		/* fall through */
 	case KDUMP_XLAT_DIRECT:
 		*paddr = vaddr - phys_off;
 		return kdump_ok;
