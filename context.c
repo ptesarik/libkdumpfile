@@ -69,7 +69,6 @@ kdump_arch_name(kdump_ctx *ctx)
 		[ARCH_MIPS] = "mips",
 		[ARCH_PPC] = "ppc",
 		[ARCH_PPC64] = "ppc64",
-		[ARCH_PPC64LE] = "ppc64le",
 		[ARCH_S390] = "s390",
 		[ARCH_S390X] = "s390x",
 		[ARCH_X86] = "i386",

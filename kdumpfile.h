@@ -297,7 +297,6 @@ size_t kdump_ptr_size(kdump_ctx *ctx);
  *   - mips
  *   - ppc
  *   - ppc64
- *   - ppc64le
  *   - s390
  *   - s390x
  *   - x86_64

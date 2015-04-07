@@ -58,7 +58,6 @@ enum kdump_arch {
 	ARCH_MIPS,
 	ARCH_PPC,
 	ARCH_PPC64,
-	ARCH_PPC64LE,
 	ARCH_S390,
 	ARCH_S390X,
 	ARCH_X86,
