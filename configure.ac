@@ -35,7 +35,14 @@ LT_INIT
 AC_SUBST(REQUIRES_PRIVATE)
 AC_SUBST(LIBS_PRIVATE)
 
-kdump_COMPRESSION(zlib, ZLIB, z, uncompress)
+dnl This makes sure pkg.m4 is available.
+m4_pattern_forbid([^_?PKG_[A-Z_]+$],[*** pkg.m4 missing, please install pkg-config])
+
+PKG_CHECK_MODULES(ZLIB, zlib,
+  [ REQUIRES_PRIVATE="zlib $REQUIRES_PRIVATE" ])
+AS_VAR_APPEND([CFLAGS], " $ZLIB_CFLAGS")
+AS_VAR_APPEND([LIBS], " $ZLIB_LIBS")
+
 kdump_COMPRESSION(lzo, LZO, lzo2, lzo1x_decompress_safe)
 kdump_COMPRESSION(snappy, SNAPPY, snappy, snappy_uncompress)
 
