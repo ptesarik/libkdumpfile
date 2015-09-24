@@ -32,6 +32,9 @@ AM_PROG_AR
 
 LT_INIT
 
+AC_SUBST(REQUIRES_PRIVATE)
+AC_SUBST(LIBS_PRIVATE)
+
 kdump_COMPRESSION(zlib, ZLIB, z, uncompress)
 kdump_COMPRESSION(lzo, LZO, lzo2, lzo1x_decompress_safe)
 kdump_COMPRESSION(snappy, SNAPPY, snappy, snappy_uncompress)
@@ -39,6 +42,7 @@ kdump_COMPRESSION(snappy, SNAPPY, snappy, snappy_uncompress)
 AC_CONFIG_FILES([
 	Makefile
 	doc/Makefile
+	libkdumpfile.pc
 ])
 
 AC_OUTPUT

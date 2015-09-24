@@ -1,0 +1,15 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libkdumpfile
+Description: Kernel coredump file access
+URL: https://github.com/ptesarik/libkdumpfile
+Version: @VERSION@
+
+Requires:
+Requires.private: @REQUIRES_PRIVATE@
+Libs: -L${libdir} -lkdumpfile
+Libs.private: @LIBS_PRIVATE@
+Cflags: -I${includedir}

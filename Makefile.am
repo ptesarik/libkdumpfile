@@ -58,3 +58,6 @@ dist_noinst_DATA = \
 	COPYING.LGPLv3 \
 	README.md \
 	libkdumpfile.map
+
+pkgconfigdir=$(libdir)/pkgconfig
+pkgconfig_DATA=libkdumpfile.pc
