@@ -317,6 +317,8 @@ struct lkcd_priv {
 	char format[MAX_FORMAT_NAME];
 };
 
+static void lkcd_cleanup(kdump_ctx *ctx);
+
 static off_t
 find_page(kdump_ctx *ctx, off_t off, unsigned pfn, struct dump_page *dp)
 {
@@ -656,10 +658,6 @@ open_common(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		goto err_free;
 
-	ret = set_arch(ctx, machine_arch(ctx->utsname.machine));
-	if (ret != kdump_ok)
-		goto err_free;
-
 	max_idx1 = pfn_idx1(ctx->max_pfn - 1) + 1;
 	lkcdp->pfn_level1 = calloc(max_idx1, sizeof(struct pfn_level2*));
 	if (!lkcdp->pfn_level1) {
@@ -669,10 +667,14 @@ open_common(kdump_ctx *ctx)
 		goto err_free;
 	}
 
+	ret = set_arch(ctx, machine_arch(ctx->utsname.machine));
+	if (ret != kdump_ok)
+		goto err_free;
+
 	return kdump_ok;
 
   err_free:
-	free(lkcdp);
+	lkcd_cleanup(ctx);
 	return ret;
 }
 
