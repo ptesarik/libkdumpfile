@@ -39,7 +39,8 @@ dnl This makes sure pkg.m4 is available.
 m4_pattern_forbid([^_?PKG_[A-Z_]+$],[*** pkg.m4 missing, please install pkg-config])
 
 PKG_CHECK_MODULES(ZLIB, zlib,
-  [ REQUIRES_PRIVATE="zlib $REQUIRES_PRIVATE" ])
+  [ REQUIRES_PRIVATE="zlib $REQUIRES_PRIVATE"
+  ],[# ignore if missing])
 AS_VAR_APPEND([CFLAGS], " $ZLIB_CFLAGS")
 AS_VAR_APPEND([LIBS], " $ZLIB_LIBS")
 
