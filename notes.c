@@ -331,6 +331,8 @@ do_any_note(kdump_ctx *ctx, Elf32_Word type,
 	return do_arch_note(ctx, type, name, namesz, desc, descsz);
 }
 
+#define roundup_size(sz)	(((size_t)(sz)+3) & ~(size_t)3)
+
 static kdump_status
 do_notes(kdump_ctx *ctx, void *data, size_t size, do_note_fn *do_note)
 {
@@ -342,15 +344,19 @@ do_notes(kdump_ctx *ctx, void *data, size_t size, do_note_fn *do_note)
 		Elf32_Word namesz = dump32toh(ctx, hdr->n_namesz);
 		Elf32_Word descsz = dump32toh(ctx, hdr->n_descsz);
 		Elf32_Word type = dump32toh(ctx, hdr->n_type);
-		size_t descoff = sizeof(Elf32_Nhdr) + ((namesz + 3) & ~3);
+		size_t descoff = sizeof(Elf32_Nhdr) + roundup_size(namesz);
 
-		if (size < descoff + ((descsz + 3) & ~3))
+		if (size < descoff + descsz)
 			break;
-		size -= descoff + ((descsz + 3) & ~3);
 
 		name = (char*) (hdr + 1);
 		desc = (char*)hdr + descoff;
-		hdr = (Elf32_Nhdr*) (desc + ((descsz + 3) & ~3));
+		size -= descoff;
+
+		hdr = (Elf32_Nhdr*) (desc + roundup_size(descsz));
+		size = (size >= roundup_size(descsz))
+			? size - roundup_size(descsz)
+			: 0;
 
 		ret = do_note(ctx, type, name, namesz, desc, descsz);
 	}
