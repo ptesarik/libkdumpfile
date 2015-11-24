@@ -40,6 +40,7 @@ m4_pattern_forbid([^_?PKG_[A-Z_]+$],[*** pkg.m4 missing, please install pkg-conf
 
 PKG_CHECK_MODULES(ZLIB, zlib,
   [ REQUIRES_PRIVATE="zlib $REQUIRES_PRIVATE"
+    AC_DEFINE(USE_ZLIB, 1, [Define to enable support for zlib compression])
   ],[# ignore if missing])
 AS_VAR_APPEND([CFLAGS], " $ZLIB_CFLAGS")
 AS_VAR_APPEND([LIBS], " $ZLIB_LIBS")
