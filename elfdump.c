@@ -36,6 +36,11 @@
 #include <errno.h>
 #include <elf.h>
 
+/* This definition is missing from older version of <elf.h> */
+#ifndef EM_AARCH64
+# define EM_AARCH64      183
+#endif
+
 static const struct format_ops xen_dom0_ops;
 static const struct format_ops xen_domU_ops;
 
