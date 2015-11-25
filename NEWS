@@ -2,6 +2,7 @@
 -----
   * improved support of Xen dumpcore files
   * basic support for MIPS architecture
+  * fix support for LKCD dumps on s390x
 
 0.1.4
 -----
