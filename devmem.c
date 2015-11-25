@@ -132,11 +132,7 @@ devmem_probe(kdump_ctx *ctx)
 #elif defined(__i386__)
 	ret = set_arch(ctx, ARCH_X86);
 #elif defined(__powerpc64__)
-# if __BYTE_ORDER == __LITTLE_ENDIAN
-	ret = set_arch(ctx, ARCH_PPC64LE);
-# else
 	ret = set_arch(ctx, ARCH_PPC64);
-# endif
 #elif defined(__powerpc__)
 	ret = set_arch(ctx, ARCH_PPC);
 #elif defined(__s390x__)
