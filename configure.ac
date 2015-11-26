@@ -38,13 +38,7 @@ AC_SUBST(LIBS_PRIVATE)
 dnl This makes sure pkg.m4 is available.
 m4_pattern_forbid([^_?PKG_[A-Z_]+$],[*** pkg.m4 missing, please install pkg-config])
 
-PKG_CHECK_MODULES(ZLIB, zlib,
-  [ REQUIRES_PRIVATE="zlib $REQUIRES_PRIVATE"
-    AC_DEFINE(USE_ZLIB, 1, [Define to enable support for zlib compression])
-  ],[# ignore if missing])
-AS_VAR_APPEND([CFLAGS], " $ZLIB_CFLAGS")
-AS_VAR_APPEND([LIBS], " $ZLIB_LIBS")
-
+kdump_COMPRESSION(zlib, ZLIB, z, uncompress)
 kdump_COMPRESSION(lzo, LZO, lzo2, lzo1x_decompress_safe)
 kdump_COMPRESSION(snappy, SNAPPY, snappy, snappy_uncompress)
 
