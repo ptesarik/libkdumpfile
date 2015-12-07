@@ -128,15 +128,24 @@ kdump_set_fd(kdump_ctx *ctx, int fd)
 static kdump_status
 kdump_open_known(kdump_ctx *ctx)
 {
+	struct kdump_attr attr;
+	kdump_status res;
+
 	if (!attr_isset(ctx, GATTR(GKI_linux_uts_sysname)))
 		/* If this fails, it is not fatal. */
 		use_kernel_utsname(ctx);
 
-	if (ctx->xen_extra_ver)
-		/* Return value ignored: if this fails, it is not fatal. */
-		kdump_read_string(ctx, ctx->xen_extra_ver,
-				  (char**)&ctx->xen_ver.extra,
-				  KDUMP_XENMACHADDR);
+	/* If this fails, it is not fatal. */
+	res = kdump_get_attr(ctx, GATTR(GKI_xen_ver_extra_addr), &attr);
+	if (res == kdump_ok) {
+		char *extra;
+		res = kdump_read_string(ctx, attr.val.address, &extra,
+					KDUMP_XENMACHADDR);
+		if (res == kdump_ok) {
+			set_attr_string(ctx, GATTR(GKI_xen_ver_extra), extra);
+			free(extra);
+		}
+	}
 
 	get_version_code(ctx);
 
@@ -270,8 +279,6 @@ kdump_free(kdump_ctx *ctx)
 		free(ctx->vmcoreinfo);
 	if (ctx->vmcoreinfo_xen)
 		free(ctx->vmcoreinfo_xen);
-	if (ctx->xen_ver.extra)
-		free((void*)ctx->xen_ver.extra);
 	cleanup_attr(ctx);
 	free(ctx);
 }

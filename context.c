@@ -205,7 +205,16 @@ kdump_vmcoreinfo_row_xen(kdump_ctx *ctx, const char *key)
 void
 kdump_xen_version(kdump_ctx *ctx, kdump_xen_version_t *version)
 {
-	memcpy(version, &ctx->xen_ver, sizeof(kdump_xen_version_t));
+	struct kdump_attr attr;
+	kdump_status res;
+
+	res = kdump_get_attr(ctx, GATTR(GKI_xen_ver_major), &attr);
+	version->major = res == kdump_ok ? attr.val.number : 0;
+
+	res = kdump_get_attr(ctx, GATTR(GKI_xen_ver_minor), &attr);
+	version->minor = res == kdump_ok ? attr.val.number : 0;
+
+	version->extra = kdump_get_string_attr(ctx, GATTR(GKI_xen_ver_extra));
 }
 
 static kdump_status

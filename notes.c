@@ -149,22 +149,39 @@ process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 {
 	size_t ptr_size = get_attr_ptr_size(ctx);
 	unsigned words = len / ptr_size;
+	unsigned long major, minor;
+	kdump_vaddr_t extra;
+	kdump_status res;
 
 	if (ptr_size == 8 &&
 	    len >= sizeof(struct xen_crash_info_64)) {
 		struct xen_crash_info_64 *info = data;
-		ctx->xen_ver.major = dump64toh(ctx, info->xen_major_version);
-		ctx->xen_ver.minor = dump64toh(ctx, info->xen_minor_version);
-		ctx->xen_extra_ver = dump64toh(ctx, info->xen_extra_version);
+		major = dump64toh(ctx, info->xen_major_version);
+		minor = dump64toh(ctx, info->xen_minor_version);
+		extra = dump64toh(ctx, info->xen_extra_version);
 		ctx->xen_p2m_mfn = dump64toh(ctx, ((uint64_t*)data)[words-1]);
 	} else if (ptr_size == 4 &&
 		   len >= sizeof(struct xen_crash_info_32)){
 		struct xen_crash_info_32 *info = data;
-		ctx->xen_ver.major = dump32toh(ctx, info->xen_major_version);
-		ctx->xen_ver.minor = dump32toh(ctx, info->xen_minor_version);
-		ctx->xen_extra_ver = dump32toh(ctx, info->xen_extra_version);
+		major = dump32toh(ctx, info->xen_major_version);
+		minor = dump32toh(ctx, info->xen_minor_version);
+		extra = dump32toh(ctx, info->xen_extra_version);
 		ctx->xen_p2m_mfn = dump32toh(ctx, ((uint32_t*)data)[words-1]);
-	}
+	} else
+		return kdump_ok;
+
+	res = set_attr_number(ctx, GATTR(GKI_xen_ver_major), major);
+	if (res != kdump_ok)
+		return res;
+
+	res = set_attr_number(ctx, GATTR(GKI_xen_ver_minor), minor);
+	if (res != kdump_ok)
+		return res;
+
+	res = set_attr_address(ctx, GATTR(GKI_xen_ver_extra_addr),
+				     extra);
+	if (res != kdump_ok)
+		return res;
 
 	return kdump_ok;
 }
@@ -173,32 +190,39 @@ static kdump_status
 process_xen_dumpcore_version(kdump_ctx *ctx, void *data, size_t len)
 {
 	size_t ptr_size = get_attr_ptr_size(ctx);
-	const char *ver_extra = NULL;
+	unsigned long major, minor;
+	const char *extra;
+	char extra_str[XEN_EXTRA_VERSION_SZ + 1];
+	kdump_status res;
 
 	if (ptr_size == 8 &&
 	    len >= sizeof(struct xen_dumpcore_elfnote_xen_version_64)) {
 		struct xen_dumpcore_elfnote_xen_version_64 *ver = data;
-		ctx->xen_ver.major = dump64toh(ctx, ver->major_version);
-		ctx->xen_ver.minor = dump64toh(ctx, ver->minor_version);
-		ver_extra = ver->extra_version;
+		major = dump64toh(ctx, ver->major_version);
+		minor = dump64toh(ctx, ver->minor_version);
+		extra = ver->extra_version;
 	} else if(ptr_size == 4 &&
 		  len >= sizeof(struct xen_dumpcore_elfnote_xen_version_32)) {
 		struct xen_dumpcore_elfnote_xen_version_32 *ver = data;
-		ctx->xen_ver.major = dump64toh(ctx, ver->major_version);
-		ctx->xen_ver.minor = dump64toh(ctx, ver->minor_version);
-		ver_extra = ver->extra_version;
-	}
+		major = dump64toh(ctx, ver->major_version);
+		minor = dump64toh(ctx, ver->minor_version);
+		extra = ver->extra_version;
+	} else
+		return kdump_ok;
 
-	if (ver_extra) {
-		char *newextra;
-		newextra = ctx_malloc(XEN_EXTRA_VERSION_SZ + 1,
-				      ctx, "Xen extra version");
-		if (!newextra)
-			return kdump_syserr;
-		memcpy(newextra, ver_extra, XEN_EXTRA_VERSION_SZ);
-		newextra[XEN_EXTRA_VERSION_SZ] = '\0';
-		ctx->xen_ver.extra = newextra;
-	}
+	res = set_attr_number(ctx, GATTR(GKI_xen_ver_major), major);
+	if (res != kdump_ok)
+		return res;
+
+	res = set_attr_number(ctx, GATTR(GKI_xen_ver_minor), minor);
+	if (res != kdump_ok)
+		return res;
+
+	memcpy(extra_str, extra, XEN_EXTRA_VERSION_SZ);
+	extra_str[XEN_EXTRA_VERSION_SZ] = '\0';
+	res = set_attr_string(ctx, GATTR(GKI_xen_ver_extra), extra_str);
+	if (res != kdump_ok)
+		return res;
 
 	return kdump_ok;
 }
