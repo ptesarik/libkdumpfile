@@ -35,15 +35,19 @@
 #include <errno.h>
 
 static const struct attr_template global_keys[] = {
-#define ATTR(key, field, type, ctype)			\
-	[GKI_ ## field] = { key, kdump_ ## type },
+#define ATTR(dir, key, field, type, ctype)				\
+	[GKI_ ## field] = {						\
+		key,							\
+		&global_keys[GKI_dir_ ## dir],				\
+		kdump_ ## type						\
+	},
 #include "static-attr.def"
 #include "global-attr.def"
 #undef ATTR
 };
 
 static const size_t static_offsets[] = {
-#define ATTR(key, field, type, ctype)				\
+#define ATTR(dir, key, field, type, ctype)		\
 	[GKI_ ## field] = offsetof(kdump_ctx, field),
 #include "static-attr.def"
 #undef ATTR
@@ -52,18 +56,15 @@ static const size_t static_offsets[] = {
 #define NR_GLOBAL	ARRAY_SIZE(global_keys)
 #define NR_STATIC	ARRAY_SIZE(static_offsets)
 
-/**  Initialize statically allocated attributes
+/**  Get a modifiable pointer to the static data with a given index.
+ * @param ctx  Dump file object.
+ * @param idx  Static index.
+ * @returns    Pointer to the actual static attribute data.
  */
-void
-init_static_attrs(kdump_ctx *ctx)
+static inline struct attr_data *
+static_attr_data(kdump_ctx *ctx, enum global_keyidx idx)
 {
-	int i;
-
-	for (i = 0; i < NR_STATIC; ++i) {
-		struct attr_data *attr =
-			(struct attr_data*)((char*)ctx + static_offsets[i]);
-		attr->template = &global_keys[i];
-	}
+	return (struct attr_data*)((char*)ctx + static_offsets[idx]);
 }
 
 /**  Check if a template denotes statically allocated attribute
@@ -84,15 +85,37 @@ template_static(const struct attr_template *tmpl)
 static const struct attr_template*
 lookup_template(const char *key)
 {
-	const struct attr_template *t;
+	const struct attr_template *dir, *t;
+	const char *p;
 	unsigned i;
 
 	if (key > GATTR(NR_GLOBAL))
 		return &global_keys[-(intptr_t)key];
 
+	dir = &global_keys[GKI_dir_root];
+	while ( (p = strchr(key, '.')) ) {
+		size_t keylen = p - key;
+		++p;
+
+		for (t = global_keys, i = 0; i < NR_GLOBAL; ++i, ++t)
+			if (t->parent == dir &&
+			    t->type == kdump_directory &&
+			    strlen(t->key) == keylen &&
+			    !memcmp(key, t->key, keylen)) {
+				dir = t;
+				key = p;
+				break;
+			}
+
+		if (key != p)
+			return NULL; /* directory not found */
+	}
+
 	for (t = global_keys, i = 0; i < NR_GLOBAL; ++i, ++t)
-		if (!strcmp(key, t->key))
+		if (t->parent == dir &&
+		    !strcmp(key, t->key))
 			return t;
+
 	return NULL;
 }
 
@@ -100,15 +123,38 @@ lookup_template(const char *key)
  * @param ctx   Dump file object.
  * @param tmpl  Attribute template.
  * @returns     Stored attribute or @c NULL if not found.
+ *
  */
-static struct attr_data*
-lookup_data(const kdump_ctx *ctx, const struct attr_template *tmpl)
+static const struct attr_data*
+lookup_data_const(const kdump_ctx *ctx, const struct attr_template *tmpl)
 {
+	const struct attr_data *parent;
 	struct attr_data *d;
-	for (d = ctx->attrs; d; d = d->next)
+
+	if (tmpl->parent == tmpl)
+		return &ctx->dir_root;
+
+	parent = lookup_data_const(ctx, tmpl->parent);
+	if (!parent)
+		return NULL;
+
+	for (d = parent->val.directory; d; d = d->next)
 		if (d->template == tmpl)
 			return d;
 	return NULL;
+}
+
+/**  Lookup modifiable attribute value by template.
+ *
+ * This is a wrapper around @c lookup_data_const with a typecast to
+ * a non-const pointers, which is necessary to modify attributes.
+ *
+ * @sa lookup_data_const
+ */
+static inline struct attr_data*
+lookup_data(kdump_ctx *ctx, const struct attr_template *tmpl)
+{
+	return (struct attr_data*) lookup_data_const(ctx, tmpl);
 }
 
 /**  Check if a given attribute is set.
@@ -120,7 +166,7 @@ int
 attr_isset(const kdump_ctx *ctx, const char *key)
 {
 	const struct attr_template *t = lookup_template(key);
-	return t && !!lookup_data(ctx, t);
+	return t && !!lookup_data_const(ctx, t);
 }
 
 kdump_status
@@ -128,14 +174,14 @@ kdump_get_attr(kdump_ctx *ctx, const char *key,
 	       struct kdump_attr *valp)
 {
 	const struct attr_template *t;
-	struct attr_data *d;
+	const struct attr_data *d;
 
 	clear_error(ctx);
 	t = lookup_template(key);
 	if (!t)
 		return set_error(ctx, kdump_unsupported, "No such key");
 
-	d = lookup_data(ctx, t);
+	d = lookup_data_const(ctx, t);
 	if (d) {
 		valp->type = t->type;
 		valp->val = d->val;
@@ -196,6 +242,15 @@ alloc_attr_by_key(kdump_ctx *ctx, struct attr_data **pattr,
 static void
 free_attr(struct attr_data *attr)
 {
+	if (attr->template->type == kdump_directory) {
+		struct attr_data *node = attr->val.directory;
+		while (node) {
+			struct attr_data *next = node->next;
+			free_attr(node);
+			node = next;
+		}
+	}
+
 	if (template_static(attr->template))
 		attr->pprev = NULL;
 	else
@@ -203,21 +258,21 @@ free_attr(struct attr_data *attr)
 }
 
 /**  Add new attribute to a dump file object.
- * @param ctx   Dump file object.
+ * @param dir   Parent attribute.
  * @param attr  Complete initialized attribute.
  *
  * This function merely adds the attribute to the dump file object.
  * It does not check for duplicates.
  */
 static void
-add_attr(kdump_ctx *ctx, struct attr_data *attr)
+add_attr(struct attr_data *dir, struct attr_data *attr)
 {
 	/* Link the new node */
-	attr->next = ctx->attrs;
+	attr->next = dir->val.directory;
 	if (attr->next)
 		attr->next->pprev = &attr->next;
-	ctx->attrs = attr;
-	attr->pprev = &ctx->attrs;
+	dir->val.directory = attr;
+	attr->pprev = (struct attr_data**)&dir->val.directory;
 }
 
 /**  Delete an attribute.
@@ -240,14 +295,33 @@ delete_attr(struct attr_data *attr)
 void
 cleanup_attr(kdump_ctx *ctx)
 {
-	struct attr_data *attr = ctx->attrs;
+	free_attr(&ctx->dir_root);
+}
 
-	while (attr) {
-		struct attr_data *next = attr->next;
-		free_attr(attr);
-		attr = next;
+/**  Initialize statically allocated attributes
+ */
+void
+init_static_attrs(kdump_ctx *ctx)
+{
+	int i;
+
+	ctx->dir_root.next = NULL;
+	ctx->dir_root.pprev = &ctx->dir_root.next;
+
+	for (i = 0; i < NR_STATIC; ++i) {
+		struct attr_data *attr = static_attr_data(ctx, i);
+		const struct attr_template *t = &global_keys[i];
+
+		attr->template = t;
+		if (t->parent == t) {
+			attr->pprev = &attr->next;
+		} else if (t->type == kdump_directory) {
+			struct attr_data *parent;
+
+			parent = lookup_data(ctx, t->parent);
+			add_attr(parent, attr);
+		}
 	}
-	ctx->attrs = NULL;
 }
 
 /**  Set an attribute of a dump file object.
@@ -260,11 +334,16 @@ cleanup_attr(kdump_ctx *ctx)
 void
 set_attr(kdump_ctx *ctx, struct attr_data *attr)
 {
-	struct attr_data *old = lookup_data(ctx, attr->template);
+	struct attr_data *parent, *old;
 
+	parent = lookup_data(ctx, attr->template->parent);
+	if (!parent)
+		return;		/* FIXME: Error handling! */
+
+	old = lookup_data(ctx, attr->template);
 	if (old)
 		delete_attr(old);
-	add_attr(ctx, attr);
+	add_attr(parent, attr);
 }
 
 /**  Set a numeric attribute of a dump file object.

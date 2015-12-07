@@ -263,6 +263,7 @@ kdump_status kdump_read_string(kdump_ctx *ctx, kdump_addr_t addr,
  */
 enum kdump_attr_type {
 	kdump_nil,
+	kdump_directory,
 	kdump_number,
 	kdump_address,
 	kdump_string,
@@ -271,6 +272,7 @@ enum kdump_attr_type {
 /**  Dump file attribute value.
  */
 union kdump_attr_value {
+	void *directory;
 	kdump_num_t number;
 	kdump_addr_t address;
 	const char *string;

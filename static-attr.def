@@ -2,40 +2,49 @@
  *
  * To use this file, provide a definition for the ATTR() macro:
  *
- *   ATTR(key, field, type, ctype)
+ *   ATTR(dir, key, field, type, ctype)
  *
+ * @param dir    Directory identifier (without the dir_ prefix).
  * @param key    Key name (a constant C string).
  * @param field  Field name inside kdump_ctx.
  * @param type   Attribute type (kdump_attr_type).
  * @param ctype  Suggested C type for the attribute.
  *
  * A typical stanza is:
- * #define ATTR(key, field, type, ctype) \
+ * #define ATTR(dir, key, field, type, ctype) \
  *   // use macro arguments to construct whatever you need
  * #include "static-attr.def"
  * #undef ATTR
  */
 
+/* static hierarchy */
+ATTR(root, "", dir_root, directory, struct attr_data *)
+ATTR(root, "arch", dir_arch, directory, struct attr_data *)
+ATTR(root, "linux", dir_linux, directory, struct attr_data *)
+ATTR(linux, "uts", dir_linux_uts, directory, struct attr_data *)
+ATTR(root, "xen", dir_xen, directory, struct attr_data *)
+ATTR(xen, "version", dir_xen_version, directory, struct attr_data *)
+
 /* architecture name */
-ATTR("arch.name", arch_name, string, const char *)
+ATTR(arch, "name", arch_name, string, const char *)
 
 /* little-endian or big-endian */
-ATTR("arch.byte_order", byte_order, number, kdump_byte_order_t)
+ATTR(arch, "byte_order", byte_order, number, kdump_byte_order_t)
 
 /* number of CPUs in the system  */
-ATTR("arch.num_cpus", num_cpus, number, unsigned)
+ATTR(arch, "num_cpus", num_cpus, number, unsigned)
 
 /* arch pointer size */
-ATTR("arch.ptr_size", ptr_size, number, size_t)
+ATTR(arch, "ptr_size", ptr_size, number, size_t)
 
 /* target page size */
-ATTR("arch.page_size", page_size, number, size_t)
+ATTR(arch, "page_size", page_size, number, size_t)
 
 /* = log2(page_size) */
-ATTR("arch.page_shift", page_shift, number, unsigned)
+ATTR(arch, "page_shift", page_shift, number, unsigned)
 
 /* physical base */
-ATTR("linux.phys_base", phys_base, address, kdump_addr_t)
+ATTR(linux, "phys_base", phys_base, address, kdump_addr_t)
 
 /* version as produced by KERNEL_VERSION() */
-ATTR("linux.version_code", version_code, number, unsigned)
+ATTR(linux, "version_code", version_code, number, unsigned)

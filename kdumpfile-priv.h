@@ -205,6 +205,17 @@ struct kdump_vaddr_region {
 	kdump_xlat_t xlat;	/* vaddr->paddr translation method */
 };
 
+/* Global attribute keys */
+enum global_keyidx {
+#define ATTR(dir, key, field, type, ctype)	\
+	GKI_ ## field,
+#include "static-attr.def"
+#include "global-attr.def"
+#undef ATTR
+};
+
+#define GATTR(idx)	((const char*)-(intptr_t)idx)
+
 /**  Attribute template.
  *
  * All instances of a key share the same characteristics (such as key name
@@ -212,6 +223,7 @@ struct kdump_vaddr_region {
  */
 struct attr_template {
 	const char *key;
+	const struct attr_template *parent;
 	enum kdump_attr_type type;
 };
 
@@ -249,11 +261,8 @@ struct _tag_kdump_ctx {
 	struct kdump_vaddr_region *region;
 	unsigned num_regions;	/* number of elements in ->region */
 
-	/* attributes */
-	struct attr_data *attrs; /* linked list of all attributes */
-
 	/* static attributes */
-#define ATTR(key, field, type, ctype) \
+#define ATTR(dir, key, field, type, ctype)	\
 	struct attr_data field;
 #include "static-attr.def"
 #undef ATTR
@@ -399,17 +408,6 @@ void flush_regions(kdump_ctx *ctx);
 kdump_xlat_t get_xlat(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 		      kdump_paddr_t *phys_off);
 
-/* Global attribute keys */
-enum global_keyidx {
-#define ATTR(key, field, type, ctype)		\
-	GKI_ ## field,
-#include "static-attr.def"
-#include "global-attr.def"
-#undef ATTR
-};
-
-#define GATTR(idx)	((const char*)-(intptr_t)idx)
-
 /* Attribute handling */
 
 #define init_static_attrs INTERNAL_NAME(init_static_attrs)
@@ -466,7 +464,7 @@ void cleanup_attr(kdump_ctx *ctx);
 		set_attr(ctx, &ctx->name);			\
 	}
 
-#define ATTR(key, field, type, ctype)		\
+#define ATTR(dir, key, field, type, ctype)	\
 	DEFINE_GET_ACCESSOR(field, type, ctype) \
 	DEFINE_SET_ACCESSOR(field, type, ctype)
 #include "static-attr.def"
