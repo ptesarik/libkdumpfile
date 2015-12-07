@@ -526,7 +526,7 @@ read_notes(kdump_ctx *ctx, off_t off, size_t size)
 		goto out;
 	}
 
-	ret = kdump_get_attr(ctx, "linux.uts.machine", &attr);
+	ret = kdump_get_attr(ctx, GATTR(GKI_linux_uts_machine), &attr);
 	if (ret != kdump_ok) {
 		ret = set_error(ctx, ret, "Architecture is not set");
 		goto out;
@@ -828,7 +828,7 @@ open_common(kdump_ctx *ctx)
 	if (!static_attr_isset(&ctx->arch_name)) {
 		struct kdump_attr attr;
 
-		ret = kdump_get_attr(ctx, "linux.uts.machine", &attr);
+		ret = kdump_get_attr(ctx, GATTR(GKI_linux_uts_machine), &attr);
 		if (ret == kdump_ok)
 			ret = set_arch(ctx, machine_arch(attr.val.string));
 		else

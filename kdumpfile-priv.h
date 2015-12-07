@@ -401,6 +401,17 @@ void flush_regions(kdump_ctx *ctx);
 kdump_xlat_t get_xlat(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 		      kdump_paddr_t *phys_off);
 
+/* Global attribute keys */
+enum global_keyidx {
+#define ATTR(key, field, type, ctype)		\
+	GKI_ ## field,
+#include "static-attr.def"
+#include "global-attr.def"
+#undef ATTR
+};
+
+#define GATTR(idx)	((const char*)-(intptr_t)idx)
+
 /* Attribute handling */
 
 #define init_static_attrs INTERNAL_NAME(init_static_attrs)

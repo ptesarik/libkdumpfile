@@ -287,31 +287,29 @@ set_uts_string(kdump_ctx *ctx, const char *key, const char *src)
 kdump_status
 set_uts(kdump_ctx *ctx, const struct new_utsname *src)
 {
+	static const struct {
+		unsigned idx, off;
+	} defs[] = {
+#define DEF(name) \
+		{ GKI_linux_uts_ ## name, offsetof(struct new_utsname, name) }
+		DEF(sysname),
+		DEF(nodename),
+		DEF(release),
+		DEF(version),
+		DEF(machine),
+		DEF(domainname)
+#undef DEF
+	};
+
+	unsigned i;
 	kdump_status res;
 
-	res = set_uts_string(ctx, "linux.uts.sysname", src->sysname);
-	if (res != kdump_ok)
-		return res;
-
-	res = set_uts_string(ctx, "linux.uts.nodename", src->nodename);
-	if (res != kdump_ok)
-		return res;
-
-	res = set_uts_string(ctx, "linux.uts.release", src->release);
-	if (res != kdump_ok)
-		return res;
-
-	res = set_uts_string(ctx, "linux.uts.version", src->version);
-	if (res != kdump_ok)
-		return res;
-
-	res = set_uts_string(ctx, "linux.uts.machine", src->machine);
-	if (res != kdump_ok)
-		return res;
-
-	res = set_uts_string(ctx, "linux.uts.domainname", src->domainname);
-	if (res != kdump_ok)
-		return res;
+	for (i = 0; i < ARRAY_SIZE(defs); ++i) {
+		res = set_uts_string(ctx, GATTR(defs[i].idx),
+				     (const char*)src + defs[i].off);
+		if (res != kdump_ok)
+			return res;
+	}
 
 	return kdump_ok;
 }

@@ -659,7 +659,7 @@ open_common(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		goto err_free;
 
-	ret = kdump_get_attr(ctx, "linux.uts.machine", &attr);
+	ret = kdump_get_attr(ctx, GATTR(GKI_linux_uts_machine), &attr);
 	if (ret != kdump_ok) {
 		ret = set_error(ctx, ret, "Architecture is not set");
 		goto err_free;

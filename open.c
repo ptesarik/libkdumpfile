@@ -128,7 +128,7 @@ kdump_set_fd(kdump_ctx *ctx, int fd)
 static kdump_status
 kdump_open_known(kdump_ctx *ctx)
 {
-	if (!attr_isset(ctx, "linux.uts.sysname"))
+	if (!attr_isset(ctx, GATTR(GKI_linux_uts_sysname)))
 		/* If this fails, it is not fatal. */
 		use_kernel_utsname(ctx);
 
@@ -219,7 +219,7 @@ get_version_code(kdump_ctx *ctx)
 	long a, b, c;
 	kdump_status res;
 
-	res = kdump_get_attr(ctx, "linux.uts.release", &rel);
+	res = kdump_get_attr(ctx, GATTR(GKI_linux_uts_release), &rel);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot get kernel release");
 

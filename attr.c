@@ -34,14 +34,6 @@
 #include <string.h>
 #include <errno.h>
 
-enum global_keyidx {
-#define ATTR(key, field, type, ctype)		\
-	GKI_ ## field,
-#include "static-attr.def"
-#include "global-attr.def"
-#undef ATTR
-};
-
 static const struct attr_template global_keys[] = {
 #define ATTR(key, field, type, ctype)			\
 	[GKI_ ## field] = { key, kdump_ ## type },
@@ -94,6 +86,10 @@ lookup_template(const char *key)
 {
 	const struct attr_template *t;
 	unsigned i;
+
+	if (key > GATTR(NR_GLOBAL))
+		return &global_keys[-(intptr_t)key];
+
 	for (t = global_keys, i = 0; i < NR_GLOBAL; ++i, ++t)
 		if (!strcmp(key, t->key))
 			return t;

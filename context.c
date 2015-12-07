@@ -109,37 +109,37 @@ kdump_get_string_attr(kdump_ctx *ctx, const char *key)
 const char *
 kdump_sysname(kdump_ctx *ctx)
 {
-	return kdump_get_string_attr(ctx, "linux.uts.sysname");
+	return kdump_get_string_attr(ctx, GATTR(GKI_linux_uts_sysname));
 }
 
 const char *
 kdump_nodename(kdump_ctx *ctx)
 {
-	return kdump_get_string_attr(ctx, "linux.uts.nodename");
+	return kdump_get_string_attr(ctx, GATTR(GKI_linux_uts_nodename));
 }
 
 const char *
 kdump_release(kdump_ctx *ctx)
 {
-	return kdump_get_string_attr(ctx, "linux.uts.release");
+	return kdump_get_string_attr(ctx, GATTR(GKI_linux_uts_release));
 }
 
 const char *
 kdump_version(kdump_ctx *ctx)
 {
-	return kdump_get_string_attr(ctx, "linux.uts.version");
+	return kdump_get_string_attr(ctx, GATTR(GKI_linux_uts_version));
 }
 
 const char *
 kdump_machine(kdump_ctx *ctx)
 {
-	return kdump_get_string_attr(ctx, "linux.uts.machine");
+	return kdump_get_string_attr(ctx, GATTR(GKI_linux_uts_machine));
 }
 
 const char *
 kdump_domainname(kdump_ctx *ctx)
 {
-	return kdump_get_string_attr(ctx, "linux.uts.domainname");
+	return kdump_get_string_attr(ctx, GATTR(GKI_linux_uts_domainname));
 }
 
 unsigned
