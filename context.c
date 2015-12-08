@@ -85,7 +85,7 @@ kdump_pageshift(kdump_ctx *ctx)
 kdump_paddr_t
 kdump_phys_base(kdump_ctx *ctx)
 {
-	return ctx->phys_base;
+	return get_attr_phys_base(ctx);
 }
 
 const char *

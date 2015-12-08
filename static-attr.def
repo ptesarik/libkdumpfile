@@ -24,3 +24,6 @@ ATTR("arch.byte_order", byte_order, number, kdump_byte_order_t)
 
 /* arch pointer size */
 ATTR("arch.ptr_size", ptr_size, number, size_t)
+
+/* physical base */
+ATTR("linux.phys_base", phys_base, address, kdump_addr_t)

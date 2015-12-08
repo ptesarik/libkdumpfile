@@ -245,7 +245,6 @@ struct _tag_kdump_ctx {
 	unsigned page_shift;	/* = log2(page_size) */
 	kdump_pfn_t last_pfn;	/* last read PFN */
 	kdump_pfn_t max_pfn;	/* max PFN for read_page */
-	kdump_paddr_t phys_base; /* kernel physical base offset */
 
 	struct kdump_vaddr_region *region;
 	unsigned num_regions;	/* number of elements in ->region */
@@ -275,7 +274,6 @@ struct _tag_kdump_ctx {
 
 /* kdump_ctx flags */
 #define DIF_XEN		(1UL<<1)
-#define DIF_PHYS_BASE	(1UL<<2) /* phys_base is valid */
 #define DIF_UTSNAME	(1UL<<3) /* utsname is complete */
 
 /* File formats */
@@ -542,13 +540,6 @@ static inline void
 clear_error(kdump_ctx *ctx)
 {
 	ctx->err_str = NULL;
-}
-
-static inline void
-set_phys_base(kdump_ctx *ctx, kdump_paddr_t base)
-{
-	ctx->phys_base = base;
-	ctx->flags |= DIF_PHYS_BASE;
 }
 
 /* These are macros to avoid possible conversions of the "rd" parameter */

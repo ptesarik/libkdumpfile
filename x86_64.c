@@ -310,7 +310,8 @@ read_pgt(kdump_ctx *ctx)
 		return kdump_syserr;
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, pgtaddr - __START_KERNEL_map + ctx->phys_base,
+	ret = kdump_readp(ctx, (pgtaddr - __START_KERNEL_map +
+				get_attr_phys_base(ctx)),
 			  pgt, &sz, KDUMP_PHYSADDR);
 	if (ret == kdump_ok)
 		archdata->pgt = pgt;
@@ -462,10 +463,10 @@ x86_64_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 static kdump_status
 x86_64_process_load(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t paddr)
 {
-	if (!(ctx->flags & DIF_PHYS_BASE) &&
+	if (!static_attr_isset(&ctx->phys_base) &&
 	    vaddr >= __START_KERNEL_map &&
 	    vaddr < __START_KERNEL_map + MAX_PHYSICAL_START)
-		set_phys_base(ctx, paddr - (vaddr - __START_KERNEL_map));
+		set_attr_phys_base(ctx, paddr - (vaddr - __START_KERNEL_map));
 	return kdump_ok;
 }
 

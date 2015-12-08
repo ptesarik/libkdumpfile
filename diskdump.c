@@ -634,7 +634,7 @@ read_sub_hdr_32(struct setup_data *sdp, int32_t header_version)
 				 "Cannot read subheader: %s",
 				 read_err_str(rd));
 
-	set_phys_base(ctx, dump32toh(ctx, subhdr.phys_base));
+	set_attr_phys_base(ctx, dump32toh(ctx, subhdr.phys_base));
 
 	if (header_version >= 4) {
 		sdp->note_off = dump64toh(ctx, subhdr.offset_note);
@@ -715,7 +715,7 @@ read_sub_hdr_64(struct setup_data *sdp, int32_t header_version)
 				 "Cannot read subheader: %s",
 				 read_err_str(rd));
 
-	set_phys_base(ctx, dump64toh(ctx, subhdr.phys_base));
+	set_attr_phys_base(ctx, dump64toh(ctx, subhdr.phys_base));
 
 	if (header_version >= 4) {
 		sdp->note_off = dump64toh(ctx, subhdr.offset_note);
