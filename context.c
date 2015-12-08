@@ -49,7 +49,7 @@ kdump_format(kdump_ctx *ctx)
 kdump_byte_order_t
 kdump_byte_order(kdump_ctx *ctx)
 {
-	return ctx->byte_order;
+	return ctx->byte_order.val.number;
 }
 
 size_t

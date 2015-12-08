@@ -657,7 +657,8 @@ do_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh,
 	kdump_ctx *ctx = sdp->ctx;
 	kdump_status ret;
 
-	ctx->byte_order = byte_order;
+	ctx->byte_order.val.number = byte_order;
+	set_attr(ctx, &ctx->byte_order);
 
 	ctx->ptr_size.val.number = 4;
 	set_attr(ctx, &ctx->ptr_size);
@@ -740,7 +741,8 @@ do_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh,
 	kdump_ctx *ctx = sdp->ctx;
 	kdump_status ret;
 
-	ctx->byte_order = byte_order;
+	ctx->byte_order.val.number = byte_order;
+	set_attr(ctx, &ctx->byte_order);
 
 	ctx->ptr_size.val.number = 8;
 	set_attr(ctx, &ctx->ptr_size);

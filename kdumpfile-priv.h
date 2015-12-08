@@ -232,7 +232,7 @@ struct _tag_kdump_ctx {
 	unsigned long flags;	/* see DIF_XXX below */
 
 	struct attr_data arch_name;    /* architecture name */
-	kdump_byte_order_t byte_order; /* little-endian or big-endian */
+	struct attr_data byte_order;   /* little-endian or big-endian */
 	struct attr_data ptr_size;     /* arch pointer size */
 
 	const struct format_ops *ops;
@@ -494,7 +494,7 @@ bitcount(unsigned x)
 static inline uint16_t
 dump16toh(kdump_ctx *ctx, uint16_t x)
 {
-	return ctx->byte_order == kdump_big_endian
+	return ctx->byte_order.val.number == kdump_big_endian
 		? be16toh(x)
 		: le16toh(x);
 }
@@ -502,7 +502,7 @@ dump16toh(kdump_ctx *ctx, uint16_t x)
 static inline uint32_t
 dump32toh(kdump_ctx *ctx, uint32_t x)
 {
-	return ctx->byte_order == kdump_big_endian
+	return ctx->byte_order.val.number == kdump_big_endian
 		? be32toh(x)
 		: le32toh(x);
 }
@@ -510,7 +510,7 @@ dump32toh(kdump_ctx *ctx, uint32_t x)
 static inline uint64_t
 dump64toh(kdump_ctx *ctx, uint64_t x)
 {
-	return ctx->byte_order == kdump_big_endian
+	return ctx->byte_order.val.number == kdump_big_endian
 		? be64toh(x)
 		: le64toh(x);
 }

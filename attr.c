@@ -36,17 +36,20 @@
 
 enum global_keyidx {
 	GKI_ARCH_NAME = 0,
+	GKI_ARCH_BYTE_ORDER,
 	GKI_ARCH_PTR_SIZE,
 	GKI_MAX_STATIC = GKI_ARCH_PTR_SIZE,
 };
 
 static const struct attr_template global_keys[] = {
 	[GKI_ARCH_NAME] = { "arch.name", kdump_string },
+	[GKI_ARCH_BYTE_ORDER] = { "arch.byte_order", kdump_string },
 	[GKI_ARCH_PTR_SIZE] = { "arch.ptr_size", kdump_number },
 };
 
 static const size_t static_offsets[] = {
 	[GKI_ARCH_NAME] = offsetof(kdump_ctx, arch_name),
+	[GKI_ARCH_BYTE_ORDER] = offsetof(kdump_ctx, byte_order),
 	[GKI_ARCH_PTR_SIZE] = offsetof(kdump_ctx, ptr_size),
 };
 

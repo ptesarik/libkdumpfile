@@ -839,13 +839,18 @@ elf_probe(kdump_ctx *ctx)
 	ctx->fmtdata = edp;
 
 	switch (eheader[EI_DATA]) {
-	case ELFDATA2LSB: ctx->byte_order = kdump_little_endian; break;
-	case ELFDATA2MSB: ctx->byte_order = kdump_big_endian; break;
+	case ELFDATA2LSB:
+		ctx->byte_order.val.number = kdump_little_endian;
+		break;
+	case ELFDATA2MSB:
+		ctx->byte_order.val.number = kdump_big_endian;
+		break;
 	default:
 		return set_error(ctx, kdump_unsupported,
 				 "Unsupported ELF data format: %u",
 				 eheader[EI_DATA]);
 	}
+	set_attr(ctx, &ctx->byte_order);
 
         if ((elf32->e_ident[EI_CLASS] == ELFCLASS32) &&
 	    (dump16toh(ctx, elf32->e_type) == ET_CORE) &&
