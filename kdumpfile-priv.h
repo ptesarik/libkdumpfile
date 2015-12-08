@@ -232,7 +232,6 @@ struct _tag_kdump_ctx {
 	unsigned long flags;	/* see DIF_XXX below */
 
 	kdump_byte_order_t byte_order; /* little-endian or big-endian */
-	size_t ptr_size;	/* arch pointer size */
 
 	const struct format_ops *ops;
 	const struct arch_ops *arch_ops;

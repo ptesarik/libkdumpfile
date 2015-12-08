@@ -153,16 +153,24 @@ static kdump_status
 elf_read_xen_dom0(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
-	unsigned fpp = ctx->page_size / ctx->ptr_size;
+	struct kdump_attr attr;
+	size_t ptr_size;
+	unsigned fpp;
 	uint64_t mfn_idx, frame_idx;
 	kdump_status ret;
 
+	ret = kdump_get_attr(ctx, "arch.ptr_size", &attr);
+	if (ret != kdump_ok)
+		return ret;
+	ptr_size = attr.val.number;
+
+	fpp = ctx->page_size / ptr_size;
 	mfn_idx = pfn / fpp;
 	frame_idx = pfn % fpp;
 	if (mfn_idx >= edp->xen_map_size)
 		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 
-	pfn = (ctx->ptr_size == 8)
+	pfn = (ptr_size == 8)
 		? ((uint64_t*)edp->xen_map)[mfn_idx]
 		: ((uint32_t*)edp->xen_map)[mfn_idx];
 	ret = elf_read_page(ctx, pfn);
@@ -170,7 +178,7 @@ elf_read_xen_dom0(kdump_ctx *ctx, kdump_pfn_t pfn)
 		return set_error(ctx, ret, "Cannot read MFN %llx",
 				 (unsigned long long) pfn);
 
-	pfn = (ctx->ptr_size == 8)
+	pfn = (ptr_size == 8)
 		? ((uint64_t*)ctx->page)[frame_idx]
 		: ((uint32_t*)ctx->page)[frame_idx];
 	ret = elf_read_page(ctx, pfn);
@@ -548,12 +556,20 @@ static kdump_status
 initialize_xen_map64(kdump_ctx *ctx, void *dir)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
-	unsigned fpp = ctx->page_size / ctx->ptr_size;
+	struct kdump_attr attr;
+	size_t ptr_size;
+	unsigned fpp;
 	uint64_t *dirp, *p, *map;
 	uint64_t pfn;
 	unsigned long mfns;
 	kdump_status ret;
 
+	ret = kdump_get_attr(ctx, "arch.ptr_size", &attr);
+	if (ret != kdump_ok)
+		return ret;
+	ptr_size = attr.val.number;
+
+	fpp = ctx->page_size / ptr_size;
 	mfns = 0;
 	for (dirp = dir, pfn = 0; *dirp && pfn < ctx->max_pfn;
 	     ++dirp, pfn += fpp * fpp) {
@@ -599,12 +615,20 @@ static kdump_status
 initialize_xen_map32(kdump_ctx *ctx, void *dir)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
-	unsigned fpp = ctx->page_size / ctx->ptr_size;
+	struct kdump_attr attr;
+	size_t ptr_size;
+	unsigned fpp;
 	uint32_t *dirp, *p, *map;
 	uint32_t pfn;
 	unsigned long mfns;
 	kdump_status ret;
 
+	ret = kdump_get_attr(ctx, "arch.ptr_size", &attr);
+	if (ret != kdump_ok)
+		return ret;
+	ptr_size = attr.val.number;
+
+	fpp = ctx->page_size / ptr_size;
 	mfns = 0;
 	for (dirp = dir, pfn = 0; *dirp && pfn < ctx->max_pfn;
 	     ++dirp, pfn += fpp * fpp) {
@@ -650,6 +674,7 @@ static kdump_status
 initialize_xen_map(kdump_ctx *ctx)
 {
 	void *dir, *page;
+	struct kdump_attr attr;
 	kdump_status ret;
 
 	ret = elf_read_page(ctx, ctx->xen_p2m_mfn);
@@ -664,7 +689,11 @@ initialize_xen_map(kdump_ctx *ctx)
 		return kdump_syserr;
 	ctx->page = page;
 
-	ret = (ctx->ptr_size == 8)
+	ret = kdump_get_attr(ctx, "arch.ptr_size", &attr);
+	if (ret != kdump_ok)
+		return ret;
+
+	ret = (attr.val.number == 8)
 		? initialize_xen_map64(ctx, dir)
 		: initialize_xen_map32(ctx, dir);
 

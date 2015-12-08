@@ -147,16 +147,25 @@ process_core_note(kdump_ctx *ctx, uint32_t type,
 static kdump_status
 process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 {
-	unsigned words = len / ctx->ptr_size;
+	struct kdump_attr attr;
+	size_t ptr_size;
+	unsigned words;
+	kdump_status res;
 
-	if (ctx->ptr_size == 8 &&
+	res = kdump_get_attr(ctx, "arch.ptr_size", &attr);
+	if (res != kdump_ok)
+		return res;
+	ptr_size = attr.val.number;
+
+	words = len / ptr_size;
+	if (ptr_size == 8 &&
 	    len >= sizeof(struct xen_crash_info_64)) {
 		struct xen_crash_info_64 *info = data;
 		ctx->xen_ver.major = dump64toh(ctx, info->xen_major_version);
 		ctx->xen_ver.minor = dump64toh(ctx, info->xen_minor_version);
 		ctx->xen_extra_ver = dump64toh(ctx, info->xen_extra_version);
 		ctx->xen_p2m_mfn = dump64toh(ctx, ((uint64_t*)data)[words-1]);
-	} else if (ctx->ptr_size == 4 &&
+	} else if (ptr_size == 4 &&
 		   len >= sizeof(struct xen_crash_info_32)){
 		struct xen_crash_info_32 *info = data;
 		ctx->xen_ver.major = dump32toh(ctx, info->xen_major_version);
@@ -171,15 +180,23 @@ process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 static kdump_status
 process_xen_dumpcore_version(kdump_ctx *ctx, void *data, size_t len)
 {
+	struct kdump_attr attr;
+	size_t ptr_size;
 	const char *ver_extra = NULL;
+	kdump_status res;
 
-	if (ctx->ptr_size == 8 &&
+	res = kdump_get_attr(ctx, "arch.ptr_size", &attr);
+	if (res != kdump_ok)
+		return res;
+	ptr_size = attr.val.number;
+
+	if (ptr_size == 8 &&
 	    len >= sizeof(struct xen_dumpcore_elfnote_xen_version_64)) {
 		struct xen_dumpcore_elfnote_xen_version_64 *ver = data;
 		ctx->xen_ver.major = dump64toh(ctx, ver->major_version);
 		ctx->xen_ver.minor = dump64toh(ctx, ver->minor_version);
 		ver_extra = ver->extra_version;
-	} else if(ctx->ptr_size == 4 &&
+	} else if(ptr_size == 4 &&
 		  len >= sizeof(struct xen_dumpcore_elfnote_xen_version_32)) {
 		struct xen_dumpcore_elfnote_xen_version_32 *ver = data;
 		ctx->xen_ver.major = dump64toh(ctx, ver->major_version);

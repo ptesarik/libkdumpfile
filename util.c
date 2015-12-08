@@ -247,8 +247,11 @@ set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 		set_page_size_and_shift(ctx, 1UL << page_shift, page_shift);
 	}
 
-	ctx->ptr_size = arch_ptr_size(arch);
 	ctx->arch_ops = arch_ops(arch);
+
+	res = set_attr_number(ctx, "arch.ptr_size", arch_ptr_size(arch));
+	if (res != kdump_ok)
+		return res;
 
 	res = set_attr_static_string(ctx, "arch.name", arch_name(arch));
 	if (res != kdump_ok)

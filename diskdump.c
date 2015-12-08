@@ -658,7 +658,10 @@ do_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh,
 	kdump_status ret;
 
 	ctx->byte_order = byte_order;
-	ctx->ptr_size = 4;
+
+	ret = set_attr_number(ctx, "arch.ptr_size", 4);
+	if (ret != kdump_ok)
+		return ret;
 
 	ret = read_sub_hdr_32(sdp, dump32toh(ctx, dh->header_version));
 	if (ret != kdump_ok)
@@ -739,7 +742,10 @@ do_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh,
 	kdump_status ret;
 
 	ctx->byte_order = byte_order;
-	ctx->ptr_size = 8;
+
+	ret = set_attr_number(ctx, "arch.ptr_size", 8);
+	if (ret != kdump_ok)
+		return ret;
 
 	ret = read_sub_hdr_64(sdp, dump32toh(ctx, dh->header_version));
 	if (ret != kdump_ok)
