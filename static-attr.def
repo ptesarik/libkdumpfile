@@ -22,6 +22,9 @@ ATTR("arch.name", arch_name, string, const char *)
 /* little-endian or big-endian */
 ATTR("arch.byte_order", byte_order, number, kdump_byte_order_t)
 
+/* number of CPUs in the system  */
+ATTR("arch.num_cpus", num_cpus, number, unsigned)
+
 /* arch pointer size */
 ATTR("arch.ptr_size", ptr_size, number, size_t)
 

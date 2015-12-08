@@ -133,7 +133,7 @@ kdump_version_code(kdump_ctx *ctx)
 unsigned
 kdump_num_cpus(kdump_ctx *ctx)
 {
-	return ctx->num_cpus;
+	return get_attr_num_cpus(ctx);
 }
 
 kdump_status

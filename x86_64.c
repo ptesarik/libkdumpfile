@@ -418,7 +418,7 @@ process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 		return set_error(ctx, kdump_dataerr,
 				 "Wrong PRSTATUS size: %zu", size);
 
-	++ctx->num_cpus;
+	++ctx->num_cpus.val.number;
 
 	cs = ctx_malloc(sizeof *cs, ctx, "x86_64 registers");
 	if (!cs)
@@ -454,7 +454,7 @@ x86_64_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 	if (!cs)
 		return set_error(ctx, kdump_nodata,
 				 "Out-of-bounds CPU number: %u (max %u)",
-				 cpu, ctx->num_cpus);
+				 cpu, get_attr_num_cpus(ctx));
 
 	*value = cs->reg[index];
 	return kdump_ok;
