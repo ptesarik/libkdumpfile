@@ -360,18 +360,22 @@ init_static_attrs(kdump_ctx *ctx)
 /**  Set an attribute of a dump file object.
  * @param ctx   Dump file object.
  * @param attr  Attribute (detached).
+ * @returns     Error status (see below).
  *
  * This function works both for statically allocated and dynamically
  * allocated attributes.
  */
-void
+kdump_status
 set_attr(kdump_ctx *ctx, struct attr_data *attr)
 {
 	struct attr_data *parent, *old;
 
 	parent = instantiate_path(ctx, attr->template->parent);
 	if (!parent)
-		return;		/* FIXME: Error handling! */
+		return set_error(ctx, kdump_syserr,
+				 "Cannot instantiate attribute '%s': %s",
+				 attr->template->parent->key,
+				 strerror(errno));
 
 	for (old = parent->val.directory; old; old = old->next)
 		if (old->template == attr->template) {
@@ -380,6 +384,7 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr)
 		}
 
 	add_attr(parent, attr);
+	return kdump_ok;
 }
 
 /**  Set a numeric attribute of a dump file object.
@@ -399,8 +404,7 @@ set_attr_number(kdump_ctx *ctx, const char *key, kdump_num_t num)
 		return res;
 
 	attr->val.number = num;
-	set_attr(ctx, attr);
-	return kdump_ok;
+	return set_attr(ctx, attr);
 }
 
 /**  Set an address attribute of a dump file object.
@@ -420,8 +424,7 @@ set_attr_address(kdump_ctx *ctx, const char *key, kdump_addr_t addr)
 		return res;
 
 	attr->val.address = addr;
-	set_attr(ctx, attr);
-	return kdump_ok;
+	return set_attr(ctx, attr);
 }
 
 /**  Set a string attribute of a dump file object.
@@ -445,8 +448,7 @@ set_attr_string(kdump_ctx *ctx, const char *key, const char *str)
 	dynstr = (char*)(attr + 1);
 	memcpy(dynstr, str, len + 1);
 	attr->val.string = dynstr;
-	set_attr(ctx, attr);
-	return kdump_ok;
+	return set_attr(ctx, attr);
 }
 
 /**  Set a static string attribute of a dump file object.
@@ -466,6 +468,5 @@ set_attr_static_string(kdump_ctx *ctx, const char *key, const char *str)
 		return res;
 
 	attr->val.string = str;
-	set_attr(ctx, attr);
-	return kdump_ok;
+	return set_attr(ctx, attr);
 }
