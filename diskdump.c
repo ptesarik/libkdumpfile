@@ -659,9 +659,8 @@ do_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh,
 
 	ctx->byte_order = byte_order;
 
-	ret = set_attr_number(ctx, "arch.ptr_size", 4);
-	if (ret != kdump_ok)
-		return ret;
+	ctx->ptr_size.val.number = 4;
+	set_attr(ctx, &ctx->ptr_size);
 
 	ret = read_sub_hdr_32(sdp, dump32toh(ctx, dh->header_version));
 	if (ret != kdump_ok)
@@ -743,9 +742,8 @@ do_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh,
 
 	ctx->byte_order = byte_order;
 
-	ret = set_attr_number(ctx, "arch.ptr_size", 8);
-	if (ret != kdump_ok)
-		return ret;
+	ctx->ptr_size.val.number = 8;
+	set_attr(ctx, &ctx->ptr_size);
 
 	ret = read_sub_hdr_64(sdp, dump32toh(ctx, dh->header_version));
 	if (ret != kdump_ok)
@@ -824,7 +822,7 @@ open_common(kdump_ctx *ctx)
 			goto err_cleanup;
 	}
 
-	if (!attr_isset(ctx, "arch.name"))
+	if (!static_attr_isset(&ctx->arch_name))
 		ret = set_arch(ctx, machine_arch(ctx->utsname.machine));
 	if (ret != kdump_ok)
 		goto err_cleanup;

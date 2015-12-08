@@ -34,12 +34,48 @@
 #include <string.h>
 #include <errno.h>
 
+enum global_keyidx {
+	GKI_ARCH_NAME = 0,
+	GKI_ARCH_PTR_SIZE,
+	GKI_MAX_STATIC = GKI_ARCH_PTR_SIZE,
+};
+
 static const struct attr_template global_keys[] = {
-	{ "arch.name", kdump_string },
-	{ "arch.ptr_size", kdump_number },
+	[GKI_ARCH_NAME] = { "arch.name", kdump_string },
+	[GKI_ARCH_PTR_SIZE] = { "arch.ptr_size", kdump_number },
+};
+
+static const size_t static_offsets[] = {
+	[GKI_ARCH_NAME] = offsetof(kdump_ctx, arch_name),
+	[GKI_ARCH_PTR_SIZE] = offsetof(kdump_ctx, ptr_size),
 };
 
 #define NR_GLOBAL	ARRAY_SIZE(global_keys)
+
+/**  Initialize statically allocated attributes
+ */
+void
+init_static_attrs(kdump_ctx *ctx)
+{
+	int i;
+
+	for (i = 0; i <= GKI_MAX_STATIC; ++i) {
+		struct attr_data *attr =
+			(struct attr_data*)((char*)ctx + static_offsets[i]);
+		attr->template = &global_keys[i];
+	}
+}
+
+/**  Check if a template denotes statically allocated attribute
+ * @param tmpl  Template.
+ * @returns     Non-zero if the template's attribute is static.
+ */
+static inline int
+template_static(const struct attr_template *tmpl)
+{
+	return tmpl >= &global_keys[0] &&
+		tmpl <= &global_keys[GKI_MAX_STATIC];
+}
 
 /**  Look up a template by name.
  * @param key  Key name.
@@ -156,7 +192,10 @@ alloc_attr_by_key(kdump_ctx *ctx, struct attr_data **pattr,
 static void
 free_attr(struct attr_data *attr)
 {
-	free(attr);
+	if (template_static(attr->template))
+		attr->pprev = NULL;
+	else
+		free(attr);
 }
 
 /**  Add new attribute to a dump file object.
@@ -210,8 +249,11 @@ cleanup_attr(kdump_ctx *ctx)
 /**  Set an attribute of a dump file object.
  * @param ctx   Dump file object.
  * @param attr  Attribute (detached).
+ *
+ * This function works both for statically allocated and dynamically
+ * allocated attributes.
  */
-static void
+void
 set_attr(kdump_ctx *ctx, struct attr_data *attr)
 {
 	struct attr_data *old = lookup_data(ctx, attr->template);

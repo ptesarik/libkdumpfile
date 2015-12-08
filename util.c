@@ -237,8 +237,6 @@ arch_name(enum kdump_arch arch)
 kdump_status
 set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 {
-	kdump_status res;
-
 	if (!ctx->page_size) {
 		int page_shift = default_page_shift(arch);
 		if (!page_shift)
@@ -249,13 +247,11 @@ set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 
 	ctx->arch_ops = arch_ops(arch);
 
-	res = set_attr_number(ctx, "arch.ptr_size", arch_ptr_size(arch));
-	if (res != kdump_ok)
-		return res;
+	ctx->ptr_size.val.number = arch_ptr_size(arch);
+	set_attr(ctx, &ctx->ptr_size);
 
-	res = set_attr_static_string(ctx, "arch.name", arch_name(arch));
-	if (res != kdump_ok)
-		return res;
+	ctx->arch_name.val.string = arch_name(arch);
+	set_attr(ctx, &ctx->arch_name);
 
 	if (ctx->arch_ops && ctx->arch_ops->init)
 		return ctx->arch_ops->init(ctx);

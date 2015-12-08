@@ -55,23 +55,13 @@ kdump_byte_order(kdump_ctx *ctx)
 size_t
 kdump_ptr_size(kdump_ctx *ctx)
 {
-	struct kdump_attr attr;
-
-	if (kdump_get_attr(ctx, "arch.ptr_size", &attr) != kdump_ok)
-		return 0;
-
-	return attr.val.number;
+	return ctx->ptr_size.val.number;
 }
 
 const char *
 kdump_arch_name(kdump_ctx *ctx)
 {
-	struct kdump_attr attr;
-
-	if (kdump_get_attr(ctx, "arch.name", &attr) != kdump_ok)
-		return NULL;
-
-	return attr.val.string;
+	return ctx->arch_name.val.string;
 }
 
 int

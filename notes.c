@@ -147,17 +147,9 @@ process_core_note(kdump_ctx *ctx, uint32_t type,
 static kdump_status
 process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 {
-	struct kdump_attr attr;
-	size_t ptr_size;
-	unsigned words;
-	kdump_status res;
+	size_t ptr_size = ctx->ptr_size.val.number;
+	unsigned words = len / ptr_size;
 
-	res = kdump_get_attr(ctx, "arch.ptr_size", &attr);
-	if (res != kdump_ok)
-		return res;
-	ptr_size = attr.val.number;
-
-	words = len / ptr_size;
 	if (ptr_size == 8 &&
 	    len >= sizeof(struct xen_crash_info_64)) {
 		struct xen_crash_info_64 *info = data;
@@ -180,15 +172,8 @@ process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 static kdump_status
 process_xen_dumpcore_version(kdump_ctx *ctx, void *data, size_t len)
 {
-	struct kdump_attr attr;
-	size_t ptr_size;
+	size_t ptr_size = ctx->ptr_size.val.number;
 	const char *ver_extra = NULL;
-	kdump_status res;
-
-	res = kdump_get_attr(ctx, "arch.ptr_size", &attr);
-	if (res != kdump_ok)
-		return res;
-	ptr_size = attr.val.number;
 
 	if (ptr_size == 8 &&
 	    len >= sizeof(struct xen_dumpcore_elfnote_xen_version_64)) {

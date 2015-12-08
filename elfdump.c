@@ -153,17 +153,12 @@ static kdump_status
 elf_read_xen_dom0(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
-	struct kdump_attr attr;
 	size_t ptr_size;
 	unsigned fpp;
 	uint64_t mfn_idx, frame_idx;
 	kdump_status ret;
 
-	ret = kdump_get_attr(ctx, "arch.ptr_size", &attr);
-	if (ret != kdump_ok)
-		return ret;
-	ptr_size = attr.val.number;
-
+	ptr_size = ctx->ptr_size.val.number;
 	fpp = ctx->page_size / ptr_size;
 	mfn_idx = pfn / fpp;
 	frame_idx = pfn % fpp;
@@ -556,7 +551,6 @@ static kdump_status
 initialize_xen_map64(kdump_ctx *ctx, void *dir)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
-	struct kdump_attr attr;
 	size_t ptr_size;
 	unsigned fpp;
 	uint64_t *dirp, *p, *map;
@@ -564,11 +558,7 @@ initialize_xen_map64(kdump_ctx *ctx, void *dir)
 	unsigned long mfns;
 	kdump_status ret;
 
-	ret = kdump_get_attr(ctx, "arch.ptr_size", &attr);
-	if (ret != kdump_ok)
-		return ret;
-	ptr_size = attr.val.number;
-
+	ptr_size = ctx->ptr_size.val.number;
 	fpp = ctx->page_size / ptr_size;
 	mfns = 0;
 	for (dirp = dir, pfn = 0; *dirp && pfn < ctx->max_pfn;
@@ -615,7 +605,6 @@ static kdump_status
 initialize_xen_map32(kdump_ctx *ctx, void *dir)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
-	struct kdump_attr attr;
 	size_t ptr_size;
 	unsigned fpp;
 	uint32_t *dirp, *p, *map;
@@ -623,11 +612,7 @@ initialize_xen_map32(kdump_ctx *ctx, void *dir)
 	unsigned long mfns;
 	kdump_status ret;
 
-	ret = kdump_get_attr(ctx, "arch.ptr_size", &attr);
-	if (ret != kdump_ok)
-		return ret;
-	ptr_size = attr.val.number;
-
+	ptr_size = ctx->ptr_size.val.number;
 	fpp = ctx->page_size / ptr_size;
 	mfns = 0;
 	for (dirp = dir, pfn = 0; *dirp && pfn < ctx->max_pfn;
@@ -674,7 +659,6 @@ static kdump_status
 initialize_xen_map(kdump_ctx *ctx)
 {
 	void *dir, *page;
-	struct kdump_attr attr;
 	kdump_status ret;
 
 	ret = elf_read_page(ctx, ctx->xen_p2m_mfn);
@@ -689,11 +673,7 @@ initialize_xen_map(kdump_ctx *ctx)
 		return kdump_syserr;
 	ctx->page = page;
 
-	ret = kdump_get_attr(ctx, "arch.ptr_size", &attr);
-	if (ret != kdump_ok)
-		return ret;
-
-	ret = (attr.val.number == 8)
+	ret = (ctx->ptr_size.val.number == 8)
 		? initialize_xen_map64(ctx, dir)
 		: initialize_xen_map32(ctx, dir);
 

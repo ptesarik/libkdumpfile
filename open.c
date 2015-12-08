@@ -62,6 +62,7 @@ kdump_init(void)
 	if (!ctx)
 		return NULL;
 
+	init_static_attrs(ctx);
 	ctx->last_pfn = -(kdump_paddr_t)1;
 	ctx->cb_get_symbol_val = kdump_vmcoreinfo_symbol;
 

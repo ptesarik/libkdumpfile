@@ -231,7 +231,9 @@ struct _tag_kdump_ctx {
 	const char *format;	/* file format (descriptive name) */
 	unsigned long flags;	/* see DIF_XXX below */
 
+	struct attr_data arch_name;    /* architecture name */
 	kdump_byte_order_t byte_order; /* little-endian or big-endian */
+	struct attr_data ptr_size;     /* arch pointer size */
 
 	const struct format_ops *ops;
 	const struct arch_ops *arch_ops;
@@ -404,8 +406,24 @@ kdump_xlat_t get_xlat(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 
 /* Attribute handling */
 
+#define init_static_attrs INTERNAL_NAME(init_static_attrs)
+void init_static_attrs(kdump_ctx *ctx);
+
 #define attr_isset INTERNAL_NAME(attr_isset)
 int attr_isset(const kdump_ctx *ctx, const char *key);
+
+/**  Check if a statically allocated attribute is set.
+ * @param data  Pointer to the static attribute.
+ * @returns     Non-zero if attribute data is valid.
+ */
+static inline int
+static_attr_isset(const struct attr_data *data)
+{
+	return !!data->pprev;
+}
+
+#define set_attr INTERNAL_NAME(set_attr)
+void set_attr(kdump_ctx *ctx, struct attr_data *attr);
 
 #define set_attr_number INTERNAL_NAME(set_attr_number)
 kdump_status set_attr_number(kdump_ctx *ctx, const char *key,
