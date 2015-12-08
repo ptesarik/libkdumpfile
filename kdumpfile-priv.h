@@ -231,9 +231,10 @@ struct _tag_kdump_ctx {
 	const char *format;	/* file format (descriptive name) */
 	unsigned long flags;	/* see DIF_XXX below */
 
-	struct attr_data arch_name;    /* architecture name */
-	struct attr_data byte_order;   /* little-endian or big-endian */
-	struct attr_data ptr_size;     /* arch pointer size */
+#define ATTR(key, field, type, ctype) \
+	struct attr_data field;
+#include "static-attr.def"
+#undef ATTR
 
 	const struct format_ops *ops;
 	const struct arch_ops *arch_ops;
@@ -459,13 +460,12 @@ void cleanup_attr(kdump_ctx *ctx);
 		ctx->name.val.type = newval;			\
 		set_attr(ctx, &ctx->name);			\
 	}
-#define DEFINE_ACCESSORS(name, type, ctype)    \
-	DEFINE_GET_ACCESSOR(name, type, ctype) \
-	DEFINE_SET_ACCESSOR(name, type, ctype)
 
-DEFINE_ACCESSORS(arch_name, string, const char *)
-DEFINE_ACCESSORS(byte_order, number, kdump_byte_order_t)
-DEFINE_ACCESSORS(ptr_size, number, size_t)
+#define ATTR(key, field, type, ctype)		\
+	DEFINE_GET_ACCESSOR(field, type, ctype) \
+	DEFINE_SET_ACCESSOR(field, type, ctype)
+#include "static-attr.def"
+#undef ATTR
 
 /* Older glibc didn't have the byteorder macros */
 #ifndef be16toh

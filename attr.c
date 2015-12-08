@@ -35,25 +35,28 @@
 #include <errno.h>
 
 enum global_keyidx {
-	GKI_ARCH_NAME = 0,
-	GKI_ARCH_BYTE_ORDER,
-	GKI_ARCH_PTR_SIZE,
-	GKI_MAX_STATIC = GKI_ARCH_PTR_SIZE,
+#define ATTR(key, field, type, ctype)		\
+	GKI_ ## field,
+#include "static-attr.def"
+#undef ATTR
 };
 
 static const struct attr_template global_keys[] = {
-	[GKI_ARCH_NAME] = { "arch.name", kdump_string },
-	[GKI_ARCH_BYTE_ORDER] = { "arch.byte_order", kdump_string },
-	[GKI_ARCH_PTR_SIZE] = { "arch.ptr_size", kdump_number },
+#define ATTR(key, field, type, ctype)			\
+	[GKI_ ## field] = { key, kdump_ ## type },
+#include "static-attr.def"
+#undef ATTR
 };
 
 static const size_t static_offsets[] = {
-	[GKI_ARCH_NAME] = offsetof(kdump_ctx, arch_name),
-	[GKI_ARCH_BYTE_ORDER] = offsetof(kdump_ctx, byte_order),
-	[GKI_ARCH_PTR_SIZE] = offsetof(kdump_ctx, ptr_size),
+#define ATTR(key, field, type, ctype)				\
+	[GKI_ ## field] = offsetof(kdump_ctx, field),
+#include "static-attr.def"
+#undef ATTR
 };
 
 #define NR_GLOBAL	ARRAY_SIZE(global_keys)
+#define NR_STATIC	ARRAY_SIZE(static_offsets)
 
 /**  Initialize statically allocated attributes
  */
@@ -62,7 +65,7 @@ init_static_attrs(kdump_ctx *ctx)
 {
 	int i;
 
-	for (i = 0; i <= GKI_MAX_STATIC; ++i) {
+	for (i = 0; i < NR_STATIC; ++i) {
 		struct attr_data *attr =
 			(struct attr_data*)((char*)ctx + static_offsets[i]);
 		attr->template = &global_keys[i];
@@ -77,7 +80,7 @@ static inline int
 template_static(const struct attr_template *tmpl)
 {
 	return tmpl >= &global_keys[0] &&
-		tmpl <= &global_keys[GKI_MAX_STATIC];
+		tmpl < &global_keys[NR_STATIC];
 }
 
 /**  Look up a template by name.

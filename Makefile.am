@@ -51,7 +51,8 @@ include_HEADERS = \
 	kdumpfile.h
 
 noinst_HEADERS = \
-	kdumpfile-priv.h
+	kdumpfile-priv.h \
+	static-attr.def
 
 dist_noinst_DATA = \
 	COPYING.GPLv2 \

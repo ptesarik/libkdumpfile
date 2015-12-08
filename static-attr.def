@@ -1,0 +1,26 @@
+/* Definitions for static attributes
+ *
+ * To use this file, provide a definition for the ATTR() macro:
+ *
+ *   ATTR(key, field, type, ctype)
+ *
+ * @param key    Key name (a constant C string).
+ * @param field  Field name inside kdump_ctx.
+ * @param type   Attribute type (kdump_attr_type).
+ * @param ctype  Suggested C type for the attribute.
+ *
+ * A typical stanza is:
+ * #define ATTR(key, field, type, ctype) \
+ *   // use macro arguments to construct whatever you need
+ * #include "static-attr.def"
+ * #undef ATTR
+ */
+
+/* architecture name */
+ATTR("arch.name", arch_name, string, const char *)
+
+/* little-endian or big-endian */
+ATTR("arch.byte_order", byte_order, number, kdump_byte_order_t)
+
+/* arch pointer size */
+ATTR("arch.ptr_size", ptr_size, number, size_t)
