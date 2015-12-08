@@ -213,7 +213,7 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 
 	if (!page_is_dumpable(ctx, pfn)) {
-		memset(ctx->page, 0, ctx->page_size);
+		memset(ctx->page, 0, get_attr_page_size(ctx));
 		ctx->last_pfn =  -(kdump_paddr_t)1;
 		return kdump_ok;
 	}
@@ -238,7 +238,7 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 					 (unsigned long)pd.size);
 		buf = ctx->buffer;
 	} else {
-		if (pd.size != ctx->page_size)
+		if (pd.size != get_attr_page_size(ctx))
 			return set_error(ctx, kdump_dataerr,
 					 "Wrong page size: %lu",
 					 (unsigned long)pd.size);
@@ -255,13 +255,13 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 
 	if (pd.flags & DUMP_DH_COMPRESSED_ZLIB) {
 #if USE_ZLIB
-		uLongf retlen = ctx->page_size;
+		uLongf retlen = get_attr_page_size(ctx);
 		int ret = uncompress(ctx->page, &retlen,
 				     buf, pd.size);
 		if (ret != Z_OK)
 			return set_error(ctx, kdump_dataerr,
 					 "Decompression failed: %d", ret);
-		if (retlen != ctx->page_size)
+		if (retlen != get_attr_page_size(ctx))
 			return set_error(ctx, kdump_dataerr,
 					 "Wrong uncompressed size: %lu",
 					 (unsigned long) retlen);
@@ -272,14 +272,14 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 #endif
 	} else if (pd.flags & DUMP_DH_COMPRESSED_LZO) {
 #if USE_LZO
-		lzo_uint retlen = ctx->page_size;
+		lzo_uint retlen = get_attr_page_size(ctx);
 		int ret = lzo1x_decompress_safe((lzo_bytep)buf, pd.size,
 						(lzo_bytep)ctx->page, &retlen,
 						LZO1X_MEM_DECOMPRESS);
 		if (ret != LZO_E_OK)
 			return set_error(ctx, kdump_dataerr,
 					 "Decompression failed: %d", ret);
-		if (retlen != ctx->page_size)
+		if (retlen != get_attr_page_size(ctx))
 			return set_error(ctx, kdump_dataerr,
 					 "Wrong uncompressed size: %lu",
 					 (unsigned long) retlen);
@@ -290,7 +290,7 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 #endif
 	} else if (pd.flags & DUMP_DH_COMPRESSED_SNAPPY) {
 #if USE_SNAPPY
-		size_t retlen = ctx->page_size;
+		size_t retlen = get_attr_page_size(ctx);
 		snappy_status ret;
 		ret = snappy_uncompress((char *)buf, pd.size,
 					(char *)ctx->page, &retlen);
@@ -298,7 +298,7 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 			return set_error(ctx, kdump_dataerr,
 					 "Decompression failed: %d",
 					 (int) ret);
-		if (retlen != ctx->page_size)
+		if (retlen != get_attr_page_size(ctx))
 			return set_error(ctx, kdump_dataerr,
 					 "Wrong uncompressed size: %lu",
 					 (unsigned long) retlen);
@@ -546,19 +546,19 @@ read_bitmap(kdump_ctx *ctx, int32_t sub_hdr_size,
 	    int32_t bitmap_blocks)
 {
 	struct disk_dump_priv *ddp = ctx->fmtdata;
-	off_t off = (1 + sub_hdr_size) * ctx->page_size;
+	off_t off = (1 + sub_hdr_size) * get_attr_page_size(ctx);
 	size_t bitmapsize;
 	kdump_pfn_t max_bitmap_pfn;
 	ssize_t rd;
 
-	ddp->descoff = off + bitmap_blocks * ctx->page_size;
+	ddp->descoff = off + bitmap_blocks * get_attr_page_size(ctx);
 
-	bitmapsize = bitmap_blocks * ctx->page_size;
+	bitmapsize = bitmap_blocks * get_attr_page_size(ctx);
 	max_bitmap_pfn = (kdump_pfn_t)bitmapsize * 8;
 	if (ctx->max_pfn <= max_bitmap_pfn / 2) {
 		/* partial dump */
 		bitmap_blocks /= 2;
-		bitmapsize = bitmap_blocks * ctx->page_size;
+		bitmapsize = bitmap_blocks * get_attr_page_size(ctx);
 		off += bitmapsize;
 		max_bitmap_pfn = (kdump_pfn_t)bitmapsize * 8;
 	}
@@ -628,7 +628,7 @@ read_sub_hdr_32(struct setup_data *sdp, int32_t header_version)
 	if (header_version < 1)
 		return kdump_ok;
 
-	rd = pread(ctx->fd, &subhdr, sizeof subhdr, ctx->page_size);
+	rd = pread(ctx->fd, &subhdr, sizeof subhdr, get_attr_page_size(ctx));
 	if (rd != sizeof subhdr)
 		return set_error(ctx, read_error(rd),
 				 "Cannot read subheader: %s",
@@ -709,7 +709,7 @@ read_sub_hdr_64(struct setup_data *sdp, int32_t header_version)
 	if (header_version < 1)
 		return kdump_ok;
 
-	rd = pread(ctx->fd, &subhdr, sizeof subhdr, ctx->page_size);
+	rd = pread(ctx->fd, &subhdr, sizeof subhdr, get_attr_page_size(ctx));
 	if (rd != sizeof subhdr)
 		return set_error(ctx, read_error(rd),
 				 "Cannot read subheader: %s",

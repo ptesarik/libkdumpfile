@@ -73,13 +73,13 @@ kdump_is_xen(kdump_ctx *ctx)
 size_t
 kdump_pagesize(kdump_ctx *ctx)
 {
-	return ctx->page_size;
+	return get_attr_page_size(ctx);
 }
 
 unsigned
 kdump_pageshift(kdump_ctx *ctx)
 {
-	return ctx->page_shift;
+	return get_attr_page_shift(ctx);
 }
 
 kdump_paddr_t

@@ -241,8 +241,6 @@ struct _tag_kdump_ctx {
 
 	void *buffer;		/* temporary buffer */
 	void *page;		/* page data buffer */
-	size_t page_size;	/* target page size */
-	unsigned page_shift;	/* = log2(page_size) */
 	kdump_pfn_t last_pfn;	/* last read PFN */
 	kdump_pfn_t max_pfn;	/* max PFN for read_page */
 

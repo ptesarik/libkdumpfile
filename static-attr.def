@@ -25,5 +25,11 @@ ATTR("arch.byte_order", byte_order, number, kdump_byte_order_t)
 /* arch pointer size */
 ATTR("arch.ptr_size", ptr_size, number, size_t)
 
+/* target page size */
+ATTR("arch.page_size", page_size, number, size_t)
+
+/* = log2(page_size) */
+ATTR("arch.page_shift", page_shift, number, unsigned)
+
 /* physical base */
 ATTR("linux.phys_base", phys_base, address, kdump_addr_t)

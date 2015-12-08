@@ -99,11 +99,11 @@ get_vmcoreinfo(kdump_ctx *ctx)
 static kdump_status
 devmem_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
-	off_t pos = pfn * ctx->page_size;
+	off_t pos = pfn * get_attr_page_size(ctx);
 	ssize_t rd;
 
-	rd = pread(ctx->fd, ctx->page, ctx->page_size, pos);
-	if (rd != ctx->page_size)
+	rd = pread(ctx->fd, ctx->page, get_attr_page_size(ctx), pos);
+	if (rd != get_attr_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read memory device: %s",
 				 read_err_str(rd));

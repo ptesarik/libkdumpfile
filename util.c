@@ -208,8 +208,8 @@ set_page_size_and_shift(kdump_ctx *ctx, size_t page_size, unsigned page_shift)
 				 "Cannot allocate page buffer (%zu bytes): %s",
 				 page_size, strerror(errno));
 	ctx->page = page;
-	ctx->page_size = page_size;
-	ctx->page_shift = page_shift;
+	set_attr_page_size(ctx, page_size);
+	set_attr_page_shift(ctx, page_shift);
 	return kdump_ok;
 }
 
@@ -237,7 +237,7 @@ arch_name(enum kdump_arch arch)
 kdump_status
 set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 {
-	if (!ctx->page_size) {
+	if (!static_attr_isset(&ctx->page_size)) {
 		int page_shift = default_page_shift(arch);
 		if (!page_shift)
 			return set_error(ctx, kdump_unsupported,

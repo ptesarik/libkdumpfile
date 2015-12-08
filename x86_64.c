@@ -585,15 +585,15 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 		if (ret != kdump_ok)
 			return ret;
 
-		mfn = maddr >> ctx->page_shift;
+		mfn = maddr >> get_attr_page_shift(ctx);
 		ret = ctx->ops->mfn_to_pfn(ctx, mfn, &pfn);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret,
 					 "Cannot translate MFN 0x%llx",
 					 (unsigned long long) mfn);
 
-		*paddr = (pfn << ctx->page_shift) |
-			(maddr & (ctx->page_size - 1));
+		*paddr = (pfn << get_attr_page_shift(ctx)) |
+			(maddr & (get_attr_page_size(ctx) - 1));
 		return kdump_ok;
 	}
 

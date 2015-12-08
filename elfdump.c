@@ -112,7 +112,7 @@ static kdump_status
 elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
-	kdump_paddr_t addr = pfn * ctx->page_size;
+	kdump_paddr_t addr = pfn * get_attr_page_size(ctx);
 	kdump_paddr_t segoff;
 	off_t pos;
 	ssize_t rd;
@@ -139,8 +139,8 @@ elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	}
 
 	/* read page data */
-	rd = pread(ctx->fd, ctx->page, ctx->page_size, pos);
-	if (rd != ctx->page_size)
+	rd = pread(ctx->fd, ctx->page, get_attr_page_size(ctx), pos);
+	if (rd != get_attr_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu: %s",
 				 (unsigned long long) pos, read_err_str(rd));
@@ -159,7 +159,7 @@ elf_read_xen_dom0(kdump_ctx *ctx, kdump_pfn_t pfn)
 	kdump_status ret;
 
 	ptr_size = get_attr_ptr_size(ctx);
-	fpp = ctx->page_size / ptr_size;
+	fpp = get_attr_page_size(ctx) / ptr_size;
 	mfn_idx = pfn / fpp;
 	frame_idx = pfn % fpp;
 	if (mfn_idx >= edp->xen_map_size)
@@ -215,9 +215,9 @@ elf_read_xen_domU(kdump_ctx *ctx, kdump_pfn_t pfn)
 				 "No machine address for PFN: 0x%llx",
 				 (unsigned long long) pfn);
 
-	offset = edp->xen_pages_offset + (off_t)idx * ctx->page_size;
-	rd = pread(ctx->fd, ctx->page, ctx->page_size, offset);
-	if (rd != ctx->page_size)
+	offset = edp->xen_pages_offset + (off_t)idx * get_attr_page_size(ctx);
+	rd = pread(ctx->fd, ctx->page, get_attr_page_size(ctx), offset);
+	if (rd != get_attr_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu: %s",
 				 (unsigned long long) offset,
@@ -273,9 +273,9 @@ elf_read_xenmach_domU(kdump_ctx *ctx, kdump_pfn_t mfn)
 	if (idx == ~0UL)
 		return set_error(ctx, kdump_nodata, "Page not found");
 
-	offset = edp->xen_pages_offset + (off_t)idx * ctx->page_size;
-	rd = pread(ctx->fd, ctx->page, ctx->page_size, offset);
-	if (rd != ctx->page_size)
+	offset = edp->xen_pages_offset + (off_t)idx * get_attr_page_size(ctx);
+	rd = pread(ctx->fd, ctx->page, get_attr_page_size(ctx), offset);
+	if (rd != get_attr_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu: %s",
 				 (unsigned long long) offset,
@@ -559,7 +559,7 @@ initialize_xen_map64(kdump_ctx *ctx, void *dir)
 	kdump_status ret;
 
 	ptr_size = get_attr_ptr_size(ctx);
-	fpp = ctx->page_size / ptr_size;
+	fpp = get_attr_page_size(ctx) / ptr_size;
 	mfns = 0;
 	for (dirp = dir, pfn = 0; *dirp && pfn < ctx->max_pfn;
 	     ++dirp, pfn += fpp * fpp) {
@@ -571,7 +571,9 @@ initialize_xen_map64(kdump_ctx *ctx, void *dir)
 					 "Cannot read Xen P2M map MFN 0x%llx",
 					 (unsigned long long) *dirp);
 
-		for (p = ctx->page; (void*)p < ctx->page + ctx->page_size; ++p)
+		for (p = ctx->page;
+		     (void*)p < ctx->page + get_attr_page_size(ctx);
+		     ++p)
 			if (*p)
 				++mfns;
 	}
@@ -591,7 +593,9 @@ initialize_xen_map64(kdump_ctx *ctx, void *dir)
 					 "Cannot read Xen P2M map MFN 0x%llx",
 					 (unsigned long long) *dirp);
 
-		for (p = ctx->page; (void*)p < ctx->page + ctx->page_size; ++p)
+		for (p = ctx->page;
+		     (void*)p < ctx->page + get_attr_page_size(ctx);
+		     ++p)
 			if (*p) {
 				*map++ = dump64toh(ctx, *p);
 				--mfns;
@@ -613,7 +617,7 @@ initialize_xen_map32(kdump_ctx *ctx, void *dir)
 	kdump_status ret;
 
 	ptr_size = get_attr_ptr_size(ctx);
-	fpp = ctx->page_size / ptr_size;
+	fpp = get_attr_page_size(ctx) / ptr_size;
 	mfns = 0;
 	for (dirp = dir, pfn = 0; *dirp && pfn < ctx->max_pfn;
 	     ++dirp, pfn += fpp * fpp) {
@@ -625,7 +629,9 @@ initialize_xen_map32(kdump_ctx *ctx, void *dir)
 					 "Cannot read Xen P2M map MFN 0x%llx",
 					 (unsigned long long) *dirp);
 
-		for (p = ctx->page; (void*)p < ctx->page + ctx->page_size; ++p)
+		for (p = ctx->page;
+		     (void*)p < ctx->page + get_attr_page_size(ctx);
+		     ++p)
 			if (*p)
 				++mfns;
 	}
@@ -645,7 +651,9 @@ initialize_xen_map32(kdump_ctx *ctx, void *dir)
 					 "Cannot read Xen P2M map MFN 0x%llx",
 					 (unsigned long long) *dirp);
 
-		for (p = ctx->page; (void*)p < ctx->page + ctx->page_size; ++p)
+		for (p = ctx->page;
+		     (void*)p < ctx->page + get_attr_page_size(ctx);
+		     ++p)
 			if (*p) {
 				*map++ = dump32toh(ctx, *p);
 				--mfns;
@@ -668,7 +676,7 @@ initialize_xen_map(kdump_ctx *ctx)
 				 (unsigned long long) ctx->xen_p2m_mfn);
 
 	dir = ctx->page;
-	page = ctx_malloc(ctx->page_size, ctx, "page buffer");
+	page = ctx_malloc(get_attr_page_size(ctx), ctx, "page buffer");
 	if (page == NULL)
 		return kdump_syserr;
 	ctx->page = page;
@@ -755,7 +763,8 @@ open_common(kdump_ctx *ctx)
 	/* process LOAD segments */
 	for (i = 0; i < edp->num_load_segments; ++i) {
 		struct load_segment *seg = edp->load_segments + i;
-		unsigned long pfn = (seg->phys + seg->size) / ctx->page_size;
+		unsigned long pfn = (seg->phys + seg->size) /
+			get_attr_page_size(ctx);
 		if (pfn > ctx->max_pfn)
 			ctx->max_pfn = pfn;
 

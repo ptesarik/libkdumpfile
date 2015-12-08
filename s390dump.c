@@ -94,7 +94,7 @@ static kdump_status
 s390_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	struct s390dump_priv *sdp = ctx->fmtdata;
-	kdump_paddr_t addr = pfn * ctx->page_size;
+	kdump_paddr_t addr = pfn * get_attr_page_size(ctx);
 	off_t pos;
 	ssize_t rd;
 
@@ -105,8 +105,8 @@ s390_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 
 	pos = (off_t)addr + (off_t)sdp->dataoff;
-	rd = pread(ctx->fd, ctx->page, ctx->page_size, pos);
-	if (rd != ctx->page_size)
+	rd = pread(ctx->fd, ctx->page, get_attr_page_size(ctx), pos);
+	if (rd != get_attr_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu: %s",
 				 (unsigned long long) pos,
