@@ -128,7 +128,7 @@ kdump_set_fd(kdump_ctx *ctx, int fd)
 static kdump_status
 kdump_open_known(kdump_ctx *ctx)
 {
-	if (!(ctx->flags & DIF_UTSNAME))
+	if (!attr_isset(ctx, "linux.uts.sysname"))
 		/* If this fails, it is not fatal. */
 		use_kernel_utsname(ctx);
 
@@ -213,16 +213,22 @@ use_kernel_utsname(kdump_ctx *ctx)
 static kdump_status
 get_version_code(kdump_ctx *ctx)
 {
+	struct kdump_attr rel;
 	const char *p;
 	char *endp;
 	long a, b, c;
+	kdump_status res;
 
-	p = ctx->utsname.release;
+	res = kdump_get_attr(ctx, "linux.uts.release", &rel);
+	if (res != kdump_ok)
+		return set_error(ctx, res, "Cannot get kernel release");
+
+	p = rel.val.string;
 	a = strtoul(p, &endp, 10);
 	if (endp == p || *endp != '.')
 		return set_error(ctx, kdump_dataerr,
 				 "Invalid kernel version: %s",
-				 ctx->utsname.release);
+				 rel.val.string);
 
 	b = c = 0L;
 	if (*endp) {
@@ -231,7 +237,7 @@ get_version_code(kdump_ctx *ctx)
 		if (endp == p || *endp != '.')
 			return set_error(ctx, kdump_dataerr,
 					 "Invalid kernel version: %s",
-					 ctx->utsname.release);
+					 rel.val.string);
 
 		if (*endp) {
 			p = endp + 1;
@@ -239,7 +245,7 @@ get_version_code(kdump_ctx *ctx)
 			if (endp == p)
 				return set_error(ctx, kdump_dataerr,
 						 "Invalid kernel version: %s",
-						 ctx->utsname.release);
+						 rel.val.string);
 		}
 	}
 

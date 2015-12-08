@@ -38,6 +38,7 @@ enum global_keyidx {
 #define ATTR(key, field, type, ctype)		\
 	GKI_ ## field,
 #include "static-attr.def"
+#include "global-attr.def"
 #undef ATTR
 };
 
@@ -45,6 +46,7 @@ static const struct attr_template global_keys[] = {
 #define ATTR(key, field, type, ctype)			\
 	[GKI_ ## field] = { key, kdump_ ## type },
 #include "static-attr.def"
+#include "global-attr.def"
 #undef ATTR
 };
 

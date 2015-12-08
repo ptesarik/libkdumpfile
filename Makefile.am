@@ -52,6 +52,7 @@ include_HEADERS = \
 
 noinst_HEADERS = \
 	kdumpfile-priv.h \
+	global-attr.def \
 	static-attr.def
 
 dist_noinst_DATA = \

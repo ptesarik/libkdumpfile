@@ -258,8 +258,6 @@ struct _tag_kdump_ctx {
 #include "static-attr.def"
 #undef ATTR
 
-	struct new_utsname utsname;
-
 	struct vmcoreinfo *vmcoreinfo;
 	struct vmcoreinfo *vmcoreinfo_xen;
 
@@ -278,7 +276,6 @@ struct _tag_kdump_ctx {
 
 /* kdump_ctx flags */
 #define DIF_XEN		(1UL<<1)
-#define DIF_UTSNAME	(1UL<<3) /* utsname is complete */
 
 /* File formats */
 
@@ -352,11 +349,8 @@ kdump_status set_arch(kdump_ctx *ctx, enum kdump_arch arch);
 #define set_page_size INTERNAL_NAME(set_page_size)
 kdump_status set_page_size(kdump_ctx *ctx, size_t page_size);
 
-#define copy_uts_string INTERNAL_NAME(copy_uts_string)
-void copy_uts_string(char *dest, const char *src);
-
 #define set_uts INTERNAL_NAME(set_uts)
-void set_uts(kdump_ctx *ctx, const struct new_utsname *src);
+kdump_status set_uts(kdump_ctx *ctx, const struct new_utsname *src);
 
 #define uts_looks_sane INTERNAL_NAME(uts_looks_sane)
 int uts_looks_sane(struct new_utsname *uts);

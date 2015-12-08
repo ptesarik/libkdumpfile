@@ -272,8 +272,12 @@ process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
 	}
 
 	val = kdump_vmcoreinfo_row(ctx, "OSRELEASE");
-	if (val)
-		strncpy(ctx->utsname.release, val, NEW_UTS_LEN);
+	if (val) {
+		ret = set_attr_string(ctx, "linux.uts.release", val);
+		if (ret != kdump_ok)
+			return set_error(ctx, ret,
+					 "Cannot set UTS release");
+	}
 
 	return kdump_ok;
 }

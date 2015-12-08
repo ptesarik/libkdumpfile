@@ -609,6 +609,7 @@ open_common(kdump_ctx *ctx)
 	struct dump_header_common *dh = ctx->buffer;
 	struct lkcd_priv *lkcdp;
 	unsigned max_idx1;
+	struct kdump_attr attr;
 	kdump_status ret;
 
 	lkcdp = ctx_malloc(sizeof *lkcdp, ctx, "LKCD private data");
@@ -655,6 +656,16 @@ open_common(kdump_ctx *ctx)
 				lkcdp->version);
 	}
 
+	if (ret != kdump_ok)
+		goto err_free;
+
+	ret = kdump_get_attr(ctx, "linux.uts.machine", &attr);
+	if (ret != kdump_ok) {
+		ret = set_error(ctx, ret, "Architecture is not set");
+		goto err_free;
+	}
+
+	ret = set_arch(ctx, machine_arch(attr.val.string));
 	if (ret != kdump_ok)
 		goto err_free;
 

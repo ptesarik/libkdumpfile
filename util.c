@@ -273,25 +273,47 @@ set_page_size(kdump_ctx *ctx, size_t page_size)
 /* Final NUL may be missing in the source (i.e. corrupted dump data),
  * but let's make sure that it is present in the destination.
  */
-void
-copy_uts_string(char *dest, const char *src)
+static kdump_status
+set_uts_string(kdump_ctx *ctx, const char *key, const char *src)
 {
-	if (!*dest) {
-		memcpy(dest, src, NEW_UTS_LEN);
-		dest[NEW_UTS_LEN] = 0;
-	}
+	char str[NEW_UTS_LEN + 1];
+
+	memcpy(str, src, NEW_UTS_LEN);
+	str[NEW_UTS_LEN] = 0;
+	return set_error(ctx, set_attr_string(ctx, key, str),
+			 "Cannot set attribute %s", key);
 }
 
-void
+kdump_status
 set_uts(kdump_ctx *ctx, const struct new_utsname *src)
 {
-	copy_uts_string(ctx->utsname.sysname, src->sysname);
-	copy_uts_string(ctx->utsname.nodename, src->nodename);
-	copy_uts_string(ctx->utsname.release, src->release);
-	copy_uts_string(ctx->utsname.version, src->version);
-	copy_uts_string(ctx->utsname.machine, src->machine);
-	copy_uts_string(ctx->utsname.domainname, src->domainname);
-	ctx->flags |= DIF_UTSNAME;
+	kdump_status res;
+
+	res = set_uts_string(ctx, "linux.uts.sysname", src->sysname);
+	if (res != kdump_ok)
+		return res;
+
+	res = set_uts_string(ctx, "linux.uts.nodename", src->nodename);
+	if (res != kdump_ok)
+		return res;
+
+	res = set_uts_string(ctx, "linux.uts.release", src->release);
+	if (res != kdump_ok)
+		return res;
+
+	res = set_uts_string(ctx, "linux.uts.version", src->version);
+	if (res != kdump_ok)
+		return res;
+
+	res = set_uts_string(ctx, "linux.uts.machine", src->machine);
+	if (res != kdump_ok)
+		return res;
+
+	res = set_uts_string(ctx, "linux.uts.domainname", src->domainname);
+	if (res != kdump_ok)
+		return res;
+
+	return kdump_ok;
 }
 
 int

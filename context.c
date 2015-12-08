@@ -88,40 +88,58 @@ kdump_phys_base(kdump_ctx *ctx)
 	return get_attr_phys_base(ctx);
 }
 
+/** Get a string attribute.
+ *
+ * @param ctx  Dump file object.
+ * @param key  Attribut key.
+ * @returns    The attribute value, @c NULL if not found or if the
+ *             attribute is not a string.
+ */
+static const char *
+kdump_get_string_attr(kdump_ctx *ctx, const char *key)
+{
+	struct kdump_attr attr;
+
+	return (kdump_get_attr(ctx, key, &attr) == kdump_ok &&
+		attr.type == kdump_string)
+		? attr.val.string
+		: NULL;
+}
+
 const char *
 kdump_sysname(kdump_ctx *ctx)
 {
-	return ctx->utsname.sysname;
+	return kdump_get_string_attr(ctx, "linux.uts.sysname");
 }
 
 const char *
 kdump_nodename(kdump_ctx *ctx)
 {
-	return ctx->utsname.nodename;
+	return kdump_get_string_attr(ctx, "linux.uts.nodename");
 }
 
 const char *
 kdump_release(kdump_ctx *ctx)
 {
-	return ctx->utsname.release;
+	return kdump_get_string_attr(ctx, "linux.uts.release");
 }
 
 const char *
 kdump_version(kdump_ctx *ctx)
 {
-	return ctx->utsname.version;
+	return kdump_get_string_attr(ctx, "linux.uts.version");
 }
 
 const char *
 kdump_machine(kdump_ctx *ctx)
 {
-	return ctx->utsname.machine;
+	return kdump_get_string_attr(ctx, "linux.uts.machine");
 }
 
 const char *
 kdump_domainname(kdump_ctx *ctx)
 {
-	return ctx->utsname.domainname;
+	return kdump_get_string_attr(ctx, "linux.uts.domainname");
 }
 
 unsigned

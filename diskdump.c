@@ -504,6 +504,7 @@ read_notes(kdump_ctx *ctx, off_t off, size_t size)
 {
 	void *notes;
 	ssize_t rd;
+	struct kdump_attr attr;
 	kdump_status ret = kdump_ok;
 
 	notes = ctx_malloc(size, ctx, "notes");
@@ -525,7 +526,13 @@ read_notes(kdump_ctx *ctx, off_t off, size_t size)
 		goto out;
 	}
 
-	ret = set_arch(ctx, machine_arch(ctx->utsname.machine));
+	ret = kdump_get_attr(ctx, "linux.uts.machine", &attr);
+	if (ret != kdump_ok) {
+		ret = set_error(ctx, ret, "Architecture is not set");
+		goto out;
+	}
+
+	ret = set_arch(ctx, machine_arch(attr.val.string));
 	if (ret != kdump_ok) {
 		ret = set_error(ctx, ret, "Cannot set architecture");
 		goto out;
@@ -818,8 +825,15 @@ open_common(kdump_ctx *ctx)
 			goto err_cleanup;
 	}
 
-	if (!static_attr_isset(&ctx->arch_name))
-		ret = set_arch(ctx, machine_arch(ctx->utsname.machine));
+	if (!static_attr_isset(&ctx->arch_name)) {
+		struct kdump_attr attr;
+
+		ret = kdump_get_attr(ctx, "linux.uts.machine", &attr);
+		if (ret == kdump_ok)
+			ret = set_arch(ctx, machine_arch(attr.val.string));
+		else
+			ret = set_error(ctx, ret, "Architecture is not set");
+	}
 	if (ret != kdump_ok)
 		goto err_cleanup;
 
