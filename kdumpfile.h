@@ -294,6 +294,25 @@ struct kdump_attr {
 kdump_status kdump_get_attr(kdump_ctx *ctx, const char *key,
 			    struct kdump_attr *valp);
 
+/**  Type for kdump_enum_attr callback function.
+ * @param data  Data pointer which was passed to @ref kdump_enum_attr.
+ * @param key   Key name.
+ * @param valp  Attribute value.
+ * @returns     Non-zero if enumeration should stop.
+ */
+typedef int kdump_enum_attr_fn(void *data, const char *key,
+			       const struct kdump_attr *valp);
+
+/**  Enumerate an attribute directory.
+ * @param ctx      Dump file object.
+ * @param path     Path to the attribute.
+ * @param cb       Callback function.
+ * @param cb_data  Data that is passed to the callback function.
+ * @returns     Error status.
+ */
+kdump_status kdump_enum_attr(kdump_ctx *ctx, const char *path,
+			     kdump_enum_attr_fn *cb, void *cb_data);
+
 /**  Get target dump format.
  * @param ctx  Dump file object.
  * @returns    Descriptive name of the file format.

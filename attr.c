@@ -204,6 +204,36 @@ kdump_get_attr(kdump_ctx *ctx, const char *key,
 	return set_error(ctx, kdump_nodata, "Key has no value");
 }
 
+kdump_status
+kdump_enum_attr(kdump_ctx *ctx, const char *path,
+		kdump_enum_attr_fn *cb, void *cb_data)
+{
+	const struct attr_template *t;
+	const struct attr_data *parent, *d;
+
+	clear_error(ctx);
+	t = lookup_template(path);
+	if (!t)
+		return set_error(ctx, kdump_unsupported, "No such path");
+
+	parent = lookup_data_const(ctx, t);
+	if (!parent)
+		return set_error(ctx, kdump_nodata, "Path not instantiated");
+	if (parent->template->type != kdump_directory)
+		return set_error(ctx, kdump_unsupported,
+				 "Path is a leaf attribute");
+
+	for (d = (struct attr_data*)parent->val.directory; d; d = d->next) {
+		struct kdump_attr attr;
+
+		attr.type = d->template->type;
+		attr.val = d->val;
+		if (cb(cb_data, d->template->key, &attr))
+			break;
+	}
+	return kdump_ok;
+}
+
 /**  Allocate a new attribute.
  * @param tmpl   Attribute template.
  * @param extra  Extra size to be allocated.
