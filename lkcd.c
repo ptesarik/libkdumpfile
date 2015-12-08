@@ -659,16 +659,6 @@ open_common(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		goto err_free;
 
-	ret = kdump_get_attr(ctx, GATTR(GKI_linux_uts_machine), &attr);
-	if (ret != kdump_ok) {
-		ret = set_error(ctx, ret, "Architecture is not set");
-		goto err_free;
-	}
-
-	ret = set_arch(ctx, machine_arch(attr.val.string));
-	if (ret != kdump_ok)
-		goto err_free;
-
 	max_idx1 = pfn_idx1(ctx->max_pfn - 1) + 1;
 	lkcdp->pfn_level1 = calloc(max_idx1, sizeof(struct pfn_level2*));
 	if (!lkcdp->pfn_level1) {
@@ -678,7 +668,13 @@ open_common(kdump_ctx *ctx)
 		goto err_free;
 	}
 
-	ret = set_arch(ctx, machine_arch(ctx->utsname.machine));
+	ret = kdump_get_attr(ctx, GATTR(GKI_linux_uts_machine), &attr);
+	if (ret != kdump_ok) {
+		ret = set_error(ctx, ret, "Architecture is not set");
+		goto err_free;
+	}
+
+	ret = set_arch(ctx, machine_arch(attr.val.string));
 	if (ret != kdump_ok)
 		goto err_free;
 

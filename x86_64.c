@@ -447,7 +447,7 @@ x86_64_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 				 "Out-of-bounds register number: %u (max %u)",
 				 index, ELF_NGREG);
 
-	cpu = ctx->num_cpus - cpu - 1;
+	cpu = get_attr_num_cpus(ctx) - cpu - 1;
 
 	for (i = 0, cs = archdata->cpu_state; i < cpu && cs; ++i)
 		cs = cs->next;

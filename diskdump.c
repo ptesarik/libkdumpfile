@@ -317,7 +317,8 @@ static kdump_status
 diskdump_read_xen_dom0(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	struct disk_dump_priv *ddp = ctx->fmtdata;
-	unsigned fpp = ctx->page_size / ctx->ptr_size;
+	size_t ptr_size = get_attr_ptr_size(ctx);
+	unsigned fpp = get_attr_page_size(ctx) / ptr_size;
 	uint64_t mfn_idx, frame_idx;
 	kdump_status ret;
 
@@ -326,7 +327,7 @@ diskdump_read_xen_dom0(kdump_ctx *ctx, kdump_pfn_t pfn)
 	if (mfn_idx >= ddp->xen_map_size)
 		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 
-	pfn = (ctx->ptr_size == 8)
+	pfn = (ptr_size == 8)
 		? ((uint64_t*)ddp->xen_map)[mfn_idx]
 		: ((uint32_t*)ddp->xen_map)[mfn_idx];
 	ret = diskdump_read_page(ctx, pfn);
@@ -334,7 +335,7 @@ diskdump_read_xen_dom0(kdump_ctx *ctx, kdump_pfn_t pfn)
 		return set_error(ctx, ret, "Cannot read MFN %llx",
 				 (unsigned long long) pfn);
 
-	pfn = (ctx->ptr_size == 8)
+	pfn = (ptr_size == 8)
 		? ((uint64_t*)ctx->page)[frame_idx]
 		: ((uint32_t*)ctx->page)[frame_idx];
 	ret = diskdump_read_page(ctx, pfn);
@@ -346,7 +347,8 @@ static kdump_status
 initialize_xen_map64(kdump_ctx *ctx, void *dir)
 {
 	struct disk_dump_priv *ddp = ctx->fmtdata;
-	unsigned fpp = ctx->page_size / ctx->ptr_size;
+	size_t page_size = get_attr_page_size(ctx);
+	unsigned fpp = page_size / get_attr_ptr_size(ctx);
 	uint64_t *dirp, *p, *map;
 	uint64_t pfn;
 	unsigned long mfns;
@@ -363,7 +365,7 @@ initialize_xen_map64(kdump_ctx *ctx, void *dir)
 					 "Cannot read Xen P2M map MFN 0x%llx",
 					 (unsigned long long) *dirp);
 
-		for (p = ctx->page; (void*)p < ctx->page + ctx->page_size; ++p)
+		for (p = ctx->page; (void*)p < ctx->page + page_size; ++p)
 			if (*p)
 				++mfns;
 	}
@@ -383,7 +385,7 @@ initialize_xen_map64(kdump_ctx *ctx, void *dir)
 					 "Cannot read Xen P2M map MFN 0x%llx",
 					 (unsigned long long) *dirp);
 
-		for (p = ctx->page; (void*)p < ctx->page + ctx->page_size; ++p)
+		for (p = ctx->page; (void*)p < ctx->page + page_size; ++p)
 			if (*p) {
 				*map++ = dump64toh(ctx, *p);
 				--mfns;
@@ -397,7 +399,8 @@ static kdump_status
 initialize_xen_map32(kdump_ctx *ctx, void *dir)
 {
 	struct disk_dump_priv *ddp = ctx->fmtdata;
-	unsigned fpp = ctx->page_size / ctx->ptr_size;
+	size_t page_size = get_attr_page_size(ctx);
+	unsigned fpp = page_size / get_attr_ptr_size(ctx);
 	uint32_t *dirp, *p, *map;
 	uint32_t pfn;
 	unsigned long mfns;
@@ -414,7 +417,7 @@ initialize_xen_map32(kdump_ctx *ctx, void *dir)
 					 "Cannot read Xen P2M map MFN 0x%llx",
 					 (unsigned long long) *dirp);
 
-		for (p = ctx->page; (void*)p < ctx->page + ctx->page_size; ++p)
+		for (p = ctx->page; (void*)p < ctx->page + page_size; ++p)
 			if (*p)
 				++mfns;
 	}
@@ -434,7 +437,7 @@ initialize_xen_map32(kdump_ctx *ctx, void *dir)
 					 "Cannot read Xen P2M map MFN 0x%llx",
 					 (unsigned long long) *dirp);
 
-		for (p = ctx->page; (void*)p < ctx->page + ctx->page_size; ++p)
+		for (p = ctx->page; (void*)p < ctx->page + page_size; ++p)
 			if (*p) {
 				*map++ = dump32toh(ctx, *p);
 				--mfns;
@@ -457,12 +460,12 @@ initialize_xen_map(kdump_ctx *ctx)
 				 (unsigned long long) ctx->xen_p2m_mfn);
 
 	dir = ctx->page;
-	page = ctx_malloc(ctx->page_size, ctx, "page buffer");
+	page = ctx_malloc(get_attr_page_size(ctx), ctx, "page buffer");
 	if (page == NULL)
 		return kdump_syserr;
 	ctx->page = page;
 
-	ret = (ctx->ptr_size == 8)
+	ret = (get_attr_ptr_size(ctx) == 8)
 		? initialize_xen_map64(ctx, dir)
 		: initialize_xen_map32(ctx, dir);
 
