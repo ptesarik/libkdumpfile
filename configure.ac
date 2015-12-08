@@ -21,7 +21,7 @@ dnl  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 AC_INIT([Library for reading kernel core dumps],
         [0.1.6],[ptesarik@suse.cz],[libkdumpfile])
 
-AC_CONFIG_SRCDIR([diskdump.c])
+AC_CONFIG_SRCDIR([src/diskdump.c])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADER([config.h])
 
@@ -46,6 +46,7 @@ AC_CONFIG_FILES([
 	Makefile
 	doc/Makefile
 	examples/Makefile
+	src/Makefile
 	libkdumpfile.pc
 ])
 

@@ -1,0 +1,32 @@
+/* Definitions for global (but not static) attributes
+ *
+ * To use this file, provide a definition for the ATTR() macro:
+ *
+ *   ATTR(dir, key, id, type, ctype)
+ *
+ * @param dir    Directory identifier (without the dir_ prefix).
+ * @param key    Key name (a constant C string).
+ * @param id     C identifier.
+ * @param type   Attribute type (kdump_attr_type).
+ * @param ctype  Suggested C type for the attribute.
+ *
+ * A typical stanza is:
+ * #define ATTR(dir, key, field, type, ctype) \
+ *   // use macro arguments to construct whatever you need
+ * #include "global-attr.def"
+ * #undef ATTR
+ */
+
+/* utsname */
+ATTR(linux_uts, "sysname", linux_uts_sysname, string, const char *)
+ATTR(linux_uts, "nodename", linux_uts_nodename, string, const char *)
+ATTR(linux_uts, "release", linux_uts_release, string, const char *)
+ATTR(linux_uts, "version", linux_uts_version, string, const char *)
+ATTR(linux_uts, "machine", linux_uts_machine, string, const char *)
+ATTR(linux_uts, "domainname", linux_uts_domainname, string, const char *)
+
+/* Xen */
+ATTR(xen_version, "major", xen_ver_major, number, unsigned long)
+ATTR(xen_version, "minor", xen_ver_minor, number, unsigned long)
+ATTR(xen_version, "extra", xen_ver_extra, string, const char *)
+ATTR(xen_version, "extra_addr", xen_ver_extra_addr, address, kdump_vaddr_t)

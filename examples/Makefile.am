@@ -19,8 +19,10 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
+AM_CPPFLAGS = -I$(top_srcdir)/src
+LIBS = $(top_srcdir)/src/libkdumpfile.la
+
 dumpattr_SOURCES = \
 	dumpattr.c
-dumpattr_LDADD = ../libkdumpfile.la
 
 bin_PROGRAMS = dumpattr
