@@ -444,6 +444,29 @@ kdump_status set_attr_static_string(kdump_ctx *ctx, const char *key,
 #define cleanup_attr INTERNAL_NAME(cleanup_attr)
 void cleanup_attr(kdump_ctx *ctx);
 
+/* Accessor functions for static attributes */
+
+#define DEFINE_GET_ACCESSOR(name, type, ctype)			\
+	static inline ctype					\
+	get_attr_ ## name(kdump_ctx *ctx)			\
+	{							\
+		return ctx->name.val.type;			\
+	}
+#define DEFINE_SET_ACCESSOR(name, type, ctype)			\
+	static inline void					\
+	set_attr_ ## name(kdump_ctx *ctx, ctype newval)		\
+	{							\
+		ctx->name.val.type = newval;			\
+		set_attr(ctx, &ctx->name);			\
+	}
+#define DEFINE_ACCESSORS(name, type, ctype)    \
+	DEFINE_GET_ACCESSOR(name, type, ctype) \
+	DEFINE_SET_ACCESSOR(name, type, ctype)
+
+DEFINE_ACCESSORS(arch_name, string, const char *)
+DEFINE_ACCESSORS(byte_order, number, kdump_byte_order_t)
+DEFINE_ACCESSORS(ptr_size, number, size_t)
+
 /* Older glibc didn't have the byteorder macros */
 #ifndef be16toh
 
@@ -494,7 +517,7 @@ bitcount(unsigned x)
 static inline uint16_t
 dump16toh(kdump_ctx *ctx, uint16_t x)
 {
-	return ctx->byte_order.val.number == kdump_big_endian
+	return get_attr_byte_order(ctx) == kdump_big_endian
 		? be16toh(x)
 		: le16toh(x);
 }
@@ -502,7 +525,7 @@ dump16toh(kdump_ctx *ctx, uint16_t x)
 static inline uint32_t
 dump32toh(kdump_ctx *ctx, uint32_t x)
 {
-	return ctx->byte_order.val.number == kdump_big_endian
+	return get_attr_byte_order(ctx) == kdump_big_endian
 		? be32toh(x)
 		: le32toh(x);
 }
@@ -510,7 +533,7 @@ dump32toh(kdump_ctx *ctx, uint32_t x)
 static inline uint64_t
 dump64toh(kdump_ctx *ctx, uint64_t x)
 {
-	return ctx->byte_order.val.number == kdump_big_endian
+	return get_attr_byte_order(ctx) == kdump_big_endian
 		? be64toh(x)
 		: le64toh(x);
 }

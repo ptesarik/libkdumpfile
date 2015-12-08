@@ -687,13 +687,12 @@ lkcd_probe(kdump_ctx *ctx)
 		{ 0xa8, 0x19, 0x01, 0x73, 0x61, 0x8f, 0x23, 0xed };
 
 	if (!memcmp(ctx->buffer, magic_le, sizeof magic_le))
-		ctx->byte_order.val.number = kdump_little_endian;
+		set_attr_byte_order(ctx, kdump_little_endian);
 	else if (!memcmp(ctx->buffer, magic_be, sizeof magic_be))
-		ctx->byte_order.val.number = kdump_big_endian;
+		set_attr_byte_order(ctx, kdump_big_endian);
 	else
 		return set_error(ctx, kdump_unsupported,
 				 "Unknown LKCD signature");
-	set_attr(ctx, &ctx->byte_order);
 
 	return open_common(ctx);
 }

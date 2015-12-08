@@ -247,11 +247,8 @@ set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 
 	ctx->arch_ops = arch_ops(arch);
 
-	ctx->ptr_size.val.number = arch_ptr_size(arch);
-	set_attr(ctx, &ctx->ptr_size);
-
-	ctx->arch_name.val.string = arch_name(arch);
-	set_attr(ctx, &ctx->arch_name);
+	set_attr_ptr_size(ctx, arch_ptr_size(arch));
+	set_attr_arch_name(ctx, arch_name(arch));
 
 	if (ctx->arch_ops && ctx->arch_ops->init)
 		return ctx->arch_ops->init(ctx);

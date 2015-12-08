@@ -133,7 +133,7 @@ elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 				break;
 			}
 		}
-		if (i >= edp->num_load_segments) 
+		if (i >= edp->num_load_segments)
 	                return set_error(ctx, kdump_nodata,
 					 "Page not found");
 	}
@@ -158,7 +158,7 @@ elf_read_xen_dom0(kdump_ctx *ctx, kdump_pfn_t pfn)
 	uint64_t mfn_idx, frame_idx;
 	kdump_status ret;
 
-	ptr_size = ctx->ptr_size.val.number;
+	ptr_size = get_attr_ptr_size(ctx);
 	fpp = ctx->page_size / ptr_size;
 	mfn_idx = pfn / fpp;
 	frame_idx = pfn % fpp;
@@ -558,7 +558,7 @@ initialize_xen_map64(kdump_ctx *ctx, void *dir)
 	unsigned long mfns;
 	kdump_status ret;
 
-	ptr_size = ctx->ptr_size.val.number;
+	ptr_size = get_attr_ptr_size(ctx);
 	fpp = ctx->page_size / ptr_size;
 	mfns = 0;
 	for (dirp = dir, pfn = 0; *dirp && pfn < ctx->max_pfn;
@@ -612,7 +612,7 @@ initialize_xen_map32(kdump_ctx *ctx, void *dir)
 	unsigned long mfns;
 	kdump_status ret;
 
-	ptr_size = ctx->ptr_size.val.number;
+	ptr_size = get_attr_ptr_size(ctx);
 	fpp = ctx->page_size / ptr_size;
 	mfns = 0;
 	for (dirp = dir, pfn = 0; *dirp && pfn < ctx->max_pfn;
@@ -673,7 +673,7 @@ initialize_xen_map(kdump_ctx *ctx)
 		return kdump_syserr;
 	ctx->page = page;
 
-	ret = (ctx->ptr_size.val.number == 8)
+	ret = (get_attr_ptr_size(ctx) == 8)
 		? initialize_xen_map64(ctx, dir)
 		: initialize_xen_map32(ctx, dir);
 
@@ -840,17 +840,16 @@ elf_probe(kdump_ctx *ctx)
 
 	switch (eheader[EI_DATA]) {
 	case ELFDATA2LSB:
-		ctx->byte_order.val.number = kdump_little_endian;
+		set_attr_byte_order(ctx, kdump_little_endian);
 		break;
 	case ELFDATA2MSB:
-		ctx->byte_order.val.number = kdump_big_endian;
+		set_attr_byte_order(ctx, kdump_big_endian);
 		break;
 	default:
 		return set_error(ctx, kdump_unsupported,
 				 "Unsupported ELF data format: %u",
 				 eheader[EI_DATA]);
 	}
-	set_attr(ctx, &ctx->byte_order);
 
         if ((elf32->e_ident[EI_CLASS] == ELFCLASS32) &&
 	    (dump16toh(ctx, elf32->e_type) == ET_CORE) &&

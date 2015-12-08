@@ -49,19 +49,19 @@ kdump_format(kdump_ctx *ctx)
 kdump_byte_order_t
 kdump_byte_order(kdump_ctx *ctx)
 {
-	return ctx->byte_order.val.number;
+	return get_attr_byte_order(ctx);
 }
 
 size_t
 kdump_ptr_size(kdump_ctx *ctx)
 {
-	return ctx->ptr_size.val.number;
+	return get_attr_ptr_size(ctx);
 }
 
 const char *
 kdump_arch_name(kdump_ctx *ctx)
 {
-	return ctx->arch_name.val.string;
+	return get_attr_arch_name(ctx);
 }
 
 int

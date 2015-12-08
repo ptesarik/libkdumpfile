@@ -155,11 +155,10 @@ devmem_probe(kdump_ctx *ctx)
 
 	ctx->format = "live source";
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-	ctx->byte_order.val.number = kdump_little_endian;
+	set_attr_byte_order(ctx, kdump_little_endian);
 #else
-	ctx->byte_order.val.number = kdump_big_endian;
+	set_attr_byte_order(ctx, kdump_big_endian);
 #endif
-	set_attr(ctx, &ctx->byte_order);
 
 	ret = set_page_size(ctx, sysconf(_SC_PAGESIZE));
 	if (ret != kdump_ok)

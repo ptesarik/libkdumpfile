@@ -147,7 +147,7 @@ process_core_note(kdump_ctx *ctx, uint32_t type,
 static kdump_status
 process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 {
-	size_t ptr_size = ctx->ptr_size.val.number;
+	size_t ptr_size = get_attr_ptr_size(ctx);
 	unsigned words = len / ptr_size;
 
 	if (ptr_size == 8 &&
@@ -172,7 +172,7 @@ process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 static kdump_status
 process_xen_dumpcore_version(kdump_ctx *ctx, void *data, size_t len)
 {
-	size_t ptr_size = ctx->ptr_size.val.number;
+	size_t ptr_size = get_attr_ptr_size(ctx);
 	const char *ver_extra = NULL;
 
 	if (ptr_size == 8 &&
