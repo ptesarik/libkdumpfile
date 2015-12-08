@@ -243,7 +243,7 @@ get_version_code(kdump_ctx *ctx)
 		}
 	}
 
-	ctx->version_code = KERNEL_VERSION(a, b, c);
+	set_attr_version_code(ctx, KERNEL_VERSION(a, b, c));
 	return kdump_ok;
 }
 

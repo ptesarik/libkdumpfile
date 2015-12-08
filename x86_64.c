@@ -385,7 +385,7 @@ x86_64_vtop_init(kdump_ctx *ctx)
 		return ret;
 
 	if (!layout)
-		layout = layout_by_version(ctx->version_code);
+		layout = layout_by_version(get_attr_version_code(ctx));
 	if (!layout)
 		return set_error(ctx, kdump_unsupported,
 				 "Cannot determine virtual memory layout");

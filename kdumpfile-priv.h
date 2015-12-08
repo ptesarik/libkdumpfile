@@ -259,7 +259,6 @@ struct _tag_kdump_ctx {
 #undef ATTR
 
 	struct new_utsname utsname;
-	unsigned version_code;	/* version as produced by KERNEL_VERSION() */
 
 	struct vmcoreinfo *vmcoreinfo;
 	struct vmcoreinfo *vmcoreinfo_xen;

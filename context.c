@@ -127,7 +127,7 @@ kdump_domainname(kdump_ctx *ctx)
 unsigned
 kdump_version_code(kdump_ctx *ctx)
 {
-	return ctx->version_code;
+	return get_attr_version_code(ctx);
 }
 
 unsigned
