@@ -21,7 +21,7 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = doc
+SUBDIRS = doc examples
 
 lib_LTLIBRARIES = libkdumpfile.la
 libkdumpfile_la_SOURCES = \

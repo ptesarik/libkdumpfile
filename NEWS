@@ -1,6 +1,7 @@
 0.1.6
 -----
   * metadata is stored as hierarchical attributes which can be enumerated
+  * include example code to demonstrate attributes
 
 0.1.5
 -----
