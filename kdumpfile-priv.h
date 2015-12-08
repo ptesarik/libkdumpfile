@@ -231,23 +231,32 @@ struct _tag_kdump_ctx {
 	const char *format;	/* file format (descriptive name) */
 	unsigned long flags;	/* see DIF_XXX below */
 
-#define ATTR(key, field, type, ctype) \
-	struct attr_data field;
-#include "static-attr.def"
-#undef ATTR
-
+	/* format-specific fields */
 	const struct format_ops *ops;
-	const struct arch_ops *arch_ops;
+	void *fmtdata;		/* private data */
 
+	/* arch-specific fields */
+	const struct arch_ops *arch_ops;
+	void *archdata;		/* private data */
+
+	/* read_page internals */
 	void *buffer;		/* temporary buffer */
 	void *page;		/* page data buffer */
 	kdump_pfn_t last_pfn;	/* last read PFN */
 	kdump_pfn_t max_pfn;	/* max PFN for read_page */
 
+	/* address translation */
 	struct kdump_vaddr_region *region;
 	unsigned num_regions;	/* number of elements in ->region */
 
+	/* attributes */
 	struct attr_data *attrs; /* linked list of all attributes */
+
+	/* static attributes */
+#define ATTR(key, field, type, ctype) \
+	struct attr_data field;
+#include "static-attr.def"
+#undef ATTR
 
 	struct new_utsname utsname;
 	unsigned version_code;	/* version as produced by KERNEL_VERSION() */
@@ -261,11 +270,10 @@ struct _tag_kdump_ctx {
 	kdump_pfn_t xen_p2m_mfn;
 	int xen_pte_is_mach;
 
-	void *fmtdata;		/* format-specific private data */
-	void *archdata;		/* arch-specific private data */
-
+	/* callbacks */
 	kdump_get_symbol_val_fn *cb_get_symbol_val;
 
+	/* error messages */
 	char *err_str;		/* error string */
 	char err_buf[ERRBUF];	/* buffer for error string */
 };
