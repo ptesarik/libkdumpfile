@@ -35,6 +35,7 @@
 #include <errno.h>
 
 static const struct attr_template global_keys[] = {
+	{ "arch.name", kdump_string },
 };
 
 #define NR_GLOBAL	ARRAY_SIZE(global_keys)

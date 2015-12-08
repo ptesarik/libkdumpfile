@@ -61,22 +61,12 @@ kdump_ptr_size(kdump_ctx *ctx)
 const char *
 kdump_arch_name(kdump_ctx *ctx)
 {
-	static const char *const names[] = {
-		[ARCH_AARCH64] = "aarch64",
-		[ARCH_ALPHA] = "alpha",
-		[ARCH_ARM] = "arm",
-		[ARCH_IA64] = "ia64",
-		[ARCH_MIPS] = "mips",
-		[ARCH_PPC] = "ppc",
-		[ARCH_PPC64] = "ppc64",
-		[ARCH_S390] = "s390",
-		[ARCH_S390X] = "s390x",
-		[ARCH_X86] = "i386",
-		[ARCH_X86_64] = "x86_64",
-	};
-	if (ctx->arch < ARRAY_SIZE(names))
-		return names[ctx->arch];
-	return NULL;
+	struct kdump_attr attr;
+
+	if (kdump_get_attr(ctx, "arch.name", &attr) != kdump_ok)
+		return NULL;
+
+	return attr.val.string;
 }
 
 int

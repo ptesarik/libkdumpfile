@@ -818,7 +818,7 @@ open_common(kdump_ctx *ctx)
 			goto err_cleanup;
 	}
 
-	if (ctx->arch == ARCH_UNKNOWN)
+	if (!attr_isset(ctx, "arch.name"))
 		ret = set_arch(ctx, machine_arch(ctx->utsname.machine));
 	if (ret != kdump_ok)
 		goto err_cleanup;
