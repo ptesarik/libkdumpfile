@@ -275,6 +275,40 @@ add_attr(struct attr_data *dir, struct attr_data *attr)
 	attr->pprev = (struct attr_data**)&dir->val.directory;
 }
 
+/**  Instantiate a directory template path.
+ * @param ctx   Dump file object.
+ * @param tmpl  Directory template.
+ * @returns     The newly instantiated attribute,
+ *              or @c NULL on allocation failure.
+ *
+ * Inititalize all paths up the hierarchy for the (leaf) directory
+ * denoted by @c tmpl.
+ */
+static struct attr_data *
+instantiate_path(kdump_ctx *ctx, const struct attr_template *tmpl)
+{
+	struct attr_data *d, *parent;
+
+	d = lookup_data(ctx, tmpl);
+	if (d != NULL)
+		return d;
+
+	if (tmpl->parent == tmpl) {
+		d = &ctx->dir_root;
+		d->next = NULL;
+		d->pprev = &d->next;
+		return d;
+	}
+
+	parent = instantiate_path(ctx, tmpl->parent);
+	d = template_static(tmpl)
+		? static_attr_data(ctx, tmpl - global_keys)
+		: alloc_attr(tmpl, 0);
+	if (d)
+		add_attr(parent, d);
+	return d;
+}
+
 /**  Delete an attribute.
  * @param attr  Attribute to be deleted.
  *
@@ -303,24 +337,10 @@ cleanup_attr(kdump_ctx *ctx)
 void
 init_static_attrs(kdump_ctx *ctx)
 {
-	int i;
-
-	ctx->dir_root.next = NULL;
-	ctx->dir_root.pprev = &ctx->dir_root.next;
-
+	enum global_keyidx i;
 	for (i = 0; i < NR_STATIC; ++i) {
 		struct attr_data *attr = static_attr_data(ctx, i);
-		const struct attr_template *t = &global_keys[i];
-
-		attr->template = t;
-		if (t->parent == t) {
-			attr->pprev = &attr->next;
-		} else if (t->type == kdump_directory) {
-			struct attr_data *parent;
-
-			parent = lookup_data(ctx, t->parent);
-			add_attr(parent, attr);
-		}
+		attr->template = &global_keys[i];
 	}
 }
 
@@ -336,13 +356,16 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr)
 {
 	struct attr_data *parent, *old;
 
-	parent = lookup_data(ctx, attr->template->parent);
+	parent = instantiate_path(ctx, attr->template->parent);
 	if (!parent)
 		return;		/* FIXME: Error handling! */
 
-	old = lookup_data(ctx, attr->template);
-	if (old)
-		delete_attr(old);
+	for (old = parent->val.directory; old; old = old->next)
+		if (old->template == attr->template) {
+			delete_attr(old);
+			break;
+		}
+
 	add_attr(parent, attr);
 }
 
