@@ -60,11 +60,22 @@ static const size_t static_offsets[] = {
  * @param ctx  Dump file object.
  * @param idx  Static index.
  * @returns    Pointer to the actual static attribute data.
+ * @sa static_attr_data_const
  */
 static inline struct attr_data *
 static_attr_data(kdump_ctx *ctx, enum global_keyidx idx)
 {
 	return (struct attr_data*)((char*)ctx + static_offsets[idx]);
+}
+
+/**  Get a const pointer to the static data with a given index.
+ * @sa static_attr_data
+ */
+static inline const struct attr_data *
+static_attr_data_const(const kdump_ctx *ctx, enum global_keyidx idx)
+{
+	return (const struct attr_data*)
+		((const char*)ctx + static_offsets[idx]);
 }
 
 /**  Check if a template denotes statically allocated attribute
@@ -129,10 +140,12 @@ static const struct attr_data*
 lookup_data_const(const kdump_ctx *ctx, const struct attr_template *tmpl)
 {
 	const struct attr_data *parent;
-	struct attr_data *d;
+	const struct attr_data *d;
 
-	if (tmpl->parent == tmpl)
-		return &ctx->dir_root;
+	if (template_static(tmpl)) {
+		d = static_attr_data_const(ctx, tmpl - global_keys);
+		return static_attr_isset(d) ? d : NULL;
+	}
 
 	parent = lookup_data_const(ctx, tmpl->parent);
 	if (!parent)
