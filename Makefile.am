@@ -25,6 +25,7 @@ SUBDIRS = doc
 
 lib_LTLIBRARIES = libkdumpfile.la
 libkdumpfile_la_SOURCES = \
+	attr.c \
 	context.c \
 	devmem.c \
 	diskdump.c \

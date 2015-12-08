@@ -47,6 +47,14 @@ extern "C" {
  */
 typedef uint_fast64_t kdump_addr_t;
 
+/**  Type of a generic number.
+ *
+ * This type is large enough to hold register value on any architecture
+ * supported by `libkdumpfile`. Note that it may be larger than the
+ * registers in the target.
+ */
+typedef uint_fast64_t kdump_num_t;
+
 /**  Maximum value represented by kdump_addr_t.
  */
 #define KDUMP_ADDR_MAX	(~(kdump_addr_t)0)
@@ -250,6 +258,39 @@ kdump_status kdump_readp(kdump_ctx *ctx, kdump_addr_t addr,
  */
 kdump_status kdump_read_string(kdump_ctx *ctx, kdump_addr_t addr,
 			       char **pstr, long flags);
+
+/**  Dump file attribute value type.
+ */
+enum kdump_attr_type {
+	kdump_nil,
+	kdump_number,
+	kdump_address,
+	kdump_string,
+};
+
+/**  Dump file attribute value.
+ */
+union kdump_attr_value {
+	kdump_num_t number;
+	kdump_addr_t address;
+	const char *string;
+};
+
+/**  Dump file attribute: type + value.
+ */
+struct kdump_attr {
+	enum kdump_attr_type type;
+	union kdump_attr_value val;
+};
+
+/**  Get a dump file attribute.
+ * @param ctx  Dump file object.
+ * @param key  Attribute key.
+ * @param valp Value (filled on successful return).
+ * @returns    Error status.
+ */
+kdump_status kdump_get_attr(kdump_ctx *ctx, const char *key,
+			    struct kdump_attr *valp);
 
 /**  Get target dump format.
  * @param ctx  Dump file object.

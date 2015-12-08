@@ -205,6 +205,27 @@ struct kdump_vaddr_region {
 	kdump_xlat_t xlat;	/* vaddr->paddr translation method */
 };
 
+/**  Attribute template.
+ *
+ * All instances of a key share the same characteristics (such as key name
+ * and value type).
+ */
+struct attr_template {
+	const char *key;
+	enum kdump_attr_type type;
+};
+
+/**  Data type for storing attribute value in each instance.
+ *
+ * Note that this structure does not include type, because it must be
+ * equal to the template type.
+ */
+struct attr_data {
+	struct attr_data *next, **pprev;
+	const struct attr_template *template;
+	union kdump_attr_value val;
+};
+
 struct _tag_kdump_ctx {
 	int fd;			/* dump file descriptor */
 	const char *format;	/* file format (descriptive name) */
@@ -227,6 +248,8 @@ struct _tag_kdump_ctx {
 
 	struct kdump_vaddr_region *region;
 	unsigned num_regions;	/* number of elements in ->region */
+
+	struct attr_data *attrs; /* linked list of all attributes */
 
 	struct new_utsname utsname;
 	unsigned version_code;	/* version as produced by KERNEL_VERSION() */
@@ -380,6 +403,30 @@ void flush_regions(kdump_ctx *ctx);
 #define get_xlat INTERNAL_NAME(get_xlat)
 kdump_xlat_t get_xlat(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 		      kdump_paddr_t *phys_off);
+
+/* Attribute handling */
+
+#define attr_isset INTERNAL_NAME(attr_isset)
+int attr_isset(const kdump_ctx *ctx, const char *key);
+
+#define set_attr_number INTERNAL_NAME(set_attr_number)
+kdump_status set_attr_number(kdump_ctx *ctx, const char *key,
+			     kdump_num_t num);
+
+#define set_attr_address INTERNAL_NAME(set_attr_address)
+kdump_status set_attr_address(kdump_ctx *ctx, const char *key,
+			      kdump_addr_t addr);
+
+#define set_attr_string INTERNAL_NAME(set_attr_string)
+kdump_status set_attr_string(kdump_ctx *ctx, const char *key,
+			     const char *str);
+
+#define set_attr_static_string INTERNAL_NAME(set_attr_static_string)
+kdump_status set_attr_static_string(kdump_ctx *ctx, const char *key,
+				    const char *str);
+
+#define cleanup_attr INTERNAL_NAME(cleanup_attr)
+void cleanup_attr(kdump_ctx *ctx);
 
 /* Older glibc didn't have the byteorder macros */
 #ifndef be16toh

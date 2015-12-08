@@ -116,6 +116,7 @@ kdump_set_fd(kdump_ctx *ctx, int fd)
 		if (ret != kdump_unsupported)
 			return ret;
 
+		cleanup_attr(ctx);
 		clear_error(ctx);
 	}
 
@@ -264,5 +265,6 @@ kdump_free(kdump_ctx *ctx)
 		free(ctx->vmcoreinfo_xen);
 	if (ctx->xen_ver.extra)
 		free((void*)ctx->xen_ver.extra);
+	cleanup_attr(ctx);
 	free(ctx);
 }
