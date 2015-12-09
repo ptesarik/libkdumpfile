@@ -89,6 +89,29 @@ template_static(const struct attr_template *tmpl)
 		tmpl < &global_keys[NR_STATIC];
 }
 
+/**  Look up a template by its name in one directory.
+ * @param dir     Attribute directory.
+ * @param key     Key name.
+ * @param keylen  Key length.
+ * @returns       Template with the given key, or @c NULL if not found.
+ *
+ * By specifying the key length, it is possible to search for a
+ * component of an attribute path without copying the path string.
+ */
+static const struct attr_template*
+lookup_template_dir(const struct attr_template *dir,
+		    const char *key, size_t keylen)
+{
+	const struct attr_template *t;
+
+	for (t = global_keys; t < &global_keys[NR_GLOBAL]; ++t)
+		if (t->parent == dir &&
+		    !strncmp(key, t->key, keylen) &&
+		    t->key[keylen] == '\0')
+			return t;
+	return NULL;
+}
+
 /**  Look up a template by name.
  * @param key  Key name.
  * @returns    Attribute template, or @c NULL if not found.
@@ -98,7 +121,6 @@ lookup_template(const char *key)
 {
 	const struct attr_template *dir, *t;
 	const char *p;
-	unsigned i;
 
 	if (key > GATTR(NR_GLOBAL))
 		return &global_keys[-(intptr_t)key];
@@ -108,26 +130,15 @@ lookup_template(const char *key)
 		size_t keylen = p - key;
 		++p;
 
-		for (t = global_keys, i = 0; i < NR_GLOBAL; ++i, ++t)
-			if (t->parent == dir &&
-			    t->type == kdump_directory &&
-			    strlen(t->key) == keylen &&
-			    !memcmp(key, t->key, keylen)) {
-				dir = t;
-				key = p;
-				break;
-			}
-
-		if (key != p)
+		t = lookup_template_dir(dir, key, keylen);
+		if (t && t->type == kdump_directory) {
+			dir = t;
+			key = p;
+		} else
 			return NULL; /* directory not found */
 	}
 
-	for (t = global_keys, i = 0; i < NR_GLOBAL; ++i, ++t)
-		if (t->parent == dir &&
-		    !strcmp(key, t->key))
-			return t;
-
-	return NULL;
+	return lookup_template_dir(dir, key, strlen(key));
 }
 
 /**  Lookup attribute value by template.
