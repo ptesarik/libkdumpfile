@@ -17,6 +17,9 @@
  * #undef ATTR
  */
 
+/* cpu */
+ATTR(root, "cpu", dir_cpu, directory, struct attr_data *)
+
 /* utsname */
 ATTR(linux_uts, "sysname", linux_uts_sysname, string, const char *)
 ATTR(linux_uts, "nodename", linux_uts_nodename, string, const char *)

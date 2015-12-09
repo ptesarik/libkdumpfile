@@ -33,6 +33,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include <errno.h>
 #include <linux/version.h>
 
@@ -242,6 +243,37 @@ struct elf_prstatus
 	/* optional UNUSED fields may follow */
 } __attribute__((packed));
 
+static const struct attr_template reg_names[] = {
+#define REG(name)	{ #name, NULL, kdump_number }
+	REG(r15),
+	REG(r14),
+	REG(r13),
+	REG(r12),
+	REG(bp),
+	REG(bx),
+	REG(r11),
+	REG(r10),
+	REG(r9),
+	REG(r8),
+	REG(ax),
+	REG(cx),
+	REG(dx),
+	REG(si),
+	REG(di),
+	REG(orig_ax),
+	REG(ip),
+	REG(cs),
+	REG(flags),
+	REG(sp),
+	REG(ss),
+	REG(fs_base),
+	REG(gs_base),
+	REG(ds),
+	REG(es),
+	REG(fs),
+	REG(gs),
+};
+
 /* Internal CPU state, as seen by libkdumpfile */
 struct cpu_state {
 	int32_t pid;
@@ -412,11 +444,20 @@ process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 	struct x86_64_data *archdata = ctx->archdata;
 	struct elf_prstatus *status = data;
 	struct cpu_state *cs;
+	char cpukey[sizeof("cpu.") + 20];
+	kdump_status res;
 	int i;
 
 	if (size < sizeof(struct elf_prstatus))
 		return set_error(ctx, kdump_dataerr,
 				 "Wrong PRSTATUS size: %zu", size);
+
+	sprintf(cpukey, "cpu.%llu",
+		(unsigned long long) get_attr_num_cpus(ctx));
+	res = add_attr_template(ctx, cpukey, kdump_directory);
+	if (res != kdump_ok)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot create attribute '%s'", cpukey);
 
 	++ctx->num_cpus.val.number;
 
@@ -425,8 +466,17 @@ process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 		return kdump_syserr;
 
 	cs->pid = dump32toh(ctx, status->pr_pid);
-	for (i = 0; i < ELF_NGREG; ++i)
+	for (i = 0; i < ELF_NGREG; ++i) {
+		union kdump_attr_value val;
 		cs->reg[i] = dump64toh(ctx, status->pr_reg[i]);
+
+		val.number = cs->reg[i];
+		res = add_attr(ctx, cpukey, &reg_names[i], val);
+		if (res != kdump_ok)
+			return set_error(ctx, kdump_syserr,
+					 "Cannot set '%s.%s'",
+					 cpukey, reg_names[i].key);
+	}
 
 	cs->next = archdata->cpu_state;
 	archdata->cpu_state = cs;
