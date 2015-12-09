@@ -227,6 +227,16 @@ struct attr_template {
 	enum kdump_attr_type type;
 };
 
+/**  Dynamically allocated attribute template.
+ *
+ * Dynamically allocated templates are maintained in a linked list,
+ * so they need a separate type with a @c next field.
+ */
+struct dyn_attr_template {
+	struct dyn_attr_template *next;
+	struct attr_template template;
+};
+
 /**  Data type for storing attribute value in each instance.
  *
  * Note that this structure does not include type, because it must be
@@ -260,6 +270,9 @@ struct _tag_kdump_ctx {
 	/* address translation */
 	struct kdump_vaddr_region *region;
 	unsigned num_regions;	/* number of elements in ->region */
+
+	/* attribute templates */
+	struct dyn_attr_template *tmpl;
 
 	/* static attributes */
 #define ATTR(dir, key, field, type, ctype)	\
@@ -409,6 +422,10 @@ kdump_xlat_t get_xlat(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 		      kdump_paddr_t *phys_off);
 
 /* Attribute handling */
+
+#define add_attr_template INTERNAL_NAME(add_attr_template)
+kdump_status add_attr_template(kdump_ctx *ctx, const char *path,
+			       enum kdump_attr_type type);
 
 #define init_static_attrs INTERNAL_NAME(init_static_attrs)
 void init_static_attrs(kdump_ctx *ctx);

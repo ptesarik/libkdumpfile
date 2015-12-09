@@ -89,7 +89,24 @@ template_static(const struct attr_template *tmpl)
 		tmpl < &global_keys[NR_STATIC];
 }
 
+/**  Check if a template matches search criteria.
+ * @param tmpl    Template to be checked.
+ * @param dir     Template directory.
+ * @param key     Key name.
+ * @param keylen  Key length.
+ */
+static inline int
+template_match(const struct attr_template *tmpl,
+	       const struct attr_template *dir,
+	       const char *key, size_t keylen)
+{
+	return (tmpl->parent == dir &&
+		!strncmp(tmpl->key, key, keylen) &&
+		tmpl->key[keylen] == '\0');
+}
+
 /**  Look up a template by its name in one directory.
+ * @param ctx     Dump file object.
  * @param dir     Attribute directory.
  * @param key     Key name.
  * @param keylen  Key length.
@@ -99,46 +116,98 @@ template_static(const struct attr_template *tmpl)
  * component of an attribute path without copying the path string.
  */
 static const struct attr_template*
-lookup_template_dir(const struct attr_template *dir,
+lookup_template_dir(const kdump_ctx *ctx, const struct attr_template *dir,
 		    const char *key, size_t keylen)
 {
+	const struct dyn_attr_template *dt;
 	const struct attr_template *t;
 
+	for (dt = ctx->tmpl; dt; dt = dt->next)
+		if (template_match(&dt->template, dir, key, keylen))
+			return &dt->template;
+
 	for (t = global_keys; t < &global_keys[NR_GLOBAL]; ++t)
-		if (t->parent == dir &&
-		    !strncmp(key, t->key, keylen) &&
-		    t->key[keylen] == '\0')
+		if (template_match(t, dir, key, keylen))
 			return t;
 	return NULL;
 }
 
+/**  Look up the parent of a template by name.
+ * @param ctx   Dump file object.
+ * @param pkey  Pointer to key name. If the path is found, this pointer
+ *              is updated to the last path component on return.
+ * @returns     Attribute template of @c key's parent attribute,
+ *              or @c NULL if not found.
+ */
+static const struct attr_template*
+lookup_template_parent(const kdump_ctx *ctx, const char **pkey)
+{
+	const struct attr_template *dir;
+	const char *p, *key = *pkey;
+
+	dir = &global_keys[GKI_dir_root];
+	while ( (p = strchr(key, '.')) ) {
+		dir = lookup_template_dir(ctx, dir, key, p - key);
+		if (!dir || dir->type != kdump_directory)
+			return NULL; /* directory not found */
+
+		key = p + 1;
+	}
+
+	*pkey = key;
+	return dir;
+}
+
 /**  Look up a template by name.
+ * @param ctx  Dump file object.
  * @param key  Key name.
  * @returns    Attribute template, or @c NULL if not found.
  */
 static const struct attr_template*
-lookup_template(const char *key)
+lookup_template(const kdump_ctx *ctx, const char *key)
 {
-	const struct attr_template *dir, *t;
-	const char *p;
+	const struct attr_template *dir;
 
 	if (key > GATTR(NR_GLOBAL))
 		return &global_keys[-(intptr_t)key];
 
-	dir = &global_keys[GKI_dir_root];
-	while ( (p = strchr(key, '.')) ) {
-		size_t keylen = p - key;
-		++p;
+	dir = lookup_template_parent(ctx, &key);
+	if (!dir)
+		return NULL;
 
-		t = lookup_template_dir(dir, key, keylen);
-		if (t && t->type == kdump_directory) {
-			dir = t;
-			key = p;
-		} else
-			return NULL; /* directory not found */
-	}
+	return lookup_template_dir(ctx, dir, key, strlen(key));
+}
 
-	return lookup_template_dir(dir, key, strlen(key));
+/**  Add an attribute template.
+ * @param ctx   Dump file object.
+ */
+kdump_status
+add_attr_template(kdump_ctx *ctx, const char *path,
+		  enum kdump_attr_type type)
+{
+	const struct attr_template *parent;
+	struct dyn_attr_template *dt;
+
+	parent = lookup_template_parent(ctx, &path);
+	if (!parent)
+		return set_error(ctx, kdump_unsupported, "No such key");
+	if (parent->type != kdump_directory)
+		return set_error(ctx, kdump_unsupported,
+				 "Path is a leaf attribute");
+
+	dt = malloc(sizeof *dt);
+	if (!dt)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate attribute template: %s",
+				 strerror(errno));
+
+	dt->template.key = path;
+	dt->template.parent = parent;
+	dt->template.type = type;
+	dt->next = ctx->tmpl;
+	ctx->tmpl = dt;
+
+	return kdump_ok;
 }
 
 /**  Lookup attribute value by template.
@@ -189,7 +258,7 @@ lookup_data(kdump_ctx *ctx, const struct attr_template *tmpl)
 int
 attr_isset(const kdump_ctx *ctx, const char *key)
 {
-	const struct attr_template *t = lookup_template(key);
+	const struct attr_template *t = lookup_template(ctx, key);
 	return t && !!lookup_data_const(ctx, t);
 }
 
@@ -201,7 +270,7 @@ kdump_get_attr(kdump_ctx *ctx, const char *key,
 	const struct attr_data *d;
 
 	clear_error(ctx);
-	t = lookup_template(key);
+	t = lookup_template(ctx, key);
 	if (!t)
 		return set_error(ctx, kdump_unsupported, "No such key");
 
@@ -223,7 +292,7 @@ kdump_enum_attr(kdump_ctx *ctx, const char *path,
 	const struct attr_data *parent, *d;
 
 	clear_error(ctx);
-	t = lookup_template(path);
+	t = lookup_template(ctx, path);
 	if (!t)
 		return set_error(ctx, kdump_unsupported, "No such path");
 
@@ -276,7 +345,7 @@ alloc_attr_by_key(kdump_ctx *ctx, struct attr_data **pattr,
 	const struct attr_template *t;
 	struct attr_data *attr;
 
-	t = lookup_template(key);
+	t = lookup_template(ctx, key);
 	if (!t)
 		return set_error(ctx, kdump_unsupported, "No such key");
 
