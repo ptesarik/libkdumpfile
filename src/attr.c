@@ -187,6 +187,7 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 {
 	const struct attr_template *parent;
 	struct dyn_attr_template *dt;
+	char *keyname;
 
 	parent = lookup_template_parent(ctx, &path);
 	if (!parent)
@@ -195,13 +196,15 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 		return set_error(ctx, kdump_unsupported,
 				 "Path is a leaf attribute");
 
-	dt = malloc(sizeof *dt);
+	dt = malloc(sizeof *dt + strlen(path) + 1);
 	if (!dt)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate attribute template: %s",
 				 strerror(errno));
 
-	dt->template.key = path;
+	keyname = (char*) (dt + 1);
+	strcpy(keyname, path);
+	dt->template.key = keyname;
 	dt->template.parent = parent;
 	dt->template.type = type;
 	dt->next = ctx->tmpl;
