@@ -427,8 +427,10 @@ instantiate_path(kdump_ctx *ctx, const struct attr_template *tmpl)
 	d = template_static(tmpl)
 		? static_attr_data(ctx, tmpl - global_keys)
 		: alloc_attr(tmpl, 0);
-	if (d)
+	if (d) {
+		d->val.directory = NULL;
 		add_attr(parent, d);
+	}
 	return d;
 }
 
