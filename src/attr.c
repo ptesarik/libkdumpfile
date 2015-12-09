@@ -434,7 +434,7 @@ free_attr(struct attr_data *attr)
 		free(attr);
 }
 
-/**  Add new attribute to a dump file object.
+/**  Link a new attribute to its parent.
  * @param dir   Parent attribute.
  * @param attr  Complete initialized attribute.
  *
@@ -442,7 +442,7 @@ free_attr(struct attr_data *attr)
  * It does not check for duplicates.
  */
 static void
-add_attr(struct attr_data *dir, struct attr_data *attr)
+link_attr(struct attr_data *dir, struct attr_data *attr)
 {
 	/* Link the new node */
 	attr->next = dir->val.directory;
@@ -476,7 +476,7 @@ instantiate_path(kdump_ctx *ctx, const struct attr_template *tmpl)
 		: alloc_attr(tmpl, 0);
 	if (d) {
 		d->val.directory = NULL;
-		add_attr(parent, d);
+		link_attr(parent, d);
 	}
 	return d;
 }
@@ -540,7 +540,7 @@ replace_attr(struct attr_data *parent, struct attr_data *attr)
 			break;
 		}
 
-	add_attr(parent, attr);
+	link_attr(parent, attr);
 }
 
 /**  Set an attribute of a dump file object.
@@ -649,4 +649,39 @@ set_attr_static_string(kdump_ctx *ctx, const char *key, const char *str)
 
 	attr->val.string = str;
 	return set_attr(ctx, attr);
+}
+
+/**  Add an attribute to any directory.
+ * @param ctx   Dump file object.
+ * @param path  Key name.
+ * @param tmpl  Attribute template.
+ * @param val   Key value.
+ * @returns     Newly allocated attr_data, or @c NULL on failure.
+ */
+kdump_status
+add_attr(kdump_ctx *ctx, const char *path,
+	 const struct attr_template *tmpl, union kdump_attr_value val)
+{
+	const struct attr_template *parent_tmpl;
+	struct attr_data *parent;
+
+	parent_tmpl = lookup_template(ctx, path);
+	if (!parent_tmpl)
+		return set_error(ctx, kdump_unsupported,
+				 "No such path");
+
+	parent = instantiate_path(ctx, parent_tmpl);
+	if (!parent)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot instantiate path '%s': %s",
+				 path, strerror(errno));
+
+	struct attr_data *d = alloc_attr(tmpl, 0);
+	if (!d)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate attribute: %s",
+				 strerror(errno));
+	d->val = val;
+	replace_attr(parent, d);
+	return kdump_ok;
 }
