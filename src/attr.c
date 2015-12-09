@@ -501,6 +501,28 @@ init_static_attrs(kdump_ctx *ctx)
 	}
 }
 
+/**  Replace an attribute.
+ * @param parent  Parent attribute.
+ * @param attr    New attribute data.
+ *
+ * Replace an attribute node under @c parent with @c attr. If the
+ * given attribute does not exist yet, @c attr is simply added under
+ * @c parent. Otherwise, the old attribute is deleted first.
+ */
+static void
+replace_attr(struct attr_data *parent, struct attr_data *attr)
+{
+	struct attr_data *old;
+
+	for (old = parent->val.directory; old; old = old->next)
+		if (old->template == attr->template) {
+			delete_attr(old);
+			break;
+		}
+
+	add_attr(parent, attr);
+}
+
 /**  Set an attribute of a dump file object.
  * @param ctx   Dump file object.
  * @param attr  Attribute (detached).
@@ -512,7 +534,7 @@ init_static_attrs(kdump_ctx *ctx)
 kdump_status
 set_attr(kdump_ctx *ctx, struct attr_data *attr)
 {
-	struct attr_data *parent, *old;
+	struct attr_data *parent;
 
 	parent = instantiate_path(ctx, attr->template->parent);
 	if (!parent)
@@ -521,13 +543,7 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr)
 				 attr->template->parent->key,
 				 strerror(errno));
 
-	for (old = parent->val.directory; old; old = old->next)
-		if (old->template == attr->template) {
-			delete_attr(old);
-			break;
-		}
-
-	add_attr(parent, attr);
+	replace_attr(parent, attr);
 	return kdump_ok;
 }
 
