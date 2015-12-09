@@ -274,15 +274,10 @@ static const struct attr_template reg_names[] = {
 	REG(gs),
 };
 
-/* Internal CPU state, as seen by libkdumpfile */
-struct cpu_state {
-	int32_t pid;
-	uint64_t reg[ELF_NGREG];
-	struct cpu_state *next;
-};
+static const struct attr_template tmpl_pid =
+	{ "pid", NULL, kdump_number };
 
 struct x86_64_data {
-	struct cpu_state *cpu_state;
 	uint64_t *pgt;
 };
 
@@ -441,10 +436,9 @@ x86_64_vtop_init(kdump_ctx *ctx)
 static kdump_status
 process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 {
-	struct x86_64_data *archdata = ctx->archdata;
 	struct elf_prstatus *status = data;
-	struct cpu_state *cs;
 	char cpukey[sizeof("cpu.") + 20];
+	union kdump_attr_value val;
 	kdump_status res;
 	int i;
 
@@ -461,25 +455,21 @@ process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 
 	++ctx->num_cpus.val.number;
 
-	cs = ctx_malloc(sizeof *cs, ctx, "x86_64 registers");
-	if (!cs)
-		return kdump_syserr;
+	val.number = dump32toh(ctx, status->pr_pid);
+	res = add_attr(ctx, cpukey, &tmpl_pid, val);
+	if (res != kdump_ok)
+		return set_error(ctx, res,
+				 "Cannot set '%s.%s'",
+				 cpukey, tmpl_pid.key);
 
-	cs->pid = dump32toh(ctx, status->pr_pid);
 	for (i = 0; i < ELF_NGREG; ++i) {
-		union kdump_attr_value val;
-		cs->reg[i] = dump64toh(ctx, status->pr_reg[i]);
-
-		val.number = cs->reg[i];
+		val.number = dump64toh(ctx, status->pr_reg[i]);
 		res = add_attr(ctx, cpukey, &reg_names[i], val);
 		if (res != kdump_ok)
 			return set_error(ctx, kdump_syserr,
 					 "Cannot set '%s.%s'",
 					 cpukey, reg_names[i].key);
 	}
-
-	cs->next = archdata->cpu_state;
-	archdata->cpu_state = cs;
 
 	return kdump_ok;
 }
@@ -488,25 +478,22 @@ static kdump_status
 x86_64_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 		kdump_reg_t *value)
 {
-	struct x86_64_data *archdata = ctx->archdata;
-	struct cpu_state *cs;
-	int i;
+	char key[sizeof("cpu.") + 20 + sizeof("orig_rax")];
+	struct kdump_attr attr;
+	kdump_status res;
 
 	if (index >= ELF_NGREG)
 		return set_error(ctx, kdump_nodata,
 				 "Out-of-bounds register number: %u (max %u)",
 				 index, ELF_NGREG);
 
-	cpu = get_attr_num_cpus(ctx) - cpu - 1;
+	sprintf(key, "cpu.%u.%s", cpu, reg_names[index].key);
+	res = kdump_get_attr(ctx, key, &attr);
+	if (res != kdump_ok)
+		return set_error(ctx, res,
+				 "Cannot read '%s'", key);
 
-	for (i = 0, cs = archdata->cpu_state; i < cpu && cs; ++i)
-		cs = cs->next;
-	if (!cs)
-		return set_error(ctx, kdump_nodata,
-				 "Out-of-bounds CPU number: %u (max %u)",
-				 cpu, get_attr_num_cpus(ctx));
-
-	*value = cs->reg[index];
+	*value = attr.val.number;
 	return kdump_ok;
 }
 
@@ -524,14 +511,6 @@ static void
 x86_64_cleanup(kdump_ctx *ctx)
 {
 	struct x86_64_data *archdata = ctx->archdata;
-	struct cpu_state *cs, *oldcs;
-
-	cs = archdata->cpu_state;
-	while (cs) {
-		oldcs = cs;
-		cs = cs->next;
-		free(oldcs);
-	}
 
 	if (archdata->pgt)
 		free(archdata->pgt);
