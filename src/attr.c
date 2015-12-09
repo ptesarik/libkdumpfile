@@ -426,7 +426,9 @@ free_attr(struct attr_data *attr)
 		}
 	}
 
-	if (template_static(attr->template))
+	if (attr->template == &global_keys[GKI_dir_root])
+		attr->val.directory = NULL;
+	else if (template_static(attr->template))
 		attr->pprev = NULL;
 	else
 		free(attr);
@@ -467,13 +469,6 @@ instantiate_path(kdump_ctx *ctx, const struct attr_template *tmpl)
 	d = (struct attr_data*) lookup_data_tmpl(ctx, tmpl);
 	if (d != NULL)
 		return d;
-
-	if (tmpl->parent == tmpl) {
-		d = &ctx->dir_root;
-		d->next = NULL;
-		d->pprev = &d->next;
-		return d;
-	}
 
 	parent = instantiate_path(ctx, tmpl->parent);
 	d = template_static(tmpl)
@@ -518,6 +513,11 @@ init_static_attrs(kdump_ctx *ctx)
 	for (i = 0; i < NR_STATIC; ++i) {
 		struct attr_data *attr = static_attr_data(ctx, i);
 		attr->template = &global_keys[i];
+		if (i == GKI_dir_root) {
+			attr->next = attr;
+			attr->pprev = &attr->next;
+			attr->val.directory = NULL;
+		}
 	}
 }
 
