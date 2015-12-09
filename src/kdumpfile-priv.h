@@ -214,7 +214,7 @@ enum global_keyidx {
 #undef ATTR
 };
 
-#define GATTR(idx)	((const char*)-(intptr_t)idx)
+#define GATTR(idx)	((const char*)-(intptr_t)(idx))
 
 /**  Attribute template.
  *
