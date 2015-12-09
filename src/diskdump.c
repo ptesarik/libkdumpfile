@@ -877,10 +877,12 @@ diskdump_cleanup(kdump_ctx *ctx)
 {
 	struct disk_dump_priv *ddp = ctx->fmtdata;
 
-	if (ddp->bitmap)
-		free(ddp->bitmap);
-	free(ddp);
-	ctx->fmtdata = NULL;
+	if (ddp) {
+		if (ddp->bitmap)
+			free(ddp->bitmap);
+		free(ddp);
+		ctx->fmtdata = NULL;
+	}
 }
 
 const struct format_ops diskdump_ops = {
