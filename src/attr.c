@@ -214,10 +214,9 @@ add_attr_template(kdump_ctx *ctx, const char *path,
  * @param ctx   Dump file object.
  * @param tmpl  Attribute template.
  * @returns     Stored attribute or @c NULL if not found.
- *
  */
-static const struct attr_data*
-lookup_data_const(const kdump_ctx *ctx, const struct attr_template *tmpl)
+static inline const struct attr_data*
+lookup_data_tmpl(const kdump_ctx *ctx, const struct attr_template *tmpl)
 {
 	const struct attr_data *parent;
 	const struct attr_data *d;
@@ -227,7 +226,7 @@ lookup_data_const(const kdump_ctx *ctx, const struct attr_template *tmpl)
 		return static_attr_isset(d) ? d : NULL;
 	}
 
-	parent = lookup_data_const(ctx, tmpl->parent);
+	parent = lookup_data_tmpl(ctx, tmpl->parent);
 	if (!parent)
 		return NULL;
 
@@ -237,17 +236,55 @@ lookup_data_const(const kdump_ctx *ctx, const struct attr_template *tmpl)
 	return NULL;
 }
 
-/**  Lookup modifiable attribute value by template.
+/**  Look up attribute data by partial key path.
+ * @param ctx     Dump file object.
+ * @param key     Key path.
+ * @param keylen  Length of the initial portion of @c key to be considered.
+ * @returns       Stored attribute, or @c NULL if not found.
  *
- * This is a wrapper around @c lookup_data_const with a typecast to
- * a non-const pointers, which is necessary to modify attributes.
- *
- * @sa lookup_data_const
+ * Unlike @c lookup_data_const, this function only works with genuine
+ * @c key strings. Using a special constant (@sa GATTR) is not possible.
  */
-static inline struct attr_data*
-lookup_data(kdump_ctx *ctx, const struct attr_template *tmpl)
+static const struct attr_data*
+lookup_data_part(const kdump_ctx *ctx, const char *key, size_t keylen)
 {
-	return (struct attr_data*) lookup_data_const(ctx, tmpl);
+	const struct attr_data *parent, *d;
+	const char *p;
+
+	if (!key || !keylen)
+		return static_attr_data_const(ctx, GKI_dir_root);
+
+	p = memrchr(key, '.', keylen);
+	if (p) {
+		parent = lookup_data_part(ctx, key, p - key);
+		if (!parent)
+			return NULL;
+
+		keylen -= p - key + 1;
+		key = p + 1;
+	} else
+		parent = static_attr_data_const(ctx, GKI_dir_root);
+
+	for (d = parent->val.directory; d; d = d->next)
+		if (!strncmp(d->template->key, key, keylen) &&
+		    d->template->key[keylen] == '\0')
+			return d;
+	return NULL;
+}
+
+/**  Look up attribute value by name.
+ * @param ctx   Dump file object.
+ * @param key   Key name.
+ * @returns     Stored attribute or @c NULL if not found.
+ *
+ */
+static const struct attr_data*
+lookup_data(const kdump_ctx *ctx, const char *key)
+{
+	if (key > GATTR(NR_GLOBAL))
+		return lookup_data_tmpl(ctx, &global_keys[-(intptr_t)key]);
+
+	return lookup_data_part(ctx, key, strlen(key));
 }
 
 /**  Check if a given attribute is set.
@@ -258,25 +295,20 @@ lookup_data(kdump_ctx *ctx, const struct attr_template *tmpl)
 int
 attr_isset(const kdump_ctx *ctx, const char *key)
 {
-	const struct attr_template *t = lookup_template(ctx, key);
-	return t && !!lookup_data_const(ctx, t);
+	return !!lookup_data(ctx, key);
 }
 
 kdump_status
 kdump_get_attr(kdump_ctx *ctx, const char *key,
 	       struct kdump_attr *valp)
 {
-	const struct attr_template *t;
 	const struct attr_data *d;
 
 	clear_error(ctx);
-	t = lookup_template(ctx, key);
-	if (!t)
-		return set_error(ctx, kdump_unsupported, "No such key");
 
-	d = lookup_data_const(ctx, t);
+	d = lookup_data(ctx, key);
 	if (d) {
-		valp->type = t->type;
+		valp->type = d->template->type;
 		valp->val = d->val;
 		return kdump_ok;
 	}
@@ -296,7 +328,7 @@ kdump_enum_attr(kdump_ctx *ctx, const char *path,
 	if (!t)
 		return set_error(ctx, kdump_unsupported, "No such path");
 
-	parent = lookup_data_const(ctx, t);
+	parent = lookup_data(ctx, path);
 	if (!parent)
 		return set_error(ctx, kdump_nodata, "Path not instantiated");
 	if (parent->template->type != kdump_directory)
@@ -412,7 +444,7 @@ instantiate_path(kdump_ctx *ctx, const struct attr_template *tmpl)
 {
 	struct attr_data *d, *parent;
 
-	d = lookup_data(ctx, tmpl);
+	d = (struct attr_data*) lookup_data_tmpl(ctx, tmpl);
 	if (d != NULL)
 		return d;
 
