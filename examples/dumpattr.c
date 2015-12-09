@@ -38,7 +38,7 @@ list_attr_recursive(void *data, const char *key,
 		putchar('\n');
 		++ad->indent;
 		oldpath = ad->path;
-		if (*oldpath) {
+		if (oldpath) {
 			newpath = alloca(strlen(oldpath) + strlen(key) + 2);
 			sprintf(newpath, "%s.%s", oldpath, key);
 			ad->path = newpath;
@@ -86,7 +86,7 @@ main(int argc, char **argv)
 
 	struct attr_data data;
 	data.ctx = ctx;
-	data.path = argv[2] ?: "";
+	data.path = argv[2];
 	data.indent = 0;
 	res = kdump_enum_attr(ctx, data.path, list_attr_recursive, &data);
 	if (res != kdump_ok) {

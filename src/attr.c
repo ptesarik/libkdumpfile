@@ -168,7 +168,7 @@ lookup_template(const kdump_ctx *ctx, const char *key)
 {
 	const struct attr_template *dir;
 
-	if (key > GATTR(NR_GLOBAL))
+	if (!key || key > GATTR(NR_GLOBAL))
 		return &global_keys[-(intptr_t)key];
 
 	dir = lookup_template_parent(ctx, &key);
@@ -298,7 +298,7 @@ lookup_data_part(const kdump_ctx *ctx, const char *key, size_t keylen)
 static const struct attr_data*
 lookup_data(const kdump_ctx *ctx, const char *key)
 {
-	if (key > GATTR(NR_GLOBAL))
+	if (!key || key > GATTR(NR_GLOBAL))
 		return lookup_data_tmpl(ctx, &global_keys[-(intptr_t)key]);
 
 	return lookup_data_part(ctx, key, strlen(key));
