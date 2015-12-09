@@ -467,6 +467,11 @@ kdump_status add_attr(kdump_ctx *ctx, const char *path,
 		      const struct attr_template *tmpl,
 		      union kdump_attr_value val);
 
+#define add_attr_number INTERNAL_NAME(add_attr_number)
+kdump_status add_attr_number(kdump_ctx *ctx, const char *path,
+			     const struct attr_template *tmpl,
+			     kdump_num_t num);
+
 #define cleanup_attr INTERNAL_NAME(cleanup_attr)
 void cleanup_attr(kdump_ctx *ctx);
 

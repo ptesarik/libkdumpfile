@@ -673,8 +673,8 @@ add_attr(kdump_ctx *ctx, const char *path,
 	parent = instantiate_path(ctx, parent_tmpl);
 	if (!parent)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot instantiate path '%s': %s",
-				 path, strerror(errno));
+				 "Cannot instantiate path: %s",
+				 strerror(errno));
 
 	struct attr_data *d = alloc_attr(tmpl, 0);
 	if (!d)
@@ -684,4 +684,24 @@ add_attr(kdump_ctx *ctx, const char *path,
 	d->val = val;
 	replace_attr(parent, d);
 	return kdump_ok;
+}
+
+/**  Add a numeric attribute to a directory.
+ * @param ctx   Dump file object.
+ * @param path  Key name.
+ * @param tmpl  Attribute template.
+ * @param num   Key value (numeric).
+ * @returns     Newly allocated attr_data, or @c NULL on failure.
+ *
+ * This is a wrapper around @c add_attr. It also generates a good enough
+ * error message, so callers don't have to provide their own.
+ */
+kdump_status
+add_attr_number(kdump_ctx *ctx, const char *path,
+		const struct attr_template *tmpl, kdump_num_t num)
+{
+	union kdump_attr_value val;
+	val.number = num;
+	return set_error(ctx, add_attr(ctx, path, tmpl, val),
+			 "Cannot set '%s.%s'", path, tmpl->key);
 }

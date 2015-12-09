@@ -438,7 +438,6 @@ process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 {
 	struct elf_prstatus *status = data;
 	char cpukey[sizeof("cpu.") + 20];
-	union kdump_attr_value val;
 	kdump_status res;
 	int i;
 
@@ -455,20 +454,16 @@ process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 
 	++ctx->num_cpus.val.number;
 
-	val.number = dump32toh(ctx, status->pr_pid);
-	res = add_attr(ctx, cpukey, &tmpl_pid, val);
+	res = add_attr_number(ctx, cpukey, &tmpl_pid,
+			      dump32toh(ctx, status->pr_pid));
 	if (res != kdump_ok)
-		return set_error(ctx, res,
-				 "Cannot set '%s.%s'",
-				 cpukey, tmpl_pid.key);
+		return res;
 
 	for (i = 0; i < ELF_NGREG; ++i) {
-		val.number = dump64toh(ctx, status->pr_reg[i]);
-		res = add_attr(ctx, cpukey, &reg_names[i], val);
+		res = add_attr_number(ctx, cpukey, &reg_names[i],
+				      dump64toh(ctx, status->pr_reg[i]));
 		if (res != kdump_ok)
-			return set_error(ctx, kdump_syserr,
-					 "Cannot set '%s.%s'",
-					 cpukey, reg_names[i].key);
+			return res;
 	}
 
 	return kdump_ok;
