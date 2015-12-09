@@ -236,40 +236,57 @@ lookup_data_tmpl(const kdump_ctx *ctx, const struct attr_template *tmpl)
 	return NULL;
 }
 
-/**  Look up attribute data by partial key path.
- * @param ctx     Dump file object.
+/**  Look up a directory entry
+ * @param parent  Parent attribute (must be a directory).
  * @param key     Key path.
  * @param keylen  Length of the initial portion of @c key to be considered.
  * @returns       Stored attribute, or @c NULL if not found.
- *
- * Unlike @c lookup_data_const, this function only works with genuine
- * @c key strings. Using a special constant (@sa GATTR) is not possible.
  */
-static const struct attr_data*
-lookup_data_part(const kdump_ctx *ctx, const char *key, size_t keylen)
+static const struct attr_data *
+lookup_data_dir(const struct attr_data *parent, const char *key, size_t keylen)
 {
-	const struct attr_data *parent, *d;
-	const char *p;
+	const struct attr_data *d;
 
-	if (!key || !keylen)
-		return static_attr_data_const(ctx, GKI_dir_root);
-
-	p = memrchr(key, '.', keylen);
-	if (p) {
-		parent = lookup_data_part(ctx, key, p - key);
-		if (!parent)
-			return NULL;
-
-		keylen -= p - key + 1;
-		key = p + 1;
-	} else
-		parent = static_attr_data_const(ctx, GKI_dir_root);
+	if (parent->template->type != kdump_directory)
+		return NULL;
 
 	for (d = parent->val.directory; d; d = d->next)
 		if (!strncmp(d->template->key, key, keylen) &&
 		    d->template->key[keylen] == '\0')
 			return d;
+
 	return NULL;
+}
+
+/**  Look up attribute value by part of name.
+ * @param ctx     Dump file object.
+ * @param key     Key name.
+ * @param keylen  Length of the initial portion of @c key to be considered.
+ * @returns       Stored attribute or @c NULL if not found.
+ *
+ * Unlike @c lookup_data, this function only works with genuine @c key
+ * strings. Using a special constant (@sa GATTR) is not possible.
+ */
+static const struct attr_data*
+lookup_data_part(const kdump_ctx *ctx, const char *key, size_t keylen)
+{
+	const struct attr_data *d =
+		static_attr_data_const(ctx, GKI_dir_root);
+
+	if (keylen) {
+		const char *p;
+		while ( (p = memchr(key, '.', keylen)) ) {
+			d = lookup_data_dir(d, key, p - key);
+			if (!d)
+				return NULL;
+			keylen -= p - key + 1;
+			key = p + 1;
+		}
+
+		d = lookup_data_dir(d, key, keylen);
+	}
+
+	return d;
 }
 
 /**  Look up attribute value by name.
