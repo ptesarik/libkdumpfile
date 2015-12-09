@@ -445,8 +445,7 @@ process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 		return set_error(ctx, kdump_dataerr,
 				 "Wrong PRSTATUS size: %zu", size);
 
-	sprintf(cpukey, "cpu.%llu",
-		(unsigned long long) get_attr_num_cpus(ctx));
+	sprintf(cpukey, "cpu.%u", get_attr_num_cpus(ctx));
 	res = add_attr_template(ctx, cpukey, kdump_directory);
 	if (res != kdump_ok)
 		return set_error(ctx, kdump_syserr,
