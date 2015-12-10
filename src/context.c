@@ -185,7 +185,7 @@ vmcoreinfo_row(struct vmcoreinfo *info, const char *key)
 	if (!info)
 		return NULL;
 	for (i = 0; i < info->n; ++i)
-		if (!strcmp(key, info->row[i].key))
+		if (!strcmp(key, info->row[i].template.key))
 			return info->row[i].val;
 	return NULL;
 }

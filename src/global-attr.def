@@ -25,6 +25,8 @@ ATTR(linux_uts, "version", linux_uts_version, string, const char *)
 ATTR(linux_uts, "machine", linux_uts_machine, string, const char *)
 ATTR(linux_uts, "domainname", linux_uts_domainname, string, const char *)
 ATTR(linux, "vmcoreinfo", dir_linux_vmcoreinfo, directory, struct attr_data *)
+ATTR(linux_vmcoreinfo, "lines", linux_vmcoreinfo_lines,
+     directory, struct attr_data *)
 ATTR(linux_vmcoreinfo, "raw", linux_vmcoreinfo_raw, string, const char *)
 
 /* Xen */
@@ -35,4 +37,6 @@ ATTR(xen_version, "minor", xen_ver_minor, number, unsigned long)
 ATTR(xen_version, "extra", xen_ver_extra, string, const char *)
 ATTR(xen_version, "extra_addr", xen_ver_extra_addr, address, kdump_vaddr_t)
 ATTR(xen, "vmcoreinfo", dir_xen_vmcoreinfo, directory, struct attr_data *)
+ATTR(xen_vmcoreinfo, "lines", xen_vmcoreinfo_lines,
+     directory, struct attr_data *)
 ATTR(xen_vmcoreinfo, "raw", xen_vmcoreinfo_raw, string, const char *)

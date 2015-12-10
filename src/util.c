@@ -388,7 +388,7 @@ kdump_status
 store_vmcoreinfo(kdump_ctx *ctx, const char *path, struct vmcoreinfo **pinfo,
 		 void *data, size_t len)
 {
-	char key[strlen(path) + sizeof(".raw")];
+	char key[strlen(path) + sizeof(".lines")];
 	struct vmcoreinfo *info;
 	struct vmcoreinfo_row *row;
 	char *p, *q;
@@ -415,6 +415,7 @@ store_vmcoreinfo(kdump_ctx *ctx, const char *path, struct vmcoreinfo **pinfo,
 		return set_error(ctx, res, "Cannot set '%s'", key);
 	}
 
+	stpcpy(stpcpy(key, path), ".lines");
 	p = info->raw;
 	q = p + len + 1;
 	row = info->row;
@@ -428,7 +429,7 @@ store_vmcoreinfo(kdump_ctx *ctx, const char *path, struct vmcoreinfo **pinfo,
 
 		memcpy(q, p, endp - p);
 
-		row->key = q;
+		row->template.key = q;
 
 		eq = memchr(q, '=', endp - p);
 		if (eq) {
@@ -436,6 +437,17 @@ store_vmcoreinfo(kdump_ctx *ctx, const char *path, struct vmcoreinfo **pinfo,
 			row->val = eq + 1;
 		} else
 			row->val = NULL;
+
+		row->template.type = kdump_string;
+		res = add_attr_static_string(ctx, key, &row->template,
+					     row->val);
+		if (res != kdump_ok) {
+			free(info);
+			return set_error(ctx, res,
+					 "Cannot set vmcoreinfo '%s'",
+					 row->template.key);
+		}
+
 		++row;
 		++info->n;
 

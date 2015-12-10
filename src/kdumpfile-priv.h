@@ -169,16 +169,6 @@ struct new_utsname {
 	char domainname[NEW_UTS_LEN + 1];
 };
 
-struct vmcoreinfo_row {
-	const char *key, *val;
-};
-
-struct vmcoreinfo {
-	char *raw;		/* raw content */
-	unsigned n;		/* number of rows */
-	struct vmcoreinfo_row row[]; /* parsed rows */
-};
-
 typedef enum _tag_kdump_xlat {
 	/* No mapping set */
 	KDUMP_XLAT_NONE,
@@ -246,6 +236,17 @@ struct attr_data {
 	struct attr_data *next, **pprev;
 	const struct attr_template *template;
 	union kdump_attr_value val;
+};
+
+struct vmcoreinfo_row {
+	struct attr_template template;
+	const char *val;
+};
+
+struct vmcoreinfo {
+	char *raw;		/* raw content */
+	unsigned n;		/* number of rows */
+	struct vmcoreinfo_row row[]; /* parsed rows */
 };
 
 struct _tag_kdump_ctx {
