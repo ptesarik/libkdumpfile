@@ -398,10 +398,27 @@ add_parsed_row(kdump_ctx *ctx, const char *path, struct vmcoreinfo_row *row)
 		     sizeof(".lines"));
 	suff = stpcpy(key, path);
 
-	stpcpy(suff, ".lines");
-	row->template.type = kdump_string;
-	res = add_attr_static_string(ctx, key, &row->template,
-				     row->val);
+	p = stpcpy(suff, ".lines.");
+	stpcpy(p, row->template.key);
+
+	/* FIXME: Invent a better way to store lines with dots
+	 * in the key name
+	 */
+	while ( (q = strchr(p, '.')) ) {
+		*q = '\0';
+		res = add_attr_template(ctx, key, kdump_directory);
+		if (res != kdump_ok)
+			return set_error(ctx, res,
+					 "Cannot add attribute '%s'", key);
+		*q = '.';
+		p = q + 1;
+	}
+	res = add_attr_template(ctx, key, kdump_string);
+	if (res != kdump_ok)
+		return set_error(ctx, res,
+				 "Cannot add attribute '%s'", key);
+
+	res = set_attr_static_string(ctx, key, row->val);
 	if (res != kdump_ok)
 		return set_error(ctx, res,
 				 "Cannot set vmcoreinfo '%s'",
