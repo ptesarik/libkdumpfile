@@ -191,9 +191,9 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 
 	parent = lookup_template_parent(ctx, &path);
 	if (!parent)
-		return set_error(ctx, kdump_unsupported, "No such key");
+		return set_error(ctx, kdump_unsupported, "No such path");
 	if (parent->type != kdump_directory)
-		return set_error(ctx, kdump_unsupported,
+		return set_error(ctx, kdump_invalid,
 				 "Path is a leaf attribute");
 
 	dt = malloc(sizeof *dt + strlen(path) + 1);
@@ -352,7 +352,7 @@ kdump_enum_attr(kdump_ctx *ctx, const char *path,
 	if (!parent)
 		return set_error(ctx, kdump_nodata, "Path not instantiated");
 	if (parent->template->type != kdump_directory)
-		return set_error(ctx, kdump_unsupported,
+		return set_error(ctx, kdump_invalid,
 				 "Path is a leaf attribute");
 
 	for (d = (struct attr_data*)parent->val.directory; d; d = d->next) {
@@ -399,7 +399,7 @@ alloc_attr_by_key(kdump_ctx *ctx, struct attr_data **pattr,
 
 	t = lookup_template(ctx, key);
 	if (!t)
-		return set_error(ctx, kdump_unsupported, "No such key");
+		return set_error(ctx, kdump_unsupported, "No such path");
 
 	attr = alloc_attr(t, extra);
 	if (!attr)
@@ -667,8 +667,7 @@ add_attr(kdump_ctx *ctx, const char *path,
 
 	parent_tmpl = lookup_template(ctx, path);
 	if (!parent_tmpl)
-		return set_error(ctx, kdump_unsupported,
-				 "No such path");
+		return set_error(ctx, kdump_unsupported, "No such path");
 
 	parent = instantiate_path(ctx, parent_tmpl);
 	if (!parent)
