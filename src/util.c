@@ -385,6 +385,87 @@ count_lines(char *buf, size_t len)
 }
 
 kdump_status
+add_parsed_row(kdump_ctx *ctx, const char *path, struct vmcoreinfo_row *row)
+{
+	char *key, *suff, *type, *sym;
+	char *p, *q;
+	size_t len;
+	unsigned long long val;
+	enum kdump_attr_type attr_type;
+	kdump_status res;
+
+	key = alloca(strlen(path) + strlen(row->template.key) +
+		     sizeof(".lines"));
+	suff = stpcpy(key, path);
+
+	stpcpy(suff, ".lines");
+	row->template.type = kdump_string;
+	res = add_attr_static_string(ctx, key, &row->template,
+				     row->val);
+	if (res != kdump_ok)
+		return set_error(ctx, res,
+				 "Cannot set vmcoreinfo '%s'",
+				 row->template.key);
+
+	p = strchr(row->template.key, '(');
+	if (!p)
+		return kdump_ok;
+	q = strchr(p, ')');
+	if (!q || q[1])
+		return kdump_ok;
+
+	type = suff;
+	*type++ = '.';
+	len = p - row->template.key;
+	memcpy(type, row->template.key, len);
+	type[len] = '\0';
+
+	sym = type + len + 1;
+	len = q - p - 1;
+	memcpy(sym, p + 1, len);
+	sym[len] = '\0';
+
+	if (!strcmp(type, "SYMBOL")) {
+		val = strtoull(row->val, &p, 16);
+		if (*p)
+			/* invalid format -> ignore */
+			return kdump_ok;
+		attr_type = kdump_address;
+	} else if (!strcmp(type, "LENGTH") ||
+		   !strcmp(type, "NUMBER") ||
+		   !strcmp(type, "OFFSET") ||
+		   !strcmp(type, "SIZE")) {
+		val = strtoull(row->val, &p, 10);
+		if (*p)
+			/* invalid format -> ignore */
+			return kdump_ok;
+		attr_type = kdump_number;
+	} else
+		return kdump_ok;
+
+	sym[-1] = '.';
+	for (p = sym; (p = strchr(p, '.')); ++p) {
+		*p = '\0';
+		res = add_attr_template(ctx, key, kdump_directory);
+		if (res != kdump_ok)
+			return set_error(ctx, res,
+					 "Cannot add attribute '%s'", key);
+		*p = '.';
+	}
+
+	res = add_attr_template(ctx, key, attr_type);
+	if (res != kdump_ok)
+		return set_error(ctx, res,
+				 "Cannot add attribute '%s'", key);
+
+	return set_error(ctx,
+			 (attr_type == kdump_number)
+			 ? set_attr_number(ctx, key, val)
+			 : set_attr_address(ctx, key, val),
+			 "Cannot set %s", key);
+}
+
+kdump_status
 store_vmcoreinfo(kdump_ctx *ctx, const char *path, struct vmcoreinfo **pinfo,
 		 void *data, size_t len)
 {
@@ -427,8 +508,8 @@ store_vmcoreinfo(kdump_ctx *ctx, const char *path, struct vmcoreinfo **pinfo,
 		if (!endp)
 			endp = p + strlen(p);
 
+		q[endp - p] = '\0';
 		memcpy(q, p, endp - p);
-
 		row->template.key = q;
 
 		eq = memchr(q, '=', endp - p);
@@ -438,21 +519,17 @@ store_vmcoreinfo(kdump_ctx *ctx, const char *path, struct vmcoreinfo **pinfo,
 		} else
 			row->val = NULL;
 
-		row->template.type = kdump_string;
-		res = add_attr_static_string(ctx, key, &row->template,
-					     row->val);
+
+		res = add_parsed_row(ctx, path, row);
 		if (res != kdump_ok) {
 			free(info);
-			return set_error(ctx, res,
-					 "Cannot set vmcoreinfo '%s'",
-					 row->template.key);
+			return res;
 		}
 
 		++row;
 		++info->n;
 
-		q += endp - p;
-		*q++ = '\0';
+		q += endp - p + 1;
 		p = endp;
 		if (*p)
 			++p;

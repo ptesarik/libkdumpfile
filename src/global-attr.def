@@ -28,6 +28,11 @@ ATTR(linux, "vmcoreinfo", dir_linux_vmcoreinfo, directory, struct attr_data *)
 ATTR(linux_vmcoreinfo, "lines", linux_vmcoreinfo_lines,
      directory, struct attr_data *)
 ATTR(linux_vmcoreinfo, "raw", linux_vmcoreinfo_raw, string, const char *)
+ATTR(linux_vmcoreinfo, "LENGTH", linux_length, directory, struct attr_data *)
+ATTR(linux_vmcoreinfo, "NUMBER", linux_number, directory, struct attr_data *)
+ATTR(linux_vmcoreinfo, "OFFSET", linux_offset, directory, struct attr_data *)
+ATTR(linux_vmcoreinfo, "SIZE", linux_size, directory, struct attr_data *)
+ATTR(linux_vmcoreinfo, "SYMBOL", linux_symbol, directory, struct attr_data *)
 
 /* Xen */
 ATTR(root, "xen", dir_xen, directory, struct attr_data *)
@@ -40,3 +45,8 @@ ATTR(xen, "vmcoreinfo", dir_xen_vmcoreinfo, directory, struct attr_data *)
 ATTR(xen_vmcoreinfo, "lines", xen_vmcoreinfo_lines,
      directory, struct attr_data *)
 ATTR(xen_vmcoreinfo, "raw", xen_vmcoreinfo_raw, string, const char *)
+ATTR(xen_vmcoreinfo, "LENGTH", xen_length, directory, struct attr_data *)
+ATTR(xen_vmcoreinfo, "NUMBER", xen_number, directory, struct attr_data *)
+ATTR(xen_vmcoreinfo, "OFFSET", xen_offset, directory, struct attr_data *)
+ATTR(xen_vmcoreinfo, "SIZE", xen_size, directory, struct attr_data *)
+ATTR(xen_vmcoreinfo, "SYMBOL", xen_symbol, directory, struct attr_data *)
