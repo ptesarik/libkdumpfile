@@ -169,13 +169,25 @@ kdump_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 const char *
 kdump_vmcoreinfo(kdump_ctx *ctx)
 {
-	return ctx->vmcoreinfo ? ctx->vmcoreinfo->raw : NULL;
+	struct kdump_attr attr;
+	kdump_status res;
+
+	res = kdump_get_attr(ctx, GATTR(GKI_linux_vmcoreinfo_raw), &attr);
+	return res == kdump_ok
+		? attr.val.string
+		: NULL;
 }
 
 const char *
 kdump_vmcoreinfo_xen(kdump_ctx *ctx)
 {
-	return ctx->vmcoreinfo_xen ? ctx->vmcoreinfo_xen->raw : NULL;
+	struct kdump_attr attr;
+	kdump_status res;
+
+	res = kdump_get_attr(ctx, GATTR(GKI_xen_vmcoreinfo_raw), &attr);
+	return res == kdump_ok
+		? attr.val.string
+		: NULL;
 }
 
 static const char*
