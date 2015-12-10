@@ -88,14 +88,7 @@ kdump_phys_base(kdump_ctx *ctx)
 	return get_attr_phys_base(ctx);
 }
 
-/** Get a string attribute.
- *
- * @param ctx  Dump file object.
- * @param key  Attribut key.
- * @returns    The attribute value, @c NULL if not found or if the
- *             attribute is not a string.
- */
-static const char *
+const char *
 kdump_get_string_attr(kdump_ctx *ctx, const char *key)
 {
 	struct kdump_attr attr;

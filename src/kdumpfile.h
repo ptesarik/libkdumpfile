@@ -295,6 +295,15 @@ struct kdump_attr {
 kdump_status kdump_get_attr(kdump_ctx *ctx, const char *key,
 			    struct kdump_attr *valp);
 
+/** Get a string attribute.
+ *
+ * @param ctx  Dump file object.
+ * @param key  Attribut key.
+ * @returns    The attribute value, @c NULL if not found or if the
+ *             attribute is not a string.
+ */
+const char *kdump_get_string_attr(kdump_ctx *ctx, const char *key);
+
 /**  Type for kdump_enum_attr callback function.
  * @param data  Data pointer which was passed to @ref kdump_enum_attr.
  * @param key   Key name.
