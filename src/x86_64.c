@@ -451,7 +451,7 @@ process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot create attribute '%s'", cpukey);
 
-	++ctx->num_cpus.val.number;
+	set_attr_num_cpus(ctx, get_attr_num_cpus(ctx) + 1);
 
 	res = add_attr_number(ctx, cpukey, &tmpl_pid,
 			      dump32toh(ctx, status->pr_pid));

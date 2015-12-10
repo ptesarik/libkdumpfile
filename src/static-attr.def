@@ -20,6 +20,7 @@
 /* static hierarchy */
 ATTR(root, "", dir_root, directory, struct attr_data *)
 ATTR(root, "arch", dir_arch, directory, struct attr_data *)
+ATTR(root, "cpu", dir_cpu, directory, struct attr_data *)
 ATTR(root, "linux", dir_linux, directory, struct attr_data *)
 ATTR(linux, "uts", dir_linux_uts, directory, struct attr_data *)
 
@@ -29,9 +30,6 @@ ATTR(arch, "name", arch_name, string, const char *)
 /* little-endian or big-endian */
 ATTR(arch, "byte_order", byte_order, number, kdump_byte_order_t)
 
-/* number of CPUs in the system  */
-ATTR(arch, "num_cpus", num_cpus, number, unsigned)
-
 /* arch pointer size */
 ATTR(arch, "ptr_size", ptr_size, number, size_t)
 
@@ -40,6 +38,9 @@ ATTR(arch, "page_size", page_size, number, size_t)
 
 /* = log2(page_size) */
 ATTR(arch, "page_shift", page_shift, number, unsigned)
+
+/* number of CPUs in the system  */
+ATTR(cpu, "number", num_cpus, number, unsigned)
 
 /* physical base */
 ATTR(linux, "phys_base", phys_base, address, kdump_addr_t)
