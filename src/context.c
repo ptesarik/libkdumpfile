@@ -218,44 +218,35 @@ kdump_xen_version(kdump_ctx *ctx, kdump_xen_version_t *version)
 }
 
 static kdump_status
-vmcoreinfo_symbol(kdump_ctx *ctx, struct vmcoreinfo *info,
-		  const char *symname, kdump_addr_t *symvalue)
+vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname, kdump_addr_t *symvalue,
+		  const char *base)
 {
-	char key[sizeof("SYMBOL()") + strlen(symname)];
-	const char *valstr;
-	unsigned long long val;
-	char *p;
+	char attrkey[strlen(base) + sizeof(".vmcoreinfo.SYMBOL.") +
+		     strlen(symname)];
+	struct kdump_attr attr;
+	kdump_status ret;
 
-	sprintf(key, "SYMBOL(%s)", symname);
-	valstr = vmcoreinfo_row(info, key);
-	if (!valstr || !*valstr)
-		return set_error(ctx, kdump_nodata, "Symbol not found");
+	clear_error(ctx);
 
-	val = strtoull(valstr, &p, 16);
-	if (*p)
-		return set_error(ctx, kdump_dataerr,
-				 "Invalid number: %s", valstr);
-
-	*symvalue = val;
-	return kdump_ok;
+	stpcpy(stpcpy(stpcpy(attrkey, base), ".vmcoreinfo.SYMBOL."), symname);
+	ret = kdump_get_attr(ctx, attrkey, &attr);
+	if (ret == kdump_ok)
+		*symvalue = attr.val.address;
+	return ret;
 }
 
 kdump_status
 kdump_vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname,
 			kdump_addr_t *symvalue)
 {
-	clear_error(ctx);
-
-	return vmcoreinfo_symbol(ctx, ctx->vmcoreinfo, symname, symvalue);
+	return vmcoreinfo_symbol(ctx, symname, symvalue, "linux");
 }
 
 kdump_status
 kdump_vmcoreinfo_symbol_xen(kdump_ctx *ctx, const char *symname,
 			    kdump_addr_t *symvalue)
 {
-	clear_error(ctx);
-
-	return vmcoreinfo_symbol(ctx, ctx->vmcoreinfo_xen, symname, symvalue);
+	return vmcoreinfo_symbol(ctx, symname, symvalue, "xen");
 }
 
 kdump_get_symbol_val_fn *
