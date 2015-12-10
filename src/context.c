@@ -187,25 +187,13 @@ kdump_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 const char *
 kdump_vmcoreinfo(kdump_ctx *ctx)
 {
-	struct kdump_attr attr;
-	kdump_status res;
-
-	res = kdump_get_attr(ctx, GATTR(GKI_linux_vmcoreinfo_raw), &attr);
-	return res == kdump_ok
-		? attr.val.string
-		: NULL;
+	return kdump_get_string_attr(ctx, GATTR(GKI_linux_vmcoreinfo_raw));
 }
 
 const char *
 kdump_vmcoreinfo_xen(kdump_ctx *ctx)
 {
-	struct kdump_attr attr;
-	kdump_status res;
-
-	res = kdump_get_attr(ctx, GATTR(GKI_xen_vmcoreinfo_raw), &attr);
-	return res == kdump_ok
-		? attr.val.string
-		: NULL;
+	return kdump_get_string_attr(ctx, GATTR(GKI_xen_vmcoreinfo_raw));
 }
 
 static const char*
@@ -213,14 +201,11 @@ vmcoreinfo_row(kdump_ctx *ctx, const char *key, const char *base)
 {
 	char attrkey[strlen(base) + sizeof(".vmcoreinfo.lines.")
 		     + strlen(key)];
-	struct kdump_attr attr;
 
 	clear_error(ctx);
 
-	stpcpy(stpcpy(stpcpy(attrkey, base), ".vmcoreinfo.lines."), key);
-	return kdump_get_attr(ctx, attrkey, &attr) == kdump_ok
-		? attr.val.string
-		: NULL;
+	sprintf(attrkey, "%s.vmcoreinfo.lines.%s", base, key);
+	return kdump_get_string_attr(ctx, attrkey);
 }
 
 const char *
@@ -261,7 +246,7 @@ vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname, kdump_addr_t *symvalue,
 
 	clear_error(ctx);
 
-	stpcpy(stpcpy(stpcpy(attrkey, base), ".vmcoreinfo.SYMBOL."), symname);
+	sprintf(attrkey, "%s.vmcoreinfo.SYMBOL.%s", base, symname);
 	ret = kdump_get_attr(ctx, attrkey, &attr);
 	if (ret == kdump_ok)
 		*symvalue = attr.val.address;
