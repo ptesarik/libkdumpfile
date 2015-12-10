@@ -33,6 +33,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include <errno.h>
 #include <linux/version.h>
 
@@ -117,15 +118,31 @@ struct elf_prstatus
 	/* optional UNUSED fields may follow */
 } __attribute__((packed));
 
-/* Internal CPU state, as seen by libkdumpfile */
-struct cpu_state {
-	int32_t pid;
-	uint64_t reg[ELF_NGREG];
-	struct cpu_state *next;
+static const struct attr_template reg_names[] = {
+#define REG(name)	{ #name, NULL, kdump_number }
+	REG(ebx),
+	REG(ecx),
+	REG(edx),
+	REG(esi),
+	REG(edi),
+	REG(ebp),
+	REG(eax),
+	REG(ds),
+	REG(es),
+	REG(fs),
+	REG(gs),
+	REG(orig_eax),
+	REG(eip),
+	REG(cs),
+	REG(eflags),
+	REG(esp),
+	REG(ss),
 };
 
+static const struct attr_template tmpl_pid =
+	{ "pid", NULL, kdump_number };
+
 struct ia32_data {
-	struct cpu_state *cpu_state;
 	union {
 		void *pgt;
 		uint32_t *pgt_nonpae;
@@ -156,28 +173,38 @@ ia32_init(kdump_ctx *ctx)
 static kdump_status
 process_ia32_prstatus(kdump_ctx *ctx, void *data, size_t size)
 {
-	struct ia32_data *archdata = ctx->archdata;
 	struct elf_prstatus *status = data;
-	struct cpu_state *cs;
+	char cpukey[sizeof("cpu.") + 20 + sizeof(".reg")];
+	kdump_status res;
 	int i;
 
 	if (size < sizeof(struct elf_prstatus))
 		return set_error(ctx, kdump_dataerr,
 				 "Wrong PRSTATUS size: %zu", size);
 
-	++ctx->num_cpus.val.number;
+	sprintf(cpukey, "cpu.%u", get_attr_num_cpus(ctx));
+	res = add_attr_template(ctx, cpukey, kdump_directory);
+	if (res == kdump_ok) {
+		res = add_attr_number(ctx, cpukey, &tmpl_pid,
+				      dump32toh(ctx, status->pr_pid));
+		if (res != kdump_ok)
+			return res;
 
-	cs = ctx_malloc(sizeof *cs, ctx, "ia32 registers");
-	if (!cs)
-		return kdump_syserr;
+		strcat(cpukey, ".reg");
+		res = add_attr_template(ctx, cpukey, kdump_directory);
+	}
+	if (res != kdump_ok)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot create attribute '%s'", cpukey);
 
-	cs->pid = dump32toh(ctx, status->pr_pid);
-	for (i = 0; i < ELF_NGREG; ++i)
-		cs->reg[i] = dump32toh(ctx, status->pr_reg[i]);
+	for (i = 0; i < ELF_NGREG; ++i) {
+		res = add_attr_number(ctx, cpukey, &reg_names[i],
+				      dump64toh(ctx, status->pr_reg[i]));
+		if (res != kdump_ok)
+			return res;
+	}
 
-	cs->next = archdata->cpu_state;
-	archdata->cpu_state = cs;
-
+	set_attr_num_cpus(ctx, get_attr_num_cpus(ctx) + 1);
 	return kdump_ok;
 }
 
@@ -185,23 +212,22 @@ static kdump_status
 ia32_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 	      kdump_reg_t *value)
 {
-	struct ia32_data *archdata = ctx->archdata;
-	struct cpu_state *cs;
-	int i;
+	char key[sizeof("cpu.") + 20 + sizeof("orig_eax")];
+	struct kdump_attr attr;
+	kdump_status res;
 
 	if (index >= ELF_NGREG)
 		return set_error(ctx, kdump_nodata,
 				 "Out-of-bounds register number: %u (max %u)",
 				 index, ELF_NGREG);
 
-	for (i = 0, cs = archdata->cpu_state; i < cpu && cs; ++i)
-		cs = cs->next;
-	if (!cs)
-		return set_error(ctx, kdump_nodata,
-				 "Out-of-bounds CPU number: %u (max %u)",
-				 cpu, get_attr_num_cpus(ctx));
+	sprintf(key, "cpu.%u.%s", cpu, reg_names[index].key);
+	res = kdump_get_attr(ctx, key, &attr);
+	if (res != kdump_ok)
+		return set_error(ctx, res,
+				 "Cannot read '%s'", key);
 
-	*value = cs->reg[index];
+	*value = attr.val.number;
 	return kdump_ok;
 }
 
@@ -281,14 +307,6 @@ static void
 ia32_cleanup(kdump_ctx *ctx)
 {
 	struct ia32_data *archdata = ctx->archdata;
-	struct cpu_state *cs, *oldcs;
-
-	cs = archdata->cpu_state;
-	while (cs) {
-		oldcs = cs;
-		cs = cs->next;
-		free(oldcs);
-	}
 
 	if (archdata->pgt)
 		free(archdata->pgt);
