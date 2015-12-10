@@ -185,16 +185,23 @@ kdump_status
 add_attr_template(kdump_ctx *ctx, const char *path,
 		  enum kdump_attr_type type)
 {
-	const struct attr_template *parent;
+	const struct attr_template *parent, *t;
 	struct dyn_attr_template *dt;
 	char *keyname;
 
 	parent = lookup_template_parent(ctx, &path);
 	if (!parent)
 		return set_error(ctx, kdump_unsupported, "No such path");
+
 	if (parent->type != kdump_directory)
 		return set_error(ctx, kdump_invalid,
 				 "Path is a leaf attribute");
+
+	t = lookup_template_dir(ctx, parent, path, strlen(path));
+	if (t)
+		return set_error(ctx,
+				 (t->type == type ? kdump_ok : kdump_invalid),
+				 "Type conflict with existing template");
 
 	dt = malloc(sizeof *dt + strlen(path) + 1);
 	if (!dt)
