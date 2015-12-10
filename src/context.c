@@ -158,12 +158,30 @@ kdump_status
 kdump_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 	       kdump_reg_t *value)
 {
+	char *key;
+	const char *regname;
+	struct kdump_attr attr;
+	kdump_status res;
+
 	clear_error(ctx);
 
-	if (!ctx->arch_ops || !ctx->arch_ops->read_reg)
+	if (!ctx->arch_ops || !ctx->arch_ops->reg_name)
 		return set_error(ctx, kdump_nodata, "Registers not available");
 
-	return ctx->arch_ops->read_reg(ctx, cpu, index, value);
+	regname = ctx->arch_ops->reg_name(index);
+	if (!regname)
+		return set_error(ctx, kdump_nodata,
+				 "Out-of-bounds register number");
+
+	key = alloca(sizeof("cpu.") + 20 + sizeof(".reg.") + strlen(regname));
+	sprintf(key, "cpu.%u.reg.%s", cpu, regname);
+	res = kdump_get_attr(ctx, key, &attr);
+	if (res != kdump_ok)
+		return set_error(ctx, res,
+				 "Cannot read '%s'", key);
+
+	*value = attr.val.number;
+	return kdump_ok;
 }
 
 const char *

@@ -208,27 +208,12 @@ process_ia32_prstatus(kdump_ctx *ctx, void *data, size_t size)
 	return kdump_ok;
 }
 
-static kdump_status
-ia32_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
-	      kdump_reg_t *value)
+static const char *
+ia32_reg_name(unsigned index)
 {
-	char key[sizeof("cpu.") + 20 + sizeof("orig_eax")];
-	struct kdump_attr attr;
-	kdump_status res;
-
-	if (index >= ELF_NGREG)
-		return set_error(ctx, kdump_nodata,
-				 "Out-of-bounds register number: %u (max %u)",
-				 index, ELF_NGREG);
-
-	sprintf(key, "cpu.%u.%s", cpu, reg_names[index].key);
-	res = kdump_get_attr(ctx, key, &attr);
-	if (res != kdump_ok)
-		return set_error(ctx, res,
-				 "Cannot read '%s'", key);
-
-	*value = attr.val.number;
-	return kdump_ok;
+	return index < ARRAY_SIZE(reg_names)
+		? reg_names[index].key
+		: NULL;
 }
 
 static kdump_status
@@ -427,7 +412,7 @@ const struct arch_ops ia32_ops = {
 	.init = ia32_init,
 	.vtop_init = ia32_vtop_init,
 	.process_prstatus = process_ia32_prstatus,
-	.read_reg = ia32_read_reg,
+	.reg_name = ia32_reg_name,
 	.vtop = ia32_vtop,
 	.cleanup = ia32_cleanup,
 };

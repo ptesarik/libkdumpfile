@@ -133,14 +133,12 @@ struct arch_ops {
 	 */
 	kdump_status (*process_prstatus)(kdump_ctx *, void *, size_t);
 
-	/* Read a register value:
-	 *   cpu    CPU number (in dumpfile order)
-	 *   index  CPU index (arch-dependent)
-	 *          no guarantees - return kdump_nodata if out of range
-	 *   value  will contain register value on success
+	/* Get a register name:
+	 *   index  register index (arch-dependent)
+	 *
+	 * Returns the register name or @c NULL if index is out of range.
 	 */
-	kdump_status (*read_reg)(kdump_ctx *ctx, unsigned cpu, unsigned index,
-				 kdump_reg_t *value);
+	const char* (*reg_name)(unsigned index);
 
 	/* Process a LOAD segment
 	 */
