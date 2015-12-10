@@ -380,7 +380,8 @@ int uncompress_rle(unsigned char *dst, size_t *pdstlen,
 		   const unsigned char *src, size_t srclen);
 
 #define store_vmcoreinfo INTERNAL_NAME(store_vmcoreinfo)
-kdump_status store_vmcoreinfo(kdump_ctx *ctx, struct vmcoreinfo **pinfo,
+kdump_status store_vmcoreinfo(kdump_ctx *ctx, const char *path,
+			      struct vmcoreinfo **pinfo,
 			      void *data, size_t len);
 
 #define paged_read INTERNAL_NAME(paged_read)

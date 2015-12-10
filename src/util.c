@@ -385,14 +385,16 @@ count_lines(char *buf, size_t len)
 }
 
 kdump_status
-store_vmcoreinfo(kdump_ctx *ctx, struct vmcoreinfo **pinfo,
+store_vmcoreinfo(kdump_ctx *ctx, const char *path, struct vmcoreinfo **pinfo,
 		 void *data, size_t len)
 {
+	char key[strlen(path) + sizeof(".raw")];
 	struct vmcoreinfo *info;
 	struct vmcoreinfo_row *row;
 	char *p, *q;
 	unsigned n;
 	size_t sz;
+	kdump_status res;
 
 	n = count_lines(data, len);
 	sz = sizeof(struct vmcoreinfo) +
@@ -405,6 +407,13 @@ store_vmcoreinfo(kdump_ctx *ctx, struct vmcoreinfo **pinfo,
 	info->raw = (char*)info->row + n * sizeof(struct vmcoreinfo_row);
 	memcpy(info->raw, data, len);
 	info->raw[len] = '\0';
+
+	stpcpy(stpcpy(key, path), ".raw");
+	res = set_attr_static_string(ctx, key, info->raw);
+	if (res != kdump_ok) {
+		free(info);
+		return set_error(ctx, res, "Cannot set '%s'", key);
+	}
 
 	p = info->raw;
 	q = p + len + 1;
