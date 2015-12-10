@@ -41,7 +41,6 @@
 # define EM_AARCH64      183
 #endif
 
-static const struct format_ops xen_dom0_ops;
 static const struct format_ops xen_domU_ops;
 
 struct xen_p2m {
@@ -75,8 +74,6 @@ struct elfdump_priv {
 	char *strtab;
 
 	off_t xen_pages_offset;
-	void *xen_map;
-	unsigned long xen_map_size;
 	enum {
 		xen_map_pfn,
 		xen_map_p2m,
@@ -149,51 +146,20 @@ elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	return kdump_ok;
 }
 
-static kdump_status
-elf_read_xen_dom0(kdump_ctx *ctx, kdump_pfn_t pfn)
+static unsigned long
+pfn_to_idx(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
-	size_t ptr_size;
-	unsigned fpp;
-	uint64_t mfn_idx, frame_idx;
-	kdump_status ret;
-
-	ptr_size = get_attr_ptr_size(ctx);
-	fpp = get_attr_page_size(ctx) / ptr_size;
-	mfn_idx = pfn / fpp;
-	frame_idx = pfn % fpp;
-	if (mfn_idx >= edp->xen_map_size)
-		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
-
-	pfn = (ptr_size == 8)
-		? ((uint64_t*)edp->xen_map)[mfn_idx]
-		: ((uint32_t*)edp->xen_map)[mfn_idx];
-	ret = elf_read_page(ctx, pfn);
-	if (ret != kdump_ok)
-		return set_error(ctx, ret, "Cannot read MFN %llx",
-				 (unsigned long long) pfn);
-
-	pfn = (ptr_size == 8)
-		? ((uint64_t*)ctx->page)[frame_idx]
-		: ((uint32_t*)ctx->page)[frame_idx];
-	ret = elf_read_page(ctx, pfn);
-	return set_error(ctx, ret, "Cannot read MFN %llx",
-			 (unsigned long long) pfn);
-}
-
-static unsigned long
-pfn_to_idx(struct elfdump_priv *edp, kdump_pfn_t pfn)
-{
 	unsigned long i;
 
 	if (edp->xen_map_type == xen_map_pfn) {
-		uint64_t *p = edp->xen_map;
-		for (i = 0; i < edp->xen_map_size; ++i, ++p)
+		uint64_t *p = ctx->xen_map;
+		for (i = 0; i < ctx->xen_map_size; ++i, ++p)
 			if (*p == pfn)
 				return i;
 	} else if (edp->xen_map_type == xen_map_p2m) {
-		struct xen_p2m *p = edp->xen_map;
-		for (i = 0; i < edp->xen_map_size; ++i, ++p)
+		struct xen_p2m *p = ctx->xen_map;
+		for (i = 0; i < ctx->xen_map_size; ++i, ++p)
 			if (p->pfn == pfn)
 				return i;
 	}
@@ -209,7 +175,7 @@ elf_read_xen_domU(kdump_ctx *ctx, kdump_pfn_t pfn)
 	off_t offset;
 	ssize_t rd;
 
-	idx = pfn_to_idx(edp, pfn);
+	idx = pfn_to_idx(ctx, pfn);
 	if (idx == ~0UL)
 		return set_error(ctx, kdump_nodata,
 				 "No machine address for PFN: 0x%llx",
@@ -227,13 +193,14 @@ elf_read_xen_domU(kdump_ctx *ctx, kdump_pfn_t pfn)
 }
 
 static unsigned long
-mfn_to_idx(struct elfdump_priv *edp, kdump_pfn_t mfn)
+mfn_to_idx(kdump_ctx *ctx, kdump_pfn_t mfn)
 {
+	struct elfdump_priv *edp = ctx->fmtdata;
 	unsigned long i;
 
 	if (edp->xen_map_type == xen_map_p2m) {
-		struct xen_p2m *p = edp->xen_map;
-		for (i = 0; i < edp->xen_map_size; ++i, ++p)
+		struct xen_p2m *p = ctx->xen_map;
+		for (i = 0; i < ctx->xen_map_size; ++i, ++p)
 			if (p->gmfn == mfn)
 				return i;
 	}
@@ -248,8 +215,8 @@ elf_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 	unsigned long i;
 
 	if (edp->xen_map_type == xen_map_p2m) {
-		struct xen_p2m *p = edp->xen_map;
-		for (i = 0; i < edp->xen_map_size; ++i, ++p)
+		struct xen_p2m *p = ctx->xen_map;
+		for (i = 0; i < ctx->xen_map_size; ++i, ++p)
 			if (p->gmfn == mfn) {
 				*pfn = p->pfn;
 				return kdump_ok;
@@ -269,7 +236,7 @@ elf_read_xenmach_domU(kdump_ctx *ctx, kdump_pfn_t mfn)
 	off_t offset;
 	ssize_t rd;
 
-	idx = mfn_to_idx(edp, mfn);
+	idx = mfn_to_idx(ctx, mfn);
 	if (idx == ~0UL)
 		return set_error(ctx, kdump_nodata, "Page not found");
 
@@ -548,151 +515,6 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 }
 
 static kdump_status
-initialize_xen_map64(kdump_ctx *ctx, void *dir)
-{
-	struct elfdump_priv *edp = ctx->fmtdata;
-	size_t ptr_size;
-	unsigned fpp;
-	uint64_t *dirp, *p, *map;
-	uint64_t pfn;
-	unsigned long mfns;
-	kdump_status ret;
-
-	ptr_size = get_attr_ptr_size(ctx);
-	fpp = get_attr_page_size(ctx) / ptr_size;
-	mfns = 0;
-	for (dirp = dir, pfn = 0; *dirp && pfn < ctx->max_pfn;
-	     ++dirp, pfn += fpp * fpp) {
-		ret = elf_read_page(ctx, *dirp);
-		if (ret == kdump_nodata)
-			ret = kdump_dataerr;
-		if (ret != kdump_ok)
-			return set_error(ctx, ret,
-					 "Cannot read Xen P2M map MFN 0x%llx",
-					 (unsigned long long) *dirp);
-
-		for (p = ctx->page;
-		     (void*)p < ctx->page + get_attr_page_size(ctx);
-		     ++p)
-			if (*p)
-				++mfns;
-	}
-
-	map = ctx_malloc(mfns * sizeof(uint64_t), ctx, "Xen P2M map");
-	if (!map)
-		return kdump_syserr;
-	edp->xen_map = map;
-	edp->xen_map_size = mfns;
-
-	for (dirp = dir; mfns; ++dirp) {
-		ret = elf_read_page(ctx, *dirp);
-		if (ret == kdump_nodata)
-			ret = kdump_dataerr;
-		if (ret != kdump_ok)
-			return set_error(ctx, ret,
-					 "Cannot read Xen P2M map MFN 0x%llx",
-					 (unsigned long long) *dirp);
-
-		for (p = ctx->page;
-		     (void*)p < ctx->page + get_attr_page_size(ctx);
-		     ++p)
-			if (*p) {
-				*map++ = dump64toh(ctx, *p);
-				--mfns;
-			}
-	}
-
-	return kdump_ok;
-}
-
-static kdump_status
-initialize_xen_map32(kdump_ctx *ctx, void *dir)
-{
-	struct elfdump_priv *edp = ctx->fmtdata;
-	size_t ptr_size;
-	unsigned fpp;
-	uint32_t *dirp, *p, *map;
-	uint32_t pfn;
-	unsigned long mfns;
-	kdump_status ret;
-
-	ptr_size = get_attr_ptr_size(ctx);
-	fpp = get_attr_page_size(ctx) / ptr_size;
-	mfns = 0;
-	for (dirp = dir, pfn = 0; *dirp && pfn < ctx->max_pfn;
-	     ++dirp, pfn += fpp * fpp) {
-		ret = elf_read_page(ctx, *dirp);
-		if (ret == kdump_nodata)
-			ret = kdump_dataerr;
-		if (ret != kdump_ok)
-			return set_error(ctx, ret,
-					 "Cannot read Xen P2M map MFN 0x%llx",
-					 (unsigned long long) *dirp);
-
-		for (p = ctx->page;
-		     (void*)p < ctx->page + get_attr_page_size(ctx);
-		     ++p)
-			if (*p)
-				++mfns;
-	}
-
-	map = ctx_malloc(mfns * sizeof(uint32_t), ctx, "Xen P2M map");
-	if (!map)
-		return kdump_syserr;
-	edp->xen_map = map;
-	edp->xen_map_size = mfns;
-
-	for (dirp = dir; mfns; ++dirp) {
-		ret = elf_read_page(ctx, *dirp);
-		if (ret == kdump_nodata)
-			ret = kdump_dataerr;
-		if (ret != kdump_ok)
-			return set_error(ctx, ret,
-					 "Cannot read Xen P2M map MFN 0x%llx",
-					 (unsigned long long) *dirp);
-
-		for (p = ctx->page;
-		     (void*)p < ctx->page + get_attr_page_size(ctx);
-		     ++p)
-			if (*p) {
-				*map++ = dump32toh(ctx, *p);
-				--mfns;
-			}
-	}
-
-	return kdump_ok;
-}
-
-static kdump_status
-initialize_xen_map(kdump_ctx *ctx)
-{
-	void *dir, *page;
-	kdump_status ret;
-
-	ret = elf_read_page(ctx, ctx->xen_p2m_mfn);
-	if (ret != kdump_ok)
-		return set_error(ctx, ret,
-				 "Cannot read Xen P2M directory MFN 0x%llx",
-				 (unsigned long long) ctx->xen_p2m_mfn);
-
-	dir = ctx->page;
-	page = ctx_malloc(get_attr_page_size(ctx), ctx, "page buffer");
-	if (page == NULL)
-		return kdump_syserr;
-	ctx->page = page;
-
-	ret = (get_attr_ptr_size(ctx) == 8)
-		? initialize_xen_map64(ctx, dir)
-		: initialize_xen_map32(ctx, dir);
-
-	if (ret == kdump_ok)
-		ctx->ops = &xen_dom0_ops;
-
-	free(dir);
-	return ret;
-}
-
-static kdump_status
 process_elf_notes(kdump_ctx *ctx, void *notes)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
@@ -782,20 +604,20 @@ open_common(kdump_ctx *ctx)
 		if (!strcmp(name, ".xen_pages"))
 			edp->xen_pages_offset = sect->file_offset;
 		else if (!strcmp(name, ".xen_p2m")) {
-			edp->xen_map = read_elf_sect(ctx, sect);
-			if (!edp->xen_map)
+			ctx->xen_map = read_elf_sect(ctx, sect);
+			if (!ctx->xen_map)
 				return set_error(ctx, kdump_syserr,
 						 strerror(errno));
 			edp->xen_map_type = xen_map_p2m;
-			edp->xen_map_size = sect->size /sizeof(struct xen_p2m);
+			ctx->xen_map_size = sect->size /sizeof(struct xen_p2m);
 			ctx->xen_pte_is_mach = 1;
 		} else if (!strcmp(name, ".xen_pfn")) {
-			edp->xen_map = read_elf_sect(ctx, sect);
-			if (!edp->xen_map)
+			ctx->xen_map = read_elf_sect(ctx, sect);
+			if (!ctx->xen_map)
 				return set_error(ctx, kdump_syserr,
 						 strerror(errno));
 			edp->xen_map_type = xen_map_pfn;
-			edp->xen_map_size = sect->size / sizeof(uint64_t);
+			ctx->xen_map_size = sect->size / sizeof(uint64_t);
 			ctx->xen_pte_is_mach = 0;
 		} else if (!strcmp(name, ".note.Xen")) {
 			notes = read_elf_sect(ctx, sect);
@@ -810,14 +632,8 @@ open_common(kdump_ctx *ctx)
 		}
 	}
 
-	if (ctx->xen_p2m_mfn) {
-		ret = initialize_xen_map(ctx);
-		if (ret != kdump_ok)
-			return ret;
-	}
-
 	if (edp->xen_pages_offset) {
-		if (!edp->xen_map)
+		if (!ctx->xen_map)
 			return set_error(ctx, kdump_unsupported,
 					 "Missing Xen P2M mapping");
 		ctx->flags |= DIF_XEN;
@@ -903,12 +719,6 @@ elf_cleanup(kdump_ctx *ctx)
 const struct format_ops elfdump_ops = {
 	.probe = elf_probe,
 	.read_page = elf_read_page,
-	.cleanup = elf_cleanup,
-};
-
-static const struct format_ops xen_dom0_ops = {
-	.read_page = elf_read_xen_dom0,
-	.read_xenmach_page = elf_read_page,
 	.cleanup = elf_cleanup,
 };
 

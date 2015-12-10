@@ -268,7 +268,8 @@ struct _tag_kdump_ctx {
 #include "static-attr.def"
 #undef ATTR
 
-	kdump_pfn_t xen_p2m_mfn;
+	void *xen_map;
+	unsigned long xen_map_size;
 	int xen_pte_is_mach;
 
 	/* callbacks */
@@ -377,6 +378,10 @@ uint32_t cksum32(void *buffer, size_t size, uint32_t csum);
 #define get_symbol_val INTERNAL_NAME(get_symbol_val)
 kdump_status get_symbol_val(kdump_ctx *ctx, const char *name,
 			    kdump_addr_t *val);
+
+/* Xen */
+#define init_xen_dom0 INTERNAL_NAME(init_xen_dom0)
+kdump_status init_xen_dom0(kdump_ctx *ctx);
 
 /* ELF notes */
 

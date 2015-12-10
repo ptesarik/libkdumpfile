@@ -36,6 +36,7 @@ ATTR(linux_vmcoreinfo, "SYMBOL", linux_symbol, directory, struct attr_data *)
 
 /* Xen */
 ATTR(root, "xen", dir_xen, directory, struct attr_data *)
+ATTR(xen, "p2m_mfn", xen_p2m_mfn, address, kdump_pfn_t)
 ATTR(xen, "version", dir_xen_version, directory, struct attr_data *)
 ATTR(xen_version, "major", xen_ver_major, number, unsigned long)
 ATTR(xen_version, "minor", xen_ver_minor, number, unsigned long)

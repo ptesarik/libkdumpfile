@@ -131,6 +131,11 @@ kdump_open_known(kdump_ctx *ctx)
 	struct kdump_attr attr;
 	kdump_status res;
 
+	res = init_xen_dom0(ctx);
+	if (res != kdump_ok)
+		return set_error(ctx, res,
+				 "Xen Dom0 initialization failed");
+
 	if (!attr_isset(ctx, GATTR(GKI_linux_uts_sysname)))
 		/* If this fails, it is not fatal. */
 		use_kernel_utsname(ctx);
@@ -275,6 +280,8 @@ kdump_free(kdump_ctx *ctx)
 		free(ctx->buffer);
 	if (ctx->region)
 		free(ctx->region);
+	if (ctx->xen_map)
+		free(ctx->xen_map);
 	cleanup_attr(ctx);
 	free(ctx);
 }

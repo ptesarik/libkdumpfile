@@ -151,6 +151,7 @@ process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 	unsigned words = len / ptr_size;
 	unsigned long major, minor;
 	kdump_vaddr_t extra;
+	kdump_pfn_t p2m_mfn;
 	kdump_status res;
 
 	if (ptr_size == 8 &&
@@ -159,14 +160,14 @@ process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 		major = dump64toh(ctx, info->xen_major_version);
 		minor = dump64toh(ctx, info->xen_minor_version);
 		extra = dump64toh(ctx, info->xen_extra_version);
-		ctx->xen_p2m_mfn = dump64toh(ctx, ((uint64_t*)data)[words-1]);
+		p2m_mfn = dump64toh(ctx, ((uint64_t*)data)[words-1]);
 	} else if (ptr_size == 4 &&
 		   len >= sizeof(struct xen_crash_info_32)){
 		struct xen_crash_info_32 *info = data;
 		major = dump32toh(ctx, info->xen_major_version);
 		minor = dump32toh(ctx, info->xen_minor_version);
 		extra = dump32toh(ctx, info->xen_extra_version);
-		ctx->xen_p2m_mfn = dump32toh(ctx, ((uint32_t*)data)[words-1]);
+		p2m_mfn = dump32toh(ctx, ((uint32_t*)data)[words-1]);
 	} else
 		return kdump_ok;
 
@@ -178,8 +179,11 @@ process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 	if (res != kdump_ok)
 		return res;
 
-	res = set_attr_address(ctx, GATTR(GKI_xen_ver_extra_addr),
-				     extra);
+	res = set_attr_address(ctx, GATTR(GKI_xen_ver_extra_addr), extra);
+	if (res != kdump_ok)
+		return res;
+
+	res = set_attr_address(ctx, GATTR(GKI_xen_p2m_mfn), p2m_mfn);
 	if (res != kdump_ok)
 		return res;
 
