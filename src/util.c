@@ -368,22 +368,6 @@ uncompress_rle(unsigned char *dst, size_t *pdstlen,
 	return 0;
 }
 
-static unsigned
-count_lines(char *buf, size_t len)
-{
-	size_t remain;
-	unsigned ret = 0;
-
-	for (remain = len; *buf && remain > 0; ++buf, --remain)
-		if (*buf == '\n')
-			++ret;
-
-	/* Possibly incomplete last line */
-	if (len && buf[-1] != '\n')
-		++ret;
-	return ret;
-}
-
 static kdump_status
 create_attr_path(kdump_ctx *ctx, char *path, enum kdump_attr_type type)
 {
@@ -403,35 +387,34 @@ create_attr_path(kdump_ctx *ctx, char *path, enum kdump_attr_type type)
 }
 
 kdump_status
-add_parsed_row(kdump_ctx *ctx, const char *path, struct vmcoreinfo_row *row)
+add_parsed_row(kdump_ctx *ctx, const char *path,
+	       const char *key, const char *val)
 {
-	char *key, *suff, *type, *sym;
+	char *attrkey, *suff, *type, *sym;
 	char *p, *q;
 	size_t len;
-	unsigned long long val;
+	unsigned long long num;
 	enum kdump_attr_type attr_type;
 	kdump_status res;
 
-	key = alloca(strlen(path) + strlen(row->template.key) +
-		     sizeof(".lines"));
-	suff = stpcpy(key, path);
+	attrkey = alloca(strlen(path) + strlen(key) + sizeof(".lines"));
+	suff = stpcpy(attrkey, path);
 
 	p = stpcpy(suff, ".lines.");
-	stpcpy(p, row->template.key);
+	stpcpy(p, key);
 
 	/* FIXME: Invent a better way to store lines with dots
 	 * in the key name
 	 */
-	res = create_attr_path(ctx, key, kdump_string);
+	res = create_attr_path(ctx, attrkey, kdump_string);
 	if (res != kdump_ok)
 		return res;
-	res = set_attr_static_string(ctx, key, row->val);
+	res = set_attr_string(ctx, attrkey, val);
 	if (res != kdump_ok)
 		return set_error(ctx, res,
-				 "Cannot set vmcoreinfo '%s'",
-				 row->template.key);
+				 "Cannot set vmcoreinfo '%s'", key);
 
-	p = strchr(row->template.key, '(');
+	p = strchr(key, '(');
 	if (!p)
 		return kdump_ok;
 	q = strchr(p, ')');
@@ -440,8 +423,8 @@ add_parsed_row(kdump_ctx *ctx, const char *path, struct vmcoreinfo_row *row)
 
 	type = suff;
 	*type++ = '.';
-	len = p - row->template.key;
-	memcpy(type, row->template.key, len);
+	len = p - key;
+	memcpy(type, key, len);
 	type[len] = '\0';
 
 	sym = type + len + 1;
@@ -450,7 +433,7 @@ add_parsed_row(kdump_ctx *ctx, const char *path, struct vmcoreinfo_row *row)
 	sym[len] = '\0';
 
 	if (!strcmp(type, "SYMBOL")) {
-		val = strtoull(row->val, &p, 16);
+		num = strtoull(val, &p, 16);
 		if (*p)
 			/* invalid format -> ignore */
 			return kdump_ok;
@@ -459,7 +442,7 @@ add_parsed_row(kdump_ctx *ctx, const char *path, struct vmcoreinfo_row *row)
 		   !strcmp(type, "NUMBER") ||
 		   !strcmp(type, "OFFSET") ||
 		   !strcmp(type, "SIZE")) {
-		val = strtoull(row->val, &p, 10);
+		num = strtoull(val, &p, 10);
 		if (*p)
 			/* invalid format -> ignore */
 			return kdump_ok;
@@ -468,88 +451,53 @@ add_parsed_row(kdump_ctx *ctx, const char *path, struct vmcoreinfo_row *row)
 		return kdump_ok;
 
 	sym[-1] = '.';
-	res = create_attr_path(ctx, key, attr_type);
+	res = create_attr_path(ctx, attrkey, attr_type);
 	if (res != kdump_ok)
 		return res;
 	return set_error(ctx,
 			 (attr_type == kdump_number)
-			 ? set_attr_number(ctx, key, val)
-			 : set_attr_address(ctx, key, val),
-			 "Cannot set %s", key);
+			 ? set_attr_number(ctx, attrkey, num)
+			 : set_attr_address(ctx, attrkey, num),
+			 "Cannot set %s", attrkey);
 }
 
 kdump_status
-store_vmcoreinfo(kdump_ctx *ctx, const char *path, struct vmcoreinfo **pinfo,
-		 void *data, size_t len)
+store_vmcoreinfo(kdump_ctx *ctx, const char *path, void *data, size_t len)
 {
 	char key[strlen(path) + sizeof(".lines")];
-	struct vmcoreinfo *info;
-	struct vmcoreinfo_row *row;
-	char *p, *q;
-	unsigned n;
-	size_t sz;
+	char *raw, *p, *endp, *val;
 	kdump_status res;
 
-	n = count_lines(data, len);
-	sz = sizeof(struct vmcoreinfo) +
-		n * sizeof(struct vmcoreinfo_row) +
-		2 * (len + 1);
-	info = ctx_malloc(sz, ctx, "VMCOREINFO");
-	if (!info)
+	raw = ctx_malloc(len + 1, ctx, "VMCOREINFO");
+	if (!raw)
 		return kdump_syserr;
-
-	info->raw = (char*)info->row + n * sizeof(struct vmcoreinfo_row);
-	memcpy(info->raw, data, len);
-	info->raw[len] = '\0';
+	memcpy(raw, data, len);
+	raw[len] = '\0';
 
 	stpcpy(stpcpy(key, path), ".raw");
-	res = set_attr_static_string(ctx, key, info->raw);
+	res = set_attr_string(ctx, key, raw);
 	if (res != kdump_ok) {
-		free(info);
+		free(raw);
 		return set_error(ctx, res, "Cannot set '%s'", key);
 	}
 
 	stpcpy(stpcpy(key, path), ".lines");
-	p = info->raw;
-	q = p + len + 1;
-	row = info->row;
-	info->n = 0;
-	while (*p) {
-		char *endp, *eq;
+	for (p = raw; *p; p = endp) {
+		endp = strchrnul(p, '\n');
+		if (*endp)
+			*endp++ = '\0';
 
-		endp = strchr(p, '\n');
-		if (!endp)
-			endp = p + strlen(p);
+		val = strchr(p, '=');
+		if (val)
+			*val++ = '\0';
 
-		q[endp - p] = '\0';
-		memcpy(q, p, endp - p);
-		row->template.key = q;
-
-		eq = memchr(q, '=', endp - p);
-		if (eq) {
-			*eq = 0;
-			row->val = eq + 1;
-		} else
-			row->val = NULL;
-
-
-		res = add_parsed_row(ctx, path, row);
-		if (res != kdump_ok) {
-			free(info);
-			return res;
-		}
-
-		++row;
-		++info->n;
-
-		q += endp - p + 1;
-		p = endp;
-		if (*p)
-			++p;
+		res = add_parsed_row(ctx, path, p, val);
+		if (res != kdump_ok)
+			break;
 	}
 
-	*pinfo = info;
-	return kdump_ok;
+	free(raw);
+	return res;
 }
 
 /* /dev/crash cannot handle reads larger than page size */

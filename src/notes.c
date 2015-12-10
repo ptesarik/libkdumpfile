@@ -278,8 +278,7 @@ process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
 	kdump_status ret;
 	const char *val;
 
-	ret = store_vmcoreinfo(ctx, "linux.vmcoreinfo", &ctx->vmcoreinfo,
-			       desc, descsz);
+	ret = store_vmcoreinfo(ctx, "linux.vmcoreinfo", desc, descsz);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -323,9 +322,7 @@ do_noarch_note(kdump_ctx *ctx, Elf32_Word type,
 	if (note_equal("VMCOREINFO", name, namesz))
 		return process_vmcoreinfo(ctx, desc, descsz);
 	else if (note_equal("VMCOREINFO_XEN", name, namesz))
-		return store_vmcoreinfo(ctx, "xen.vmcoreinfo",
-					&ctx->vmcoreinfo_xen,
-					desc, descsz);
+		return store_vmcoreinfo(ctx, "xen.vmcoreinfo", desc, descsz);
 
 	return kdump_ok;
 }

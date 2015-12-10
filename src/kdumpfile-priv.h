@@ -238,17 +238,6 @@ struct attr_data {
 	union kdump_attr_value val;
 };
 
-struct vmcoreinfo_row {
-	struct attr_template template;
-	const char *val;
-};
-
-struct vmcoreinfo {
-	char *raw;		/* raw content */
-	unsigned n;		/* number of rows */
-	struct vmcoreinfo_row row[]; /* parsed rows */
-};
-
 struct _tag_kdump_ctx {
 	int fd;			/* dump file descriptor */
 	const char *format;	/* file format (descriptive name) */
@@ -280,9 +269,6 @@ struct _tag_kdump_ctx {
 	struct attr_data field;
 #include "static-attr.def"
 #undef ATTR
-
-	struct vmcoreinfo *vmcoreinfo;
-	struct vmcoreinfo *vmcoreinfo_xen;
 
 	kdump_pfn_t xen_p2m_mfn;
 	int xen_pte_is_mach;
@@ -382,7 +368,6 @@ int uncompress_rle(unsigned char *dst, size_t *pdstlen,
 
 #define store_vmcoreinfo INTERNAL_NAME(store_vmcoreinfo)
 kdump_status store_vmcoreinfo(kdump_ctx *ctx, const char *path,
-			      struct vmcoreinfo **pinfo,
 			      void *data, size_t len);
 
 #define paged_read INTERNAL_NAME(paged_read)

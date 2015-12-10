@@ -275,10 +275,6 @@ kdump_free(kdump_ctx *ctx)
 		free(ctx->buffer);
 	if (ctx->region)
 		free(ctx->region);
-	if (ctx->vmcoreinfo)
-		free(ctx->vmcoreinfo);
-	if (ctx->vmcoreinfo_xen)
-		free(ctx->vmcoreinfo_xen);
 	cleanup_attr(ctx);
 	free(ctx);
 }
