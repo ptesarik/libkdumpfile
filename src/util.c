@@ -384,6 +384,24 @@ count_lines(char *buf, size_t len)
 	return ret;
 }
 
+static kdump_status
+create_attr_path(kdump_ctx *ctx, char *path, enum kdump_attr_type type)
+{
+	char *p;
+	kdump_status res;
+
+	for (p = path; (p = strchr(p, '.')); ++p) {
+		*p = '\0';
+		res = add_attr_template(ctx, path, kdump_directory);
+		if (res != kdump_ok)
+			return set_error(ctx, res,
+					 "Cannot add attribute '%s'", path);
+		*p = '.';
+	}
+	return set_error(ctx, add_attr_template(ctx, path, type),
+			 "Cannot add attribute '%s'", path);
+}
+
 kdump_status
 add_parsed_row(kdump_ctx *ctx, const char *path, struct vmcoreinfo_row *row)
 {
@@ -404,20 +422,9 @@ add_parsed_row(kdump_ctx *ctx, const char *path, struct vmcoreinfo_row *row)
 	/* FIXME: Invent a better way to store lines with dots
 	 * in the key name
 	 */
-	while ( (q = strchr(p, '.')) ) {
-		*q = '\0';
-		res = add_attr_template(ctx, key, kdump_directory);
-		if (res != kdump_ok)
-			return set_error(ctx, res,
-					 "Cannot add attribute '%s'", key);
-		*q = '.';
-		p = q + 1;
-	}
-	res = add_attr_template(ctx, key, kdump_string);
+	res = create_attr_path(ctx, key, kdump_string);
 	if (res != kdump_ok)
-		return set_error(ctx, res,
-				 "Cannot add attribute '%s'", key);
-
+		return res;
 	res = set_attr_static_string(ctx, key, row->val);
 	if (res != kdump_ok)
 		return set_error(ctx, res,
@@ -461,20 +468,9 @@ add_parsed_row(kdump_ctx *ctx, const char *path, struct vmcoreinfo_row *row)
 		return kdump_ok;
 
 	sym[-1] = '.';
-	for (p = sym; (p = strchr(p, '.')); ++p) {
-		*p = '\0';
-		res = add_attr_template(ctx, key, kdump_directory);
-		if (res != kdump_ok)
-			return set_error(ctx, res,
-					 "Cannot add attribute '%s'", key);
-		*p = '.';
-	}
-
-	res = add_attr_template(ctx, key, attr_type);
+	res = create_attr_path(ctx, key, attr_type);
 	if (res != kdump_ok)
-		return set_error(ctx, res,
-				 "Cannot add attribute '%s'", key);
-
+		return res;
 	return set_error(ctx,
 			 (attr_type == kdump_number)
 			 ? set_attr_number(ctx, key, val)
