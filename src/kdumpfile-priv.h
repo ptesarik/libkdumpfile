@@ -465,13 +465,22 @@ kdump_status set_attr_static_string(kdump_ctx *ctx, const char *key,
 
 #define add_attr INTERNAL_NAME(add_attr)
 kdump_status add_attr(kdump_ctx *ctx, const char *path,
-		      const struct attr_template *tmpl,
-		      union kdump_attr_value val);
+		      struct attr_data *attr);
 
 #define add_attr_number INTERNAL_NAME(add_attr_number)
 kdump_status add_attr_number(kdump_ctx *ctx, const char *path,
 			     const struct attr_template *tmpl,
 			     kdump_num_t num);
+
+#define add_attr_string INTERNAL_NAME(add_attr_string)
+kdump_status add_attr_string(kdump_ctx *ctx, const char *path,
+			     const struct attr_template *tmpl,
+			     const char *str);
+
+#define add_attr_static_string INTERNAL_NAME(add_attr_static_string)
+kdump_status add_attr_static_string(kdump_ctx *ctx, const char *path,
+				    const struct attr_template *tmpl,
+				    const char *str);
 
 #define cleanup_attr INTERNAL_NAME(cleanup_attr)
 void cleanup_attr(kdump_ctx *ctx);

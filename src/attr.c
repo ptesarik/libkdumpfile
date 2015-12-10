@@ -654,13 +654,11 @@ set_attr_static_string(kdump_ctx *ctx, const char *key, const char *str)
 /**  Add an attribute to any directory.
  * @param ctx   Dump file object.
  * @param path  Key name.
- * @param tmpl  Attribute template.
- * @param val   Key value.
+ * @param attr  Attribute data.
  * @returns     Newly allocated attr_data, or @c NULL on failure.
  */
 kdump_status
-add_attr(kdump_ctx *ctx, const char *path,
-	 const struct attr_template *tmpl, union kdump_attr_value val)
+add_attr(kdump_ctx *ctx, const char *path, struct attr_data *attr)
 {
 	const struct attr_template *parent_tmpl;
 	struct attr_data *parent;
@@ -675,13 +673,7 @@ add_attr(kdump_ctx *ctx, const char *path,
 				 "Cannot instantiate path: %s",
 				 strerror(errno));
 
-	struct attr_data *d = alloc_attr(tmpl, 0);
-	if (!d)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute: %s",
-				 strerror(errno));
-	d->val = val;
-	replace_attr(parent, d);
+	replace_attr(parent, attr);
 	return kdump_ok;
 }
 
@@ -699,8 +691,88 @@ kdump_status
 add_attr_number(kdump_ctx *ctx, const char *path,
 		const struct attr_template *tmpl, kdump_num_t num)
 {
-	union kdump_attr_value val;
-	val.number = num;
-	return set_error(ctx, add_attr(ctx, path, tmpl, val),
+	struct attr_data *attr;
+	kdump_status res;
+
+	attr = alloc_attr(tmpl, 0);
+	if (!attr)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate attribute: %s",
+				 strerror(errno));
+
+	attr->val.number = num;
+	res = add_attr(ctx, path, attr);
+	if (res != kdump_ok)
+		free_attr(attr);
+
+	return set_error(ctx, res,
+			 "Cannot set '%s.%s'", path, tmpl->key);
+}
+
+/**  Add a string attribute to a directory.
+ * @param ctx   Dump file object.
+ * @param path  Key name.
+ * @param tmpl  Attribute template.
+ * @param str   Key value (string).
+ * @returns     Newly allocated attr_data, or @c NULL on failure.
+ *
+ * This is a wrapper around @c add_attr. It also generates a good enough
+ * error message, so callers don't have to provide their own.
+ */
+kdump_status
+add_attr_string(kdump_ctx *ctx, const char *path,
+		const struct attr_template *tmpl, const char *str)
+{
+	struct attr_data *attr;
+	size_t len = strlen(str);
+	char *dynstr;
+	kdump_status res;
+
+	attr = alloc_attr(tmpl, len + 1);
+	if (!attr)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate attribute: %s",
+				 strerror(errno));
+
+	dynstr = (char*)(attr + 1);
+	memcpy(dynstr, str, len + 1);
+	attr->val.string = dynstr;
+	res = add_attr(ctx, path, attr);
+	if (res != kdump_ok)
+		free_attr(attr);
+
+	return set_error(ctx, res,
+			 "Cannot set '%s.%s'", path, tmpl->key);
+}
+
+/**  Add a static string attribute to a directory.
+ * @param ctx   Dump file object.
+ * @param path  Key name.
+ * @param tmpl  Attribute template.
+ * @param str   Key value (static string).
+ * @returns     Newly allocated attr_data, or @c NULL on failure.
+ *
+ * This is a wrapper around @c add_attr. It also generates a good enough
+ * error message, so callers don't have to provide their own.
+ */
+kdump_status add_attr_static_string(kdump_ctx *ctx, const char *path,
+				    const struct attr_template *tmpl,
+				    const char *str)
+{
+	struct attr_data *attr;
+	kdump_status res;
+
+	attr = alloc_attr(tmpl, 0);
+	if (!attr)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate attribute: %s",
+				 strerror(errno));
+
+	attr->val.string = str;
+	res = add_attr(ctx, path, attr);
+	if (res != kdump_ok)
+		free_attr(attr);
+
+	return set_error(ctx, res,
 			 "Cannot set '%s.%s'", path, tmpl->key);
 }
