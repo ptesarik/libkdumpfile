@@ -22,8 +22,6 @@ ATTR(root, "", dir_root, directory, struct attr_data *)
 ATTR(root, "arch", dir_arch, directory, struct attr_data *)
 ATTR(root, "linux", dir_linux, directory, struct attr_data *)
 ATTR(linux, "uts", dir_linux_uts, directory, struct attr_data *)
-ATTR(root, "xen", dir_xen, directory, struct attr_data *)
-ATTR(xen, "version", dir_xen_version, directory, struct attr_data *)
 
 /* architecture name */
 ATTR(arch, "name", arch_name, string, const char *)

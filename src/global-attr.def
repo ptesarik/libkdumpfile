@@ -29,6 +29,8 @@ ATTR(linux_uts, "machine", linux_uts_machine, string, const char *)
 ATTR(linux_uts, "domainname", linux_uts_domainname, string, const char *)
 
 /* Xen */
+ATTR(root, "xen", dir_xen, directory, struct attr_data *)
+ATTR(xen, "version", dir_xen_version, directory, struct attr_data *)
 ATTR(xen_version, "major", xen_ver_major, number, unsigned long)
 ATTR(xen_version, "minor", xen_ver_minor, number, unsigned long)
 ATTR(xen_version, "extra", xen_ver_extra, string, const char *)
