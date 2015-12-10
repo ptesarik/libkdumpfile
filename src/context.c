@@ -179,27 +179,30 @@ kdump_vmcoreinfo_xen(kdump_ctx *ctx)
 }
 
 static const char*
-vmcoreinfo_row(struct vmcoreinfo *info, const char *key)
+vmcoreinfo_row(kdump_ctx *ctx, const char *key, const char *base)
 {
-	unsigned i;
-	if (!info)
-		return NULL;
-	for (i = 0; i < info->n; ++i)
-		if (!strcmp(key, info->row[i].template.key))
-			return info->row[i].val;
-	return NULL;
+	char attrkey[strlen(base) + sizeof(".vmcoreinfo.lines.")
+		     + strlen(key)];
+	struct kdump_attr attr;
+
+	clear_error(ctx);
+
+	stpcpy(stpcpy(stpcpy(attrkey, base), ".vmcoreinfo.lines."), key);
+	return kdump_get_attr(ctx, attrkey, &attr) == kdump_ok
+		? attr.val.string
+		: NULL;
 }
 
 const char *
 kdump_vmcoreinfo_row(kdump_ctx *ctx, const char *key)
 {
-	return vmcoreinfo_row(ctx->vmcoreinfo, key);
+	return vmcoreinfo_row(ctx, key, "linux");
 }
 
 const char *
 kdump_vmcoreinfo_row_xen(kdump_ctx *ctx, const char *key)
 {
-	return vmcoreinfo_row(ctx->vmcoreinfo_xen, key);
+	return vmcoreinfo_row(ctx, key, "xen");
 }
 
 void
