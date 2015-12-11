@@ -395,26 +395,39 @@ read_pgt(kdump_ctx *ctx)
 	struct x86_64_data *archdata = ctx->archdata;
 	kdump_vaddr_t pgtaddr;
 	uint64_t *pgt;
+	long rdflags;
 	kdump_status ret;
 	size_t sz;
 
 	ret = get_symbol_val(ctx, "init_level4_pgt", &pgtaddr);
-	if (ret != kdump_ok)
+	if (ret == kdump_ok) {
+		if (pgtaddr < __START_KERNEL_map)
+			return set_error(ctx, kdump_unsupported,
+					 "Wrong page directory address: 0x%llx",
+					 (unsigned long long) pgtaddr);
+
+		pgtaddr -= __START_KERNEL_map - get_attr_phys_base(ctx);
+		rdflags = KDUMP_PHYSADDR;
+	} else if (ret == kdump_nodata) {
+		struct kdump_attr attr;
+		ret = kdump_get_attr(ctx, "cpu.0.reg.cr3", &attr);
+		if (ret != kdump_ok)
+			return set_error(ctx, ret,
+					 "Cannot get CR3 value");
+		pgtaddr = attr.val.number;
+		rdflags = (get_attr_xen_type(ctx) == kdump_xen_pv)
+			? KDUMP_XENMACHADDR
+			: KDUMP_PHYSADDR;
+	} else
 		return ret;
 
-	if (pgtaddr < __START_KERNEL_map)
-		return set_error(ctx, kdump_unsupported,
-				 "Wrong page directory address: 0x%llx",
-				 (unsigned long long) pgtaddr);
 
 	pgt = ctx_malloc(PAGE_SIZE, ctx, "page table");
 	if (!pgt)
 		return kdump_syserr;
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, (pgtaddr - __START_KERNEL_map +
-				get_attr_phys_base(ctx)),
-			  pgt, &sz, KDUMP_PHYSADDR);
+	ret = kdump_readp(ctx, pgtaddr, pgt, &sz, rdflags);
 	if (ret == kdump_ok)
 		archdata->pgt = pgt;
 	else

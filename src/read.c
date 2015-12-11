@@ -78,9 +78,14 @@ read_phys_page_fn(kdump_ctx *ctx)
 static inline read_page_fn
 read_xenmach_page_fn(kdump_ctx *ctx)
 {
-	return (get_attr_xen_type(ctx) == kdump_xen_system)
-		? ctx->ops->read_page
-		: NULL;
+	switch (get_attr_xen_type(ctx)) {
+	case kdump_xen_system:
+		return ctx->ops->read_page;
+	case kdump_xen_pv:
+		return ctx->ops->read_xenmach_page;
+	default:
+		return NULL;
+	}
 }
 
 static kdump_status
