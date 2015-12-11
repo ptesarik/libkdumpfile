@@ -145,6 +145,10 @@ struct arch_ops {
 	kdump_status (*process_load)(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 				     kdump_paddr_t paddr);
 
+	/* Process a Xen .xen_prstatus section
+	 */
+	kdump_status (*process_xen_prstatus)(kdump_ctx *, void *, size_t);
+
 	/* Translate a virtual address to a physical address
 	 */
 	kdump_status (*vtop)(kdump_ctx *ctx, kdump_vaddr_t vaddr,

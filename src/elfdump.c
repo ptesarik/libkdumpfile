@@ -620,6 +620,17 @@ open_common(kdump_ctx *ctx)
 			if (ret != kdump_ok)
 				return set_error(ctx, ret,
 						 "Cannot process Xen notes");
+		} else if (!strcmp(name, ".xen_prstatus")) {
+			void *data = read_elf_sect(ctx, sect);
+			if (!data)
+				return set_error(ctx, kdump_syserr,
+						 strerror(errno));
+			ret = ctx->arch_ops->process_xen_prstatus(
+				ctx, data, sect->size);
+			free(data);
+			if (ret != kdump_ok)
+				return set_error(ctx, ret,
+						 "Cannot process Xen prstatus");
 		}
 	}
 

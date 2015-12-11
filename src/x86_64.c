@@ -243,35 +243,110 @@ struct elf_prstatus
 	/* optional UNUSED fields may follow */
 } __attribute__((packed));
 
+struct xen_cpu_user_regs {
+	uint64_t r15;
+	uint64_t r14;
+	uint64_t r13;
+	uint64_t r12;
+	uint64_t rbp;
+	uint64_t rbx;
+	uint64_t r11;
+	uint64_t r10;
+	uint64_t r9;
+	uint64_t r8;
+	uint64_t rax;
+	uint64_t rcx;
+	uint64_t rdx;
+	uint64_t rsi;
+	uint64_t rdi;
+	uint32_t error_code;    /* private */
+	uint32_t entry_vector;  /* private */
+	uint64_t rip;
+	uint16_t cs, _pad0[1];
+	uint8_t  saved_upcall_mask;
+	uint8_t  _pad1[3];
+	uint64_t rflags;	/* rflags.IF == !saved_upcall_mask */
+	uint64_t rsp;
+	uint16_t ss, _pad2[3];
+	uint16_t es, _pad3[3];
+	uint16_t ds, _pad4[3];
+	uint16_t fs, _pad5[3];
+	uint16_t gs, _pad6[3];
+} __attribute__((packed));
+
+struct xen_trap_info {
+	uint8_t  vector;
+	uint8_t  flags;	   /* 0-3: privilege level; 4: clear event enable? */
+	uint16_t cs;
+	uint32_t _pad1;
+	uint64_t address;
+} __attribute__((packed));
+
+struct xen_vcpu_guest_context {
+	struct { char x[512]; } fpu_ctxt;   /* User-level FPU registers     */
+	uint64_t flags;			    /* VGCF_* flags                 */
+	struct xen_cpu_user_regs user_regs; /* User-level CPU registers     */
+	struct xen_trap_info trap_ctxt[256]; /* Virtual IDT                  */
+	uint64_t ldt_base, ldt_ents;	    /* LDT (linear address, # ents) */
+	uint64_t gdt_frames[16], gdt_ents;  /* GDT (machine frames, # ents) */
+	uint64_t kernel_ss, kernel_sp;	    /* Virtual TSS (only SS1/SP1)   */
+	uint64_t ctrlreg[8];		    /* CR0-CR7 (control registers)  */
+	uint64_t debugreg[8];		    /* DB0-DB7 (debug registers)    */
+	uint64_t event_callback_eip;
+	uint64_t failsafe_callback_eip;
+	uint64_t syscall_callback_eip;
+	uint64_t vm_assist;		    /* VMASST_TYPE_* bitmap */
+	/* Segment base addresses. */
+	uint64_t fs_base;
+	uint64_t gs_base_kernel;
+	uint64_t gs_base_user;
+} __attribute__ ((packed));
+
 static const struct attr_template reg_names[] = {
 #define REG(name)	{ #name, NULL, kdump_number }
-	REG(r15),
-	REG(r14),
-	REG(r13),
-	REG(r12),
-	REG(rbp),
-	REG(rbx),
-	REG(r11),
-	REG(r10),
-	REG(r9),
-	REG(r8),
-	REG(rax),
-	REG(rcx),
-	REG(rdx),
-	REG(rsi),
-	REG(rdi),
-	REG(orig_rax),
-	REG(rip),
-	REG(cs),
-	REG(rflags),
-	REG(rsp),
-	REG(ss),
-	REG(fs_base),
-	REG(gs_base),
-	REG(ds),
-	REG(es),
-	REG(fs),
-	REG(gs),
+	REG(r15),		/*  0 */
+	REG(r14),		/*  1 */
+	REG(r13),		/*  2 */
+	REG(r12),		/*  3 */
+	REG(rbp),		/*  4 */
+	REG(rbx),		/*  5 */
+	REG(r11),		/*  6 */
+	REG(r10),		/*  7 */
+	REG(r9),		/*  8 */
+	REG(r8),		/*  9 */
+	REG(rax),		/* 10 */
+	REG(rcx),		/* 11 */
+	REG(rdx),		/* 12 */
+	REG(rsi),		/* 13 */
+	REG(rdi),		/* 14 */
+	REG(orig_rax),		/* 15 */
+	REG(rip),		/* 16 */
+	REG(cs),		/* 17 */
+	REG(rflags),		/* 18 */
+	REG(rsp),		/* 19 */
+	REG(ss),		/* 20 */
+	REG(fs_base),		/* 21 */
+	REG(gs_base),		/* 22 */
+	REG(ds),		/* 23 */
+	REG(es),		/* 24 */
+	REG(fs),		/* 25 */
+	REG(gs),		/* 26 */
+	REG(cr0),		/* 27 */
+	REG(cr1),		/* 28 */
+	REG(cr2),		/* 29 */
+	REG(cr3),		/* 30 */
+	REG(cr4),		/* 31 */
+	REG(cr5),		/* 32 */
+	REG(cr6),		/* 33 */
+	REG(cr7),		/* 34 */
+	REG(dr0),		/* 35 */
+	REG(dr1),		/* 36 */
+	REG(dr2),		/* 37 */
+	REG(dr3),		/* 38 */
+	REG(dr4),		/* 39 */
+	REG(dr5),		/* 40 */
+	REG(dr6),		/* 41 */
+	REG(dr7),		/* 42 */
 };
 
 static const struct attr_template tmpl_pid =
@@ -459,6 +534,52 @@ process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 	return kdump_ok;
 }
 
+#define xen_reg_idx(field) \
+	(offsetof(struct xen_cpu_user_regs, field) / sizeof(uint64_t))
+#define xen_reg_cnt(start, end) \
+	(xen_reg_idx(end) - xen_reg_idx(start) + 1)
+
+static kdump_status
+process_x86_64_xen_prstatus(kdump_ctx *ctx, void *data, size_t size)
+{
+	unsigned cpu = 0;
+	kdump_status res;
+
+	while (size >= sizeof(struct xen_vcpu_guest_context)) {
+		struct xen_vcpu_guest_context *vgc = data;
+		struct xen_cpu_user_regs *regs = &vgc->user_regs;
+		uint16_t *p;
+
+		/* zero out padding */
+		for (p = &regs->cs; p <= &regs->gs; p += 4)
+			p[1] = p[2] = p[3] = 0;
+
+		res = set_cpu_regs64(ctx, cpu, &reg_names[0], &regs->r15,
+				     xen_reg_cnt(r15, rdi));
+		if (res != kdump_ok)
+			return res;
+
+		res = set_cpu_regs64(ctx, cpu, &reg_names[16], &regs->rip,
+				     xen_reg_cnt(cs, gs));
+		if (res != kdump_ok)
+			return res;
+
+		res = set_cpu_regs64(ctx, cpu, &reg_names[27],
+				     vgc->ctrlreg, 16);
+		if (res != kdump_ok)
+			return res;
+
+		++cpu;
+		data += sizeof(struct xen_vcpu_guest_context);
+		size -= sizeof(struct xen_vcpu_guest_context);
+	}
+
+	if (!static_attr_isset(&ctx->num_cpus) || cpu > get_attr_num_cpus(ctx))
+		set_attr_num_cpus(ctx, cpu);
+
+	return kdump_ok;
+}
+
 static const char *
 x86_64_reg_name(unsigned index)
 {
@@ -605,6 +726,7 @@ const struct arch_ops x86_64_ops = {
 	.process_prstatus = process_x86_64_prstatus,
 	.reg_name = x86_64_reg_name,
 	.process_load = x86_64_process_load,
+	.process_xen_prstatus = process_x86_64_xen_prstatus,
 	.vtop = x86_64_vtop,
 	.cleanup = x86_64_cleanup,
 };
