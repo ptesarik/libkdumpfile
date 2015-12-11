@@ -18,6 +18,7 @@ LIBKDUMPFILE_0 {
     kdump_ptr_size;
     kdump_arch_name;
     kdump_is_xen;
+    kdump_xen_type;
     kdump_pagesize;
     kdump_pageshift;
     kdump_phys_base;

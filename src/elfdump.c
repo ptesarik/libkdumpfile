@@ -74,10 +74,6 @@ struct elfdump_priv {
 	char *strtab;
 
 	off_t xen_pages_offset;
-	enum {
-		xen_map_pfn,
-		xen_map_p2m,
-	} xen_map_type;
 
 	uint32_t elfmach;	/* ELF e_machine field */
 };
@@ -149,15 +145,14 @@ elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 static unsigned long
 pfn_to_idx(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
-	struct elfdump_priv *edp = ctx->fmtdata;
 	unsigned long i;
 
-	if (edp->xen_map_type == xen_map_pfn) {
+	if (get_attr_xen_type(ctx) == kdump_xen_hvm) {
 		uint64_t *p = ctx->xen_map;
 		for (i = 0; i < ctx->xen_map_size; ++i, ++p)
 			if (*p == pfn)
 				return i;
-	} else if (edp->xen_map_type == xen_map_p2m) {
+	} else if (get_attr_xen_type(ctx) == kdump_xen_hvm) {
 		struct xen_p2m *p = ctx->xen_map;
 		for (i = 0; i < ctx->xen_map_size; ++i, ++p)
 			if (p->pfn == pfn)
@@ -195,10 +190,9 @@ elf_read_xen_domU(kdump_ctx *ctx, kdump_pfn_t pfn)
 static unsigned long
 mfn_to_idx(kdump_ctx *ctx, kdump_pfn_t mfn)
 {
-	struct elfdump_priv *edp = ctx->fmtdata;
 	unsigned long i;
 
-	if (edp->xen_map_type == xen_map_p2m) {
+	if (get_attr_xen_type(ctx) == kdump_xen_pv) {
 		struct xen_p2m *p = ctx->xen_map;
 		for (i = 0; i < ctx->xen_map_size; ++i, ++p)
 			if (p->gmfn == mfn)
@@ -211,20 +205,19 @@ mfn_to_idx(kdump_ctx *ctx, kdump_pfn_t mfn)
 static kdump_status
 elf_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 {
-	struct elfdump_priv *edp = ctx->fmtdata;
+	struct xen_p2m *p = ctx->xen_map;
 	unsigned long i;
 
-	if (edp->xen_map_type == xen_map_p2m) {
-		struct xen_p2m *p = ctx->xen_map;
-		for (i = 0; i < ctx->xen_map_size; ++i, ++p)
-			if (p->gmfn == mfn) {
-				*pfn = p->pfn;
-				return kdump_ok;
-			}
-	} else
-		return set_error(ctx, kdump_unsupported,
-				 "No MFN-to-PFN translation table");
+	if (get_attr_xen_type(ctx) != kdump_xen_pv) {
+		*pfn = mfn;
+		return kdump_ok;
+	}
 
+	for (i = 0; i < ctx->xen_map_size; ++i, ++p)
+		if (p->gmfn == mfn) {
+			*pfn = p->pfn;
+			return kdump_ok;
+		}
 	return set_error(ctx, kdump_nodata, "MFN not found");
 }
 
@@ -608,17 +601,15 @@ open_common(kdump_ctx *ctx)
 			if (!ctx->xen_map)
 				return set_error(ctx, kdump_syserr,
 						 strerror(errno));
-			edp->xen_map_type = xen_map_p2m;
 			ctx->xen_map_size = sect->size /sizeof(struct xen_p2m);
-			ctx->xen_pte_is_mach = 1;
+			set_attr_xen_type(ctx, kdump_xen_pv);
 		} else if (!strcmp(name, ".xen_pfn")) {
 			ctx->xen_map = read_elf_sect(ctx, sect);
 			if (!ctx->xen_map)
 				return set_error(ctx, kdump_syserr,
 						 strerror(errno));
-			edp->xen_map_type = xen_map_pfn;
 			ctx->xen_map_size = sect->size / sizeof(uint64_t);
-			ctx->xen_pte_is_mach = 0;
+			set_attr_xen_type(ctx, kdump_xen_hvm);
 		} else if (!strcmp(name, ".note.Xen")) {
 			notes = read_elf_sect(ctx, sect);
 			if (!notes)
@@ -636,7 +627,6 @@ open_common(kdump_ctx *ctx)
 		if (!ctx->xen_map)
 			return set_error(ctx, kdump_unsupported,
 					 "Missing Xen P2M mapping");
-		ctx->flags |= DIF_XEN;
 		ctx->ops = &xen_domU_ops;
 	}
 

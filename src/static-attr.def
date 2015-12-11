@@ -23,6 +23,7 @@ ATTR(root, "arch", dir_arch, directory, struct attr_data *)
 ATTR(root, "cpu", dir_cpu, directory, struct attr_data *)
 ATTR(root, "linux", dir_linux, directory, struct attr_data *)
 ATTR(linux, "uts", dir_linux_uts, directory, struct attr_data *)
+ATTR(root, "xen", dir_xen, directory, struct attr_data *)
 
 /* architecture name */
 ATTR(arch, "name", arch_name, string, const char *)
@@ -47,3 +48,6 @@ ATTR(linux, "phys_base", phys_base, address, kdump_addr_t)
 
 /* version as produced by KERNEL_VERSION() */
 ATTR(linux, "version_code", version_code, number, unsigned)
+
+/* Xen dump type */
+ATTR(xen, "type", xen_type, number, kdump_xen_type_t)

@@ -64,10 +64,16 @@ kdump_arch_name(kdump_ctx *ctx)
 	return get_attr_arch_name(ctx);
 }
 
+kdump_xen_type_t
+kdump_xen_type(kdump_ctx *ctx)
+{
+	return get_attr_xen_type(ctx);
+}
+
 int
 kdump_is_xen(kdump_ctx *ctx)
 {
-	return !!(ctx->flags & DIF_XEN);
+	return get_attr_xen_type(ctx) != kdump_xen_none;
 }
 
 size_t

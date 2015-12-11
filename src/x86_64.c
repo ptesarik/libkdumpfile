@@ -584,7 +584,7 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	kdump_status ret;
 
-	if (ctx->flags & DIF_XEN && ctx->xen_pte_is_mach) {
+	if (get_attr_xen_type(ctx) == kdump_xen_pv) {
 		kdump_addr_t maddr;
 		kdump_pfn_t mfn, pfn;
 

@@ -117,6 +117,17 @@ typedef enum _tag_kdump_byte_order {
 	kdump_little_endian,
 } kdump_byte_order_t;
 
+/**  Type of a Xen dump.
+ *
+ * Type of Xen guest of the Linux domain.
+ */
+typedef enum _tag_kdump_xen_type {
+	kdump_xen_none,		/*< Not running under Xen */
+	kdump_xen_system,	/*< Comlete dump of a Xen system */
+	kdump_xen_pv,		/*< PV guest dump */
+	kdump_xen_hvm,		/*< HVM guest dump */
+} kdump_xen_type_t;
+
 /**  Xen hypervisor version.
  *
  * Xen dumps may contain the hypervisor version, which consists of three
@@ -386,6 +397,12 @@ const char *kdump_arch_name(kdump_ctx *ctx);
  * dumps.
  */
 int kdump_is_xen(kdump_ctx *ctx);
+
+/**  Get the type of a Xen dump file.
+ * @param ctx  Dump file object.
+ * @returns    Type of the dump (@sa kdump_xen_type_t)
+ */
+kdump_xen_type_t kdump_xen_type(kdump_ctx *ctx);
 
 /**  Get target page size.
  * @params ctx  Dump file object.

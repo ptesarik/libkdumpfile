@@ -239,7 +239,6 @@ struct attr_data {
 struct _tag_kdump_ctx {
 	int fd;			/* dump file descriptor */
 	const char *format;	/* file format (descriptive name) */
-	unsigned long flags;	/* see DIF_XXX below */
 
 	/* format-specific fields */
 	const struct format_ops *ops;
@@ -270,7 +269,6 @@ struct _tag_kdump_ctx {
 
 	void *xen_map;
 	unsigned long xen_map_size;
-	int xen_pte_is_mach;
 
 	/* callbacks */
 	kdump_get_symbol_val_fn *cb_get_symbol_val;
@@ -279,9 +277,6 @@ struct _tag_kdump_ctx {
 	char *err_str;		/* error string */
 	char err_buf[ERRBUF];	/* buffer for error string */
 };
-
-/* kdump_ctx flags */
-#define DIF_XEN		(1UL<<1)
 
 /* File formats */
 

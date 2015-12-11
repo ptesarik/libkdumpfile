@@ -154,6 +154,8 @@ process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 	kdump_pfn_t p2m_mfn;
 	kdump_status res;
 
+	set_attr_xen_type(ctx, kdump_xen_system);
+
 	if (ptr_size == 8 &&
 	    len >= sizeof(struct xen_crash_info_64)) {
 		struct xen_crash_info_64 *info = data;
@@ -247,7 +249,6 @@ process_xen_note(kdump_ctx *ctx, uint32_t type,
 	else if (type == XEN_ELFNOTE_DUMPCORE_XEN_VERSION)
 		process_xen_dumpcore_version(ctx, desc, descsz);
 
-	ctx->flags |= DIF_XEN;
 	return ret;
 }
 

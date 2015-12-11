@@ -70,13 +70,17 @@ read_dom0_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 static inline read_page_fn
 read_phys_page_fn(kdump_ctx *ctx)
 {
-	return ctx->flags & DIF_XEN ? read_dom0_page : ctx->ops->read_page;
+	return (get_attr_xen_type(ctx) == kdump_xen_system)
+		? read_dom0_page
+		: ctx->ops->read_page;
 }
 
 static inline read_page_fn
 read_xenmach_page_fn(kdump_ctx *ctx)
 {
-	return ctx->flags & DIF_XEN ? ctx->ops->read_page : NULL;
+	return (get_attr_xen_type(ctx) == kdump_xen_system)
+		? ctx->ops->read_page
+		: NULL;
 }
 
 static kdump_status
