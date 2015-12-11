@@ -321,6 +321,9 @@ extern const struct arch_ops s390x_ops;
 #define x86_64_ops INTERNAL_NAME(x86_64_ops)
 extern const struct arch_ops x86_64_ops;
 
+#define ppc64_ops INTERNAL_NAME(ppc64_ops)
+extern const struct arch_ops ppc64_ops;
+
 /* struct timeval has a different layout on 32-bit and 64-bit */
 struct timeval_32 {
 	int32_t tv_sec;

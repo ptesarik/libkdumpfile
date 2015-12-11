@@ -36,6 +36,7 @@ libkdumpfile_la_SOURCES = \
 	todo.c \
 	util.c \
 	vtop.c \
+	ppc64.c \
 	x86_64.c
 
 EXTRA_libkdumpfile_la_DEPENDENCIES = libkdumpfile.map

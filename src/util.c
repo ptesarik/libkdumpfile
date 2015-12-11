@@ -183,7 +183,7 @@ arch_ops(enum kdump_arch arch)
 	case ARCH_IA64:
 	case ARCH_MIPS:
 	case ARCH_PPC:
-	case ARCH_PPC64:
+	case ARCH_PPC64:	return &ppc64_ops;
 	case ARCH_S390:
 		/* TODO */
 		break;
