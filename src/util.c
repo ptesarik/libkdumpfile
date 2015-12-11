@@ -555,3 +555,49 @@ get_symbol_val(kdump_ctx *ctx, const char *name, kdump_addr_t *val)
 	kdump_status ret = ctx->cb_get_symbol_val(ctx, name, val);
 	return set_error(ctx, ret, "Cannot resolve \"%s\"", name);
 }
+
+kdump_status
+set_cpu_regs64(kdump_ctx *ctx, unsigned cpu,
+	       const struct attr_template *tmpl, uint64_t *regs, unsigned num)
+{
+	char cpukey[sizeof("cpu.") + 20 + sizeof(".reg")];
+	unsigned i;
+	kdump_status res;
+
+	sprintf(cpukey, "cpu.%u.reg", cpu);
+	res = create_attr_path(ctx, cpukey, kdump_directory);
+	if (res != kdump_ok)
+		return res;
+
+	for (i = 0; i < num; ++i) {
+		res = add_attr_number(ctx, cpukey, tmpl + i,
+				      dump64toh(ctx, regs[i]));
+		if (res != kdump_ok)
+			return res;
+	}
+
+	return kdump_ok;
+}
+
+kdump_status
+set_cpu_regs32(kdump_ctx *ctx, unsigned cpu,
+	       const struct attr_template *tmpl, uint32_t *regs, unsigned num)
+{
+	char cpukey[sizeof("cpu.") + 20 + sizeof(".reg")];
+	unsigned i;
+	kdump_status res;
+
+	sprintf(cpukey, "cpu.%u.reg", cpu);
+	res = create_attr_path(ctx, cpukey, kdump_number);
+	if (res != kdump_ok)
+		return res;
+
+	for (i = 0; i < num; ++i) {
+		res = add_attr_number(ctx, cpukey, tmpl + i,
+				      dump32toh(ctx, regs[i]));
+		if (res != kdump_ok)
+			return res;
+	}
+
+	return kdump_ok;
+}

@@ -176,33 +176,21 @@ process_ia32_prstatus(kdump_ctx *ctx, void *data, size_t size)
 	struct elf_prstatus *status = data;
 	char cpukey[sizeof("cpu.") + 20 + sizeof(".reg")];
 	kdump_status res;
-	int i;
 
 	if (size < sizeof(struct elf_prstatus))
 		return set_error(ctx, kdump_dataerr,
 				 "Wrong PRSTATUS size: %zu", size);
 
-	sprintf(cpukey, "cpu.%u", get_attr_num_cpus(ctx));
-	res = add_attr_template(ctx, cpukey, kdump_directory);
-	if (res == kdump_ok) {
-		res = add_attr_number(ctx, cpukey, &tmpl_pid,
-				      dump32toh(ctx, status->pr_pid));
-		if (res != kdump_ok)
-			return res;
-
-		strcat(cpukey, ".reg");
-		res = add_attr_template(ctx, cpukey, kdump_directory);
-	}
+	res = set_cpu_regs32(ctx, get_attr_num_cpus(ctx),
+			     reg_names, status->pr_reg, ELF_NGREG);
 	if (res != kdump_ok)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot create attribute '%s'", cpukey);
+		return res;
 
-	for (i = 0; i < ELF_NGREG; ++i) {
-		res = add_attr_number(ctx, cpukey, &reg_names[i],
-				      dump64toh(ctx, status->pr_reg[i]));
-		if (res != kdump_ok)
-			return res;
-	}
+	sprintf(cpukey, "cpu.%u", get_attr_num_cpus(ctx));
+	res = add_attr_number(ctx, cpukey, &tmpl_pid,
+			      dump32toh(ctx, status->pr_pid));
+	if (res != kdump_ok)
+		return res;
 
 	set_attr_num_cpus(ctx, get_attr_num_cpus(ctx) + 1);
 	return kdump_ok;

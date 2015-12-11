@@ -374,6 +374,16 @@ uint32_t cksum32(void *buffer, size_t size, uint32_t csum);
 kdump_status get_symbol_val(kdump_ctx *ctx, const char *name,
 			    kdump_addr_t *val);
 
+#define set_cpu_regs64 INTERNAL_NAME(set_cpu_regs64)
+kdump_status set_cpu_regs64(kdump_ctx *ctx, unsigned cpu,
+			    const struct attr_template *tmpl,
+			    uint64_t *regs, unsigned num);
+
+#define set_cpu_regs32 INTERNAL_NAME(set_cpu_regs32)
+kdump_status set_cpu_regs32(kdump_ctx *ctx, unsigned cpu,
+			    const struct attr_template *tmpl,
+			    uint32_t *regs, unsigned num);
+
 /* Xen */
 #define init_xen_dom0 INTERNAL_NAME(init_xen_dom0)
 kdump_status init_xen_dom0(kdump_ctx *ctx);
