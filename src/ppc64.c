@@ -36,27 +36,8 @@
 #include <errno.h>
 #include <elf.h>
 
-#define TRAC {fprintf(stderr, __FILE__"::%d: TRACEUR\n", __LINE__);}
-
 #define VIRTADDR_BITS_MAX	64
 #define VIRTADDR_MAX		UINT64_MAX
-
-struct os_info_entry {
-        uint64_t addr;
-	uint64_t size;
-        uint32_t csum;
-} __attribute__ ((packed));
-
-struct os_info {
-	uint64_t magic;
-	uint32_t csum;
-	uint16_t version_major;
-	uint16_t version_minor;
-	uint64_t crashkernel_addr;
-	uint64_t crashkernel_size;
-	struct os_info_entry entry[2];
-	/* possibly more fields up to PAGE_SIZE */
-} __attribute__ ((packed));
 
 struct ppc64_data {
 	struct {
@@ -86,6 +67,61 @@ struct ppc64_data {
 	int pgttype;
 };
 
+static const struct attr_template reg_names[] = {
+#define REG(name)	{ #name, NULL, kdump_number }
+	REG(gpr00),
+	REG(gpr01),
+	REG(gpr02),
+	REG(gpr03),
+	REG(gpr04),
+	REG(gpr05),
+	REG(gpr06),
+	REG(gpr07),
+	REG(gpr08),
+	REG(gpr09),
+	REG(gpr10),
+	REG(gpr11),
+	REG(gpr12),
+	REG(gpr13),
+	REG(gpr14),
+	REG(gpr15),
+	REG(gpr16),
+	REG(gpr17),
+	REG(gpr18),
+	REG(gpr19),
+	REG(gpr20),
+	REG(gpr21),
+	REG(gpr22),
+	REG(gpr23),
+	REG(gpr24),
+	REG(gpr25),
+	REG(gpr26),
+	REG(gpr27),
+	REG(gpr28),
+	REG(gpr29),
+	REG(gpr30),
+	REG(gpr31),
+	REG(nip),
+	REG(msr),
+	REG(or3),
+	REG(ctr),
+	REG(lr),
+	REG(xer),
+	REG(ccr),
+	REG(mq),
+	REG(dar),
+	REG(dsisr),
+	REG(rx1),
+	REG(rx2),
+	REG(rx3),
+	REG(rx4),
+	REG(rx5),
+	REG(rx6),
+	REG(rx7),
+	REG(rx8),
+	REG(rx9),
+};
+	
 #define _64K (1<<16)
 
 #define PAGE_SIZE (kdump_pagesize(a))
@@ -98,7 +134,7 @@ struct ppc64_data {
 #define HUGEPD_SHIFT_MASK 0x3f
 
 static int vtoplog = 0;
-#define L(format, ...) vtoplog && fprintf (stderr, __FILE__":%d: " format, __LINE__, ##__VA_ARGS__)
+#define L(format, ...) if (vtoplog) fprintf (stderr, __FILE__":%d: " format, __LINE__, ##__VA_ARGS__)
 
 enum {
 	NORMAL = 0,
@@ -116,7 +152,8 @@ static int ishuge(kdump_vaddr_t pte)
 		return NORMAL;
 }
 
-static void vaddr_split (struct ppc64_data *archdata, kdump_vaddr_t addr, int *l4, int *l3, int *l2, int *l1, kdump_vaddr_t *off)
+static void vaddr_split (struct ppc64_data *archdata, kdump_vaddr_t addr,
+	int *l4, int *l3, int *l2, int *l1, kdump_vaddr_t *off)
 {
 	*l4 = (addr >> archdata->pg.l4_shift) & archdata->pg.l4_mask;
 	*l3 = (addr >> archdata->pg.l3_shift) & ((1 << archdata->pg.l3_size) - 1);
@@ -129,11 +166,9 @@ static kdump_status
 ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	struct ppc64_data *archdata = ctx->archdata;
-	uint64_t entry = 0;
 	int l1, l2, l3, l4;
 	kdump_vaddr_t l1e, l2e, l3e, l4e, e, pt;
-	kdump_vaddr_t addr, pg, pagemask;
-	kdump_status ret;
+	kdump_vaddr_t addr, pagemask;
 	size_t ps = kdump_ptr_size(ctx);
 	int huge;
 
@@ -141,25 +176,27 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	pagemask = archdata->pg.size-1;
 
-	L("reading l4 %p\n", archdata->pg.pg + l4*ps);
+	L("reading l4 %lx\n", archdata->pg.pg + l4*ps);
 
 	if (kdump_readp(ctx, archdata->pg.pg + l4*ps, &l4e, &ps, KDUMP_KVADDR) != kdump_ok)
 		return set_error(ctx, kdump_unsupported, "Cannot read L4");
 
 	l4e = dump64toh(ctx, l4e);
+
+	if (!l4e) goto notfound;
+
 	huge = ishuge(l4e);
 	if (huge) {
 		e = l4e;
 		goto gohuge;
 	}
 
-	L("l4 => %p\n", l4e);
+	L("l4 => %lx\n", l4e);
 
 	if (archdata->pg.l3_size != 0) {
 		/* TODO: DO ! e = ?*/
-
-		return set_error(ctx, kdump_unsupported, "L3 != 0 not yet supported");
-
+		l3e = 0;
+		return set_error(ctx, kdump_unsupported, "L3 %lx != 0 not yet supported", l3e);
 	} else
 		e = l4e;
 
@@ -167,6 +204,8 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 		return set_error(ctx, kdump_unsupported, "Cannot read L2");
 
 	l2e = dump64toh(ctx, l2e);
+
+	if (!l2e) goto notfound;
 
 	huge = ishuge(l2e);
 	if (huge) {
@@ -177,18 +216,20 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	e = (l2e & (~archdata->pg.l2_mask)) +
 		ps*((vaddr>>archdata->pg.l1_shift) & ((1<<archdata->pg.l1_size)-1));
 
-	L("l2 => %p (ps=%d) %p ==> %p\n", l2e, ps, (l2e & (~archdata->pg.l2_mask)), e);
+	L("l2 => %lx %lx ==> %lx\n", l2e, (l2e & (~archdata->pg.l2_mask)), e);
 
-	if (kdump_readp(ctx, (l2e&~(pagemask)) + (e&(pagemask)), &e, &ps, KDUMP_KVADDR) != kdump_ok)
+	if (kdump_readp(ctx, (l2e&~(pagemask)) + (e&(pagemask)), &l1e, &ps, KDUMP_KVADDR) != kdump_ok)
 		return set_error(ctx, kdump_unsupported, "Cannot read L1");
 
-	e = dump64toh(ctx, e);
-	L("l1 => %p\n", e);
-	L("   => %p\n",
-		(((e>>archdata->pg.pte_shift)<<archdata->pg.l1_shift)&~(pagemask))
+	l1e = dump64toh(ctx, l1e);
+
+	if (!l1e) goto notfound;
+
+	L("l1 %lx => %lx\n", l1e,
+		(((l1e>>archdata->pg.pte_shift)<<archdata->pg.l1_shift)&~(pagemask))
 		+((pagemask)&vaddr));
 
-	*paddr = (((e>>archdata->pg.pte_shift)<<archdata->pg.l1_shift)&~(pagemask))
+	*paddr = (((l1e>>archdata->pg.pte_shift)<<archdata->pg.l1_shift)&~(pagemask))
 		+((pagemask)&vaddr);
 
 	return kdump_ok;
@@ -199,14 +240,21 @@ gohuge:
 
 		return set_error(ctx, kdump_unsupported, "Cannot read hugepage");
 
+	pt = dump64toh(ctx, e);
+
+	if (!pt) goto notfound;
+
 	*paddr = (((pt>>archdata->pg.pte_shift)<<archdata->pg.l1_shift)&~(pagemask));
+
+	return kdump_ok;
+notfound:
+	return kdump_nodata;
 }
 
 
 static kdump_status
 ppc64_vtop_init(kdump_ctx *ctx)
 {
-	struct ppc64_data *archdata = ctx->archdata;
 	kdump_vaddr_t addr, vmal;
 	kdump_status ret;
 	const char *val;
@@ -250,14 +298,6 @@ ppc64_vtop_init(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		return ret;
 
-	{
-		kdump_paddr_t paddr = 0L;
-		ppc64_vtop(ctx, 0xc000000001070000, &paddr);
-		L("ppc64_vtop->%p\n", paddr);
-		ppc64_vtop(ctx, 0xd000000004d0cde0, &paddr);
-		L("ppc64_vtop->%p\n", paddr);
-	}
-
 	return kdump_ok;
 }
 
@@ -266,13 +306,8 @@ ppc64_init(kdump_ctx *ctx)
 {
 	struct ppc64_data *archdata;
 	kdump_vaddr_t pgtaddr;
-	const char *val;
 	kdump_status ret;
 	int pagesize;
-	const char *pg;
-
-	TRAC
-
 
 	archdata = calloc(1, sizeof(struct ppc64_data));
 	if (!archdata)
@@ -307,11 +342,8 @@ ppc64_init(kdump_ctx *ctx)
 	archdata->pg.l2 = calloc(1, pagesize);
 	archdata->pg.l1 = calloc(1, pagesize);
 
-	L("pagesize=%d,pageshift=%d,pbase=%p\n", kdump_pagesize(ctx), kdump_pageshift(ctx), kdump_phys_base(ctx));
-
 	ret = get_symbol_val(ctx, "swapper_pg_dir", &pgtaddr);
 	if (ret == kdump_ok) {
-	//	ret = read_pgt(ctx, pgtaddr);
 		if (ret != kdump_ok)
 			return ret;
 	}
@@ -334,9 +366,71 @@ ppc64_cleanup(kdump_ctx *ctx)
 	ctx->archdata = NULL;
 }
 
+#define ELF_NGREG 49
+
+struct elf_siginfo
+{
+	int32_t si_signo;	/* signal number */
+	int32_t si_code;	/* extra code */
+	int32_t si_errno;	/* errno */
+} __attribute__((packed));
+
+
+struct elf_prstatus
+{
+	struct elf_siginfo pr_info;	/* UNUSED in kernel cores */
+	int16_t	pr_cursig;		/* UNUSED in kernel cores */
+	char	_pad1[2];		/* alignment */
+	uint64_t pr_sigpend;		/* UNUSED in kernel cores */
+	uint64_t pr_sighold;		/* UNUSED in kernel cores */
+	int32_t	pr_pid;			/* PID of crashing task */
+	int32_t	pr_ppid;		/* UNUSED in kernel cores */
+	int32_t	pr_pgrp;		/* UNUSED in kernel cores */
+	int32_t	pr_sid;			/* UNUSED in kernel cores */
+	struct timeval_64 pr_utime;	/* UNUSED in kernel cores */
+	struct timeval_64 pr_stime;	/* UNUSED in kernel cores */
+	struct timeval_64 pr_cutime;	/* UNUSED in kernel cores */
+	struct timeval_64 pr_cstime;	/* UNUSED in kernel cores */
+	uint64_t pr_reg[ELF_NGREG];	/* GP registers */
+	/* optional UNUSED fields may follow */
+} __attribute__((packed));
+
+
+static kdump_status
+process_ppc64_prstatus(kdump_ctx *ctx, void *data, size_t size)
+{
+	struct elf_prstatus *status = data;
+	kdump_status res;
+
+	if (size < sizeof(struct elf_prstatus))
+		return set_error(ctx, kdump_dataerr,
+				 "Wrong PRSTATUS size: %zu", size);
+
+	res = set_cpu_regs64(ctx, get_attr_num_cpus(ctx), reg_names,
+			     status->pr_reg, ELF_NGREG);
+
+	if (res != kdump_ok)
+		return res;
+
+	set_attr_num_cpus(ctx, get_attr_num_cpus(ctx) + 1);
+
+	return kdump_ok;
+}
+
+static const char *
+ppc64_reg_name(unsigned index)
+{
+	return index < ARRAY_SIZE(reg_names)
+		? reg_names[index].key
+		: NULL;
+}
+
+
 const struct arch_ops ppc64_ops = {
 	.init = ppc64_init,
 	.vtop_init = ppc64_vtop_init,
+	.process_prstatus = process_ppc64_prstatus,
+	.reg_name = ppc64_reg_name,
 	.vtop = ppc64_vtop,
 	.cleanup = ppc64_cleanup,
 };
