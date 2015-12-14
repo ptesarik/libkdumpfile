@@ -268,37 +268,6 @@ lookup_data_dir(const struct attr_data *parent, const char *key, size_t keylen)
 	return NULL;
 }
 
-/**  Look up attribute value by part of name.
- * @param ctx     Dump file object.
- * @param key     Key name.
- * @param keylen  Length of the initial portion of @c key to be considered.
- * @returns       Stored attribute or @c NULL if not found.
- *
- * Unlike @c lookup_data, this function only works with genuine @c key
- * strings. Using a special constant (@sa GATTR) is not possible.
- */
-static const struct attr_data*
-lookup_data_part(const kdump_ctx *ctx, const char *key, size_t keylen)
-{
-	const struct attr_data *d =
-		static_attr_data_const(ctx, GKI_dir_root);
-
-	if (keylen) {
-		const char *p;
-		while ( (p = memchr(key, '.', keylen)) ) {
-			d = lookup_data_dir(d, key, p - key);
-			if (!d)
-				return NULL;
-			keylen -= p - key + 1;
-			key = p + 1;
-		}
-
-		d = lookup_data_dir(d, key, keylen);
-	}
-
-	return d;
-}
-
 /**  Look up attribute value by name.
  * @param ctx   Dump file object.
  * @param key   Key name.
@@ -308,10 +277,21 @@ lookup_data_part(const kdump_ctx *ctx, const char *key, size_t keylen)
 static const struct attr_data*
 lookup_data(const kdump_ctx *ctx, const char *key)
 {
+	const char *p;
+	const struct attr_data *d;
+
 	if (!key || key > GATTR(NR_GLOBAL))
 		return lookup_data_tmpl(ctx, &global_keys[-(intptr_t)key]);
 
-	return lookup_data_part(ctx, key, strlen(key));
+	d = static_attr_data_const(ctx, GKI_dir_root);
+	while ( (p = strchr(key, '.')) ) {
+		d = lookup_data_dir(d, key, p - key);
+		if (!d)
+			return NULL;
+		key = p + 1;
+	}
+
+	return lookup_data_dir(d, key, strlen(key));
 }
 
 /**  Check if a given attribute is set.
