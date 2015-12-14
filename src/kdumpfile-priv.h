@@ -235,7 +235,7 @@ struct dyn_attr_template {
  * equal to the template type.
  */
 struct attr_data {
-	struct attr_data *next, **pprev;
+	struct attr_data *next, **pprev, *parent;
 	const struct attr_template *template;
 	union kdump_attr_value val;
 };

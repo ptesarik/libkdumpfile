@@ -437,6 +437,7 @@ link_attr(struct attr_data *dir, struct attr_data *attr)
 		attr->next->pprev = &attr->next;
 	dir->val.directory = attr;
 	attr->pprev = (struct attr_data**)&dir->val.directory;
+	attr->parent = dir;
 }
 
 /**  Instantiate a directory template path.
