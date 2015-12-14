@@ -225,7 +225,7 @@ add_attr_template(kdump_ctx *ctx, const char *path,
  * @param tmpl  Attribute template.
  * @returns     Stored attribute or @c NULL if not found.
  */
-static inline const struct attr_data*
+static const struct attr_data*
 lookup_data_tmpl(const kdump_ctx *ctx, const struct attr_template *tmpl)
 {
 	const struct attr_data *parent;
