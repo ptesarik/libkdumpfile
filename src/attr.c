@@ -226,7 +226,7 @@ add_attr_template(kdump_ctx *ctx, const char *path,
  * @returns     Stored attribute or @c NULL if not found.
  */
 static const struct attr_data*
-lookup_data_tmpl(const kdump_ctx *ctx, const struct attr_template *tmpl)
+lookup_attr_tmpl(const kdump_ctx *ctx, const struct attr_template *tmpl)
 {
 	const struct attr_data *parent;
 	const struct attr_data *d;
@@ -236,7 +236,7 @@ lookup_data_tmpl(const kdump_ctx *ctx, const struct attr_template *tmpl)
 		return static_attr_isset(d) ? d : NULL;
 	}
 
-	parent = lookup_data_tmpl(ctx, tmpl->parent);
+	parent = lookup_attr_tmpl(ctx, tmpl->parent);
 	if (!parent)
 		return NULL;
 
@@ -344,16 +344,15 @@ keycmp(const struct attr_data *attr, const char *key)
  * @param ctx   Dump file object.
  * @param key   Key name.
  * @returns     Stored attribute or @c NULL if not found.
- *
  */
-static const struct attr_data*
-lookup_data(const kdump_ctx *ctx, const char *key)
+const struct attr_data*
+lookup_attr(const kdump_ctx *ctx, const char *key)
 {
 	unsigned ehash, i;
 	const struct attr_hash *tbl;
 
 	if (!key || key > GATTR(NR_GLOBAL))
-		return lookup_data_tmpl(ctx, &global_keys[-(intptr_t)key]);
+		return lookup_attr_tmpl(ctx, &global_keys[-(intptr_t)key]);
 
 	i = key_hash_index(key);
 	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
@@ -372,17 +371,6 @@ lookup_data(const kdump_ctx *ctx, const char *key)
 	return NULL;
 }
 
-/**  Check if a given attribute is set.
- * @param ctx  Dump file object.
- * @param key  Key name.
- * @returns    Non-zero if the key is known and has a value.
- */
-int
-attr_isset(const kdump_ctx *ctx, const char *key)
-{
-	return !!lookup_data(ctx, key);
-}
-
 kdump_status
 kdump_get_attr(kdump_ctx *ctx, const char *key,
 	       struct kdump_attr *valp)
@@ -391,7 +379,7 @@ kdump_get_attr(kdump_ctx *ctx, const char *key,
 
 	clear_error(ctx);
 
-	d = lookup_data(ctx, key);
+	d = lookup_attr(ctx, key);
 	if (d) {
 		valp->type = d->template->type;
 		valp->val = d->val;
@@ -409,7 +397,7 @@ kdump_enum_attr(kdump_ctx *ctx, const char *path,
 
 	clear_error(ctx);
 
-	parent = lookup_data(ctx, path);
+	parent = lookup_attr(ctx, path);
 	if (!parent)
 		return set_error(ctx, kdump_nodata, "No such path");
 	if (parent->template->type != kdump_directory)
@@ -609,7 +597,7 @@ instantiate_path(kdump_ctx *ctx, const struct attr_template *tmpl)
 {
 	struct attr_data *d, *parent;
 
-	d = (struct attr_data*) lookup_data_tmpl(ctx, tmpl);
+	d = (struct attr_data*) lookup_attr_tmpl(ctx, tmpl);
 	if (d != NULL)
 		return d;
 

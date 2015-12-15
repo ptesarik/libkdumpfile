@@ -473,8 +473,19 @@ kdump_status add_attr_template(kdump_ctx *ctx, const char *path,
 #define init_static_attrs INTERNAL_NAME(init_static_attrs)
 void init_static_attrs(kdump_ctx *ctx);
 
-#define attr_isset INTERNAL_NAME(attr_isset)
-int attr_isset(const kdump_ctx *ctx, const char *key);
+#define lookup_attr INTERNAL_NAME(lookup_attr_data)
+const struct attr_data *lookup_attr(const kdump_ctx *ctx, const char *key);
+
+/**  Check if a given attribute is set.
+ * @param ctx  Dump file object.
+ * @param key  Key name.
+ * @returns    Non-zero if the key is known and has a value.
+ */
+static inline int
+attr_isset(const kdump_ctx *ctx, const char *key)
+{
+	return !!lookup_attr(ctx, key);
+}
 
 /**  Check if a statically allocated attribute is set.
  * @param data  Pointer to the static attribute.
