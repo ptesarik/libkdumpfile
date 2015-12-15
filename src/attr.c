@@ -405,17 +405,13 @@ kdump_status
 kdump_enum_attr(kdump_ctx *ctx, const char *path,
 		kdump_enum_attr_fn *cb, void *cb_data)
 {
-	const struct attr_template *t;
 	const struct attr_data *parent, *d;
 
 	clear_error(ctx);
-	t = lookup_template(ctx, path);
-	if (!t)
-		return set_error(ctx, kdump_unsupported, "No such path");
 
 	parent = lookup_data(ctx, path);
 	if (!parent)
-		return set_error(ctx, kdump_nodata, "Path not instantiated");
+		return set_error(ctx, kdump_nodata, "No such path");
 	if (parent->template->type != kdump_directory)
 		return set_error(ctx, kdump_invalid,
 				 "Path is a leaf attribute");
