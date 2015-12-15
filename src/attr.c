@@ -268,7 +268,7 @@ attr_pathlen(const struct attr_data *attr)
 	const struct attr_data *d;
 	size_t len = 0;
 
-	for (d = attr; d->parent; d = d->parent) {
+	for (d = attr; d->parent != d; d = d->parent) {
 		len += strlen(d->template->key);
 		if (d != attr)
 			++len;	/* for the separating dot ('.') */
@@ -291,7 +291,7 @@ make_attr_path(const struct attr_data *attr, char *endp)
 {
 	const struct attr_data *d;
 
-	for (d = attr; d->parent; d = d->parent) {
+	for (d = attr; d->parent != d; d = d->parent) {
 		size_t len = strlen(d->template->key);
 		*(--endp) = (d == attr) ? '\0' : '.';
 		endp -= len;
@@ -486,7 +486,8 @@ link_attr(struct attr_data *dir, struct attr_data *attr)
 	attr->next = dir->val.directory;
 	if (attr->next)
 		attr->next->pprev = &attr->next;
-	dir->val.directory = attr;
+	if (attr != dir)
+		dir->val.directory = attr;
 	attr->pprev = (struct attr_data**)&dir->val.directory;
 	attr->parent = dir;
 }
@@ -572,15 +573,11 @@ free_attr(kdump_ctx *ctx, struct attr_data *attr)
 		}
 	}
 
-	if (attr->template == &global_keys[GKI_dir_root])
-		attr->val.directory = NULL;
-	else {
-		unhash_attr(ctx, attr);
-		if (template_static(attr->template))
-			attr->pprev = NULL;
-		else
-			free(attr);
-	}
+	unhash_attr(ctx, attr);
+	if (template_static(attr->template))
+		attr->pprev = NULL;
+	else
+		free(attr);
 }
 
 /**  Delete an attribute.
@@ -616,12 +613,15 @@ instantiate_path(kdump_ctx *ctx, const struct attr_template *tmpl)
 	if (d != NULL)
 		return d;
 
-	parent = instantiate_path(ctx, tmpl->parent);
 	d = template_static(tmpl)
 		? static_attr_data(ctx, tmpl - global_keys)
 		: alloc_attr(tmpl, 0);
 	if (!d)
 		return NULL;
+
+	parent = (tmpl->parent != tmpl)
+		? instantiate_path(ctx, tmpl->parent)
+		: d;
 
 	d->val.directory = NULL;
 	link_attr(parent, d);
@@ -639,7 +639,8 @@ instantiate_path(kdump_ctx *ctx, const struct attr_template *tmpl)
 void
 cleanup_attr(kdump_ctx *ctx)
 {
-	free_attr(ctx, &ctx->dir_root);
+	if (static_attr_isset(&ctx->dir_root))
+		free_attr(ctx, &ctx->dir_root);
 }
 
 /**  Initialize statically allocated attributes
@@ -651,11 +652,6 @@ init_static_attrs(kdump_ctx *ctx)
 	for (i = 0; i < NR_STATIC; ++i) {
 		struct attr_data *attr = static_attr_data(ctx, i);
 		attr->template = &global_keys[i];
-		if (i == GKI_dir_root) {
-			attr->next = attr;
-			attr->pprev = &attr->next;
-			attr->val.directory = NULL;
-		}
 	}
 }
 
