@@ -349,14 +349,14 @@ keycmp(const struct attr_data *attr, const char *key)
 static const struct attr_data*
 lookup_data(const kdump_ctx *ctx, const char *key)
 {
-	unsigned hash, i;
+	unsigned ehash, i;
 	const struct attr_hash *tbl;
 
 	if (!key || key > GATTR(NR_GLOBAL))
 		return lookup_data_tmpl(ctx, &global_keys[-(intptr_t)key]);
 
-	hash = key_hash_index(key);
-	i = hash;
+	i = key_hash_index(key);
+	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
 	do {
 		tbl = &ctx->attr;
 		do {
@@ -367,7 +367,7 @@ lookup_data(const kdump_ctx *ctx, const char *key)
 			tbl = tbl->next;
 		} while (tbl);
 		i = (i + 1) % ATTR_HASH_SIZE;
-	} while (i != hash);
+	} while (i != ehash);
 
 	return NULL;
 }
@@ -503,10 +503,11 @@ link_attr(struct attr_data *dir, struct attr_data *attr)
 static kdump_status
 hash_attr(kdump_ctx *ctx, struct attr_data *attr)
 {
-	unsigned hash, i;
+	unsigned hash, ehash, i;
 	struct attr_hash *tbl, *newtbl;
 
 	i = hash = attr_hash_index(attr);
+	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
 	do {
 		newtbl = &ctx->attr;
 		do {
@@ -518,7 +519,7 @@ hash_attr(kdump_ctx *ctx, struct attr_data *attr)
 			newtbl = tbl->next;
 		} while (newtbl);
 		i = (i + 1) % ATTR_HASH_SIZE;
-	} while (i != hash);
+	} while (i != ehash);
 
 	newtbl = calloc(1, sizeof(struct attr_hash));
 	if (!newtbl)
@@ -538,10 +539,11 @@ hash_attr(kdump_ctx *ctx, struct attr_data *attr)
 static void
 unhash_attr(kdump_ctx *ctx, const struct attr_data *attr)
 {
-	unsigned hash, i;
+	unsigned ehash, i;
 	struct attr_hash *tbl, *newtbl;
 
-	i = hash = attr_hash_index(attr);
+	i = attr_hash_index(attr);
+	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
 	do {
 		for (tbl = &ctx->attr; tbl; tbl = tbl->next)
 			if (tbl->table[i] == attr) {
@@ -553,7 +555,7 @@ unhash_attr(kdump_ctx *ctx, const struct attr_data *attr)
 				return;
 			}
 		i = (i + 1) % ATTR_HASH_SIZE;
-	} while (i != hash);
+	} while (i != ehash);
 
 	/* Not hashed? This should never happen. */
 }
