@@ -34,7 +34,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <errno.h>
 #include <linux/version.h>
 
 #define ELF_NGREG 27
@@ -374,8 +373,7 @@ x86_64_init(kdump_ctx *ctx)
 	ctx->archdata = calloc(1, sizeof(struct x86_64_data));
 	if (!ctx->archdata)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate x86_64 private data: %s",
-				 strerror(errno));
+				 "Cannot allocate x86_64 private data");
 
 	ret = add_noncanonical_region(ctx);
 	if (ret != kdump_ok)

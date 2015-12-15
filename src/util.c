@@ -33,7 +33,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <errno.h>
 #include <stdarg.h>
 
 kdump_status
@@ -91,8 +90,7 @@ ctx_malloc(size_t size, kdump_ctx *ctx, const char *desc)
 	void *ret = malloc(size);
 	if (!ret)
 		set_error(ctx, kdump_syserr,
-			  "Cannot allocate %s (%zu bytes): %s",
-			  desc, size, strerror(errno));
+			  "Cannot allocate %s (%zu bytes)", desc, size);
 	return ret;
 }
 
@@ -222,8 +220,8 @@ set_page_size_and_shift(kdump_ctx *ctx, size_t page_size, unsigned page_shift)
 	void *page = realloc(ctx->page, page_size);
 	if (!page)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate page buffer (%zu bytes): %s",
-				 page_size, strerror(errno));
+				 "Cannot allocate page buffer (%zu bytes)",
+				 page_size);
 	ctx->page = page;
 	set_attr_page_size(ctx, page_size);
 	set_attr_page_shift(ctx, page_shift);

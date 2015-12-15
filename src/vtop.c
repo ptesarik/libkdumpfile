@@ -32,7 +32,6 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <errno.h>
 
 #define RGN_ALLOC_INC 32
 
@@ -92,8 +91,7 @@ set_region(kdump_ctx *ctx, kdump_vaddr_t first, kdump_vaddr_t last,
 			if (!newrgn)
 				return set_error(ctx, kdump_syserr,
 						 "Cannot allocate translation"
-						 " region array: %s",
-						 strerror(errno));
+						 " region array");
 
 			if (!rgn) {
 				rgn = prevrgn = newrgn;

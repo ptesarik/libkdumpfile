@@ -32,7 +32,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 
 static const struct attr_template global_keys[] = {
 #define ATTR(dir, key, field, type, ctype)				\
@@ -206,8 +205,7 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 	dt = malloc(sizeof *dt + strlen(path) + 1);
 	if (!dt)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute template: %s",
-				 strerror(errno));
+				 "Cannot allocate attribute template");
 
 	keyname = (char*) (dt + 1);
 	strcpy(keyname, path);
@@ -409,8 +407,7 @@ alloc_attr_by_key(kdump_ctx *ctx, struct attr_data **pattr,
 	attr = alloc_attr(t, extra);
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute: %s",
-				 strerror(errno));
+				 "Cannot allocate attribute");
 
 	*pattr = attr;
 	return kdump_ok;
@@ -462,8 +459,7 @@ hash_attr(kdump_ctx *ctx, struct attr_data *attr)
 	newtbl = calloc(1, sizeof(struct attr_hash));
 	if (!newtbl)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate hash table: %s\n",
-				 strerror(errno));
+				 "Cannot allocate hash table");
 	newtbl->table[hash] = attr;
 	tbl->next = newtbl;
 
@@ -638,9 +634,8 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr)
 	parent = instantiate_path(ctx, attr->template->parent);
 	if (!parent)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot instantiate attribute '%s': %s",
-				 attr->template->parent->key,
-				 strerror(errno));
+				 "Cannot instantiate attribute '%s'",
+				 attr->template->parent->key);
 
 	replace_attr(ctx, parent, attr);
 	return hash_attr(ctx, attr);
@@ -749,8 +744,7 @@ add_attr(kdump_ctx *ctx, const char *path, struct attr_data *attr)
 	parent = instantiate_path(ctx, parent_tmpl);
 	if (!parent)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot instantiate path: %s",
-				 strerror(errno));
+				 "Cannot instantiate path");
 
 	replace_attr(ctx, parent, attr);
 	return hash_attr(ctx, attr);
@@ -776,8 +770,7 @@ add_attr_number(kdump_ctx *ctx, const char *path,
 	attr = alloc_attr(tmpl, 0);
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute: %s",
-				 strerror(errno));
+				 "Cannot allocate attribute");
 
 	attr->val.number = num;
 	res = add_attr(ctx, path, attr);
@@ -810,8 +803,7 @@ add_attr_string(kdump_ctx *ctx, const char *path,
 	attr = alloc_attr(tmpl, len + 1);
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute: %s",
-				 strerror(errno));
+				 "Cannot allocate attribute");
 
 	dynstr = (char*)(attr + 1);
 	memcpy(dynstr, str, len + 1);
@@ -844,8 +836,7 @@ kdump_status add_attr_static_string(kdump_ctx *ctx, const char *path,
 	attr = alloc_attr(tmpl, 0);
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute: %s",
-				 strerror(errno));
+				 "Cannot allocate attribute");
 
 	attr->val.string = str;
 	res = add_attr(ctx, path, attr);

@@ -34,7 +34,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <errno.h>
 #include <linux/version.h>
 
 #define ELF_NGREG 17
@@ -159,8 +158,7 @@ ia32_init(kdump_ctx *ctx)
 	ctx->archdata = calloc(1, sizeof(struct ia32_data));
 	if (!ctx->archdata)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate ia32 private data: %s",
-				 strerror(errno));
+				 "Cannot allocate ia32 private data");
 
 	ret = set_region(ctx, __START_KERNEL_map, VIRTADDR_MAX,
 			 KDUMP_XLAT_DIRECT, __START_KERNEL_map);

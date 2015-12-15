@@ -33,7 +33,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <errno.h>
 #include <linux/version.h>
 
 static kdump_status kdump_open_known(kdump_ctx *pctx);

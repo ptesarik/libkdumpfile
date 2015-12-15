@@ -33,7 +33,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <errno.h>
 
 #define S390_CPU_MAX	512
 
@@ -146,8 +145,7 @@ s390_probe(kdump_ctx *ctx)
 	sdp = calloc(1, sizeof *sdp);
 	if (!sdp)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate s390dump private data: %s",
-				 strerror(errno));
+				 "Cannot allocate s390dump private data");
 	ctx->fmtdata = sdp;
 
 	sdp->dataoff = dump32toh(ctx, dh->h1.hdr_size);

@@ -32,7 +32,6 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <elf.h>
 
 /* Maximum virtual address bits (architecture limit) */
@@ -460,8 +459,7 @@ s390x_init(kdump_ctx *ctx)
 	ctx->archdata = calloc(1, sizeof(struct s390x_data));
 	if (!ctx->archdata)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate s390x private data: %s",
-				 strerror(errno));
+				 "Cannot allocate s390x private data");
 
 	process_lowcore_info(ctx);
 	clear_error(ctx);

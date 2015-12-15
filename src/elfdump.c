@@ -33,7 +33,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <errno.h>
 #include <elf.h>
 
 /* This definition is missing from older version of <elf.h> */
@@ -343,9 +342,8 @@ init_strtab(kdump_ctx *ctx, unsigned strtabidx)
 	edp->strtab = read_elf_sect(ctx, ps);
 	if (!edp->strtab)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate string table"
-				 " (%zu bytes): %s",
-				 edp->strtab_size, strerror(errno));
+				 "Cannot allocate string table (%zu bytes)",
+				 edp->strtab_size);
 
 	return kdump_ok;
 }
@@ -381,8 +379,8 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 	offset = dump32toh(ctx, ehdr->e_phoff);
 	if (lseek(ctx->fd, offset, SEEK_SET) < 0)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot seek to program headers at %llu: %s",
-				 (unsigned long long) offset, strerror(errno));
+				 "Cannot seek to program headers at %llu",
+				 (unsigned long long) offset);
 	for (i = 0; i < dump16toh(ctx, ehdr->e_phnum); ++i) {
 		unsigned type;
 		off_t offset, filesz;
@@ -407,8 +405,8 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 	offset = dump32toh(ctx, ehdr->e_shoff);
 	if (lseek(ctx->fd, offset, SEEK_SET) < 0)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot seek to section headers at %llu: %s",
-				 (unsigned long long) offset, strerror(errno));
+				 "Cannot seek to section headers at %llu",
+				 (unsigned long long) offset);
 	for (i = 0; i < dump16toh(ctx, ehdr->e_shnum); ++i) {
 		ssize_t rd;
 
@@ -453,8 +451,8 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 	offset = dump64toh(ctx, ehdr->e_phoff);
 	if (lseek(ctx->fd, offset, SEEK_SET) < 0)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot seek to program headers at %llu: %s",
-				 (unsigned long long) offset, strerror(errno));
+				 "Cannot seek to program headers at %llu",
+				 (unsigned long long) offset);
 	for (i = 0; i < dump16toh(ctx, ehdr->e_phnum); ++i) {
 		unsigned type;
 		off_t offset, filesz;
@@ -479,8 +477,8 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 	offset = dump32toh(ctx, ehdr->e_shoff);
 	if (lseek(ctx->fd, offset, SEEK_SET) < 0)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot seek to section headers at %llu: %s",
-				 (unsigned long long) offset, strerror(errno));
+				 "Cannot seek to section headers at %llu",
+				 (unsigned long long) offset);
 	for (i = 0; i < dump16toh(ctx, ehdr->e_shnum); ++i) {
 		ssize_t rd;
 
@@ -592,22 +590,19 @@ open_common(kdump_ctx *ctx)
 		else if (!strcmp(name, ".xen_p2m")) {
 			ctx->xen_map = read_elf_sect(ctx, sect);
 			if (!ctx->xen_map)
-				return set_error(ctx, kdump_syserr,
-						 strerror(errno));
+				return kdump_syserr;
 			ctx->xen_map_size = sect->size /sizeof(struct xen_p2m);
 			set_attr_xen_type(ctx, kdump_xen_pv);
 		} else if (!strcmp(name, ".xen_pfn")) {
 			ctx->xen_map = read_elf_sect(ctx, sect);
 			if (!ctx->xen_map)
-				return set_error(ctx, kdump_syserr,
-						 strerror(errno));
+				return kdump_syserr;
 			ctx->xen_map_size = sect->size / sizeof(uint64_t);
 			set_attr_xen_type(ctx, kdump_xen_hvm);
 		} else if (!strcmp(name, ".note.Xen")) {
 			notes = read_elf_sect(ctx, sect);
 			if (!notes)
-				return set_error(ctx, kdump_syserr,
-						 strerror(errno));
+				return kdump_syserr;
 			ret = process_notes(ctx, notes, sect->size);
 			free(notes);
 			if (ret != kdump_ok)
@@ -616,8 +611,7 @@ open_common(kdump_ctx *ctx)
 		} else if (!strcmp(name, ".xen_prstatus")) {
 			void *data = read_elf_sect(ctx, sect);
 			if (!data)
-				return set_error(ctx, kdump_syserr,
-						 strerror(errno));
+				return kdump_syserr;
 			ret = ctx->arch_ops->process_xen_prstatus(
 				ctx, data, sect->size);
 			free(data);
@@ -653,8 +647,7 @@ elf_probe(kdump_ctx *ctx)
 	edp = calloc(1, sizeof *edp);
 	if (!edp)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate ELF dump private data: %s",
-				 strerror(errno));
+				 "Cannot allocate ELF dump private data");
 	ctx->fmtdata = edp;
 
 	switch (eheader[EI_DATA]) {

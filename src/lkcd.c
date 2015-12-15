@@ -33,7 +33,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 
 #if USE_ZLIB
 # include <zlib.h>
@@ -359,12 +358,10 @@ fill_level1(kdump_ctx *ctx, unsigned endidx)
 		*p = calloc(PFN_IDX2_SIZE, sizeof(struct pfn_level2));
 		if (!*p)
 			return set_error(ctx, kdump_syserr,
-					 "Cannot allocate level 2 cache: %s",
-					 strerror(errno));
+					 "Cannot allocate level 2 cache");
 		pfn = idx << (PFN_IDX3_BITS + PFN_IDX2_BITS);
 		if ( (off = find_page(ctx, off, pfn, &dp)) < 0)
-			return set_error(ctx, kdump_syserr,
-					 strerror(errno));
+			return kdump_syserr;
 		(*p)->off = off;
 	}
 
@@ -392,15 +389,13 @@ fill_level2(kdump_ctx *ctx, unsigned idx1, unsigned endidx)
 	pfn = ((idx1 << PFN_IDX2_BITS) + idx) << PFN_IDX3_BITS;
 	for ( ; idx < endidx; ++p, ++idx) {
 		if ( (baseoff = find_page(ctx, baseoff, pfn, &dp)) < 0)
-			return set_error(ctx, kdump_syserr,
-					 strerror(errno));
+			return kdump_syserr;
 		p->off = baseoff;
 		pfn += PFN_IDX3_SIZE;
 	}
 	if (idx) {
 		if ( (baseoff = find_page(ctx, baseoff, pfn, &dp)) < 0)
-			return set_error(ctx, kdump_syserr,
-					 strerror(errno));
+			return kdump_syserr;
 		p->off = baseoff;
 	}
 
@@ -470,7 +465,7 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	off += pfn_level3[idx3];
 
 	if (find_page(ctx, off, pfn, &dp) < 0)
-		return set_error(ctx, kdump_syserr, strerror(errno));
+		return kdump_syserr;
 	off += sizeof(struct dump_page);
 
 	type = dp.dp_flags & (DUMP_COMPRESSED|DUMP_RAW);
@@ -662,8 +657,7 @@ open_common(kdump_ctx *ctx)
 	lkcdp->pfn_level1 = calloc(max_idx1, sizeof(struct pfn_level2*));
 	if (!lkcdp->pfn_level1) {
 		set_error(ctx, kdump_syserr,
-			  "Cannot allocate level 1 cache: %s",
-			  strerror(errno));
+			  "Cannot allocate level 1 cache");
 		goto err_free;
 	}
 

@@ -36,7 +36,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 #include <endian.h>
 
 #define FN_VMCOREINFO	"/sys/kernel/vmcoreinfo"
@@ -53,15 +52,13 @@ get_vmcoreinfo(kdump_ctx *ctx)
 	f = fopen(FN_VMCOREINFO, "r");
 	if (!f)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot open %s: %s",
-				 FN_VMCOREINFO, strerror(errno));
+				 "Cannot open %s", FN_VMCOREINFO);
 
 	if (fscanf(f, "%llx %llx", &addr, &length) == 2)
 		ret = kdump_ok;
 	else if (ferror(f))
 		ret = set_error(ctx, kdump_syserr,
-				"Error reading %s: %s",
-				FN_VMCOREINFO, strerror(errno));
+				"Error reading %s", FN_VMCOREINFO);
 	else
 		ret = set_error(ctx, kdump_dataerr,
 				"Error parsing %s: Wrong file format",
@@ -76,8 +73,7 @@ get_vmcoreinfo(kdump_ctx *ctx)
 
 	if (lseek(ctx->fd, addr, SEEK_SET) == (off_t)-1) {
 		ret = set_error(ctx, kdump_syserr,
-				"Cannot seek to VMCOREINFO: %s",
-				strerror(errno));
+				"Cannot seek to VMCOREINFO");
 		goto out;
 	}
 
@@ -115,9 +111,7 @@ devmem_probe(kdump_ctx *ctx)
 	kdump_status ret;
 
 	if (fstat(ctx->fd, &st))
-		return set_error(ctx, kdump_syserr,
-				 "Cannot stat file: %s",
-				 strerror(errno));
+		return set_error(ctx, kdump_syserr, "Cannot stat file");
 
 	if (!S_ISCHR(st.st_mode) ||
 	    (st.st_rdev != makedev(1, 1) &&

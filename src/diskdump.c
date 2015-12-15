@@ -33,7 +33,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <errno.h>
 
 #if USE_ZLIB
 # include <zlib.h>
@@ -624,8 +623,7 @@ open_common(kdump_ctx *ctx)
 	ddp = calloc(1, sizeof *ddp);
 	if (!ddp)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate diskdump private data: %s",
-				 strerror(errno));
+				 "Cannot allocate diskdump private data");
 
 	ctx->fmtdata = ddp;
 

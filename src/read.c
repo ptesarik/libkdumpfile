@@ -32,7 +32,6 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <errno.h>
 
 typedef kdump_status (*read_page_fn)(kdump_ctx *, kdump_pfn_t);
 
@@ -214,9 +213,8 @@ kdump_read_string(kdump_ctx *ctx, kdump_addr_t addr,
 			if (str)
 				free(str);
 			return set_error(ctx, kdump_syserr,
-					 "Cannot enlarge string to"
-					 " %zu bytes: %s",
-					 newlength + 1, strerror(errno));
+					 "Cannot enlarge string to %zu bytes",
+					 newlength + 1);
 		}
 		memcpy(newstr + length, ctx->page + off, partlen);
 		length = newlength;

@@ -33,7 +33,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <elf.h>
 
 #define VIRTADDR_BITS_MAX	64
@@ -312,8 +311,7 @@ ppc64_init(kdump_ctx *ctx)
 	archdata = calloc(1, sizeof(struct ppc64_data));
 	if (!archdata)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate ppc64 private data: %s",
-				 strerror(errno));
+				 "Cannot allocate ppc64 private data");
 
 	ctx->archdata = archdata;
 
