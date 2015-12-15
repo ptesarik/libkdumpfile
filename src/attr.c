@@ -428,11 +428,8 @@ link_attr(struct attr_data *dir, struct attr_data *attr)
 {
 	/* Link the new node */
 	attr->next = dir->val.directory;
-	if (attr->next)
-		attr->next->pprev = &attr->next;
 	if (attr != dir)
 		dir->val.directory = attr;
-	attr->pprev = (struct attr_data**)&dir->val.directory;
 	attr->parent = dir;
 }
 
@@ -519,7 +516,7 @@ free_attr(kdump_ctx *ctx, struct attr_data *attr)
 
 	unhash_attr(ctx, attr);
 	if (template_static(attr->template))
-		attr->pprev = NULL;
+		attr->parent = NULL;
 	else
 		free(attr);
 }
@@ -533,9 +530,12 @@ free_attr(kdump_ctx *ctx, struct attr_data *attr)
 static void
 delete_attr(kdump_ctx *ctx, struct attr_data *attr)
 {
-	*attr->pprev = attr->next;
-	if (attr->next)
-		attr->next->pprev = attr->pprev;
+	struct attr_data **d;
+	d = (struct attr_data**)&attr->parent->val.directory;
+	while (*d && *d != attr)
+		d = &(*d)->next;
+	if (*d)
+		*d = attr->next;
 	free_attr(ctx, attr);
 }
 

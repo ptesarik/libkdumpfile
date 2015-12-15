@@ -235,7 +235,7 @@ struct dyn_attr_template {
  * equal to the template type.
  */
 struct attr_data {
-	struct attr_data *next, **pprev, *parent;
+	struct attr_data *next, *parent;
 	const struct attr_template *template;
 	union kdump_attr_value val;
 };
@@ -494,7 +494,7 @@ attr_isset(const kdump_ctx *ctx, const char *key)
 static inline int
 static_attr_isset(const struct attr_data *data)
 {
-	return !!data->pprev;
+	return !!data->parent;
 }
 
 #define set_attr INTERNAL_NAME(set_attr)
