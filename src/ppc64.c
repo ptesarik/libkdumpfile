@@ -170,6 +170,7 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	kdump_vaddr_t addr, pagemask;
 	size_t ps = kdump_ptr_size(ctx);
 	int huge;
+	kdump_status res;
 
 	vaddr_split (archdata, vaddr, &l4, &l3, &l2, &l1, &addr);
 
@@ -177,8 +178,9 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	L("reading l4 %lx\n", archdata->pg.pg + l4*ps);
 
-	if (kdump_readp(ctx, archdata->pg.pg + l4*ps, &l4e, &ps, KDUMP_KVADDR) != kdump_ok)
-		return set_error(ctx, kdump_unsupported, "Cannot read L4");
+	res = kdump_readp(ctx, archdata->pg.pg + l4*ps, &l4e, &ps, KDUMP_KVADDR);
+	if (res != kdump_ok)
+		return set_error(ctx, res, "Cannot read L4");
 
 	l4e = dump64toh(ctx, l4e);
 
@@ -199,8 +201,9 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	} else
 		e = l4e;
 
-	if (kdump_readp(ctx, e + l2*ps, &l2e, &ps, KDUMP_KVADDR) != kdump_ok)
-		return set_error(ctx, kdump_unsupported, "Cannot read L2");
+	res = kdump_readp(ctx, e + l2*ps, &l2e, &ps, KDUMP_KVADDR);
+	if (res != kdump_ok)
+		return set_error(ctx, res, "Cannot read L2");
 
 	l2e = dump64toh(ctx, l2e);
 
@@ -217,8 +220,9 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	L("l2 => %lx %lx ==> %lx\n", l2e, (l2e & (~archdata->pg.l2_mask)), e);
 
-	if (kdump_readp(ctx, (l2e&~(pagemask)) + (e&(pagemask)), &l1e, &ps, KDUMP_KVADDR) != kdump_ok)
-		return set_error(ctx, kdump_unsupported, "Cannot read L1");
+	res = kdump_readp(ctx, (l2e&~(pagemask)) + (e&(pagemask)), &l1e, &ps, KDUMP_KVADDR);
+	if (res != kdump_ok)
+		return set_error(ctx, res, "Cannot read L1");
 
 	l1e = dump64toh(ctx, l1e);
 
@@ -234,10 +238,11 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	return kdump_ok;
 
 gohuge:
-	if (kdump_readp(ctx, (e & ~HUGEPD_SHIFT_MASK) | PD_HUGE, &pt, &ps,
-		KDUMP_KVADDR) != kdump_ok)
+	res = kdump_readp(ctx, (e & ~HUGEPD_SHIFT_MASK) | PD_HUGE, &pt, &ps,
+			  KDUMP_KVADDR);
+	if (res != kdump_ok)
 
-		return set_error(ctx, kdump_unsupported, "Cannot read hugepage");
+		return set_error(ctx, res, "Cannot read hugepage");
 
 	pt = dump64toh(ctx, e);
 
@@ -258,6 +263,7 @@ ppc64_vtop_init(kdump_ctx *ctx)
 	kdump_status ret;
 	const char *val;
 	size_t sz = kdump_ptr_size(ctx);
+	kdump_status res;
 
 	val = kdump_vmcoreinfo_row(ctx, "SYMBOL(_stext)");
 	if (!val)
@@ -282,14 +288,16 @@ ppc64_vtop_init(kdump_ctx *ctx)
 	if (!val)
 		return set_error(ctx, kdump_nodata, "No OFFSET(vm_struct.addr) in VMCOREINFO");
 
-	if (kdump_readp(ctx, addr, &addr, &sz, KDUMP_KVADDR) != kdump_ok)
-		return set_error(ctx, kdump_unsupported, "Cannot read vmlist.addr");
+	res = kdump_readp(ctx, addr, &addr, &sz, KDUMP_KVADDR);
+	if (res != kdump_ok)
+		return set_error(ctx, res, "Cannot read vmlist.addr");
 
 	addr = dump64toh(ctx, addr);
 	addr += strtoull(val, NULL, 16);
 
-	if (kdump_readp(ctx, addr, &vmal, &sz, KDUMP_KVADDR) != kdump_ok)
-		return set_error(ctx, kdump_unsupported, "Cannot read vmlist.addr");
+	res = kdump_readp(ctx, addr, &vmal, &sz, KDUMP_KVADDR);
+	if (res != kdump_ok)
+		return set_error(ctx, res, "Cannot read vmlist.addr");
 
 	vmal = dump64toh(ctx, vmal);
 
