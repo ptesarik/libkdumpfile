@@ -240,6 +240,23 @@ struct attr_data {
 	union kdump_attr_value val;
 };
 
+/**  Size of the attribute hash table.
+ */
+#define ATTR_HASH_BITS	8
+#define ATTR_HASH_SIZE	(1U<<ATTR_HASH_BITS)
+
+/**  Attribute hash table.
+ *
+ * Attributes are in fact stored in a linked list of hash tables.
+ * Allocation is first attempted from a given slot, walking through
+ * all linked hash tables. If this fails, allocation is retried from
+ * the following slot(s) in the table.
+ */
+struct attr_hash {
+	struct attr_hash *next;
+	struct attr_data* table[ATTR_HASH_SIZE];
+};
+
 struct _tag_kdump_ctx {
 	int fd;			/* dump file descriptor */
 	const char *format;	/* file format (descriptive name) */
@@ -270,6 +287,9 @@ struct _tag_kdump_ctx {
 	struct attr_data field;
 #include "static-attr.def"
 #undef ATTR
+
+	/* attribute hash */
+	struct attr_hash attr;
 
 	void *xen_map;
 	unsigned long xen_map_size;

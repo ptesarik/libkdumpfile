@@ -246,26 +246,98 @@ lookup_data_tmpl(const kdump_ctx *ctx, const struct attr_template *tmpl)
 	return NULL;
 }
 
-/**  Look up a directory entry
- * @param parent  Parent attribute (must be a directory).
- * @param key     Key path.
- * @param keylen  Length of the initial portion of @c key to be considered.
- * @returns       Stored attribute, or @c NULL if not found.
+/**  Calculate the hash index of a key path.
+ * @param key  Key path.
+ * @returns    Desired index in the hash table.
  */
-static const struct attr_data *
-lookup_data_dir(const struct attr_data *parent, const char *key, size_t keylen)
+static unsigned
+key_hash_index(const char *key)
+{
+	return fold_hash(string_hash(key), ATTR_HASH_BITS);
+}
+
+/**  Get the length of an attribute path
+ * @param attr  Attribute data.
+ * @returns     Length of the full path string.
+ *
+ * The returned length does not include the terminating NUL character.
+ */
+static size_t
+attr_pathlen(const struct attr_data *attr)
+{
+	const struct attr_data *d;
+	size_t len = 0;
+
+	for (d = attr; d->parent; d = d->parent) {
+		len += strlen(d->template->key);
+		if (d != attr)
+			++len;	/* for the separating dot ('.') */
+	}
+	return len;
+}
+
+/**  Construct an attribute's key path.
+ * @param attr  Attribute data.
+ * @param endp  Pointer to the __end__ of the path buffer.
+ * @returns     Beginning of the path buffer.
+ *
+ * The output buffer must be big enough to hold the full path. You can
+ * use @c attr_pathlen to calculate the required length.
+ * Note that the resulting path is a NUL-terminated string, and the buffer
+ * must also contain space for this terminating NUL character.
+ */
+static char *
+make_attr_path(const struct attr_data *attr, char *endp)
 {
 	const struct attr_data *d;
 
-	if (parent->template->type != kdump_directory)
-		return NULL;
+	for (d = attr; d->parent; d = d->parent) {
+		size_t len = strlen(d->template->key);
+		*(--endp) = (d == attr) ? '\0' : '.';
+		endp -= len;
+		memcpy(endp, d->template->key, len);
+	}
+	return endp;
+}
 
-	for (d = parent->val.directory; d; d = d->next)
-		if (!strncmp(d->template->key, key, keylen) &&
-		    d->template->key[keylen] == '\0')
-			return d;
+/**  Calculate the hash index of an attribute.
+ * @param attr  Attribute data.
+ * @returns     Desired index in the hash table.
+ */
+static unsigned
+attr_hash_index(const struct attr_data *attr)
+{
+	size_t pathlen = attr_pathlen(attr);
+	char path[pathlen + 1];
 
-	return NULL;
+	make_attr_path(attr, path + pathlen + 1);
+	return key_hash_index(path);
+}
+
+/**  Compare if attribute data correponds to a given key.
+ * @param attr  Attribute data.
+ * @param key   Key path.
+ * @returns     Zero if the data is stored under the given key,
+ *              non-zero otherwise.
+ */
+static int
+keycmp(const struct attr_data *attr, const char *key)
+{
+	size_t len;
+	const char *p;
+
+	len = strlen(key);
+	while ( (p = memrchr(key, '.', len)) ) {
+		size_t partlen = key + len - p - 1;
+		int res = strncmp(attr->template->key, p + 1, partlen);
+		if (!res)
+			return res;
+		if (attr->template->key[partlen] != '\0')
+			return 1;
+		len = p - key;
+	}
+
+	return memcmp(attr->template->key, key, len);
 }
 
 /**  Look up attribute value by name.
@@ -277,21 +349,27 @@ lookup_data_dir(const struct attr_data *parent, const char *key, size_t keylen)
 static const struct attr_data*
 lookup_data(const kdump_ctx *ctx, const char *key)
 {
-	const char *p;
-	const struct attr_data *d;
+	unsigned hash, i;
+	const struct attr_hash *tbl;
 
 	if (!key || key > GATTR(NR_GLOBAL))
 		return lookup_data_tmpl(ctx, &global_keys[-(intptr_t)key]);
 
-	d = static_attr_data_const(ctx, GKI_dir_root);
-	while ( (p = strchr(key, '.')) ) {
-		d = lookup_data_dir(d, key, p - key);
-		if (!d)
-			return NULL;
-		key = p + 1;
-	}
+	hash = key_hash_index(key);
+	i = hash;
+	do {
+		tbl = &ctx->attr;
+		do {
+			if (!tbl->table[i])
+				break;
+			if (!keycmp(tbl->table[i], key))
+				return tbl->table[i];
+			tbl = tbl->next;
+		} while (tbl);
+		i = (i + 1) % ATTR_HASH_SIZE;
+	} while (i != hash);
 
-	return lookup_data_dir(d, key, strlen(key));
+	return NULL;
 }
 
 /**  Check if a given attribute is set.
@@ -398,29 +476,6 @@ alloc_attr_by_key(kdump_ctx *ctx, struct attr_data **pattr,
 	return kdump_ok;
 }
 
-/**  Free all memory associated with an attribute.
- * @param attr  The attribute to be freed (detached).
- */
-static void
-free_attr(struct attr_data *attr)
-{
-	if (attr->template->type == kdump_directory) {
-		struct attr_data *node = attr->val.directory;
-		while (node) {
-			struct attr_data *next = node->next;
-			free_attr(node);
-			node = next;
-		}
-	}
-
-	if (attr->template == &global_keys[GKI_dir_root])
-		attr->val.directory = NULL;
-	else if (template_static(attr->template))
-		attr->pprev = NULL;
-	else
-		free(attr);
-}
-
 /**  Link a new attribute to its parent.
  * @param dir   Parent attribute.
  * @param attr  Complete initialized attribute.
@@ -438,6 +493,111 @@ link_attr(struct attr_data *dir, struct attr_data *attr)
 	dir->val.directory = attr;
 	attr->pprev = (struct attr_data**)&dir->val.directory;
 	attr->parent = dir;
+}
+
+/**  Add an attribute to the hash table.
+ * @param ctx   Dump file object.
+ * @param attr  Attribute data.
+ * @returns     Error status.
+ */
+static kdump_status
+hash_attr(kdump_ctx *ctx, struct attr_data *attr)
+{
+	unsigned hash, i;
+	struct attr_hash *tbl, *newtbl;
+
+	i = hash = attr_hash_index(attr);
+	do {
+		newtbl = &ctx->attr;
+		do {
+			tbl = newtbl;
+			if (!tbl->table[i]) {
+				tbl->table[i] = attr;
+				return kdump_ok;
+			}
+			newtbl = tbl->next;
+		} while (newtbl);
+		i = (i + 1) % ATTR_HASH_SIZE;
+	} while (i != hash);
+
+	newtbl = calloc(1, sizeof(struct attr_hash));
+	if (!newtbl)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate hash table: %s\n",
+				 strerror(errno));
+	newtbl->table[hash] = attr;
+	tbl->next = newtbl;
+
+	return kdump_ok;
+}
+
+/**  Remove an attribute from the hash table.
+ * @param ctx   Dump file object.
+ * @param attr  Attribute data.
+ */
+static void
+unhash_attr(kdump_ctx *ctx, const struct attr_data *attr)
+{
+	unsigned hash, i;
+	struct attr_hash *tbl, *newtbl;
+
+	i = hash = attr_hash_index(attr);
+	do {
+		for (tbl = &ctx->attr; tbl; tbl = tbl->next)
+			if (tbl->table[i] == attr) {
+				newtbl = tbl;
+				while (newtbl->next)
+					newtbl = newtbl->next;
+				tbl->table[i] = newtbl->table[i];
+				newtbl->table[i] = NULL;
+				return;
+			}
+		i = (i + 1) % ATTR_HASH_SIZE;
+	} while (i != hash);
+
+	/* Not hashed? This should never happen. */
+}
+
+/**  Free all memory associated with an attribute.
+ * @param ctx   Dump file object.
+ * @param attr  The attribute to be freed (detached).
+ */
+static void
+free_attr(kdump_ctx *ctx, struct attr_data *attr)
+{
+	if (attr->template->type == kdump_directory) {
+		struct attr_data *node = attr->val.directory;
+		while (node) {
+			struct attr_data *next = node->next;
+			free_attr(ctx, node);
+			node = next;
+		}
+	}
+
+	if (attr->template == &global_keys[GKI_dir_root])
+		attr->val.directory = NULL;
+	else {
+		unhash_attr(ctx, attr);
+		if (template_static(attr->template))
+			attr->pprev = NULL;
+		else
+			free(attr);
+	}
+}
+
+/**  Delete an attribute.
+ * @param ctx   Dump file object.
+ * @param attr  Attribute to be deleted.
+ *
+ * Remove an attribute from its dump file object and free it.
+ */
+static void
+delete_attr(kdump_ctx *ctx, struct attr_data *attr)
+{
+	*attr->pprev = attr->next;
+	if (attr->next)
+		attr->next->pprev = attr->pprev;
+	free_attr(ctx, attr);
 }
 
 /**  Instantiate a directory template path.
@@ -462,25 +622,17 @@ instantiate_path(kdump_ctx *ctx, const struct attr_template *tmpl)
 	d = template_static(tmpl)
 		? static_attr_data(ctx, tmpl - global_keys)
 		: alloc_attr(tmpl, 0);
-	if (d) {
-		d->val.directory = NULL;
-		link_attr(parent, d);
-	}
-	return d;
-}
+	if (!d)
+		return NULL;
 
-/**  Delete an attribute.
- * @param attr  Attribute to be deleted.
- *
- * Remove an attribute from its dump file object and free it.
- */
-static void
-delete_attr(struct attr_data *attr)
-{
-	*attr->pprev = attr->next;
-	if (attr->next)
-		attr->next->pprev = attr->pprev;
-	free_attr(attr);
+	d->val.directory = NULL;
+	link_attr(parent, d);
+	if (hash_attr(ctx, d) != kdump_ok) {
+		delete_attr(ctx, d);
+		return NULL;
+	}
+
+	return d;
 }
 
 /**  Cleanup all attributes from a dump file object.
@@ -489,7 +641,7 @@ delete_attr(struct attr_data *attr)
 void
 cleanup_attr(kdump_ctx *ctx)
 {
-	free_attr(&ctx->dir_root);
+	free_attr(ctx, &ctx->dir_root);
 }
 
 /**  Initialize statically allocated attributes
@@ -510,6 +662,7 @@ init_static_attrs(kdump_ctx *ctx)
 }
 
 /**  Replace an attribute.
+ * @param ctx     Dump file object.
  * @param parent  Parent attribute.
  * @param attr    New attribute data.
  *
@@ -518,13 +671,13 @@ init_static_attrs(kdump_ctx *ctx)
  * @c parent. Otherwise, the old attribute is deleted first.
  */
 static void
-replace_attr(struct attr_data *parent, struct attr_data *attr)
+replace_attr(kdump_ctx *ctx, struct attr_data *parent, struct attr_data *attr)
 {
 	struct attr_data *old;
 
 	for (old = parent->val.directory; old; old = old->next)
 		if (old->template == attr->template) {
-			delete_attr(old);
+			delete_attr(ctx, old);
 			break;
 		}
 
@@ -551,8 +704,8 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr)
 				 attr->template->parent->key,
 				 strerror(errno));
 
-	replace_attr(parent, attr);
-	return kdump_ok;
+	replace_attr(ctx, parent, attr);
+	return hash_attr(ctx, attr);
 }
 
 /**  Set a numeric attribute of a dump file object.
@@ -661,8 +814,8 @@ add_attr(kdump_ctx *ctx, const char *path, struct attr_data *attr)
 				 "Cannot instantiate path: %s",
 				 strerror(errno));
 
-	replace_attr(parent, attr);
-	return kdump_ok;
+	replace_attr(ctx, parent, attr);
+	return hash_attr(ctx, attr);
 }
 
 /**  Add a numeric attribute to a directory.
@@ -691,7 +844,7 @@ add_attr_number(kdump_ctx *ctx, const char *path,
 	attr->val.number = num;
 	res = add_attr(ctx, path, attr);
 	if (res != kdump_ok)
-		free_attr(attr);
+		free_attr(ctx, attr);
 
 	return set_error(ctx, res,
 			 "Cannot set '%s.%s'", path, tmpl->key);
@@ -727,7 +880,7 @@ add_attr_string(kdump_ctx *ctx, const char *path,
 	attr->val.string = dynstr;
 	res = add_attr(ctx, path, attr);
 	if (res != kdump_ok)
-		free_attr(attr);
+		free_attr(ctx, attr);
 
 	return set_error(ctx, res,
 			 "Cannot set '%s.%s'", path, tmpl->key);
@@ -759,7 +912,7 @@ kdump_status add_attr_static_string(kdump_ctx *ctx, const char *path,
 	attr->val.string = str;
 	res = add_attr(ctx, path, attr);
 	if (res != kdump_ok)
-		free_attr(attr);
+		free_attr(ctx, attr);
 
 	return set_error(ctx, res,
 			 "Cannot set '%s.%s'", path, tmpl->key);
