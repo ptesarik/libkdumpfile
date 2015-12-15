@@ -169,7 +169,7 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	xlat = get_xlat(ctx, vaddr, &phys_off);
 	switch (xlat) {
 	case KDUMP_XLAT_NONE:
-		return set_error(ctx, kdump_unsupported,
+		return set_error(ctx, kdump_invalid,
 				 "Uninitialized translation method");
 
 	case KDUMP_XLAT_INVALID:
@@ -178,7 +178,7 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	case KDUMP_XLAT_VTOP:
 		if (!ctx->arch_ops || !ctx->arch_ops->vtop)
-			return set_error(ctx, kdump_unsupported,
+			return set_error(ctx, kdump_invalid,
 					 "VTOP translation not initialized");
 		return ctx->arch_ops->vtop(ctx, vaddr, paddr);
 

@@ -218,7 +218,7 @@ read_pgt(kdump_ctx *ctx)
 		return ret;
 
 	if (pgtaddr < __START_KERNEL_map)
-		return set_error(ctx, kdump_unsupported,
+		return set_error(ctx, kdump_dataerr,
 				 "Wrong page directory address: 0x%llx",
 				 (unsigned long long) pgtaddr);
 
@@ -388,7 +388,7 @@ ia32_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	struct ia32_data *archdata = ctx->archdata;
 
 	if (!archdata->pgt)
-		return set_error(ctx, kdump_unsupported,
+		return set_error(ctx, kdump_invalid,
 				 "VTOP translation not initialized");
 
 	return archdata->pae_state > 0

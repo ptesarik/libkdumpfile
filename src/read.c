@@ -109,7 +109,7 @@ static kdump_status
 setup_readfn(kdump_ctx *ctx, long flags, read_page_fn *fn)
 {
 	if (!ctx->ops)
-		return set_error(ctx, kdump_unsupported,
+		return set_error(ctx, kdump_invalid,
 				 "File format not initialized");
 
 	if (flags & KDUMP_PHYSADDR)
@@ -120,11 +120,11 @@ setup_readfn(kdump_ctx *ctx, long flags, read_page_fn *fn)
 		ctx->arch_ops && ctx->arch_ops->vtop)
 		*fn = read_kvpage;
 	else
-		return set_error(ctx, kdump_unsupported,
+		return set_error(ctx, kdump_invalid,
 				 "Invalid address type flags");
 
 	if (!*fn)
-		return set_error(ctx, kdump_unsupported,
+		return set_error(ctx, kdump_invalid,
 				 "Read function not available");
 
 	return kdump_ok;

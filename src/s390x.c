@@ -142,7 +142,7 @@ xlat(kdump_ctx *ctx, struct vtop_control *ctl)
 	case 1: idx = pud_index(ctl->vaddr); break;
 	case 0: idx = pmd_index(ctl->vaddr); break;
 	default:
-		return set_error(ctx, kdump_unsupported,
+		return set_error(ctx, kdump_dataerr,
 				 "Unknown translation table type: %d",
 				 ctl->tbltype);
 	}
@@ -199,7 +199,7 @@ s390x_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	kdump_status ret;
 
 	if (!archdata->pgt)
-		return set_error(ctx, kdump_unsupported,
+		return set_error(ctx, kdump_invalid,
 				 "VTOP translation not initialized");
 
 	/* TODO: This should be initialised from kernel_asce, but for

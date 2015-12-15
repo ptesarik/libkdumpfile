@@ -402,7 +402,7 @@ read_pgt(kdump_ctx *ctx)
 	ret = get_symbol_val(ctx, "init_level4_pgt", &pgtaddr);
 	if (ret == kdump_ok) {
 		if (pgtaddr < __START_KERNEL_map)
-			return set_error(ctx, kdump_unsupported,
+			return set_error(ctx, kdump_dataerr,
 					 "Wrong page directory address: 0x%llx",
 					 (unsigned long long) pgtaddr);
 
@@ -502,7 +502,7 @@ x86_64_vtop_init(kdump_ctx *ctx)
 	if (!layout)
 		layout = layout_by_version(get_attr_version_code(ctx));
 	if (!layout)
-		return set_error(ctx, kdump_unsupported,
+		return set_error(ctx, kdump_nodata,
 				 "Cannot determine virtual memory layout");
 
 	flush_regions(ctx);
@@ -635,7 +635,7 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	kdump_status ret;
 
 	if (!archdata->pgt)
-		return set_error(ctx, kdump_unsupported,
+		return set_error(ctx, kdump_invalid,
 				 "VTOP translation not initialized");
 
 	pgd = archdata->pgt[pgd_index(vaddr)];
