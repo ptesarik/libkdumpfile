@@ -141,11 +141,9 @@ kdump_phys_base(kdump_ctx *ctx)
 const char *
 kdump_get_string_attr(kdump_ctx *ctx, const char *key)
 {
-	struct kdump_attr attr;
-
-	return (kdump_get_attr(ctx, key, &attr) == kdump_ok &&
-		attr.type == kdump_string)
-		? attr.val.string
+	const struct attr_data *attr = lookup_attr(ctx, key);
+	return (attr && attr->template->type == kdump_string)
+		? attr->val.string
 		: NULL;
 }
 
@@ -203,8 +201,7 @@ kdump_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 {
 	char *key;
 	const char *regname;
-	struct kdump_attr attr;
-	kdump_status res;
+	const struct attr_data *attr;
 
 	clear_error(ctx);
 
@@ -218,12 +215,11 @@ kdump_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 
 	key = alloca(sizeof("cpu.") + 20 + sizeof(".reg.") + strlen(regname));
 	sprintf(key, "cpu.%u.reg.%s", cpu, regname);
-	res = kdump_get_attr(ctx, key, &attr);
-	if (res != kdump_ok)
-		return set_error(ctx, res,
-				 "Cannot read '%s'", key);
+	attr = lookup_attr(ctx, key);
+	if (!attr)
+		return set_error(ctx, kdump_nodata, "Cannot read '%s'", key);
 
-	*value = attr.val.number;
+	*value = attr->val.number;
 	return kdump_ok;
 }
 
@@ -266,14 +262,13 @@ kdump_vmcoreinfo_row_xen(kdump_ctx *ctx, const char *key)
 void
 kdump_xen_version(kdump_ctx *ctx, kdump_xen_version_t *version)
 {
-	struct kdump_attr attr;
-	kdump_status res;
+	const struct attr_data *attr;
 
-	res = kdump_get_attr(ctx, GATTR(GKI_xen_ver_major), &attr);
-	version->major = res == kdump_ok ? attr.val.number : 0;
+	attr = lookup_attr(ctx, GATTR(GKI_xen_ver_major));
+	version->major = attr ? attr->val.number : 0;
 
-	res = kdump_get_attr(ctx, GATTR(GKI_xen_ver_minor), &attr);
-	version->minor = res == kdump_ok ? attr.val.number : 0;
+	attr = lookup_attr(ctx, GATTR(GKI_xen_ver_minor));
+	version->minor = attr ? attr->val.number : 0;
 
 	version->extra = kdump_get_string_attr(ctx, GATTR(GKI_xen_ver_extra));
 }
@@ -284,16 +279,17 @@ vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname, kdump_addr_t *symvalue,
 {
 	char attrkey[strlen(base) + sizeof(".vmcoreinfo.SYMBOL.") +
 		     strlen(symname)];
-	struct kdump_attr attr;
-	kdump_status ret;
+	const struct attr_data *attr;
 
 	clear_error(ctx);
 
 	sprintf(attrkey, "%s.vmcoreinfo.SYMBOL.%s", base, symname);
-	ret = kdump_get_attr(ctx, attrkey, &attr);
-	if (ret == kdump_ok)
-		*symvalue = attr.val.address;
-	return ret;
+	attr = lookup_attr(ctx, attrkey);
+	if (!attr)
+		return set_error(ctx, kdump_nodata, "Key has no value");
+
+	*symvalue = attr->val.address;
+	return kdump_ok;
 }
 
 kdump_status

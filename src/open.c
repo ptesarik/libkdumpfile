@@ -128,7 +128,7 @@ kdump_set_fd(kdump_ctx *ctx, int fd)
 static kdump_status
 kdump_open_known(kdump_ctx *ctx)
 {
-	struct kdump_attr attr;
+	const struct attr_data *attr;
 	kdump_status res;
 
 	res = init_xen_dom0(ctx);
@@ -141,10 +141,10 @@ kdump_open_known(kdump_ctx *ctx)
 		use_kernel_utsname(ctx);
 
 	/* If this fails, it is not fatal. */
-	res = kdump_get_attr(ctx, GATTR(GKI_xen_ver_extra_addr), &attr);
-	if (res == kdump_ok) {
+	attr = lookup_attr(ctx, GATTR(GKI_xen_ver_extra_addr));
+	if (attr) {
 		char *extra;
-		res = kdump_read_string(ctx, attr.val.address, &extra,
+		res = kdump_read_string(ctx, attr->val.address, &extra,
 					KDUMP_XENMACHADDR);
 		if (res == kdump_ok) {
 			set_attr_string(ctx, GATTR(GKI_xen_ver_extra), extra);
@@ -227,22 +227,22 @@ use_kernel_utsname(kdump_ctx *ctx)
 static kdump_status
 get_version_code(kdump_ctx *ctx)
 {
-	struct kdump_attr rel;
+	const struct attr_data *rel;
 	const char *p;
 	char *endp;
 	long a, b, c;
-	kdump_status res;
 
-	res = kdump_get_attr(ctx, GATTR(GKI_linux_uts_release), &rel);
-	if (res != kdump_ok)
-		return set_error(ctx, res, "Cannot get kernel release");
+	rel = lookup_attr(ctx, GATTR(GKI_linux_uts_release));
+	if (!rel)
+		return set_error(ctx, kdump_nodata,
+				 "Cannot get kernel release");
 
-	p = rel.val.string;
+	p = rel->val.string;
 	a = strtoul(p, &endp, 10);
 	if (endp == p || *endp != '.')
 		return set_error(ctx, kdump_dataerr,
 				 "Invalid kernel version: %s",
-				 rel.val.string);
+				 rel->val.string);
 
 	b = c = 0L;
 	if (*endp) {
@@ -251,7 +251,7 @@ get_version_code(kdump_ctx *ctx)
 		if (endp == p || *endp != '.')
 			return set_error(ctx, kdump_dataerr,
 					 "Invalid kernel version: %s",
-					 rel.val.string);
+					 rel->val.string);
 
 		if (*endp) {
 			p = endp + 1;
@@ -259,7 +259,7 @@ get_version_code(kdump_ctx *ctx)
 			if (endp == p)
 				return set_error(ctx, kdump_dataerr,
 						 "Invalid kernel version: %s",
-						 rel.val.string);
+						 rel->val.string);
 		}
 	}
 

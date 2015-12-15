@@ -352,17 +352,14 @@ init_xen_dom0(kdump_ctx *ctx)
 {
 	void *dir, *page;
 	kdump_pfn_t xen_p2m_mfn;
-	struct kdump_attr attr;
+	const struct attr_data *attr;
 	kdump_status ret;
 
-	ret = kdump_get_attr(ctx, GATTR(GKI_xen_p2m_mfn), &attr);
-	if (ret == kdump_nodata)
+	attr = lookup_attr(ctx, GATTR(GKI_xen_p2m_mfn));
+	if (!attr)
 		/* not a Xen Dom0 dump */
 		return kdump_ok;
-	else if (ret != kdump_ok)
-		return set_error(ctx, ret,
-				 "Cannot get xen_p2m_mfn");
-	xen_p2m_mfn = attr.val.address;
+	xen_p2m_mfn = attr->val.address;
 
 	ret = ctx->ops->read_page(ctx, xen_p2m_mfn);
 	if (ret != kdump_ok)

@@ -409,12 +409,12 @@ read_pgt(kdump_ctx *ctx)
 		pgtaddr -= __START_KERNEL_map - get_attr_phys_base(ctx);
 		rdflags = KDUMP_PHYSADDR;
 	} else if (ret == kdump_nodata) {
-		struct kdump_attr attr;
-		ret = kdump_get_attr(ctx, "cpu.0.reg.cr3", &attr);
-		if (ret != kdump_ok)
-			return set_error(ctx, ret,
+		const struct attr_data *attr;
+		attr = lookup_attr(ctx, "cpu.0.reg.cr3");
+		if (!attr)
+			return set_error(ctx, kdump_nodata,
 					 "Cannot get CR3 value");
-		pgtaddr = attr.val.number;
+		pgtaddr = attr->val.number;
 		rdflags = (get_attr_xen_type(ctx) == kdump_xen_pv)
 			? KDUMP_XENMACHADDR
 			: KDUMP_PHYSADDR;
