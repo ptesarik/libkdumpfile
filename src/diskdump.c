@@ -217,9 +217,8 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	rd = pread(ctx->fd, &pd, sizeof pd, pd_pos);
 	if (rd != sizeof pd)
 		return set_error(ctx, read_error(rd),
-				 "Cannot read page descriptor at %llu: %s",
-				 (unsigned long long) pd_pos,
-				 read_err_str(rd));
+				 "Cannot read page descriptor at %llu",
+				 (unsigned long long) pd_pos);
 
 	pd.offset = dump64toh(ctx, pd.offset);
 	pd.size = dump32toh(ctx, pd.size);
@@ -244,9 +243,8 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	rd = pread(ctx->fd, buf, pd.size, pd.offset);
 	if (rd != pd.size)
 		return set_error(ctx, read_error(rd),
-				 "Cannot read page data at %llu: %s",
-				 (unsigned long long) pd.offset,
-				 read_err_str(rd));
+				 "Cannot read page data at %llu",
+				 (unsigned long long) pd.offset);
 
 	if (pd.flags & DUMP_DH_COMPRESSED_ZLIB) {
 #if USE_ZLIB
@@ -322,9 +320,8 @@ read_vmcoreinfo(kdump_ctx *ctx, off_t off, size_t size)
 	rd = pread(ctx->fd, info, size, off);
 	if (rd != size)
 		ret = set_error(ctx, read_error(rd),
-				"Cannot read %zu VMCOREINFO bytes at %llu: %s",
-				size, (unsigned long long) off,
-				read_err_str(rd));
+				"Cannot read %zu VMCOREINFO bytes at %llu",
+				size, (unsigned long long) off);
 
 	if (ret == kdump_ok)
 		ret = process_vmcoreinfo(ctx, info, size);
@@ -349,9 +346,8 @@ read_notes(kdump_ctx *ctx, off_t off, size_t size)
 	rd = pread(ctx->fd, notes, size, off);
 	if (rd != size) {
 		ret = set_error(ctx, read_error(rd),
-				"Cannot read %zu note bytes at %llu: %s",
-				size, (unsigned long long) off,
-				read_err_str(rd));
+				"Cannot read %zu note bytes at %llu",
+				size, (unsigned long long) off);
 		goto out;
 	}
 
@@ -415,9 +411,8 @@ read_bitmap(kdump_ctx *ctx, int32_t sub_hdr_size,
 	if (rd != bitmapsize)
 		return set_error(ctx, read_error(rd),
 				 "Cannot read %zu bytes of page bitmap"
-				 " at %llu: %s",
-				 bitmapsize, (unsigned long long) off,
-				 read_err_str(rd));
+				 " at %llu",
+				 bitmapsize, (unsigned long long) off);
 
 	return kdump_ok;
 }
@@ -473,8 +468,7 @@ read_sub_hdr_32(struct setup_data *sdp, int32_t header_version)
 	rd = pread(ctx->fd, &subhdr, sizeof subhdr, get_attr_page_size(ctx));
 	if (rd != sizeof subhdr)
 		return set_error(ctx, read_error(rd),
-				 "Cannot read subheader: %s",
-				 read_err_str(rd));
+				 "Cannot read subheader");
 
 	set_attr_phys_base(ctx, dump32toh(ctx, subhdr.phys_base));
 
@@ -554,8 +548,7 @@ read_sub_hdr_64(struct setup_data *sdp, int32_t header_version)
 	rd = pread(ctx->fd, &subhdr, sizeof subhdr, get_attr_page_size(ctx));
 	if (rd != sizeof subhdr)
 		return set_error(ctx, read_error(rd),
-				 "Cannot read subheader: %s",
-				 read_err_str(rd));
+				 "Cannot read subheader");
 
 	set_attr_phys_base(ctx, dump64toh(ctx, subhdr.phys_base));
 

@@ -84,8 +84,7 @@ get_vmcoreinfo(kdump_ctx *ctx)
 	rd = paged_read(ctx->fd, info, length);
 	if (rd != length) {
 		ret = set_error(ctx, read_error(rd),
-				"Cannot read VMCOREINFO: %s",
-				read_err_str(rd));
+				"Cannot read VMCOREINFO");
 		goto out;
 	}
 
@@ -105,8 +104,7 @@ devmem_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	rd = pread(ctx->fd, ctx->page, get_attr_page_size(ctx), pos);
 	if (rd != get_attr_page_size(ctx))
 		return set_error(ctx, read_error(rd),
-				 "Cannot read memory device: %s",
-				 read_err_str(rd));
+				 "Cannot read memory device");
 	return kdump_ok;
 }
 

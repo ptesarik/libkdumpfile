@@ -106,8 +106,8 @@ kdump_set_fd(kdump_ctx *ctx, int fd)
 	rd = paged_read(ctx->fd, ctx->buffer, MAX_PAGE_SIZE);
 	if (rd != MAX_PAGE_SIZE)
 		return set_error(ctx, read_error(rd),
-				 "Cannot read %lu bytes at 0: %s",
-				 MAX_PAGE_SIZE, read_err_str(rd));
+				 "Cannot read %lu bytes at 0",
+				 MAX_PAGE_SIZE);
 
 	for (i = 0; i < ARRAY_SIZE(formats); ++i) {
 		ctx->ops = formats[i];

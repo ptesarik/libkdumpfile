@@ -108,9 +108,8 @@ s390_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	rd = pread(ctx->fd, ctx->page, get_attr_page_size(ctx), pos);
 	if (rd != get_attr_page_size(ctx))
 		return set_error(ctx, read_error(rd),
-				 "Cannot read page data at %llu: %s",
-				 (unsigned long long) pos,
-				 read_err_str(rd));
+				 "Cannot read page data at %llu",
+				 (unsigned long long) pos);
 
 	ctx->last_pfn = pfn;
 	return kdump_ok;
@@ -138,9 +137,8 @@ s390_probe(kdump_ctx *ctx)
 	rd = pread(ctx->fd, &marker, sizeof marker, pos);
 	if (rd != sizeof marker)
 		return set_error(ctx, read_error(rd),
-				 "Cannot read end marker at %llu: %s",
-				 (unsigned long long) pos,
-				 read_err_str(rd));
+				 "Cannot read end marker at %llu",
+				 (unsigned long long) pos);
 	if (memcmp(marker.str, END_MARKER, sizeof END_MARKER - 1) ||
 	    dump64toh(ctx, marker.tod) < dump64toh(ctx, dh->h1.tod))
 		return set_error(ctx, kdump_dataerr, "End marker not found");

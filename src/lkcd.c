@@ -498,9 +498,8 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	rd = pread(ctx->fd, buf, dp.dp_size, off);
 	if (rd != dp.dp_size)
 		return set_error(ctx, read_error(rd),
-				 "Cannot read page data at %llu: %s",
-				 (unsigned long long) off,
-				 read_err_str(rd));
+				 "Cannot read page data at %llu",
+				 (unsigned long long) off);
 
 	if (type == DUMP_RAW)
 		goto out;

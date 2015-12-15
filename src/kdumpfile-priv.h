@@ -639,7 +639,6 @@ clear_error(kdump_ctx *ctx)
 
 /* These are macros to avoid possible conversions of the "rd" parameter */
 
-#define read_error(rd)  ((rd) < 0 ? kdump_syserr : kdump_dataerr)
-#define read_err_str(rd) ((rd) < 0 ? strerror(errno) : "Unexpected EOF")
+#define read_error(rd)  ((rd) < 0 ? kdump_syserr : kdump_eof)
 
 #endif	/* kdumpfile-priv.h */

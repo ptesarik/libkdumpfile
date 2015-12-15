@@ -135,8 +135,8 @@ elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	rd = pread(ctx->fd, ctx->page, get_attr_page_size(ctx), pos);
 	if (rd != get_attr_page_size(ctx))
 		return set_error(ctx, read_error(rd),
-				 "Cannot read page data at %llu: %s",
-				 (unsigned long long) pos, read_err_str(rd));
+				 "Cannot read page data at %llu",
+				 (unsigned long long) pos);
 
 	ctx->last_pfn = pfn;
 	return kdump_ok;
@@ -180,9 +180,8 @@ elf_read_xen_domU(kdump_ctx *ctx, kdump_pfn_t pfn)
 	rd = pread(ctx->fd, ctx->page, get_attr_page_size(ctx), offset);
 	if (rd != get_attr_page_size(ctx))
 		return set_error(ctx, read_error(rd),
-				 "Cannot read page data at %llu: %s",
-				 (unsigned long long) offset,
-				 read_err_str(rd));
+				 "Cannot read page data at %llu",
+				 (unsigned long long) offset);
 
 	return 0;
 }
@@ -237,9 +236,8 @@ elf_read_xenmach_domU(kdump_ctx *ctx, kdump_pfn_t mfn)
 	rd = pread(ctx->fd, ctx->page, get_attr_page_size(ctx), offset);
 	if (rd != get_attr_page_size(ctx))
 		return set_error(ctx, read_error(rd),
-				 "Cannot read page data at %llu: %s",
-				 (unsigned long long) offset,
-				 read_err_str(rd));
+				 "Cannot read page data at %llu",
+				 (unsigned long long) offset);
 
 	return 0;
 }
@@ -395,8 +393,7 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 		rd = read(ctx->fd, &prog, sizeof prog);
 		if (rd != sizeof prog)
 			return set_error(ctx, read_error(rd),
-					 "Cannot read program header #%d: %s",
-					 i, read_err_str(rd));
+					 "Cannot read program header #%d", i);
 
 		type = dump32toh(ctx, prog.p_type);
 		offset = dump32toh(ctx, prog.p_offset);
@@ -418,8 +415,7 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 		rd = read(ctx->fd, &sect, sizeof sect);
 		if (rd != sizeof sect)
 			return set_error(ctx, read_error(rd),
-					 "Cannot read section header #%d: %s",
-					 i, read_err_str(rd));
+					 "Cannot read section header #%d", i);
 		store_sect(edp,
 			   dump32toh(ctx, sect.sh_offset),
 			   dump32toh(ctx, sect.sh_size),
@@ -469,8 +465,7 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 		rd = read(ctx->fd, &prog, sizeof prog);
 		if (rd != sizeof prog)
 			return set_error(ctx, read_error(rd),
-					 "Cannot read program header #%d: %s",
-					 i, read_err_str(rd));
+					 "Cannot read program header #%d", i);
 
 		type = dump32toh(ctx, prog.p_type);
 		offset = dump64toh(ctx, prog.p_offset);
@@ -492,8 +487,7 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 		rd = read(ctx->fd, &sect, sizeof sect);
 		if (rd != sizeof sect)
 			return set_error(ctx, read_error(rd),
-					 "Cannot read section header #%d: %s",
-					 i, read_err_str(rd));
+					 "Cannot read section header #%d", i);
 		store_sect(edp,
 			   dump64toh(ctx, sect.sh_offset),
 			   dump64toh(ctx, sect.sh_size),
@@ -523,9 +517,8 @@ process_elf_notes(kdump_ctx *ctx, void *notes)
 		rd = pread(ctx->fd, p, seg->size, seg->file_offset);
 		if (rd != seg->size)
 			return set_error(ctx, read_error(rd),
-					 "Cannot read ELF notes at %llu: %s",
-					 (unsigned long long) seg->file_offset,
-					 read_err_str(rd));
+					 "Cannot read ELF notes at %llu",
+					 (unsigned long long) seg->file_offset);
 
 		ret = process_noarch_notes(ctx, p, seg->size);
 		if (ret != kdump_ok)
