@@ -101,6 +101,7 @@ typedef enum _tag_kdump_status {
 	kdump_nodata,		/**< Data is not stored in the dump file. */
 	kdump_dataerr,		/**< Corrupted file data. */
 	kdump_invalid,		/**< Invalid value. */
+	kdump_nokey,		/**< No such attribute key. */
 } kdump_status;
 
 /**  Target dump byte order.
