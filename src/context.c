@@ -40,6 +40,50 @@ kdump_err_str(kdump_ctx *ctx)
 	return ctx->err_str;
 }
 
+kdump_status
+kdump_get_attr(kdump_ctx *ctx, const char *key,
+	       struct kdump_attr *valp)
+{
+	const struct attr_data *d;
+
+	clear_error(ctx);
+
+	d = lookup_attr(ctx, key);
+	if (d) {
+		valp->type = d->template->type;
+		valp->val = d->val;
+		return kdump_ok;
+	}
+
+	return set_error(ctx, kdump_nodata, "Key has no value");
+}
+
+kdump_status
+kdump_enum_attr(kdump_ctx *ctx, const char *path,
+		kdump_enum_attr_fn *cb, void *cb_data)
+{
+	const struct attr_data *parent, *d;
+
+	clear_error(ctx);
+
+	parent = lookup_attr(ctx, path);
+	if (!parent)
+		return set_error(ctx, kdump_nodata, "No such path");
+	if (parent->template->type != kdump_directory)
+		return set_error(ctx, kdump_invalid,
+				 "Path is a leaf attribute");
+
+	for (d = (struct attr_data*)parent->val.directory; d; d = d->next) {
+		struct kdump_attr attr;
+
+		attr.type = d->template->type;
+		attr.val = d->val;
+		if (cb(cb_data, d->template->key, &attr))
+			break;
+	}
+	return kdump_ok;
+}
+
 const char *
 kdump_format(kdump_ctx *ctx)
 {
