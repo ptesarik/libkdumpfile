@@ -96,6 +96,23 @@ ctx_malloc(size_t size, kdump_ctx *ctx, const char *desc)
 	return ret;
 }
 
+unsigned long
+string_hash(const char *s)
+{
+	size_t len = strlen(s);
+	unsigned long hash = 0;
+
+	while (len >= sizeof(unsigned long)) {
+		hash += *(unsigned long*)s;
+		hash *= 9;
+		s += sizeof(unsigned long);
+		len -= sizeof(unsigned long);
+	}
+	while (len--)
+		hash += (unsigned long)*s++ << (8 * len);
+	return hash;
+}
+
 static size_t
 arch_ptr_size(enum kdump_arch arch)
 {

@@ -391,6 +391,26 @@ kdump_status set_cpu_regs32(kdump_ctx *ctx, unsigned cpu,
 			    const struct attr_template *tmpl,
 			    uint32_t *regs, unsigned num);
 
+/* hashing */
+#define string_hash INTERNAL_NAME(string_hash)
+unsigned long string_hash(const char *s);
+
+/* Knuth recommends primes in approximately golden ratio to the maximum
+ * integer representable by a machine word for multiplicative hashing.
+ */
+#define GOLDEN_RATIO_PRIME_32 2654435761UL
+#define GOLDEN_RATIO_PRIME_64 11400714819323198549ULL
+
+static inline unsigned long
+fold_hash(unsigned long hash, unsigned bits)
+{
+#if SIZEOF_LONG == 8
+	return (hash * GOLDEN_RATIO_PRIME_64) >> (8 * sizeof(long) - bits);
+#else
+	return (hash * GOLDEN_RATIO_PRIME_32) >> (8 * sizeof(long) - bits);
+#endif
+}
+
 /* Xen */
 #define init_xen_dom0 INTERNAL_NAME(init_xen_dom0)
 kdump_status init_xen_dom0(kdump_ctx *ctx);
