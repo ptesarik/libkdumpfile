@@ -289,9 +289,11 @@ make_attr_path(const struct attr_data *attr, char *endp)
 {
 	const struct attr_data *d;
 
+	*endp = '\0';
 	for (d = attr; d->parent != d; d = d->parent) {
 		size_t len = strlen(d->template->key);
-		*(--endp) = (d == attr) ? '\0' : '.';
+		if (d != attr)
+			*(--endp) = '.';
 		endp -= len;
 		memcpy(endp, d->template->key, len);
 	}
@@ -308,7 +310,7 @@ attr_hash_index(const struct attr_data *attr)
 	size_t pathlen = attr_pathlen(attr);
 	char path[pathlen + 1];
 
-	make_attr_path(attr, path + pathlen + 1);
+	make_attr_path(attr, path + pathlen);
 	return key_hash_index(path);
 }
 
