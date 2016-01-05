@@ -746,6 +746,10 @@ add_attr(kdump_ctx *ctx, const char *path, struct attr_data *attr)
 	if (!parent_tmpl)
 		return set_error(ctx, kdump_nokey, "No such path");
 
+	if (parent_tmpl->type != kdump_directory)
+		return set_error(ctx, kdump_invalid,
+				 "Path is a leaf attribute");
+
 	parent = instantiate_path(ctx, parent_tmpl);
 	if (!parent)
 		return set_error(ctx, kdump_syserr,
