@@ -385,6 +385,7 @@ alloc_attr(const struct attr_template *tmpl, size_t extra)
 	if (!ret)
 		return NULL;
 
+	ret->parent = NULL;
 	ret->template = tmpl;
 	return ret;
 }
@@ -513,7 +514,8 @@ free_attr(kdump_ctx *ctx, struct attr_data *attr)
 		}
 	}
 
-	unhash_attr(ctx, attr);
+	if (attr->parent)
+		unhash_attr(ctx, attr);
 	if (template_static(attr->template))
 		attr->parent = NULL;
 	else
