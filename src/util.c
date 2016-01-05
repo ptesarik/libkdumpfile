@@ -603,7 +603,7 @@ set_cpu_regs32(kdump_ctx *ctx, unsigned cpu,
 	kdump_status res;
 
 	sprintf(cpukey, "cpu.%u.reg", cpu);
-	res = create_attr_path(ctx, cpukey, kdump_number);
+	res = create_attr_path(ctx, cpukey, kdump_directory);
 	if (res != kdump_ok)
 		return res;
 
