@@ -237,7 +237,10 @@ struct dyn_attr_template {
 struct attr_data {
 	struct attr_data *next, *parent;
 	const struct attr_template *template;
-	union kdump_attr_value val;
+	union {
+		union kdump_attr_value val;
+		struct attr_data *dir; /*< For @c kdump_directory */
+	};
 };
 
 /**  Size of the attribute hash table.
@@ -554,9 +557,20 @@ void cleanup_attr(kdump_ctx *ctx);
 		set_attr(ctx, &ctx->name); /* fail-safe */	\
 	}
 
+#define DEFINE_ACCESSORS(name, type, ctype)	\
+	DEFINE_GET_ACCESSOR(name, type, ctype)	\
+	DEFINE_SET_ACCESSOR(name, type, ctype)
+
+#define DEFINE_ACCESSORS_number(name, ctype) \
+	DEFINE_ACCESSORS(name, number, ctype)
+#define DEFINE_ACCESSORS_address(name, ctype) \
+	DEFINE_ACCESSORS(name, address, ctype)
+#define DEFINE_ACCESSORS_string(name, ctype) \
+	DEFINE_ACCESSORS(name, string, ctype)
+#define DEFINE_ACCESSORS_directory(name, ctype)
+
 #define ATTR(dir, key, field, type, ctype)	\
-	DEFINE_GET_ACCESSOR(field, type, ctype) \
-	DEFINE_SET_ACCESSOR(field, type, ctype)
+	DEFINE_ACCESSORS_ ## type(field, ctype)
 #include "static-attr.def"
 #undef ATTR
 

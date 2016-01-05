@@ -238,7 +238,7 @@ lookup_attr_tmpl(const kdump_ctx *ctx, const struct attr_template *tmpl)
 	if (!parent)
 		return NULL;
 
-	for (d = parent->val.directory; d; d = d->next)
+	for (d = parent->dir; d; d = d->next)
 		if (d->template == tmpl)
 			return d;
 	return NULL;
@@ -424,9 +424,9 @@ static void
 link_attr(struct attr_data *dir, struct attr_data *attr)
 {
 	/* Link the new node */
-	attr->next = dir->val.directory;
+	attr->next = dir->dir;
 	if (attr != dir)
-		dir->val.directory = attr;
+		dir->dir = attr;
 	attr->parent = dir;
 }
 
@@ -502,7 +502,7 @@ static void
 free_attr(kdump_ctx *ctx, struct attr_data *attr)
 {
 	if (attr->template->type == kdump_directory) {
-		struct attr_data *node = attr->val.directory;
+		struct attr_data *node = attr->dir;
 		while (node) {
 			struct attr_data *next = node->next;
 			free_attr(ctx, node);
@@ -527,7 +527,7 @@ static void
 delete_attr(kdump_ctx *ctx, struct attr_data *attr)
 {
 	struct attr_data **d;
-	d = (struct attr_data**)&attr->parent->val.directory;
+	d = &attr->parent->dir;
 	while (*d && *d != attr)
 		d = &(*d)->next;
 	if (*d)
@@ -563,7 +563,7 @@ instantiate_path(kdump_ctx *ctx, const struct attr_template *tmpl)
 		? instantiate_path(ctx, tmpl->parent)
 		: d;
 
-	d->val.directory = NULL;
+	d->dir = NULL;
 	link_attr(parent, d);
 	if (hash_attr(ctx, d) != kdump_ok) {
 		delete_attr(ctx, d);
@@ -609,7 +609,7 @@ replace_attr(kdump_ctx *ctx, struct attr_data *parent, struct attr_data *attr)
 {
 	struct attr_data *old;
 
-	for (old = parent->val.directory; old; old = old->next)
+	for (old = parent->dir; old; old = old->next)
 		if (old->template == attr->template) {
 			delete_attr(ctx, old);
 			break;

@@ -286,7 +286,6 @@ enum kdump_attr_type {
 /**  Dump file attribute value.
  */
 union kdump_attr_value {
-	void *directory;
 	kdump_num_t number;
 	kdump_addr_t address;
 	const char *string;
