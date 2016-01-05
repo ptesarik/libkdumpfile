@@ -538,6 +538,9 @@ kdump_status add_attr_static_string(kdump_ctx *ctx, const char *path,
 				    const struct attr_template *tmpl,
 				    const char *str);
 
+#define clear_attrs INTERNAL_NAME(clear_attrs)
+void clear_attrs(kdump_ctx *ctx);
+
 #define cleanup_attr INTERNAL_NAME(cleanup_attr)
 void cleanup_attr(kdump_ctx *ctx);
 

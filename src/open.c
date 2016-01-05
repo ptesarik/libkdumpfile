@@ -116,7 +116,7 @@ kdump_set_fd(kdump_ctx *ctx, int fd)
 		if (ret != kdump_unsupported)
 			return ret;
 
-		cleanup_attr(ctx);
+		clear_attrs(ctx);
 		clear_error(ctx);
 	}
 

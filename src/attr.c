@@ -578,14 +578,42 @@ instantiate_path(kdump_ctx *ctx, const struct attr_template *tmpl)
 	return d;
 }
 
-/**  Cleanup all attributes from a dump file object.
+/**  Clear (unset) all attributes.
  * @param ctx   Dump file object.
+ */
+void
+clear_attrs(kdump_ctx *ctx)
+{
+	if (static_attr_isset(&ctx->dir_root))
+		free_attr(ctx, &ctx->dir_root);
+}
+
+/**  Free all memory used by attributes.
+ * @param ctx  Dump file object.
  */
 void
 cleanup_attr(kdump_ctx *ctx)
 {
-	if (static_attr_isset(&ctx->dir_root))
-		free_attr(ctx, &ctx->dir_root);
+	struct attr_hash *tbl, *tblnext;
+	struct dyn_attr_template *dt, *dtnext;
+
+	clear_attrs(ctx);
+
+	tblnext = ctx->attr.next;
+	while(tblnext) {
+		tbl = tblnext;
+		tblnext = tbl->next;
+		free(tbl);
+	}
+	ctx->attr.next = NULL;
+
+	dtnext = ctx->tmpl;
+	while(dtnext) {
+		dt = dtnext;
+		dtnext = dt->next;
+		free(dt);
+	}
+	ctx->tmpl = NULL;
 }
 
 /**  Initialize statically allocated attributes
