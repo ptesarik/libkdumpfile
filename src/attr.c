@@ -328,10 +328,11 @@ keycmp(const struct attr_data *attr, const char *key)
 	while ( (p = memrchr(key, '.', len)) ) {
 		size_t partlen = key + len - p - 1;
 		int res = strncmp(attr->template->key, p + 1, partlen);
-		if (!res)
+		if (res)
 			return res;
 		if (attr->template->key[partlen] != '\0')
 			return 1;
+		attr = attr->parent;
 		len = p - key;
 	}
 
