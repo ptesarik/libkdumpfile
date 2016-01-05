@@ -40,8 +40,10 @@ set_error(kdump_ctx *ctx, kdump_status ret, const char *msgfmt, ...)
 {
 	static const char failure[] = "(set_error failed)";
 	static const char delim[] = { ':', ' ' };
+	static const char ellipsis[] = { '.', '.', '.' };
 
 	va_list ap;
+	char msgbuf[ERRBUF];
 	const char *msg;
 	int msglen;
 	size_t remain;
@@ -50,10 +52,16 @@ set_error(kdump_ctx *ctx, kdump_status ret, const char *msgfmt, ...)
 		return ret;
 
 	va_start(ap, msgfmt);
-	msglen = vasprintf((char**)&msg, msgfmt, ap);
+	msglen = snprintf(msgbuf, sizeof(msgbuf), msgfmt, ap);
+	va_end(ap);
+
 	if (msglen < 0) {
 		msg = failure;
 		msglen = sizeof(failure) - 1;
+	} else {
+		msg = msgbuf;
+		if (msglen >= sizeof(msgbuf))
+			msglen = sizeof(msgbuf) - 1;
 	}
 
 	if (!ctx->err_str) {
@@ -75,12 +83,9 @@ set_error(kdump_ctx *ctx, kdump_status ret, const char *msgfmt, ...)
 	} else {
 		ctx->err_str = ctx->err_buf;
 		memcpy(ctx->err_str, msg + msglen - remain, remain);
+		memcpy(ctx->err_str, ellipsis, sizeof(ellipsis));
 	}
 
-	if (remain < msglen)
-		memcpy(ctx->err_buf, "...", 3);
-
-	va_end(ap);
 	return ret;
 }
 
