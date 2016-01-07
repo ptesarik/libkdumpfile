@@ -151,7 +151,7 @@ pfn_to_idx(kdump_ctx *ctx, kdump_pfn_t pfn)
 		for (i = 0; i < ctx->xen_map_size; ++i, ++p)
 			if (*p == pfn)
 				return i;
-	} else if (get_attr_xen_type(ctx) == kdump_xen_hvm) {
+	} else if (get_attr_xen_type(ctx) == kdump_xen_pv) {
 		struct xen_p2m *p = ctx->xen_map;
 		for (i = 0; i < ctx->xen_map_size; ++i, ++p)
 			if (p->pfn == pfn)
