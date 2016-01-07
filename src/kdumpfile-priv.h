@@ -494,7 +494,7 @@ attr_isset(const struct attr_data *data)
 }
 
 #define set_attr INTERNAL_NAME(set_attr)
-void set_attr(kdump_ctx *ctx, struct attr_data *attr);
+void set_attr(struct attr_data *attr);
 
 #define set_attr_number INTERNAL_NAME(set_attr_number)
 kdump_status set_attr_number(kdump_ctx *ctx, const char *key,
@@ -550,7 +550,7 @@ void cleanup_attr(kdump_ctx *ctx);
 	set_attr_ ## name(kdump_ctx *ctx, ctype newval)		\
 	{							\
 		ctx->name.val.type = newval;			\
-		set_attr(ctx, &ctx->name); /* fail-safe */	\
+		set_attr(&ctx->name);				\
 	}
 
 #define DEFINE_ACCESSORS(name, type, ctype)	\

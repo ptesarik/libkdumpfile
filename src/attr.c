@@ -661,7 +661,7 @@ replace_attr(kdump_ctx *ctx, struct attr_data *parent, struct attr_data *attr)
  * allocated attributes.
  */
 void
-set_attr(kdump_ctx *ctx, struct attr_data *attr)
+set_attr(struct attr_data *attr)
 {
 	instantiate_path(attr->parent);
 	attr->isset = 1;
@@ -683,7 +683,7 @@ set_attr_number(kdump_ctx *ctx, const char *key, kdump_num_t num)
 		return set_error(ctx, kdump_nokey, "No such key");
 
 	attr->val.number = num;
-	set_attr(ctx, attr);
+	set_attr(attr);
 	return kdump_ok;
 }
 
@@ -703,7 +703,7 @@ set_attr_address(kdump_ctx *ctx, const char *key, kdump_addr_t addr)
 		return set_error(ctx, kdump_nokey, "No such key");
 
 	attr->val.address = addr;
-	set_attr(ctx, attr);
+	set_attr(attr);
 	return kdump_ok;
 }
 
@@ -735,7 +735,7 @@ set_attr_string(kdump_ctx *ctx, const char *key, const char *str)
 
 	attr->dynstr = 1;
 	attr->val.string = dynstr;
-	set_attr(ctx, attr);
+	set_attr(attr);
 	return kdump_ok;
 }
 
@@ -759,7 +759,7 @@ set_attr_static_string(kdump_ctx *ctx, const char *key, const char *str)
 
 	attr->dynstr = 0;
 	attr->val.string = str;
-	set_attr(ctx, attr);
+	set_attr(attr);
 	return kdump_ok;
 }
 
