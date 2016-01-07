@@ -342,6 +342,10 @@ alloc_attr(const struct attr_template *tmpl)
 	ret->template = tmpl;
 	ret->isset = 0;
 	ret->dynstr = 0;
+
+	if (tmpl->type == kdump_directory)
+		ret->dir = NULL;
+
 	return ret;
 }
 
@@ -535,8 +539,6 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate attribute stub");
 	}
-	if (type == kdump_directory)
-		attr->dir = NULL;
 
 	link_attr(parent, attr);
 	res = hash_attr(ctx, attr);
@@ -630,9 +632,6 @@ init_attrs(kdump_ctx *ctx)
 			if (!attr)
 				return kdump_syserr;
 		}
-
-		if (tmpl->type == kdump_directory)
-			attr->dir = NULL;
 
 		attrs[i] = attr;
 		link_attr(attrs[tmpl->parent - global_keys], attr);
