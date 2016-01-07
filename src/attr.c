@@ -324,27 +324,23 @@ clear_attr(struct attr_data *attr)
  * @param parent  Parent directory. If @c NULL, create a self-owned
  *                attribute (root directory).
  * @param tmpl    Attribute template.
- * @param pattr   Pointer to attribute data, filled out on success.
- * @returns       Error status.
+ * @returns       Attribute data, or @c NULL on allocation failure.
  */
-static kdump_status
+static struct attr_data *
 new_attr(kdump_ctx *ctx, struct attr_data *parent,
-	 const struct attr_template *tmpl, struct attr_data **pattr)
+	 const struct attr_template *tmpl)
 {
 	struct attr_data *attr;
 
 	attr = alloc_attr(ctx, parent, tmpl);
 	if (!attr)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute");
-	attr->template = tmpl;
+		return attr;
 
+	attr->template = tmpl;
 	if (!parent)
 		parent = attr;
-
 	link_attr(parent, attr);
-	*pattr = attr;
-	return kdump_ok;
+	return attr;
 }
 
 /**  Add an attribute template.
@@ -357,7 +353,6 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 	struct dyn_attr_template *dt;
 	struct attr_data *attr, *parent;
 	char *keyname;
-	kdump_status res;
 
 	attr = lookup_attr_raw(ctx, path);
 	if (attr) {
@@ -387,10 +382,11 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 	dt->template.parent = parent->template;
 	dt->template.type = type;
 
-	res = new_attr(ctx, parent, &dt->template, &attr);
-	if (res != kdump_ok) {
+	attr = new_attr(ctx, parent, &dt->template);
+	if (!attr) {
 		free(dt);
-		return res;
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate attribute");
 	}
 
 	dt->next = ctx->tmpl;
@@ -461,16 +457,17 @@ kdump_status
 init_attrs(kdump_ctx *ctx)
 {
 	enum global_keyidx i;
-	kdump_status res;
 
 	for (i = 0; i < NR_GLOBAL; ++i) {
 		const struct attr_template *tmpl = &global_keys[i];
 		struct attr_data *attr, *parent;
 
 		parent = ctx->global_attrs[tmpl->parent - global_keys];
-		res = new_attr(ctx, parent, tmpl, &attr);
-		if (res != kdump_ok)
-			return res;
+		attr = new_attr(ctx, parent, tmpl);
+		if (!attr)
+			return set_error(ctx, kdump_syserr,
+					 "Cannot initialize attribute %s",
+					 tmpl->key);
 		ctx->global_attrs[i] = attr;
 
 		if (i < NR_STATIC && tmpl->type != kdump_directory) {
@@ -599,7 +596,7 @@ static kdump_status
 add_attr(kdump_ctx *ctx, const char *dir, const struct attr_template *tmpl,
 	 struct attr_data **pattr)
 {
-	struct attr_data *parent;
+	struct attr_data *parent, *attr;
 
 	parent = (struct attr_data*) lookup_attr_raw(ctx, dir);
 	if (!parent)
@@ -610,7 +607,13 @@ add_attr(kdump_ctx *ctx, const char *dir, const struct attr_template *tmpl,
 				 "Path is a leaf attribute");
 
 	instantiate_path(parent);
-	return new_attr(ctx, parent, tmpl, pattr);
+	attr = new_attr(ctx, parent, tmpl);
+	if (!attr)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate attribute");
+
+	*pattr = attr;
+	return kdump_ok;
 }
 
 /**  Add a numeric attribute to a directory.
