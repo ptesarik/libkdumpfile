@@ -345,20 +345,20 @@ lookup_attr(const kdump_ctx *ctx, const char *key)
 
 /**  Allocate a new attribute.
  * @param tmpl   Attribute template.
- * @param extra  Extra size to be allocated.
  */
 static struct attr_data*
-alloc_attr(const struct attr_template *tmpl, size_t extra)
+alloc_attr(const struct attr_template *tmpl)
 {
 	struct attr_data *ret;
 
-	ret = malloc(sizeof(struct attr_data) + extra);
+	ret = malloc(sizeof(struct attr_data));
 	if (!ret)
 		return NULL;
 
 	ret->parent = NULL;
 	ret->template = tmpl;
 	ret->isset = 0;
+	ret->dynstr = 0;
 	return ret;
 }
 
@@ -366,12 +366,10 @@ alloc_attr(const struct attr_template *tmpl, size_t extra)
  * @param ctx         Dump file object.
  * @param[out] pattr  To be filled with the allocated attribute.
  * @param key         Key name.
- * @param extra       Extra size to be allocated.
  * @returns           Error status.
  */
 static kdump_status
-alloc_attr_by_key(kdump_ctx *ctx, struct attr_data **pattr,
-		  const char *key, size_t extra)
+alloc_attr_by_key(kdump_ctx *ctx, struct attr_data **pattr, const char *key)
 {
 	const struct attr_template *t;
 	struct attr_data *attr;
@@ -380,7 +378,7 @@ alloc_attr_by_key(kdump_ctx *ctx, struct attr_data **pattr,
 	if (!t)
 		return set_error(ctx, kdump_nokey, "No such path");
 
-	attr = alloc_attr(t, extra);
+	attr = alloc_attr(t);
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate attribute");
@@ -489,6 +487,10 @@ free_attr(kdump_ctx *ctx, struct attr_data *attr)
 	attr->isset = 0;
 	if (attr->parent)
 		unhash_attr(ctx, attr);
+	if (attr->dynstr) {
+		attr->dynstr = 0;
+		free((void*)attr->val.string);
+	}
 	if (!template_static(attr->template))
 		free(attr);
 }
@@ -557,7 +559,7 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 			return set_error(ctx, kdump_nokey, "No such path");
 		}
 
-		attr = alloc_attr(&dt->template, 0);
+		attr = alloc_attr(&dt->template);
 		if (!attr) {
 			free(dt);
 			return set_error(ctx, kdump_syserr,
@@ -655,7 +657,7 @@ init_attrs(kdump_ctx *ctx)
 			attr = static_attr_data(ctx, i);
 			attr->template = tmpl;
 		} else if (tmpl->type == kdump_directory) {
-			attr = alloc_attr(tmpl, 0);
+			attr = alloc_attr(tmpl);
 			if (!attr)
 				return kdump_syserr;
 			attr->dir = NULL;
@@ -736,7 +738,7 @@ set_attr_number(kdump_ctx *ctx, const char *key, kdump_num_t num)
 	struct attr_data *attr;
 	kdump_status res;
 
-	res = alloc_attr_by_key(ctx, &attr, key, 0);
+	res = alloc_attr_by_key(ctx, &attr, key);
 	if (res != kdump_ok)
 		return res;
 
@@ -756,7 +758,7 @@ set_attr_address(kdump_ctx *ctx, const char *key, kdump_addr_t addr)
 	struct attr_data *attr;
 	kdump_status res;
 
-	res = alloc_attr_by_key(ctx, &attr, key, 0);
+	res = alloc_attr_by_key(ctx, &attr, key);
 	if (res != kdump_ok)
 		return res;
 
@@ -774,16 +776,21 @@ kdump_status
 set_attr_string(kdump_ctx *ctx, const char *key, const char *str)
 {
 	struct attr_data *attr;
-	size_t len = strlen(str);
 	char *dynstr;
 	kdump_status res;
 
-	res = alloc_attr_by_key(ctx, &attr, key, len + 1);
-	if (res != kdump_ok)
-		return res;
+	dynstr = strdup(str);
+	if (!dynstr)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate string");
 
-	dynstr = (char*)(attr + 1);
-	memcpy(dynstr, str, len + 1);
+	res = alloc_attr_by_key(ctx, &attr, key);
+	if (res != kdump_ok) {
+		free(dynstr);
+		return res;
+	}
+
+	attr->dynstr = 1;
 	attr->val.string = dynstr;
 	return set_attr(ctx, attr);
 }
@@ -800,7 +807,7 @@ set_attr_static_string(kdump_ctx *ctx, const char *key, const char *str)
 	struct attr_data *attr;
 	kdump_status res;
 
-	res = alloc_attr_by_key(ctx, &attr, key, 0);
+	res = alloc_attr_by_key(ctx, &attr, key);
 	if (res != kdump_ok)
 		return res;
 
@@ -850,7 +857,7 @@ add_attr_number(kdump_ctx *ctx, const char *path,
 	struct attr_data *attr;
 	kdump_status res;
 
-	attr = alloc_attr(tmpl, 0);
+	attr = alloc_attr(tmpl);
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate attribute");
@@ -879,17 +886,22 @@ add_attr_string(kdump_ctx *ctx, const char *path,
 		const struct attr_template *tmpl, const char *str)
 {
 	struct attr_data *attr;
-	size_t len = strlen(str);
 	char *dynstr;
 	kdump_status res;
 
-	attr = alloc_attr(tmpl, len + 1);
-	if (!attr)
+	dynstr = strdup(str);
+	if (!dynstr)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate string");
+
+	attr = alloc_attr(tmpl);
+	if (!attr) {
+		free(dynstr);
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate attribute");
+	}
 
-	dynstr = (char*)(attr + 1);
-	memcpy(dynstr, str, len + 1);
+	attr->dynstr = 1;
 	attr->val.string = dynstr;
 	res = add_attr(ctx, path, attr);
 	if (res != kdump_ok)
@@ -916,7 +928,7 @@ kdump_status add_attr_static_string(kdump_ctx *ctx, const char *path,
 	struct attr_data *attr;
 	kdump_status res;
 
-	attr = alloc_attr(tmpl, 0);
+	attr = alloc_attr(tmpl);
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate attribute");

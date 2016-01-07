@@ -237,7 +237,10 @@ struct dyn_attr_template {
 struct attr_data {
 	struct attr_data *next, *parent;
 	const struct attr_template *template;
+
 	unsigned isset : 1;
+	unsigned dynstr : 1;	/*< Dynamically allocated string */
+
 	union {
 		union kdump_attr_value val;
 		struct attr_data *dir; /*< For @c kdump_directory */
