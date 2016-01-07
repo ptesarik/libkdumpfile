@@ -493,6 +493,42 @@ delete_attr(kdump_ctx *ctx, struct attr_data *attr)
 	free_attr(ctx, attr);
 }
 
+/**  Allocate a new attribute in any directory.
+ * @param ctx     Dump file object.
+ * @param parent  Parent directory.
+ * @param tmpl    Attribute template.
+ * @param pattr   Pointer to attribute data, filled out on success.
+ * @returns       Error status.
+ */
+static kdump_status
+new_attr(kdump_ctx *ctx, struct attr_data *parent,
+	 const struct attr_template *tmpl, struct attr_data **pattr)
+{
+	struct attr_data *attr, *old;
+	kdump_status res;
+
+	attr = alloc_attr(tmpl);
+	if (!attr)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate attribute");
+
+	link_attr(parent, attr);
+	res = hash_attr(ctx, attr);
+	if (res != kdump_ok) {
+		delete_attr(ctx, attr);
+		return res;
+	}
+
+	for (old = parent->dir; old; old = old->next)
+		if (old != attr && old->template == attr->template) {
+			delete_attr(ctx, old);
+			break;
+		}
+
+	*pattr = attr;
+	return kdump_ok;
+}
+
 /**  Add an attribute template.
  * @param ctx   Dump file object.
  */
@@ -533,20 +569,10 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 	dt->template.parent = parent->template;
 	dt->template.type = type;
 
-	attr = alloc_attr(&dt->template);
-	if (!attr) {
-		free(dt);
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute stub");
-	}
-
-	link_attr(parent, attr);
-	res = hash_attr(ctx, attr);
+	res = new_attr(ctx, parent, &dt->template, &attr);
 	if (res != kdump_ok) {
-		free_attr(ctx, attr);
 		free(dt);
-		return set_error(ctx, res,
-				 "Cannot hash attribute stub");
+		return res;
 	}
 
 	dt->next = ctx->tmpl;
@@ -622,48 +648,26 @@ init_attrs(kdump_ctx *ctx)
 
 	for (i = 0; i < NR_GLOBAL; ++i) {
 		const struct attr_template *tmpl = &global_keys[i];
-		struct attr_data *attr;
+		struct attr_data *attr, *parent;
 
 		if (i < NR_STATIC) {
-			attr = static_attr_data(ctx, i);
+			attrs[i] = attr = static_attr_data(ctx, i);
 			attr->template = tmpl;
-		} else {
-			attr = alloc_attr(tmpl);
-			if (!attr)
-				return kdump_syserr;
-		}
 
-		attrs[i] = attr;
-		link_attr(attrs[tmpl->parent - global_keys], attr);
-		res = hash_attr(ctx, attr);
-		if (res != kdump_ok)
-			return res;
+			parent = attrs[tmpl->parent - global_keys];
+			link_attr(parent, attr);
+			res = hash_attr(ctx, attr);
+			if (res != kdump_ok)
+				return res;
+		} else {
+			parent = attrs[tmpl->parent - global_keys];
+			res = new_attr(ctx, parent, tmpl, &attrs[i]);
+			if (res != kdump_ok)
+				return res;
+		}
 	}
 
 	return kdump_ok;
-}
-
-/**  Replace an attribute.
- * @param ctx     Dump file object.
- * @param parent  Parent attribute.
- * @param attr    New attribute data.
- *
- * Replace an attribute node under @c parent with @c attr. If the
- * given attribute does not exist yet, @c attr is simply added under
- * @c parent. Otherwise, the old attribute is deleted first.
- */
-static void
-replace_attr(kdump_ctx *ctx, struct attr_data *parent, struct attr_data *attr)
-{
-	struct attr_data *old;
-
-	for (old = parent->dir; old; old = old->next)
-		if (old->template == attr->template) {
-			delete_attr(ctx, old);
-			break;
-		}
-
-	link_attr(parent, attr);
 }
 
 /**  Set an attribute of a dump file object.
@@ -783,8 +787,7 @@ static kdump_status
 add_attr(kdump_ctx *ctx, const char *dir, const struct attr_template *tmpl,
 	 struct attr_data **pattr)
 {
-	struct attr_data *parent, *attr;
-	kdump_status res;
+	struct attr_data *parent;
 
 	parent = (struct attr_data*) lookup_attr_raw(ctx, dir);
 	if (!parent)
@@ -794,21 +797,8 @@ add_attr(kdump_ctx *ctx, const char *dir, const struct attr_template *tmpl,
 		return set_error(ctx, kdump_invalid,
 				 "Path is a leaf attribute");
 
-	attr = alloc_attr(tmpl);
-	if (!attr)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute");
-
 	instantiate_path(parent);
-	replace_attr(ctx, parent, attr);
-	res = hash_attr(ctx, attr);
-	if (res != kdump_ok) {
-		free_attr(ctx, attr);
-		return res;
-	}
-
-	*pattr = attr;
-	return kdump_ok;
+	return new_attr(ctx, parent, tmpl, pattr);
 }
 
 /**  Add a numeric attribute to a directory.
