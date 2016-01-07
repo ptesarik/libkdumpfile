@@ -100,9 +100,8 @@ ctx_malloc(size_t size, kdump_ctx *ctx, const char *desc)
 }
 
 unsigned long
-string_hash(const char *s)
+mem_hash(const char *s, size_t len)
 {
-	size_t len = strlen(s);
 	unsigned long hash = 0;
 
 	while (len >= sizeof(unsigned long)) {
@@ -114,6 +113,12 @@ string_hash(const char *s)
 	while (len--)
 		hash += (unsigned long)*s++ << (8 * len);
 	return hash;
+}
+
+unsigned long
+string_hash(const char *s)
+{
+	return mem_hash(s, strlen(s));
 }
 
 static size_t

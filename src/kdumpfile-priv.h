@@ -423,6 +423,9 @@ kdump_status set_cpu_regs32(kdump_ctx *ctx, unsigned cpu,
 #define string_hash INTERNAL_NAME(string_hash)
 unsigned long string_hash(const char *s);
 
+#define mem_hash INTERNAL_NAME(mem_hash)
+unsigned long mem_hash(const char *s, size_t len);
+
 /* Knuth recommends primes in approximately golden ratio to the maximum
  * integer representable by a machine word for multiplicative hashing.
  */
