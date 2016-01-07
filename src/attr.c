@@ -772,18 +772,21 @@ set_attr_static_string(kdump_ctx *ctx, const char *key, const char *str)
 	return kdump_ok;
 }
 
-/**  Add an attribute to any directory.
- * @param ctx   Dump file object.
- * @param path  Key name.
- * @param attr  Attribute data.
- * @returns     Newly allocated attr_data, or @c NULL on failure.
+/**  Allocate a new attribute in any directory.
+ * @param ctx    Dump file object.
+ * @param dir    Directory key path.
+ * @param tmpl   Attribute template.
+ * @param pattr  Pointer to attribute data, filled out on success.
+ * @returns      Error status.
  */
-kdump_status
-add_attr(kdump_ctx *ctx, const char *path, struct attr_data *attr)
+static kdump_status
+add_attr(kdump_ctx *ctx, const char *dir, const struct attr_template *tmpl,
+	 struct attr_data **pattr)
 {
-	struct attr_data *parent;
+	struct attr_data *parent, *attr;
+	kdump_status res;
 
-	parent = (struct attr_data*) lookup_attr_raw(ctx, path);
+	parent = (struct attr_data*) lookup_attr_raw(ctx, dir);
 	if (!parent)
 		return set_error(ctx, kdump_nokey,
 				 "No such path");
@@ -791,10 +794,21 @@ add_attr(kdump_ctx *ctx, const char *path, struct attr_data *attr)
 		return set_error(ctx, kdump_invalid,
 				 "Path is a leaf attribute");
 
+	attr = alloc_attr(tmpl);
+	if (!attr)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate attribute");
+
 	instantiate_path(parent);
 	replace_attr(ctx, parent, attr);
-	attr->isset = 1;
-	return hash_attr(ctx, attr);
+	res = hash_attr(ctx, attr);
+	if (res != kdump_ok) {
+		free_attr(ctx, attr);
+		return res;
+	}
+
+	*pattr = attr;
+	return kdump_ok;
 }
 
 /**  Add a numeric attribute to a directory.
@@ -814,18 +828,14 @@ add_attr_number(kdump_ctx *ctx, const char *path,
 	struct attr_data *attr;
 	kdump_status res;
 
-	attr = alloc_attr(tmpl);
-	if (!attr)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute");
+	res = add_attr(ctx, path, tmpl, &attr);
+	if (res != kdump_ok)
+		return set_error(ctx, res,
+				 "Cannot set '%s.%s'", path, tmpl->key);
 
 	attr->val.number = num;
-	res = add_attr(ctx, path, attr);
-	if (res != kdump_ok)
-		free_attr(ctx, attr);
-
-	return set_error(ctx, res,
-			 "Cannot set '%s.%s'", path, tmpl->key);
+	set_attr(attr);
+	return kdump_ok;
 }
 
 /**  Add a string attribute to a directory.
@@ -851,21 +861,17 @@ add_attr_string(kdump_ctx *ctx, const char *path,
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate string");
 
-	attr = alloc_attr(tmpl);
-	if (!attr) {
+	res = add_attr(ctx, path, tmpl, &attr);
+	if (res != kdump_ok) {
 		free(dynstr);
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute");
+		return set_error(ctx, res,
+				 "Cannot set '%s.%s'", path, tmpl->key);
 	}
 
 	attr->dynstr = 1;
 	attr->val.string = dynstr;
-	res = add_attr(ctx, path, attr);
-	if (res != kdump_ok)
-		free_attr(ctx, attr);
-
-	return set_error(ctx, res,
-			 "Cannot set '%s.%s'", path, tmpl->key);
+	set_attr(attr);
+	return kdump_ok;
 }
 
 /**  Add a static string attribute to a directory.
@@ -885,16 +891,12 @@ kdump_status add_attr_static_string(kdump_ctx *ctx, const char *path,
 	struct attr_data *attr;
 	kdump_status res;
 
-	attr = alloc_attr(tmpl);
-	if (!attr)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute");
+	res = add_attr(ctx, path, tmpl, &attr);
+	if (res != kdump_ok)
+		return set_error(ctx, res,
+				 "Cannot set '%s.%s'", path, tmpl->key);
 
 	attr->val.string = str;
-	res = add_attr(ctx, path, attr);
-	if (res != kdump_ok)
-		free_attr(ctx, attr);
-
-	return set_error(ctx, res,
-			 "Cannot set '%s.%s'", path, tmpl->key);
+	set_attr(attr);
+	return kdump_ok;
 }

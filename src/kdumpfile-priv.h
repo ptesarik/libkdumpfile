@@ -515,10 +515,6 @@ kdump_status set_attr_string(kdump_ctx *ctx, const char *key,
 kdump_status set_attr_static_string(kdump_ctx *ctx, const char *key,
 				    const char *str);
 
-#define add_attr INTERNAL_NAME(add_attr)
-kdump_status add_attr(kdump_ctx *ctx, const char *path,
-		      struct attr_data *attr);
-
 #define add_attr_number INTERNAL_NAME(add_attr_number)
 kdump_status add_attr_number(kdump_ctx *ctx, const char *path,
 			     const struct attr_template *tmpl,
