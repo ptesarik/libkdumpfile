@@ -399,6 +399,27 @@ unhash_attr(kdump_ctx *ctx, const struct attr_data *attr)
 	/* Not hashed? This should never happen. */
 }
 
+/**  Clear (unset) an attribute.
+ */
+static void
+clear_attr(struct attr_data *attr)
+{
+	if (attr->template->type == kdump_directory) {
+		struct attr_data *child = attr->dir;
+		while (child) {
+			struct attr_data *next = child->next;
+			clear_attr(child);
+			child = next;
+		}
+	}
+
+	attr->isset = 0;
+	if (attr->dynstr) {
+		attr->dynstr = 0;
+		free((void*) attr->val.string);
+	}
+}
+
 /**  Free all memory associated with an attribute.
  * @param ctx   Dump file object.
  * @param attr  The attribute to be freed (detached).
@@ -413,15 +434,12 @@ free_attr(kdump_ctx *ctx, struct attr_data *attr)
 			free_attr(ctx, node);
 			node = next;
 		}
+		attr->dir = NULL;
 	}
 
-	attr->isset = 0;
+	clear_attr(attr);
 	if (attr->parent)
 		unhash_attr(ctx, attr);
-	if (attr->dynstr) {
-		attr->dynstr = 0;
-		free((void*)attr->val.string);
-	}
 	if (!template_static(attr->template))
 		free(attr);
 }
@@ -533,8 +551,7 @@ instantiate_path(struct attr_data *attr)
 void
 clear_attrs(kdump_ctx *ctx)
 {
-	if (attr_isset(&ctx->dir_root))
-		free_attr(ctx, &ctx->dir_root);
+	clear_attr(&ctx->dir_root);
 }
 
 /**  Free all memory used by attributes.
@@ -546,7 +563,7 @@ cleanup_attr(kdump_ctx *ctx)
 	struct attr_hash *tbl, *tblnext;
 	struct dyn_attr_template *dt, *dtnext;
 
-	clear_attrs(ctx);
+	free_attr(ctx, &ctx->dir_root);
 
 	tblnext = ctx->attr.next;
 	while(tblnext) {
@@ -653,6 +670,7 @@ set_attr_number(kdump_ctx *ctx, const char *key, kdump_num_t num)
 	if (!attr)
 		return set_error(ctx, kdump_nokey, "No such key");
 
+	clear_attr(attr);
 	attr->val.number = num;
 	set_attr(attr);
 	return kdump_ok;
@@ -673,6 +691,7 @@ set_attr_address(kdump_ctx *ctx, const char *key, kdump_addr_t addr)
 	if (!attr)
 		return set_error(ctx, kdump_nokey, "No such key");
 
+	clear_attr(attr);
 	attr->val.address = addr;
 	set_attr(attr);
 	return kdump_ok;
@@ -701,9 +720,7 @@ set_attr_string(kdump_ctx *ctx, const char *key, const char *str)
 		return set_error(ctx, kdump_nokey, "No such key");
 	}
 
-	if (attr->dynstr)
-		free((void*)attr->val.string);
-
+	clear_attr(attr);
 	attr->dynstr = 1;
 	attr->val.string = dynstr;
 	set_attr(attr);
@@ -725,10 +742,7 @@ set_attr_static_string(kdump_ctx *ctx, const char *key, const char *str)
 	if (!attr)
 		return set_error(ctx, kdump_nokey, "No such key");
 
-	if (attr->dynstr)
-		free((void*) attr->val.string);
-
-	attr->dynstr = 0;
+	clear_attr(attr);
 	attr->val.string = str;
 	set_attr(attr);
 	return kdump_ok;
