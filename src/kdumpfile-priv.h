@@ -296,7 +296,7 @@ struct _tag_kdump_ctx {
 
 	/* static attributes */
 #define ATTR(dir, key, field, type, ctype)	\
-	struct attr_data field;
+	union kdump_attr_value field;
 #include "static-attr.def"
 #undef ATTR
 
@@ -555,20 +555,20 @@ void cleanup_attr(kdump_ctx *ctx);
 	static inline ctype					\
 	get_attr_ ## name(kdump_ctx *ctx)			\
 	{							\
-		return ctx->name.val.type;			\
+		return ctx->name.type;				\
 	}
 #define DEFINE_SET_ACCESSOR(name, type, ctype)			\
 	static inline void					\
 	set_attr_ ## name(kdump_ctx *ctx, ctype newval)		\
 	{							\
-		ctx->name.val.type = newval;			\
-		set_attr(&ctx->name);				\
+		ctx->name.type = newval;			\
+		set_attr(ctx->global_attrs[GKI_ ## name]);	\
 	}
-#define DEFINE_ISSET_ACCESSOR(name)				\
-	static inline int					\
-	isset_ ## name(kdump_ctx *ctx)				\
-	{							\
-		return attr_isset(&ctx->name);			\
+#define DEFINE_ISSET_ACCESSOR(name)					\
+	static inline int						\
+	isset_ ## name(kdump_ctx *ctx)					\
+	{								\
+		return attr_isset(ctx->global_attrs[GKI_ ## name]);	\
 	}
 
 #define DEFINE_ACCESSORS(name, type, ctype)	\

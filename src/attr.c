@@ -55,37 +55,15 @@ static const size_t static_offsets[] = {
 #define NR_GLOBAL	ARRAY_SIZE(global_keys)
 #define NR_STATIC	ARRAY_SIZE(static_offsets)
 
-/**  Get a modifiable pointer to the static data with a given index.
+/**  Get a pointer to the static value with a given index.
  * @param ctx  Dump file object.
  * @param idx  Static index.
- * @returns    Pointer to the actual static attribute data.
- * @sa static_attr_data_const
+ * @returns    Pointer to the static attribute value.
  */
-static inline struct attr_data *
-static_attr_data(kdump_ctx *ctx, enum global_keyidx idx)
+static inline union kdump_attr_value *
+static_attr_value(kdump_ctx *ctx, enum global_keyidx idx)
 {
-	return (struct attr_data*)((char*)ctx + static_offsets[idx]);
-}
-
-/**  Get a const pointer to the static data with a given index.
- * @sa static_attr_data
- */
-static inline const struct attr_data *
-static_attr_data_const(const kdump_ctx *ctx, enum global_keyidx idx)
-{
-	return (const struct attr_data*)
-		((const char*)ctx + static_offsets[idx]);
-}
-
-/**  Check if a template denotes statically allocated attribute
- * @param tmpl  Template.
- * @returns     Non-zero if the template's attribute is static.
- */
-static inline int
-template_static(const struct attr_template *tmpl)
-{
-	return tmpl >= &global_keys[0] &&
-		tmpl < &global_keys[NR_STATIC];
+	return (union kdump_attr_value*)((char*)ctx + static_offsets[idx]);
 }
 
 /**  Calculate the hash index of a key path.
@@ -267,7 +245,7 @@ lookup_attr_parent(const kdump_ctx *ctx, const char **pkey)
 
 	p = strrchr(*pkey, '.');
 	if (!p)
-		return (struct attr_data*) &ctx->dir_root;
+		return ctx->global_attrs[GKI_dir_root];
 
 	key = *pkey;
 	*pkey = p + 1;
@@ -420,8 +398,7 @@ free_attr(kdump_ctx *ctx, struct attr_data *attr)
 	clear_attr(attr);
 	if (attr->parent)
 		unhash_attr(ctx, attr);
-	if (!template_static(attr->template))
-		free(attr);
+	free(attr);
 }
 
 /**  Delete an attribute.
@@ -444,7 +421,8 @@ delete_attr(kdump_ctx *ctx, struct attr_data *attr)
 
 /**  Allocate a new attribute in any directory.
  * @param ctx     Dump file object.
- * @param parent  Parent directory.
+ * @param parent  Parent directory. If @c NULL, create a self-owned
+ *                attribute (root directory).
  * @param tmpl    Attribute template.
  * @param pattr   Pointer to attribute data, filled out on success.
  * @returns       Error status.
@@ -460,6 +438,9 @@ new_attr(kdump_ctx *ctx, struct attr_data *parent,
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate attribute");
+
+	if (!parent)
+		parent = attr;
 
 	link_attr(parent, attr);
 	res = hash_attr(ctx, attr);
@@ -555,7 +536,7 @@ instantiate_path(struct attr_data *attr)
 void
 clear_attrs(kdump_ctx *ctx)
 {
-	clear_attr(&ctx->dir_root);
+	clear_attr(ctx->global_attrs[GKI_dir_root]);
 }
 
 /**  Free all memory used by attributes.
@@ -567,7 +548,7 @@ cleanup_attr(kdump_ctx *ctx)
 	struct attr_hash *tbl, *tblnext;
 	struct dyn_attr_template *dt, *dtnext;
 
-	free_attr(ctx, &ctx->dir_root);
+	free_attr(ctx, ctx->global_attrs[GKI_dir_root]);
 
 	tblnext = ctx->attr.next;
 	while(tblnext) {
@@ -598,21 +579,15 @@ init_attrs(kdump_ctx *ctx)
 		const struct attr_template *tmpl = &global_keys[i];
 		struct attr_data *attr, *parent;
 
-		if (i < NR_STATIC) {
-			ctx->global_attrs[i] = attr = static_attr_data(ctx, i);
-			attr->template = tmpl;
+		parent = ctx->global_attrs[tmpl->parent - global_keys];
+		res = new_attr(ctx, parent, tmpl, &attr);
+		if (res != kdump_ok)
+			return res;
+		ctx->global_attrs[i] = attr;
 
-			parent = ctx->global_attrs[tmpl->parent - global_keys];
-			link_attr(parent, attr);
-			res = hash_attr(ctx, attr);
-			if (res != kdump_ok)
-				return res;
-		} else {
-			parent = ctx->global_attrs[tmpl->parent - global_keys];
-			res = new_attr(ctx, parent, tmpl,
-				       &ctx->global_attrs[i]);
-			if (res != kdump_ok)
-				return res;
+		if (i < NR_STATIC && tmpl->type != kdump_directory) {
+			attr->indirect = 1;
+			attr->pval = static_attr_value(ctx, i);
 		}
 	}
 
