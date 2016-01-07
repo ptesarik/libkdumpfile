@@ -88,30 +88,6 @@ template_static(const struct attr_template *tmpl)
 		tmpl < &global_keys[NR_STATIC];
 }
 
-/**  Lookup attribute value by template.
- * @param ctx   Dump file object.
- * @param tmpl  Attribute template.
- * @returns     Stored attribute or @c NULL if not found.
- */
-static const struct attr_data*
-lookup_attr_tmpl(const kdump_ctx *ctx, const struct attr_template *tmpl)
-{
-	const struct attr_data *parent;
-	const struct attr_data *d;
-
-	if (template_static(tmpl))
-		return static_attr_data_const(ctx, tmpl - global_keys);
-
-	parent = lookup_attr_tmpl(ctx, tmpl->parent);
-	if (!parent)
-		return NULL;
-
-	for (d = parent->dir; d; d = d->next)
-		if (d->template == tmpl)
-			return d;
-	return NULL;
-}
-
 /**  Calculate the hash index of a key path.
  * @param key  Key path.
  * @returns    Desired index in the hash table.
@@ -131,6 +107,26 @@ static unsigned
 part_hash_index(const char *key, size_t keylen)
 {
 	return fold_hash(mem_hash(key, keylen), ATTR_HASH_BITS);
+}
+
+/**  Get the length of an attribute template path
+ * @param tmpl  Attribute template.
+ * @returns     Length of the full path string.
+ *
+ * The returned length does not include the terminating NUL character.
+ */
+static size_t
+tmpl_pathlen(const struct attr_template *tmpl)
+{
+	const struct attr_template *t;
+	size_t len = 0;
+
+	for (t = tmpl; t->parent != t; t = t->parent) {
+		len += strlen(t->key);
+		if (t != tmpl)
+			++len;	/* for the separating dot ('.') */
+	}
+	return len;
 }
 
 /**  Get the length of an attribute path
@@ -153,8 +149,8 @@ attr_pathlen(const struct attr_data *attr)
 	return len;
 }
 
-/**  Construct an attribute's key path.
- * @param attr  Attribute data.
+/**  Construct an attribute template path.
+ * @param tmpl  Attribute template.
  * @param endp  Pointer to the __end__ of the path buffer.
  * @returns     Beginning of the path buffer.
  *
@@ -162,6 +158,29 @@ attr_pathlen(const struct attr_data *attr)
  * use @c attr_pathlen to calculate the required length.
  * Note that the resulting path is a NUL-terminated string, and the buffer
  * must also contain space for this terminating NUL character.
+ */
+static char *
+make_tmpl_path(const struct attr_template *tmpl, char *endp)
+{
+	const struct attr_template *t;
+
+	*endp = '\0';
+	for (t = tmpl; t->parent != t; t = t->parent) {
+		size_t len = strlen(t->key);
+		if (t != tmpl)
+			*(--endp) = '.';
+		endp -= len;
+		memcpy(endp, t->key, len);
+	}
+	return endp;
+}
+
+/**  Construct an attribute's key path.
+ * @param attr  Attribute data.
+ * @param endp  Pointer to the __end__ of the path buffer.
+ * @returns     Beginning of the path buffer.
+ *
+ * Same restrictions as @c make_tmpl_path.
  */
 static char *
 make_attr_path(const struct attr_data *attr, char *endp)
@@ -258,11 +277,19 @@ lookup_attr_part(const kdump_ctx *ctx, const char *key, size_t keylen)
 static struct attr_data *
 lookup_attr_raw(const kdump_ctx *ctx, const char *key)
 {
-	if (!key || key > GATTR(NR_GLOBAL))
-		return (struct attr_data*)
-			lookup_attr_tmpl(ctx, &global_keys[-(intptr_t)key]);
+	size_t keylen;
 
-	return lookup_attr_part(ctx, key, strlen(key));
+	if (!key || key > GATTR(NR_GLOBAL)) {
+		char *keybuf;
+		const struct attr_template *tmpl =
+			&global_keys[-(intptr_t)key];
+		keylen = tmpl_pathlen(tmpl);
+		keybuf = alloca(keylen + 1);
+		key = make_tmpl_path(tmpl, keybuf + keylen);
+	} else
+		keylen = strlen(key);
+
+	return lookup_attr_part(ctx, key, keylen);
 }
 
 /**  Look up attribute data by name.
