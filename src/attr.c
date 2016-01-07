@@ -88,75 +88,6 @@ template_static(const struct attr_template *tmpl)
 		tmpl < &global_keys[NR_STATIC];
 }
 
-/**  Check if a template matches search criteria.
- * @param tmpl    Template to be checked.
- * @param dir     Template directory.
- * @param key     Key name.
- * @param keylen  Key length.
- */
-static inline int
-template_match(const struct attr_template *tmpl,
-	       const struct attr_template *dir,
-	       const char *key, size_t keylen)
-{
-	return (tmpl->parent == dir &&
-		!strncmp(tmpl->key, key, keylen) &&
-		tmpl->key[keylen] == '\0');
-}
-
-/**  Look up a template by its name in one directory.
- * @param ctx     Dump file object.
- * @param dir     Attribute directory.
- * @param key     Key name.
- * @param keylen  Key length.
- * @returns       Template with the given key, or @c NULL if not found.
- *
- * By specifying the key length, it is possible to search for a
- * component of an attribute path without copying the path string.
- */
-static const struct attr_template*
-lookup_template_dir(const kdump_ctx *ctx, const struct attr_template *dir,
-		    const char *key, size_t keylen)
-{
-	const struct dyn_attr_template *dt;
-	const struct attr_template *t;
-
-	for (dt = ctx->tmpl; dt; dt = dt->next)
-		if (template_match(&dt->template, dir, key, keylen))
-			return &dt->template;
-
-	for (t = global_keys; t < &global_keys[NR_GLOBAL]; ++t)
-		if (template_match(t, dir, key, keylen))
-			return t;
-	return NULL;
-}
-
-/**  Look up the parent of a template by name.
- * @param ctx   Dump file object.
- * @param pkey  Pointer to key name. If the path is found, this pointer
- *              is updated to the last path component on return.
- * @returns     Attribute template of @c key's parent attribute,
- *              or @c NULL if not found.
- */
-static const struct attr_template*
-lookup_template_parent(const kdump_ctx *ctx, const char **pkey)
-{
-	const struct attr_template *dir;
-	const char *p, *key = *pkey;
-
-	dir = &global_keys[GKI_dir_root];
-	while ( (p = strchr(key, '.')) ) {
-		dir = lookup_template_dir(ctx, dir, key, p - key);
-		if (!dir || dir->type != kdump_directory)
-			return NULL; /* directory not found */
-
-		key = p + 1;
-	}
-
-	*pkey = key;
-	return dir;
-}
-
 /**  Lookup attribute value by template.
  * @param ctx   Dump file object.
  * @param tmpl  Attribute template.
@@ -346,6 +277,28 @@ lookup_attr(const kdump_ctx *ctx, const char *key)
 	return d && attr_isset(d) ? d : NULL;
 }
 
+/**  Look up attribute parent by name.
+ * @param ctx   Dump file object.
+ * @param pkey  Pointer to key name. This pointer is updated to the last
+ *              path component on return.
+ * @returns     Stored attribute or @c NULL if not found.
+ *
+ * This function does not check whether an attribute is set, or not.
+ */
+static struct attr_data *
+lookup_attr_parent(const kdump_ctx *ctx, const char **pkey)
+{
+	const char *key, *p;
+
+	p = strrchr(*pkey, '.');
+	if (!p)
+		return (struct attr_data*) &ctx->dir_root;
+
+	key = *pkey;
+	*pkey = p + 1;
+	return lookup_attr_part(ctx, key, p - key);
+}
+
 /**  Allocate a new attribute.
  * @param tmpl   Attribute template.
  */
@@ -498,25 +451,27 @@ kdump_status
 add_attr_template(kdump_ctx *ctx, const char *path,
 		  enum kdump_attr_type type)
 {
-	const struct attr_template *parent, *t;
 	struct dyn_attr_template *dt;
-	struct attr_data *attrparent, *attr;
+	struct attr_data *attr, *parent;
 	char *keyname;
 	kdump_status res;
 
-	parent = lookup_template_parent(ctx, &path);
+	attr = lookup_attr_raw(ctx, path);
+	if (attr) {
+		if (attr->template->type == type)
+			return kdump_ok;
+
+		return set_error(ctx, kdump_invalid,
+				 "Type conflict with existing template");
+	}
+
+	parent = lookup_attr_parent(ctx, &path);
 	if (!parent)
 		return set_error(ctx, kdump_nokey, "No such path");
 
-	if (parent->type != kdump_directory)
+	if (parent->template->type != kdump_directory)
 		return set_error(ctx, kdump_invalid,
 				 "Path is a leaf attribute");
-
-	t = lookup_template_dir(ctx, parent, path, strlen(path));
-	if (t)
-		return set_error(ctx,
-				 (t->type == type ? kdump_ok : kdump_invalid),
-				 "Type conflict with existing template");
 
 	dt = malloc(sizeof *dt + strlen(path) + 1);
 	if (!dt)
@@ -526,14 +481,8 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 	keyname = (char*) (dt + 1);
 	strcpy(keyname, path);
 	dt->template.key = keyname;
-	dt->template.parent = parent;
+	dt->template.parent = parent->template;
 	dt->template.type = type;
-
-	attrparent = (struct attr_data*) lookup_attr_tmpl(ctx, parent);
-	if (!attrparent) {
-		free(dt);
-		return set_error(ctx, kdump_nokey, "No such path");
-	}
 
 	attr = alloc_attr(&dt->template);
 	if (!attr) {
@@ -544,7 +493,7 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 	if (type == kdump_directory)
 		attr->dir = NULL;
 
-	link_attr(attrparent, attr);
+	link_attr(parent, attr);
 	res = hash_attr(ctx, attr);
 	if (res != kdump_ok) {
 		free_attr(ctx, attr);
