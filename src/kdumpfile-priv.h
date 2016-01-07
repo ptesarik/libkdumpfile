@@ -204,6 +204,8 @@ enum global_keyidx {
 #include "static-attr.def"
 #include "global-attr.def"
 #undef ATTR
+
+	NR_GLOBAL_ATTRS		/*< Total number of global attributes. */
 };
 
 #define GATTR(idx)	((const char*)-(intptr_t)(idx))
@@ -295,6 +297,9 @@ struct _tag_kdump_ctx {
 	struct attr_data field;
 #include "static-attr.def"
 #undef ATTR
+
+	/* global attributes */
+	struct attr_data *global_attrs[NR_GLOBAL_ATTRS];
 
 	/* attribute hash */
 	struct attr_hash attr;
