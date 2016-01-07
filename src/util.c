@@ -262,7 +262,7 @@ arch_name(enum kdump_arch arch)
 kdump_status
 set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 {
-	if (!attr_isset(&ctx->page_size)) {
+	if (!isset_page_size(ctx)) {
 		int page_shift = default_page_shift(arch);
 		if (!page_shift)
 			return set_error(ctx, kdump_unsupported,

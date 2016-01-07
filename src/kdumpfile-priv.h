@@ -564,10 +564,17 @@ void cleanup_attr(kdump_ctx *ctx);
 		ctx->name.val.type = newval;			\
 		set_attr(&ctx->name);				\
 	}
+#define DEFINE_ISSET_ACCESSOR(name)				\
+	static inline int					\
+	isset_ ## name(kdump_ctx *ctx)				\
+	{							\
+		return attr_isset(&ctx->name);			\
+	}
 
 #define DEFINE_ACCESSORS(name, type, ctype)	\
 	DEFINE_GET_ACCESSOR(name, type, ctype)	\
-	DEFINE_SET_ACCESSOR(name, type, ctype)
+	DEFINE_SET_ACCESSOR(name, type, ctype)	\
+	DEFINE_ISSET_ACCESSOR(name)
 
 #define DEFINE_ACCESSORS_number(name, ctype) \
 	DEFINE_ACCESSORS(name, number, ctype)
@@ -575,7 +582,8 @@ void cleanup_attr(kdump_ctx *ctx);
 	DEFINE_ACCESSORS(name, address, ctype)
 #define DEFINE_ACCESSORS_string(name, ctype) \
 	DEFINE_ACCESSORS(name, string, ctype)
-#define DEFINE_ACCESSORS_directory(name, ctype)
+#define DEFINE_ACCESSORS_directory(name, ctype) \
+	DEFINE_ISSET_ACCESSOR(name)
 
 #define ATTR(dir, key, field, type, ctype)	\
 	DEFINE_ACCESSORS_ ## type(field, ctype)

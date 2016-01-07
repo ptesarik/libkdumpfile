@@ -585,7 +585,7 @@ process_x86_64_xen_prstatus(kdump_ctx *ctx, void *data, size_t size)
 		size -= sizeof(struct xen_vcpu_guest_context);
 	}
 
-	if (!attr_isset(&ctx->num_cpus) || cpu > get_attr_num_cpus(ctx))
+	if (!isset_num_cpus(ctx) || cpu > get_attr_num_cpus(ctx))
 		set_attr_num_cpus(ctx, cpu);
 
 	return kdump_ok;
@@ -602,7 +602,7 @@ x86_64_reg_name(unsigned index)
 static kdump_status
 x86_64_process_load(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t paddr)
 {
-	if (!attr_isset(&ctx->phys_base) &&
+	if (!isset_phys_base(ctx) &&
 	    vaddr >= __START_KERNEL_map &&
 	    vaddr < __START_KERNEL_map + MAX_PHYSICAL_START)
 		set_attr_phys_base(ctx, paddr - (vaddr - __START_KERNEL_map));
