@@ -709,16 +709,14 @@ set_attr_string(kdump_ctx *ctx, const char *key, const char *str)
 	struct attr_data *attr;
 	char *dynstr;
 
+	attr = lookup_attr_raw(ctx, key);
+	if (!attr)
+		return set_error(ctx, kdump_nokey, "No such key");
+
 	dynstr = strdup(str);
 	if (!dynstr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate string");
-
-	attr = lookup_attr_raw(ctx, key);
-	if (!attr) {
-		free(dynstr);
-		return set_error(ctx, kdump_nokey, "No such key");
-	}
 
 	clear_attr(attr);
 	attr->dynstr = 1;
