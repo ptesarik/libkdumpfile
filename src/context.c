@@ -76,6 +76,9 @@ kdump_enum_attr(kdump_ctx *ctx, const char *path,
 	for (d = parent->dir; d; d = d->next) {
 		struct kdump_attr attr;
 
+		if (!attr_isset(d))
+			continue;
+
 		attr.type = d->template->type;
 		attr.val = d->val;
 		if (cb(cb_data, d->template->key, &attr))

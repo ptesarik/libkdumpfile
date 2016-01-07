@@ -177,47 +177,6 @@ lookup_template(const kdump_ctx *ctx, const char *key)
 	return lookup_template_dir(ctx, dir, key, strlen(key));
 }
 
-/**  Add an attribute template.
- * @param ctx   Dump file object.
- */
-kdump_status
-add_attr_template(kdump_ctx *ctx, const char *path,
-		  enum kdump_attr_type type)
-{
-	const struct attr_template *parent, *t;
-	struct dyn_attr_template *dt;
-	char *keyname;
-
-	parent = lookup_template_parent(ctx, &path);
-	if (!parent)
-		return set_error(ctx, kdump_nokey, "No such path");
-
-	if (parent->type != kdump_directory)
-		return set_error(ctx, kdump_invalid,
-				 "Path is a leaf attribute");
-
-	t = lookup_template_dir(ctx, parent, path, strlen(path));
-	if (t)
-		return set_error(ctx,
-				 (t->type == type ? kdump_ok : kdump_invalid),
-				 "Type conflict with existing template");
-
-	dt = malloc(sizeof *dt + strlen(path) + 1);
-	if (!dt)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute template");
-
-	keyname = (char*) (dt + 1);
-	strcpy(keyname, path);
-	dt->template.key = keyname;
-	dt->template.parent = parent;
-	dt->template.type = type;
-	dt->next = ctx->tmpl;
-	ctx->tmpl = dt;
-
-	return kdump_ok;
-}
-
 /**  Lookup attribute value by template.
  * @param ctx   Dump file object.
  * @param tmpl  Attribute template.
@@ -552,43 +511,93 @@ delete_attr(kdump_ctx *ctx, struct attr_data *attr)
 	free_attr(ctx, attr);
 }
 
-/**  Instantiate a directory template path.
+/**  Add an attribute template.
  * @param ctx   Dump file object.
- * @param tmpl  Directory template.
+ */
+kdump_status
+add_attr_template(kdump_ctx *ctx, const char *path,
+		  enum kdump_attr_type type)
+{
+	const struct attr_template *parent, *t;
+	struct dyn_attr_template *dt;
+	char *keyname;
+
+	parent = lookup_template_parent(ctx, &path);
+	if (!parent)
+		return set_error(ctx, kdump_nokey, "No such path");
+
+	if (parent->type != kdump_directory)
+		return set_error(ctx, kdump_invalid,
+				 "Path is a leaf attribute");
+
+	t = lookup_template_dir(ctx, parent, path, strlen(path));
+	if (t)
+		return set_error(ctx,
+				 (t->type == type ? kdump_ok : kdump_invalid),
+				 "Type conflict with existing template");
+
+	dt = malloc(sizeof *dt + strlen(path) + 1);
+	if (!dt)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate attribute template");
+
+	keyname = (char*) (dt + 1);
+	strcpy(keyname, path);
+	dt->template.key = keyname;
+	dt->template.parent = parent;
+	dt->template.type = type;
+
+	if (type == kdump_directory) {
+		struct attr_data *attrparent, *attr;
+		kdump_status res;
+
+		attrparent = (struct attr_data*) lookup_attr_tmpl(ctx, parent);
+		if (!attrparent) {
+			free(dt);
+			return set_error(ctx, kdump_nokey, "No such path");
+		}
+
+		attr = alloc_attr(&dt->template, 0);
+		if (!attr) {
+			free(dt);
+			return set_error(ctx, kdump_syserr,
+					 "Cannot allocate directory stub");
+		}
+		attr->dir = NULL;
+
+		link_attr(attrparent, attr);
+		res = hash_attr(ctx, attr);
+		if (res != kdump_ok) {
+			free_attr(ctx, attr);
+			free(dt);
+			return set_error(ctx, res,
+					 "Cannot hash directory stub");
+		}
+	}
+
+	dt->next = ctx->tmpl;
+	ctx->tmpl = dt;
+
+	return kdump_ok;
+}
+
+/**  Instantiate a directory path.
+ * @param attr  Leaf attribute.
  * @returns     The newly instantiated attribute,
  *              or @c NULL on allocation failure.
  *
  * Inititalize all paths up the hierarchy for the (leaf) directory
  * denoted by @c tmpl.
  */
-static struct attr_data *
-instantiate_path(kdump_ctx *ctx, const struct attr_template *tmpl)
+static void
+instantiate_path(struct attr_data *attr)
 {
-	struct attr_data *d, *parent;
-
-	d = (struct attr_data*) lookup_attr_tmpl(ctx, tmpl);
-	if (d != NULL && attr_isset(d))
-		return d;
-
-	d = template_static(tmpl)
-		? static_attr_data(ctx, tmpl - global_keys)
-		: alloc_attr(tmpl, 0);
-	if (!d)
-		return NULL;
-
-	parent = (tmpl->parent != tmpl)
-		? instantiate_path(ctx, tmpl->parent)
-		: d;
-
-	d->dir = NULL;
-	link_attr(parent, d);
-	if (hash_attr(ctx, d) != kdump_ok) {
-		delete_attr(ctx, d);
-		return NULL;
+	while (!attr_isset(attr)) {
+		attr->isset = 1;
+		if (attr == attr->parent)
+			break;
+		attr = attr->parent;
 	}
-
-	d->isset = 1;
-	return d;
 }
 
 /**  Clear (unset) all attributes.
@@ -631,14 +640,36 @@ cleanup_attr(kdump_ctx *ctx)
 
 /**  Initialize statically allocated attributes
  */
-void
-init_static_attrs(kdump_ctx *ctx)
+kdump_status
+init_attrs(kdump_ctx *ctx)
 {
+	struct attr_data *attrs[NR_GLOBAL];
 	enum global_keyidx i;
-	for (i = 0; i < NR_STATIC; ++i) {
-		struct attr_data *attr = static_attr_data(ctx, i);
-		attr->template = &global_keys[i];
+	kdump_status res;
+
+	for (i = 0; i < NR_GLOBAL; ++i) {
+		const struct attr_template *tmpl = &global_keys[i];
+		struct attr_data *attr;
+
+		if (i < NR_STATIC) {
+			attr = static_attr_data(ctx, i);
+			attr->template = tmpl;
+		} else if (tmpl->type == kdump_directory) {
+			attr = alloc_attr(tmpl, 0);
+			if (!attr)
+				return kdump_syserr;
+			attr->dir = NULL;
+		} else
+			continue;
+
+		attrs[i] = attr;
+		link_attr(attrs[tmpl->parent - global_keys], attr);
+		res = hash_attr(ctx, attr);
+		if (res != kdump_ok)
+			return res;
 	}
+
+	return kdump_ok;
 }
 
 /**  Replace an attribute.
@@ -675,17 +706,22 @@ replace_attr(kdump_ctx *ctx, struct attr_data *parent, struct attr_data *attr)
 kdump_status
 set_attr(kdump_ctx *ctx, struct attr_data *attr)
 {
-	struct attr_data *parent;
+	if (!template_static(attr->template)) {
+		struct attr_data *parent = (struct attr_data*)
+			lookup_attr_tmpl(ctx, attr->template->parent);
+		if (!parent)
+			return set_error(ctx, kdump_nokey,
+					 "No such path");
+		replace_attr(ctx, parent, attr);
+	}
 
-	parent = instantiate_path(ctx, attr->template->parent);
-	if (!parent)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot instantiate attribute '%s'",
-				 attr->template->parent->key);
-
-	replace_attr(ctx, parent, attr);
+	instantiate_path(attr->parent);
 	attr->isset = 1;
-	return hash_attr(ctx, attr);
+
+	if (!template_static(attr->template))
+		return hash_attr(ctx, attr);
+
+	return kdump_ok;
 }
 
 /**  Set a numeric attribute of a dump file object.
@@ -781,22 +817,17 @@ set_attr_static_string(kdump_ctx *ctx, const char *key, const char *str)
 kdump_status
 add_attr(kdump_ctx *ctx, const char *path, struct attr_data *attr)
 {
-	const struct attr_template *parent_tmpl;
 	struct attr_data *parent;
 
-	parent_tmpl = lookup_template(ctx, path);
-	if (!parent_tmpl)
-		return set_error(ctx, kdump_nokey, "No such path");
-
-	if (parent_tmpl->type != kdump_directory)
+	parent = (struct attr_data*) lookup_attr_raw(ctx, path);
+	if (!parent)
+		return set_error(ctx, kdump_nokey,
+				 "No such path");
+	if (parent->template->type != kdump_directory)
 		return set_error(ctx, kdump_invalid,
 				 "Path is a leaf attribute");
 
-	parent = instantiate_path(ctx, parent_tmpl);
-	if (!parent)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot instantiate path");
-
+	instantiate_path(parent);
 	replace_attr(ctx, parent, attr);
 	attr->isset = 1;
 	return hash_attr(ctx, attr);

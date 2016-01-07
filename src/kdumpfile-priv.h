@@ -474,8 +474,8 @@ kdump_xlat_t get_xlat(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 kdump_status add_attr_template(kdump_ctx *ctx, const char *path,
 			       enum kdump_attr_type type);
 
-#define init_static_attrs INTERNAL_NAME(init_static_attrs)
-void init_static_attrs(kdump_ctx *ctx);
+#define init_attrs INTERNAL_NAME(init_attrs)
+kdump_status init_attrs(kdump_ctx *ctx);
 
 #define lookup_attr INTERNAL_NAME(lookup_attr)
 const struct attr_data *lookup_attr(const kdump_ctx *ctx, const char *key);
