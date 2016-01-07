@@ -238,28 +238,6 @@ lookup_attr_parent(const kdump_ctx *ctx, const char **pkey)
 	return lookup_attr_part(ctx, key, p - key);
 }
 
-/**  Initialize a newly allocated attribute
- * @param ret     Attribute data.
- * @param parent  Parent directory, or @c NULL.
- * @param tmpl    Attribute template.
- * @returns       Attribute data (@c ret).
- */
-static struct attr_data *
-init_attr(struct attr_data *ret, struct attr_data *parent,
-	  const struct attr_template *tmpl)
-{
-	ret->parent = NULL;
-	ret->template = tmpl;
-	ret->isset = 0;
-	ret->dynstr = 0;
-	ret->indirect = 0;
-
-	if (tmpl->type == kdump_directory)
-		ret->dir = NULL;
-
-	return ret;
-}
-
 /**  Link a new attribute to its parent.
  * @param dir   Parent attribute.
  * @param attr  Complete initialized attribute.
@@ -305,8 +283,8 @@ alloc_attr(kdump_ctx *ctx, struct attr_data *parent,
 		newtbl = &ctx->attr;
 		do {
 			tbl = newtbl;
-			if (tbl->table[i].parent == NULL)
-				return init_attr(&tbl->table[i], parent, tmpl);
+			if (!tbl->table[i].parent)
+				return &tbl->table[i];
 			newtbl = tbl->next;
 		} while (newtbl);
 		i = (i + 1) % ATTR_HASH_SIZE;
@@ -317,7 +295,7 @@ alloc_attr(kdump_ctx *ctx, struct attr_data *parent,
 		return NULL;
 	tbl->next = newtbl;
 
-	return init_attr(&newtbl->table[hash], parent, tmpl);
+	return &newtbl->table[hash];
 }
 
 /**  Clear (unset) an attribute.
@@ -341,27 +319,6 @@ clear_attr(struct attr_data *attr)
 	}
 }
 
-/**  Free all memory associated with an attribute.
- * @param ctx   Dump file object.
- * @param attr  The attribute to be freed (detached).
- */
-static void
-free_attr(kdump_ctx *ctx, struct attr_data *attr)
-{
-	if (attr->template->type == kdump_directory) {
-		struct attr_data *node = attr->dir;
-		while (node) {
-			struct attr_data *next = node->next;
-			free_attr(ctx, node);
-			node = next;
-		}
-		attr->dir = NULL;
-	}
-
-	clear_attr(attr);
-	attr->parent = NULL;
-}
-
 /**  Allocate a new attribute in any directory.
  * @param ctx     Dump file object.
  * @param parent  Parent directory. If @c NULL, create a self-owned
@@ -380,6 +337,7 @@ new_attr(kdump_ctx *ctx, struct attr_data *parent,
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate attribute");
+	attr->template = tmpl;
 
 	if (!parent)
 		parent = attr;
@@ -478,7 +436,7 @@ cleanup_attr(kdump_ctx *ctx)
 	struct attr_hash *tbl, *tblnext;
 	struct dyn_attr_template *dt, *dtnext;
 
-	free_attr(ctx, ctx->global_attrs[GKI_dir_root]);
+	clear_attrs(ctx);
 
 	tblnext = ctx->attr.next;
 	while(tblnext) {
