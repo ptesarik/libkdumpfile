@@ -229,10 +229,8 @@ lookup_attr_tmpl(const kdump_ctx *ctx, const struct attr_template *tmpl)
 	const struct attr_data *parent;
 	const struct attr_data *d;
 
-	if (template_static(tmpl)) {
-		d = static_attr_data_const(ctx, tmpl - global_keys);
-		return attr_isset(d) ? d : NULL;
-	}
+	if (template_static(tmpl))
+		return static_attr_data_const(ctx, tmpl - global_keys);
 
 	parent = lookup_attr_tmpl(ctx, tmpl->parent);
 	if (!parent)
@@ -341,13 +339,15 @@ keycmp(const struct attr_data *attr, const char *key)
 	return memcmp(attr->template->key, key, len);
 }
 
-/**  Look up attribute value by name.
+/**  Look up raw attribute data by name.
  * @param ctx   Dump file object.
  * @param key   Key name.
  * @returns     Stored attribute or @c NULL if not found.
+ *
+ * This function does not check whether an attribute is set, or not.
  */
-const struct attr_data*
-lookup_attr(const kdump_ctx *ctx, const char *key)
+static const struct attr_data *
+lookup_attr_raw(const kdump_ctx *ctx, const char *key)
 {
 	unsigned ehash, i;
 	const struct attr_hash *tbl;
@@ -370,6 +370,18 @@ lookup_attr(const kdump_ctx *ctx, const char *key)
 	} while (i != ehash);
 
 	return NULL;
+}
+
+/**  Look up attribute data by name.
+ * @param ctx   Dump file object.
+ * @param key   Key name.
+ * @returns     Stored attribute or @c NULL if not found.
+ */
+const struct attr_data *
+lookup_attr(const kdump_ctx *ctx, const char *key)
+{
+	const struct attr_data *d = lookup_attr_raw(ctx, key);
+	return d && attr_isset(d) ? d : NULL;
 }
 
 /**  Allocate a new attribute.
@@ -555,7 +567,7 @@ instantiate_path(kdump_ctx *ctx, const struct attr_template *tmpl)
 	struct attr_data *d, *parent;
 
 	d = (struct attr_data*) lookup_attr_tmpl(ctx, tmpl);
-	if (d != NULL)
+	if (d != NULL && attr_isset(d))
 		return d;
 
 	d = template_static(tmpl)
