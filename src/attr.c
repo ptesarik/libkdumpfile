@@ -157,26 +157,6 @@ lookup_template_parent(const kdump_ctx *ctx, const char **pkey)
 	return dir;
 }
 
-/**  Look up a template by name.
- * @param ctx  Dump file object.
- * @param key  Key name.
- * @returns    Attribute template, or @c NULL if not found.
- */
-static const struct attr_template*
-lookup_template(const kdump_ctx *ctx, const char *key)
-{
-	const struct attr_template *dir;
-
-	if (!key || key > GATTR(NR_GLOBAL))
-		return &global_keys[-(intptr_t)key];
-
-	dir = lookup_template_parent(ctx, &key);
-	if (!dir)
-		return NULL;
-
-	return lookup_template_dir(ctx, dir, key, strlen(key));
-}
-
 /**  Lookup attribute value by template.
  * @param ctx   Dump file object.
  * @param tmpl  Attribute template.
@@ -305,14 +285,15 @@ keycmp(const struct attr_data *attr, const char *key)
  *
  * This function does not check whether an attribute is set, or not.
  */
-static const struct attr_data *
+static struct attr_data *
 lookup_attr_raw(const kdump_ctx *ctx, const char *key)
 {
 	unsigned ehash, i;
 	const struct attr_hash *tbl;
 
 	if (!key || key > GATTR(NR_GLOBAL))
-		return lookup_attr_tmpl(ctx, &global_keys[-(intptr_t)key]);
+		return (struct attr_data*)
+			lookup_attr_tmpl(ctx, &global_keys[-(intptr_t)key]);
 
 	i = key_hash_index(key);
 	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
@@ -360,31 +341,6 @@ alloc_attr(const struct attr_template *tmpl)
 	ret->isset = 0;
 	ret->dynstr = 0;
 	return ret;
-}
-
-/**  Allocate new attribute object by key name.
- * @param ctx         Dump file object.
- * @param[out] pattr  To be filled with the allocated attribute.
- * @param key         Key name.
- * @returns           Error status.
- */
-static kdump_status
-alloc_attr_by_key(kdump_ctx *ctx, struct attr_data **pattr, const char *key)
-{
-	const struct attr_template *t;
-	struct attr_data *attr;
-
-	t = lookup_template(ctx, key);
-	if (!t)
-		return set_error(ctx, kdump_nokey, "No such path");
-
-	attr = alloc_attr(t);
-	if (!attr)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute");
-
-	*pattr = attr;
-	return kdump_ok;
 }
 
 /**  Link a new attribute to its parent.
@@ -522,7 +478,9 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 {
 	const struct attr_template *parent, *t;
 	struct dyn_attr_template *dt;
+	struct attr_data *attrparent, *attr;
 	char *keyname;
+	kdump_status res;
 
 	parent = lookup_template_parent(ctx, &path);
 	if (!parent)
@@ -549,32 +507,28 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 	dt->template.parent = parent;
 	dt->template.type = type;
 
-	if (type == kdump_directory) {
-		struct attr_data *attrparent, *attr;
-		kdump_status res;
+	attrparent = (struct attr_data*) lookup_attr_tmpl(ctx, parent);
+	if (!attrparent) {
+		free(dt);
+		return set_error(ctx, kdump_nokey, "No such path");
+	}
 
-		attrparent = (struct attr_data*) lookup_attr_tmpl(ctx, parent);
-		if (!attrparent) {
-			free(dt);
-			return set_error(ctx, kdump_nokey, "No such path");
-		}
-
-		attr = alloc_attr(&dt->template);
-		if (!attr) {
-			free(dt);
-			return set_error(ctx, kdump_syserr,
-					 "Cannot allocate directory stub");
-		}
+	attr = alloc_attr(&dt->template);
+	if (!attr) {
+		free(dt);
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate attribute stub");
+	}
+	if (type == kdump_directory)
 		attr->dir = NULL;
 
-		link_attr(attrparent, attr);
-		res = hash_attr(ctx, attr);
-		if (res != kdump_ok) {
-			free_attr(ctx, attr);
-			free(dt);
-			return set_error(ctx, res,
-					 "Cannot hash directory stub");
-		}
+	link_attr(attrparent, attr);
+	res = hash_attr(ctx, attr);
+	if (res != kdump_ok) {
+		free_attr(ctx, attr);
+		free(dt);
+		return set_error(ctx, res,
+				 "Cannot hash attribute stub");
 	}
 
 	dt->next = ctx->tmpl;
@@ -656,13 +610,14 @@ init_attrs(kdump_ctx *ctx)
 		if (i < NR_STATIC) {
 			attr = static_attr_data(ctx, i);
 			attr->template = tmpl;
-		} else if (tmpl->type == kdump_directory) {
+		} else {
 			attr = alloc_attr(tmpl);
 			if (!attr)
 				return kdump_syserr;
+		}
+
+		if (tmpl->type == kdump_directory)
 			attr->dir = NULL;
-		} else
-			continue;
 
 		attrs[i] = attr;
 		link_attr(attrs[tmpl->parent - global_keys], attr);
@@ -705,25 +660,11 @@ replace_attr(kdump_ctx *ctx, struct attr_data *parent, struct attr_data *attr)
  * This function works both for statically allocated and dynamically
  * allocated attributes.
  */
-kdump_status
+void
 set_attr(kdump_ctx *ctx, struct attr_data *attr)
 {
-	if (!template_static(attr->template)) {
-		struct attr_data *parent = (struct attr_data*)
-			lookup_attr_tmpl(ctx, attr->template->parent);
-		if (!parent)
-			return set_error(ctx, kdump_nokey,
-					 "No such path");
-		replace_attr(ctx, parent, attr);
-	}
-
 	instantiate_path(attr->parent);
 	attr->isset = 1;
-
-	if (!template_static(attr->template))
-		return hash_attr(ctx, attr);
-
-	return kdump_ok;
 }
 
 /**  Set a numeric attribute of a dump file object.
@@ -736,14 +677,14 @@ kdump_status
 set_attr_number(kdump_ctx *ctx, const char *key, kdump_num_t num)
 {
 	struct attr_data *attr;
-	kdump_status res;
 
-	res = alloc_attr_by_key(ctx, &attr, key);
-	if (res != kdump_ok)
-		return res;
+	attr = lookup_attr_raw(ctx, key);
+	if (!attr)
+		return set_error(ctx, kdump_nokey, "No such key");
 
 	attr->val.number = num;
-	return set_attr(ctx, attr);
+	set_attr(ctx, attr);
+	return kdump_ok;
 }
 
 /**  Set an address attribute of a dump file object.
@@ -756,14 +697,14 @@ kdump_status
 set_attr_address(kdump_ctx *ctx, const char *key, kdump_addr_t addr)
 {
 	struct attr_data *attr;
-	kdump_status res;
 
-	res = alloc_attr_by_key(ctx, &attr, key);
-	if (res != kdump_ok)
-		return res;
+	attr = lookup_attr_raw(ctx, key);
+	if (!attr)
+		return set_error(ctx, kdump_nokey, "No such key");
 
 	attr->val.address = addr;
-	return set_attr(ctx, attr);
+	set_attr(ctx, attr);
+	return kdump_ok;
 }
 
 /**  Set a string attribute of a dump file object.
@@ -777,22 +718,25 @@ set_attr_string(kdump_ctx *ctx, const char *key, const char *str)
 {
 	struct attr_data *attr;
 	char *dynstr;
-	kdump_status res;
 
 	dynstr = strdup(str);
 	if (!dynstr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate string");
 
-	res = alloc_attr_by_key(ctx, &attr, key);
-	if (res != kdump_ok) {
+	attr = lookup_attr_raw(ctx, key);
+	if (!attr) {
 		free(dynstr);
-		return res;
+		return set_error(ctx, kdump_nokey, "No such key");
 	}
+
+	if (attr->dynstr)
+		free((void*)attr->val.string);
 
 	attr->dynstr = 1;
 	attr->val.string = dynstr;
-	return set_attr(ctx, attr);
+	set_attr(ctx, attr);
+	return kdump_ok;
 }
 
 /**  Set a static string attribute of a dump file object.
@@ -805,14 +749,18 @@ kdump_status
 set_attr_static_string(kdump_ctx *ctx, const char *key, const char *str)
 {
 	struct attr_data *attr;
-	kdump_status res;
 
-	res = alloc_attr_by_key(ctx, &attr, key);
-	if (res != kdump_ok)
-		return res;
+	attr = lookup_attr_raw(ctx, key);
+	if (!attr)
+		return set_error(ctx, kdump_nokey, "No such key");
 
+	if (attr->dynstr)
+		free((void*) attr->val.string);
+
+	attr->dynstr = 0;
 	attr->val.string = str;
-	return set_attr(ctx, attr);
+	set_attr(ctx, attr);
+	return kdump_ok;
 }
 
 /**  Add an attribute to any directory.

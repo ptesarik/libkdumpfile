@@ -494,7 +494,7 @@ attr_isset(const struct attr_data *data)
 }
 
 #define set_attr INTERNAL_NAME(set_attr)
-kdump_status set_attr(kdump_ctx *ctx, struct attr_data *attr);
+void set_attr(kdump_ctx *ctx, struct attr_data *attr);
 
 #define set_attr_number INTERNAL_NAME(set_attr_number)
 kdump_status set_attr_number(kdump_ctx *ctx, const char *key,
