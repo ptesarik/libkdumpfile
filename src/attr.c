@@ -191,6 +191,17 @@ key_hash_index(const char *key)
 	return fold_hash(string_hash(key), ATTR_HASH_BITS);
 }
 
+/**  Calculate the hash index of a partial key path.
+ * @param key     Key path.
+ * @param keylen  Initial portion of @c key to be considered.
+ * @returns       Desired index in the hash table.
+ */
+static unsigned
+part_hash_index(const char *key, size_t keylen)
+{
+	return fold_hash(mem_hash(key, keylen), ATTR_HASH_BITS);
+}
+
 /**  Get the length of an attribute path
  * @param attr  Attribute data.
  * @returns     Length of the full path string.
@@ -254,16 +265,15 @@ attr_hash_index(const struct attr_data *attr)
 /**  Compare if attribute data correponds to a given key.
  * @param attr  Attribute data.
  * @param key   Key path.
+ * @param len   Initial portion of @c key to be considered.
  * @returns     Zero if the data is stored under the given key,
  *              non-zero otherwise.
  */
 static int
-keycmp(const struct attr_data *attr, const char *key)
+keycmp(const struct attr_data *attr, const char *key, size_t len)
 {
-	size_t len;
 	const char *p;
 
-	len = strlen(key);
 	while ( (p = memrchr(key, '.', len)) ) {
 		size_t partlen = key + len - p - 1;
 		int res = strncmp(attr->template->key, p + 1, partlen);
@@ -278,6 +288,35 @@ keycmp(const struct attr_data *attr, const char *key)
 	return memcmp(attr->template->key, key, len);
 }
 
+/**  Look up attribute value by name.
+ * @param ctx     Dump file object.
+ * @param key     Key name.
+ * @param keylen  Initial portion of @c key to be considered.
+ * @returns       Stored attribute or @c NULL if not found.
+ */
+static struct attr_data*
+lookup_attr_part(const kdump_ctx *ctx, const char *key, size_t keylen)
+{
+	unsigned ehash, i;
+	const struct attr_hash *tbl;
+
+	i = part_hash_index(key, keylen);
+	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
+	do {
+		tbl = &ctx->attr;
+		do {
+			if (!tbl->table[i])
+				break;
+			if (!keycmp(tbl->table[i], key, keylen))
+				return tbl->table[i];
+			tbl = tbl->next;
+		} while (tbl);
+		i = (i + 1) % ATTR_HASH_SIZE;
+	} while (i != ehash);
+
+	return NULL;
+}
+
 /**  Look up raw attribute data by name.
  * @param ctx   Dump file object.
  * @param key   Key name.
@@ -288,28 +327,11 @@ keycmp(const struct attr_data *attr, const char *key)
 static struct attr_data *
 lookup_attr_raw(const kdump_ctx *ctx, const char *key)
 {
-	unsigned ehash, i;
-	const struct attr_hash *tbl;
-
 	if (!key || key > GATTR(NR_GLOBAL))
 		return (struct attr_data*)
 			lookup_attr_tmpl(ctx, &global_keys[-(intptr_t)key]);
 
-	i = key_hash_index(key);
-	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
-	do {
-		tbl = &ctx->attr;
-		do {
-			if (!tbl->table[i])
-				break;
-			if (!keycmp(tbl->table[i], key))
-				return tbl->table[i];
-			tbl = tbl->next;
-		} while (tbl);
-		i = (i + 1) % ATTR_HASH_SIZE;
-	} while (i != ehash);
-
-	return NULL;
+	return lookup_attr_part(ctx, key, strlen(key));
 }
 
 /**  Look up attribute data by name.
