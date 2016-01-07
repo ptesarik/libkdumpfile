@@ -231,7 +231,7 @@ lookup_attr_tmpl(const kdump_ctx *ctx, const struct attr_template *tmpl)
 
 	if (template_static(tmpl)) {
 		d = static_attr_data_const(ctx, tmpl - global_keys);
-		return static_attr_isset(d) ? d : NULL;
+		return attr_isset(d) ? d : NULL;
 	}
 
 	parent = lookup_attr_tmpl(ctx, tmpl->parent);
@@ -387,6 +387,7 @@ alloc_attr(const struct attr_template *tmpl, size_t extra)
 
 	ret->parent = NULL;
 	ret->template = tmpl;
+	ret->isset = 0;
 	return ret;
 }
 
@@ -514,11 +515,10 @@ free_attr(kdump_ctx *ctx, struct attr_data *attr)
 		}
 	}
 
+	attr->isset = 0;
 	if (attr->parent)
 		unhash_attr(ctx, attr);
-	if (template_static(attr->template))
-		attr->parent = NULL;
-	else
+	if (!template_static(attr->template))
 		free(attr);
 }
 
@@ -575,6 +575,7 @@ instantiate_path(kdump_ctx *ctx, const struct attr_template *tmpl)
 		return NULL;
 	}
 
+	d->isset = 1;
 	return d;
 }
 
@@ -584,7 +585,7 @@ instantiate_path(kdump_ctx *ctx, const struct attr_template *tmpl)
 void
 clear_attrs(kdump_ctx *ctx)
 {
-	if (static_attr_isset(&ctx->dir_root))
+	if (attr_isset(&ctx->dir_root))
 		free_attr(ctx, &ctx->dir_root);
 }
 
@@ -671,6 +672,7 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr)
 				 attr->template->parent->key);
 
 	replace_attr(ctx, parent, attr);
+	attr->isset = 1;
 	return hash_attr(ctx, attr);
 }
 
@@ -784,6 +786,7 @@ add_attr(kdump_ctx *ctx, const char *path, struct attr_data *attr)
 				 "Cannot instantiate path");
 
 	replace_attr(ctx, parent, attr);
+	attr->isset = 1;
 	return hash_attr(ctx, attr);
 }
 

@@ -651,7 +651,7 @@ open_common(kdump_ctx *ctx)
 			goto err_cleanup;
 	}
 
-	if (!static_attr_isset(&ctx->arch_name)) {
+	if (!attr_isset(&ctx->arch_name)) {
 		const struct attr_data *attr =
 			lookup_attr(ctx, GATTR(GKI_linux_uts_machine));
 		ret = attr

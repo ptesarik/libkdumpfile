@@ -237,6 +237,7 @@ struct dyn_attr_template {
 struct attr_data {
 	struct attr_data *next, *parent;
 	const struct attr_template *template;
+	unsigned isset : 1;
 	union {
 		union kdump_attr_value val;
 		struct attr_data *dir; /*< For @c kdump_directory */
@@ -476,28 +477,17 @@ kdump_status add_attr_template(kdump_ctx *ctx, const char *path,
 #define init_static_attrs INTERNAL_NAME(init_static_attrs)
 void init_static_attrs(kdump_ctx *ctx);
 
-#define lookup_attr INTERNAL_NAME(lookup_attr_data)
+#define lookup_attr INTERNAL_NAME(lookup_attr)
 const struct attr_data *lookup_attr(const kdump_ctx *ctx, const char *key);
 
-/**  Check if a given attribute is set.
- * @param ctx  Dump file object.
- * @param key  Key name.
- * @returns    Non-zero if the key is known and has a value.
- */
-static inline int
-attr_isset(const kdump_ctx *ctx, const char *key)
-{
-	return !!lookup_attr(ctx, key);
-}
-
-/**  Check if a statically allocated attribute is set.
- * @param data  Pointer to the static attribute.
+/**  Check if an attribute is set.
+ * @param data  Pointer to the attribute data.
  * @returns     Non-zero if attribute data is valid.
  */
 static inline int
-static_attr_isset(const struct attr_data *data)
+attr_isset(const struct attr_data *data)
 {
-	return !!data->parent;
+	return data->isset;
 }
 
 #define set_attr INTERNAL_NAME(set_attr)

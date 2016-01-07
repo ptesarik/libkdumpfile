@@ -135,7 +135,7 @@ kdump_open_known(kdump_ctx *ctx)
 		return set_error(ctx, res,
 				 "Xen Dom0 initialization failed");
 
-	if (!attr_isset(ctx, GATTR(GKI_linux_uts_sysname)))
+	if (!lookup_attr(ctx, GATTR(GKI_linux_uts_sysname)))
 		/* If this fails, it is not fatal. */
 		use_kernel_utsname(ctx);
 
