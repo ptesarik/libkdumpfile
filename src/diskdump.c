@@ -362,7 +362,7 @@ read_notes(kdump_ctx *ctx, off_t off, size_t size)
 		goto out;
 	}
 
-	ret = set_arch(ctx, machine_arch(attr->val.string));
+	ret = set_arch(ctx, machine_arch(attr_value(attr)->string));
 	if (ret != kdump_ok) {
 		ret = set_error(ctx, ret, "Cannot set architecture");
 		goto out;
@@ -655,7 +655,7 @@ open_common(kdump_ctx *ctx)
 		const struct attr_data *attr =
 			lookup_attr(ctx, GATTR(GKI_linux_uts_machine));
 		ret = attr
-			? set_arch(ctx, machine_arch(attr->val.string))
+			? set_arch(ctx, machine_arch(attr_value(attr)->string))
 			: set_error(ctx, kdump_nodata,
 				    "Architecture is not set");
 	}

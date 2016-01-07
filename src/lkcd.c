@@ -667,7 +667,7 @@ open_common(kdump_ctx *ctx)
 		goto err_free;
 	}
 
-	ret = set_arch(ctx, machine_arch(attr->val.string));
+	ret = set_arch(ctx, machine_arch(attr_value(attr)->string));
 	if (ret != kdump_ok)
 		goto err_free;
 

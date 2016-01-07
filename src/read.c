@@ -357,7 +357,7 @@ init_xen_dom0(kdump_ctx *ctx)
 	if (!attr)
 		/* not a Xen Dom0 dump */
 		return kdump_ok;
-	xen_p2m_mfn = attr->val.address;
+	xen_p2m_mfn = attr_value(attr)->address;
 
 	ret = ctx->ops->read_page(ctx, xen_p2m_mfn);
 	if (ret != kdump_ok)

@@ -412,7 +412,7 @@ read_pgt(kdump_ctx *ctx)
 		if (!attr)
 			return set_error(ctx, kdump_nodata,
 					 "Cannot get CR3 value");
-		pgtaddr = attr->val.number;
+		pgtaddr = attr_value(attr)->number;
 		rdflags = (get_attr_xen_type(ctx) == kdump_xen_pv)
 			? KDUMP_XENMACHADDR
 			: KDUMP_PHYSADDR;

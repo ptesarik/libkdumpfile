@@ -290,6 +290,7 @@ alloc_attr(const struct attr_template *tmpl)
 	ret->template = tmpl;
 	ret->isset = 0;
 	ret->dynstr = 0;
+	ret->indirect = 0;
 
 	if (tmpl->type == kdump_directory)
 		ret->dir = NULL;
@@ -395,7 +396,7 @@ clear_attr(struct attr_data *attr)
 	attr->isset = 0;
 	if (attr->dynstr) {
 		attr->dynstr = 0;
-		free((void*) attr->val.string);
+		free((void*) attr_value(attr)->string);
 	}
 }
 

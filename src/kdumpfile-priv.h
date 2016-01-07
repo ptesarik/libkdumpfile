@@ -242,10 +242,12 @@ struct attr_data {
 
 	unsigned isset : 1;
 	unsigned dynstr : 1;	/*< Dynamically allocated string */
+	unsigned indirect : 1;	/*< Actual value is at @c *pval */
 
 	union {
 		union kdump_attr_value val;
-		struct attr_data *dir; /*< For @c kdump_directory */
+		struct attr_data *dir;	      /*< For @c kdump_directory */
+		union kdump_attr_value *pval; /*< Pointer to indirect value */
 	};
 };
 
@@ -499,6 +501,12 @@ static inline int
 attr_isset(const struct attr_data *data)
 {
 	return data->isset;
+}
+
+static inline const union kdump_attr_value *
+attr_value(const struct attr_data *attr)
+{
+	return attr->indirect ? attr->pval : &attr->val;
 }
 
 #define set_attr INTERNAL_NAME(set_attr)

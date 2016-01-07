@@ -51,7 +51,7 @@ kdump_get_attr(kdump_ctx *ctx, const char *key,
 	d = lookup_attr(ctx, key);
 	if (d) {
 		valp->type = d->template->type;
-		valp->val = d->val;
+		valp->val = *attr_value(d);
 		return kdump_ok;
 	}
 
@@ -80,7 +80,7 @@ kdump_enum_attr(kdump_ctx *ctx, const char *path,
 			continue;
 
 		attr.type = d->template->type;
-		attr.val = d->val;
+		attr.val = *attr_value(d);
 		if (cb(cb_data, d->template->key, &attr))
 			break;
 	}
@@ -146,7 +146,7 @@ kdump_get_string_attr(kdump_ctx *ctx, const char *key)
 {
 	const struct attr_data *attr = lookup_attr(ctx, key);
 	return (attr && attr->template->type == kdump_string)
-		? attr->val.string
+		? attr_value(attr)->string
 		: NULL;
 }
 
@@ -222,7 +222,7 @@ kdump_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 	if (!attr)
 		return set_error(ctx, kdump_nodata, "Cannot read '%s'", key);
 
-	*value = attr->val.number;
+	*value = attr_value(attr)->number;
 	return kdump_ok;
 }
 
@@ -268,10 +268,10 @@ kdump_xen_version(kdump_ctx *ctx, kdump_xen_version_t *version)
 	const struct attr_data *attr;
 
 	attr = lookup_attr(ctx, GATTR(GKI_xen_ver_major));
-	version->major = attr ? attr->val.number : 0;
+	version->major = attr ? attr_value(attr)->number : 0;
 
 	attr = lookup_attr(ctx, GATTR(GKI_xen_ver_minor));
-	version->minor = attr ? attr->val.number : 0;
+	version->minor = attr ? attr_value(attr)->number : 0;
 
 	version->extra = kdump_get_string_attr(ctx, GATTR(GKI_xen_ver_extra));
 }
@@ -291,7 +291,7 @@ vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname, kdump_addr_t *symvalue,
 	if (!attr)
 		return set_error(ctx, kdump_nodata, "Key has no value");
 
-	*symvalue = attr->val.address;
+	*symvalue = attr_value(attr)->address;
 	return kdump_ok;
 }
 
