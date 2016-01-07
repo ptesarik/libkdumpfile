@@ -266,7 +266,7 @@ struct attr_data {
  */
 struct attr_hash {
 	struct attr_hash *next;
-	struct attr_data* table[ATTR_HASH_SIZE];
+	struct attr_data table[ATTR_HASH_SIZE];
 };
 
 struct _tag_kdump_ctx {

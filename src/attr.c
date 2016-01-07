@@ -133,20 +133,6 @@ make_attr_path(const struct attr_data *attr, char *endp)
 	return endp;
 }
 
-/**  Calculate the hash index of an attribute.
- * @param attr  Attribute data.
- * @returns     Desired index in the hash table.
- */
-static unsigned
-attr_hash_index(const struct attr_data *attr)
-{
-	size_t pathlen = attr_pathlen(attr);
-	char path[pathlen + 1];
-
-	make_attr_path(attr, path + pathlen);
-	return key_hash_index(path);
-}
-
 /**  Compare if attribute data correponds to a given key.
  * @param attr  Attribute data.
  * @param key   Key path.
@@ -190,10 +176,10 @@ lookup_attr_part(const kdump_ctx *ctx, const char *key, size_t keylen)
 	do {
 		tbl = &ctx->attr;
 		do {
-			if (!tbl->table[i])
+			if (!tbl->table[i].parent)
 				break;
-			if (!keycmp(tbl->table[i], key, keylen))
-				return tbl->table[i];
+			if (!keycmp(&tbl->table[i], key, keylen))
+				return (struct attr_data*) &tbl->table[i];
 			tbl = tbl->next;
 		} while (tbl);
 		i = (i + 1) % ATTR_HASH_SIZE;
@@ -252,18 +238,16 @@ lookup_attr_parent(const kdump_ctx *ctx, const char **pkey)
 	return lookup_attr_part(ctx, key, p - key);
 }
 
-/**  Allocate a new attribute.
- * @param tmpl   Attribute template.
+/**  Initialize a newly allocated attribute
+ * @param ret     Attribute data.
+ * @param parent  Parent directory, or @c NULL.
+ * @param tmpl    Attribute template.
+ * @returns       Attribute data (@c ret).
  */
-static struct attr_data*
-alloc_attr(const struct attr_template *tmpl)
+static struct attr_data *
+init_attr(struct attr_data *ret, struct attr_data *parent,
+	  const struct attr_template *tmpl)
 {
-	struct attr_data *ret;
-
-	ret = malloc(sizeof(struct attr_data));
-	if (!ret)
-		return NULL;
-
 	ret->parent = NULL;
 	ret->template = tmpl;
 	ret->isset = 0;
@@ -293,27 +277,36 @@ link_attr(struct attr_data *dir, struct attr_data *attr)
 	attr->parent = dir;
 }
 
-/**  Add an attribute to the hash table.
- * @param ctx   Dump file object.
- * @param attr  Attribute data.
- * @returns     Error status.
+/**  Allocate an attribute from the hash table.
+ * @param ctx     Dump file object.
+ * @param parent  Parent directory, or @c NULL.
+ * @param tmpl    Attribute template.
+ * @returns       Attribute data, or @c NULL on allocation failure.
  */
-static kdump_status
-hash_attr(kdump_ctx *ctx, struct attr_data *attr)
+static struct attr_data *
+alloc_attr(kdump_ctx *ctx, struct attr_data *parent,
+	   const struct attr_template *tmpl)
 {
+	struct attr_data tmp;
+	size_t pathlen;
+	char *path;
 	unsigned hash, ehash, i;
 	struct attr_hash *tbl, *newtbl;
 
-	i = hash = attr_hash_index(attr);
+	tmp.parent = parent ?: &tmp;
+	tmp.template = tmpl;
+	pathlen = attr_pathlen(&tmp);
+	path = alloca(pathlen + 1);
+	make_attr_path(&tmp, path + pathlen);
+
+	i = hash = key_hash_index(path);
 	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
 	do {
 		newtbl = &ctx->attr;
 		do {
 			tbl = newtbl;
-			if (!tbl->table[i]) {
-				tbl->table[i] = attr;
-				return kdump_ok;
-			}
+			if (tbl->table[i].parent == NULL)
+				return init_attr(&tbl->table[i], parent, tmpl);
 			newtbl = tbl->next;
 		} while (newtbl);
 		i = (i + 1) % ATTR_HASH_SIZE;
@@ -321,40 +314,10 @@ hash_attr(kdump_ctx *ctx, struct attr_data *attr)
 
 	newtbl = calloc(1, sizeof(struct attr_hash));
 	if (!newtbl)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate hash table");
-	newtbl->table[hash] = attr;
+		return NULL;
 	tbl->next = newtbl;
 
-	return kdump_ok;
-}
-
-/**  Remove an attribute from the hash table.
- * @param ctx   Dump file object.
- * @param attr  Attribute data.
- */
-static void
-unhash_attr(kdump_ctx *ctx, const struct attr_data *attr)
-{
-	unsigned ehash, i;
-	struct attr_hash *tbl, *newtbl;
-
-	i = attr_hash_index(attr);
-	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
-	do {
-		for (tbl = &ctx->attr; tbl; tbl = tbl->next)
-			if (tbl->table[i] == attr) {
-				newtbl = tbl;
-				while (newtbl->next)
-					newtbl = newtbl->next;
-				tbl->table[i] = newtbl->table[i];
-				newtbl->table[i] = NULL;
-				return;
-			}
-		i = (i + 1) % ATTR_HASH_SIZE;
-	} while (i != ehash);
-
-	/* Not hashed? This should never happen. */
+	return init_attr(&newtbl->table[hash], parent, tmpl);
 }
 
 /**  Clear (unset) an attribute.
@@ -396,27 +359,7 @@ free_attr(kdump_ctx *ctx, struct attr_data *attr)
 	}
 
 	clear_attr(attr);
-	if (attr->parent)
-		unhash_attr(ctx, attr);
-	free(attr);
-}
-
-/**  Delete an attribute.
- * @param ctx   Dump file object.
- * @param attr  Attribute to be deleted.
- *
- * Remove an attribute from its dump file object and free it.
- */
-static void
-delete_attr(kdump_ctx *ctx, struct attr_data *attr)
-{
-	struct attr_data **d;
-	d = &attr->parent->dir;
-	while (*d && *d != attr)
-		d = &(*d)->next;
-	if (*d)
-		*d = attr->next;
-	free_attr(ctx, attr);
+	attr->parent = NULL;
 }
 
 /**  Allocate a new attribute in any directory.
@@ -431,10 +374,9 @@ static kdump_status
 new_attr(kdump_ctx *ctx, struct attr_data *parent,
 	 const struct attr_template *tmpl, struct attr_data **pattr)
 {
-	struct attr_data *attr, *old;
-	kdump_status res;
+	struct attr_data *attr;
 
-	attr = alloc_attr(tmpl);
+	attr = alloc_attr(ctx, parent, tmpl);
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate attribute");
@@ -443,18 +385,6 @@ new_attr(kdump_ctx *ctx, struct attr_data *parent,
 		parent = attr;
 
 	link_attr(parent, attr);
-	res = hash_attr(ctx, attr);
-	if (res != kdump_ok) {
-		delete_attr(ctx, attr);
-		return res;
-	}
-
-	for (old = parent->dir; old; old = old->next)
-		if (old != attr && old->template == attr->template) {
-			delete_attr(ctx, old);
-			break;
-		}
-
 	*pattr = attr;
 	return kdump_ok;
 }
