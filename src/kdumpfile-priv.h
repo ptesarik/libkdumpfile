@@ -584,17 +584,8 @@ void cleanup_attr(kdump_ctx *ctx);
 	DEFINE_SET_ACCESSOR(name, type, ctype)	\
 	DEFINE_ISSET_ACCESSOR(name)
 
-#define DEFINE_ACCESSORS_number(name, ctype) \
-	DEFINE_ACCESSORS(name, number, ctype)
-#define DEFINE_ACCESSORS_address(name, ctype) \
-	DEFINE_ACCESSORS(name, address, ctype)
-#define DEFINE_ACCESSORS_string(name, ctype) \
-	DEFINE_ACCESSORS(name, string, ctype)
-#define DEFINE_ACCESSORS_directory(name, ctype) \
-	DEFINE_ISSET_ACCESSOR(name)
-
 #define ATTR(dir, key, field, type, ctype)	\
-	DEFINE_ACCESSORS_ ## type(field, ctype)
+	DEFINE_ACCESSORS(field, type, ctype)
 #include "static-attr.def"
 #undef ATTR
 
