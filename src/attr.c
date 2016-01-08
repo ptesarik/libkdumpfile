@@ -47,13 +47,10 @@ static const struct attr_template global_keys[] = {
 
 static const size_t static_offsets[] = {
 #define ATTR(dir, key, field, type, ctype)		\
-	[GKI_ ## field] = offsetof(kdump_ctx, field),
+	[GKI_ ## field - GKI_static_first] = offsetof(kdump_ctx, field),
 #include "static-attr.def"
 #undef ATTR
 };
-
-#define NR_GLOBAL	ARRAY_SIZE(global_keys)
-#define NR_STATIC	ARRAY_SIZE(static_offsets)
 
 /**  Get a pointer to the static value with a given index.
  * @param ctx  Dump file object.
@@ -63,7 +60,8 @@ static const size_t static_offsets[] = {
 static inline union kdump_attr_value *
 static_attr_value(kdump_ctx *ctx, enum global_keyidx idx)
 {
-	return (union kdump_attr_value*)((char*)ctx + static_offsets[idx]);
+	return (union kdump_attr_value*)
+		((char*)ctx + static_offsets[idx - GKI_static_first]);
 }
 
 /**  Calculate the hash index of a key path.
@@ -198,7 +196,7 @@ lookup_attr_part(const kdump_ctx *ctx, const char *key, size_t keylen)
 static struct attr_data *
 lookup_attr_raw(const kdump_ctx *ctx, const char *key)
 {
-	if (!key || key > GATTR(NR_GLOBAL))
+	if (!key || key > GATTR(NR_GLOBAL_ATTRS))
 		return ctx->global_attrs[-(intptr_t)key];
 
 	return lookup_attr_part(ctx, key, strlen(key));
@@ -458,7 +456,7 @@ init_attrs(kdump_ctx *ctx)
 {
 	enum global_keyidx i;
 
-	for (i = 0; i < NR_GLOBAL; ++i) {
+	for (i = 0; i < NR_GLOBAL_ATTRS; ++i) {
 		const struct attr_template *tmpl = &global_keys[i];
 		struct attr_data *attr, *parent;
 
@@ -470,7 +468,7 @@ init_attrs(kdump_ctx *ctx)
 					 tmpl->key);
 		ctx->global_attrs[i] = attr;
 
-		if (i < NR_STATIC && tmpl->type != kdump_directory) {
+		if (i >= GKI_static_first && i <= GKI_static_last) {
 			attr->indirect = 1;
 			attr->pval = static_attr_value(ctx, i);
 		}

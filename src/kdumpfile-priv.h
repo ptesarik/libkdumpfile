@@ -201,11 +201,19 @@ struct kdump_vaddr_region {
 enum global_keyidx {
 #define ATTR(dir, key, field, type, ctype)	\
 	GKI_ ## field,
-#include "static-attr.def"
-#include "global-attr.def"
-#undef ATTR
 
-	NR_GLOBAL_ATTRS		/*< Total number of global attributes. */
+#include "global-attr.def"
+
+	GKI_static_first,
+	GKI_nonstatic_first = 0,
+	GKI_nonstatic_last = GKI_static_first - 1,
+
+#include "static-attr.def"
+
+	NR_GLOBAL_ATTRS,	/*< Total number of global attributes. */
+	GKI_static_last = NR_GLOBAL_ATTRS - 1
+
+#undef ATTR
 };
 
 #define GATTR(idx)	((const char*)-(intptr_t)(idx))
