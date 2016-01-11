@@ -286,6 +286,7 @@ struct attr_data {
 	unsigned isset : 1;
 	unsigned dynstr : 1;	/*< Dynamically allocated string */
 	unsigned indirect : 1;	/*< Actual value is at @c *pval */
+	unsigned acthook : 1;	/*< Set when executing a hook */
 
 	union {
 		union kdump_attr_value val;
