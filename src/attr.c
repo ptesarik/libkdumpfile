@@ -34,11 +34,12 @@
 #include <string.h>
 
 static const struct attr_template global_keys[] = {
-#define ATTR(dir, key, field, type, ctype)				\
+#define ATTR(dir, key, field, type, ctype, ...)				\
 	[GKI_ ## field] = {						\
 		key,							\
 		&global_keys[GKI_dir_ ## dir],				\
-		kdump_ ## type						\
+		kdump_ ## type,						\
+		##__VA_ARGS__						\
 	},
 #include "static-attr.def"
 #include "global-attr.def"
@@ -46,7 +47,7 @@ static const struct attr_template global_keys[] = {
 };
 
 static const size_t static_offsets[] = {
-#define ATTR(dir, key, field, type, ctype)		\
+#define ATTR(dir, key, field, type, ctype, ...)				\
 	[GKI_ ## field - GKI_static_first] = offsetof(kdump_ctx, field),
 #include "static-attr.def"
 #undef ATTR

@@ -199,7 +199,7 @@ struct kdump_vaddr_region {
 
 /* Global attribute keys */
 enum global_keyidx {
-#define ATTR(dir, key, field, type, ctype)	\
+#define ATTR(dir, key, field, type, ctype, ...)	\
 	GKI_ ## field,
 
 #include "global-attr.def"
@@ -338,7 +338,7 @@ struct _tag_kdump_ctx {
 	struct dyn_attr_template *tmpl;
 
 	/* static attributes */
-#define ATTR(dir, key, field, type, ctype)	\
+#define ATTR(dir, key, field, type, ctype, ...)	\
 	union kdump_attr_value field;
 #include "static-attr.def"
 #undef ATTR
@@ -622,7 +622,7 @@ void cleanup_attr(kdump_ctx *ctx);
 	DEFINE_SET_ACCESSOR(name, type, ctype)	\
 	DEFINE_ISSET_ACCESSOR(name)
 
-#define ATTR(dir, key, field, type, ctype)	\
+#define ATTR(dir, key, field, type, ctype, ...)	\
 	DEFINE_ACCESSORS(field, type, ctype)
 #include "static-attr.def"
 #undef ATTR

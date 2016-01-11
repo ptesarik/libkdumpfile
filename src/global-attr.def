@@ -10,8 +10,11 @@
  * @param type   Attribute type (kdump_attr_type).
  * @param ctype  Suggested C type for the attribute.
  *
+ * The variadic argument can be used to pass additional @c attr_template
+ * initialization.
+ *
  * A typical stanza is:
- * #define ATTR(dir, key, field, type, ctype) \
+ * #define ATTR(dir, key, field, type, ctype, ...) \
  *   // use macro arguments to construct whatever you need
  * #include "global-attr.def"
  * #undef ATTR
