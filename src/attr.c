@@ -480,16 +480,23 @@ init_attrs(kdump_ctx *ctx)
 /**  Set an attribute of a dump file object.
  * @param ctx   Dump file object.
  * @param attr  Attribute (detached).
+ * @param val   New value for the object.
  * @returns     Error status (see below).
  *
  * This function works both for statically allocated and dynamically
  * allocated attributes.
  */
-void
-set_attr(struct attr_data *attr)
+kdump_status
+set_attr(kdump_ctx *ctx, struct attr_data *attr, union kdump_attr_value val)
 {
+	if (attr->indirect)
+		*attr->pval = val;
+	else
+		attr->val = val;
+
 	instantiate_path(attr->parent);
 	attr->isset = 1;
+	return kdump_ok;
 }
 
 /**  Set a numeric attribute of a dump file object.
@@ -502,15 +509,15 @@ kdump_status
 set_attr_number(kdump_ctx *ctx, const char *key, kdump_num_t num)
 {
 	struct attr_data *attr;
+	union kdump_attr_value val;
 
 	attr = lookup_attr_raw(ctx, key);
 	if (!attr)
 		return set_error(ctx, kdump_nokey, "No such key");
 
 	clear_attr(attr);
-	attr->val.number = num;
-	set_attr(attr);
-	return kdump_ok;
+	val.number = num;
+	return set_attr(ctx, attr, val);
 }
 
 /**  Set an address attribute of a dump file object.
@@ -523,15 +530,15 @@ kdump_status
 set_attr_address(kdump_ctx *ctx, const char *key, kdump_addr_t addr)
 {
 	struct attr_data *attr;
+	union kdump_attr_value val;
 
 	attr = lookup_attr_raw(ctx, key);
 	if (!attr)
 		return set_error(ctx, kdump_nokey, "No such key");
 
 	clear_attr(attr);
-	attr->val.address = addr;
-	set_attr(attr);
-	return kdump_ok;
+	val.address = addr;
+	return set_attr(ctx, attr, val);
 }
 
 /**  Set a string attribute of a dump file object.
@@ -545,6 +552,7 @@ set_attr_string(kdump_ctx *ctx, const char *key, const char *str)
 {
 	struct attr_data *attr;
 	char *dynstr;
+	union kdump_attr_value val;
 
 	attr = lookup_attr_raw(ctx, key);
 	if (!attr)
@@ -557,9 +565,8 @@ set_attr_string(kdump_ctx *ctx, const char *key, const char *str)
 
 	clear_attr(attr);
 	attr->dynstr = 1;
-	attr->val.string = dynstr;
-	set_attr(attr);
-	return kdump_ok;
+	val.string = dynstr;
+	return set_attr(ctx, attr, val);
 }
 
 /**  Set a static string attribute of a dump file object.
@@ -572,15 +579,15 @@ kdump_status
 set_attr_static_string(kdump_ctx *ctx, const char *key, const char *str)
 {
 	struct attr_data *attr;
+	union kdump_attr_value val;
 
 	attr = lookup_attr_raw(ctx, key);
 	if (!attr)
 		return set_error(ctx, kdump_nokey, "No such key");
 
 	clear_attr(attr);
-	attr->val.string = str;
-	set_attr(attr);
-	return kdump_ok;
+	val.string = str;
+	return set_attr(ctx, attr, val);
 }
 
 /**  Allocate a new attribute in any directory.
@@ -629,6 +636,7 @@ add_attr_number(kdump_ctx *ctx, const char *path,
 		const struct attr_template *tmpl, kdump_num_t num)
 {
 	struct attr_data *attr;
+	union kdump_attr_value val;
 	kdump_status res;
 
 	res = add_attr(ctx, path, tmpl, &attr);
@@ -636,9 +644,8 @@ add_attr_number(kdump_ctx *ctx, const char *path,
 		return set_error(ctx, res,
 				 "Cannot set '%s.%s'", path, tmpl->key);
 
-	attr->val.number = num;
-	set_attr(attr);
-	return kdump_ok;
+	val.number = num;
+	return set_attr(ctx, attr, val);
 }
 
 /**  Add a string attribute to a directory.
@@ -657,6 +664,7 @@ add_attr_string(kdump_ctx *ctx, const char *path,
 {
 	struct attr_data *attr;
 	char *dynstr;
+	union kdump_attr_value val;
 	kdump_status res;
 
 	dynstr = strdup(str);
@@ -672,9 +680,8 @@ add_attr_string(kdump_ctx *ctx, const char *path,
 	}
 
 	attr->dynstr = 1;
-	attr->val.string = dynstr;
-	set_attr(attr);
-	return kdump_ok;
+	val.string = dynstr;
+	return set_attr(ctx, attr, val);
 }
 
 /**  Add a static string attribute to a directory.
@@ -692,6 +699,7 @@ kdump_status add_attr_static_string(kdump_ctx *ctx, const char *path,
 				    const char *str)
 {
 	struct attr_data *attr;
+	union kdump_attr_value val;
 	kdump_status res;
 
 	res = add_attr(ctx, path, tmpl, &attr);
@@ -699,7 +707,6 @@ kdump_status add_attr_static_string(kdump_ctx *ctx, const char *path,
 		return set_error(ctx, res,
 				 "Cannot set '%s.%s'", path, tmpl->key);
 
-	attr->val.string = str;
-	set_attr(attr);
-	return kdump_ok;
+	val.string = str;
+	return set_attr(ctx, attr, val);
 }

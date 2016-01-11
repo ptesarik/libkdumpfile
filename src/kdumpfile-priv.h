@@ -518,7 +518,8 @@ attr_value(const struct attr_data *attr)
 }
 
 #define set_attr INTERNAL_NAME(set_attr)
-void set_attr(struct attr_data *attr);
+kdump_status set_attr(kdump_ctx *ctx, struct attr_data *attr,
+		      union kdump_attr_value val);
 
 #define set_attr_number INTERNAL_NAME(set_attr_number)
 kdump_status set_attr_number(kdump_ctx *ctx, const char *key,
@@ -565,12 +566,14 @@ void cleanup_attr(kdump_ctx *ctx);
 	{							\
 		return ctx->name.type;				\
 	}
-#define DEFINE_SET_ACCESSOR(name, type, ctype)			\
-	static inline void					\
-	set_attr_ ## name(kdump_ctx *ctx, ctype newval)		\
-	{							\
-		ctx->name.type = newval;			\
-		set_attr(ctx->global_attrs[GKI_ ## name]);	\
+#define DEFINE_SET_ACCESSOR(name, type, ctype)				\
+	static inline kdump_status					\
+	set_attr_ ## name(kdump_ctx *ctx, ctype newval)			\
+	{								\
+		union kdump_attr_value val;				\
+		val.type = newval;					\
+		return set_attr(ctx, ctx->global_attrs[GKI_ ## name],	\
+				val);					\
 	}
 #define DEFINE_ISSET_ACCESSOR(name)					\
 	static inline int						\
