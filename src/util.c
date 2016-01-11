@@ -224,20 +224,6 @@ arch_ops(enum kdump_arch arch)
 	return NULL;
 }
 
-static kdump_status
-set_page_size_and_shift(kdump_ctx *ctx, size_t page_size, unsigned page_shift)
-{
-	void *page = realloc(ctx->page, page_size);
-	if (!page)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate page buffer (%zu bytes)",
-				 page_size);
-	ctx->page = page;
-	set_attr_page_size(ctx, page_size);
-	set_attr_page_shift(ctx, page_shift);
-	return kdump_ok;
-}
-
 static const char *
 arch_name(enum kdump_arch arch)
 {
@@ -267,7 +253,7 @@ set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 		if (!page_shift)
 			return set_error(ctx, kdump_unsupported,
 					 "No default page size");
-		set_page_size_and_shift(ctx, 1UL << page_shift, page_shift);
+		set_attr_page_shift(ctx, page_shift);
 	}
 
 	ctx->arch_ops = arch_ops(arch);
@@ -281,19 +267,40 @@ set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 	return kdump_ok;
 }
 
-kdump_status
-set_page_size(kdump_ctx *ctx, size_t page_size)
+static kdump_status
+page_size_pre_hook(kdump_ctx *ctx, struct attr_data *attr,
+		   union kdump_attr_value *newval)
 {
-	unsigned page_shift;
+	size_t page_size = newval->number;
+	void *page = realloc(ctx->page, page_size);
 
 	/* It must be a power of 2 */
 	if (page_size != (page_size & ~(page_size - 1)))
 		return set_error(ctx, kdump_dataerr,
 				 "Invalid page size: %zu", page_size);
 
-	page_shift = ffsl((unsigned long)page_size) - 1;
-	return set_page_size_and_shift(ctx, page_size, page_shift);
+	if (!page)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate page buffer (%zu bytes)",
+				 page_size);
+	ctx->page = page;
+
+	return set_attr_page_shift(ctx, ffsl((unsigned long)page_size) - 1);
 }
+
+const struct attr_ops page_size_ops = {
+	.pre_set = page_size_pre_hook,
+};
+
+static kdump_status
+page_shift_post_hook(kdump_ctx *ctx, struct attr_data *attr)
+{
+	return set_attr_page_size(ctx, (size_t)1 << attr_value(attr)->number);
+}
+
+const struct attr_ops page_shift_ops = {
+	.post_set = page_shift_post_hook,
+};
 
 /* Final NUL may be missing in the source (i.e. corrupted dump data),
  * but let's make sure that it is present in the destination.

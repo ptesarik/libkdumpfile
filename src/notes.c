@@ -264,7 +264,7 @@ process_xc_xen_note(kdump_ctx *ctx, uint32_t type,
 		struct xen_elfnote_header *header = desc;
 		uint64_t page_size = dump64toh(ctx, header->xch_page_size);
 
-		return set_page_size(ctx, page_size);
+		return set_attr_page_size(ctx, page_size);
 	} else if (type == XEN_ELFNOTE_DUMPCORE_FORMAT_VERSION) {
 		uint64_t version = dump64toh(ctx, *(uint64_t*)desc);
 
@@ -295,7 +295,7 @@ process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
 			return set_error(ctx, kdump_dataerr,
 					 "Invalid PAGESIZE: %s", val);
 
-		ret = set_page_size(ctx, page_size);
+		ret = set_attr_page_size(ctx, page_size);
 		if (ret != kdump_ok)
 			return ret;
 	}

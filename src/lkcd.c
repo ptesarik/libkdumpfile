@@ -618,7 +618,7 @@ open_common(kdump_ctx *ctx)
 
 	ctx->format = lkcdp->format;
 
-	ret = set_page_size(ctx, dump32toh(ctx, dh->dh_page_size));
+	ret = set_attr_page_size(ctx, dump32toh(ctx, dh->dh_page_size));
 	if (ret != kdump_ok)
 		return ret;
 

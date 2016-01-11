@@ -151,7 +151,7 @@ s390_probe(kdump_ctx *ctx)
 	sdp->dataoff = dump32toh(ctx, dh->h1.hdr_size);
 	ctx->max_pfn = dump32toh(ctx, dh->h1.num_pages);
 
-	ret = set_page_size(ctx, dump32toh(ctx, dh->h1.page_size));
+	ret = set_attr_page_size(ctx, dump32toh(ctx, dh->h1.page_size));
 	if (ret != kdump_ok)
 		goto out;
 

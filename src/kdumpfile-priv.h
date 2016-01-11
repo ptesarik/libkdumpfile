@@ -433,9 +433,6 @@ enum kdump_arch machine_arch(const char *machine);
 #define set_arch INTERNAL_NAME(set_arch)
 kdump_status set_arch(kdump_ctx *ctx, enum kdump_arch arch);
 
-#define set_page_size INTERNAL_NAME(set_page_size)
-kdump_status set_page_size(kdump_ctx *ctx, size_t page_size);
-
 #define set_uts INTERNAL_NAME(set_uts)
 kdump_status set_uts(kdump_ctx *ctx, const struct new_utsname *src);
 
@@ -627,6 +624,13 @@ void cleanup_attr(kdump_ctx *ctx);
 	DEFINE_ACCESSORS(field, type, ctype)
 #include "static-attr.def"
 #undef ATTR
+
+/* Attribute ops */
+#define page_size_ops INTERNAL_NAME(page_size_ops)
+extern const struct attr_ops page_size_ops;
+
+#define page_shift_ops INTERNAL_NAME(page_shift_ops)
+extern const struct attr_ops page_shift_ops;
 
 /* Older glibc didn't have the byteorder macros */
 #ifndef be16toh

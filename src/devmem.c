@@ -152,7 +152,7 @@ devmem_probe(kdump_ctx *ctx)
 	set_attr_byte_order(ctx, kdump_big_endian);
 #endif
 
-	ret = set_page_size(ctx, sysconf(_SC_PAGESIZE));
+	ret = set_attr_page_size(ctx, sysconf(_SC_PAGESIZE));
 	if (ret != kdump_ok)
 		return ret;
 

@@ -439,7 +439,7 @@ try_header(kdump_ctx *ctx, int32_t block_size,
 				 (unsigned long long) maxcovered);
 
 	/* basic sanity checks passed */
-	ret = set_page_size(ctx, block_size);
+	ret = set_attr_page_size(ctx, block_size);
 	if (ret != kdump_ok)
 		return ret;
 

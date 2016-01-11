@@ -30,10 +30,10 @@ ATTR(arch, "byte_order", byte_order, number, kdump_byte_order_t)
 ATTR(arch, "ptr_size", ptr_size, number, size_t)
 
 /* target page size */
-ATTR(arch, "page_size", page_size, number, size_t)
+ATTR(arch, "page_size", page_size, number, size_t, .ops = &page_size_ops)
 
 /* = log2(page_size) */
-ATTR(arch, "page_shift", page_shift, number, unsigned)
+ATTR(arch, "page_shift", page_shift, number, unsigned, .ops = &page_shift_ops)
 
 /* number of CPUs in the system  */
 ATTR(cpu, "number", num_cpus, number, unsigned)
