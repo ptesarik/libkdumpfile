@@ -218,6 +218,40 @@ enum global_keyidx {
 
 #define GATTR(idx)	((const char*)-(intptr_t)(idx))
 
+struct attr_data;
+
+/**  Type for early attribute hooks.
+ * @param ctx      Dump file object.
+ * @param attr     Attribute.
+ * @param val      New attribute value.
+ * @returns        Error status.
+ *
+ * This function is called before making a change to an attribute.
+ * If this function returns an error code, it is passed up the chain,
+ * and no other action is taken.
+ */
+typedef kdump_status attr_pre_fn(
+	kdump_ctx *ctx, struct attr_data *attr, union kdump_attr_value *val);
+
+/**  Type for late attribute hooks.
+ * @param ctx      Dump file object.
+ * @param attr     Attribute.
+ * @returns        Error status.
+ *
+ * This function is called after making a change to an attribute.
+ * If this function returns an error code, it is passed up the chain,
+ * but the value had been changed already.
+ */
+typedef kdump_status attr_post_fn(
+	kdump_ctx *ctx, struct attr_data *attr);
+
+/**  Attribute ops
+ */
+struct attr_ops {
+	attr_pre_fn *pre_set;   /*< Called before attr_set. */
+	attr_post_fn *post_set; /*< Called after attr_set(). */
+};
+
 /**  Attribute template.
  *
  * All instances of a key share the same characteristics (such as key name
@@ -227,6 +261,7 @@ struct attr_template {
 	const char *key;
 	const struct attr_template *parent;
 	enum kdump_attr_type type;
+	const struct attr_ops *ops;
 };
 
 /**  Dynamically allocated attribute template.

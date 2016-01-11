@@ -379,6 +379,7 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 	dt->template.key = keyname;
 	dt->template.parent = parent->template;
 	dt->template.type = type;
+	dt->template.ops = NULL;
 
 	attr = new_attr(ctx, parent, &dt->template);
 	if (!attr) {
@@ -489,6 +490,16 @@ init_attrs(kdump_ctx *ctx)
 kdump_status
 set_attr(kdump_ctx *ctx, struct attr_data *attr, union kdump_attr_value val)
 {
+	kdump_status res;
+	const struct attr_ops *ops;
+
+	ops = attr->template->ops;
+	if (ops && ops->pre_set) {
+		res = ops->pre_set(ctx, attr, &val);
+		if (res != kdump_ok)
+			return res;
+	}
+
 	if (attr->indirect)
 		*attr->pval = val;
 	else
@@ -496,7 +507,11 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr, union kdump_attr_value val)
 
 	instantiate_path(attr->parent);
 	attr->isset = 1;
-	return kdump_ok;
+
+	ops = attr->template->ops;
+	return (ops && ops->post_set)
+		? ops->post_set(ctx, attr)
+		: kdump_ok;
 }
 
 /**  Set a numeric attribute of a dump file object.
