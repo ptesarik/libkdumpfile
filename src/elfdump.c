@@ -693,14 +693,16 @@ elf_cleanup(kdump_ctx *ctx)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
 
-	if (edp->load_segments)
-		free(edp->load_segments);
-	if (edp->sections)
-		free(edp->sections);
-	if (edp->strtab)
-		free(edp->strtab);
-	free(edp);
-	ctx->fmtdata = NULL;
+	if (edp) {
+		if (edp->load_segments)
+			free(edp->load_segments);
+		if (edp->sections)
+			free(edp->sections);
+		if (edp->strtab)
+			free(edp->strtab);
+		free(edp);
+		ctx->fmtdata = NULL;
+	}
 };
 
 const struct format_ops elfdump_ops = {
