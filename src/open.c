@@ -68,6 +68,7 @@ kdump_init(void)
 
 	ctx->last_pfn = -(kdump_paddr_t)1;
 	ctx->cb_get_symbol_val = kdump_vmcoreinfo_symbol;
+	ctx->cb_get_symbol_val_xen = kdump_vmcoreinfo_symbol_xen;
 
 	return ctx;
 }

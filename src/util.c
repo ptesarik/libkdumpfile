@@ -589,6 +589,13 @@ get_symbol_val(kdump_ctx *ctx, const char *name, kdump_addr_t *val)
 }
 
 kdump_status
+get_symbol_val_xen(kdump_ctx *ctx, const char *name, kdump_addr_t *val)
+{
+	kdump_status ret = ctx->cb_get_symbol_val_xen(ctx, name, val);
+	return set_error(ctx, ret, "Cannot resolve \"%s\"", name);
+}
+
+kdump_status
 set_cpu_regs64(kdump_ctx *ctx, unsigned cpu,
 	       const struct attr_template *tmpl, uint64_t *regs, unsigned num)
 {

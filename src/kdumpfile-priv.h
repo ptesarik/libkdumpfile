@@ -361,6 +361,7 @@ struct _tag_kdump_ctx {
 
 	/* callbacks */
 	kdump_get_symbol_val_fn *cb_get_symbol_val;
+	kdump_get_symbol_val_fn *cb_get_symbol_val_xen;
 
 	/* error messages */
 	char *err_str;		/* error string */
@@ -462,6 +463,10 @@ uint32_t cksum32(void *buffer, size_t size, uint32_t csum);
 #define get_symbol_val INTERNAL_NAME(get_symbol_val)
 kdump_status get_symbol_val(kdump_ctx *ctx, const char *name,
 			    kdump_addr_t *val);
+
+#define get_symbol_val_xen INTERNAL_NAME(get_symbol_val_xen)
+kdump_status get_symbol_val_xen(kdump_ctx *ctx, const char *name,
+				kdump_addr_t *val);
 
 #define set_cpu_regs64 INTERNAL_NAME(set_cpu_regs64)
 kdump_status set_cpu_regs64(kdump_ctx *ctx, unsigned cpu,

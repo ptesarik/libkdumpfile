@@ -580,6 +580,16 @@ typedef kdump_status kdump_get_symbol_val_fn(
 kdump_get_symbol_val_fn *
 kdump_cb_get_symbol_val(kdump_ctx *ctx, kdump_get_symbol_val_fn *cb);
 
+/**  Set the get_symbol_val_xen callback
+ * @param ctx  Dump file object.
+ * @param cb   New callback function.
+ * @return the Previous callback function.
+ *
+ * This callback is used for symbols in the Xen hypervisor.
+ */
+kdump_get_symbol_val_fn *
+kdump_cb_get_symbol_val_xen(kdump_ctx *ctx, kdump_get_symbol_val_fn *cb);
+
 #ifdef  __cplusplus
 }
 #endif
