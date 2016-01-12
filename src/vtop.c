@@ -36,17 +36,6 @@
 #define RGN_ALLOC_INC 32
 
 kdump_status
-kdump_vtop_init(kdump_ctx *ctx)
-{
-	clear_error(ctx);
-
-	if (ctx->arch_ops && ctx->arch_ops->vtop_init)
-		return ctx->arch_ops->vtop_init(ctx);
-
-	return kdump_ok;
-}
-
-kdump_status
 set_vtop_xlat(struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
 	      kdump_xlat_t xlat, kdump_vaddr_t phys_off)
 {
@@ -155,6 +144,35 @@ get_vtop_xlat(struct vtop_map *map, kdump_vaddr_t vaddr,
 	return rgn->xlat;
 }
 
+/**  Set default translation to VTOP (page table) translation
+ */
+static void
+default_to_vtop(struct vtop_map *map)
+{
+	struct kdump_vaddr_region *rgn;
+	for (rgn = map->region; rgn < &map->region[map->num_regions]; ++rgn)
+		if (rgn->xlat == KDUMP_XLAT_NONE)
+			rgn->xlat = KDUMP_XLAT_VTOP;
+}
+
+kdump_status
+kdump_vtop_init(kdump_ctx *ctx)
+{
+	kdump_status res;
+
+	clear_error(ctx);
+
+	if (!ctx->arch_ops || !ctx->arch_ops->vtop_init)
+		return kdump_unsupported;
+
+	res = ctx->arch_ops->vtop_init(ctx);
+	if (res != kdump_ok)
+		return res;
+
+	default_to_vtop(&ctx->vtop_map);
+	return kdump_ok;
+}
+
 kdump_status
 kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
@@ -166,17 +184,17 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	xlat = get_vtop_xlat(&ctx->vtop_map, vaddr, &phys_off);
 	switch (xlat) {
 	case KDUMP_XLAT_NONE:
-		return set_error(ctx, kdump_invalid,
-				 "Uninitialized translation method");
+		return set_error(ctx, kdump_nodata,
+				 "Unhandled virtual address");
 
 	case KDUMP_XLAT_INVALID:
-		return set_error(ctx, kdump_nodata,
+		return set_error(ctx, kdump_invalid,
 				 "Invalid virtual address");
 
 	case KDUMP_XLAT_VTOP:
 		if (!ctx->arch_ops || !ctx->arch_ops->vtop)
-			return set_error(ctx, kdump_invalid,
-					 "VTOP translation not initialized");
+			return set_error(ctx, kdump_unsupported,
+					 "VTOP translation not available");
 		return ctx->arch_ops->vtop(ctx, vaddr, paddr);
 
 	case KDUMP_XLAT_DIRECT:
