@@ -23,6 +23,9 @@
 /* architecture name */
 ATTR(arch, "name", arch_name, string, const char *)
 
+/* ELF machine ID (e_machine field) */
+ATTR(arch, "machine", arch_machine, number, uint_fast16_t)
+
 /* little-endian or big-endian */
 ATTR(arch, "byte_order", byte_order, number, kdump_byte_order_t)
 
