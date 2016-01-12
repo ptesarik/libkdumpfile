@@ -94,11 +94,11 @@ get_vmcoreinfo(kdump_ctx *ctx)
 static kdump_status
 devmem_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
-	off_t pos = pfn * get_attr_page_size(ctx);
+	off_t pos = pfn * get_page_size(ctx);
 	ssize_t rd;
 
-	rd = pread(ctx->fd, ctx->page, get_attr_page_size(ctx), pos);
-	if (rd != get_attr_page_size(ctx))
+	rd = pread(ctx->fd, ctx->page, get_page_size(ctx), pos);
+	if (rd != get_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read memory device");
 	return kdump_ok;
@@ -147,12 +147,12 @@ devmem_probe(kdump_ctx *ctx)
 
 	ctx->format = "live source";
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-	set_attr_byte_order(ctx, kdump_little_endian);
+	set_byte_order(ctx, kdump_little_endian);
 #else
-	set_attr_byte_order(ctx, kdump_big_endian);
+	set_byte_order(ctx, kdump_big_endian);
 #endif
 
-	ret = set_attr_page_size(ctx, sysconf(_SC_PAGESIZE));
+	ret = set_page_size(ctx, sysconf(_SC_PAGESIZE));
 	if (ret != kdump_ok)
 		return ret;
 

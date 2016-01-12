@@ -253,13 +253,13 @@ set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 		if (!page_shift)
 			return set_error(ctx, kdump_unsupported,
 					 "No default page size");
-		set_attr_page_shift(ctx, page_shift);
+		set_page_shift(ctx, page_shift);
 	}
 
 	ctx->arch_ops = arch_ops(arch);
 
-	set_attr_ptr_size(ctx, arch_ptr_size(arch));
-	set_attr_arch_name(ctx, arch_name(arch));
+	set_ptr_size(ctx, arch_ptr_size(arch));
+	set_arch_name(ctx, arch_name(arch));
 
 	if (ctx->arch_ops && ctx->arch_ops->init)
 		return ctx->arch_ops->init(ctx);
@@ -285,7 +285,7 @@ page_size_pre_hook(kdump_ctx *ctx, struct attr_data *attr,
 				 page_size);
 	ctx->page = page;
 
-	return set_attr_page_shift(ctx, ffsl((unsigned long)page_size) - 1);
+	return set_page_shift(ctx, ffsl((unsigned long)page_size) - 1);
 }
 
 const struct attr_ops page_size_ops = {
@@ -295,7 +295,7 @@ const struct attr_ops page_size_ops = {
 static kdump_status
 page_shift_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 {
-	return set_attr_page_size(ctx, (size_t)1 << attr_value(attr)->number);
+	return set_page_size(ctx, (size_t)1 << attr_value(attr)->number);
 }
 
 const struct attr_ops page_shift_ops = {

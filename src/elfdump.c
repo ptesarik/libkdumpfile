@@ -102,7 +102,7 @@ static kdump_status
 elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
-	kdump_paddr_t addr = pfn * get_attr_page_size(ctx);
+	kdump_paddr_t addr = pfn * get_page_size(ctx);
 	kdump_paddr_t segoff;
 	off_t pos;
 	ssize_t rd;
@@ -129,8 +129,8 @@ elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	}
 
 	/* read page data */
-	rd = pread(ctx->fd, ctx->page, get_attr_page_size(ctx), pos);
-	if (rd != get_attr_page_size(ctx))
+	rd = pread(ctx->fd, ctx->page, get_page_size(ctx), pos);
+	if (rd != get_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu",
 				 (unsigned long long) pos);
@@ -144,12 +144,12 @@ pfn_to_idx(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	unsigned long i;
 
-	if (get_attr_xen_type(ctx) == kdump_xen_hvm) {
+	if (get_xen_type(ctx) == kdump_xen_hvm) {
 		uint64_t *p = ctx->xen_map;
 		for (i = 0; i < ctx->xen_map_size; ++i, ++p)
 			if (*p == pfn)
 				return i;
-	} else if (get_attr_xen_type(ctx) == kdump_xen_pv) {
+	} else if (get_xen_type(ctx) == kdump_xen_pv) {
 		struct xen_p2m *p = ctx->xen_map;
 		for (i = 0; i < ctx->xen_map_size; ++i, ++p)
 			if (p->pfn == pfn)
@@ -173,9 +173,9 @@ elf_read_xen_domU(kdump_ctx *ctx, kdump_pfn_t pfn)
 				 "No machine address for PFN: 0x%llx",
 				 (unsigned long long) pfn);
 
-	offset = edp->xen_pages_offset + (off_t)idx * get_attr_page_size(ctx);
-	rd = pread(ctx->fd, ctx->page, get_attr_page_size(ctx), offset);
-	if (rd != get_attr_page_size(ctx))
+	offset = edp->xen_pages_offset + (off_t)idx * get_page_size(ctx);
+	rd = pread(ctx->fd, ctx->page, get_page_size(ctx), offset);
+	if (rd != get_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu",
 				 (unsigned long long) offset);
@@ -188,7 +188,7 @@ mfn_to_idx(kdump_ctx *ctx, kdump_pfn_t mfn)
 {
 	unsigned long i;
 
-	if (get_attr_xen_type(ctx) == kdump_xen_pv) {
+	if (get_xen_type(ctx) == kdump_xen_pv) {
 		struct xen_p2m *p = ctx->xen_map;
 		for (i = 0; i < ctx->xen_map_size; ++i, ++p)
 			if (p->gmfn == mfn)
@@ -204,7 +204,7 @@ elf_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 	struct xen_p2m *p = ctx->xen_map;
 	unsigned long i;
 
-	if (get_attr_xen_type(ctx) != kdump_xen_pv) {
+	if (get_xen_type(ctx) != kdump_xen_pv) {
 		*pfn = mfn;
 		return kdump_ok;
 	}
@@ -229,9 +229,9 @@ elf_read_xenmach_domU(kdump_ctx *ctx, kdump_pfn_t mfn)
 	if (idx == ~0UL)
 		return set_error(ctx, kdump_nodata, "Page not found");
 
-	offset = edp->xen_pages_offset + (off_t)idx * get_attr_page_size(ctx);
-	rd = pread(ctx->fd, ctx->page, get_attr_page_size(ctx), offset);
-	if (rd != get_attr_page_size(ctx))
+	offset = edp->xen_pages_offset + (off_t)idx * get_page_size(ctx);
+	rd = pread(ctx->fd, ctx->page, get_page_size(ctx), offset);
+	if (rd != get_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu",
 				 (unsigned long long) offset);
@@ -364,7 +364,7 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 	kdump_status ret;
 	int i;
 
-	set_attr_arch_machine(ctx, dump16toh(ctx, ehdr->e_machine));
+	set_arch_machine(ctx, dump16toh(ctx, ehdr->e_machine));
 
 	ret = init_segments(ctx, dump16toh(ctx, ehdr->e_phnum));
 	if (ret != kdump_ok)
@@ -435,7 +435,7 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 	kdump_status ret;
 	int i;
 
-	set_attr_arch_machine(ctx, dump16toh(ctx, ehdr->e_machine));
+	set_arch_machine(ctx, dump16toh(ctx, ehdr->e_machine));
 
 	ret = init_segments(ctx, dump16toh(ctx, ehdr->e_phnum));
 	if (ret != kdump_ok)
@@ -523,7 +523,7 @@ process_elf_notes(kdump_ctx *ctx, void *notes)
 		p += seg->size;
 	}
 
-	ret = set_arch(ctx, mach2arch(get_attr_arch_machine(ctx)));
+	ret = set_arch(ctx, mach2arch(get_arch_machine(ctx)));
 	if (ret != kdump_ok)
 		return ret;
 
@@ -568,7 +568,7 @@ open_common(kdump_ctx *ctx)
 	for (i = 0; i < edp->num_load_segments; ++i) {
 		struct load_segment *seg = edp->load_segments + i;
 		unsigned long pfn = (seg->phys + seg->size) /
-			get_attr_page_size(ctx);
+			get_page_size(ctx);
 		if (pfn > ctx->max_pfn)
 			ctx->max_pfn = pfn;
 
@@ -590,13 +590,13 @@ open_common(kdump_ctx *ctx)
 			if (!ctx->xen_map)
 				return kdump_syserr;
 			ctx->xen_map_size = sect->size /sizeof(struct xen_p2m);
-			set_attr_xen_type(ctx, kdump_xen_pv);
+			set_xen_type(ctx, kdump_xen_pv);
 		} else if (!strcmp(name, ".xen_pfn")) {
 			ctx->xen_map = read_elf_sect(ctx, sect);
 			if (!ctx->xen_map)
 				return kdump_syserr;
 			ctx->xen_map_size = sect->size / sizeof(uint64_t);
-			set_attr_xen_type(ctx, kdump_xen_hvm);
+			set_xen_type(ctx, kdump_xen_hvm);
 		} else if (!strcmp(name, ".note.Xen")) {
 			notes = read_elf_sect(ctx, sect);
 			if (!notes)
@@ -650,10 +650,10 @@ elf_probe(kdump_ctx *ctx)
 
 	switch (eheader[EI_DATA]) {
 	case ELFDATA2LSB:
-		set_attr_byte_order(ctx, kdump_little_endian);
+		set_byte_order(ctx, kdump_little_endian);
 		break;
 	case ELFDATA2MSB:
-		set_attr_byte_order(ctx, kdump_big_endian);
+		set_byte_order(ctx, kdump_big_endian);
 		break;
 	default:
 		return set_error(ctx, kdump_unsupported,

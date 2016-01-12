@@ -404,7 +404,7 @@ read_pgt(kdump_ctx *ctx)
 					 "Wrong page directory address: 0x%llx",
 					 (unsigned long long) pgtaddr);
 
-		pgtaddr -= __START_KERNEL_map - get_attr_phys_base(ctx);
+		pgtaddr -= __START_KERNEL_map - get_phys_base(ctx);
 		rdflags = KDUMP_PHYSADDR;
 	} else if (ret == kdump_nodata) {
 		const struct attr_data *attr;
@@ -413,7 +413,7 @@ read_pgt(kdump_ctx *ctx)
 			return set_error(ctx, kdump_nodata,
 					 "Cannot get CR3 value");
 		pgtaddr = attr_value(attr)->number;
-		rdflags = (get_attr_xen_type(ctx) == kdump_xen_pv)
+		rdflags = (get_xen_type(ctx) == kdump_xen_pv)
 			? KDUMP_XENMACHADDR
 			: KDUMP_PHYSADDR;
 	} else
@@ -498,7 +498,7 @@ x86_64_vtop_init(kdump_ctx *ctx)
 		return ret;
 
 	if (!layout)
-		layout = layout_by_version(get_attr_version_code(ctx));
+		layout = layout_by_version(get_version_code(ctx));
 	if (!layout)
 		return set_error(ctx, kdump_nodata,
 				 "Cannot determine virtual memory layout");
@@ -530,18 +530,18 @@ process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 		return set_error(ctx, kdump_dataerr,
 				 "Wrong PRSTATUS size: %zu", size);
 
-	res = set_cpu_regs64(ctx, get_attr_num_cpus(ctx), reg_names,
+	res = set_cpu_regs64(ctx, get_num_cpus(ctx), reg_names,
 			     status->pr_reg, ELF_NGREG);
 	if (res != kdump_ok)
 		return res;
 
-	sprintf(cpukey, "cpu.%u", get_attr_num_cpus(ctx));
+	sprintf(cpukey, "cpu.%u", get_num_cpus(ctx));
 	res = add_attr_number(ctx, cpukey, &tmpl_pid,
 			      dump32toh(ctx, status->pr_pid));
 	if (res != kdump_ok)
 		return res;
 
-	set_attr_num_cpus(ctx, get_attr_num_cpus(ctx) + 1);
+	set_num_cpus(ctx, get_num_cpus(ctx) + 1);
 	return kdump_ok;
 }
 
@@ -585,8 +585,8 @@ process_x86_64_xen_prstatus(kdump_ctx *ctx, void *data, size_t size)
 		size -= sizeof(struct xen_vcpu_guest_context);
 	}
 
-	if (!isset_num_cpus(ctx) || cpu > get_attr_num_cpus(ctx))
-		set_attr_num_cpus(ctx, cpu);
+	if (!isset_num_cpus(ctx) || cpu > get_num_cpus(ctx))
+		set_num_cpus(ctx, cpu);
 
 	return kdump_ok;
 }
@@ -605,7 +605,7 @@ x86_64_process_load(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t paddr)
 	if (!isset_phys_base(ctx) &&
 	    vaddr >= __START_KERNEL_map &&
 	    vaddr < __START_KERNEL_map + MAX_PHYSICAL_START)
-		set_attr_phys_base(ctx, paddr - (vaddr - __START_KERNEL_map));
+		set_phys_base(ctx, paddr - (vaddr - __START_KERNEL_map));
 	return kdump_ok;
 }
 
@@ -704,7 +704,7 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	kdump_status ret;
 
-	if (get_attr_xen_type(ctx) == kdump_xen_pv) {
+	if (get_xen_type(ctx) == kdump_xen_pv) {
 		kdump_addr_t maddr;
 		kdump_pfn_t mfn, pfn;
 
@@ -716,15 +716,15 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 		if (ret != kdump_ok)
 			return ret;
 
-		mfn = maddr >> get_attr_page_shift(ctx);
+		mfn = maddr >> get_page_shift(ctx);
 		ret = ctx->ops->mfn_to_pfn(ctx, mfn, &pfn);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret,
 					 "Cannot translate MFN 0x%llx",
 					 (unsigned long long) mfn);
 
-		*paddr = (pfn << get_attr_page_shift(ctx)) |
-			(maddr & (get_attr_page_size(ctx) - 1));
+		*paddr = (pfn << get_page_shift(ctx)) |
+			(maddr & (get_page_size(ctx) - 1));
 		return kdump_ok;
 	}
 

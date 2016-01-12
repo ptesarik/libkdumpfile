@@ -147,14 +147,14 @@ process_core_note(kdump_ctx *ctx, uint32_t type,
 static kdump_status
 process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 {
-	size_t ptr_size = get_attr_ptr_size(ctx);
+	size_t ptr_size = get_ptr_size(ctx);
 	unsigned words = len / ptr_size;
 	unsigned long major, minor;
 	kdump_vaddr_t extra;
 	kdump_pfn_t p2m_mfn;
 	kdump_status res;
 
-	set_attr_xen_type(ctx, kdump_xen_system);
+	set_xen_type(ctx, kdump_xen_system);
 
 	if (ptr_size == 8 &&
 	    len >= sizeof(struct xen_crash_info_64)) {
@@ -195,7 +195,7 @@ process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 static kdump_status
 process_xen_dumpcore_version(kdump_ctx *ctx, void *data, size_t len)
 {
-	size_t ptr_size = get_attr_ptr_size(ctx);
+	size_t ptr_size = get_ptr_size(ctx);
 	unsigned long major, minor;
 	const char *extra;
 	char extra_str[XEN_EXTRA_VERSION_SZ + 1];
@@ -264,7 +264,7 @@ process_xc_xen_note(kdump_ctx *ctx, uint32_t type,
 		struct xen_elfnote_header *header = desc;
 		uint64_t page_size = dump64toh(ctx, header->xch_page_size);
 
-		return set_attr_page_size(ctx, page_size);
+		return set_page_size(ctx, page_size);
 	} else if (type == XEN_ELFNOTE_DUMPCORE_FORMAT_VERSION) {
 		uint64_t version = dump64toh(ctx, *(uint64_t*)desc);
 
@@ -295,7 +295,7 @@ process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
 			return set_error(ctx, kdump_dataerr,
 					 "Invalid PAGESIZE: %s", val);
 
-		ret = set_attr_page_size(ctx, page_size);
+		ret = set_page_size(ctx, page_size);
 		if (ret != kdump_ok)
 			return ret;
 	}

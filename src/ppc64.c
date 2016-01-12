@@ -271,7 +271,7 @@ ppc64_vtop_init(kdump_ctx *ctx)
 
 	addr = strtoull(val, NULL, 16);
 
-	set_attr_phys_base(ctx, addr);
+	set_phys_base(ctx, addr);
 
 	flush_regions(ctx);
 	ret = set_region(ctx, addr, addr + 0x1000000000000000, KDUMP_XLAT_DIRECT, addr);
@@ -412,13 +412,13 @@ process_ppc64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 		return set_error(ctx, kdump_dataerr,
 				 "Wrong PRSTATUS size: %zu", size);
 
-	res = set_cpu_regs64(ctx, get_attr_num_cpus(ctx), reg_names,
+	res = set_cpu_regs64(ctx, get_num_cpus(ctx), reg_names,
 			     status->pr_reg, ELF_NGREG);
 
 	if (res != kdump_ok)
 		return res;
 
-	set_attr_num_cpus(ctx, get_attr_num_cpus(ctx) + 1);
+	set_num_cpus(ctx, get_num_cpus(ctx) + 1);
 
 	return kdump_ok;
 }

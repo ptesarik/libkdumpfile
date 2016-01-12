@@ -96,49 +96,49 @@ kdump_format(kdump_ctx *ctx)
 kdump_byte_order_t
 kdump_byte_order(kdump_ctx *ctx)
 {
-	return get_attr_byte_order(ctx);
+	return get_byte_order(ctx);
 }
 
 size_t
 kdump_ptr_size(kdump_ctx *ctx)
 {
-	return get_attr_ptr_size(ctx);
+	return get_ptr_size(ctx);
 }
 
 const char *
 kdump_arch_name(kdump_ctx *ctx)
 {
-	return get_attr_arch_name(ctx);
+	return get_arch_name(ctx);
 }
 
 kdump_xen_type_t
 kdump_xen_type(kdump_ctx *ctx)
 {
-	return get_attr_xen_type(ctx);
+	return get_xen_type(ctx);
 }
 
 int
 kdump_is_xen(kdump_ctx *ctx)
 {
-	return get_attr_xen_type(ctx) != kdump_xen_none;
+	return get_xen_type(ctx) != kdump_xen_none;
 }
 
 size_t
 kdump_pagesize(kdump_ctx *ctx)
 {
-	return get_attr_page_size(ctx);
+	return get_page_size(ctx);
 }
 
 unsigned
 kdump_pageshift(kdump_ctx *ctx)
 {
-	return get_attr_page_shift(ctx);
+	return get_page_shift(ctx);
 }
 
 kdump_paddr_t
 kdump_phys_base(kdump_ctx *ctx)
 {
-	return get_attr_phys_base(ctx);
+	return get_phys_base(ctx);
 }
 
 const char *
@@ -189,13 +189,13 @@ kdump_domainname(kdump_ctx *ctx)
 unsigned
 kdump_version_code(kdump_ctx *ctx)
 {
-	return get_attr_version_code(ctx);
+	return get_version_code(ctx);
 }
 
 unsigned
 kdump_num_cpus(kdump_ctx *ctx)
 {
-	return get_attr_num_cpus(ctx);
+	return get_num_cpus(ctx);
 }
 
 kdump_status

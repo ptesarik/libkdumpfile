@@ -179,18 +179,18 @@ process_ia32_prstatus(kdump_ctx *ctx, void *data, size_t size)
 		return set_error(ctx, kdump_dataerr,
 				 "Wrong PRSTATUS size: %zu", size);
 
-	res = set_cpu_regs32(ctx, get_attr_num_cpus(ctx),
+	res = set_cpu_regs32(ctx, get_num_cpus(ctx),
 			     reg_names, status->pr_reg, ELF_NGREG);
 	if (res != kdump_ok)
 		return res;
 
-	sprintf(cpukey, "cpu.%u", get_attr_num_cpus(ctx));
+	sprintf(cpukey, "cpu.%u", get_num_cpus(ctx));
 	res = add_attr_number(ctx, cpukey, &tmpl_pid,
 			      dump32toh(ctx, status->pr_pid));
 	if (res != kdump_ok)
 		return res;
 
-	set_attr_num_cpus(ctx, get_attr_num_cpus(ctx) + 1);
+	set_num_cpus(ctx, get_num_cpus(ctx) + 1);
 	return kdump_ok;
 }
 

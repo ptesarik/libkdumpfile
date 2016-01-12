@@ -321,7 +321,7 @@ static void lkcd_cleanup(kdump_ctx *ctx);
 static off_t
 find_page(kdump_ctx *ctx, off_t off, unsigned pfn, struct dump_page *dp)
 {
-	uint64_t addr = pfn * get_attr_page_size(ctx);
+	uint64_t addr = pfn * get_page_size(ctx);
 
 	for ( ;; ) {
 		if (pread(ctx->fd, dp, sizeof *dp, off) != sizeof *dp)
@@ -410,7 +410,7 @@ fill_level2(kdump_ctx *ctx, unsigned idx1, unsigned endidx)
 	for (idx = 0; idx < PFN_IDX3_SIZE; ++idx, ++pp) {
 		if ( (off = find_page(ctx, off, pfn, &dp)) < 0)
 			break;
-		if (dp.dp_address == pfn * get_attr_page_size(ctx))
+		if (dp.dp_address == pfn * get_page_size(ctx))
 			*pp = off - baseoff;
 		pfn++;
 	}
@@ -478,7 +478,7 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 		buf = ctx->buffer;
 		break;
 	case DUMP_RAW:
-		if (dp.dp_size != get_attr_page_size(ctx))
+		if (dp.dp_size != get_page_size(ctx))
 			return set_error(ctx, kdump_dataerr,
 					 "Wrong page size: %lu",
 					 (unsigned long) dp.dp_size);
@@ -500,25 +500,25 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 		goto out;
 
 	if (lkcdp->compression == DUMP_COMPRESS_RLE) {
-		size_t retlen = get_attr_page_size(ctx);
+		size_t retlen = get_page_size(ctx);
 		int ret = uncompress_rle(ctx->page, &retlen,
 					 buf, dp.dp_size);
 		if (ret)
 			return set_error(ctx, kdump_dataerr,
 					 "Decompression failed: %d", ret);
-		if (retlen != get_attr_page_size(ctx))
+		if (retlen != get_page_size(ctx))
 			return set_error(ctx, kdump_dataerr,
 					 "Wrong uncompressed size: %lu",
 					 (unsigned long) retlen);
 	} else if (lkcdp->compression == DUMP_COMPRESS_GZIP) {
 #if USE_ZLIB
-		uLongf retlen = get_attr_page_size(ctx);
+		uLongf retlen = get_page_size(ctx);
 		int ret = uncompress(ctx->page, &retlen,
 				     buf, dp.dp_size);
 		if (ret != Z_OK)
 			return set_error(ctx, kdump_dataerr,
 					 "Decompression failed: %d", ret);
-		if (retlen != get_attr_page_size(ctx))
+		if (retlen != get_page_size(ctx))
 			return set_error(ctx, kdump_dataerr,
 					 "Wrong uncompressed size: %lu",
 					 (unsigned long) retlen);
@@ -618,7 +618,7 @@ open_common(kdump_ctx *ctx)
 
 	ctx->format = lkcdp->format;
 
-	ret = set_attr_page_size(ctx, dump32toh(ctx, dh->dh_page_size));
+	ret = set_page_size(ctx, dump32toh(ctx, dh->dh_page_size));
 	if (ret != kdump_ok)
 		return ret;
 
@@ -687,9 +687,9 @@ lkcd_probe(kdump_ctx *ctx)
 		{ 0xa8, 0x19, 0x01, 0x73, 0x61, 0x8f, 0x23, 0xed };
 
 	if (!memcmp(ctx->buffer, magic_le, sizeof magic_le))
-		set_attr_byte_order(ctx, kdump_little_endian);
+		set_byte_order(ctx, kdump_little_endian);
 	else if (!memcmp(ctx->buffer, magic_be, sizeof magic_be))
-		set_attr_byte_order(ctx, kdump_big_endian);
+		set_byte_order(ctx, kdump_big_endian);
 	else
 		return set_error(ctx, kdump_unsupported,
 				 "Unknown LKCD signature");

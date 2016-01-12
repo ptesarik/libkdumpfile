@@ -595,13 +595,13 @@ void cleanup_attr(kdump_ctx *ctx);
 
 #define DEFINE_GET_ACCESSOR(name, type, ctype)			\
 	static inline ctype					\
-	get_attr_ ## name(kdump_ctx *ctx)			\
+	get_ ## name(kdump_ctx *ctx)				\
 	{							\
 		return ctx->name.type;				\
 	}
 #define DEFINE_SET_ACCESSOR(name, type, ctype)				\
 	static inline kdump_status					\
-	set_attr_ ## name(kdump_ctx *ctx, ctype newval)			\
+	set_ ## name(kdump_ctx *ctx, ctype newval)			\
 	{								\
 		union kdump_attr_value val;				\
 		val.type = newval;					\
@@ -682,7 +682,7 @@ bitcount(unsigned x)
 static inline uint16_t
 dump16toh(kdump_ctx *ctx, uint16_t x)
 {
-	return get_attr_byte_order(ctx) == kdump_big_endian
+	return get_byte_order(ctx) == kdump_big_endian
 		? be16toh(x)
 		: le16toh(x);
 }
@@ -690,7 +690,7 @@ dump16toh(kdump_ctx *ctx, uint16_t x)
 static inline uint32_t
 dump32toh(kdump_ctx *ctx, uint32_t x)
 {
-	return get_attr_byte_order(ctx) == kdump_big_endian
+	return get_byte_order(ctx) == kdump_big_endian
 		? be32toh(x)
 		: le32toh(x);
 }
@@ -698,7 +698,7 @@ dump32toh(kdump_ctx *ctx, uint32_t x)
 static inline uint64_t
 dump64toh(kdump_ctx *ctx, uint64_t x)
 {
-	return get_attr_byte_order(ctx) == kdump_big_endian
+	return get_byte_order(ctx) == kdump_big_endian
 		? be64toh(x)
 		: le64toh(x);
 }

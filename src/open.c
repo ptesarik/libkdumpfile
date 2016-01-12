@@ -37,7 +37,7 @@
 
 static kdump_status kdump_open_known(kdump_ctx *pctx);
 static kdump_status use_kernel_utsname(kdump_ctx *ctx);
-static kdump_status get_version_code(kdump_ctx *ctx);
+static kdump_status setup_version_code(kdump_ctx *ctx);
 
 static const struct format_ops *formats[] = {
 	&elfdump_ops,
@@ -155,7 +155,7 @@ kdump_open_known(kdump_ctx *ctx)
 		}
 	}
 
-	get_version_code(ctx);
+	setup_version_code(ctx);
 
 	flush_regions(ctx);
 
@@ -228,7 +228,7 @@ use_kernel_utsname(kdump_ctx *ctx)
 }
 
 static kdump_status
-get_version_code(kdump_ctx *ctx)
+setup_version_code(kdump_ctx *ctx)
 {
 	const struct attr_data *rel;
 	const char *p;
@@ -266,7 +266,7 @@ get_version_code(kdump_ctx *ctx)
 		}
 	}
 
-	set_attr_version_code(ctx, KERNEL_VERSION(a, b, c));
+	set_version_code(ctx, KERNEL_VERSION(a, b, c));
 	return kdump_ok;
 }
 

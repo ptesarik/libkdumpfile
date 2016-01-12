@@ -93,7 +93,7 @@ static kdump_status
 s390_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	struct s390dump_priv *sdp = ctx->fmtdata;
-	kdump_paddr_t addr = pfn * get_attr_page_size(ctx);
+	kdump_paddr_t addr = pfn * get_page_size(ctx);
 	off_t pos;
 	ssize_t rd;
 
@@ -104,8 +104,8 @@ s390_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 
 	pos = (off_t)addr + (off_t)sdp->dataoff;
-	rd = pread(ctx->fd, ctx->page, get_attr_page_size(ctx), pos);
-	if (rd != get_attr_page_size(ctx))
+	rd = pread(ctx->fd, ctx->page, get_page_size(ctx), pos);
+	if (rd != get_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu",
 				 (unsigned long long) pos);
@@ -129,7 +129,7 @@ s390_probe(kdump_ctx *ctx)
 				 "Invalid S390DUMP signature");
 
 	ctx->format = "S390";
-	set_attr_byte_order(ctx, kdump_big_endian);
+	set_byte_order(ctx, kdump_big_endian);
 
 	pos = dump32toh(ctx, dh->h1.hdr_size) +
 		dump64toh(ctx, dh->h1.mem_size);
@@ -151,7 +151,7 @@ s390_probe(kdump_ctx *ctx)
 	sdp->dataoff = dump32toh(ctx, dh->h1.hdr_size);
 	ctx->max_pfn = dump32toh(ctx, dh->h1.num_pages);
 
-	ret = set_attr_page_size(ctx, dump32toh(ctx, dh->h1.page_size));
+	ret = set_page_size(ctx, dump32toh(ctx, dh->h1.page_size));
 	if (ret != kdump_ok)
 		goto out;
 

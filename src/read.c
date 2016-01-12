@@ -43,8 +43,8 @@ read_dom0_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	uint64_t mfn_idx, frame_idx;
 	kdump_status ret;
 
-	ptr_size = get_attr_ptr_size(ctx);
-	fpp = get_attr_page_size(ctx) / ptr_size;
+	ptr_size = get_ptr_size(ctx);
+	fpp = get_page_size(ctx) / ptr_size;
 	mfn_idx = pfn / fpp;
 	frame_idx = pfn % fpp;
 	if (mfn_idx >= ctx->xen_map_size)
@@ -69,7 +69,7 @@ read_dom0_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 static inline read_page_fn
 read_phys_page_fn(kdump_ctx *ctx)
 {
-	return (get_attr_xen_type(ctx) == kdump_xen_system)
+	return (get_xen_type(ctx) == kdump_xen_system)
 		? read_dom0_page
 		: ctx->ops->read_page;
 }
@@ -77,7 +77,7 @@ read_phys_page_fn(kdump_ctx *ctx)
 static inline read_page_fn
 read_xenmach_page_fn(kdump_ctx *ctx)
 {
-	switch (get_attr_xen_type(ctx)) {
+	switch (get_xen_type(ctx)) {
 	case kdump_xen_system:
 		return ctx->ops->read_page;
 	case kdump_xen_pv:
@@ -95,13 +95,13 @@ read_kvpage(kdump_ctx *ctx, kdump_pfn_t pfn)
 	read_page_fn read_page;
 	kdump_status ret;
 
-	vaddr = pfn << get_attr_page_shift(ctx);
+	vaddr = pfn << get_page_shift(ctx);
 	ret = kdump_vtop(ctx, vaddr, &paddr);
 	if (ret != kdump_ok)
 		return ret;
 
 	read_page = read_phys_page_fn(ctx);
-	return read_page(ctx, paddr >> get_attr_page_shift(ctx));
+	return read_page(ctx, paddr >> get_page_shift(ctx));
 }
 
 static kdump_status
@@ -147,12 +147,12 @@ kdump_readp(kdump_ctx *ctx, kdump_addr_t addr,
 	while (remain) {
 		size_t off, partlen;
 
-		ret = readfn(ctx, addr / get_attr_page_size(ctx));
+		ret = readfn(ctx, addr / get_page_size(ctx));
 		if (ret != kdump_ok)
 			break;
 
-		off = addr % get_attr_page_size(ctx);
-		partlen = get_attr_page_size(ctx) - off;
+		off = addr % get_page_size(ctx);
+		partlen = get_page_size(ctx) - off;
 		if (partlen > remain)
 			partlen = remain;
 		memcpy(buffer, ctx->page + off, partlen);
@@ -197,12 +197,12 @@ kdump_read_string(kdump_ctx *ctx, kdump_addr_t addr,
 	do {
 		size_t off, partlen;
 
-		ret = readfn(ctx, addr / get_attr_page_size(ctx));
+		ret = readfn(ctx, addr / get_page_size(ctx));
 		if (ret != kdump_ok)
 			break;
 
-		off = addr % get_attr_page_size(ctx);
-		partlen = get_attr_page_size(ctx) - off;
+		off = addr % get_page_size(ctx);
+		partlen = get_page_size(ctx) - off;
 		endp = memchr(ctx->page + off, 0, partlen);
 		if (endp)
 			partlen = endp - ((char*)ctx->page + off);
@@ -241,8 +241,8 @@ init_xen_p2m64(kdump_ctx *ctx, void *dir)
 	unsigned long mfns;
 	kdump_status ret;
 
-	ptr_size = get_attr_ptr_size(ctx);
-	fpp = get_attr_page_size(ctx) / ptr_size;
+	ptr_size = get_ptr_size(ctx);
+	fpp = get_page_size(ctx) / ptr_size;
 	mfns = 0;
 	for (dirp = dir, pfn = 0; *dirp && pfn < ctx->max_pfn;
 	     ++dirp, pfn += fpp * fpp) {
@@ -255,7 +255,7 @@ init_xen_p2m64(kdump_ctx *ctx, void *dir)
 					 (unsigned long long) *dirp);
 
 		for (p = ctx->page;
-		     (void*)p < ctx->page + get_attr_page_size(ctx);
+		     (void*)p < ctx->page + get_page_size(ctx);
 		     ++p)
 			if (*p)
 				++mfns;
@@ -277,7 +277,7 @@ init_xen_p2m64(kdump_ctx *ctx, void *dir)
 					 (unsigned long long) *dirp);
 
 		for (p = ctx->page;
-		     (void*)p < ctx->page + get_attr_page_size(ctx);
+		     (void*)p < ctx->page + get_page_size(ctx);
 		     ++p)
 			if (*p) {
 				*map++ = dump64toh(ctx, *p);
@@ -298,8 +298,8 @@ init_xen_p2m32(kdump_ctx *ctx, void *dir)
 	unsigned long mfns;
 	kdump_status ret;
 
-	ptr_size = get_attr_ptr_size(ctx);
-	fpp = get_attr_page_size(ctx) / ptr_size;
+	ptr_size = get_ptr_size(ctx);
+	fpp = get_page_size(ctx) / ptr_size;
 	mfns = 0;
 	for (dirp = dir, pfn = 0; *dirp && pfn < ctx->max_pfn;
 	     ++dirp, pfn += fpp * fpp) {
@@ -312,7 +312,7 @@ init_xen_p2m32(kdump_ctx *ctx, void *dir)
 					 (unsigned long long) *dirp);
 
 		for (p = ctx->page;
-		     (void*)p < ctx->page + get_attr_page_size(ctx);
+		     (void*)p < ctx->page + get_page_size(ctx);
 		     ++p)
 			if (*p)
 				++mfns;
@@ -334,7 +334,7 @@ init_xen_p2m32(kdump_ctx *ctx, void *dir)
 					 (unsigned long long) *dirp);
 
 		for (p = ctx->page;
-		     (void*)p < ctx->page + get_attr_page_size(ctx);
+		     (void*)p < ctx->page + get_page_size(ctx);
 		     ++p)
 			if (*p) {
 				*map++ = dump32toh(ctx, *p);
@@ -366,12 +366,12 @@ init_xen_dom0(kdump_ctx *ctx)
 				 (unsigned long long) xen_p2m_mfn);
 
 	dir = ctx->page;
-	page = ctx_malloc(get_attr_page_size(ctx), ctx, "page buffer");
+	page = ctx_malloc(get_page_size(ctx), ctx, "page buffer");
 	if (page == NULL)
 		return kdump_syserr;
 	ctx->page = page;
 
-	ret = (get_attr_ptr_size(ctx) == 8)
+	ret = (get_ptr_size(ctx) == 8)
 		? init_xen_p2m64(ctx, dir)
 		: init_xen_p2m32(ctx, dir);
 
