@@ -413,7 +413,7 @@ read_pgt(kdump_ctx *ctx)
 			return set_error(ctx, kdump_nodata,
 					 "Cannot get CR3 value");
 		pgtaddr = attr_value(attr)->number;
-		rdflags = (get_xen_type(ctx) == kdump_xen_pv)
+		rdflags = (get_xen_xlat(ctx) == kdump_xen_nonauto)
 			? KDUMP_XENMACHADDR
 			: KDUMP_PHYSADDR;
 	} else
@@ -704,7 +704,7 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	kdump_status ret;
 
-	if (get_xen_type(ctx) == kdump_xen_pv) {
+	if (get_xen_xlat(ctx) == kdump_xen_nonauto) {
 		kdump_addr_t maddr;
 		kdump_pfn_t mfn, pfn;
 

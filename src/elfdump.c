@@ -144,12 +144,12 @@ pfn_to_idx(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	unsigned long i;
 
-	if (get_xen_type(ctx) == kdump_xen_hvm) {
+	if (get_xen_xlat(ctx) == kdump_xen_auto) {
 		uint64_t *p = ctx->xen_map;
 		for (i = 0; i < ctx->xen_map_size; ++i, ++p)
 			if (*p == pfn)
 				return i;
-	} else if (get_xen_type(ctx) == kdump_xen_pv) {
+	} else {
 		struct xen_p2m *p = ctx->xen_map;
 		for (i = 0; i < ctx->xen_map_size; ++i, ++p)
 			if (p->pfn == pfn)
@@ -188,7 +188,7 @@ mfn_to_idx(kdump_ctx *ctx, kdump_pfn_t mfn)
 {
 	unsigned long i;
 
-	if (get_xen_type(ctx) == kdump_xen_pv) {
+	if (get_xen_xlat(ctx) == kdump_xen_nonauto) {
 		struct xen_p2m *p = ctx->xen_map;
 		for (i = 0; i < ctx->xen_map_size; ++i, ++p)
 			if (p->gmfn == mfn)
@@ -204,7 +204,7 @@ elf_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 	struct xen_p2m *p = ctx->xen_map;
 	unsigned long i;
 
-	if (get_xen_type(ctx) != kdump_xen_pv) {
+	if (get_xen_xlat(ctx) != kdump_xen_nonauto) {
 		*pfn = mfn;
 		return kdump_ok;
 	}
@@ -590,13 +590,13 @@ open_common(kdump_ctx *ctx)
 			if (!ctx->xen_map)
 				return kdump_syserr;
 			ctx->xen_map_size = sect->size /sizeof(struct xen_p2m);
-			set_xen_type(ctx, kdump_xen_pv);
+			set_xen_xlat(ctx, kdump_xen_nonauto);
 		} else if (!strcmp(name, ".xen_pfn")) {
 			ctx->xen_map = read_elf_sect(ctx, sect);
 			if (!ctx->xen_map)
 				return kdump_syserr;
 			ctx->xen_map_size = sect->size / sizeof(uint64_t);
-			set_xen_type(ctx, kdump_xen_hvm);
+			set_xen_xlat(ctx, kdump_xen_auto);
 		} else if (!strcmp(name, ".note.Xen")) {
 			notes = read_elf_sect(ctx, sect);
 			if (!notes)
@@ -620,6 +620,7 @@ open_common(kdump_ctx *ctx)
 	}
 
 	if (edp->xen_pages_offset) {
+		set_xen_type(ctx, kdump_xen_domain);
 		if (!ctx->xen_map)
 			return set_error(ctx, kdump_unsupported,
 					 "Missing Xen P2M mapping");

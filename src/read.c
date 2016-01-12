@@ -77,14 +77,12 @@ read_phys_page_fn(kdump_ctx *ctx)
 static inline read_page_fn
 read_xenmach_page_fn(kdump_ctx *ctx)
 {
-	switch (get_xen_type(ctx)) {
-	case kdump_xen_system:
+	if (get_xen_type(ctx) == kdump_xen_system)
 		return ctx->ops->read_page;
-	case kdump_xen_pv:
+	else if (get_xen_xlat(ctx) == kdump_xen_nonauto)
 		return ctx->ops->read_xenmach_page;
-	default:
+	else
 		return NULL;
-	}
 }
 
 static kdump_status

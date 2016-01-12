@@ -49,3 +49,6 @@ ATTR(linux, "version_code", version_code, number, unsigned)
 
 /* Xen dump type */
 ATTR(xen, "type", xen_type, number, kdump_xen_type_t)
+
+/* Xen physmap translation */
+ATTR(xen, "xlat", xen_xlat, number, kdump_xen_xlat_t)
