@@ -155,33 +155,61 @@ default_to_vtop(struct vtop_map *map)
 			rgn->xlat = KDUMP_XLAT_VTOP;
 }
 
-kdump_status
-kdump_vtop_init(kdump_ctx *ctx)
+static kdump_status
+vtop_init(kdump_ctx *ctx, struct vtop_map *map, size_t init_ops_off)
 {
 	kdump_status res;
+	kdump_status (*arch_init)(kdump_ctx *);
 
 	clear_error(ctx);
 
-	if (!ctx->arch_ops || !ctx->arch_ops->vtop_init)
-		return kdump_unsupported;
+	if (!ctx->arch_ops)
+		return set_error(ctx, kdump_unsupported,
+				 "Unsupported architecture");
 
-	res = ctx->arch_ops->vtop_init(ctx);
+	arch_init = *(kdump_status (*const *)(kdump_ctx*))
+		((char*)ctx->arch_ops + init_ops_off);
+	if (!arch_init)
+		return set_error(ctx, kdump_unsupported,
+				 "No vtop support for this architecture");
+
+	res = arch_init(ctx);
 	if (res != kdump_ok)
 		return res;
 
-	default_to_vtop(&ctx->vtop_map);
+	default_to_vtop(map);
 	return kdump_ok;
 }
 
 kdump_status
-kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
+kdump_vtop_init(kdump_ctx *ctx)
 {
+	return vtop_init(ctx, &ctx->vtop_map[VMI_linux],
+			 offsetof(struct arch_ops, vtop_init));
+}
+
+kdump_status
+kdump_vtop_init_xen(kdump_ctx *ctx)
+{
+	return vtop_init(ctx, &ctx->vtop_map[VMI_xen],
+			 offsetof(struct arch_ops, vtop_init_xen));
+}
+
+static kdump_status
+map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
+	 enum vtop_map_idx mapidx)
+{
+	static const char *const phys_base_key[] = {
+		[VMI_linux] = GATTR(GKI_phys_base),
+		[VMI_xen] = GATTR(GKI_xen_phys_start),
+	};
+
 	kdump_xlat_t xlat;
 	kdump_paddr_t phys_off;
+	kdump_status (*arch_vtop)(kdump_ctx *, kdump_vaddr_t, kdump_paddr_t *);
+	const struct attr_data *attr;
 
-	clear_error(ctx);
-
-	xlat = get_vtop_xlat(&ctx->vtop_map, vaddr, &phys_off);
+	xlat = get_vtop_xlat(&ctx->vtop_map[mapidx], vaddr, &phys_off);
 	switch (xlat) {
 	case KDUMP_XLAT_NONE:
 		return set_error(ctx, kdump_nodata,
@@ -192,21 +220,52 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 				 "Invalid virtual address");
 
 	case KDUMP_XLAT_VTOP:
-		if (!ctx->arch_ops || !ctx->arch_ops->vtop)
+		arch_vtop = NULL;
+		if (ctx->arch_ops) {
+			if (mapidx == VMI_linux)
+				arch_vtop = ctx->arch_ops->vtop;
+			else if (mapidx == VMI_xen)
+				arch_vtop = ctx->arch_ops->vtop_xen;
+		}
+		if (!arch_vtop)
 			return set_error(ctx, kdump_unsupported,
 					 "VTOP translation not available");
-		return ctx->arch_ops->vtop(ctx, vaddr, paddr);
+		return arch_vtop(ctx, vaddr, paddr);
 
 	case KDUMP_XLAT_DIRECT:
 		*paddr = vaddr - phys_off;
 		return kdump_ok;
 
 	case KDUMP_XLAT_KTEXT:
-		*paddr = vaddr - phys_off + get_phys_base(ctx);
+		attr = lookup_attr(ctx, phys_base_key[mapidx]);
+		if (!attr)
+			return set_error(ctx, kdump_nodata,
+					 "Unknown kernel physical base");
+		*paddr = vaddr - phys_off + attr_value(attr)->address;
 		return kdump_ok;
 	};
 
 	/* unknown translation method */
 	return set_error(ctx, kdump_dataerr,
 			 "Invalid translation method: %d", (int)xlat);
+}
+
+kdump_status
+kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
+{
+	clear_error(ctx);
+
+	return map_vtop(ctx, vaddr, paddr, 0);
+}
+
+kdump_status
+kdump_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
+{
+	clear_error(ctx);
+
+	if (get_xen_type(ctx) != kdump_xen_system)
+		return set_error(ctx, kdump_nodata,
+				 "Not a Xen system dump");
+
+	return map_vtop(ctx, vaddr, paddr, 1);
 }

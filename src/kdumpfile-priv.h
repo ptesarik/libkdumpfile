@@ -129,6 +129,10 @@ struct arch_ops {
 	 */
 	kdump_status (*vtop_init)(kdump_ctx *);
 
+	/* Initialise Xen virtual-to-physical translation.
+	 */
+	kdump_status (*vtop_init_xen)(kdump_ctx *);
+
 	/* Process an NT_PRSTATUS note
 	 */
 	kdump_status (*process_prstatus)(kdump_ctx *, void *, size_t);
@@ -153,6 +157,11 @@ struct arch_ops {
 	 */
 	kdump_status (*vtop)(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 			     kdump_paddr_t *paddr);
+
+	/* Translate a Xen virtual address to a physical address
+	 */
+	kdump_status (*vtop_xen)(kdump_ctx *ctx, kdump_vaddr_t vaddr,
+				 kdump_paddr_t *paddr);
 
 	/* Clean up any arch-specific data
 	 */
@@ -202,6 +211,15 @@ struct kdump_vaddr_region {
 struct vtop_map {
 	unsigned num_regions;	/*< number of elements in @c region */
 	struct kdump_vaddr_region *region;
+};
+
+/**  Index into @c vtop_map[]
+ */
+enum vtop_map_idx {
+	VMI_linux,
+	VMI_xen,
+
+	NR_VTOP_MAPS
 };
 
 /* Global attribute keys */
@@ -339,7 +357,7 @@ struct _tag_kdump_ctx {
 	kdump_pfn_t max_pfn;	/* max PFN for read_page */
 
 	/* address translation */
-	struct vtop_map vtop_map;
+	struct vtop_map vtop_map[NR_VTOP_MAPS];
 
 	/* attribute templates */
 	struct dyn_attr_template *tmpl;

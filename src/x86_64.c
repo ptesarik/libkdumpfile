@@ -363,7 +363,7 @@ add_noncanonical_region(kdump_ctx *ctx)
 {
 	kdump_status res;
 
-	res = set_vtop_xlat(&ctx->vtop_map,
+	res = set_vtop_xlat(&ctx->vtop_map[VMI_linux],
 			    NONCANONICAL_START, NONCANONICAL_END,
 			    KDUMP_XLAT_INVALID, 0);
 	return set_error(ctx, res, "Cannot set up noncanonical mapping");
@@ -383,7 +383,7 @@ x86_64_init(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		return ret;
 
-	ret = set_vtop_xlat(&ctx->vtop_map,
+	ret = set_vtop_xlat(&ctx->vtop_map[VMI_linux],
 			    __START_KERNEL_map, VIRTADDR_MAX,
 			    KDUMP_XLAT_KTEXT, __START_KERNEL_map);
 	if (ret != kdump_ok)
@@ -509,14 +509,15 @@ x86_64_vtop_init(kdump_ctx *ctx)
 		return set_error(ctx, kdump_nodata,
 				 "Cannot determine virtual memory layout");
 
-	flush_vtop_map(&ctx->vtop_map);
+	flush_vtop_map(&ctx->vtop_map[VMI_linux]);
 	ret = add_noncanonical_region(ctx);
 	if (ret != kdump_ok)
 		return ret;
 
 	for (i = 0; i < layout->nregions; ++i) {
 		const struct region_def *def = &layout->regions[i];
-		ret = set_vtop_xlat(&ctx->vtop_map, def->first, def->last,
+		ret = set_vtop_xlat(&ctx->vtop_map[VMI_linux],
+				    def->first, def->last,
 				    def->xlat, def->phys_off);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret,

@@ -268,7 +268,7 @@ s390x_vtop_init(kdump_ctx *ctx)
 
 	if (archdata->pgt) {
 		archdata->pgttype = determine_pgttype(ctx);
-		ret = set_vtop_xlat(&ctx->vtop_map,
+		ret = set_vtop_xlat(&ctx->vtop_map[VMI_linux],
 				    0, VIRTADDR_MAX,
 				    KDUMP_XLAT_VTOP, 0);
 		if (ret != kdump_ok)
@@ -286,7 +286,7 @@ s390x_vtop_init(kdump_ctx *ctx)
 			return ret;
 		highmem = dump64toh(ctx, highmem);
 
-		ret = set_vtop_xlat(&ctx->vtop_map,
+		ret = set_vtop_xlat(&ctx->vtop_map[VMI_linux],
 				    0, highmem,
 				    KDUMP_XLAT_DIRECT, 0);
 		if (ret != kdump_ok)
@@ -476,7 +476,7 @@ s390x_init(kdump_ctx *ctx)
 			return ret;
 	}
 
-	ret = set_vtop_xlat(&ctx->vtop_map,
+	ret = set_vtop_xlat(&ctx->vtop_map[VMI_linux],
 			    0, VIRTADDR_MAX,
 			    KDUMP_XLAT_DIRECT, 0);
 	if (ret != kdump_ok)

@@ -273,8 +273,8 @@ ppc64_vtop_init(kdump_ctx *ctx)
 
 	set_phys_base(ctx, addr);
 
-	flush_vtop_map(&ctx->vtop_map);
-	ret = set_vtop_xlat(&ctx->vtop_map,
+	flush_vtop_map(&ctx->vtop_map[VMI_linux]);
+	ret = set_vtop_xlat(&ctx->vtop_map[VMI_linux],
 			    addr, addr + 0x1000000000000000,
 			    KDUMP_XLAT_DIRECT, addr);
 	if (ret != kdump_ok)
@@ -303,7 +303,7 @@ ppc64_vtop_init(kdump_ctx *ctx)
 
 	vmal = dump64toh(ctx, vmal);
 
-	ret = set_vtop_xlat(&ctx->vtop_map,
+	ret = set_vtop_xlat(&ctx->vtop_map[VMI_linux],
 			    vmal, VIRTADDR_MAX,
 			    KDUMP_XLAT_VTOP, addr);
 	if (ret != kdump_ok)

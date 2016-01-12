@@ -202,14 +202,24 @@ kdump_status kdump_fdopen(kdump_ctx **pctx, int fd);
  * virtual-to-physical address translation. Using the @ref KDUMP_KVADDR
  * flag does not work until this function is called.
  *
- * The reasone this initialization is not done as part of @ref kdump_set_fd
+ * The reason this initialization is not done as part of @ref kdump_set_fd
  * is that it usually requires additional resources (and time), and may fail.
  * However, some library users do not need address translation, or they can
  * implement a fallback mechanism if it is unavailable.
  */
 kdump_status kdump_vtop_init(kdump_ctx *ctx);
 
-/**  Translat a virtual address to a physical address.
+/**  Initialize Xen virtual-to-physical translation.
+ * @param ctx  Dump file object.
+ * @returns    Error status.
+ *
+ * Initialize Xen hypervisor virtual-to-physical translation.
+ *
+ * @sa kdump_vtop_init.
+ */
+kdump_status kdump_vtop_init_xen(kdump_ctx *ctx);
+
+/**  Translate a virtual address to a physical address.
  * @param ctx         Dump file object.
  * @param[in] vaddr   Virtual address.
  * @param[out] paddr  Physical address.
@@ -220,6 +230,20 @@ kdump_status kdump_vtop_init(kdump_ctx *ctx);
  */
 kdump_status kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 			kdump_paddr_t *paddr);
+
+/**  Translate a Xen virtual address to a physical address.
+ * @param ctx         Dump file object.
+ * @param[in] vaddr   Virtual address.
+ * @param[out] paddr  Physical address.
+ * @returns           Error status.
+ *
+ * Translate a virtual address to a physical address. Note that in this
+ * context, physical address is equal to machine address, because the
+ * hypervisor itself does not have a second mapping. This function fails
+ * unless there was previously a successful call to @ref kdump_vtop_init.
+ */
+kdump_status kdump_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr,
+			    kdump_paddr_t *paddr);
 
 #define KDUMP_PHYSADDR		(1UL<<0) /**< Physical address. */
 #define KDUMP_XENMACHADDR	(1UL<<1) /**< Xen machine address. */
