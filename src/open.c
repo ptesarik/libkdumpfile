@@ -157,7 +157,7 @@ kdump_open_known(kdump_ctx *ctx)
 
 	setup_version_code(ctx);
 
-	flush_regions(ctx);
+	flush_vtop_map(&ctx->vtop_map);
 
 	clear_error(ctx);
 	return kdump_ok;
@@ -281,10 +281,9 @@ kdump_free(kdump_ctx *ctx)
 		free(ctx->page);
 	if (ctx->buffer)
 		free(ctx->buffer);
-	if (ctx->region)
-		free(ctx->region);
 	if (ctx->xen_map)
 		free(ctx->xen_map);
+	flush_vtop_map(&ctx->vtop_map);
 	cleanup_attr(ctx);
 	free(ctx);
 }

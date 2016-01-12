@@ -197,6 +197,13 @@ struct kdump_vaddr_region {
 	kdump_xlat_t xlat;	/* vaddr->paddr translation method */
 };
 
+/**  Map for virtual-to-physical translation
+ */
+struct vtop_map {
+	unsigned num_regions;	/*< number of elements in @c region */
+	struct kdump_vaddr_region *region;
+};
+
 /* Global attribute keys */
 enum global_keyidx {
 #define ATTR(dir, key, field, type, ctype, ...)	\
@@ -332,8 +339,7 @@ struct _tag_kdump_ctx {
 	kdump_pfn_t max_pfn;	/* max PFN for read_page */
 
 	/* address translation */
-	struct kdump_vaddr_region *region;
-	unsigned num_regions;	/* number of elements in ->region */
+	struct vtop_map vtop_map;
 
 	/* attribute templates */
 	struct dyn_attr_template *tmpl;
@@ -510,17 +516,17 @@ kdump_status process_vmcoreinfo(kdump_ctx *ctx, void *data, size_t size);
 
 /* Virtual address space regions */
 
-#define set_region INTERNAL_NAME(set_region)
-kdump_status set_region(kdump_ctx *ctx,
-			kdump_vaddr_t first, kdump_vaddr_t last,
-			kdump_xlat_t xlat, kdump_vaddr_t phys_off);
+#define set_vtop_xlat INTERNAL_NAME(set_vtop_xlat)
+kdump_status set_vtop_xlat(struct vtop_map *map,
+			   kdump_vaddr_t first, kdump_vaddr_t last,
+			   kdump_xlat_t xlat, kdump_vaddr_t phys_off);
 
-#define flush_regions INTERNAL_NAME(flush_regions)
-void flush_regions(kdump_ctx *ctx);
+#define flush_vtop_map INTERNAL_NAME(flush_vtop_map)
+void flush_vtop_map(struct vtop_map *map);
 
-#define get_xlat INTERNAL_NAME(get_xlat)
-kdump_xlat_t get_xlat(kdump_ctx *ctx, kdump_vaddr_t vaddr,
-		      kdump_paddr_t *phys_off);
+#define get_vtop_xlat INTERNAL_NAME(get_vtop_xlat)
+kdump_xlat_t get_vtop_xlat(struct vtop_map *map, kdump_vaddr_t vaddr,
+			   kdump_paddr_t *phys_off);
 
 /* Attribute handling */
 

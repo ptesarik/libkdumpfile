@@ -160,10 +160,12 @@ ia32_init(kdump_ctx *ctx)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate ia32 private data");
 
-	ret = set_region(ctx, __START_KERNEL_map, VIRTADDR_MAX,
-			 KDUMP_XLAT_DIRECT, __START_KERNEL_map);
+	ret = set_vtop_xlat(&ctx->vtop_map,
+			    __START_KERNEL_map, VIRTADDR_MAX,
+			    KDUMP_XLAT_DIRECT, __START_KERNEL_map);
 	if (ret != kdump_ok)
-		return ret;
+		return set_error(ctx, ret,
+				 "Cannot set up initial directmap");
 
 	return kdump_ok;
 }
@@ -266,10 +268,12 @@ ia32_vtop_init(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		return ret;
 
-	flush_regions(ctx);
-	ret = set_region(ctx, 0, VIRTADDR_MAX, KDUMP_XLAT_VTOP, 0);
+	flush_vtop_map(&ctx->vtop_map);
+	ret = set_vtop_xlat(&ctx->vtop_map,
+			    0, VIRTADDR_MAX,
+			    KDUMP_XLAT_VTOP, 0);
 	if (ret != kdump_ok)
-		return ret;
+		return set_error(ctx, ret, "Cannot set up pagetable mapping");
 
 	return kdump_ok;
 }

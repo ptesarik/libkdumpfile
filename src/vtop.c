@@ -47,17 +47,17 @@ kdump_vtop_init(kdump_ctx *ctx)
 }
 
 kdump_status
-set_region(kdump_ctx *ctx, kdump_vaddr_t first, kdump_vaddr_t last,
-	   kdump_xlat_t xlat, kdump_vaddr_t phys_off)
+set_vtop_xlat(struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
+	      kdump_xlat_t xlat, kdump_vaddr_t phys_off)
 {
 	struct kdump_vaddr_region *rgn, *prevrgn;
 	kdump_vaddr_t rfirst, rlast;
 	unsigned left;
 	int numinc;
 
-	rgn = ctx->region;
+	rgn = map->region;
 	rfirst = 0;
-	for (left = ctx->num_regions; left > 0; --left) {
+	for (left = map->num_regions; left > 0; --left) {
 		if (first <= rfirst + rgn->max_off)
 			break;
 		rfirst += rgn->max_off + 1;
@@ -81,32 +81,30 @@ set_region(kdump_ctx *ctx, kdump_vaddr_t first, kdump_vaddr_t last,
 		--numinc;
 
 	if (numinc) {
-		int idx = (ctx->num_regions - 1) % RGN_ALLOC_INC;
+		int idx = (map->num_regions - 1) % RGN_ALLOC_INC;
 		if (idx + numinc >= RGN_ALLOC_INC) {
 			struct kdump_vaddr_region *newrgn;
-			unsigned newalloc = ctx->num_regions - idx +
+			unsigned newalloc = map->num_regions - idx +
 				2 * RGN_ALLOC_INC;
-			newrgn = realloc(ctx->region,
+			newrgn = realloc(map->region,
 					 newalloc * sizeof(*newrgn));
 			if (!newrgn)
-				return set_error(ctx, kdump_syserr,
-						 "Cannot allocate translation"
-						 " region array");
+				return kdump_syserr;
 
 			if (!rgn) {
 				rgn = prevrgn = newrgn;
 				rgn->max_off = KDUMP_ADDR_MAX;
 				rgn->xlat = KDUMP_XLAT_NONE;
-				++ctx->num_regions;
+				++map->num_regions;
 				++left;
 				--numinc;
 			} else {
-				rgn = newrgn + (rgn - ctx->region);
-				prevrgn = newrgn + (prevrgn - ctx->region);
+				rgn = newrgn + (rgn - map->region);
+				prevrgn = newrgn + (prevrgn - map->region);
 			}
-			ctx->region = newrgn;
+			map->region = newrgn;
 		}
-		ctx->num_regions += numinc;
+		map->num_regions += numinc;
 
 		memmove(rgn + numinc, rgn,
 			left * sizeof(struct kdump_vaddr_region));
@@ -126,24 +124,25 @@ set_region(kdump_ctx *ctx, kdump_vaddr_t first, kdump_vaddr_t last,
 }
 
 void
-flush_regions(kdump_ctx *ctx)
+flush_vtop_map(struct vtop_map *map)
 {
-	if (ctx->region)
-		free(ctx->region);
-	ctx->region = NULL;
-	ctx->num_regions = 0;
+	if (map->region)
+		free(map->region);
+	map->region = NULL;
+	map->num_regions = 0;
 }
 
 kdump_xlat_t
-get_xlat(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *phys_off)
+get_vtop_xlat(struct vtop_map *map, kdump_vaddr_t vaddr,
+	      kdump_paddr_t *phys_off)
 {
 	struct kdump_vaddr_region *rgn;
 	kdump_vaddr_t rfirst;
 	unsigned left;
 
-	rgn = ctx->region;
+	rgn = map->region;
 	rfirst = 0;
-	for (left = ctx->num_regions; left > 0; --left) {
+	for (left = map->num_regions; left > 0; --left) {
 		if (vaddr <= rfirst + rgn->max_off)
 			break;
 		rfirst += rgn->max_off + 1;
@@ -164,7 +163,7 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	clear_error(ctx);
 
-	xlat = get_xlat(ctx, vaddr, &phys_off);
+	xlat = get_vtop_xlat(&ctx->vtop_map, vaddr, &phys_off);
 	switch (xlat) {
 	case KDUMP_XLAT_NONE:
 		return set_error(ctx, kdump_invalid,

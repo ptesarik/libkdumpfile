@@ -268,9 +268,12 @@ s390x_vtop_init(kdump_ctx *ctx)
 
 	if (archdata->pgt) {
 		archdata->pgttype = determine_pgttype(ctx);
-		ret = set_region(ctx, 0, VIRTADDR_MAX, KDUMP_XLAT_VTOP, 0);
+		ret = set_vtop_xlat(&ctx->vtop_map,
+				    0, VIRTADDR_MAX,
+				    KDUMP_XLAT_VTOP, 0);
 		if (ret != kdump_ok)
-			return ret;
+			return set_error(ctx, ret,
+					 "Cannot set up pagetable mapping");
 	}
 
 	ret = get_symbol_val(ctx, "high_memory", &addr);
@@ -283,9 +286,11 @@ s390x_vtop_init(kdump_ctx *ctx)
 			return ret;
 		highmem = dump64toh(ctx, highmem);
 
-		ret = set_region(ctx, 0, highmem, KDUMP_XLAT_DIRECT, 0);
+		ret = set_vtop_xlat(&ctx->vtop_map,
+				    0, highmem,
+				    KDUMP_XLAT_DIRECT, 0);
 		if (ret != kdump_ok)
-			return ret;
+			return set_error(ctx, ret, "Cannot set up directmap");
 	} else if (!archdata->pgt)
 		return set_error(ctx, kdump_nodata,
 				 "Cannot determine size of direct mapping");
@@ -471,9 +476,11 @@ s390x_init(kdump_ctx *ctx)
 			return ret;
 	}
 
-	ret = set_region(ctx, 0, VIRTADDR_MAX, KDUMP_XLAT_DIRECT, 0);
+	ret = set_vtop_xlat(&ctx->vtop_map,
+			    0, VIRTADDR_MAX,
+			    KDUMP_XLAT_DIRECT, 0);
 	if (ret != kdump_ok)
-		return ret;
+		return set_error(ctx, ret, "Cannot set up initial directmap");
 
 	return kdump_ok;
 }
