@@ -103,6 +103,21 @@ read_kvpage(kdump_ctx *ctx, kdump_pfn_t pfn)
 }
 
 static kdump_status
+read_xenvpage(kdump_ctx *ctx, kdump_pfn_t pfn)
+{
+	kdump_vaddr_t vaddr;
+	kdump_paddr_t paddr;
+	kdump_status ret;
+
+	vaddr = pfn << get_page_shift(ctx);
+	ret = kdump_vtop_xen(ctx, vaddr, &paddr);
+	if (ret != kdump_ok)
+		return ret;
+
+	return ctx->ops->read_page(ctx, paddr >> get_page_shift(ctx));
+}
+
+static kdump_status
 setup_readfn(kdump_ctx *ctx, long flags, read_page_fn *fn)
 {
 	if (!ctx->ops)
@@ -116,6 +131,9 @@ setup_readfn(kdump_ctx *ctx, long flags, read_page_fn *fn)
 	else if (flags & KDUMP_KVADDR && ctx->ops->read_page &&
 		ctx->arch_ops && ctx->arch_ops->vtop)
 		*fn = read_kvpage;
+	else if (flags & KDUMP_XENVADDR && ctx->ops->read_page &&
+		ctx->arch_ops && ctx->arch_ops->vtop_xen)
+		*fn = read_xenvpage;
 	else
 		return set_error(ctx, kdump_invalid,
 				 "Invalid address type flags");

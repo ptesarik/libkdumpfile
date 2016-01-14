@@ -248,6 +248,7 @@ kdump_status kdump_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 #define KDUMP_PHYSADDR		(1UL<<0) /**< Physical address. */
 #define KDUMP_XENMACHADDR	(1UL<<1) /**< Xen machine address. */
 #define KDUMP_KVADDR		(1UL<<2) /**< Kernel virtual address. */
+#define KDUMP_XENVADDR		(1UL<<3) /**< Xen virtual address.  */
 
 /**  Read data from the dump file.
  * @param ctx          Dump file object.
@@ -264,6 +265,7 @@ kdump_status kdump_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr,
  *   - @ref KDUMP_PHYSADDR: interpret @c addr as physical address.
  *   - @ref KDUMP_XENMACHADDR: interpret @c addr as Xen machine address.
  *   - @ref KDUMP_KVADDR: interpret @c addr as kernel virtual address.
+ *   - @ref KDUMP_XENVADDR: interpret @c addr as Xen virtual address.
  */
 ssize_t kdump_read(kdump_ctx *ctx, kdump_addr_t addr,
 		   void *buffer, size_t length, long flags);
