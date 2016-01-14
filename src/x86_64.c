@@ -216,6 +216,11 @@ static struct layout_def {
 	DEF_LAYOUT(2, 6, 31),
 };
 
+#define XEN_DIRECTMAP_START	0xffff830000000000ULL
+#define XEN_DIRECTMAP_END_OLD	0xffff83ffffffffffULL
+#define XEN_DIRECTMAP_END_4_0_0	0xffff87ffffffffffULL
+#define XEN_VIRT_SIZE		(1ULL<<30)
+
 struct elf_siginfo
 {
 	int32_t si_signo;	/* signal number */
@@ -352,18 +357,19 @@ static const struct attr_template tmpl_pid =
 	{ "pid", NULL, kdump_number };
 
 struct x86_64_data {
-	uint64_t *pgt;
+	uint64_t *pgt;		/**< Linux kernel top-level page table */
+	uint64_t *pgt_xen;	/**< Xen hypervisor top-level page table */
 };
 
 static kdump_status x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 				kdump_paddr_t *paddr);
 
 static kdump_status
-add_noncanonical_region(kdump_ctx *ctx)
+add_noncanonical_region(kdump_ctx *ctx, struct vtop_map *map)
 {
 	kdump_status res;
 
-	res = set_vtop_xlat(&ctx->vtop_map[VMI_linux],
+	res = set_vtop_xlat(map,
 			    NONCANONICAL_START, NONCANONICAL_END,
 			    KDUMP_XLAT_INVALID, 0);
 	return set_error(ctx, res, "Cannot set up noncanonical mapping");
@@ -379,7 +385,7 @@ x86_64_init(kdump_ctx *ctx)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate x86_64 private data");
 
-	ret = add_noncanonical_region(ctx);
+	ret = add_noncanonical_region(ctx, &ctx->vtop_map[VMI_linux]);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -510,7 +516,7 @@ x86_64_vtop_init(kdump_ctx *ctx)
 				 "Cannot determine virtual memory layout");
 
 	flush_vtop_map(&ctx->vtop_map[VMI_linux]);
-	ret = add_noncanonical_region(ctx);
+	ret = add_noncanonical_region(ctx, &ctx->vtop_map[VMI_linux]);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -525,6 +531,55 @@ x86_64_vtop_init(kdump_ctx *ctx)
 	}
 
 	return kdump_ok;
+}
+
+static kdump_status
+x86_64_vtop_init_xen(kdump_ctx *ctx)
+{
+	struct x86_64_data *archdata = ctx->archdata;
+	kdump_addr_t pgtaddr;
+	uint64_t *pgt;
+	size_t sz;
+	kdump_status res;
+
+	res = add_noncanonical_region(ctx, &ctx->vtop_map[VMI_xen]);
+	if (res != kdump_ok)
+		return res;
+
+	res = get_symbol_val_xen(ctx, "pgd_l4", &pgtaddr);
+	if (res != kdump_ok)
+		return set_error(ctx, kdump_nodata,
+				 "Symbol not found: %s", "pgd_l4");
+
+	if (pgtaddr >= XEN_DIRECTMAP_START) {
+		/* Xen versions before 3.2.0 */
+		res = set_vtop_xlat(&ctx->vtop_map[VMI_xen],
+				    XEN_DIRECTMAP_START, XEN_DIRECTMAP_END_OLD,
+				    KDUMP_XLAT_DIRECT, XEN_DIRECTMAP_START);
+	} else {
+		kdump_vaddr_t xen_virt_start;
+		xen_virt_start = pgtaddr & ~((1ULL<<30) - 1);
+		res = set_vtop_xlat(&ctx->vtop_map[VMI_xen],
+				    xen_virt_start,
+				    xen_virt_start + XEN_VIRT_SIZE - 1,
+				    KDUMP_XLAT_KTEXT, xen_virt_start);
+	}
+	if (res != kdump_ok)
+		return set_error(ctx, res,
+				 "Cannot set up initial kernel mapping");
+
+	pgt = ctx_malloc(PAGE_SIZE, ctx, "Xen page table");
+	if (!pgt)
+		return kdump_syserr;
+
+	sz = PAGE_SIZE;
+	res = kdump_readp(ctx, pgtaddr, pgt, &sz, KDUMP_XENVADDR);
+	if (res == kdump_ok)
+		archdata->pgt_xen = pgt;
+	else
+		free(pgt);
+
+	return res;
 }
 
 static kdump_status
@@ -624,6 +679,8 @@ x86_64_cleanup(kdump_ctx *ctx)
 
 	if (archdata->pgt)
 		free(archdata->pgt);
+	if (archdata->pgt_xen)
+		free(archdata->pgt_xen);
 
 	free(archdata);
 	ctx->archdata = NULL;
@@ -631,20 +688,19 @@ x86_64_cleanup(kdump_ctx *ctx)
 
 static kdump_status
 x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
-	       int rdflags)
+	       uint64_t *pgt, int rdflags)
 {
-	struct x86_64_data *archdata = ctx->archdata;
 	uint64_t tbl[PTRS_PER_PAGE];
 	uint64_t pgd, pud, pmd, pte;
 	kdump_paddr_t base;
 	size_t sz;
 	kdump_status ret;
 
-	if (!archdata->pgt)
+	if (!pgt)
 		return set_error(ctx, kdump_invalid,
 				 "VTOP translation not initialized");
 
-	pgd = archdata->pgt[pgd_index(vaddr)];
+	pgd = pgt[pgd_index(vaddr)];
 	if (!(pgd & _PAGE_PRESENT))
 		return set_error(ctx, kdump_nodata,
 				 "Page directory pointer not present:"
@@ -710,6 +766,7 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 static kdump_status
 x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
+	struct x86_64_data *archdata = ctx->archdata;
 	kdump_status ret;
 
 	if (get_xen_xlat(ctx) == kdump_xen_nonauto) {
@@ -720,7 +777,8 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 			return set_error(ctx, kdump_nodata,
 					 "No MFN-to-PFN translation method");
 
-		ret = x86_64_pt_walk(ctx, vaddr, &maddr, KDUMP_XENMACHADDR);
+		ret = x86_64_pt_walk(ctx, vaddr, &maddr,
+				     archdata->pgt, KDUMP_XENMACHADDR);
 		if (ret != kdump_ok)
 			return ret;
 
@@ -736,16 +794,32 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 		return kdump_ok;
 	}
 
-	return x86_64_pt_walk(ctx, vaddr, paddr, KDUMP_PHYSADDR);
+	return x86_64_pt_walk(ctx, vaddr, paddr,
+			      archdata->pgt, KDUMP_PHYSADDR);
+}
+
+static kdump_status
+x86_64_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
+{
+	struct x86_64_data *archdata = ctx->archdata;
+
+	if (get_xen_type(ctx) != kdump_xen_system)
+		return set_error(ctx, kdump_invalid,
+				 "Not a Xen system dump");
+
+	return x86_64_pt_walk(ctx, vaddr, paddr,
+			      archdata->pgt_xen, KDUMP_XENMACHADDR);
 }
 
 const struct arch_ops x86_64_ops = {
 	.init = x86_64_init,
 	.vtop_init = x86_64_vtop_init,
+	.vtop_init_xen = x86_64_vtop_init_xen,
 	.process_prstatus = process_x86_64_prstatus,
 	.reg_name = x86_64_reg_name,
 	.process_load = x86_64_process_load,
 	.process_xen_prstatus = process_x86_64_xen_prstatus,
 	.vtop = x86_64_vtop,
+	.vtop_xen = x86_64_vtop_xen,
 	.cleanup = x86_64_cleanup,
 };
