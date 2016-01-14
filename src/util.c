@@ -52,7 +52,7 @@ set_error(kdump_ctx *ctx, kdump_status ret, const char *msgfmt, ...)
 		return ret;
 
 	va_start(ap, msgfmt);
-	msglen = snprintf(msgbuf, sizeof(msgbuf), msgfmt, ap);
+	msglen = vsnprintf(msgbuf, sizeof(msgbuf), msgfmt, ap);
 	va_end(ap);
 
 	if (msglen < 0) {
