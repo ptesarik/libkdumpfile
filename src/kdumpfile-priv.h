@@ -112,6 +112,8 @@ struct format_ops {
 	 * Return:
 	 *   kdump_ok        output variable contains translated PFN
 	 *   kdump_nodata    given MFN was not found
+	 *
+	 * This function should be used for single domain dumps.
 	 */
 	kdump_status (*mfn_to_pfn)(kdump_ctx *, kdump_pfn_t, kdump_pfn_t *);
 
@@ -165,6 +167,12 @@ struct arch_ops {
 	 */
 	kdump_status (*vtop_xen)(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 				 kdump_paddr_t *paddr);
+
+	/* Translate a machine frame number to physical frame number
+	 *
+	 * This function should be used for Xen system dumps.
+	 */
+	kdump_status (*mfn_to_pfn)(kdump_ctx *, kdump_pfn_t, kdump_pfn_t *);
 
 	/* Clean up any arch-specific data
 	 */

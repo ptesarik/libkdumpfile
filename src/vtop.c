@@ -323,8 +323,13 @@ kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
 
 	switch (get_xen_type(ctx)) {
 	case kdump_xen_system:
-		return set_error(ctx, kdump_unsupported,
-				 "Xen system dumps not yet implemented");
+		if (!ctx->arch_ops || !ctx->arch_ops->mfn_to_pfn)
+			return set_error(ctx, kdump_unsupported,
+					 "Not implemented");
+		mfn = maddr >> get_page_shift(ctx);
+		ret = ctx->arch_ops->mfn_to_pfn(ctx, mfn, &pfn);
+		break;
+
 	case kdump_xen_domain:
 		if (get_xen_xlat(ctx) == kdump_xen_nonauto) {
 			if (!ctx->ops->mfn_to_pfn)
