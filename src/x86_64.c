@@ -220,6 +220,7 @@ static struct layout_def {
 #define XEN_DIRECTMAP_END_OLD	0xffff83ffffffffffULL
 #define XEN_DIRECTMAP_END_4_0_0	0xffff87ffffffffffULL
 #define XEN_VIRT_SIZE		(1ULL<<30)
+#define MACH2PHYS_VIRT_START	0xffff828000000000ULL
 
 struct elf_siginfo
 {
@@ -787,6 +788,23 @@ x86_64_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 			      archdata->pgt_xen, KDUMP_XENMACHADDR);
 }
 
+static kdump_status
+x86_64_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
+{
+	kdump_vaddr_t addr;
+	uint64_t tmp;
+	size_t sz;
+	kdump_status ret;
+
+	addr = MACH2PHYS_VIRT_START + sizeof(uint64_t) * mfn;
+	sz = sizeof tmp;
+	ret = kdump_readp(ctx, addr, &tmp, &sz, KDUMP_KVADDR);
+	if (ret == kdump_ok)
+		*pfn = tmp;
+
+	return ret;
+}
+
 const struct arch_ops x86_64_ops = {
 	.init = x86_64_init,
 	.vtop_init = x86_64_vtop_init,
@@ -797,5 +815,6 @@ const struct arch_ops x86_64_ops = {
 	.process_xen_prstatus = process_x86_64_xen_prstatus,
 	.vtop = x86_64_vtop,
 	.vtop_xen = x86_64_vtop_xen,
+	.mfn_to_pfn = x86_64_mfn_to_pfn,
 	.cleanup = x86_64_cleanup,
 };
