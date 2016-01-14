@@ -73,6 +73,13 @@ typedef kdump_addr_t kdump_paddr_t;
  */
 typedef kdump_addr_t kdump_vaddr_t;
 
+/**  Type of a Xen machine address.
+ *
+ * Use this type instead of @ref kdump_addr_t if the entity is always
+ * known to be a Xen machine address.
+ */
+typedef kdump_addr_t kdump_maddr_t;
+
 /**  Type of a register.
  *
  * Use this type for register values. Note that it might be larger than
@@ -244,6 +251,17 @@ kdump_status kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
  */
 kdump_status kdump_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 			    kdump_paddr_t *paddr);
+
+/**  Translate a Xen machine address to a physical address.
+ * @param ctx         Dump file object.
+ * @param[in] maddr   Machine address.
+ * @param[out] paddr  Physical address.
+ * @returns           Error status.
+ *
+ * Translate a Xen machine address to a physical address.
+ */
+kdump_status kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr,
+			kdump_paddr_t *paddr);
 
 #define KDUMP_PHYSADDR		(1UL<<0) /**< Physical address. */
 #define KDUMP_XENMACHADDR	(1UL<<1) /**< Xen machine address. */

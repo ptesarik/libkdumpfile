@@ -269,3 +269,36 @@ kdump_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	return map_vtop(ctx, vaddr, paddr, 1);
 }
+
+kdump_status
+kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
+{
+	kdump_pfn_t mfn, pfn;
+	kdump_status ret;
+
+	switch (get_xen_type(ctx)) {
+	case kdump_xen_system:
+		return set_error(ctx, kdump_unsupported,
+				 "Xen system dumps not yet implemented");
+	case kdump_xen_domain:
+		if (get_xen_xlat(ctx) == kdump_xen_nonauto) {
+			if (!ctx->ops->mfn_to_pfn)
+				return set_error(ctx, kdump_unsupported,
+						 "Not implemented");
+			mfn = maddr >> get_page_shift(ctx);
+			ret = ctx->ops->mfn_to_pfn(ctx, mfn, &pfn);
+			break;
+		}
+		/* else fall-through */
+
+	default:
+		*paddr = maddr;
+		return kdump_ok;
+	}
+
+	if (ret == kdump_ok)
+		*paddr = (pfn << get_page_shift(ctx)) |
+			(maddr & (get_page_size(ctx) - 1));
+
+	return ret;
+}

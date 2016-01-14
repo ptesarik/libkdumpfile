@@ -771,27 +771,15 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	if (get_xen_xlat(ctx) == kdump_xen_nonauto) {
 		kdump_addr_t maddr;
-		kdump_pfn_t mfn, pfn;
-
-		if (!ctx->ops->mfn_to_pfn)
-			return set_error(ctx, kdump_nodata,
-					 "No MFN-to-PFN translation method");
 
 		ret = x86_64_pt_walk(ctx, vaddr, &maddr,
 				     archdata->pgt, KDUMP_XENMACHADDR);
 		if (ret != kdump_ok)
 			return ret;
 
-		mfn = maddr >> get_page_shift(ctx);
-		ret = ctx->ops->mfn_to_pfn(ctx, mfn, &pfn);
-		if (ret != kdump_ok)
-			return set_error(ctx, ret,
-					 "Cannot translate MFN 0x%llx",
-					 (unsigned long long) mfn);
-
-		*paddr = (pfn << get_page_shift(ctx)) |
-			(maddr & (get_page_size(ctx) - 1));
-		return kdump_ok;
+		return set_error(ctx, kdump_mtop(ctx, maddr, paddr),
+				 "Cannot translate machine address 0x%llx",
+				 (unsigned long long) maddr);
 	}
 
 	return x86_64_pt_walk(ctx, vaddr, paddr,
