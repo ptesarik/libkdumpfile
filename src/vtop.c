@@ -290,6 +290,20 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 }
 
 kdump_status
+kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
+{
+	clear_error(ctx);
+
+	if (xenmach_equal_phys(ctx))
+		return map_vtop(ctx, vaddr, maddr, 0);
+
+	if (!ctx->arch_ops || !ctx->arch_ops->vtop)
+		return set_error_no_vtop(ctx);
+
+	return ctx->arch_ops->vtop(ctx, vaddr, maddr);
+}
+
+kdump_status
 kdump_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	clear_error(ctx);

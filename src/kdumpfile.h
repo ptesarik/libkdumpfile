@@ -238,6 +238,19 @@ kdump_status kdump_vtop_init_xen(kdump_ctx *ctx);
 kdump_status kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 			kdump_paddr_t *paddr);
 
+/**  Translate a virtual address to a machine address.
+ * @param ctx         Dump file object.
+ * @param[in] vaddr   Virtual address.
+ * @param[out] maddr  Machine address.
+ * @returns           Error status.
+ *
+ * Translate a virtual address to a machine address. If the dump is not
+ * a Xen dump or it has an auto-translated physmap, this function is
+ * equivallent to @ref kdump_vtop.
+ */
+kdump_status kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr,
+			kdump_maddr_t *maddr);
+
 /**  Translate a Xen virtual address to a physical address.
  * @param ctx         Dump file object.
  * @param[in] vaddr   Virtual address.
