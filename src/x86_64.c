@@ -431,9 +431,7 @@ read_pgt(kdump_ctx *ctx)
 			return set_error(ctx, kdump_nodata,
 					 "Cannot get CR3 value");
 		pgtaddr = attr_value(attr)->number;
-		rdflags = (get_xen_xlat(ctx) == kdump_xen_nonauto)
-			? KDUMP_XENMACHADDR
-			: KDUMP_PHYSADDR;
+		rdflags = KDUMP_XENMACHADDR;
 	} else
 		return ret;
 
@@ -720,7 +718,7 @@ x86_64_cleanup(kdump_ctx *ctx)
 
 static kdump_status
 x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
-	       uint64_t *pgt, int rdflags)
+	       uint64_t *pgt)
 {
 	uint64_t tbl[PTRS_PER_PAGE];
 	uint64_t pgd, pud, pmd, pte;
@@ -742,7 +740,7 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	base = pgd & ~PHYSADDR_MASK & PAGE_MASK;
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, base, tbl, &sz, rdflags);
+	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_XENMACHADDR);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -761,7 +759,7 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	base = pud & ~PHYSADDR_MASK & PAGE_MASK;
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, base, tbl, &sz, rdflags);
+	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_XENMACHADDR);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -779,7 +777,7 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	base = pmd & ~PHYSADDR_MASK & PAGE_MASK;
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, base, tbl, &sz, rdflags);
+	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_XENMACHADDR);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -799,24 +797,14 @@ static kdump_status
 x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	struct x86_64_data *archdata = ctx->archdata;
-	int rdflags = xenmach_equal_phys(ctx)
-		? KDUMP_PHYSADDR
-		: KDUMP_XENMACHADDR;
-
-	return x86_64_pt_walk(ctx, vaddr, paddr, archdata->pgt, rdflags);
+	return x86_64_pt_walk(ctx, vaddr, paddr, archdata->pgt);
 }
 
 static kdump_status
 x86_64_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	struct x86_64_data *archdata = ctx->archdata;
-
-	if (get_xen_type(ctx) != kdump_xen_system)
-		return set_error(ctx, kdump_invalid,
-				 "Not a Xen system dump");
-
-	return x86_64_pt_walk(ctx, vaddr, paddr,
-			      archdata->pgt_xen, KDUMP_XENMACHADDR);
+	return x86_64_pt_walk(ctx, vaddr, paddr, archdata->pgt_xen);
 }
 
 static kdump_status
