@@ -1,6 +1,8 @@
 0.1.8
 -----
   * differentiation of Xen dump types (attribute "xen.type")
+  * support for opening dumps in Xen hypervisor mode
+  * many other Xen improvements
 
 0.1.7
 -----
