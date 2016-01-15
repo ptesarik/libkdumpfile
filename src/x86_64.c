@@ -79,6 +79,11 @@
 
 #define __START_KERNEL_map	0xffffffff80000000ULL
 
+/* The beginning of kernel text virtual mapping may not be mapped
+ * for various reasons. Let's use an offset of 1M to be safe.
+ */
+#define KERNEL_map_skip		(1ULL << 20)
+
 /* This constant is not the maximum physical load offset. This is the
  * maximum expected value of the PHYSICAL_START config option, which
  * defaults to 0x1000000. A relocatable kernel can be loaded anywhere
@@ -497,6 +502,18 @@ layout_by_pgt(kdump_ctx *ctx)
 	return NULL;
 }
 
+static void
+remove_ktext_xlat(struct vtop_map *map)
+{
+	struct kdump_vaddr_region *rgn;
+	for (rgn = map->region;
+	     rgn < &map->region[map->num_regions]; ++rgn)
+		if (rgn->xlat == KDUMP_XLAT_KTEXT) {
+			rgn->phys_off = 0UL;
+			rgn->xlat = KDUMP_XLAT_VTOP;
+		}
+}
+
 static kdump_status
 x86_64_vtop_init(kdump_ctx *ctx)
 {
@@ -529,6 +546,20 @@ x86_64_vtop_init(kdump_ctx *ctx)
 		if (ret != kdump_ok)
 			return set_error(ctx, ret,
 					 "Cannot set up mapping #%d", i);
+	}
+
+	if (!isset_phys_base(ctx)) {
+		kdump_paddr_t phys_base;
+		ret = vtop_pgt(ctx, __START_KERNEL_map + KERNEL_map_skip,
+			       &phys_base);
+		if (ret == kdump_nodata) {
+			clear_error(ctx);
+			remove_ktext_xlat(&ctx->vtop_map[VMI_linux]);
+		} else if (ret == kdump_ok)
+			set_phys_base(ctx, phys_base - KERNEL_map_skip);
+		else
+			return set_error(ctx, ret,
+					 "Error getting phys_base");
 	}
 
 	return kdump_ok;
