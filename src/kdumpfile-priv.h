@@ -154,6 +154,9 @@ struct arch_ops {
 	kdump_status (*process_xen_prstatus)(kdump_ctx *, void *, size_t);
 
 	/* Translate a virtual address to a physical address
+	 *
+	 * In case of Xen, this should be the address as used by the CPU,
+	 * i.e. a Xen machine address for a non-auto-translated domain.
 	 */
 	kdump_status (*vtop)(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 			     kdump_paddr_t *paddr);
@@ -519,10 +522,6 @@ fold_hash(unsigned long hash, unsigned bits)
 #endif
 }
 
-/* Xen */
-#define init_xen_dom0 INTERNAL_NAME(init_xen_dom0)
-kdump_status init_xen_dom0(kdump_ctx *ctx);
-
 /* ELF notes */
 
 #define process_notes INTERNAL_NAME(process_notes)
@@ -550,6 +549,10 @@ void flush_vtop_map(struct vtop_map *map);
 #define get_vtop_xlat INTERNAL_NAME(get_vtop_xlat)
 kdump_xlat_t get_vtop_xlat(struct vtop_map *map, kdump_vaddr_t vaddr,
 			   kdump_paddr_t *phys_off);
+
+#define vtop_pgt INTERNAL_NAME(vtop_pgt)
+kdump_status vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr,
+		      kdump_paddr_t *paddr);
 
 /* Attribute handling */
 
@@ -660,6 +663,22 @@ extern const struct attr_ops page_size_ops;
 
 #define page_shift_ops INTERNAL_NAME(page_shift_ops)
 extern const struct attr_ops page_shift_ops;
+
+/* Xen */
+#define init_xen_dom0 INTERNAL_NAME(init_xen_dom0)
+kdump_status init_xen_dom0(kdump_ctx *ctx);
+
+/**  Check if physical addresses are equal to Xen machine addresses.
+ *
+ * For ease of use, on a non-Xen dump, this check is always true.
+ */
+static inline int
+xenmach_equal_phys(kdump_ctx *ctx)
+{
+	return get_xen_type(ctx) == kdump_xen_none ||
+		(get_xen_type(ctx) == kdump_xen_domain &&
+		 get_xen_xlat(ctx) == kdump_xen_auto);
+}
 
 /* Older glibc didn't have the byteorder macros */
 #ifndef be16toh

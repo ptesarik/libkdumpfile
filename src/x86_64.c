@@ -466,28 +466,28 @@ layout_by_pgt(kdump_ctx *ctx)
 	kdump_status ret;
 
 	/* Only pre-2.6.11 kernels had this direct mapping */
-	ret = x86_64_vtop(ctx, 0x0000010000000000, &paddr);
+	ret = vtop_pgt(ctx, 0x0000010000000000, &paddr);
 	if (ret == kdump_ok && paddr == 0)
 		return layout_by_version(KERNEL_VERSION(2, 6, 0));
 	if (ret != kdump_nodata)
 		return NULL;
 
 	/* Only kernels between 2.6.11 and 2.6.27 had this direct mapping */
-	ret = x86_64_vtop(ctx, 0xffff810000000000, &paddr);
+	ret = vtop_pgt(ctx, 0xffff810000000000, &paddr);
 	if (ret == kdump_ok && paddr == 0)
 		return layout_by_version(KERNEL_VERSION(2, 6, 11));
 	if (ret != kdump_nodata)
 		return NULL;
 
 	/* Only 2.6.31+ kernels map VMEMMAP at this address */
-	ret = x86_64_vtop(ctx, 0xffffea0000000000, &paddr);
+	ret = vtop_pgt(ctx, 0xffffea0000000000, &paddr);
 	if (ret == kdump_ok)
 		return layout_by_version(KERNEL_VERSION(2, 6, 31));
 	if (ret != kdump_nodata)
 		return NULL;
 
 	/* Sanity check for 2.6.27+ direct mapping */
-	ret = x86_64_vtop(ctx, 0xffff880000000000, &paddr);
+	ret = vtop_pgt(ctx, 0xffff880000000000, &paddr);
 	if (ret == kdump_ok && paddr == 0)
 		return layout_by_version(KERNEL_VERSION(2, 6, 27));
 	if (ret != kdump_nodata)
@@ -767,23 +767,11 @@ static kdump_status
 x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	struct x86_64_data *archdata = ctx->archdata;
-	kdump_status ret;
+	int rdflags = xenmach_equal_phys(ctx)
+		? KDUMP_PHYSADDR
+		: KDUMP_XENMACHADDR;
 
-	if (get_xen_xlat(ctx) == kdump_xen_nonauto) {
-		kdump_addr_t maddr;
-
-		ret = x86_64_pt_walk(ctx, vaddr, &maddr,
-				     archdata->pgt, KDUMP_XENMACHADDR);
-		if (ret != kdump_ok)
-			return ret;
-
-		return set_error(ctx, kdump_mtop(ctx, maddr, paddr),
-				 "Cannot translate machine address 0x%llx",
-				 (unsigned long long) maddr);
-	}
-
-	return x86_64_pt_walk(ctx, vaddr, paddr,
-			      archdata->pgt, KDUMP_PHYSADDR);
+	return x86_64_pt_walk(ctx, vaddr, paddr, archdata->pgt, rdflags);
 }
 
 static kdump_status

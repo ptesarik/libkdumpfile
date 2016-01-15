@@ -195,6 +195,43 @@ kdump_vtop_init_xen(kdump_ctx *ctx)
 			 offsetof(struct arch_ops, vtop_init_xen));
 }
 
+static inline kdump_status
+set_error_no_vtop(kdump_ctx *ctx)
+{
+	return set_error(ctx, kdump_unsupported,
+			 "VTOP translation not available");
+}
+
+/**  Virtual-to-physical translation using pagetables.
+ * @param ctx         Dump file object.
+ * @param[in] vaddr   Virtual address.
+ * @param[out] paddr  Physical address.
+ * @returns           Error status.
+ *
+ * Unlike @ref kdump_vtop, this function always uses page tables to
+ * do the translation.
+ */
+kdump_status
+vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
+{
+	kdump_addr_t maddr;
+	kdump_status res;
+
+	if (!ctx->arch_ops || !ctx->arch_ops->vtop)
+		return set_error_no_vtop(ctx);
+
+	if (xenmach_equal_phys(ctx))
+		return ctx->arch_ops->vtop(ctx, vaddr, paddr);
+
+	res = ctx->arch_ops->vtop(ctx, vaddr, &maddr);
+	if (res != kdump_ok)
+		return res;
+
+	return set_error(ctx, kdump_mtop(ctx, maddr, paddr),
+			 "Cannot translate machine address 0x%llx",
+			 (unsigned long long) maddr);
+}
+
 static kdump_status
 map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	 enum vtop_map_idx mapidx)
@@ -206,7 +243,6 @@ map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 
 	kdump_xlat_t xlat;
 	kdump_paddr_t phys_off;
-	kdump_status (*arch_vtop)(kdump_ctx *, kdump_vaddr_t, kdump_paddr_t *);
 	const struct attr_data *attr;
 
 	xlat = get_vtop_xlat(&ctx->vtop_map[mapidx], vaddr, &phys_off);
@@ -220,17 +256,12 @@ map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 				 "Invalid virtual address");
 
 	case KDUMP_XLAT_VTOP:
-		arch_vtop = NULL;
-		if (ctx->arch_ops) {
-			if (mapidx == VMI_linux)
-				arch_vtop = ctx->arch_ops->vtop;
-			else if (mapidx == VMI_xen)
-				arch_vtop = ctx->arch_ops->vtop_xen;
-		}
-		if (!arch_vtop)
-			return set_error(ctx, kdump_unsupported,
-					 "VTOP translation not available");
-		return arch_vtop(ctx, vaddr, paddr);
+		if (mapidx == VMI_linux)
+			return vtop_pgt(ctx, vaddr, paddr);
+		else if (ctx->arch_ops && ctx->arch_ops->vtop_xen)
+			return ctx->arch_ops->vtop_xen(ctx, vaddr, paddr);
+		else
+			return set_error_no_vtop(ctx);
 
 	case KDUMP_XLAT_DIRECT:
 		*paddr = vaddr - phys_off;
