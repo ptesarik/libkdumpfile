@@ -89,17 +89,15 @@ static kdump_status
 read_kvpage(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	kdump_vaddr_t vaddr;
-	kdump_paddr_t paddr;
-	read_page_fn read_page;
+	kdump_maddr_t maddr;
 	kdump_status ret;
 
 	vaddr = pfn << get_page_shift(ctx);
-	ret = kdump_vtop(ctx, vaddr, &paddr);
+	ret = kdump_vtom(ctx, vaddr, &maddr);
 	if (ret != kdump_ok)
 		return ret;
 
-	read_page = read_phys_page_fn(ctx);
-	return read_page(ctx, paddr >> get_page_shift(ctx));
+	return ctx->ops->read_page(ctx, maddr >> get_page_shift(ctx));
 }
 
 static kdump_status
