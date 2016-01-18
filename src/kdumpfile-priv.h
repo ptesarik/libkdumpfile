@@ -168,6 +168,9 @@ struct arch_ops {
 	kdump_status (*vtop_xen)(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 				 kdump_paddr_t *paddr);
 
+	/* Translate a physical frame number to a machine frame number */
+	kdump_status (*pfn_to_mfn)(kdump_ctx *, kdump_pfn_t, kdump_pfn_t *);
+
 	/* Translate a machine frame number to physical frame number
 	 *
 	 * This function should be used for Xen system dumps.

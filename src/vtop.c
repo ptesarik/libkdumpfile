@@ -316,6 +316,30 @@ kdump_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 }
 
 kdump_status
+kdump_ptom(kdump_ctx *ctx, kdump_paddr_t paddr, kdump_maddr_t *maddr)
+{
+	kdump_pfn_t mfn, pfn;
+	kdump_status ret;
+
+	if (xenmach_equal_phys(ctx)) {
+		*maddr = paddr;
+		return kdump_ok;
+	}
+
+	if (!ctx->arch_ops || !ctx->arch_ops->pfn_to_mfn)
+		return set_error(ctx, kdump_unsupported,
+				 "Not implemented");
+
+	pfn = paddr >> get_page_shift(ctx);
+	ret = ctx->arch_ops->pfn_to_mfn(ctx, pfn, &mfn);
+	if (ret == kdump_ok)
+		*maddr = (mfn << get_page_shift(ctx)) |
+			(paddr & (get_page_size(ctx) - 1));
+
+	return ret;
+}
+
+kdump_status
 kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
 {
 	kdump_pfn_t mfn, pfn;

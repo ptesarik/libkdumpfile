@@ -10,6 +10,7 @@ LIBKDUMPFILE_0 {
     kdump_vtop;
     kdump_vtop_xen;
     kdump_vtom;
+    kdump_ptom;
     kdump_mtop;
     kdump_read;
     kdump_readp;

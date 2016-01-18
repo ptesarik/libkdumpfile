@@ -808,6 +808,63 @@ x86_64_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 }
 
 static kdump_status
+read_pfn(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_pfn_t *pval)
+{
+	uint64_t val;
+	size_t sz;
+	kdump_status res;
+
+	sz = sizeof val;
+	res = kdump_readp(ctx, KDUMP_MACHPHYSADDR, maddr, &val, &sz);
+	if (res == kdump_ok)
+		*pval = dump64toh(ctx, val);
+	return res;
+}
+
+static kdump_status
+x86_64_pfn_to_mfn(kdump_ctx *ctx, kdump_pfn_t pfn, kdump_pfn_t *mfn)
+{
+	const struct attr_data *attr;
+	kdump_pfn_t mfn_tbl;
+	kdump_maddr_t maddr;
+	uint64_t idx, l2_idx, l3_idx;
+	kdump_status res;
+
+	attr = lookup_attr(ctx, GATTR(GKI_xen_p2m_mfn));
+	if (!attr)
+		return kdump_nodata;
+	mfn_tbl = attr_value(attr)->address;
+
+	idx = pfn;
+	l3_idx = idx % PTRS_PER_PAGE;
+	idx /= PTRS_PER_PAGE;
+	l2_idx = idx % PTRS_PER_PAGE;
+	idx /= PTRS_PER_PAGE;
+	if (idx >= PTRS_PER_PAGE)
+		return set_error(ctx, kdump_invalid, "Out-of-bounds PFN");
+
+	maddr = (mfn_tbl << get_page_shift(ctx)) + idx * sizeof(uint64_t);
+	res = read_pfn(ctx, maddr, &mfn_tbl);
+	if (res != kdump_ok)
+		return set_error(ctx, res,
+				 "Cannot read p2m L1 table at 0x%llx",
+				 (unsigned long long) maddr);
+
+	maddr = (mfn_tbl << get_page_shift(ctx)) + l2_idx * sizeof(uint64_t);
+	res = read_pfn(ctx, maddr, &mfn_tbl);
+	if (res != kdump_ok)
+		return set_error(ctx, res,
+				 "Cannot read p2m L2 table at 0x%llx",
+				 (unsigned long long) maddr);
+
+	maddr = (mfn_tbl << get_page_shift(ctx)) + l3_idx * sizeof(uint64_t);
+	res = read_pfn(ctx, maddr, mfn);
+	return set_error(ctx, res,
+			 "Cannot read p2m L3 table at 0x%llx",
+			 (unsigned long long) maddr);
+}
+
+static kdump_status
 x86_64_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 {
 	kdump_vaddr_t addr;
@@ -834,6 +891,7 @@ const struct arch_ops x86_64_ops = {
 	.process_xen_prstatus = process_x86_64_xen_prstatus,
 	.vtop = x86_64_vtop,
 	.vtop_xen = x86_64_vtop_xen,
+	.pfn_to_mfn = x86_64_pfn_to_mfn,
 	.mfn_to_pfn = x86_64_mfn_to_pfn,
 	.cleanup = x86_64_cleanup,
 };
