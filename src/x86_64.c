@@ -411,7 +411,7 @@ read_pgt(kdump_ctx *ctx)
 	struct x86_64_data *archdata = ctx->archdata;
 	kdump_vaddr_t pgtaddr;
 	uint64_t *pgt;
-	long rdflags;
+	kdump_addrspace_t as;
 	kdump_status ret;
 	size_t sz;
 
@@ -423,7 +423,7 @@ read_pgt(kdump_ctx *ctx)
 					 (unsigned long long) pgtaddr);
 
 		pgtaddr -= __START_KERNEL_map - get_phys_base(ctx);
-		rdflags = KDUMP_PHYSADDR;
+		as = KDUMP_PHYSADDR;
 	} else if (ret == kdump_nodata) {
 		const struct attr_data *attr;
 		attr = lookup_attr(ctx, "cpu.0.reg.cr3");
@@ -431,7 +431,7 @@ read_pgt(kdump_ctx *ctx)
 			return set_error(ctx, kdump_nodata,
 					 "Cannot get CR3 value");
 		pgtaddr = attr_value(attr)->number;
-		rdflags = KDUMP_XENMACHADDR;
+		as = KDUMP_XENMACHADDR;
 	} else
 		return ret;
 
@@ -441,7 +441,7 @@ read_pgt(kdump_ctx *ctx)
 		return kdump_syserr;
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, pgtaddr, pgt, &sz, rdflags);
+	ret = kdump_readp(ctx, as, pgtaddr, pgt, &sz);
 	if (ret == kdump_ok)
 		archdata->pgt = pgt;
 	else
@@ -603,7 +603,7 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 		return kdump_syserr;
 
 	sz = PAGE_SIZE;
-	res = kdump_readp(ctx, pgtaddr, pgt, &sz, KDUMP_XENVADDR);
+	res = kdump_readp(ctx, KDUMP_XENVADDR, pgtaddr, pgt, &sz);
 	if (res == kdump_ok)
 		archdata->pgt_xen = pgt;
 	else
@@ -740,7 +740,7 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	base = pgd & ~PHYSADDR_MASK & PAGE_MASK;
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_XENMACHADDR);
+	ret = kdump_readp(ctx, KDUMP_XENMACHADDR, base, tbl, &sz);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -759,7 +759,7 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	base = pud & ~PHYSADDR_MASK & PAGE_MASK;
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_XENMACHADDR);
+	ret = kdump_readp(ctx, KDUMP_XENMACHADDR, base, tbl, &sz);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -777,7 +777,7 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	base = pmd & ~PHYSADDR_MASK & PAGE_MASK;
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_XENMACHADDR);
+	ret = kdump_readp(ctx, KDUMP_XENMACHADDR, base, tbl, &sz);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -817,7 +817,7 @@ x86_64_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 
 	addr = MACH2PHYS_VIRT_START + sizeof(uint64_t) * mfn;
 	sz = sizeof tmp;
-	ret = kdump_readp(ctx, addr, &tmp, &sz, KDUMP_KVADDR);
+	ret = kdump_readp(ctx, KDUMP_KVADDR, addr, &tmp, &sz);
 	if (ret == kdump_ok)
 		*pfn = tmp;
 

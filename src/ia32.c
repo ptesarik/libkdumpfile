@@ -227,8 +227,9 @@ read_pgt(kdump_ctx *ctx)
 		uint64_t entry;
 
 		sz = sizeof addr;
-		ret = kdump_readp(ctx, addr - __START_KERNEL_map,
-				  &entry, &sz, KDUMP_PHYSADDR);
+		ret = kdump_readp(ctx,
+				  KDUMP_PHYSADDR, addr - __START_KERNEL_map,
+				  &entry, &sz);
 		if (ret != kdump_ok)
 			return ret;
 		archdata->pae_state = entry ? 1 : -1;
@@ -242,8 +243,9 @@ read_pgt(kdump_ctx *ctx)
 	if (!pgt)
 		return kdump_syserr;
 
-	ret = kdump_readp(ctx, pgtaddr - __START_KERNEL_map,
-			  pgt, &sz, KDUMP_PHYSADDR);
+	ret = kdump_readp(ctx,
+			  KDUMP_PHYSADDR, pgtaddr - __START_KERNEL_map,
+			  pgt, &sz);
 	if (ret != kdump_ok) {
 		free(pgt);
 		return set_error(ctx, ret, "Cannot read page table");
@@ -314,7 +316,7 @@ ia32_vtop_nonpae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	base = pgd & PAGE_MASK;
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_PHYSADDR);
+	ret = kdump_readp(ctx, KDUMP_PHYSADDR, base, tbl, &sz);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -350,7 +352,7 @@ ia32_vtop_pae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	base = pgd & ~PHYSADDR_MASK_PAE & PAGE_MASK;
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_PHYSADDR);
+	ret = kdump_readp(ctx, KDUMP_PHYSADDR, base, tbl, &sz);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -368,7 +370,7 @@ ia32_vtop_pae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	base = pmd & ~PHYSADDR_MASK_PAE & PAGE_MASK;
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, base, tbl, &sz, KDUMP_PHYSADDR);
+	ret = kdump_readp(ctx, KDUMP_PHYSADDR, base, tbl, &sz);
 	if (ret != kdump_ok)
 		return ret;
 

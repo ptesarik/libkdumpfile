@@ -148,8 +148,8 @@ kdump_open_known(kdump_ctx *ctx)
 	attr = lookup_attr(ctx, GATTR(GKI_xen_ver_extra_addr));
 	if (attr) {
 		char *extra;
-		res = kdump_read_string(ctx, attr_value(attr)->address, &extra,
-					KDUMP_XENMACHADDR);
+		res = kdump_read_string(ctx, KDUMP_XENMACHADDR,
+					attr_value(attr)->address, &extra);
 		if (res == kdump_ok) {
 			set_attr_string(ctx, GATTR(GKI_xen_ver_extra), extra);
 			free(extra);
@@ -184,7 +184,7 @@ uts_name_from_init_uts_ns(kdump_ctx *ctx, kdump_vaddr_t *uts_name)
 		return ret;
 
 	rd = sizeof buf;
-	ret = kdump_readp(ctx, init_uts_ns, buf, &rd, KDUMP_KVADDR);
+	ret = kdump_readp(ctx, KDUMP_KVADDR, init_uts_ns, buf, &rd);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -215,8 +215,8 @@ use_kernel_utsname(kdump_ctx *ctx)
 		return ret;
 
 	rd = sizeof uts;
-	ret = kdump_readp(ctx, uts_name, (unsigned char*)&uts, &rd,
-			  KDUMP_KVADDR);
+	ret = kdump_readp(ctx, KDUMP_KVADDR, uts_name,
+			  (unsigned char*)&uts, &rd);
 	if (ret != kdump_ok)
 		return ret;
 

@@ -276,37 +276,39 @@ kdump_status kdump_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 kdump_status kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr,
 			kdump_paddr_t *paddr);
 
-#define KDUMP_PHYSADDR		(1UL<<0) /**< Physical address. */
-#define KDUMP_XENMACHADDR	(1UL<<1) /**< Xen machine address. */
-#define KDUMP_KVADDR		(1UL<<2) /**< Kernel virtual address. */
-#define KDUMP_XENVADDR		(1UL<<3) /**< Xen virtual address.  */
+/**  Address spaces used by kdump_readp()
+ *
+ * When passing an address to kdump_readp(), this type is used to
+ * specify the kind of address.
+ */
+typedef enum _tag_kdump_addrspace {
+	KDUMP_PHYSADDR,		/**< Physical address. */
+	KDUMP_XENMACHADDR,	/**< Xen machine address. */
+	KDUMP_KVADDR,		/**< Kernel virtual address. */
+	KDUMP_XENVADDR,		/**< Xen virtual address.  */
+} kdump_addrspace_t;
 
 /**  Read data from the dump file.
  * @param ctx          Dump file object.
+ * @param[in] as       Address space of @c addr.
  * @param[in] addr     Any type of address.
  * @param[out] buffer  Buffer to receive data.
  * @param[in] length   Length of @c buffer.
- * @param[in] flags    Flags.
  * @returns            Number of bytes actually read, or -1.
  *
  * Read data from a dump file. The function returns -1 if an error occurs.
  * It may return a short count on EOF or if data is filtered out.
- *
- * Allowed @c flags:
- *   - @ref KDUMP_PHYSADDR: interpret @c addr as physical address.
- *   - @ref KDUMP_XENMACHADDR: interpret @c addr as Xen machine address.
- *   - @ref KDUMP_KVADDR: interpret @c addr as kernel virtual address.
- *   - @ref KDUMP_XENVADDR: interpret @c addr as Xen virtual address.
  */
-ssize_t kdump_read(kdump_ctx *ctx, kdump_addr_t addr,
-		   void *buffer, size_t length, long flags);
+ssize_t kdump_read(kdump_ctx *ctx,
+		   kdump_addrspace_t as, kdump_addr_t addr,
+		   void *buffer, size_t length);
 
 /**  Read data from the dump file, returning full error status.
  * @param ctx              Dump file object.
+ * @param[in] as           Address space of @c addr.
  * @param[in] addr         Any type of address.
  * @param[out] buffer      Buffer to receive data.
  * @param[in,out] plength  Length of the buffer.
- * @param[in] flags        Flags.
  * @returns                Error status.
  *
  * This function works just like @ref kdump_read, but instead of returning
@@ -315,14 +317,15 @@ ssize_t kdump_read(kdump_ctx *ctx, kdump_addr_t addr,
  * of bytes read from the dump file. Note that this number may be non-zero
  * even if the call itself fails.
  */
-kdump_status kdump_readp(kdump_ctx *ctx, kdump_addr_t addr,
-			 void *buffer, size_t *plength, long flags);
+kdump_status kdump_readp(kdump_ctx *ctx,
+			 kdump_addrspace_t as, kdump_addr_t addr,
+			 void *buffer, size_t *plength);
 
 /**  Read a string from the dump file.
  * @param ctx        Dump file object.
+ * @param[in] as     Address space of @c addr.
  * @param[in] addr   Any type of address.
  * @param[out] pstr  String to be read.
- * @param[in] flags  Flags.
  * @returns          Error status.
  *
  * Use this function to read a NUL-terminated string at address @c addr.
@@ -331,8 +334,9 @@ kdump_status kdump_readp(kdump_ctx *ctx, kdump_addr_t addr,
  * This function is usually more efficient than implementing the same
  * thing with @ref kdump_read or @ref kdump_readp.
  */
-kdump_status kdump_read_string(kdump_ctx *ctx, kdump_addr_t addr,
-			       char **pstr, long flags);
+kdump_status kdump_read_string(kdump_ctx *ctx,
+			       kdump_addrspace_t as, kdump_addr_t addr,
+			       char **pstr);
 
 /**  Dump file attribute value type.
  */

@@ -115,36 +115,52 @@ read_xenvpage(kdump_ctx *ctx, kdump_pfn_t pfn)
 }
 
 static kdump_status
-setup_readfn(kdump_ctx *ctx, long flags, read_page_fn *fn)
+setup_readfn(kdump_ctx *ctx, kdump_addrspace_t as, read_page_fn *pfn)
 {
+	read_page_fn fn;
+
 	if (!ctx->ops)
 		return set_error(ctx, kdump_invalid,
 				 "File format not initialized");
 
-	if (flags & KDUMP_PHYSADDR)
-		*fn = read_phys_page_fn(ctx);
-	else if (flags & KDUMP_XENMACHADDR)
-		*fn = read_xenmach_page_fn(ctx);
-	else if (flags & KDUMP_KVADDR && ctx->ops->read_page &&
-		ctx->arch_ops && ctx->arch_ops->vtop)
-		*fn = read_kvpage;
-	else if (flags & KDUMP_XENVADDR && ctx->ops->read_page &&
-		ctx->arch_ops && ctx->arch_ops->vtop_xen)
-		*fn = read_xenvpage;
-	else
-		return set_error(ctx, kdump_invalid,
-				 "Invalid address type flags");
+	fn = NULL;
+	switch (as) {
+	case KDUMP_PHYSADDR:
+		fn = read_phys_page_fn(ctx);
+		break;
 
-	if (!*fn)
+	case KDUMP_XENMACHADDR:
+		fn = read_xenmach_page_fn(ctx);
+		break;
+
+	case KDUMP_KVADDR:
+		if (ctx->ops->read_page &&
+		    ctx->arch_ops && ctx->arch_ops->vtop)
+			fn = read_kvpage;
+		break;
+
+	case KDUMP_XENVADDR:
+		if (ctx->ops->read_page &&
+		    ctx->arch_ops && ctx->arch_ops->vtop_xen)
+			fn = read_xenvpage;
+		break;
+
+	default:
+		return set_error(ctx, kdump_invalid,
+				 "Invalid address space");
+	}
+
+	if (!fn)
 		return set_error(ctx, kdump_invalid,
 				 "Read function not available");
 
+	*pfn = fn;
 	return kdump_ok;
 }
 
 kdump_status
-kdump_readp(kdump_ctx *ctx, kdump_addr_t addr,
-	    void *buffer, size_t *plength, long flags)
+kdump_readp(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+	    void *buffer, size_t *plength)
 {
 	read_page_fn readfn;
 	size_t remain;
@@ -152,7 +168,7 @@ kdump_readp(kdump_ctx *ctx, kdump_addr_t addr,
 
 	clear_error(ctx);
 
-	ret = setup_readfn(ctx, flags, &readfn);
+	ret = setup_readfn(ctx, as, &readfn);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -179,22 +195,22 @@ kdump_readp(kdump_ctx *ctx, kdump_addr_t addr,
 }
 
 ssize_t
-kdump_read(kdump_ctx *ctx, kdump_addr_t addr,
-	   void *buffer, size_t length, long flags)
+kdump_read(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+	   void *buffer, size_t length)
 {
 	size_t sz;
 	kdump_status ret;
 
 	sz = length;
-	ret = kdump_readp(ctx, addr, buffer, &sz, flags);
+	ret = kdump_readp(ctx, as, addr, buffer, &sz);
 	if (!sz && ret == kdump_syserr)
 		return -1;
 	return sz;
 }
 
 kdump_status
-kdump_read_string(kdump_ctx *ctx, kdump_addr_t addr,
-		  char **pstr, long flags)
+kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+		  char **pstr)
 {
 	read_page_fn readfn;
 	char *str = NULL, *newstr, *endp;
@@ -203,7 +219,7 @@ kdump_read_string(kdump_ctx *ctx, kdump_addr_t addr,
 
 	clear_error(ctx);
 
-	ret = setup_readfn(ctx, flags, &readfn);
+	ret = setup_readfn(ctx, as, &readfn);
 	if (ret != kdump_ok)
 		return ret;
 

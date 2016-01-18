@@ -178,7 +178,8 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	L("reading l4 %lx\n", archdata->pg.pg + l4*ps);
 
-	res = kdump_readp(ctx, archdata->pg.pg + l4*ps, &l4e, &ps, KDUMP_KVADDR);
+	res = kdump_readp(ctx, KDUMP_KVADDR, archdata->pg.pg + l4*ps,
+			  &l4e, &ps);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot read L4");
 
@@ -201,7 +202,7 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	} else
 		e = l4e;
 
-	res = kdump_readp(ctx, e + l2*ps, &l2e, &ps, KDUMP_KVADDR);
+	res = kdump_readp(ctx, KDUMP_KVADDR, e + l2*ps, &l2e, &ps);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot read L2");
 
@@ -220,7 +221,9 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	L("l2 => %lx %lx ==> %lx\n", l2e, (l2e & (~archdata->pg.l2_mask)), e);
 
-	res = kdump_readp(ctx, (l2e&~(pagemask)) + (e&(pagemask)), &l1e, &ps, KDUMP_KVADDR);
+	res = kdump_readp(ctx,
+			  KDUMP_KVADDR, (l2e&~(pagemask)) + (e&(pagemask)),
+			  &l1e, &ps);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot read L1");
 
@@ -238,8 +241,9 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	return kdump_ok;
 
 gohuge:
-	res = kdump_readp(ctx, (e & ~HUGEPD_SHIFT_MASK) | PD_HUGE, &pt, &ps,
-			  KDUMP_KVADDR);
+	res = kdump_readp(ctx,
+			  KDUMP_KVADDR, (e & ~HUGEPD_SHIFT_MASK) | PD_HUGE,
+			  &pt, &ps);
 	if (res != kdump_ok)
 
 		return set_error(ctx, res, "Cannot read hugepage");
@@ -290,14 +294,14 @@ ppc64_vtop_init(kdump_ctx *ctx)
 	if (!val)
 		return set_error(ctx, kdump_nodata, "No OFFSET(vm_struct.addr) in VMCOREINFO");
 
-	res = kdump_readp(ctx, addr, &addr, &sz, KDUMP_KVADDR);
+	res = kdump_readp(ctx, KDUMP_KVADDR, addr, &addr, &sz);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot read vmlist.addr");
 
 	addr = dump64toh(ctx, addr);
 	addr += strtoull(val, NULL, 16);
 
-	res = kdump_readp(ctx, addr, &vmal, &sz, KDUMP_KVADDR);
+	res = kdump_readp(ctx, KDUMP_KVADDR, addr, &vmal, &sz);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot read vmlist.addr");
 

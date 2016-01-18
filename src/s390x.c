@@ -185,8 +185,9 @@ xlat(kdump_ctx *ctx, struct vtop_control *ctl)
 	--ctl->tbltype;
 
 	sz = (ctl->len - ctl->off) * sizeof(uint64_t);
-	return kdump_readp(ctx, ctl->paddr + ctl->off * sizeof(uint64_t),
-			   ctl->tbl + ctl->off, &sz, KDUMP_PHYSADDR);
+	return kdump_readp(ctx, KDUMP_PHYSADDR,
+			   ctl->paddr + ctl->off * sizeof(uint64_t),
+			   ctl->tbl + ctl->off, &sz);
 }
 
 static kdump_status
@@ -281,7 +282,7 @@ s390x_vtop_init(kdump_ctx *ctx)
 		uint64_t highmem;
 		size_t sz = sizeof(highmem);
 		/* In identity mapping virtual == physical */
-		ret = kdump_readp(ctx, addr, &highmem, &sz, KDUMP_PHYSADDR);
+		ret = kdump_readp(ctx, KDUMP_PHYSADDR, addr, &highmem, &sz);
 		if (ret != kdump_ok)
 			return ret;
 		highmem = dump64toh(ctx, highmem);
@@ -311,7 +312,7 @@ read_pgt(kdump_ctx *ctx, kdump_vaddr_t pgtaddr)
 		return kdump_syserr;
 
 	sz = sizeof(uint64_t) * PTRS_PER_PGD;
-	ret = kdump_readp(ctx, pgtaddr, pgt, &sz, KDUMP_PHYSADDR);
+	ret = kdump_readp(ctx, KDUMP_PHYSADDR, pgtaddr, pgt, &sz);
 	if (ret == kdump_ok)
 		archdata->pgt = pgt;
 	else
@@ -333,7 +334,7 @@ read_os_info_from_lowcore(kdump_ctx *ctx)
 	kdump_status ret;
 
 	sz = sizeof(addr);
-	ret = kdump_readp(ctx, LC_OS_INFO, &addr, &sz, KDUMP_PHYSADDR);
+	ret = kdump_readp(ctx, KDUMP_PHYSADDR, LC_OS_INFO, &addr, &sz);
 	if (ret != kdump_ok)
 		return set_error(ctx, ret, "Cannot read LC_OS_INFO pointer");
 	addr = dump64toh(ctx, addr);
@@ -346,7 +347,7 @@ read_os_info_from_lowcore(kdump_ctx *ctx)
 				 (unsigned long long) addr);
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, addr, os_info_buf, &sz, KDUMP_PHYSADDR);
+	ret = kdump_readp(ctx, KDUMP_PHYSADDR, addr, os_info_buf, &sz);
 	if (ret != kdump_ok)
 		return set_error(ctx, ret, "Cannot read os_info");
 	os_info = (struct os_info*) os_info_buf;
@@ -376,7 +377,7 @@ read_os_info_from_lowcore(kdump_ctx *ctx)
 	if (!vmcoreinfo)
 		return kdump_syserr;
 
-	ret = kdump_readp(ctx, addr, vmcoreinfo, &sz, KDUMP_PHYSADDR);
+	ret = kdump_readp(ctx, KDUMP_PHYSADDR, addr, vmcoreinfo, &sz);
 	if (ret != kdump_ok) {
 		free(vmcoreinfo);
 		return set_error(ctx, ret, "Cannot read VMCOREINFO");
@@ -410,7 +411,7 @@ read_vmcoreinfo_from_lowcore(kdump_ctx *ctx)
 	kdump_status ret;
 
 	sz = sizeof(addr);
-	ret = kdump_readp(ctx, LC_VMCORE_INFO, &addr, &sz, KDUMP_PHYSADDR);
+	ret = kdump_readp(ctx, KDUMP_PHYSADDR, LC_VMCORE_INFO, &addr, &sz);
 	if (ret != kdump_ok)
 		return ret;
 	addr = dump64toh(ctx, addr);
@@ -419,7 +420,7 @@ read_vmcoreinfo_from_lowcore(kdump_ctx *ctx)
 				 "NULL VMCOREINFO pointer");
 
 	sz = sizeof(hdr);
-	ret = kdump_readp(ctx, addr, &hdr, &sz, KDUMP_PHYSADDR);
+	ret = kdump_readp(ctx, KDUMP_PHYSADDR, addr, &hdr, &sz);
 	if (ret != kdump_ok)
 		return ret;
 	hdr.n_namesz = dump32toh(ctx, hdr.n_namesz);
@@ -433,7 +434,7 @@ read_vmcoreinfo_from_lowcore(kdump_ctx *ctx)
 		return kdump_syserr;
 
 	sz = notesz;
-	ret = kdump_readp(ctx, addr, note, &sz, KDUMP_PHYSADDR);
+	ret = kdump_readp(ctx, KDUMP_PHYSADDR, addr, note, &sz);
 	if (ret == kdump_ok &&
 	    !memcmp(note + sizeof(Elf64_Nhdr), "VMCOREINFO", hdr.n_namesz))
 		ret = process_notes(ctx, note, notesz);
