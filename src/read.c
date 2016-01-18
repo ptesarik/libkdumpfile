@@ -53,7 +53,7 @@ read_kpage_generic(kdump_ctx *ctx, kdump_pfn_t pfn)
 static inline read_page_fn
 read_kphys_page_fn(kdump_ctx *ctx)
 {
-	if (xenmach_equal_phys(ctx))
+	if (kphys_is_machphys(ctx))
 		return ctx->ops->read_page;
 
 	if (ctx->ops->read_kpage)

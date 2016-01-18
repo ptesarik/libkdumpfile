@@ -220,7 +220,7 @@ vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	if (!ctx->arch_ops || !ctx->arch_ops->vtop)
 		return set_error_no_vtop(ctx);
 
-	if (xenmach_equal_phys(ctx))
+	if (kphys_is_machphys(ctx))
 		return ctx->arch_ops->vtop(ctx, vaddr, paddr);
 
 	res = ctx->arch_ops->vtop(ctx, vaddr, &maddr);
@@ -294,7 +294,7 @@ kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 {
 	clear_error(ctx);
 
-	if (xenmach_equal_phys(ctx))
+	if (kphys_is_machphys(ctx))
 		return map_vtop(ctx, vaddr, maddr, 0);
 
 	if (!ctx->arch_ops || !ctx->arch_ops->vtop)
@@ -321,7 +321,7 @@ kdump_ptom(kdump_ctx *ctx, kdump_paddr_t paddr, kdump_maddr_t *maddr)
 	kdump_pfn_t mfn, pfn;
 	kdump_status ret;
 
-	if (xenmach_equal_phys(ctx)) {
+	if (kphys_is_machphys(ctx)) {
 		*maddr = paddr;
 		return kdump_ok;
 	}

@@ -682,12 +682,10 @@ extern const struct attr_ops page_shift_ops;
 
 /* Xen */
 
-/**  Check if physical addresses are equal to Xen machine addresses.
- *
- * For ease of use, on a non-Xen dump, this check is always true.
+/**  Check if kernel physical address space is equal to machine physical one.
  */
 static inline int
-xenmach_equal_phys(kdump_ctx *ctx)
+kphys_is_machphys(kdump_ctx *ctx)
 {
 	return get_xen_type(ctx) == kdump_xen_none ||
 		(get_xen_type(ctx) == kdump_xen_domain &&
