@@ -280,10 +280,15 @@ kdump_status kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr,
  *
  * When passing an address to kdump_readp(), this type is used to
  * specify the kind of address.
+ *
+ * The difference between @c KDUMP_KPHYSADDR and @c KDUMP_MACHPHYSADDR
+ * matters only in environments where the kernel has a different view
+ * of physical address space than the CPU, e.g. paravirtualized kernels
+ * under Xen.
  */
 typedef enum _tag_kdump_addrspace {
-	KDUMP_PHYSADDR,		/**< Physical address. */
-	KDUMP_XENMACHADDR,	/**< Xen machine address. */
+	KDUMP_KPHYSADDR,	/**< Kernel physical address. */
+	KDUMP_MACHPHYSADDR,	/**< Machine physical address. */
 	KDUMP_KVADDR,		/**< Kernel virtual address. */
 	KDUMP_XENVADDR,		/**< Xen virtual address.  */
 } kdump_addrspace_t;

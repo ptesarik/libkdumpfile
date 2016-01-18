@@ -423,7 +423,7 @@ read_pgt(kdump_ctx *ctx)
 					 (unsigned long long) pgtaddr);
 
 		pgtaddr -= __START_KERNEL_map - get_phys_base(ctx);
-		as = KDUMP_PHYSADDR;
+		as = KDUMP_KPHYSADDR;
 	} else if (ret == kdump_nodata) {
 		const struct attr_data *attr;
 		attr = lookup_attr(ctx, "cpu.0.reg.cr3");
@@ -431,7 +431,7 @@ read_pgt(kdump_ctx *ctx)
 			return set_error(ctx, kdump_nodata,
 					 "Cannot get CR3 value");
 		pgtaddr = attr_value(attr)->number;
-		as = KDUMP_XENMACHADDR;
+		as = KDUMP_MACHPHYSADDR;
 	} else
 		return ret;
 
@@ -740,7 +740,7 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	base = pgd & ~PHYSADDR_MASK & PAGE_MASK;
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, KDUMP_XENMACHADDR, base, tbl, &sz);
+	ret = kdump_readp(ctx, KDUMP_MACHPHYSADDR, base, tbl, &sz);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -759,7 +759,7 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	base = pud & ~PHYSADDR_MASK & PAGE_MASK;
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, KDUMP_XENMACHADDR, base, tbl, &sz);
+	ret = kdump_readp(ctx, KDUMP_MACHPHYSADDR, base, tbl, &sz);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -777,7 +777,7 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	base = pmd & ~PHYSADDR_MASK & PAGE_MASK;
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, KDUMP_XENMACHADDR, base, tbl, &sz);
+	ret = kdump_readp(ctx, KDUMP_MACHPHYSADDR, base, tbl, &sz);
 	if (ret != kdump_ok)
 		return ret;
 

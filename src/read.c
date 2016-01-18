@@ -67,7 +67,7 @@ read_dom0_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 }
 
 static inline read_page_fn
-read_phys_page_fn(kdump_ctx *ctx)
+read_kphys_page_fn(kdump_ctx *ctx)
 {
 	return (get_xen_type(ctx) == kdump_xen_system)
 		? read_dom0_page
@@ -75,7 +75,7 @@ read_phys_page_fn(kdump_ctx *ctx)
 }
 
 static inline read_page_fn
-read_xenmach_page_fn(kdump_ctx *ctx)
+read_machphys_page_fn(kdump_ctx *ctx)
 {
 	if (get_xen_type(ctx) == kdump_xen_domain &&
 	    get_xen_xlat(ctx) == kdump_xen_nonauto)
@@ -125,12 +125,12 @@ setup_readfn(kdump_ctx *ctx, kdump_addrspace_t as, read_page_fn *pfn)
 
 	fn = NULL;
 	switch (as) {
-	case KDUMP_PHYSADDR:
-		fn = read_phys_page_fn(ctx);
+	case KDUMP_KPHYSADDR:
+		fn = read_kphys_page_fn(ctx);
 		break;
 
-	case KDUMP_XENMACHADDR:
-		fn = read_xenmach_page_fn(ctx);
+	case KDUMP_MACHPHYSADDR:
+		fn = read_machphys_page_fn(ctx);
 		break;
 
 	case KDUMP_KVADDR:
