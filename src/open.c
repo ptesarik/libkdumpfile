@@ -135,11 +135,6 @@ kdump_open_known(kdump_ctx *ctx)
 	const struct attr_data *attr;
 	kdump_status res;
 
-	res = init_xen_dom0(ctx);
-	if (res != kdump_ok)
-		return set_error(ctx, res,
-				 "Xen Dom0 initialization failed");
-
 	if (!lookup_attr(ctx, GATTR(GKI_linux_uts_sysname)))
 		/* If this fails, it is not fatal. */
 		use_kernel_utsname(ctx);

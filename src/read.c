@@ -38,40 +38,28 @@ typedef kdump_status (*read_page_fn)(kdump_ctx *, kdump_pfn_t);
 static kdump_status
 read_dom0_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
-	size_t ptr_size;
-	unsigned fpp;
-	uint64_t mfn_idx, frame_idx;
-	kdump_status ret;
+	kdump_pfn_t mfn;
+	kdump_status res;
 
-	ptr_size = get_ptr_size(ctx);
-	fpp = get_page_size(ctx) / ptr_size;
-	mfn_idx = pfn / fpp;
-	frame_idx = pfn % fpp;
-	if (mfn_idx >= ctx->xen_map_size)
-		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
+	res = ctx->arch_ops->pfn_to_mfn(ctx, pfn, &mfn);
+	if (res != kdump_ok)
+		return res;
 
-	pfn = (ptr_size == 8)
-		? ((uint64_t*)ctx->xen_map)[mfn_idx]
-		: ((uint32_t*)ctx->xen_map)[mfn_idx];
-	ret = ctx->ops->read_page(ctx, pfn);
-	if (ret != kdump_ok)
-		return set_error(ctx, ret, "Cannot read MFN %llx",
-				 (unsigned long long) pfn);
-
-	pfn = (ptr_size == 8)
-		? ((uint64_t*)ctx->page)[frame_idx]
-		: ((uint32_t*)ctx->page)[frame_idx];
-	ret = ctx->ops->read_page(ctx, pfn);
-	return set_error(ctx, ret, "Cannot read MFN %llx",
+	res = ctx->ops->read_page(ctx, mfn);
+	return set_error(ctx, res, "Cannot read MFN %llx",
 			 (unsigned long long) pfn);
 }
 
 static inline read_page_fn
 read_kphys_page_fn(kdump_ctx *ctx)
 {
-	return (get_xen_type(ctx) == kdump_xen_system)
-		? read_dom0_page
-		: ctx->ops->read_page;
+	if (get_xen_type(ctx) == kdump_xen_system) {
+		if (ctx->arch_ops && ctx->arch_ops->pfn_to_mfn)
+			return read_dom0_page;
+	} else
+		return ctx->ops->read_page;
+
+	return NULL;
 }
 
 static inline read_page_fn
@@ -255,153 +243,5 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		*pstr = str;
 	}
 
-	return ret;
-}
-
-static kdump_status
-init_xen_p2m64(kdump_ctx *ctx, void *dir)
-{
-	size_t ptr_size;
-	unsigned fpp;
-	uint64_t *dirp, *p, *map;
-	uint64_t pfn;
-	unsigned long mfns;
-	kdump_status ret;
-
-	ptr_size = get_ptr_size(ctx);
-	fpp = get_page_size(ctx) / ptr_size;
-	mfns = 0;
-	for (dirp = dir, pfn = 0; *dirp && pfn < ctx->max_pfn;
-	     ++dirp, pfn += fpp * fpp) {
-		ret = ctx->ops->read_page(ctx, *dirp);
-		if (ret == kdump_nodata)
-			ret = kdump_dataerr;
-		if (ret != kdump_ok)
-			return set_error(ctx, ret,
-					 "Cannot read Xen P2M map MFN 0x%llx",
-					 (unsigned long long) *dirp);
-
-		for (p = ctx->page;
-		     (void*)p < ctx->page + get_page_size(ctx);
-		     ++p)
-			if (*p)
-				++mfns;
-	}
-
-	map = ctx_malloc(mfns * sizeof(uint64_t), ctx, "Xen P2M map");
-	if (!map)
-		return kdump_syserr;
-	ctx->xen_map = map;
-	ctx->xen_map_size = mfns;
-
-	for (dirp = dir; mfns; ++dirp) {
-		ret = ctx->ops->read_page(ctx, *dirp);
-		if (ret == kdump_nodata)
-			ret = kdump_dataerr;
-		if (ret != kdump_ok)
-			return set_error(ctx, ret,
-					 "Cannot read Xen P2M map MFN 0x%llx",
-					 (unsigned long long) *dirp);
-
-		for (p = ctx->page;
-		     (void*)p < ctx->page + get_page_size(ctx);
-		     ++p)
-			if (*p) {
-				*map++ = dump64toh(ctx, *p);
-				--mfns;
-			}
-	}
-
-	return kdump_ok;
-}
-
-static kdump_status
-init_xen_p2m32(kdump_ctx *ctx, void *dir)
-{
-	size_t ptr_size;
-	unsigned fpp;
-	uint32_t *dirp, *p, *map;
-	uint32_t pfn;
-	unsigned long mfns;
-	kdump_status ret;
-
-	ptr_size = get_ptr_size(ctx);
-	fpp = get_page_size(ctx) / ptr_size;
-	mfns = 0;
-	for (dirp = dir, pfn = 0; *dirp && pfn < ctx->max_pfn;
-	     ++dirp, pfn += fpp * fpp) {
-		ret = ctx->ops->read_page(ctx, *dirp);
-		if (ret == kdump_nodata)
-			ret = kdump_dataerr;
-		if (ret != kdump_ok)
-			return set_error(ctx, ret,
-					 "Cannot read Xen P2M map MFN 0x%llx",
-					 (unsigned long long) *dirp);
-
-		for (p = ctx->page;
-		     (void*)p < ctx->page + get_page_size(ctx);
-		     ++p)
-			if (*p)
-				++mfns;
-	}
-
-	map = ctx_malloc(mfns * sizeof(uint32_t), ctx, "Xen P2M map");
-	if (!map)
-		return kdump_syserr;
-	ctx->xen_map = map;
-	ctx->xen_map_size = mfns;
-
-	for (dirp = dir; mfns; ++dirp) {
-		ret = ctx->ops->read_page(ctx, *dirp);
-		if (ret == kdump_nodata)
-			ret = kdump_dataerr;
-		if (ret != kdump_ok)
-			return set_error(ctx, ret,
-					 "Cannot read Xen P2M map MFN 0x%llx",
-					 (unsigned long long) *dirp);
-
-		for (p = ctx->page;
-		     (void*)p < ctx->page + get_page_size(ctx);
-		     ++p)
-			if (*p) {
-				*map++ = dump32toh(ctx, *p);
-				--mfns;
-			}
-	}
-
-	return kdump_ok;
-}
-
-kdump_status
-init_xen_dom0(kdump_ctx *ctx)
-{
-	void *dir, *page;
-	kdump_pfn_t xen_p2m_mfn;
-	const struct attr_data *attr;
-	kdump_status ret;
-
-	attr = lookup_attr(ctx, GATTR(GKI_xen_p2m_mfn));
-	if (!attr)
-		/* not a Xen Dom0 dump */
-		return kdump_ok;
-	xen_p2m_mfn = attr_value(attr)->address;
-
-	ret = ctx->ops->read_page(ctx, xen_p2m_mfn);
-	if (ret != kdump_ok)
-		return set_error(ctx, ret,
-				 "Cannot read Xen P2M directory MFN 0x%llx",
-				 (unsigned long long) xen_p2m_mfn);
-
-	dir = ctx->page;
-	page = ctx_malloc(get_page_size(ctx), ctx, "page buffer");
-	if (page == NULL)
-		return kdump_syserr;
-	ctx->page = page;
-
-	ret = (get_ptr_size(ctx) == 8)
-		? init_xen_p2m64(ctx, dir)
-		: init_xen_p2m32(ctx, dir);
-
-	free(dir);
 	return ret;
 }

@@ -676,8 +676,6 @@ extern const struct attr_ops page_size_ops;
 extern const struct attr_ops page_shift_ops;
 
 /* Xen */
-#define init_xen_dom0 INTERNAL_NAME(init_xen_dom0)
-kdump_status init_xen_dom0(kdump_ctx *ctx);
 
 /**  Check if physical addresses are equal to Xen machine addresses.
  *
