@@ -85,7 +85,7 @@ struct format_ops {
 	 */
 	kdump_status (*probe)(kdump_ctx *);
 
-	/* Read a page from the dump file.
+	/* Read a (machine physical) page from the dump file.
 	 * Input:
 	 *   ctx->fd         core dump file descriptor open for reading
 	 *   ctx->page       pointer to a page-sized buffer
@@ -96,7 +96,7 @@ struct format_ops {
 	 */
 	kdump_status (*read_page)(kdump_ctx *, kdump_pfn_t);
 
-	/* Read a page from the dump file using Xen machine addresses.
+	/* Read a kernel physical page from the dump file.
 	 * Input:
 	 *   ctx->fd         core dump file descriptor open for reading
 	 *   ctx->page       pointer to a page-sized buffer
@@ -104,8 +104,13 @@ struct format_ops {
 	 * Return:
 	 *   kdump_ok        buffer is filled with page data
 	 *   kdump_nodata    data for the given page is not present
+	 *
+	 * If a format handler has an efficient way to read a kernel physical
+	 * page, it can set this method. Otherwise, the generic code will
+	 * fall back to first translating KPHYSADDR to MACHPHYSADDR and
+	 * use @ref read_page.
 	 */
-	kdump_status (*read_xenmach_page)(kdump_ctx *, kdump_pfn_t);
+	kdump_status (*read_kpage)(kdump_ctx *, kdump_pfn_t);
 
 	/* Translate a machine frame number to physical frame number.
 	 *   ctx->fmtdata    initialized in probe()

@@ -160,7 +160,7 @@ pfn_to_idx(kdump_ctx *ctx, kdump_pfn_t pfn)
 }
 
 static kdump_status
-elf_read_xen_domU(kdump_ctx *ctx, kdump_pfn_t pfn)
+xc_read_kpage(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
 	unsigned long idx;
@@ -199,7 +199,7 @@ mfn_to_idx(kdump_ctx *ctx, kdump_pfn_t mfn)
 }
 
 static kdump_status
-elf_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
+xc_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 {
 	struct xen_p2m *p = ctx->xen_map;
 	unsigned long i;
@@ -218,7 +218,7 @@ elf_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 }
 
 static kdump_status
-elf_read_xenmach_domU(kdump_ctx *ctx, kdump_pfn_t mfn)
+xc_read_page(kdump_ctx *ctx, kdump_pfn_t mfn)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
 	unsigned long idx;
@@ -711,8 +711,8 @@ const struct format_ops elfdump_ops = {
 };
 
 static const struct format_ops xen_domU_ops = {
-	.read_page = elf_read_xen_domU,
-	.read_xenmach_page = elf_read_xenmach_domU,
-	.mfn_to_pfn = elf_mfn_to_pfn,
+	.read_page = xc_read_page,
+	.read_kpage = xc_read_kpage,
+	.mfn_to_pfn = xc_mfn_to_pfn,
 	.cleanup = elf_cleanup,
 };

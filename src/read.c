@@ -36,7 +36,7 @@
 typedef kdump_status (*read_page_fn)(kdump_ctx *, kdump_pfn_t);
 
 static kdump_status
-read_dom0_page(kdump_ctx *ctx, kdump_pfn_t pfn)
+read_kpage_generic(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	kdump_pfn_t mfn;
 	kdump_status res;
@@ -53,23 +53,17 @@ read_dom0_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 static inline read_page_fn
 read_kphys_page_fn(kdump_ctx *ctx)
 {
-	if (get_xen_type(ctx) == kdump_xen_system) {
-		if (ctx->arch_ops && ctx->arch_ops->pfn_to_mfn)
-			return read_dom0_page;
-	} else
+	if (xenmach_equal_phys(ctx))
 		return ctx->ops->read_page;
+
+	if (ctx->ops->read_kpage)
+		return ctx->ops->read_kpage;
+
+	if (ctx->ops->read_page &&
+	    ctx->arch_ops && ctx->arch_ops->pfn_to_mfn)
+		return read_kpage_generic;
 
 	return NULL;
-}
-
-static inline read_page_fn
-read_machphys_page_fn(kdump_ctx *ctx)
-{
-	if (get_xen_type(ctx) == kdump_xen_domain &&
-	    get_xen_xlat(ctx) == kdump_xen_nonauto)
-		return ctx->ops->read_xenmach_page;
-	else
-		return ctx->ops->read_page;
 }
 
 static kdump_status
@@ -118,7 +112,7 @@ setup_readfn(kdump_ctx *ctx, kdump_addrspace_t as, read_page_fn *pfn)
 		break;
 
 	case KDUMP_MACHPHYSADDR:
-		fn = read_machphys_page_fn(ctx);
+		fn = ctx->ops->read_page;
 		break;
 
 	case KDUMP_KVADDR:
