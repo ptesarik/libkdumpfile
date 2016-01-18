@@ -232,8 +232,7 @@ kdump_status kdump_vtop_init_xen(kdump_ctx *ctx);
  * @param[out] paddr  Physical address.
  * @returns           Error status.
  *
- * Translate a virtual address to a physical address. This function fails
- * unless there was previously a successful call to @ref kdump_vtop_init.
+ * Translate a virtual address to a physical address.
  */
 kdump_status kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 			kdump_paddr_t *paddr);
@@ -259,8 +258,7 @@ kdump_status kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr,
  *
  * Translate a virtual address to a physical address. Note that in this
  * context, physical address is equal to machine address, because the
- * hypervisor itself does not have a second mapping. This function fails
- * unless there was previously a successful call to @ref kdump_vtop_init.
+ * hypervisor itself does not have a second mapping.
  */
 kdump_status kdump_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 			    kdump_paddr_t *paddr);

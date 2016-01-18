@@ -134,14 +134,12 @@ setup_readfn(kdump_ctx *ctx, kdump_addrspace_t as, read_page_fn *pfn)
 		break;
 
 	case KDUMP_KVADDR:
-		if (ctx->ops->read_page &&
-		    ctx->arch_ops && ctx->arch_ops->vtop)
+		if (ctx->ops->read_page)
 			fn = read_kvpage;
 		break;
 
 	case KDUMP_XENVADDR:
-		if (ctx->ops->read_page &&
-		    ctx->arch_ops && ctx->arch_ops->vtop_xen)
+		if (ctx->ops->read_page)
 			fn = read_xenvpage;
 		break;
 
