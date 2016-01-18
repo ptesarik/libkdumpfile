@@ -578,8 +578,7 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 
 	res = get_symbol_val_xen(ctx, "pgd_l4", &pgtaddr);
 	if (res != kdump_ok)
-		return set_error(ctx, kdump_nodata,
-				 "Symbol not found: %s", "pgd_l4");
+		return res;
 
 	if (pgtaddr >= XEN_DIRECTMAP_START) {
 		/* Xen versions before 3.2.0 */
