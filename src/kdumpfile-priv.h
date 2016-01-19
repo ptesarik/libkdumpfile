@@ -199,7 +199,7 @@ struct new_utsname {
 	char domainname[NEW_UTS_LEN + 1];
 };
 
-typedef enum _tag_kdump_xlat {
+typedef enum _tag_kdump_xlat_method {
 	/* No mapping set */
 	KDUMP_XLAT_NONE,
 
@@ -214,15 +214,16 @@ typedef enum _tag_kdump_xlat {
 
 	/* Kernel text: virtual = physical + phys_off - ctx->phys_base */
 	KDUMP_XLAT_KTEXT,
-} kdump_xlat_t;
+} kdump_xlat_method_t;
 
-/* Maximum length of the error message */
-#define ERRBUF	160
+struct kdump_xlat {
+	kdump_addr_t phys_off;	    /**< offset from physical addresses */
+	kdump_xlat_method_t method; /**< vaddr->paddr translation method */
+};
 
 struct kdump_vaddr_region {
-	kdump_vaddr_t max_off;	/* max offset inside the range */
-	kdump_addr_t phys_off;	/* offset from physical addresses */
-	kdump_xlat_t xlat;	/* vaddr->paddr translation method */
+	kdump_vaddr_t max_off;	/**< max offset inside the range */
+	struct kdump_xlat xlat; /**< translation definition */
 };
 
 /**  Map for virtual-to-physical translation
@@ -356,6 +357,9 @@ struct attr_hash {
 	struct attr_hash *next;
 	struct attr_data table[ATTR_HASH_SIZE];
 };
+
+/* Maximum length of the error message */
+#define ERRBUF	160
 
 struct _tag_kdump_ctx {
 	int fd;			/* dump file descriptor */
@@ -557,14 +561,14 @@ kdump_status process_vmcoreinfo(kdump_ctx *ctx, void *data, size_t size);
 #define set_vtop_xlat INTERNAL_NAME(set_vtop_xlat)
 kdump_status set_vtop_xlat(struct vtop_map *map,
 			   kdump_vaddr_t first, kdump_vaddr_t last,
-			   kdump_xlat_t xlat, kdump_vaddr_t phys_off);
+			   kdump_xlat_method_t method, kdump_vaddr_t phys_off);
 
 #define flush_vtop_map INTERNAL_NAME(flush_vtop_map)
 void flush_vtop_map(struct vtop_map *map);
 
 #define get_vtop_xlat INTERNAL_NAME(get_vtop_xlat)
-kdump_xlat_t get_vtop_xlat(struct vtop_map *map, kdump_vaddr_t vaddr,
-			   kdump_paddr_t *phys_off);
+const struct kdump_xlat *get_vtop_xlat(struct vtop_map *map,
+				       kdump_vaddr_t vaddr);
 
 #define vtop_pgt INTERNAL_NAME(vtop_pgt)
 kdump_status vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr,

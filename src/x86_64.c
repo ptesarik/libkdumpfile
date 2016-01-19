@@ -104,7 +104,7 @@
 
 struct region_def {
 	kdump_vaddr_t first, last;
-	kdump_xlat_t xlat;
+	kdump_xlat_method_t method;
 	kdump_vaddr_t phys_off;
 };
 
@@ -506,9 +506,9 @@ remove_ktext_xlat(struct vtop_map *map)
 	struct kdump_vaddr_region *rgn;
 	for (rgn = map->region;
 	     rgn < &map->region[map->num_regions]; ++rgn)
-		if (rgn->xlat == KDUMP_XLAT_KTEXT) {
-			rgn->phys_off = 0UL;
-			rgn->xlat = KDUMP_XLAT_VTOP;
+		if (rgn->xlat.method == KDUMP_XLAT_KTEXT) {
+			rgn->xlat.phys_off = 0UL;
+			rgn->xlat.method = KDUMP_XLAT_VTOP;
 		}
 }
 
@@ -540,7 +540,7 @@ x86_64_vtop_init(kdump_ctx *ctx)
 		const struct region_def *def = &layout->regions[i];
 		ret = set_vtop_xlat(&ctx->vtop_map[VMI_linux],
 				    def->first, def->last,
-				    def->xlat, def->phys_off);
+				    def->method, def->phys_off);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret,
 					 "Cannot set up mapping #%d", i);

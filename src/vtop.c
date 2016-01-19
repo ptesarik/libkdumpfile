@@ -37,7 +37,7 @@
 
 kdump_status
 set_vtop_xlat(struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
-	      kdump_xlat_t xlat, kdump_vaddr_t phys_off)
+	      kdump_xlat_method_t method, kdump_vaddr_t phys_off)
 {
 	struct kdump_vaddr_region *rgn, *prevrgn;
 	kdump_vaddr_t rfirst, rlast;
@@ -83,7 +83,7 @@ set_vtop_xlat(struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
 			if (!rgn) {
 				rgn = prevrgn = newrgn;
 				rgn->max_off = KDUMP_ADDR_MAX;
-				rgn->xlat = KDUMP_XLAT_NONE;
+				rgn->xlat.method = KDUMP_XLAT_NONE;
 				++map->num_regions;
 				++left;
 				--numinc;
@@ -107,8 +107,8 @@ set_vtop_xlat(struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
 	}
 
 	prevrgn->max_off = last - first;
-	prevrgn->phys_off = phys_off;
-	prevrgn->xlat = xlat;
+	prevrgn->xlat.phys_off = phys_off;
+	prevrgn->xlat.method = method;
 	return kdump_ok;
 }
 
@@ -121,27 +121,25 @@ flush_vtop_map(struct vtop_map *map)
 	map->num_regions = 0;
 }
 
-kdump_xlat_t
-get_vtop_xlat(struct vtop_map *map, kdump_vaddr_t vaddr,
-	      kdump_paddr_t *phys_off)
+const struct kdump_xlat *
+get_vtop_xlat(struct vtop_map *map, kdump_vaddr_t vaddr)
 {
+	static const struct kdump_xlat xlat_none = {
+		.method = KDUMP_XLAT_NONE,
+	};
+
 	struct kdump_vaddr_region *rgn;
 	kdump_vaddr_t rfirst;
-	unsigned left;
 
 	rgn = map->region;
+	if (!rgn)
+		return &xlat_none;
 	rfirst = 0;
-	for (left = map->num_regions; left > 0; --left) {
-		if (vaddr <= rfirst + rgn->max_off)
-			break;
+	while (vaddr > rfirst + rgn->max_off) {
 		rfirst += rgn->max_off + 1;
 		++rgn;
 	}
-	if (!rgn)
-		return KDUMP_XLAT_NONE;
-
-	*phys_off = rgn->phys_off;
-	return rgn->xlat;
+	return &rgn->xlat;
 }
 
 /**  Set default translation to VTOP (page table) translation
@@ -151,8 +149,8 @@ default_to_vtop(struct vtop_map *map)
 {
 	struct kdump_vaddr_region *rgn;
 	for (rgn = map->region; rgn < &map->region[map->num_regions]; ++rgn)
-		if (rgn->xlat == KDUMP_XLAT_NONE)
-			rgn->xlat = KDUMP_XLAT_VTOP;
+		if (rgn->xlat.method == KDUMP_XLAT_NONE)
+			rgn->xlat.method = KDUMP_XLAT_VTOP;
 }
 
 static kdump_status
@@ -241,12 +239,11 @@ map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 		[VMI_xen] = GATTR(GKI_xen_phys_start),
 	};
 
-	kdump_xlat_t xlat;
-	kdump_paddr_t phys_off;
+	const struct kdump_xlat *xlat;
 	const struct attr_data *attr;
 
-	xlat = get_vtop_xlat(&ctx->vtop_map[mapidx], vaddr, &phys_off);
-	switch (xlat) {
+	xlat = get_vtop_xlat(&ctx->vtop_map[mapidx], vaddr);
+	switch (xlat->method) {
 	case KDUMP_XLAT_NONE:
 		return set_error(ctx, kdump_nodata,
 				 "Unhandled virtual address");
@@ -264,7 +261,7 @@ map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 			return set_error_no_vtop(ctx);
 
 	case KDUMP_XLAT_DIRECT:
-		*paddr = vaddr - phys_off;
+		*paddr = vaddr - xlat->phys_off;
 		return kdump_ok;
 
 	case KDUMP_XLAT_KTEXT:
@@ -272,13 +269,13 @@ map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 		if (!attr)
 			return set_error(ctx, kdump_nodata,
 					 "Unknown kernel physical base");
-		*paddr = vaddr - phys_off + attr_value(attr)->address;
+		*paddr = vaddr - xlat->phys_off + attr_value(attr)->address;
 		return kdump_ok;
 	};
 
 	/* unknown translation method */
 	return set_error(ctx, kdump_dataerr,
-			 "Invalid translation method: %d", (int)xlat);
+			 "Invalid translation method: %d", (int)xlat->method);
 }
 
 kdump_status
