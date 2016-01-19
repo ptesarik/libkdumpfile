@@ -579,6 +579,10 @@ const struct kdump_xlat *get_vtop_xlat(struct vtop_map *map,
 kdump_status vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 		      kdump_paddr_t *paddr);
 
+#define vtop_pgt_xen INTERNAL_NAME(vtop_pgt_xen)
+kdump_status vtop_pgt_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr,
+			  kdump_paddr_t *paddr);
+
 /* Attribute handling */
 
 #define add_attr_template INTERNAL_NAME(add_attr_template)

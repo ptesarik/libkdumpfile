@@ -230,6 +230,23 @@ vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 			 (unsigned long long) maddr);
 }
 
+/**  Xen Virtual-to-physical translation using pagetables.
+ * @param ctx         Dump file object.
+ * @param[in] vaddr   Xen virtual address.
+ * @param[out] paddr  Physical address.
+ * @returns           Error status.
+ *
+ * Same as @ref vtop_pgt, but for Xen hypervisor virtual addresses.
+ */
+kdump_status
+vtop_pgt_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
+{
+	if (ctx->arch_ops && ctx->arch_ops->vtop_xen)
+		return ctx->arch_ops->vtop_xen(ctx, vaddr, paddr);
+	else
+		return set_error_no_vtop(ctx);
+}
+
 static kdump_status
 map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	 enum vtop_map_idx mapidx)
@@ -250,10 +267,8 @@ map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	case KDUMP_XLAT_VTOP:
 		if (mapidx == VMI_linux)
 			return vtop_pgt(ctx, vaddr, paddr);
-		else if (ctx->arch_ops && ctx->arch_ops->vtop_xen)
-			return ctx->arch_ops->vtop_xen(ctx, vaddr, paddr);
 		else
-			return set_error_no_vtop(ctx);
+			return vtop_pgt_xen(ctx, vaddr, paddr);
 
 	case KDUMP_XLAT_DIRECT:
 		*paddr = vaddr - xlat->phys_off;
