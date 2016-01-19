@@ -342,22 +342,17 @@ struct kdump_vaddr_region {
 	struct kdump_xlat xlat; /**< translation definition */
 };
 
+typedef kdump_status vtop_pgt_fn(
+	kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr);
+
 /**  Map for virtual-to-physical translation
  */
 struct vtop_map {
+	vtop_pgt_fn *vtop_pgt_fn;     /**< function to walk page tables */
 	enum global_keyidx phys_base; /**< kernel physical base  */
 
 	unsigned num_regions;	      /**< number of elements in @c region */
 	struct kdump_vaddr_region *region;
-};
-
-/**  Index into @c vtop_map[]
- */
-enum vtop_map_idx {
-	VMI_linux,
-	VMI_xen,
-
-	NR_VTOP_MAPS
 };
 
 /* Maximum length of the error message */
@@ -382,7 +377,8 @@ struct _tag_kdump_ctx {
 	kdump_pfn_t max_pfn;	/* max PFN for read_page */
 
 	/* address translation */
-	struct vtop_map vtop_map[NR_VTOP_MAPS];
+	struct vtop_map vtop_map;
+	struct vtop_map vtop_map_xen;
 
 	/* attribute templates */
 	struct dyn_attr_template *tmpl;
@@ -572,7 +568,7 @@ kdump_status set_vtop_xlat(struct vtop_map *map,
 void flush_vtop_map(struct vtop_map *map);
 
 #define get_vtop_xlat INTERNAL_NAME(get_vtop_xlat)
-const struct kdump_xlat *get_vtop_xlat(struct vtop_map *map,
+const struct kdump_xlat *get_vtop_xlat(const struct vtop_map *map,
 				       kdump_vaddr_t vaddr);
 
 #define vtop_pgt INTERNAL_NAME(vtop_pgt)

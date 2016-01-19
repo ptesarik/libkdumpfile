@@ -155,8 +155,8 @@ kdump_open_known(kdump_ctx *ctx)
 
 	setup_version_code(ctx);
 
-	flush_vtop_map(&ctx->vtop_map[VMI_linux]);
-	flush_vtop_map(&ctx->vtop_map[VMI_xen]);
+	flush_vtop_map(&ctx->vtop_map);
+	flush_vtop_map(&ctx->vtop_map_xen);
 
 	clear_error(ctx);
 	return kdump_ok;
@@ -282,8 +282,8 @@ kdump_free(kdump_ctx *ctx)
 		free(ctx->buffer);
 	if (ctx->xen_map)
 		free(ctx->xen_map);
-	flush_vtop_map(&ctx->vtop_map[VMI_linux]);
-	flush_vtop_map(&ctx->vtop_map[VMI_xen]);
+	flush_vtop_map(&ctx->vtop_map);
+	flush_vtop_map(&ctx->vtop_map_xen);
 	cleanup_attr(ctx);
 	free(ctx);
 }

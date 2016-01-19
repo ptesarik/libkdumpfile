@@ -122,7 +122,7 @@ flush_vtop_map(struct vtop_map *map)
 }
 
 const struct kdump_xlat *
-get_vtop_xlat(struct vtop_map *map, kdump_vaddr_t vaddr)
+get_vtop_xlat(const struct vtop_map *map, kdump_vaddr_t vaddr)
 {
 	static const struct kdump_xlat xlat_none = {
 		.method = KDUMP_XLAT_NONE,
@@ -182,14 +182,14 @@ vtop_init(kdump_ctx *ctx, struct vtop_map *map, size_t init_ops_off)
 kdump_status
 kdump_vtop_init(kdump_ctx *ctx)
 {
-	return vtop_init(ctx, &ctx->vtop_map[VMI_linux],
+	return vtop_init(ctx, &ctx->vtop_map,
 			 offsetof(struct arch_ops, vtop_init));
 }
 
 kdump_status
 kdump_vtop_init_xen(kdump_ctx *ctx)
 {
-	return vtop_init(ctx, &ctx->vtop_map[VMI_xen],
+	return vtop_init(ctx, &ctx->vtop_map_xen,
 			 offsetof(struct arch_ops, vtop_init_xen));
 }
 
@@ -249,12 +249,12 @@ vtop_pgt_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 static kdump_status
 map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
-	 enum vtop_map_idx mapidx)
+	 const struct vtop_map *map)
 {
 	const struct kdump_xlat *xlat;
 	const struct attr_data *attr;
 
-	xlat = get_vtop_xlat(&ctx->vtop_map[mapidx], vaddr);
+	xlat = get_vtop_xlat(map, vaddr);
 	switch (xlat->method) {
 	case KDUMP_XLAT_NONE:
 		return set_error(ctx, kdump_nodata,
@@ -265,17 +265,14 @@ map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 				 "Invalid virtual address");
 
 	case KDUMP_XLAT_VTOP:
-		if (mapidx == VMI_linux)
-			return vtop_pgt(ctx, vaddr, paddr);
-		else
-			return vtop_pgt_xen(ctx, vaddr, paddr);
+		return map->vtop_pgt_fn(ctx, vaddr, paddr);
 
 	case KDUMP_XLAT_DIRECT:
 		*paddr = vaddr - xlat->phys_off;
 		return kdump_ok;
 
 	case KDUMP_XLAT_KTEXT:
-		attr = ctx->global_attrs[ctx->vtop_map[mapidx].phys_base];
+		attr = ctx->global_attrs[map->phys_base];
 		if (!attr_isset(attr))
 			return set_error(ctx, kdump_nodata,
 					 "Unknown kernel physical base");
@@ -293,7 +290,7 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	clear_error(ctx);
 
-	return map_vtop(ctx, vaddr, paddr, 0);
+	return map_vtop(ctx, vaddr, paddr, &ctx->vtop_map);
 }
 
 kdump_status
@@ -302,7 +299,7 @@ kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 	clear_error(ctx);
 
 	if (kphys_is_machphys(ctx))
-		return map_vtop(ctx, vaddr, maddr, 0);
+		return map_vtop(ctx, vaddr, maddr, &ctx->vtop_map);
 
 	if (!ctx->arch_ops || !ctx->arch_ops->vtop)
 		return set_error_no_vtop(ctx);
@@ -319,7 +316,7 @@ kdump_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 		return set_error(ctx, kdump_nodata,
 				 "Not a Xen system dump");
 
-	return map_vtop(ctx, vaddr, paddr, 1);
+	return map_vtop(ctx, vaddr, paddr, &ctx->vtop_map_xen);
 }
 
 kdump_status
@@ -387,6 +384,9 @@ kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
 void
 init_vtop_maps(kdump_ctx *ctx)
 {
-	ctx->vtop_map[VMI_linux].phys_base = GKI_phys_base;
-	ctx->vtop_map[VMI_xen].phys_base = GKI_xen_phys_start;
+	ctx->vtop_map.phys_base = GKI_phys_base;
+	ctx->vtop_map.vtop_pgt_fn = vtop_pgt;
+
+	ctx->vtop_map_xen.phys_base = GKI_xen_phys_start;
+	ctx->vtop_map_xen.vtop_pgt_fn = vtop_pgt_xen;
 }
