@@ -234,11 +234,6 @@ static kdump_status
 map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	 enum vtop_map_idx mapidx)
 {
-	static const char *const phys_base_key[] = {
-		[VMI_linux] = GATTR(GKI_phys_base),
-		[VMI_xen] = GATTR(GKI_xen_phys_start),
-	};
-
 	const struct kdump_xlat *xlat;
 	const struct attr_data *attr;
 
@@ -265,8 +260,8 @@ map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 		return kdump_ok;
 
 	case KDUMP_XLAT_KTEXT:
-		attr = lookup_attr(ctx, phys_base_key[mapidx]);
-		if (!attr)
+		attr = ctx->global_attrs[ctx->vtop_map[mapidx].phys_base];
+		if (!attr_isset(attr))
 			return set_error(ctx, kdump_nodata,
 					 "Unknown kernel physical base");
 		*paddr = vaddr - xlat->phys_off + attr_value(attr)->address;
@@ -372,4 +367,11 @@ kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
 			(maddr & (get_page_size(ctx) - 1));
 
 	return ret;
+}
+
+void
+init_vtop_maps(kdump_ctx *ctx)
+{
+	ctx->vtop_map[VMI_linux].phys_base = GKI_phys_base;
+	ctx->vtop_map[VMI_xen].phys_base = GKI_xen_phys_start;
 }

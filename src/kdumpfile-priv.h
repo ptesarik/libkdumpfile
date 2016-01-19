@@ -199,49 +199,6 @@ struct new_utsname {
 	char domainname[NEW_UTS_LEN + 1];
 };
 
-typedef enum _tag_kdump_xlat_method {
-	/* No mapping set */
-	KDUMP_XLAT_NONE,
-
-	/* Invalid virtual addresses */
-	KDUMP_XLAT_INVALID,
-
-	/* Arbitrary: use vtop to map between virtual and physical */
-	KDUMP_XLAT_VTOP,
-
-	/* Direct mapping: virtual = physical + phys_off */
-	KDUMP_XLAT_DIRECT,
-
-	/* Kernel text: virtual = physical + phys_off - ctx->phys_base */
-	KDUMP_XLAT_KTEXT,
-} kdump_xlat_method_t;
-
-struct kdump_xlat {
-	kdump_addr_t phys_off;	    /**< offset from physical addresses */
-	kdump_xlat_method_t method; /**< vaddr->paddr translation method */
-};
-
-struct kdump_vaddr_region {
-	kdump_vaddr_t max_off;	/**< max offset inside the range */
-	struct kdump_xlat xlat; /**< translation definition */
-};
-
-/**  Map for virtual-to-physical translation
- */
-struct vtop_map {
-	unsigned num_regions;	/*< number of elements in @c region */
-	struct kdump_vaddr_region *region;
-};
-
-/**  Index into @c vtop_map[]
- */
-enum vtop_map_idx {
-	VMI_linux,
-	VMI_xen,
-
-	NR_VTOP_MAPS
-};
-
 /* Global attribute keys */
 enum global_keyidx {
 #define ATTR(dir, key, field, type, ctype, ...)	\
@@ -356,6 +313,51 @@ struct attr_data {
 struct attr_hash {
 	struct attr_hash *next;
 	struct attr_data table[ATTR_HASH_SIZE];
+};
+
+typedef enum _tag_kdump_xlat_method {
+	/* No mapping set */
+	KDUMP_XLAT_NONE,
+
+	/* Invalid virtual addresses */
+	KDUMP_XLAT_INVALID,
+
+	/* Arbitrary: use vtop to map between virtual and physical */
+	KDUMP_XLAT_VTOP,
+
+	/* Direct mapping: virtual = physical + phys_off */
+	KDUMP_XLAT_DIRECT,
+
+	/* Kernel text: virtual = physical + phys_off - ctx->phys_base */
+	KDUMP_XLAT_KTEXT,
+} kdump_xlat_method_t;
+
+struct kdump_xlat {
+	kdump_addr_t phys_off;	    /**< offset from physical addresses */
+	kdump_xlat_method_t method; /**< vaddr->paddr translation method */
+};
+
+struct kdump_vaddr_region {
+	kdump_vaddr_t max_off;	/**< max offset inside the range */
+	struct kdump_xlat xlat; /**< translation definition */
+};
+
+/**  Map for virtual-to-physical translation
+ */
+struct vtop_map {
+	enum global_keyidx phys_base; /**< kernel physical base  */
+
+	unsigned num_regions;	      /**< number of elements in @c region */
+	struct kdump_vaddr_region *region;
+};
+
+/**  Index into @c vtop_map[]
+ */
+enum vtop_map_idx {
+	VMI_linux,
+	VMI_xen,
+
+	NR_VTOP_MAPS
 };
 
 /* Maximum length of the error message */
@@ -557,6 +559,9 @@ kdump_status process_arch_notes(kdump_ctx *ctx, void *data, size_t size);
 kdump_status process_vmcoreinfo(kdump_ctx *ctx, void *data, size_t size);
 
 /* Virtual address space regions */
+
+#define init_vtop_maps INTERNAL_NAME(init_vtop_maps)
+void init_vtop_maps(kdump_ctx *ctx);
 
 #define set_vtop_xlat INTERNAL_NAME(set_vtop_xlat)
 kdump_status set_vtop_xlat(struct vtop_map *map,

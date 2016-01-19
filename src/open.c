@@ -70,6 +70,8 @@ kdump_init(void)
 	ctx->cb_get_symbol_val = kdump_vmcoreinfo_symbol;
 	ctx->cb_get_symbol_val_xen = kdump_vmcoreinfo_symbol_xen;
 
+	init_vtop_maps(ctx);
+
 	return ctx;
 }
 
