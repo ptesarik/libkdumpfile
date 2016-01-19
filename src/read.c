@@ -67,7 +67,7 @@ read_kphys_page_fn(kdump_ctx *ctx)
 }
 
 static kdump_status
-read_kvpage(kdump_ctx *ctx, kdump_pfn_t pfn)
+read_kvpage_machphys(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	kdump_vaddr_t vaddr;
 	kdump_maddr_t maddr;
@@ -79,6 +79,36 @@ read_kvpage(kdump_ctx *ctx, kdump_pfn_t pfn)
 		return ret;
 
 	return ctx->ops->read_page(ctx, maddr >> get_page_shift(ctx));
+}
+
+static kdump_status
+read_kvpage_kphys(kdump_ctx *ctx, kdump_pfn_t pfn)
+{
+	kdump_vaddr_t vaddr;
+	kdump_paddr_t paddr;
+	kdump_status ret;
+
+	vaddr = pfn << get_page_shift(ctx);
+	ret = kdump_vtop(ctx, vaddr, &paddr);
+	if (ret != kdump_ok)
+		return ret;
+
+	pfn = paddr >> get_page_shift(ctx);
+	return ctx->ops->read_kpage(ctx, pfn);
+}
+
+static kdump_status
+read_kvpage_choose(kdump_ctx *ctx, kdump_pfn_t pfn)
+{
+	kdump_vaddr_t vaddr;
+	const struct kdump_xlat *xlat;
+
+	vaddr = pfn << get_page_shift(ctx);
+	xlat = get_vtop_xlat(&ctx->vtop_map, vaddr);
+	if (xlat->method != KDUMP_XLAT_VTOP)
+		return read_kvpage_kphys(ctx, pfn);
+	else
+		return read_kvpage_machphys(ctx, pfn);
 }
 
 static kdump_status
@@ -116,8 +146,13 @@ setup_readfn(kdump_ctx *ctx, kdump_addrspace_t as, read_page_fn *pfn)
 		break;
 
 	case KDUMP_KVADDR:
-		if (ctx->ops->read_page)
-			fn = read_kvpage;
+		if (ctx->ops->read_page) {
+			if (ctx->ops->read_kpage)
+				fn = read_kvpage_choose;
+			else
+				fn = read_kvpage_machphys;
+		} else if (ctx->ops->read_kpage)
+			fn = read_kvpage_kphys;
 		break;
 
 	case KDUMP_XENVADDR:
