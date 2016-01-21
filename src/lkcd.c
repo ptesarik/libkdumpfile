@@ -291,15 +291,18 @@ struct dump_page {
 #define pfn_idx3(pfn) \
 	((uint32_t)(pfn) & (PFN_IDX3_SIZE - 1))
 
-/* Level-3 tables contain only a 32-bit offset from the level-2 page
- * beginning, cutting their size by 50%. A 32-bit offset must be
- * enough, because max page shift is 18 and pfn_idx3 has 12 bits:
- * 18 + 12 = 30 and 30 < 32
+/**  Contiguous block of pages
+ *
+ * Storing only a 32-bit offset from the block beginning saves
+ * 50% of the space used by @c offs.
  */
-
-struct pfn_level2 {
-	off_t off;
-	uint32_t *pfn_level3;
+struct pfn_block {
+	off_t filepos;		/**< absolute file offset */
+	kdump_pfn_t pfn;	/**< first pfn in range */
+	unsigned short n;	/**< number of pages */
+	unsigned short alloc;	/**< allocated pages */
+	uint32_t *offs;		/**< offsets from filepos */
+	struct pfn_block *next;	/**< pointer to next block */
 };
 
 /* Maximum size of the format name: the version field is a 32-bit integer,
@@ -310,121 +313,226 @@ struct pfn_level2 {
 
 struct lkcd_priv {
 	off_t data_offset;	/* offset to 1st page */
+	off_t last_offset;	/* offset of last page parsed so far */
+	off_t end_offset;	/* offset of end marker */
+	struct pfn_block *last_block;
+
 	unsigned version;
 	unsigned compression;
-	struct pfn_level2 **pfn_level1;
+	struct pfn_block ***pfn_level1;
 	char format[MAX_FORMAT_NAME];
 };
 
 static void lkcd_cleanup(kdump_ctx *ctx);
 
-static off_t
-find_page(kdump_ctx *ctx, off_t off, unsigned pfn, struct dump_page *dp)
+static struct pfn_block **
+get_pfn_slot(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
-	uint64_t addr = pfn * get_page_size(ctx);
+	struct lkcd_priv *lkcdp = ctx->fmtdata;
+	struct pfn_block **l2;
+	unsigned idx;
 
-	for ( ;; ) {
-		if (pread(ctx->fd, dp, sizeof *dp, off) != sizeof *dp)
-			return -1;
-		dp->dp_address = dump64toh(ctx, dp->dp_address);
-		dp->dp_size = dump32toh(ctx, dp->dp_size);
-		if (dp->dp_address >= addr)
-			break;
-		off += sizeof(struct dump_page) + dp->dp_size;
+	idx = pfn_idx1(pfn);
+	l2 = lkcdp->pfn_level1[idx];
+	if (!l2) {
+		l2 = calloc(PFN_IDX2_SIZE, sizeof(struct pfn_block*));
+		if (!l2) {
+			set_error(ctx, kdump_syserr,
+				  "Cannot allocate PFN level-2 table");
+			return NULL;
+		}
+		lkcdp->pfn_level1[idx] = l2;
 	}
 
-	dp->dp_flags = dump32toh(ctx, dp->dp_flags);
-	return off;
+	return &l2[pfn_idx2(pfn)];
+}
+
+static struct pfn_block *
+alloc_pfn_block(kdump_ctx *ctx, kdump_pfn_t pfn)
+{
+	struct pfn_block **pprev, *block;
+	uint32_t *offs;
+
+	pprev = get_pfn_slot(ctx, pfn);
+	if (!pprev)
+		return NULL;
+
+	offs = ctx_malloc(PFN_IDX3_SIZE * sizeof(uint32_t),
+			  ctx, "PFN level-3 table");
+	if (!offs)
+		return NULL;
+
+	block = ctx_malloc(sizeof(struct pfn_block), ctx, "PFN block");
+	if (!block) {
+		free(offs);
+		return NULL;
+	}
+	block->pfn = pfn;
+	block->n = 0;
+	block->alloc = PFN_IDX3_SIZE;
+	block->offs = offs;
+
+	while (*pprev) {
+		if ((*pprev)->pfn >= block->pfn)
+			break;
+		pprev = &(*pprev)->next;
+	}
+	block->next = *pprev;
+	*pprev = block;
+
+	return block;
 }
 
 static kdump_status
-fill_level1(kdump_ctx *ctx, unsigned endidx)
+realloc_pfn_offs(struct pfn_block *block, unsigned short alloc)
 {
-	struct lkcd_priv *lkcdp = ctx->fmtdata;
-	off_t off = lkcdp->data_offset;
-	struct pfn_level2 **p;
-	unsigned idx;
+	uint32_t *newoffs;
 
-	for (p = lkcdp->pfn_level1, idx = 0; idx < endidx; ++p, ++idx) {
-		if (!*p)
-			break;
-		off = (*p)->off;
-	}
+	if (!block || block->alloc == alloc)
+		return kdump_ok;
 
-	for ( ; idx <= endidx; ++p, ++idx) {
-		struct dump_page dp;
-		uint32_t pfn;
-
-		*p = calloc(PFN_IDX2_SIZE, sizeof(struct pfn_level2));
-		if (!*p)
-			return set_error(ctx, kdump_syserr,
-					 "Cannot allocate level 2 cache");
-		pfn = idx << (PFN_IDX3_BITS + PFN_IDX2_BITS);
-		if ( (off = find_page(ctx, off, pfn, &dp)) < 0)
-			return kdump_syserr;
-		(*p)->off = off;
-	}
-
-	return kdump_ok;
-}
-
-static kdump_status
-fill_level2(kdump_ctx *ctx, unsigned idx1, unsigned endidx)
-{
-	struct lkcd_priv *lkcdp = ctx->fmtdata;
-	struct pfn_level2 *p = lkcdp->pfn_level1[idx1];
-	off_t off, baseoff;
-	struct dump_page dp;
-	uint32_t pfn;
-	uint32_t *pp;
-	unsigned idx;
-
-	baseoff = p->off;
-	for (idx = 0; idx <= endidx; ++p, ++idx) {
-		if (!p->pfn_level3)
-			break;
-		baseoff = p->off;
-	}
-
-	pfn = ((idx1 << PFN_IDX2_BITS) + idx) << PFN_IDX3_BITS;
-	for ( ; idx < endidx; ++p, ++idx) {
-		if ( (baseoff = find_page(ctx, baseoff, pfn, &dp)) < 0)
-			return kdump_syserr;
-		p->off = baseoff;
-		pfn += PFN_IDX3_SIZE;
-	}
-	if (idx) {
-		if ( (baseoff = find_page(ctx, baseoff, pfn, &dp)) < 0)
-			return kdump_syserr;
-		p->off = baseoff;
-	}
-
-	pp = ctx_malloc(PFN_IDX3_SIZE * sizeof(uint32_t),
-			ctx, "level 3 cache");
-	if (!pp)
+	newoffs = realloc(block->offs, alloc * sizeof(uint32_t));
+	if (!newoffs)
 		return kdump_syserr;
-	p->pfn_level3 = pp;
-	memset(pp, -1, PFN_IDX3_SIZE * sizeof(uint32_t));
 
-	off = baseoff;
-	for (idx = 0; idx < PFN_IDX3_SIZE; ++idx, ++pp) {
-		if ( (off = find_page(ctx, off, pfn, &dp)) < 0)
+	block->alloc = alloc;
+	block->offs = newoffs;
+	return kdump_ok;
+}
+
+static struct pfn_block *
+lookup_pfn_block(kdump_ctx *ctx, kdump_pfn_t pfn)
+{
+	struct lkcd_priv *lkcdp = ctx->fmtdata;
+	struct pfn_block **l2, *block;
+	unsigned idx;
+
+	idx = pfn_idx1(pfn);
+	l2 = lkcdp->pfn_level1[idx];
+	if (!l2)
+		return NULL;
+
+	idx = pfn_idx2(pfn);
+	block = l2[idx];
+
+	while (block) {
+		if (block->pfn > pfn)
 			break;
-		if (dp.dp_address == pfn * get_page_size(ctx))
-			*pp = off - baseoff;
-		pfn++;
+		if (pfn < block->pfn + block->n)
+			return block;
+		block = block->next;
 	}
 
+	return NULL;
+}
+
+static kdump_status
+read_page_desc(kdump_ctx *ctx, struct dump_page *dp, off_t off)
+{
+	ssize_t rd = pread(ctx->fd, dp, sizeof *dp, off);
+	if (rd != sizeof *dp)
+		return set_error(ctx, read_error(rd),
+				 "Cannot read page descriptor at %llu",
+				 (unsigned long long) off);
+
+	dp->dp_address = dump64toh(ctx, dp->dp_address);
+	dp->dp_size = dump32toh(ctx, dp->dp_size);
+	dp->dp_flags = dump32toh(ctx, dp->dp_flags);
 	return kdump_ok;
+}
+
+static kdump_status
+search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
+		 struct dump_page *dp, off_t *dataoff)
+{
+	struct lkcd_priv *lkcdp = ctx->fmtdata;
+	off_t off;
+	kdump_pfn_t curpfn, prevpfn;
+	struct pfn_block *block;
+	kdump_status res;
+
+	off = lkcdp->last_offset;
+	if (off == lkcdp->end_offset)
+		return set_error(ctx, kdump_nodata, "Page not found");
+
+	block = lkcdp->last_block;
+	prevpfn = block
+		? block->pfn + block->n - 1
+		: (kdump_pfn_t)-1;
+
+	do {
+		res = read_page_desc(ctx, dp, off);
+		if (res != kdump_ok) {
+			if (res == kdump_eof)
+				lkcdp->end_offset = off;
+			realloc_pfn_offs(block, block->n);
+			return res;
+		}
+
+		if (dp->dp_flags & DUMP_END) {
+			lkcdp->end_offset = off;
+			realloc_pfn_offs(block, block->n);
+			return set_error(ctx, kdump_nodata, "Page not found");
+		}
+
+		curpfn = dp->dp_address >> get_page_shift(ctx);
+		if (block && (off > block->filepos + UINT32_MAX ||
+			      curpfn != prevpfn + 1)) {
+			realloc_pfn_offs(block, block->n);
+			block = NULL;
+		}
+		if (block && block->n >= block->alloc) {
+			unsigned short newalloc = block->n + PFN_IDX3_SIZE;
+			if (realloc_pfn_offs(block, newalloc) != kdump_ok)
+				block = NULL;
+		}
+
+		if (!block) {
+			block = alloc_pfn_block(ctx, curpfn);
+			if (!block)
+				return kdump_syserr;
+			block->filepos = off;
+		} else if (pfn_idx3(curpfn) == 0) {
+			struct pfn_block **slot;
+			slot = get_pfn_slot(ctx, curpfn);
+			if (!slot)
+				return kdump_syserr;
+			block->next = *slot;
+			*slot = block;
+		}
+
+		block->offs[block->n++] = off - block->filepos;
+
+		prevpfn = curpfn;
+		off += sizeof(struct dump_page) + dp->dp_size;
+		lkcdp->last_offset = off;
+		lkcdp->last_block = block;
+	} while (curpfn != pfn);
+
+	*dataoff = off - dp->dp_size;
+	return kdump_ok;
+}
+
+static kdump_status
+get_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
+	      struct dump_page *dp, off_t *dataoff)
+{
+	struct pfn_block *block;
+	off_t off;
+
+	block = lookup_pfn_block(ctx, pfn);
+	if (!block)
+		return search_page_desc(ctx, pfn, dp, dataoff);
+
+	off = block->filepos + block->offs[pfn - block->pfn];
+	*dataoff = off + sizeof *dp;
+	return read_page_desc(ctx, dp, off);
 }
 
 static kdump_status
 lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
-	struct pfn_level2 *pfn_level2;
-	uint32_t *pfn_level3;
-	unsigned idx1, idx2, idx3;
 	struct dump_page dp;
 	unsigned type;
 	off_t off;
@@ -438,35 +546,9 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	if (pfn >= ctx->max_pfn)
 		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 
-	idx1 = pfn_idx1(pfn);
-	if (!lkcdp->pfn_level1[idx1]) {
-		ret = fill_level1(ctx, idx1);
-		if (ret != kdump_ok)
-			return set_error(ctx, ret,
-					 "Cannot fill level 2 cache (idx %u)",
-					 idx1);
-	}
-	pfn_level2 = lkcdp->pfn_level1[idx1];
-
-	idx2 = pfn_idx2(pfn);
-	if (!pfn_level2[idx2].pfn_level3) {
-		ret = fill_level2(ctx, idx1, idx2);
-		if (ret != kdump_ok)
-			return set_error(ctx, ret,
-					 "Cannot fill level 3 cache (idx %u)",
-					 idx2);
-	}
-	off = pfn_level2[idx2].off;
-	pfn_level3 = pfn_level2[idx2].pfn_level3;
-
-	idx3 = pfn_idx3(pfn);
-	if (pfn_level3[idx3] == (uint32_t)-1)
-		return set_error(ctx, kdump_nodata, "PFN not found");
-	off += pfn_level3[idx3];
-
-	if (find_page(ctx, off, pfn, &dp) < 0)
-		return kdump_syserr;
-	off += sizeof(struct dump_page);
+	ret = get_page_desc(ctx, pfn, &dp, &off);
+	if (ret != kdump_ok)
+		return ret;
 
 	type = dp.dp_flags & (DUMP_COMPRESSED|DUMP_RAW);
 	switch (type) {
@@ -653,8 +735,11 @@ open_common(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		goto err_free;
 
+	lkcdp->last_offset = lkcdp->data_offset;
+	lkcdp->end_offset = 0;
+	lkcdp->last_block = NULL;
 	max_idx1 = pfn_idx1(ctx->max_pfn - 1) + 1;
-	lkcdp->pfn_level1 = calloc(max_idx1, sizeof(struct pfn_level2*));
+	lkcdp->pfn_level1 = calloc(max_idx1 + 1, sizeof(struct pfn_level2*));
 	if (!lkcdp->pfn_level1) {
 		set_error(ctx, kdump_syserr,
 			  "Cannot allocate level 1 cache");
@@ -698,24 +783,45 @@ lkcd_probe(kdump_ctx *ctx)
 }
 
 static void
-free_level2(struct pfn_level2 *level2)
+free_level3(struct pfn_block *block, kdump_pfn_t endpfn)
+{
+	while (block) {
+		struct pfn_block *next;
+
+		/* PFN blocks which cross a level-3 boundary are freed
+		 * with the last reference (highest level-3 index). */
+		if (block->pfn + block->n > endpfn)
+			break;
+
+		next = block->next;
+		free(block->offs);
+		free(block);
+		block = next;
+
+	}
+}
+
+static void
+free_level2(struct pfn_block **level2, kdump_pfn_t *pfn)
 {
 	if (level2) {
 		unsigned i;
-		for (i = 0; i < PFN_IDX2_SIZE; ++i)
-			if (level2[i].pfn_level3)
-				free(level2[i].pfn_level3);
+		for (i = 0; i < PFN_IDX2_SIZE; ++i) {
+			*pfn += PFN_IDX3_SIZE;
+			free_level3(level2[i], *pfn);
+		}
 		free(level2);
 	}
 }
 
 static void
-free_level1(struct pfn_level2 **level1, unsigned long n)
+free_level1(struct pfn_block ***level1, unsigned long n)
 {
 	if (level1) {
+		kdump_pfn_t pfn = 0;
 		unsigned long i;
 		for (i = 0; i < n; ++i)
-			free_level2(level1[i]);
+			free_level2(level1[i], &pfn);
 		free(level1);
 	}
 }
