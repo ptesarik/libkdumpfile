@@ -400,7 +400,7 @@ realloc_pfn_offs(struct pfn_block *block, unsigned short alloc)
 {
 	uint32_t *newoffs;
 
-	if (!block || block->alloc == alloc)
+	if (block->alloc == alloc)
 		return kdump_ok;
 
 	newoffs = realloc(block->offs, alloc * sizeof(uint32_t));
@@ -480,13 +480,15 @@ search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 		if (res != kdump_ok) {
 			if (res == kdump_eof)
 				lkcdp->end_offset = off;
-			realloc_pfn_offs(block, block->n);
+			if (block)
+				realloc_pfn_offs(block, block->n);
 			return res;
 		}
 
 		if (dp->dp_flags & DUMP_END) {
 			lkcdp->end_offset = off;
-			realloc_pfn_offs(block, block->n);
+			if (block)
+				realloc_pfn_offs(block, block->n);
 			return set_error(ctx, kdump_nodata, "Page not found");
 		}
 
