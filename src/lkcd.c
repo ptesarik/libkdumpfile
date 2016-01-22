@@ -319,7 +319,10 @@ struct lkcd_priv {
 
 	unsigned version;
 	unsigned compression;
+
 	struct pfn_block ***pfn_level1;
+	unsigned l1_size;
+
 	char format[MAX_FORMAT_NAME];
 };
 
@@ -333,12 +336,28 @@ get_pfn_slot(kdump_ctx *ctx, kdump_pfn_t pfn)
 	unsigned idx;
 
 	idx = pfn_idx1(pfn);
+	if (idx >= lkcdp->l1_size) {
+		struct pfn_block ***new_l1;
+		new_l1 = realloc(lkcdp->pfn_level1,
+				 (idx + 1) * sizeof(*new_l1));
+		if (!new_l1) {
+			set_error(ctx, kdump_syserr,
+				  "Cannot allocate PFN level-%u table", 1);
+			return NULL;
+		}
+
+		memset(new_l1 + lkcdp->l1_size, 0,
+		       (idx + 1 - lkcdp->l1_size) * sizeof(*new_l1));
+		lkcdp->pfn_level1 = new_l1;
+		lkcdp->l1_size = idx + 1;
+	}
+
 	l2 = lkcdp->pfn_level1[idx];
 	if (!l2) {
 		l2 = calloc(PFN_IDX2_SIZE, sizeof(struct pfn_block*));
 		if (!l2) {
 			set_error(ctx, kdump_syserr,
-				  "Cannot allocate PFN level-2 table");
+				  "Cannot allocate PFN level-%u table", 2);
 			return NULL;
 		}
 		lkcdp->pfn_level1[idx] = l2;
@@ -408,6 +427,9 @@ lookup_pfn_block(kdump_ctx *ctx, kdump_pfn_t pfn)
 	unsigned idx;
 
 	idx = pfn_idx1(pfn);
+	if (idx >= lkcdp->l1_size)
+		return NULL;
+
 	l2 = lkcdp->pfn_level1[idx];
 	if (!l2)
 		return NULL;
@@ -542,9 +564,6 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 
 	if (pfn == ctx->last_pfn)
 		return kdump_ok;
-
-	if (pfn >= ctx->max_pfn)
-		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 
 	ret = get_page_desc(ctx, pfn, &dp, &off);
 	if (ret != kdump_ok)
@@ -684,7 +703,6 @@ open_common(kdump_ctx *ctx)
 {
 	struct dump_header_common *dh = ctx->buffer;
 	struct lkcd_priv *lkcdp;
-	unsigned max_idx1;
 	const struct attr_data *attr;
 	kdump_status ret;
 
@@ -738,13 +756,9 @@ open_common(kdump_ctx *ctx)
 	lkcdp->last_offset = lkcdp->data_offset;
 	lkcdp->end_offset = 0;
 	lkcdp->last_block = NULL;
-	max_idx1 = pfn_idx1(ctx->max_pfn - 1) + 1;
-	lkcdp->pfn_level1 = calloc(max_idx1 + 1, sizeof(struct pfn_level2*));
-	if (!lkcdp->pfn_level1) {
-		set_error(ctx, kdump_syserr,
-			  "Cannot allocate level 1 cache");
-		goto err_free;
-	}
+
+	lkcdp->pfn_level1 = NULL;
+	lkcdp->l1_size = 0;
 
 	attr = lookup_attr(ctx, GATTR(GKI_linux_uts_machine));
 	if (!attr) {
@@ -797,7 +811,6 @@ free_level3(struct pfn_block *block, kdump_pfn_t endpfn)
 		free(block->offs);
 		free(block);
 		block = next;
-
 	}
 }
 
@@ -831,7 +844,7 @@ lkcd_cleanup(kdump_ctx *ctx)
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
 
-	free_level1(lkcdp->pfn_level1, pfn_idx1(ctx->max_pfn - 1) + 1);
+	free_level1(lkcdp->pfn_level1, lkcdp->l1_size);
 	free(lkcdp);
 	ctx->fmtdata = NULL;
 }
