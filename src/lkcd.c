@@ -370,26 +370,19 @@ static struct pfn_block *
 alloc_pfn_block(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	struct pfn_block **pprev, *block;
-	uint32_t *offs;
 
 	pprev = get_pfn_slot(ctx, pfn);
 	if (!pprev)
 		return NULL;
 
-	offs = ctx_malloc(PFN_IDX3_SIZE * sizeof(uint32_t),
-			  ctx, "PFN level-3 table");
-	if (!offs)
+	block = ctx_malloc(sizeof(struct pfn_block), ctx, "PFN block");
+	if (!block)
 		return NULL;
 
-	block = ctx_malloc(sizeof(struct pfn_block), ctx, "PFN block");
-	if (!block) {
-		free(offs);
-		return NULL;
-	}
 	block->pfn = pfn;
 	block->n = 0;
-	block->alloc = PFN_IDX3_SIZE;
-	block->offs = offs;
+	block->alloc = 0;
+	block->offs = NULL;
 
 	while (*pprev) {
 		if ((*pprev)->pfn >= block->pfn)
@@ -440,7 +433,7 @@ lookup_pfn_block(kdump_ctx *ctx, kdump_pfn_t pfn)
 	while (block) {
 		if (block->pfn > pfn)
 			break;
-		if (pfn < block->pfn + block->n)
+		if (pfn <= block->pfn + block->n)
 			return block;
 		block = block->next;
 	}
@@ -479,7 +472,7 @@ search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 
 	block = lkcdp->last_block;
 	prevpfn = block
-		? block->pfn + block->n - 1
+		? block->pfn + block->n
 		: (kdump_pfn_t)-1;
 
 	do {
@@ -514,16 +507,17 @@ search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 			if (!block)
 				return kdump_syserr;
 			block->filepos = off;
-		} else if (pfn_idx3(curpfn) == 0) {
-			struct pfn_block **slot;
-			slot = get_pfn_slot(ctx, curpfn);
-			if (!slot)
-				return kdump_syserr;
-			block->next = *slot;
-			*slot = block;
+		} else {
+			if (pfn_idx3(curpfn) == 0) {
+				struct pfn_block **slot;
+				slot = get_pfn_slot(ctx, curpfn);
+				if (!slot)
+					return kdump_syserr;
+				block->next = *slot;
+				*slot = block;
+			}
+			block->offs[block->n++] = off - block->filepos;
 		}
-
-		block->offs[block->n++] = off - block->filepos;
 
 		prevpfn = curpfn;
 		off += sizeof(struct dump_page) + dp->dp_size;
@@ -546,7 +540,9 @@ get_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 	if (!block)
 		return search_page_desc(ctx, pfn, dp, dataoff);
 
-	off = block->filepos + block->offs[pfn - block->pfn];
+	off = block->filepos;
+	if (pfn > block->pfn)
+		off += block->offs[pfn - block->pfn - 1];
 	*dataoff = off + sizeof *dp;
 	return read_page_desc(ctx, dp, off);
 }
@@ -804,7 +800,7 @@ free_level3(struct pfn_block *block, kdump_pfn_t endpfn)
 
 		/* PFN blocks which cross a level-3 boundary are freed
 		 * with the last reference (highest level-3 index). */
-		if (block->pfn + block->n > endpfn)
+		if (block->pfn + block->n >= endpfn)
 			break;
 
 		next = block->next;
