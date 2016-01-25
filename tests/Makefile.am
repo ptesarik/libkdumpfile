@@ -1,7 +1,6 @@
 ## Process this file with automake to create Makefile.in
-## Configure input file for libkdumpfile.
 ##
-## Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
+## Copyright (C) 2016 Petr Tesarik <ptesarik@suse.com>
 ##
 ## This file is part of libkdumpfile.
 ##
@@ -19,15 +18,30 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-ACLOCAL_AMFLAGS = -I m4
+AM_CPPFLAGS = -I$(top_srcdir)/src
+LIBS = testutil.a
 
-SUBDIRS = doc src tests examples
+testutil_a_SOURCES = \
+	param.c
 
-dist_noinst_DATA = \
-	COPYING.GPLv2 \
-	COPYING.GPLv3 \
-	COPYING.LGPLv3 \
-	README.md
+check_LIBRARIES = \
+	testutil.a
 
-pkgconfigdir=$(libdir)/pkgconfig
-pkgconfig_DATA=libkdumpfile.pc
+check_HEADERS = \
+	lkcd.h \
+	testutil.h
+
+checkattr_SOURCES = checkattr.c
+checkattr_LDADD = $(top_srcdir)/src/libkdumpfile.la
+
+mklkcd_SOURCES = mklkcd.c
+
+check_PROGRAMS = \
+	checkattr \
+	mklkcd
+
+test_scripts = \
+	test-lkcd-empty.sh
+
+dist_check_SCRIPTS = $(test_scripts)
+TESTS = $(test_scripts)

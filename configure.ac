@@ -49,6 +49,7 @@ AC_CONFIG_FILES([
 	doc/Makefile
 	examples/Makefile
 	src/Makefile
+	tests/Makefile
 	libkdumpfile.pc
 ])
 

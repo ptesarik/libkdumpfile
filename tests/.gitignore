@@ -1,0 +1,10 @@
+# Resulting binaries
+checkattr
+mklkcd
+
+# Test results
+*.log
+*.trs
+
+# Test dump files
+*.dump
