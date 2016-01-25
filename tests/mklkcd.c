@@ -37,6 +37,8 @@
 #define DUMP_FILE_NAME  "lkcd-dump"
 #define DUMP_VERSION_NUMBER  9
 
+static int be;			/* non-zero if big-endian */
+
 static char *arch_name;
 static unsigned long long page_shift;
 static unsigned long long page_offset;
@@ -143,19 +145,19 @@ writeheader(FILE *f)
 	memset(&hdr, 0, sizeof hdr);
 
 	/* configure dump header values */
-	hdr.dh_magic_number = htole64(DUMP_MAGIC_NUMBER);
-	hdr.dh_version = htole32(DUMP_VERSION_NUMBER);
-	hdr.dh_header_size = htole32(sizeof hdr);
-	hdr.dh_dump_level = htole32(dump_level);
-	hdr.dh_page_size = htole32(1UL << page_shift);
-	hdr.dh_memory_size = htole64(0);
-	hdr.dh_memory_start = htole64(page_offset);
-	hdr.dh_memory_end = htole64(DUMP_MAGIC_NUMBER); /* sic! */
-	hdr.dh_num_dump_pages = htole32(num_dump_pages);
+	hdr.dh_magic_number = htodump64(be, DUMP_MAGIC_NUMBER);
+	hdr.dh_version = htodump32(be, DUMP_VERSION_NUMBER);
+	hdr.dh_header_size = htodump32(be, sizeof hdr);
+	hdr.dh_dump_level = htodump32(be, dump_level);
+	hdr.dh_page_size = htodump32(be, 1UL << page_shift);
+	hdr.dh_memory_size = htodump64(be, 0);
+	hdr.dh_memory_start = htodump64(be, page_offset);
+	hdr.dh_memory_end = htodump64(be, DUMP_MAGIC_NUMBER); /* sic! */
+	hdr.dh_num_dump_pages = htodump32(be, num_dump_pages);
 	strncpy(hdr.dh_panic_string, panic_string,
 		sizeof hdr.dh_panic_string);
-	hdr.dh_time.tv_sec = htole64(tv.tv_sec);
-	hdr.dh_time.tv_usec = htole64(tv.tv_usec);
+	hdr.dh_time.tv_sec = htodump64(be, tv.tv_sec);
+	hdr.dh_time.tv_usec = htodump64(be, tv.tv_usec);
 	strncpy(hdr.dh_utsname_sysname, uts_sysname,
 		sizeof hdr.dh_utsname_sysname);
 	strncpy(hdr.dh_utsname_nodename, uts_nodename,
@@ -169,9 +171,9 @@ writeheader(FILE *f)
 	strncpy(hdr.dh_utsname_domainname, uts_domainname,
 		sizeof hdr.dh_utsname_domainname);
 	if (current_task.n > 0)
-		hdr.dh_current_task = htole64(current_task.val[0]);
-	hdr.dh_dump_compress = htole32(DUMP_COMPRESS_GZIP);
-	hdr.dh_dump_buffer_size = htole64(buffer_size);
+		hdr.dh_current_task = htodump64(be, current_task.val[0]);
+	hdr.dh_dump_compress = htodump32(be, DUMP_COMPRESS_GZIP);
+	hdr.dh_dump_buffer_size = htodump64(be, buffer_size);
 
 	if (fseek(f, 0, SEEK_SET) != 0) {
 		perror("seek header");
@@ -184,17 +186,17 @@ writeheader(FILE *f)
 	}
 
 	memset(&asmhdr, 0, sizeof asmhdr);
-	asmhdr.dha_magic_number = htole64(DUMP_ASM_MAGIC_NUMBER);
-	asmhdr.dha_version = htole32(DUMP_ASM_VERSION_NUMBER);
+	asmhdr.dha_magic_number = htodump64(be, DUMP_ASM_MAGIC_NUMBER);
+	asmhdr.dha_version = htodump32(be, DUMP_ASM_VERSION_NUMBER);
 	sz = sizeof asmhdr +
 		NR_CPUS * sizeof(struct pt_regs_x86_64) + /* dha_smp_regs */
 		NR_CPUS * sizeof(uint64_t) + /* dha_smp_current_task */
 		NR_CPUS * sizeof(uint64_t) + /* dha_stack */
 		NR_CPUS * sizeof(uint64_t);  /* dha_stack_ptr */
-	asmhdr.dha_header_size = htole32(sz);
+	asmhdr.dha_header_size = htodump32(be, sz);
 
-	asmhdr.dha_smp_num_cpus = htole32(num_cpus);
-	asmhdr.dha_dumping_cpu = htole32(0);
+	asmhdr.dha_smp_num_cpus = htodump32(be, num_cpus);
+	asmhdr.dha_dumping_cpu = htodump32(be, 0);
 
 	if (fwrite(&asmhdr, sizeof asmhdr, 1, f) != 1) {
 		perror("write asm header");
@@ -208,7 +210,7 @@ writeheader(FILE *f)
 		return -1;
 	}
 	for (i = 0; i < current_task.n; ++i) {
-		uint64_t tmp = htole64(current_task.val[i]);
+		uint64_t tmp = htodump64(be, current_task.val[i]);
 		if (fwrite(&tmp, sizeof tmp, 1, f) != 1) {
 			perror("write dha_smp_current_task");
 			return -1;
@@ -221,7 +223,7 @@ writeheader(FILE *f)
 		return -1;
 	}
 	for (i = 0; i < stack.n; ++i) {
-		uint64_t tmp = htole64(stack.val[i]);
+		uint64_t tmp = htodump64(be, stack.val[i]);
 		if (fwrite(&tmp, sizeof tmp, 1, f) != 1) {
 			perror("write dha_task");
 			return -1;
@@ -234,7 +236,7 @@ writeheader(FILE *f)
 		return -1;
 	}
 	for (i = 0; i < stack_ptr.n; ++i) {
-		uint64_t tmp = htole64(stack_ptr.val[i]);
+		uint64_t tmp = htodump64(be, stack_ptr.val[i]);
 		if (fwrite(&tmp, sizeof tmp, 1, f) != 1) {
 			perror("write dha_task");
 			return -1;
@@ -254,9 +256,9 @@ writedata(FILE *f)
 		return -1;
 	}
 
-	dp.dp_address = htole64(0);
-	dp.dp_size = htole32(0);
-	dp.dp_flags = htole32(DUMP_DH_END);
+	dp.dp_address = htodump64(be, 0);
+	dp.dp_size = htodump32(be, 0);
+	dp.dp_flags = htodump32(be, DUMP_DH_END);
 	if (fwrite(&dp, sizeof dp, 1, f) != 1) {
 		perror("write data");
 		return -1;

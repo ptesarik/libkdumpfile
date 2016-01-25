@@ -30,6 +30,7 @@
 #define _TESTUTIL_H 1
 
 #include <stdio.h>
+#include <stdint.h>
 
 #define TEST_OK     0
 #define TEST_FAIL   1
@@ -37,6 +38,34 @@
 #define TEST_ERR   99
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+
+/* Endianity conversions */
+
+static inline uint16_t
+htodump16(int bigendian, uint16_t x)
+{
+	return bigendian
+		? htobe16(x)
+		: htole16(x);
+}
+
+static inline uint32_t
+htodump32(int bigendian, uint32_t x)
+{
+	return bigendian
+		? htobe32(x)
+		: htole32(x);
+}
+
+static inline uint64_t
+htodump64(int bigendian, uint64_t x)
+{
+	return bigendian
+		? htobe64(x)
+		: htole64(x);
+}
+
+/* Parameter files */
 
 struct number_array {
 	unsigned n;
