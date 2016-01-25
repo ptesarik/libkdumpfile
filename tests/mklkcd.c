@@ -37,7 +37,10 @@
 #define DUMP_FILE_NAME  "lkcd-dump"
 #define DUMP_VERSION_NUMBER  9
 
+typedef int write_fn(FILE *);
+
 static int be;			/* non-zero if big-endian */
+static write_fn *writeheader_asm;
 
 static char *arch_name;
 static unsigned long long page_shift;
@@ -131,10 +134,6 @@ writeheader(FILE *f)
 {
 	struct timeval tv;
 	struct dump_header hdr;
-	struct dump_header_asm_x86_64 asmhdr;
-	size_t sz;
-	off_t off;
-	unsigned i;
 
 	if (gettimeofday(&tv, NULL) != 0) {
 		perror("gettimeofday");
@@ -184,6 +183,17 @@ writeheader(FILE *f)
 		perror("write header");
 		return -1;
 	}
+
+	return writeheader_asm(f);
+}
+
+static int
+writeheader_asm_x86_64(FILE *f)
+{
+	struct dump_header_asm_x86_64 asmhdr;
+	size_t sz;
+	off_t off;
+	unsigned i;
 
 	memset(&asmhdr, 0, sizeof asmhdr);
 	asmhdr.dha_magic_number = htodump64(be, DUMP_ASM_MAGIC_NUMBER);
@@ -304,6 +314,20 @@ create_file(const char *name)
 	return rc;
 }
 
+static int
+setup_arch(void)
+{
+	if (!strcmp(arch_name, "x86_64")) {
+		be = 0;
+		writeheader_asm = writeheader_asm_x86_64;
+	} else {
+		fprintf(stderr, "Unknown architecture: %s\n", arch_name);
+		return -1;
+	}
+
+	return 0;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -321,6 +345,10 @@ main(int argc, char **argv)
 	}
 
 	rc = parse_params_file(&params, stdin);
+	if (rc != TEST_OK)
+		return rc;
+
+	rc = setup_arch();
 	if (rc != TEST_OK)
 		return rc;
 
