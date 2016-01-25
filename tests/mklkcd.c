@@ -196,8 +196,8 @@ writeheader_asm_x86_64(FILE *f)
 	unsigned i;
 
 	memset(&asmhdr, 0, sizeof asmhdr);
-	asmhdr.dha_magic_number = htodump64(be, DUMP_ASM_MAGIC_NUMBER);
-	asmhdr.dha_version = htodump32(be, DUMP_ASM_VERSION_NUMBER);
+	asmhdr.dha_magic_number = htodump64(be, DUMP_ASM_MAGIC_NUMBER_X86_64);
+	asmhdr.dha_version = htodump32(be, DUMP_ASM_VERSION_NUMBER_X86_64);
 	sz = sizeof asmhdr +
 		NR_CPUS * sizeof(struct pt_regs_x86_64) + /* dha_smp_regs */
 		NR_CPUS * sizeof(uint64_t) + /* dha_smp_current_task */
@@ -247,6 +247,75 @@ writeheader_asm_x86_64(FILE *f)
 	}
 	for (i = 0; i < stack_ptr.n; ++i) {
 		uint64_t tmp = htodump64(be, stack_ptr.val[i]);
+		if (fwrite(&tmp, sizeof tmp, 1, f) != 1) {
+			perror("write dha_task");
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+static int
+writeheader_asm_i386(FILE *f)
+{
+	struct dump_header_asm_i386 asmhdr;
+	size_t sz;
+	off_t off;
+	unsigned i;
+
+	memset(&asmhdr, 0, sizeof asmhdr);
+	asmhdr.dha_magic_number = htodump64(be, DUMP_ASM_MAGIC_NUMBER_I386);
+	asmhdr.dha_version = htodump32(be, DUMP_ASM_VERSION_NUMBER_I386);
+	sz = sizeof asmhdr +
+		NR_CPUS * sizeof(struct pt_regs_i386) + /* dha_smp_regs */
+		NR_CPUS * sizeof(uint32_t) + /* dha_smp_current_task */
+		NR_CPUS * sizeof(uint32_t) + /* dha_stack */
+		NR_CPUS * sizeof(uint32_t);  /* dha_stack_ptr */
+	asmhdr.dha_header_size = htodump32(be, sz);
+
+	asmhdr.dha_smp_num_cpus = htodump32(be, num_cpus);
+	asmhdr.dha_dumping_cpu = htodump32(be, 0);
+
+	if (fwrite(&asmhdr, sizeof asmhdr, 1, f) != 1) {
+		perror("write asm header");
+		return -1;
+	}
+
+	off = NR_CPUS * sizeof(struct pt_regs_i386);
+
+	if (fseek(f, off, SEEK_CUR) != 0) {
+		perror("seek dha_smp_current_task");
+		return -1;
+	}
+	for (i = 0; i < current_task.n; ++i) {
+		uint32_t tmp = htodump32(be, current_task.val[i]);
+		if (fwrite(&tmp, sizeof tmp, 1, f) != 1) {
+			perror("write dha_smp_current_task");
+			return -1;
+		}
+	}
+	off = (NR_CPUS - current_task.n) * sizeof(uint32_t);
+
+	if (fseek(f, off, SEEK_CUR) != 0) {
+		perror("seek dha_stack");
+		return -1;
+	}
+	for (i = 0; i < stack.n; ++i) {
+		uint32_t tmp = htodump32(be, stack.val[i]);
+		if (fwrite(&tmp, sizeof tmp, 1, f) != 1) {
+			perror("write dha_task");
+			return -1;
+		}
+	}
+	off = (NR_CPUS - stack.n) * sizeof(uint32_t);
+
+	if (fseek(f, off, SEEK_CUR) != 0) {
+		perror("seek dha_stack_ptr");
+		return -1;
+	}
+	for (i = 0; i < stack_ptr.n; ++i) {
+		uint32_t tmp = htodump32(be, stack_ptr.val[i]);
 		if (fwrite(&tmp, sizeof tmp, 1, f) != 1) {
 			perror("write dha_task");
 			return -1;
@@ -320,6 +389,9 @@ setup_arch(void)
 	if (!strcmp(arch_name, "x86_64")) {
 		be = 0;
 		writeheader_asm = writeheader_asm_x86_64;
+	} else if (!strcmp(arch_name, "i386")) {
+		be = 0;
+		writeheader_asm = writeheader_asm_i386;
 	} else {
 		fprintf(stderr, "Unknown architecture: %s\n", arch_name);
 		return -1;
