@@ -4,7 +4,8 @@
 
 mkdir -p out || exit 99
 
-dumpfile="out/${0}.dump"
+name=$( basename "$0" )
+dumpfile="out/${name}.dump"
 
 ./mklkcd "$dumpfile" <<EOF
 arch_name = $arch
@@ -22,7 +23,7 @@ uts.domainname = $domain
 NR_CPUS = 8
 num_cpus = 1
 
-DATA=lkcd-nodata
+DATA=$srcdir/lkcd-empty.data
 EOF
 rc=$?
 if [ $rc -ne 0 ]; then

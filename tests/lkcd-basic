@@ -4,10 +4,11 @@
 
 mkdir -p out || exit 99
 
-datafile="out/${0}.data"
-dumpfile="out/${0}.dump"
-resultfile="out/${0}.result"
-expectfile="lkcd-basic.expect"
+name=$( basename "$0" )
+datafile="out/${name}.data"
+dumpfile="out/${name}.dump"
+resultfile="out/${name}.result"
+expectfile="$srcdir/lkcd-basic.expect"
 
 echo "@0 $pageflags" >"$datafile"
 cat "$expectfile" >> "$datafile"

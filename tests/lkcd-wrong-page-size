@@ -5,8 +5,9 @@
 
 mkdir -p out || exit 99
 
-datafile="out/${0}.data"
-dumpfile="out/${0}.dump"
+name=$( basename "$0" )
+datafile="out/${name}.data"
+dumpfile="out/${name}.dump"
 
 cat >"$datafile" <<EOF
 @0 $pageflags

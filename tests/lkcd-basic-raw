@@ -1,5 +1,5 @@
 #! /bin/sh
 compression=0
 pageflags=raw
-. ./lkcd-basic
+. "$srcdir"/lkcd-basic
 exit 0

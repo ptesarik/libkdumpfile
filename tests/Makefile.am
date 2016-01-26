@@ -36,12 +36,12 @@ check_HEADERS = \
 checkattr_SOURCES = checkattr.c
 checkattr_LDADD = \
 	$(LDADD) \
-	$(top_srcdir)/src/libkdumpfile.la
+	$(top_builddir)/src/libkdumpfile.la
 
 mklkcd_SOURCES = mklkcd.c
 
 dumpdata_SOURCES = dumpdata.c
-dumpdata_LDADD = $(top_srcdir)/src/libkdumpfile.la
+dumpdata_LDADD = $(top_builddir)/src/libkdumpfile.la
 
 check_PROGRAMS = \
 	checkattr \
@@ -63,7 +63,8 @@ test_scripts = \
 	lkcd-short-page-gzip
 
 dist_check_DATA = \
-	lkcd-nodata
+	lkcd-empty.data \
+	lkcd-basic.expect
 
 dist_check_SCRIPTS = \
 	lkcd-empty \

@@ -20,7 +20,7 @@
 ##
 
 AM_CPPFLAGS = -I$(top_srcdir)/src
-LIBS = $(top_srcdir)/src/libkdumpfile.la
+LIBS = $(top_builddir)/src/libkdumpfile.la
 
 dumpattr_SOURCES = \
 	dumpattr.c

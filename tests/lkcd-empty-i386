@@ -21,4 +21,4 @@ version="#1 SMP Fri Jan 22 14:02:42 UTC 2016 (1234567)"
 machine=i686
 domain="(none)"
 
-. ./lkcd-empty
+. "$srcdir"/lkcd-empty

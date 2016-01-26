@@ -2,5 +2,5 @@
 repeat=4097
 compression=0
 pageflags=raw
-. ./lkcd-wrong-page-size
+. "$srcdir"/lkcd-wrong-page-size
 exit 0
