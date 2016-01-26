@@ -17,6 +17,8 @@ uts.domainname = $domain
 
 NR_CPUS = 8
 num_cpus = 1
+
+DATA=lkcd-nodata
 EOF
 rc=$?
 if [ $rc -ne 0 ]; then

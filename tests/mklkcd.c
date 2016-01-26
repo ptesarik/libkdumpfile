@@ -30,6 +30,8 @@
 #include <endian.h>
 #include <sys/time.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
 
 #include "testutil.h"
 #include "lkcd.h"
@@ -38,6 +40,13 @@
 #define DUMP_VERSION_NUMBER  9
 
 typedef int write_fn(FILE *);
+
+struct page_data_lkcd {
+	FILE *f;
+
+	unsigned long long addr;
+	unsigned long flags;
+};
 
 static int be;			/* non-zero if big-endian */
 static write_fn *writeheader_asm;
@@ -64,6 +73,8 @@ static struct number_array stack_ptr;
 
 static unsigned long num_dump_pages;
 
+static char *data_file;
+
 static const struct param param_array[] = {
 	PARAM_STRING("arch_name", arch_name),
 	PARAM_NUMBER("page_shift", page_shift),
@@ -84,6 +95,8 @@ static const struct param param_array[] = {
 	PARAM_NUMBER_ARRAY("current_task", current_task),
 	PARAM_NUMBER_ARRAY("stack", stack),
 	PARAM_NUMBER_ARRAY("stak_ptr", stack_ptr),
+
+	PARAM_STRING("DATA", data_file)
 };
 
 static const struct params params = {
@@ -395,24 +408,89 @@ writeheader_asm_ppc64(FILE *f)
 }
 
 static int
+parseheader(struct page_data *pg, char *p)
+{
+	struct page_data_lkcd *pglkcd = pg->priv;
+	char *endp;
+
+	if (!*p) {
+		pglkcd->addr += 1ULL << page_shift;
+		pglkcd->flags = 0;
+		return TEST_OK;
+	}
+
+	pglkcd->addr = strtoull(p, &endp, 0);
+	if (*endp && !isspace(*endp)) {
+		*endp = '\0';
+		fprintf(stderr, "Invalid address: %s\n", p);
+		return TEST_FAIL;
+	}
+
+	p = endp;
+	while (*p && isspace(*p))
+		++p;
+	if (!*p) {
+		pglkcd->flags = 0;
+		return TEST_OK;
+	}
+
+	pglkcd->flags = strtoul(p, &endp, 0);
+	if (*endp) {
+		fprintf(stderr, "Invalid flags: %s\n", p);
+		return TEST_FAIL;
+	}
+
+	return TEST_OK;
+}
+
+static int
+writepage(struct page_data *pg)
+{
+	struct page_data_lkcd *pglkcd = pg->priv;
+	struct dump_page dp;
+
+	dp.dp_address = htodump64(be, pglkcd->addr);
+	dp.dp_size = htodump32(be, pg->len);
+	dp.dp_flags = htodump32(be, pglkcd->flags);
+
+	if (fwrite(&dp, sizeof dp, 1, pglkcd->f) != 1) {
+		perror("write page desc");
+		return TEST_ERR;
+	}
+
+	if (fwrite(pg->buf, 1, pg->len, pglkcd->f) != pg->len) {
+		perror("write page data");
+		return TEST_ERR;
+	}
+
+	return TEST_OK;
+}
+
+static int
 writedata(FILE *f)
 {
-	struct dump_page dp;
+	struct page_data_lkcd pglkcd;
+	struct page_data pg;
+
+	if (!data_file)
+		return TEST_OK;
 
 	if (fseek(f, buffer_size, SEEK_SET) != 0) {
 		perror("seek data");
-		return -1;
+		return TEST_ERR;
 	}
 
-	dp.dp_address = htodump64(be, 0);
-	dp.dp_size = htodump32(be, 0);
-	dp.dp_flags = htodump32(be, DUMP_DH_END);
-	if (fwrite(&dp, sizeof dp, 1, f) != 1) {
-		perror("write data");
-		return -1;
-	}
+	printf("Creating page data\n");
 
-	return 0;
+	pglkcd.f = f;
+	pglkcd.addr = 0;
+	pglkcd.flags = 0;
+
+	pg.priv = &pglkcd;
+	pg.parse_hdr = parseheader;
+	pg.write_page = writepage;
+
+	return process_data(&pg, data_file);
 }
 
 static int

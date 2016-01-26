@@ -65,6 +65,31 @@ htodump64(int bigendian, uint64_t x)
 		: htole64(x);
 }
 
+/* Hex/oct */
+static inline char
+unhex(char digit)
+{
+	if (digit >= '0' && digit <= '9')
+		return digit - '0';
+
+	if (digit >= 'A' && digit <= 'F')
+		return digit - 'A' + 10;
+
+	if (digit >= 'a' && digit <= 'f')
+		return digit - 'a' + 10;
+
+	return -1;
+}
+
+static inline char
+unoct(char digit)
+{
+	if (digit >= '0' && digit <= '7')
+		return digit - '0';
+
+	return -1;
+}
+
 /* Parameter files */
 
 struct number_array {
@@ -103,5 +128,26 @@ int parse_key_val(char *line, char **key, char **val);
 int set_param(const struct param *p, const char *val);
 int parse_params_file(const struct params *params, FILE *f);
 int parse_params(const struct params *params, const char *fname);
+
+/* Data files */
+
+struct page_data;
+
+typedef int data_parse_hdr_fn(struct page_data *pg, char *p);
+typedef int data_write_page_fn(struct page_data *pg);
+
+struct page_data {
+	size_t alloc;		/**< Allocated bytes */
+	size_t len;		/**< Current buffer length */
+	unsigned char *buf;	/**< Page buffer */
+
+	void *priv;		/**< To be used by callbacks */
+
+	data_parse_hdr_fn *parse_hdr;	/**< Parse header */
+	data_write_page_fn *write_page; /**< Write full page */
+};
+
+int process_data(struct page_data *pg, const char *fname);
+int process_data_file(struct page_data *pg, FILE *f);
 
 #endif	/* testutil.h */

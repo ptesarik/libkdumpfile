@@ -22,6 +22,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/src
 LIBS = testutil.a
 
 testutil_a_SOURCES = \
+	data.c \
 	param.c
 
 check_LIBRARIES = \
@@ -44,6 +45,9 @@ test_scripts = \
 	lkcd-empty-i386 \
 	lkcd-empty-ppc64 \
 	lkcd-empty-x86_64
+
+dist_check_DATA = \
+	lkcd-nodata
 
 dist_check_SCRIPTS = \
 	lkcd-empty \
