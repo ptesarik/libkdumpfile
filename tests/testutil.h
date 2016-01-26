@@ -41,26 +41,31 @@
 
 /* Endianity conversions */
 
+typedef enum endian {
+	data_le,		/**< Least significant byte first */
+	data_be			/**< Most significant byte first */
+} endian_t;
+
 static inline uint16_t
-htodump16(int bigendian, uint16_t x)
+htodump16(endian_t endian, uint16_t x)
 {
-	return bigendian
+	return endian != data_le
 		? htobe16(x)
 		: htole16(x);
 }
 
 static inline uint32_t
-htodump32(int bigendian, uint32_t x)
+htodump32(endian_t endian, uint32_t x)
 {
-	return bigendian
+	return endian != data_le
 		? htobe32(x)
 		: htole32(x);
 }
 
 static inline uint64_t
-htodump64(int bigendian, uint64_t x)
+htodump64(endian_t endian, uint64_t x)
 {
-	return bigendian
+	return endian != data_le
 		? htobe64(x)
 		: htole64(x);
 }
@@ -140,6 +145,7 @@ struct page_data {
 	size_t alloc;		/**< Allocated bytes */
 	size_t len;		/**< Current buffer length */
 	unsigned char *buf;	/**< Page buffer */
+	endian_t endian;	/**< Data endianity */
 
 	void *priv;		/**< To be used by callbacks */
 

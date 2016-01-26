@@ -61,7 +61,7 @@ add_page_data(struct page_data *pg, char *p)
 {
 	char *endp;
 	unsigned char *bufp, c;
-	unsigned long sz, rep, i;
+	unsigned long len, sz, rep, i;
 	int rc;
 
 	while (*p) {
@@ -74,23 +74,29 @@ add_page_data(struct page_data *pg, char *p)
 		endp = p;
 		while (*endp && isxdigit(*endp))
 			++endp;
-		sz = endp - p;
+		len = endp - p;
+		sz = (len + (len & 1)) / 2;
 
-		rc = make_room(pg, sz + (sz & 1));
+		rc = make_room(pg, sz);
 		if (rc != TEST_OK)
 			return rc;
 
 		c = 0;
 		bufp = pg->buf + pg->len;
-		for (i = sz; i > 0; --i) {
+		if (pg->endian == data_le)
+			bufp += sz;
+		for (i = len; i > 0; --i) {
 			c |= unhex(*p++);
 			if (i & 1) {
-				*bufp++ = c;
+				if (pg->endian == data_le)
+					--bufp;
+				*bufp = c;
+				if (pg->endian == data_be)
+					++bufp;
 				c = 0;
 			} else
 				c <<= 4;
 		}
-		sz = (sz + (sz & 1)) / 2;
 		pg->len += sz;
 
 		p = endp;

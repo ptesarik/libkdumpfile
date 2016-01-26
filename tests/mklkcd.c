@@ -48,7 +48,7 @@ struct page_data_lkcd {
 	unsigned long flags;
 };
 
-static int be;			/* non-zero if big-endian */
+static endian_t be;
 static write_fn *writeheader_asm;
 
 static char *arch_name;
@@ -486,6 +486,7 @@ writedata(FILE *f)
 	pglkcd.addr = 0;
 	pglkcd.flags = 0;
 
+	pg.endian = be;
 	pg.priv = &pglkcd;
 	pg.parse_hdr = parseheader;
 	pg.write_page = writepage;
