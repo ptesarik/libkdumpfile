@@ -54,7 +54,13 @@ test_scripts = \
 	lkcd-empty-x86_64 \
 	lkcd-basic-raw \
 	lkcd-basic-rle \
-	lkcd-basic-gzip
+	lkcd-basic-gzip \
+	lkcd-long-page-raw \
+	lkcd-long-page-rle \
+	lkcd-long-page-gzip \
+	lkcd-short-page-raw \
+	lkcd-short-page-rle \
+	lkcd-short-page-gzip
 
 dist_check_DATA = \
 	lkcd-nodata
@@ -62,6 +68,7 @@ dist_check_DATA = \
 dist_check_SCRIPTS = \
 	lkcd-empty \
 	lkcd-basic \
+	lkcd-wrong-page-size \
 	$(test_scripts)
 
 TESTS = $(test_scripts)

@@ -1,0 +1,42 @@
+#
+# Create an LKCD dump file with wrong page size
+# and verify that reading fails.
+#
+
+mkdir -p out || exit 99
+
+datafile="out/${0}.data"
+dumpfile="out/${0}.dump"
+
+cat >"$datafile" <<EOF
+@0 $pageflags
+ba*$repeat
+EOF
+
+./mklkcd "$dumpfile" <<EOF
+arch_name = x86_64
+page_shift = 12
+page_offset = 0xffff880000000000
+
+NR_CPUS = 8
+num_cpus = 1
+
+compression = $compression
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create lkcd file" >&2
+    exit $rc
+fi
+echo "Created LKCD dump: $dumpfile"
+
+./dumpdata "$dumpfile" 0 4096
+rc=$?
+if [ $rc -eq 0 ]; then
+    echo "Dumping data should fail" >&2
+    exit 1
+elif [ $rc -ne 1 ]; then
+    echo "Unexpected error" >&2
+    exit 1
+fi
