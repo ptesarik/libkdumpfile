@@ -33,10 +33,14 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+#include "config.h"
 #include "testutil.h"
 #include "lkcd.h"
 
-#define DUMP_FILE_NAME  "lkcd-dump"
+#if USE_ZLIB
+# include <zlib.h>
+#endif
+
 #define DUMP_VERSION_NUMBER  9
 
 typedef int write_fn(FILE *);
@@ -46,6 +50,14 @@ struct page_data_lkcd {
 
 	unsigned long long addr;
 	unsigned long flags;
+	enum {
+		compress_auto = -1,
+		compress_no,
+		compress_yes,
+	} compress;
+
+	void *cbuf;
+	size_t cbufsz;
 };
 
 static endian_t be;
@@ -56,6 +68,7 @@ static unsigned long long page_shift;
 static unsigned long long page_offset;
 static unsigned long long dump_level = DUMP_LEVEL_KERN;
 static char *panic_string;
+static unsigned long long compression = DUMP_COMPRESS_NONE;
 static unsigned long long buffer_size = (256*1024);
 
 static char *uts_sysname;
@@ -81,6 +94,7 @@ static const struct param param_array[] = {
 	PARAM_NUMBER("page_offset", page_offset),
 	PARAM_NUMBER("dump_level", dump_level),
 	PARAM_STRING("panic_string", panic_string),
+	PARAM_NUMBER("compression", compression),
 	PARAM_NUMBER("buffer_size", buffer_size),
 
 	PARAM_STRING("uts.sysname", uts_sysname),
@@ -184,7 +198,7 @@ writeheader(FILE *f)
 		sizeof hdr.dh_utsname_domainname);
 	if (current_task.n > 0)
 		hdr.dh_current_task = htodump64(be, current_task.val[0]);
-	hdr.dh_dump_compress = htodump32(be, DUMP_COMPRESS_GZIP);
+	hdr.dh_dump_compress = htodump32(be, compression);
 	hdr.dh_dump_buffer_size = htodump64(be, buffer_size);
 
 	if (fseek(f, 0, SEEK_SET) != 0) {
@@ -415,7 +429,6 @@ parseheader(struct page_data *pg, char *p)
 
 	if (!*p) {
 		pglkcd->addr += 1ULL << page_shift;
-		pglkcd->flags = 0;
 		return TEST_OK;
 	}
 
@@ -426,21 +439,98 @@ parseheader(struct page_data *pg, char *p)
 		return TEST_FAIL;
 	}
 
+	pglkcd->flags = 0;
+	pglkcd->compress = compress_auto;
+
 	p = endp;
 	while (*p && isspace(*p))
 		++p;
-	if (!*p) {
-		pglkcd->flags = 0;
+	if (!*p)
 		return TEST_OK;
-	}
 
-	pglkcd->flags = strtoul(p, &endp, 0);
-	if (*endp) {
-		fprintf(stderr, "Invalid flags: %s\n", p);
-		return TEST_FAIL;
+	if (!strcmp(p, "raw")) {
+		pglkcd->flags |= DUMP_DH_RAW;
+		pglkcd->compress = compress_no;
+	} else if (!strcmp(p, "compress")) {
+		pglkcd->flags |= DUMP_DH_COMPRESSED;
+		pglkcd->compress = compress_yes;
+	} else if (!strcmp(p, "end")) {
+		pglkcd->flags |= DUMP_DH_END;
+	} else {
+		pglkcd->flags = strtoul(p, &endp, 0);
+		if (*endp) {
+			fprintf(stderr, "Invalid flags: %s\n", p);
+			return TEST_FAIL;
+		}
 	}
 
 	return TEST_OK;
+}
+
+static size_t
+do_rle(struct page_data *pg)
+{
+	struct page_data_lkcd *pglkcd = pg->priv;
+	size_t clen;
+
+	clen = pglkcd->cbufsz;
+	while (compress_rle(pglkcd->cbuf, &clen, pg->buf, pg->len)) {
+		unsigned char *newbuf;
+
+		clen = pglkcd->cbufsz + (1UL << (page_shift-2));
+		newbuf = realloc(pglkcd->cbuf, clen);
+		if (!newbuf) {
+			perror("Cannot allocate compression buffer");
+			return 0;
+		}
+		pglkcd->cbuf = newbuf;
+		pglkcd->cbufsz = clen;
+	}
+	return clen;
+}
+
+#if USE_ZLIB
+static size_t
+do_gzip(struct page_data *pg)
+{
+	struct page_data_lkcd *pglkcd = pg->priv;
+	uLongf clen;
+
+	clen = pglkcd->cbufsz;
+	while (compress(pglkcd->cbuf, &clen, pg->buf, pg->len) != Z_OK) {
+		unsigned char *newbuf;
+
+		clen = pglkcd->cbufsz + (1UL << (page_shift-2));
+		newbuf = realloc(pglkcd->cbuf, clen);
+		if (!newbuf) {
+			perror("Cannot allocate compression buffer");
+			return 0;
+		}
+		pglkcd->cbuf = newbuf;
+		pglkcd->cbufsz = clen;
+	}
+	return clen;
+}
+#endif
+
+static size_t
+compresspage(struct page_data *pg)
+{
+	switch (compression) {
+	case DUMP_COMPRESS_RLE:
+		return do_rle(pg);
+
+#if USE_ZLIB
+	case DUMP_COMPRESS_GZIP:
+		return do_gzip(pg);
+#endif
+
+	default:
+		fprintf(stderr, "Unsupported compression method: %llu\n",
+			compression);
+	}
+
+	return 0;
 }
 
 static int
@@ -448,17 +538,44 @@ writepage(struct page_data *pg)
 {
 	struct page_data_lkcd *pglkcd = pg->priv;
 	struct dump_page dp;
+	unsigned char *buf;
+	size_t buflen;
+	uint32_t flags;
 
+	flags = pglkcd->flags;
+
+	if (pg->len && compression != DUMP_COMPRESS_NONE &&
+	    pglkcd->compress != compress_no) {
+		buflen = compresspage(pg);
+		if (!buflen)
+			return TEST_ERR;
+		buf = pglkcd->cbuf;
+
+		if (pglkcd->compress == compress_auto) {
+			if (buflen >= pg->len) {
+				buflen = pg->len;
+				buf = pg->buf;
+				flags &= ~DUMP_DH_COMPRESSED;
+				flags |= DUMP_DH_RAW;
+			} else {
+				flags &= ~DUMP_DH_RAW;
+				flags |= DUMP_DH_COMPRESSED;
+			}
+		}
+	} else {
+		buflen = pg->len;
+		buf = pg->buf;
+	}
 	dp.dp_address = htodump64(be, pglkcd->addr);
-	dp.dp_size = htodump32(be, pg->len);
-	dp.dp_flags = htodump32(be, pglkcd->flags);
+	dp.dp_size = htodump32(be, buflen);
+	dp.dp_flags = htodump32(be, flags);
 
 	if (fwrite(&dp, sizeof dp, 1, pglkcd->f) != 1) {
 		perror("write page desc");
 		return TEST_ERR;
 	}
 
-	if (fwrite(pg->buf, 1, pg->len, pglkcd->f) != pg->len) {
+	if (fwrite(buf, 1, buflen, pglkcd->f) != buflen) {
 		perror("write page data");
 		return TEST_ERR;
 	}
@@ -471,6 +588,7 @@ writedata(FILE *f)
 {
 	struct page_data_lkcd pglkcd;
 	struct page_data pg;
+	int rc;
 
 	if (!data_file)
 		return TEST_OK;
@@ -485,13 +603,20 @@ writedata(FILE *f)
 	pglkcd.f = f;
 	pglkcd.addr = 0;
 	pglkcd.flags = 0;
+	pglkcd.cbuf = NULL;
+	pglkcd.cbufsz = 0;
 
 	pg.endian = be;
 	pg.priv = &pglkcd;
 	pg.parse_hdr = parseheader;
 	pg.write_page = writepage;
 
-	return process_data(&pg, data_file);
+	rc = process_data(&pg, data_file);
+
+	if (pglkcd.cbuf)
+		free(pglkcd.cbuf);
+
+	return rc;
 }
 
 static int

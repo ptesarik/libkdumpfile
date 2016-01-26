@@ -23,7 +23,8 @@ LDADD = libtestutil.a
 
 libtestutil_a_SOURCES = \
 	data.c \
-	param.c
+	param.c \
+	rle.c
 
 check_LIBRARIES = \
 	libtestutil.a

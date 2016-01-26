@@ -31,6 +31,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <endian.h>
 
 #define TEST_OK     0
 #define TEST_FAIL   1
@@ -155,5 +156,10 @@ struct page_data {
 
 int process_data(struct page_data *pg, const char *fname);
 int process_data_file(struct page_data *pg, FILE *f);
+
+/* RLE encoding */
+
+int compress_rle(unsigned char *dst, size_t *pdstlen,
+		 const unsigned char *src, size_t srclen);
 
 #endif	/* testutil.h */
