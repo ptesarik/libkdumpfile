@@ -41,7 +41,11 @@ check_PROGRAMS = \
 	mklkcd
 
 test_scripts = \
-	test-lkcd-empty.sh
+	lkcd-empty-i386 \
+	lkcd-empty-x86_64
 
-dist_check_SCRIPTS = $(test_scripts)
+dist_check_SCRIPTS = \
+	lkcd-empty \
+	$(test_scripts)
+
 TESTS = $(test_scripts)

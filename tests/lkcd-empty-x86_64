@@ -1,0 +1,23 @@
+#! /bin/sh
+
+#
+# lkcd-empty-x86_64
+#
+# Create an empty LKCDv9 dump file and verify meta-attributes.
+#
+
+dumpfile=${0}.dump
+
+arch=x86_64
+ptr_size=8
+page_offset=0x0000010000000000
+
+panic="Test panic string"
+node=test-node
+sysname=Linux
+release=3.4.5-test
+version="#1 SMP Fri Jan 22 14:02:42 UTC 2016 (1234567)"
+machine=x86_64
+domain="(none)"
+
+. ./lkcd-empty
