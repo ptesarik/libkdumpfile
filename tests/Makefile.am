@@ -42,6 +42,7 @@ check_PROGRAMS = \
 
 test_scripts = \
 	lkcd-empty-i386 \
+	lkcd-empty-ppc64 \
 	lkcd-empty-x86_64
 
 dist_check_SCRIPTS = \

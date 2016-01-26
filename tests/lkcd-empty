@@ -4,7 +4,7 @@
 
 ./mklkcd <<EOF $dumpfile
 arch_name = $arch
-page_shift = 12
+page_shift = $page_shift
 page_offset = $page_offset
 panic_string = $panic
 
@@ -28,10 +28,10 @@ echo "Created empty LKCD dump: $dumpfile"
 ./checkattr <<EOF $dumpfile
 arch = directory:
 arch.name = string: $arch
-arch.byte_order = number: 1
+arch.byte_order = number: $byte_order
 arch.ptr_size = number: $ptr_size
-arch.page_shift = number: 12
-arch.page_size = number: 4096
+arch.page_shift = number: $page_shift
+arch.page_size = number: $page_size
 
 linux = directory:
 linux.version_code = number: 0x030405

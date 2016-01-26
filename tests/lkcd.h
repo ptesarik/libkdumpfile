@@ -159,6 +159,42 @@ struct dump_header_asm_i386 {
 	/* uint32_t dha_stack_ptr[NR_CPUS]; */
 } __attribute__((packed));
 
+/* ppc64 stuff */
+
+struct pt_regs_ppc64 {
+	uint64_t gpr[32];
+	uint64_t nip;
+	uint64_t msr;
+	uint64_t orig_gpr3;
+	uint64_t ctr;
+	uint64_t link;
+	uint64_t xer;
+	uint64_t ccr;
+	uint64_t softe;
+	uint64_t trap;
+	uint64_t dar;
+	uint64_t dsisr;
+	uint64_t result;
+};
+
+#define DUMP_ASM_MAGIC_NUMBER_PPC64	0xdeaddeadULL
+#define DUMP_ASM_VERSION_NUMBER_PPC64	0x5
+
+struct dump_header_asm_ppc64 {
+	uint64_t dha_magic_number;
+	uint32_t dha_version;
+	uint32_t dha_header_size;
+	struct pt_regs_ppc64 dha_regs;
+
+	uint32_t dha_smp_num_cpus;
+	uint32_t dha_dumping_cpu;
+	/* struct pt_regs_ppc64 dha_smp_regs[NR_CPUS]; */
+	/* uint64_t dha_smp_current_task[NR_CPUS]; */
+	/* uint64_t dha_stack[NR_CPUS]; */
+	/* uint64_t dha_stack_ptr[NR_CPUS]; */
+} __attribute__((packed));
+
+
 #define DUMP_DH_FLAGS_NONE      0x0
 #define DUMP_DH_RAW             0x1
 #define DUMP_DH_COMPRESSED      0x2

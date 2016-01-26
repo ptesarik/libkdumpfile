@@ -9,7 +9,10 @@
 dumpfile=${0}.dump
 
 arch=i386
+byte_order=1
 ptr_size=4
+page_shift=12
+page_size=4096
 page_offset=0xC0000000
 
 panic="Test panic string"
