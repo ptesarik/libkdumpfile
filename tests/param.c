@@ -243,6 +243,8 @@ set_param_key(const struct params *params,
 		if (!strcmp(key, p->key))
 			return set_param(p, val);
 	}
+
+	fprintf(stderr, "Unknown key: %s\n", key);
 	return TEST_FAIL;
 }
 

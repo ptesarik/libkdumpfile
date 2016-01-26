@@ -172,7 +172,7 @@ process_data_file(struct page_data *pg, FILE *f)
 			if (rc == TEST_OK)
 				hdrseen = 1;
 		} else if (!hdrseen) {
-			fprintf(stderr, "Missing page header");
+			fputs("Missing page header\n", stderr);
 			rc = TEST_FAIL;
 		} else
 			rc = add_page_data(pg, p);
