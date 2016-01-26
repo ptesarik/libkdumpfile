@@ -2,7 +2,11 @@
 # The actual call to mklkcd and checkattr
 #
 
-./mklkcd <<EOF $dumpfile
+mkdir -p out || exit 99
+
+dumpfile="out/${0}.dump"
+
+./mklkcd "$dumpfile" <<EOF
 arch_name = $arch
 page_shift = $page_shift
 page_offset = $page_offset
@@ -27,7 +31,7 @@ if [ $rc -ne 0 ]; then
 fi
 echo "Created empty LKCD dump: $dumpfile"
 
-./checkattr <<EOF $dumpfile
+./checkattr "$dumpfile" <<EOF
 arch = directory:
 arch.name = string: $arch
 arch.byte_order = number: $byte_order

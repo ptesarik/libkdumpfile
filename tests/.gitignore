@@ -7,5 +7,5 @@ mklkcd
 *.log
 *.trs
 
-# Test dump files
-*.dump
+# Test output files
+out

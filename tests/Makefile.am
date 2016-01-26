@@ -65,3 +65,6 @@ dist_check_SCRIPTS = \
 	$(test_scripts)
 
 TESTS = $(test_scripts)
+
+clean-local:
+	-rm -rf out
