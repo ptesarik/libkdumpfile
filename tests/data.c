@@ -151,7 +151,7 @@ process_data_file(struct page_data *pg, FILE *f)
 		while (*p && isspace(*p))
 			++p;
 
-		if (*p == '\0')
+		if (*p == '#' || *p == '\0')
 			continue;
 
 		if (*p == '@') {
