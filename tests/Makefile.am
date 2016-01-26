@@ -39,8 +39,12 @@ checkattr_LDADD = \
 
 mklkcd_SOURCES = mklkcd.c
 
+dumpdata_SOURCES = dumpdata.c
+dumpdata_LDADD = $(top_srcdir)/src/libkdumpfile.la
+
 check_PROGRAMS = \
 	checkattr \
+	dumpdata \
 	mklkcd
 
 test_scripts = \

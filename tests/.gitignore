@@ -1,5 +1,6 @@
 # Resulting binaries
 checkattr
+dumpdata
 mklkcd
 
 # Test results
