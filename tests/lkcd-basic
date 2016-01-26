@@ -1,0 +1,41 @@
+#
+# The actual call to mklkcd and dumpdata
+#
+
+datafile="${0}.data"
+dumpfile="${0}.dump"
+resultfile="${0}.result"
+expectfile="lkcd-basic.expect"
+
+echo "@0 $pageflags" >"$datafile"
+cat "$expectfile" >> "$datafile"
+
+./mklkcd "$dumpfile" <<EOF
+arch_name = x86_64
+page_shift = 12
+page_offset = 0xffff880000000000
+
+NR_CPUS = 8
+num_cpus = 1
+
+compression = $compression
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create lkcd file" >&2
+    exit $rc
+fi
+echo "Created LKCD dump: $dumpfile"
+
+./dumpdata "$dumpfile" 0 4096 >"$resultfile"
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot dump lkcd data" >&2
+    exit $rc
+fi
+
+if ! diff "$expectfile" "$resultfile"; then
+    echo "Results do not match" >&2
+    exit 1
+fi

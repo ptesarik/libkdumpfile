@@ -51,13 +51,17 @@ check_PROGRAMS = \
 test_scripts = \
 	lkcd-empty-i386 \
 	lkcd-empty-ppc64 \
-	lkcd-empty-x86_64
+	lkcd-empty-x86_64 \
+	lkcd-basic-raw \
+	lkcd-basic-rle \
+	lkcd-basic-gzip
 
 dist_check_DATA = \
 	lkcd-nodata
 
 dist_check_SCRIPTS = \
 	lkcd-empty \
+	lkcd-basic \
 	$(test_scripts)
 
 TESTS = $(test_scripts)

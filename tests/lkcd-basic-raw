@@ -1,0 +1,5 @@
+#! /bin/sh
+compression=0
+pageflags=raw
+. ./lkcd-basic
+exit 0
