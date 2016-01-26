@@ -19,21 +19,23 @@
 ##
 
 AM_CPPFLAGS = -I$(top_srcdir)/src
-LIBS = testutil.a
+LDADD = libtestutil.a
 
-testutil_a_SOURCES = \
+libtestutil_a_SOURCES = \
 	data.c \
 	param.c
 
 check_LIBRARIES = \
-	testutil.a
+	libtestutil.a
 
 check_HEADERS = \
 	lkcd.h \
 	testutil.h
 
 checkattr_SOURCES = checkattr.c
-checkattr_LDADD = $(top_srcdir)/src/libkdumpfile.la
+checkattr_LDADD = \
+	$(LDADD) \
+	$(top_srcdir)/src/libkdumpfile.la
 
 mklkcd_SOURCES = mklkcd.c
 
