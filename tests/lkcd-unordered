@@ -1,0 +1,60 @@
+#! /bin/sh
+
+#
+# Create an LKCDv9 with unordered data and verify that the data from
+# the out-of-order page can be read.
+#
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+datafile="out/${name}.data"
+dumpfile="out/${name}.dump"
+
+magic="4E 6F 4D 61 67 69 63 21"
+cat >"$datafile" <<EOF
+@0
+00*4096
+@
+00*4096
+# Gap is here at 0x2000
+@0x3000
+00*4096
+# Fill the gap here:
+@0x2000
+$magic
+00*4088
+@0 end
+EOF
+
+./mklkcd "$dumpfile" <<EOF
+arch_name = x86_64
+page_shift = 12
+page_offset = 0xffff880000000000
+
+NR_CPUS = 8
+num_cpus = 1
+
+compression = 1
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create lkcd file" >&2
+    exit $rc
+fi
+echo "Created LKCD dump: $dumpfile"
+
+result=$( ./dumpdata "$dumpfile" 0x2000 8 )
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot read data" >&2
+    exit $rc
+fi
+echo "Data: $result"
+if [ "${result% *}" != "$magic" ] ; then
+    echo "Wrong data found" >&2
+    exit 1
+fi
+
+exit 0
