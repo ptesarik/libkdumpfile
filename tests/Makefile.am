@@ -60,7 +60,8 @@ test_scripts = \
 	lkcd-long-page-gzip \
 	lkcd-short-page-raw \
 	lkcd-short-page-rle \
-	lkcd-short-page-gzip
+	lkcd-short-page-gzip \
+	lkcd-gap
 
 dist_check_DATA = \
 	lkcd-empty.data \
