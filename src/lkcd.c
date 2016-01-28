@@ -494,32 +494,22 @@ search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 
 		curpfn = dp->dp_address >> get_page_shift(ctx);
 		if (block && (off > block->filepos + UINT32_MAX ||
-			      curpfn != prevpfn + 1)) {
+			      curpfn != prevpfn + 1 ||
+			      pfn_idx3(curpfn) == 0)) {
 			realloc_pfn_offs(block, block->n);
 			block = NULL;
 		}
-		if (block && block->n >= block->alloc) {
-			unsigned short newalloc = block->n + PFN_IDX3_SIZE;
-			if (realloc_pfn_offs(block, newalloc) != kdump_ok)
-				block = NULL;
-		}
+		if (block && block->n >= block->alloc &&
+		    realloc_pfn_offs(block, PFN_IDX3_SIZE) != kdump_ok)
+			block = NULL;
 
 		if (!block) {
 			block = alloc_pfn_block(ctx, curpfn);
 			if (!block)
 				return kdump_syserr;
 			block->filepos = off;
-		} else {
-			if (pfn_idx3(curpfn) == 0) {
-				struct pfn_block **slot;
-				slot = get_pfn_slot(ctx, curpfn);
-				if (!slot)
-					return kdump_syserr;
-				block->next = *slot;
-				*slot = block;
-			}
+		} else
 			block->offs[block->n++] = off - block->filepos;
-		}
 
 		prevpfn = curpfn;
 		off += sizeof(struct dump_page) + dp->dp_size;
@@ -795,17 +785,10 @@ lkcd_probe(kdump_ctx *ctx)
 }
 
 static void
-free_level3(struct pfn_block *block, kdump_pfn_t endpfn)
+free_level3(struct pfn_block *block)
 {
 	while (block) {
-		struct pfn_block *next;
-
-		/* PFN blocks which cross a level-3 boundary are freed
-		 * with the last reference (highest level-3 index). */
-		if (block->pfn + block->n >= endpfn)
-			break;
-
-		next = block->next;
+		struct pfn_block *next = block->next;
 		free(block->offs);
 		free(block);
 		block = next;
@@ -813,14 +796,12 @@ free_level3(struct pfn_block *block, kdump_pfn_t endpfn)
 }
 
 static void
-free_level2(struct pfn_block **level2, kdump_pfn_t *pfn)
+free_level2(struct pfn_block **level2)
 {
 	if (level2) {
 		unsigned i;
-		for (i = 0; i < PFN_IDX2_SIZE; ++i) {
-			*pfn += PFN_IDX3_SIZE;
-			free_level3(level2[i], *pfn);
-		}
+		for (i = 0; i < PFN_IDX2_SIZE; ++i)
+			free_level3(level2[i]);
 		free(level2);
 	}
 }
@@ -829,10 +810,9 @@ static void
 free_level1(struct pfn_block ***level1, unsigned long n)
 {
 	if (level1) {
-		kdump_pfn_t pfn = 0;
 		unsigned long i;
 		for (i = 0; i < n; ++i)
-			free_level2(level1[i], &pfn);
+			free_level2(level1[i]);
 		free(level1);
 	}
 }
