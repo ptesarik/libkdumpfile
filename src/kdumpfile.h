@@ -35,6 +35,10 @@
 #include <stdint.h>
 #include <unistd.h>
 
+#define KDUMPFILE_VER_MAJOR	0
+#define KDUMPFILE_VER_MINOR	2
+#define KDUMPFILE_VER_MICRO	0
+
 #ifdef  __cplusplus
 extern "C" {
 #endif
