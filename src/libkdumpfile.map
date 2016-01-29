@@ -22,7 +22,6 @@ LIBKDUMPFILE_0 {
     kdump_byte_order;
     kdump_ptr_size;
     kdump_arch_name;
-    kdump_is_xen;
     kdump_xen_type;
     kdump_pagesize;
     kdump_pageshift;
@@ -42,7 +41,6 @@ LIBKDUMPFILE_0 {
     kdump_vmcoreinfo_row_xen;
     kdump_vmcoreinfo_symbol;
     kdump_vmcoreinfo_symbol_xen;
-    kdump_xen_version;
     kdump_cb_get_symbol_val;
     kdump_cb_get_symbol_val_xen;
 

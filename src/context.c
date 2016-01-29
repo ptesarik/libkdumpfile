@@ -117,12 +117,6 @@ kdump_xen_type(kdump_ctx *ctx)
 	return get_xen_type(ctx);
 }
 
-int
-kdump_is_xen(kdump_ctx *ctx)
-{
-	return get_xen_type(ctx) != kdump_xen_none;
-}
-
 size_t
 kdump_pagesize(kdump_ctx *ctx)
 {
@@ -260,20 +254,6 @@ const char *
 kdump_vmcoreinfo_row_xen(kdump_ctx *ctx, const char *key)
 {
 	return vmcoreinfo_row(ctx, key, "xen");
-}
-
-void
-kdump_xen_version(kdump_ctx *ctx, kdump_xen_version_t *version)
-{
-	const struct attr_data *attr;
-
-	attr = lookup_attr(ctx, GATTR(GKI_xen_ver_major));
-	version->major = attr ? attr_value(attr)->number : 0;
-
-	attr = lookup_attr(ctx, GATTR(GKI_xen_ver_minor));
-	version->minor = attr ? attr_value(attr)->number : 0;
-
-	version->extra = kdump_get_string_attr(ctx, GATTR(GKI_xen_ver_extra));
 }
 
 static kdump_status

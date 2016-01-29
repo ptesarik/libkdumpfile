@@ -141,18 +141,6 @@ typedef enum _tag_kdump_xen_xlat {
 	kdump_xen_nonauto	/*< Non-auto-translated physmap */
 } kdump_xen_xlat_t;
 
-/**  Xen hypervisor version.
- *
- * Xen dumps may contain the hypervisor version, which consists of three
- * parts. @ref kdump_xen_version uses this structure to return the data.
- */
-typedef struct _tag_kdump_xen_version {
-	unsigned long major;	/**< Major version. */
-	unsigned long minor;	/**< Minor version. */
-	const char *extra;	/**< Extra version string (usually starts
-				 *   with a dot). */
-} kdump_xen_version_t;
-
 /**  Initialize a new dump file object.
  * @returns Newly allocated object, or NULL on failure.
  *
@@ -471,15 +459,6 @@ size_t kdump_ptr_size(kdump_ctx *ctx);
  */
 const char *kdump_arch_name(kdump_ctx *ctx);
 
-/**  Check if the dump file is a Xen dump file.
- * @params ctx  Dump file object.
- * @returns     Non-zero if this is a Xen dump file.
- *
- * This function returns non-zero (true) both for Dom0 dumps and for DomU
- * dumps.
- */
-int kdump_is_xen(kdump_ctx *ctx);
-
 /**  Get the type of a Xen dump file.
  * @param ctx  Dump file object.
  * @returns    Type of the dump (@sa kdump_xen_type_t)
@@ -630,13 +609,6 @@ kdump_status kdump_vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname,
  */
 kdump_status kdump_vmcoreinfo_symbol_xen(kdump_ctx *ctx, const char *symname,
 					 kdump_addr_t *symvalue);
-
-/**  Get Xen version.
- * @param ctx           Dump file object.
- * @param[out] version  Xen hypervisor version.
- *
- */
-void kdump_xen_version(kdump_ctx *ctx, kdump_xen_version_t *version);
 
 /**  Type for the get_symbol_val callback function.
  * @param ctx      Dump file object of the caller.

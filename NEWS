@@ -5,6 +5,7 @@
     - new names, types and semantics of KDUMP_*ADDR constants for
       kdump_readp() and friends
     - parameters reordered
+    - obsolete Xen functions removed
   * differentiation of Xen dump types (attribute "xen.type")
   * support for opening dumps in Xen hypervisor mode
   * many other Xen improvements
