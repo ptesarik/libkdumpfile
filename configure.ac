@@ -19,7 +19,7 @@ dnl  You should have received a copy of the GNU General Public License
 dnl  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 AC_INIT([Library for reading kernel core dumps],
-        [0.1.7],[ptesarik@suse.cz],[libkdumpfile])
+        [0.2.0],[ptesarik@suse.cz],[libkdumpfile])
 
 AC_CONFIG_SRCDIR([src/diskdump.c])
 AC_CONFIG_MACRO_DIR([m4])
