@@ -283,6 +283,7 @@ struct dump_page {
 #define PFN_IDX1_SIZE	((uint32_t)1 << PFN_IDX1_BITS)
 #define PFN_IDX2_SIZE	((uint32_t)1 << PFN_IDX2_BITS)
 #define PFN_IDX3_SIZE	((uint32_t)1 << PFN_IDX3_BITS)
+#define PFN_IDX3_MASK	(PFN_IDX3_SIZE - 1)
 
 #define pfn_idx1(pfn) \
 	((uint32_t)(pfn) >> (PFN_IDX3_BITS + PFN_IDX2_BITS))
@@ -298,7 +299,7 @@ struct dump_page {
  */
 struct pfn_block {
 	off_t filepos;		/**< absolute file offset */
-	kdump_pfn_t pfn;	/**< first pfn in range */
+	uint32_t idx3;		/**< level-3 index of first pfn in range */
 	unsigned short n;	/**< number of pages */
 	unsigned short alloc;	/**< allocated pages */
 	uint32_t *offs;		/**< offsets from filepos */
@@ -383,13 +384,13 @@ alloc_pfn_block(kdump_ctx *ctx, kdump_pfn_t pfn)
 	if (!block)
 		return NULL;
 
-	block->pfn = pfn;
+	block->idx3 = pfn_idx3(pfn);
 	block->n = 0;
 	block->alloc = 0;
 	block->offs = NULL;
 
 	while (*pprev) {
-		if ((*pprev)->pfn >= block->pfn)
+		if ((*pprev)->idx3 >= block->idx3)
 			break;
 		pprev = &(*pprev)->next;
 	}
@@ -431,7 +432,7 @@ alloc_tail_pfn_block(kdump_ctx *ctx, struct pfn_block *block,
 	if (!next)
 		return kdump_syserr;
 
-	next->pfn = block->pfn + nextidx + 1;
+	next->idx3 = block->idx3 + nextidx + 1;
 	next->n = block->n - nextidx - 1;
 	next->alloc = 0;
 	next->offs = NULL;
@@ -491,10 +492,11 @@ lookup_pfn_block(kdump_ctx *ctx, kdump_pfn_t pfn, unsigned short tolerance)
 	idx = pfn_idx2(pfn);
 	block = l2[idx];
 
+	idx = pfn_idx3(pfn);
 	while (block) {
-		if (block->pfn > pfn)
+		if (block->idx3 > idx)
 			break;
-		if (pfn <= block->pfn + block->n + tolerance)
+		if (idx <= block->idx3 + block->n + tolerance)
 			return block;
 		block = block->next;
 	}
@@ -503,22 +505,22 @@ lookup_pfn_block(kdump_ctx *ctx, kdump_pfn_t pfn, unsigned short tolerance)
 }
 
 static int
-pfn_fits_block(kdump_pfn_t pfn, struct pfn_block *block)
+idx_fits_block(unsigned idx, struct pfn_block *block)
 {
-	kdump_pfn_t blockend;
+	unsigned blockend;
 
-	if (pfn < block->pfn)
+	if (idx < block->idx3)
 		return 0;
 
-	blockend = block->pfn + block->n;
-	if (pfn <= blockend)
+	blockend = block->idx3 + block->n;
+	if (idx <= blockend)
 		return 1;
-	if (pfn > blockend + MAX_PFN_GAP)
+	if (idx > blockend + MAX_PFN_GAP)
 		return 0;
-	if (pfn > (block->pfn | (PFN_IDX3_SIZE - 1)))
+	if (idx > (block->idx3 | (PFN_IDX3_SIZE - 1)))
 		return 0;
 
-	if (block->next && block->next->pfn <= pfn)
+	if (block->next && block->next->idx3 <= idx)
 		return 0;
 
 	return 1;
@@ -545,7 +547,7 @@ search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
 	off_t off;
-	kdump_pfn_t curpfn;
+	kdump_pfn_t curpfn, blocktbl;
 	struct pfn_block *block;
 	unsigned short idx;
 	kdump_status res;
@@ -575,12 +577,13 @@ search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 		curpfn = dp->dp_address >> get_page_shift(ctx);
 		if (!block)
 			block = lookup_pfn_block(ctx, curpfn, MAX_PFN_GAP);
-		else if (!pfn_fits_block(curpfn, block)) {
+		else if (blocktbl != (curpfn & ~PFN_IDX3_MASK) ||
+			 !idx_fits_block(pfn_idx3(curpfn), block)) {
 			realloc_pfn_offs(block, block->n);
 			block = lookup_pfn_block(ctx, curpfn, MAX_PFN_GAP);
 		}
 		if (block && off > block->filepos + UINT32_MAX) {
-			idx = curpfn - block->pfn;
+			idx = pfn_idx3(curpfn) - block->idx3;
 			res = split_pfn_block(ctx, block, idx);
 			if (res != kdump_ok)
 				return set_error(ctx, res,
@@ -588,7 +591,7 @@ search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 			block = NULL;
 		}
 		if (block) {
-			idx = curpfn - block->pfn - 1;
+			idx = pfn_idx3(curpfn) - block->idx3 - 1;
 			if (idx >= block->n)
 				block->n = idx + 1;
 			if (block->n >= block->alloc &&
@@ -596,6 +599,7 @@ search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 			block = NULL;
 		}
 
+		blocktbl = curpfn & ~PFN_IDX3_MASK;
 		if (!block) {
 			block = alloc_pfn_block(ctx, curpfn);
 			if (!block)
@@ -613,11 +617,11 @@ search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 }
 
 static inline int
-pfn_is_gap(struct pfn_block *block, kdump_pfn_t pfn)
+idx_is_gap(struct pfn_block *block, unsigned idx)
 {
-	if (pfn <= block->pfn)
+	if (idx <= block->idx3)
 		return 0;
-	return block->offs[pfn - block->pfn - 1] == 0;
+	return block->offs[idx - block->idx3 - 1] == 0;
 }
 
 static kdump_status
@@ -625,15 +629,17 @@ get_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 	      struct dump_page *dp, off_t *dataoff)
 {
 	struct pfn_block *block;
+	unsigned idx;
 	off_t off;
 
 	block = lookup_pfn_block(ctx, pfn, 0);
-	if (!block || pfn_is_gap(block, pfn))
+	idx = pfn_idx3(pfn);
+	if (!block || idx_is_gap(block, idx))
 		return search_page_desc(ctx, pfn, dp, dataoff);
 
 	off = block->filepos;
-	if (pfn > block->pfn)
-		off += block->offs[pfn - block->pfn - 1];
+	if (idx > block->idx3)
+		off += block->offs[idx - block->idx3 - 1];
 	*dataoff = off + sizeof *dp;
 	return read_page_desc(ctx, dp, off);
 }
