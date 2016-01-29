@@ -306,10 +306,7 @@ struct pfn_block {
 	struct pfn_block *next;	/**< pointer to next block */
 };
 
-#define MAX_PFN_GAP \
-	((sizeof(struct pfn_block) +			\
-	  2*sizeof(void*)) /	/* malloc overhead */	\
-	 sizeof(uint32_t) + 1)
+#define MAX_PFN_GAP 15
 
 /* Maximum size of the format name: the version field is a 32-bit integer,
  * so it cannot be longer than 10 decimal digits.
