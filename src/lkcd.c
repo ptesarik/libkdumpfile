@@ -652,6 +652,7 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	if (pfn == ctx->last_pfn)
 		return kdump_ok;
 
+	off = 0;
 	ret = get_page_desc(ctx, pfn, &dp, &off);
 	if (ret != kdump_ok)
 		return ret;
