@@ -419,11 +419,18 @@ realloc_pfn_offs(struct pfn_block *block, unsigned short alloc)
 }
 
 static kdump_status
+error_pfn_offs(kdump_ctx *ctx, kdump_status res)
+{
+	return set_error(ctx, res, "Cannot allocate PFN block offs");
+}
+
+static kdump_status
 alloc_tail_pfn_block(kdump_ctx *ctx, struct pfn_block *block,
 		     unsigned short idx, unsigned short nextidx)
 {
 	struct pfn_block *next;
 	uint32_t blockoff;
+	kdump_status res;
 
 	next = ctx_malloc(sizeof(struct pfn_block), ctx, "PFN block");
 	if (!next)
@@ -433,10 +440,10 @@ alloc_tail_pfn_block(kdump_ctx *ctx, struct pfn_block *block,
 	next->n = block->n - nextidx - 1;
 	next->alloc = 0;
 	next->offs = NULL;
-	if (realloc_pfn_offs(next, next->n) != kdump_ok) {
+	res = realloc_pfn_offs(next, next->n);
+	if (res != kdump_ok) {
 		free(next);
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate PFN block offs");
+		return error_pfn_offs(ctx, res);
 	}
 
 	blockoff = block->offs[nextidx];
@@ -591,9 +598,11 @@ search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 			idx = pfn_idx3(curpfn) - block->idx3 - 1;
 			if (idx >= block->n)
 				block->n = idx + 1;
-			if (block->n >= block->alloc &&
-			    realloc_pfn_offs(block, PFN_IDX3_SIZE) != kdump_ok)
-			block = NULL;
+			if (block->n >= block->alloc) {
+				res = realloc_pfn_offs(block, PFN_IDX3_SIZE);
+				if (res != kdump_ok)
+					return error_pfn_offs(ctx, res);
+			}
 		}
 
 		blocktbl = curpfn & ~PFN_IDX3_MASK;
