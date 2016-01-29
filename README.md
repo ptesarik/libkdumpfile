@@ -35,3 +35,22 @@ project from scratch, you will need:
 To generate the `configure` script, run
 
 	autoreconf -fi
+
+Making Releases
+---------------
+
+To make a new public release:
+
+1. Make sure that the NEWS file is updated with all important changes
+2. Update the version information:
+    * configure.ac: in `AC_INIT()`
+    * src/kdumpfile.h: `#define`s at the top of the file
+    * src/Makefile.am: libtool versioning (see Libtool info file)
+
+    **FIXME:** Avoid having package version in two places somehow!
+
+3. Make a new commit ("Prepare release x.y.z")
+4. Run `make distcheck`
+5. Create a signed tag using `git tag -s`
+6. Upload the tarballs to GitHub and create a new release
+7. Write an announcement
