@@ -627,8 +627,10 @@ search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 			if (!block)
 				return kdump_syserr;
 			block->filepos = off;
-		} else
+		} else if (block->offs[idx] == 0)
 			block->offs[idx] = off - block->filepos;
+		else
+			return error_dup(ctx, off, block, curpfn);
 
 		off += sizeof(struct dump_page) + dp->dp_size;
 		lkcdp->last_offset = off;

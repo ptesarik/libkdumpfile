@@ -64,7 +64,8 @@ test_scripts = \
 	lkcd-gap \
 	lkcd-unordered \
 	lkcd-unordered-faroff \
-	lkcd-duplicate
+	lkcd-duplicate \
+	lkcd-duplicate-middle
 
 dist_check_DATA = \
 	lkcd-empty.data \
