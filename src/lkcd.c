@@ -305,6 +305,11 @@ struct pfn_block {
 	struct pfn_block *next;	/**< pointer to next block */
 };
 
+#define MAX_PFN_GAP \
+	((sizeof(struct pfn_block) +			\
+	  2*sizeof(void*)) /	/* malloc overhead */	\
+	 sizeof(uint32_t) + 1)
+
 /* Maximum size of the format name: the version field is a 32-bit integer,
  * so it cannot be longer than 10 decimal digits.
  */
@@ -315,7 +320,6 @@ struct lkcd_priv {
 	off_t data_offset;	/* offset to 1st page */
 	off_t last_offset;	/* offset of last page parsed so far */
 	off_t end_offset;	/* offset of end marker */
-	struct pfn_block *last_block;
 
 	unsigned version;
 	unsigned compression;
@@ -407,13 +411,70 @@ realloc_pfn_offs(struct pfn_block *block, unsigned short alloc)
 	if (!newoffs)
 		return kdump_syserr;
 
+	if (alloc > block->alloc)
+		memset(newoffs + block->alloc, 0,
+		       (alloc - block->alloc) * sizeof(uint32_t));
+
 	block->alloc = alloc;
 	block->offs = newoffs;
 	return kdump_ok;
 }
 
+static kdump_status
+alloc_tail_pfn_block(kdump_ctx *ctx, struct pfn_block *block,
+		     unsigned short idx, unsigned short nextidx)
+{
+	struct pfn_block *next;
+	uint32_t blockoff;
+
+	next = ctx_malloc(sizeof(struct pfn_block), ctx, "PFN block");
+	if (!next)
+		return kdump_syserr;
+
+	next->pfn = block->pfn + nextidx + 1;
+	next->n = block->n - nextidx - 1;
+	next->alloc = 0;
+	next->offs = NULL;
+	if (realloc_pfn_offs(next, next->n) != kdump_ok) {
+		free(next);
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate PFN block offs");
+	}
+
+	blockoff = block->offs[nextidx];
+	next->filepos = block->filepos + blockoff;
+	for (idx = 0; idx < next->n; ++idx)
+		next->offs[idx] = block->offs[++nextidx] - blockoff;
+
+	next->next = block->next;
+	block->next = next;
+
+	return kdump_ok;
+}
+
+static kdump_status
+split_pfn_block(kdump_ctx *ctx, struct pfn_block *block, unsigned short idx)
+{
+	unsigned short nextidx;
+	kdump_status res;
+
+	nextidx = idx;
+	while (nextidx < block->n && block->offs[nextidx] == 0)
+		++nextidx;
+	if (nextidx < block->n) {
+		res = alloc_tail_pfn_block(ctx, block, idx, nextidx);
+		if (res != kdump_ok)
+			return res;
+	}
+
+	block->n = idx - 1;
+	realloc_pfn_offs(block, block->n);
+
+	return kdump_ok;
+}
+
 static struct pfn_block *
-lookup_pfn_block(kdump_ctx *ctx, kdump_pfn_t pfn)
+lookup_pfn_block(kdump_ctx *ctx, kdump_pfn_t pfn, unsigned short tolerance)
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
 	struct pfn_block **l2, *block;
@@ -433,12 +494,34 @@ lookup_pfn_block(kdump_ctx *ctx, kdump_pfn_t pfn)
 	while (block) {
 		if (block->pfn > pfn)
 			break;
-		if (pfn <= block->pfn + block->n)
+		if (pfn <= block->pfn + block->n + tolerance)
 			return block;
 		block = block->next;
 	}
 
 	return NULL;
+}
+
+static int
+pfn_fits_block(kdump_pfn_t pfn, struct pfn_block *block)
+{
+	kdump_pfn_t blockend;
+
+	if (pfn < block->pfn)
+		return 0;
+
+	blockend = block->pfn + block->n;
+	if (pfn <= blockend)
+		return 1;
+	if (pfn > blockend + MAX_PFN_GAP)
+		return 0;
+	if (pfn > (block->pfn | (PFN_IDX3_SIZE - 1)))
+		return 0;
+
+	if (block->next && block->next->pfn <= pfn)
+		return 0;
+
+	return 1;
 }
 
 static kdump_status
@@ -462,19 +545,16 @@ search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
 	off_t off;
-	kdump_pfn_t curpfn, prevpfn;
+	kdump_pfn_t curpfn;
 	struct pfn_block *block;
+	unsigned short idx;
 	kdump_status res;
 
 	off = lkcdp->last_offset;
 	if (off == lkcdp->end_offset)
 		return set_error(ctx, kdump_nodata, "Page not found");
 
-	block = lkcdp->last_block;
-	prevpfn = block
-		? block->pfn + block->n
-		: (kdump_pfn_t)-1;
-
+	block = NULL;
 	do {
 		res = read_page_desc(ctx, dp, off);
 		if (res != kdump_ok) {
@@ -493,15 +573,28 @@ search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 		}
 
 		curpfn = dp->dp_address >> get_page_shift(ctx);
-		if (block && (off > block->filepos + UINT32_MAX ||
-			      curpfn != prevpfn + 1 ||
-			      pfn_idx3(curpfn) == 0)) {
+		if (!block)
+			block = lookup_pfn_block(ctx, curpfn, MAX_PFN_GAP);
+		else if (!pfn_fits_block(curpfn, block)) {
 			realloc_pfn_offs(block, block->n);
+			block = lookup_pfn_block(ctx, curpfn, MAX_PFN_GAP);
+		}
+		if (block && off > block->filepos + UINT32_MAX) {
+			idx = curpfn - block->pfn;
+			res = split_pfn_block(ctx, block, idx);
+			if (res != kdump_ok)
+				return set_error(ctx, res,
+						 "Cannot split PFN block");
 			block = NULL;
 		}
-		if (block && block->n >= block->alloc &&
-		    realloc_pfn_offs(block, PFN_IDX3_SIZE) != kdump_ok)
+		if (block) {
+			idx = curpfn - block->pfn - 1;
+			if (idx >= block->n)
+				block->n = idx + 1;
+			if (block->n >= block->alloc &&
+			    realloc_pfn_offs(block, PFN_IDX3_SIZE) != kdump_ok)
 			block = NULL;
+		}
 
 		if (!block) {
 			block = alloc_pfn_block(ctx, curpfn);
@@ -509,16 +602,22 @@ search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 				return kdump_syserr;
 			block->filepos = off;
 		} else
-			block->offs[block->n++] = off - block->filepos;
+			block->offs[idx] = off - block->filepos;
 
-		prevpfn = curpfn;
 		off += sizeof(struct dump_page) + dp->dp_size;
 		lkcdp->last_offset = off;
-		lkcdp->last_block = block;
 	} while (curpfn != pfn);
 
 	*dataoff = off - dp->dp_size;
 	return kdump_ok;
+}
+
+static inline int
+pfn_is_gap(struct pfn_block *block, kdump_pfn_t pfn)
+{
+	if (pfn <= block->pfn)
+		return 0;
+	return block->offs[pfn - block->pfn - 1] == 0;
 }
 
 static kdump_status
@@ -528,8 +627,8 @@ get_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 	struct pfn_block *block;
 	off_t off;
 
-	block = lookup_pfn_block(ctx, pfn);
-	if (!block)
+	block = lookup_pfn_block(ctx, pfn, 0);
+	if (!block || pfn_is_gap(block, pfn))
 		return search_page_desc(ctx, pfn, dp, dataoff);
 
 	off = block->filepos;
@@ -743,7 +842,6 @@ open_common(kdump_ctx *ctx)
 
 	lkcdp->last_offset = lkcdp->data_offset;
 	lkcdp->end_offset = 0;
-	lkcdp->last_block = NULL;
 
 	lkcdp->pfn_level1 = NULL;
 	lkcdp->l1_size = 0;

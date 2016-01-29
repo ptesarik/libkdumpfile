@@ -12,6 +12,7 @@ datafile="out/${name}.data"
 dumpfile="out/${name}.dump"
 
 magic="4E 6F 4D 61 67 69 63 21"
+magic2="21 4D 61 67 69 63 32 21"
 cat >"$datafile" <<EOF
 @0
 00*4096
@@ -19,7 +20,8 @@ cat >"$datafile" <<EOF
 00*4096
 # Gap is here at 0x2000 and 0x3000
 @0x4000
-00*4096
+$magic2
+00*4088
 # These two pages are invalid but never used
 @0x100000000 skip=0xa0000000 raw
 @0x200000000 skip=0xa0000000 raw
@@ -58,6 +60,19 @@ if [ $rc -ne 0 ]; then
 fi
 echo "Data: $result"
 expect=$( echo -ne "00\n$magic" )
+if [ "${result% *}" != "$expect" ] ; then
+    echo "Wrong data found" >&2
+    exit 1
+fi
+
+result=$( ./dumpdata "$dumpfile" 0x3fff 9 )
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot read data" >&2
+    exit $rc
+fi
+echo "Data: $result"
+expect=$( echo -ne "00\n$magic2" )
 if [ "${result% *}" != "$expect" ] ; then
     echo "Wrong data found" >&2
     exit 1
