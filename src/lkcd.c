@@ -546,6 +546,20 @@ read_page_desc(kdump_ctx *ctx, struct dump_page *dp, off_t off)
 }
 
 static kdump_status
+error_dup(kdump_ctx *ctx, off_t off, struct pfn_block *block, kdump_pfn_t pfn)
+{
+	off_t prevoff = block->filepos;
+	unsigned idx = pfn_idx3(pfn);
+	if (idx > block->idx3)
+		prevoff += block->offs[idx - block->idx3 - 1];
+	return set_error(ctx, kdump_dataerr,
+			 "Duplicate PFN 0x%llx at %lld (previous %lld)",
+			 (unsigned long long) pfn,
+			 (unsigned long long) off,
+			 (unsigned long long) prevoff);
+}
+
+static kdump_status
 search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 		 struct dump_page *dp, off_t *dataoff)
 {
@@ -595,7 +609,9 @@ search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 			block = NULL;
 		}
 		if (block) {
-			idx = pfn_idx3(curpfn) - block->idx3 - 1;
+			idx = pfn_idx3(curpfn) - block->idx3;
+			if (!idx--)
+				return error_dup(ctx, off, block, curpfn);
 			if (idx >= block->n)
 				block->n = idx + 1;
 			if (block->n >= block->alloc) {

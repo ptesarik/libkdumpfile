@@ -63,7 +63,8 @@ test_scripts = \
 	lkcd-short-page-gzip \
 	lkcd-gap \
 	lkcd-unordered \
-	lkcd-unordered-faroff
+	lkcd-unordered-faroff \
+	lkcd-duplicate
 
 dist_check_DATA = \
 	lkcd-empty.data \

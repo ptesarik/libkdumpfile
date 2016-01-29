@@ -1,0 +1,57 @@
+#! /bin/sh
+
+#
+# Create an LKCDv9 with duplicate pages
+#
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+datafile="out/${name}.data"
+dumpfile="out/${name}.dump"
+
+magic="4E 6F 4D 61 67 69 63 21"
+cat >"$datafile" <<EOF
+@0x1000
+$magic
+00*4088
+@0x1000
+00*4096
+@0
+00*4096
+@0 end
+EOF
+
+./mklkcd "$dumpfile" <<EOF
+arch_name = x86_64
+page_shift = 12
+page_offset = 0xffff880000000000
+
+NR_CPUS = 8
+num_cpus = 1
+
+compression = 1
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create lkcd file" >&2
+    exit $rc
+fi
+echo "Created LKCD dump: $dumpfile"
+
+result=$( ./dumpdata "$dumpfile" 0xfff 9 )
+rc=$?
+if [ $rc -eq 0 ]; then
+    echo "Dumping data should fail" >&2
+    exit 1
+elif [ $rc -ne 1 ]; then
+    echo "Unexpected error" >&2
+    if [ $rc -ge 128 ] ; then
+	echo "Terminated by SIG"$( kill -l $rc )
+	rc=1
+    fi
+    exit 1
+fi
+
+exit 0
