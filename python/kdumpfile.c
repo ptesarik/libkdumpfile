@@ -12,7 +12,29 @@ typedef struct {
 
 static kdump_status cb_get_symbol(kdump_ctx *ctx, const char *name, kdump_addr_t *addr)
 {
-	*addr = NULL;
+	kdumpfile_object *self;
+	PyObject *ret;
+
+	self = (kdumpfile_object*)kdump_get_priv(ctx);
+
+	if (! self->cb_get_symbol) {
+		PyErr_SetString(PyExc_RuntimeError, "Callback symbol-resolving function not set");
+		printf ("aa\n");
+		return kdump_nodata;
+	}
+
+	ret = PyObject_CallFunction(self->cb_get_symbol, "s", name);
+
+	if (! PyLong_Check(ret)) {
+		PyErr_SetString(PyExc_RuntimeError, "Callback of symbol-resolving function returned no long");
+		printf ("bb\n");
+		return kdump_nodata;
+	}
+
+	*addr = PyLong_AsUnsignedLongLong(ret);;
+
+	Py_XDECREF(ret);
+
 	return kdump_ok;
 }
 
@@ -61,6 +83,7 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 
 	self->cb_get_symbol = NULL;
 	kdump_cb_get_symbol_val(self->ctx, cb_get_symbol);
+	kdump_set_priv(self->ctx, self);
 end:
 	return (PyObject*)self;
 }
@@ -78,7 +101,6 @@ kdumpfile_dealloc(PyObject *_self)
 	if (self->file) Py_XDECREF(self->file);
 	self->ob_type->tp_free((PyObject*)self);
 }
-
 
 static PyObject *kdumpfile_read (PyObject *_self, PyObject *args, PyObject *kw)
 {
@@ -171,13 +193,25 @@ static PyObject *kdumpfile_getattr(PyObject *_self, PyObject *args, PyObject *kw
 	}
 
 	return kdumpfile_attr2obj(&attr);
-
 }
+
+
+static PyObject *kdumpfile_vtop_init(PyObject *_self, PyObject *args)
+{
+	kdumpfile_object *self = (kdumpfile_object*)_self;
+
+	kdump_vtop_init(self->ctx);
+
+	Py_RETURN_NONE;
+}
+
 static PyMethodDef kdumpfile_object_methods[] = {
-	{ "read",(PyCFunction) kdumpfile_read, METH_VARARGS | METH_KEYWORDS,
+	{"read",      (PyCFunction) kdumpfile_read, METH_VARARGS | METH_KEYWORDS,
 		"read (addrtype, address) -> buffer.\n" },
-	{"attr", (PyCFunction) kdumpfile_getattr, METH_VARARGS | METH_KEYWORDS,
+	{"attr",      (PyCFunction) kdumpfile_getattr, METH_VARARGS | METH_KEYWORDS,
 		"Get dump attribute: attr(name) -> value.\n"},
+	{"vtop_init", (PyCFunction) kdumpfile_vtop_init, METH_NOARGS,
+		"Initialize virtual memory mapping\n"},
 	{NULL}  
 };
 
@@ -200,9 +234,16 @@ static PyObject *kdumpfile_get_symbol_func (PyObject *_self, void *_data)
 int kdumpfile_set_symbol_func(PyObject *_self, PyObject *_set, void *_data)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
+
+	if (! PyCallable_Check(_set)) {
+		PyErr_SetString(PyExc_RuntimeError, "Argument must be callable");
+		return 1;
+	}
+
 	if (self->cb_get_symbol)
 		Py_XDECREF(self->cb_get_symbol);
 	self->cb_get_symbol = _set;
+	Py_INCREF(self->cb_get_symbol);
 	return 0;
 }
 
