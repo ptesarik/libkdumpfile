@@ -1,4 +1,4 @@
-#include "kdumpfile.h"
+#include <kdumpfile.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <Python.h>
@@ -7,15 +7,20 @@ typedef struct {
 	PyObject_HEAD
 	kdump_ctx *ctx;
 	PyObject *file;
+	PyObject *cb_get_symbol;
 } kdumpfile_object;
+
+static kdump_status cb_get_symbol(kdump_ctx *ctx, const char *name, kdump_addr_t *addr)
+{
+	*addr = NULL;
+	return kdump_ok;
+}
 
 static PyObject *
 kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 {
 	kdumpfile_object *self = NULL;
 	static char *keywords[] = {"file", NULL};
-	const char *encoding = NULL, *user_encoding, *errors;
-	int length = -1;
 	PyObject *fo = NULL;
 	FILE *f;
 	int fd;
@@ -51,13 +56,17 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 		self = NULL;
 		goto end;
 	}
+
 	self->file = fo;
+
+	self->cb_get_symbol = NULL;
+	kdump_cb_get_symbol_val(self->ctx, cb_get_symbol);
 end:
 	return (PyObject*)self;
 }
 
 static void
-kdumpfile_dealloc(PyObject *_self)                                                           
+kdumpfile_dealloc(PyObject *_self)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
 
@@ -65,7 +74,7 @@ kdumpfile_dealloc(PyObject *_self)
 		kdump_free(self->ctx);
 		self->ctx = NULL;
 	}
-	
+
 	if (self->file) Py_XDECREF(self->file);
 	self->ob_type->tp_free((PyObject*)self);
 }
@@ -74,13 +83,13 @@ kdumpfile_dealloc(PyObject *_self)
 static PyObject *kdumpfile_read (PyObject *_self, PyObject *args, PyObject *kw)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
-	char *buff;
+	PyObject *obj;
 	kdump_paddr_t addr;
 	int addrspace;
 	unsigned long size;
 	static char *keywords[] = {"addrspace", "address", "size", NULL};
 	size_t r;
-	
+
 	if (! PyArg_ParseTupleAndKeywords(args, kw, "ikk:", keywords, &addrspace, &addr, &size)) {
 		Py_RETURN_NONE;
 	}
@@ -90,13 +99,19 @@ static PyObject *kdumpfile_read (PyObject *_self, PyObject *args, PyObject *kw)
 		return NULL;
 	}
 
-	buff = malloc(size);
+	obj = PyByteArray_FromStringAndSize(0, size);
 
-	if ((r = kdump_read(self->ctx, addrspace, addr, buff, size)) != size) {
+	if (! obj) {
+		PyErr_SetString(PyExc_RuntimeError, "Cannot create buffer");
+		return NULL;
+	}
+
+	if ((r = kdump_read(self->ctx, addrspace, addr, PyByteArray_AS_STRING(obj), size)) != size) {
+		Py_XDECREF(obj);
 		PyErr_SetString(PyExc_RuntimeError, "Cannot read");
 		return NULL;
 	}
-	return PyByteArray_FromStringAndSize(buff, size);
+	return obj;
 }
 
 static PyObject *kdumpfile_attr2obj(const struct kdump_attr *attr);
@@ -105,7 +120,7 @@ static int kdumpfile_dir2obj_it(void *data, const char *key, const struct kdump_
 {
 	PyObject *o = (PyObject*)data, *v = kdumpfile_attr2obj(valp);
 	if (! v) return 1;
-	PyDict_SetItem(data, PyString_FromString(key), v);
+	PyDict_SetItem(o, PyString_FromString(key), v);
 	return 0;
 }
 
@@ -159,17 +174,36 @@ static PyObject *kdumpfile_getattr(PyObject *_self, PyObject *args, PyObject *kw
 
 }
 static PyMethodDef kdumpfile_object_methods[] = {
-  { "read",(PyCFunction) kdumpfile_read, METH_VARARGS | METH_KEYWORDS,
-    "read (addrtype, address) -> buffer.\n\
-" },
-    {"attr", (PyCFunction) kdumpfile_getattr, METH_VARARGS | METH_KEYWORDS,
-	    "Get dump attribute: attr(name) -> value.\n"},
-  {NULL}  
+	{ "read",(PyCFunction) kdumpfile_read, METH_VARARGS | METH_KEYWORDS,
+		"read (addrtype, address) -> buffer.\n" },
+	{"attr", (PyCFunction) kdumpfile_getattr, METH_VARARGS | METH_KEYWORDS,
+		"Get dump attribute: attr(name) -> value.\n"},
+	{NULL}  
 };
 
 static PyObject *kdumpfile_getconst (PyObject *_self, void *_value)
 {
 	return PyInt_FromLong((long)_value);
+}
+
+static PyObject *kdumpfile_get_symbol_func (PyObject *_self, void *_data)
+{
+	kdumpfile_object *self = (kdumpfile_object*)_self;
+
+	if (! self->cb_get_symbol)
+		Py_RETURN_NONE;
+	Py_INCREF(self->cb_get_symbol);
+
+	return self->cb_get_symbol;
+}
+
+int kdumpfile_set_symbol_func(PyObject *_self, PyObject *_set, void *_data)
+{
+	kdumpfile_object *self = (kdumpfile_object*)_self;
+	if (self->cb_get_symbol)
+		Py_XDECREF(self->cb_get_symbol);
+	self->cb_get_symbol = _set;
+	return 0;
 }
 
 static PyGetSetDef kdumpfile_object_getset[] = {
@@ -185,11 +219,13 @@ static PyGetSetDef kdumpfile_object_getset[] = {
 	{"KDUMP_XENVADDR", kdumpfile_getconst, NULL, 
 		"KDUMP_XENKVADDR - get by xen virtual address",
 		(void*)KDUMP_XENVADDR},
-
+	{"symbol_func", kdumpfile_get_symbol_func, kdumpfile_set_symbol_func,
+		"Callback function called by libkdumpfile for symbol resolving",
+		NULL},
 	{NULL}
 };
 
-PyTypeObject kdumpfile_object_type = 
+static PyTypeObject kdumpfile_object_type = 
 {
 	PyObject_HEAD_INIT (0) 
 	0,
@@ -232,9 +268,10 @@ PyTypeObject kdumpfile_object_type =
 	kdumpfile_new,                  /* tp_new */
 };
 
-static PyMethodDef kdumpfile_module_methods[] = {
-	{NULL}
-};
+static inline void pyncref(char* c)
+{
+	Py_INCREF((PyObject*)c);
+}
 
 PyMODINIT_FUNC
 init_kdumpfile (void)
@@ -249,6 +286,6 @@ init_kdumpfile (void)
 
 	if (!mod) return;
 
-	Py_INCREF(&kdumpfile_object_type);
+	pyncref((char*)&kdumpfile_object_type);
 	PyModule_AddObject(mod, "kdumpfile", (PyObject*)&kdumpfile_object_type);
 }
