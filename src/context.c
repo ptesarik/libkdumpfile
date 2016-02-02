@@ -296,3 +296,15 @@ kdump_cb_get_symbol_val(kdump_ctx *ctx, kdump_get_symbol_val_fn *cb)
 	ctx->cb_get_symbol_val = cb ?: kdump_vmcoreinfo_symbol;
 	return ret;
 }
+
+void
+kdump_set_priv(kdump_ctx *ctx, void *data)
+{
+	ctx->priv = data;
+}
+
+void *
+kdump_get_priv(kdump_ctx *ctx)
+{
+	return ctx->priv;
+}

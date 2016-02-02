@@ -2,6 +2,7 @@
 checkattr
 dumpdata
 mklkcd
+privptr
 
 # Test results
 *.log

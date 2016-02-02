@@ -643,6 +643,25 @@ kdump_cb_get_symbol_val(kdump_ctx *ctx, kdump_get_symbol_val_fn *cb);
 kdump_get_symbol_val_fn *
 kdump_cb_get_symbol_val_xen(kdump_ctx *ctx, kdump_get_symbol_val_fn *cb);
 
+/**  Set pointer to user private data.
+ * @param ctx  Dump file object.
+ * @param data Generic data pointer.
+ *
+ * A private pointer can be used to associate the dump file object with
+ * arbitrary data. The libkdumpfile library does not use the pointer in
+ * any way, but it can be retrieved later from a @ref kdump_ctx pointer
+ * with @ref kdump_get_priv.
+ */
+void
+kdump_set_priv(kdump_ctx *ctx, void *data);
+
+/**  Get pointer to user private data.
+ * @param ctx  Dump file object.
+ * @returns    The data pointer stored previously with @ref kdump_set_priv.
+ */
+void *
+kdump_get_priv(kdump_ctx *ctx);
+
 #ifdef  __cplusplus
 }
 #endif

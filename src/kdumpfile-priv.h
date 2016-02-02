@@ -370,6 +370,9 @@ struct _tag_kdump_ctx {
 	const struct arch_ops *arch_ops;
 	void *archdata;		/* private data */
 
+	/* user private data */
+	void *priv;
+
 	/* read_page internals */
 	void *buffer;		/* temporary buffer */
 	void *page;		/* page data buffer */

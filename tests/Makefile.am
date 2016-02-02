@@ -43,10 +43,14 @@ mklkcd_SOURCES = mklkcd.c
 dumpdata_SOURCES = dumpdata.c
 dumpdata_LDADD = $(top_builddir)/src/libkdumpfile.la
 
+privptr_SOURCES = privptr.c
+privptr_LDADD = $(top_builddir)/src/libkdumpfile.la
+
 check_PROGRAMS = \
 	checkattr \
 	dumpdata \
-	mklkcd
+	mklkcd \
+	privptr
 
 test_scripts = \
 	lkcd-empty-i386 \
@@ -77,7 +81,8 @@ dist_check_SCRIPTS = \
 	lkcd-wrong-page-size \
 	$(test_scripts)
 
-TESTS = $(test_scripts)
+TESTS = $(test_scripts) \
+	privptr
 
 clean-local:
 	-rm -rf out
