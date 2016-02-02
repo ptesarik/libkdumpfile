@@ -1,7 +1,7 @@
 ## Process this file with automake to create Makefile.in
 ## Configure input file for libkdumpfile.
 ##
-## Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
+## Copyright (C) 2015 Petr Tesarik <ptesarik@suse.com>
 ##
 ## This file is part of libkdumpfile.
 ##
@@ -19,18 +19,12 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-ACLOCAL_AMFLAGS = -I m4
+kdumpfiledir = $(pkgpythondir)
 
-SUBDIRS = doc src tests examples 
-if BUILD_PYTHON_EXT
-SUBDIRS += python
-endif
+pyexec_LTLIBRARIES = _kdumpfile.la
 
-dist_noinst_DATA = \
-	COPYING.GPLv2 \
-	COPYING.GPLv3 \
-	COPYING.LGPLv3 \
-	README.md
+_kdumpfile_la_SOURCES = kdumpfile.c
+_kdumpfile_la_CPPFLAGS = $(PYTHON_CFLAGS) -I../src
+_kdumpfile_la_LDFLAGS = -module -export-symbols-regex init_kdumpfile
+_kdumpfile_la_LIBADD = $(top_builddir)/src/libkdumpfile.la
 
-pkgconfigdir=$(libdir)/pkgconfig
-pkgconfig_DATA=libkdumpfile.pc

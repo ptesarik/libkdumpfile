@@ -87,6 +87,29 @@ kdump_enum_attr(kdump_ctx *ctx, const char *path,
 	return kdump_ok;
 }
 
+kdump_status
+kdump_enum_attr_dir(const struct kdump_attr *parent,
+		kdump_enum_attr_fn *cb, void *cb_data)
+{
+	const struct attr_data *d;
+
+	if (parent->type != kdump_directory) return kdump_invalid;
+
+	for (d = (struct attr_data*)parent->val.string; d; d = d->next) {
+		struct kdump_attr attr;
+
+		if (!attr_isset(d))
+			continue;
+
+		attr.type = d->template->type;
+		attr.val = *attr_value(d);
+		if (cb(cb_data, d->template->key, &attr))
+			break;
+	}
+	return kdump_ok;
+}
+
+
 const char *
 kdump_format(kdump_ctx *ctx)
 {
