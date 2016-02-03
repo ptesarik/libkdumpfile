@@ -632,6 +632,9 @@ search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 		else
 			return error_dup(ctx, off, block, curpfn);
 
+		if (pfn >= get_max_pfn(ctx))
+			set_max_pfn(ctx, pfn + 1);
+
 		off += sizeof(struct dump_page) + dp->dp_size;
 		lkcdp->last_offset = off;
 	} while (curpfn != pfn);
@@ -840,7 +843,6 @@ open_common(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		return ret;
 
-	ctx->max_pfn = dump64toh(ctx, dh->dh_memory_size);
 	ctx->fmtdata = lkcdp;
 
 	switch(lkcdp->version) {

@@ -203,7 +203,7 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	if (pfn == ctx->last_pfn)
 		return kdump_ok;
 
-	if (pfn >= ctx->max_pfn)
+	if (pfn >= get_max_pfn(ctx))
 		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 
 	if (!page_is_dumpable(ctx, pfn)) {
@@ -392,7 +392,7 @@ read_bitmap(kdump_ctx *ctx, int32_t sub_hdr_size,
 
 	bitmapsize = bitmap_blocks * get_page_size(ctx);
 	max_bitmap_pfn = (kdump_pfn_t)bitmapsize * 8;
-	if (ctx->max_pfn <= max_bitmap_pfn / 2) {
+	if (get_max_pfn(ctx) <= max_bitmap_pfn / 2) {
 		/* partial dump */
 		bitmap_blocks /= 2;
 		bitmapsize = bitmap_blocks * get_page_size(ctx);
@@ -400,8 +400,8 @@ read_bitmap(kdump_ctx *ctx, int32_t sub_hdr_size,
 		max_bitmap_pfn = (kdump_pfn_t)bitmapsize * 8;
 	}
 
-	if (ctx->max_pfn > max_bitmap_pfn)
-		ctx->max_pfn = max_bitmap_pfn;
+	if (get_max_pfn(ctx) > max_bitmap_pfn)
+		set_max_pfn(ctx, max_bitmap_pfn);
 
 	if (! (ddp->bitmap = ctx_malloc(bitmapsize, ctx, "page bitmap")) )
 		return kdump_syserr;
@@ -443,7 +443,7 @@ try_header(kdump_ctx *ctx, int32_t block_size,
 	if (ret != kdump_ok)
 		return ret;
 
-	ctx->max_pfn = max_mapnr;
+	set_max_pfn(ctx, max_mapnr);
 
 	return kdump_ok;
 }
@@ -480,7 +480,7 @@ read_sub_hdr_32(struct setup_data *sdp, int32_t header_version)
 				      dump32toh(ctx, subhdr.size_vmcoreinfo));
 
 	if (header_version >= 6)
-		ctx->max_pfn = dump64toh(ctx, subhdr.max_mapnr_64);
+		set_max_pfn(ctx, dump64toh(ctx, subhdr.max_mapnr_64));
 
 	return ret;
 }
@@ -560,7 +560,7 @@ read_sub_hdr_64(struct setup_data *sdp, int32_t header_version)
 				      dump64toh(ctx, subhdr.size_vmcoreinfo));
 
 	if (header_version >= 6)
-		ctx->max_pfn = dump64toh(ctx, subhdr.max_mapnr_64);
+		set_max_pfn(ctx, dump64toh(ctx, subhdr.max_mapnr_64));
 
 	return ret;
 }

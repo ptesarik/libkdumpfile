@@ -100,7 +100,7 @@ s390_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	if (pfn == ctx->last_pfn)
 		return kdump_ok;
 
-	if (pfn >= ctx->max_pfn)
+	if (pfn >= get_max_pfn(ctx))
 		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 
 	pos = (off_t)addr + (off_t)sdp->dataoff;
@@ -149,7 +149,7 @@ s390_probe(kdump_ctx *ctx)
 	ctx->fmtdata = sdp;
 
 	sdp->dataoff = dump32toh(ctx, dh->h1.hdr_size);
-	ctx->max_pfn = dump32toh(ctx, dh->h1.num_pages);
+	set_max_pfn(ctx, dump32toh(ctx, dh->h1.num_pages));
 
 	ret = set_page_size(ctx, dump32toh(ctx, dh->h1.page_size));
 	if (ret != kdump_ok)

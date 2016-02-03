@@ -20,6 +20,9 @@
  * #undef ATTR
  */
 
+/* first PFN beyond end of physical RAM (max_pfn) */
+ATTR(root, "max_pfn", max_pfn, number, kdump_pfn_t)
+
 /* architecture name */
 ATTR(arch, "name", arch_name, string, const char *)
 

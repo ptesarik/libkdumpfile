@@ -567,10 +567,10 @@ open_common(kdump_ctx *ctx)
 	/* process LOAD segments */
 	for (i = 0; i < edp->num_load_segments; ++i) {
 		struct load_segment *seg = edp->load_segments + i;
-		unsigned long pfn = (seg->phys + seg->size) /
-			get_page_size(ctx);
-		if (pfn > ctx->max_pfn)
-			ctx->max_pfn = pfn;
+		unsigned long pfn =
+			(seg->phys + seg->size) >> get_page_shift(ctx);
+		if (pfn > get_max_pfn(ctx))
+			set_max_pfn(ctx, pfn);
 
 		if (ctx->arch_ops && ctx->arch_ops->process_load) {
 			ret = ctx->arch_ops->process_load(

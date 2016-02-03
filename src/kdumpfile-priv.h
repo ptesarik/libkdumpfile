@@ -377,7 +377,6 @@ struct _tag_kdump_ctx {
 	void *buffer;		/* temporary buffer */
 	void *page;		/* page data buffer */
 	kdump_pfn_t last_pfn;	/* last read PFN */
-	kdump_pfn_t max_pfn;	/* max PFN for read_page */
 
 	/* address translation */
 	struct vtop_map vtop_map;
