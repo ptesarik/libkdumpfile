@@ -197,9 +197,7 @@ xc_read_kpage(kdump_ctx *ctx, kdump_pfn_t pfn)
 
 	idx = pfn_to_idx(ctx, pfn);
 	if (idx == ~0UL)
-		return set_error(ctx, kdump_nodata,
-				 "No machine address for PFN: 0x%llx",
-				 (unsigned long long) pfn);
+		return set_error(ctx, kdump_nodata, "Page not found");
 
 	offset = edp->xen_pages_offset + (off_t)idx * get_page_size(ctx);
 	rd = pread(ctx->fd, ctx->page, get_page_size(ctx), offset);
