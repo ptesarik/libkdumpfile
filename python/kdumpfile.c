@@ -72,7 +72,6 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 
 	if (kdump_set_fd(self->ctx, fd)) {
 		PyErr_SetString(PyExc_RuntimeError, "Cannot kdump_set_fd()");
-		kdump_free(self->ctx);
 		Py_XDECREF(self);
 		Py_XDECREF(fo);
 		self = NULL;
