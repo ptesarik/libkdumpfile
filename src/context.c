@@ -93,7 +93,9 @@ kdump_enum_attr_dir(const struct kdump_attr *parent,
 {
 	const struct attr_data *d;
 
-	if (parent->type != kdump_directory) return kdump_invalid;
+	if (parent->type != kdump_directory)
+		return set_error(ctx, kdump_invalid,
+				 "Path is a leaf attribute");
 
 	for (d = (struct attr_data*)parent->val.string; d; d = d->next) {
 		struct kdump_attr attr;
