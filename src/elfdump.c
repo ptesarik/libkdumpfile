@@ -139,6 +139,34 @@ elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	return kdump_ok;
 }
 
+static void
+get_max_pfn_xen_auto(kdump_ctx *ctx)
+{
+	uint64_t *p;
+	unsigned long i;
+	kdump_pfn_t max_pfn = 0;
+
+	for (i = 0, p = ctx->xen_map; i < ctx->xen_map_size; ++i, ++p)
+		if (*p >= max_pfn)
+			max_pfn = *p + 1;
+
+	set_max_pfn(ctx, max_pfn);
+}
+
+static void
+get_max_pfn_xen_nonauto(kdump_ctx *ctx)
+{
+	struct xen_p2m *p;
+	unsigned long i;
+	kdump_pfn_t max_pfn = 0;
+
+	for (i = 0, p = ctx->xen_map; i < ctx->xen_map_size; ++i, ++p)
+		if (p->pfn >= max_pfn)
+			max_pfn = p->pfn + 1;
+
+	set_max_pfn(ctx, max_pfn);
+}
+
 static unsigned long
 pfn_to_idx(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
@@ -591,12 +619,14 @@ open_common(kdump_ctx *ctx)
 				return kdump_syserr;
 			ctx->xen_map_size = sect->size /sizeof(struct xen_p2m);
 			set_xen_xlat(ctx, kdump_xen_nonauto);
+			get_max_pfn_xen_nonauto(ctx);
 		} else if (!strcmp(name, ".xen_pfn")) {
 			ctx->xen_map = read_elf_sect(ctx, sect);
 			if (!ctx->xen_map)
 				return kdump_syserr;
 			ctx->xen_map_size = sect->size / sizeof(uint64_t);
 			set_xen_xlat(ctx, kdump_xen_auto);
+			get_max_pfn_xen_auto(ctx);
 		} else if (!strcmp(name, ".note.Xen")) {
 			notes = read_elf_sect(ctx, sect);
 			if (!notes)
