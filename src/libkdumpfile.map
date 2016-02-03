@@ -18,7 +18,7 @@ LIBKDUMPFILE_0 {
     kdump_get_attr;
     kdump_get_string_attr;
     kdump_enum_attr;
-    kdump_enum_attr_dir;
+    kdump_enum_attr_val;
     kdump_format;
     kdump_byte_order;
     kdump_ptr_size;

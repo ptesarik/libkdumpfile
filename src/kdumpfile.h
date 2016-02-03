@@ -408,14 +408,16 @@ typedef int kdump_enum_attr_fn(void *data, const char *key,
 kdump_status kdump_enum_attr(kdump_ctx *ctx, const char *path,
 			     kdump_enum_attr_fn *cb, void *cb_data);
 
-/**  Enumerate an attribute directory.
- * @param parent   Directory attribute to enumerate
+/**  Enumerate an attribute directory by attribute value.
+ * @param ctx      Dump file object.
+ * @param parent   Directory attribute to enumerate.
  * @param cb       Callback function.
  * @param cb_data  Data that is passed to the callback function.
- * @returns     Error status.
+ * @returns        Error status.
  */
-kdump_status kdump_enum_attr_dir(const struct kdump_attr *parent,
-		kdump_enum_attr_fn *cb, void *cb_data);
+kdump_status kdump_enum_attr_val(kdump_ctx *ctx,
+				 const struct kdump_attr *parent,
+				 kdump_enum_attr_fn *cb, void *cb_data);
 
 /**  Get target dump format.
  * @param ctx  Dump file object.

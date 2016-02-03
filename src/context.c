@@ -88,8 +88,8 @@ kdump_enum_attr(kdump_ctx *ctx, const char *path,
 }
 
 kdump_status
-kdump_enum_attr_dir(const struct kdump_attr *parent,
-		kdump_enum_attr_fn *cb, void *cb_data)
+kdump_enum_attr_val(kdump_ctx *ctx, const struct kdump_attr *parent,
+		    kdump_enum_attr_fn *cb, void *cb_data)
 {
 	const struct attr_data *d;
 

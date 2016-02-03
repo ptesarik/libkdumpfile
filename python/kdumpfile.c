@@ -136,31 +136,38 @@ static PyObject *kdumpfile_read (PyObject *_self, PyObject *args, PyObject *kw)
 	return obj;
 }
 
-static PyObject *kdumpfile_attr2obj(const struct kdump_attr *attr);
+struct attr2obj_data {
+	kdump_ctx *ctx;
+	PyObject *dict;
+};
+
+static PyObject *kdumpfile_attr2obj(kdump_ctx *ctx, const struct kdump_attr *attr);
 
 static int kdumpfile_dir2obj_it(void *data, const char *key, const struct kdump_attr *valp)
 {
-	PyObject *o = (PyObject*)data, *v = kdumpfile_attr2obj(valp);
+	struct attr2obj_data *cb_data = (struct attr2obj_data *)data;
+	PyObject *v = kdumpfile_attr2obj(cb_data->ctx, valp);
 	if (! v) return 1;
-	PyDict_SetItem(o, PyString_FromString(key), v);
+	PyDict_SetItem(cb_data->dict, PyString_FromString(key), v);
 	return 0;
 }
 
-static PyObject *kdumpfile_dir2obj(const struct kdump_attr *attr)
+static PyObject *kdumpfile_dir2obj(kdump_ctx *ctx, const struct kdump_attr *attr)
 {
-	PyObject *dict;
+	struct attr2obj_data cb_data;
 
-	dict = PyDict_New();
+	cb_data.ctx = ctx;
+	cb_data.dict = PyDict_New();
 
-	if (kdump_enum_attr_dir(attr, kdumpfile_dir2obj_it, dict)) {
-		Py_XDECREF(dict);
+	if (kdump_enum_attr_val(ctx, attr, kdumpfile_dir2obj_it, &cb_data)) {
+		Py_XDECREF(cb_data.dict);
 		return NULL;
 	}
 
-	return dict;
+	return cb_data.dict;
 }
 
-static PyObject *kdumpfile_attr2obj(const struct kdump_attr *attr)
+static PyObject *kdumpfile_attr2obj(kdump_ctx *ctx, const struct kdump_attr *attr)
 {
 	switch (attr->type) {
 		case kdump_number:
@@ -170,7 +177,7 @@ static PyObject *kdumpfile_attr2obj(const struct kdump_attr *attr)
 		case kdump_string:
 			return PyString_FromString(attr->val.string);
 		case kdump_directory:
-			return kdumpfile_dir2obj(attr);
+			return kdumpfile_dir2obj(ctx, attr);
 		default:
 			PyErr_SetString(PyExc_RuntimeError, "Unhandled attr type");
 			return NULL;
@@ -192,7 +199,7 @@ static PyObject *kdumpfile_getattr(PyObject *_self, PyObject *args, PyObject *kw
 		Py_RETURN_NONE;
 	}
 
-	return kdumpfile_attr2obj(&attr);
+	return kdumpfile_attr2obj(self->ctx, &attr);
 }
 
 
