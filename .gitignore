@@ -52,6 +52,9 @@ stamp-h1
 *.x86_64
 *.hex
 
+# Documentation
+doc
+
 # Distribution tarballs
 libkdumpfile-*.tar.gz
 libkdumpfile-*.tar.bz2

@@ -21,7 +21,7 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = doc src tests examples
+SUBDIRS = src tests examples
 if BUILD_PYTHON_EXT
 SUBDIRS += python
 endif
@@ -30,7 +30,10 @@ dist_noinst_DATA = \
 	COPYING.GPLv2 \
 	COPYING.GPLv3 \
 	COPYING.LGPLv3 \
+	Doxyfile \
 	README.md
 
 pkgconfigdir=$(libdir)/pkgconfig
 pkgconfig_DATA=libkdumpfile.pc
+
+@DX_RULES@

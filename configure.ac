@@ -18,8 +18,7 @@ dnl
 dnl  You should have received a copy of the GNU General Public License
 dnl  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-AC_INIT([Library for reading kernel core dumps],
-        [0.2.0],[ptesarik@suse.cz],[libkdumpfile])
+AC_INIT([libkdumpfile],[0.2.0],[ptesarik@suse.com])
 
 AC_CONFIG_SRCDIR([src/diskdump.c])
 AC_CONFIG_MACRO_DIR([m4])
@@ -31,6 +30,8 @@ AC_PROG_CC
 AM_PROG_AR
 
 LT_INIT
+
+DX_INIT_DOXYGEN([$PACKAGE_NAME],[Doxyfile],[doc])
 
 AC_CHECK_SIZEOF(long)
 
@@ -46,7 +47,6 @@ kdump_COMPRESSION(snappy, SNAPPY, snappy, snappy_uncompress)
 
 AC_CONFIG_FILES([
 	Makefile
-	doc/Makefile
 	examples/Makefile
 	src/Makefile
 	python/Makefile

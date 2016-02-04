@@ -1,5 +1,6 @@
 0.2.1
 -----
+  * Improved Doxygen documentation (run 'make doxygen-doc').
   * Private pointer API (kdump_set_priv, kdump_get_priv).
 
 0.2.0
