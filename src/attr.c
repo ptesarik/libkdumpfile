@@ -168,17 +168,17 @@ static struct attr_data*
 lookup_attr_part(const kdump_ctx *ctx, const char *key, size_t keylen)
 {
 	unsigned ehash, i;
-	const struct attr_hash *tbl;
+	struct attr_hash *tbl;
 
 	i = part_hash_index(key, keylen);
 	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
 	do {
-		tbl = &ctx->attr;
+		tbl = ctx->attr;
 		do {
 			if (!tbl->table[i].parent)
 				break;
 			if (!keycmp(&tbl->table[i], key, keylen))
-				return (struct attr_data*) &tbl->table[i];
+				return &tbl->table[i];
 			tbl = tbl->next;
 		} while (tbl);
 		i = (i + 1) % ATTR_HASH_SIZE;
@@ -208,10 +208,10 @@ lookup_attr_raw(const kdump_ctx *ctx, const char *key)
  * @param key   Key name.
  * @returns     Stored attribute or @c NULL if not found.
  */
-const struct attr_data *
+struct attr_data *
 lookup_attr(const kdump_ctx *ctx, const char *key)
 {
-	const struct attr_data *d = lookup_attr_raw(ctx, key);
+	struct attr_data *d = lookup_attr_raw(ctx, key);
 	return d && attr_isset(d) ? d : NULL;
 }
 
@@ -268,7 +268,7 @@ alloc_attr(kdump_ctx *ctx, struct attr_data *parent,
 	size_t pathlen;
 	char *path;
 	unsigned hash, ehash, i;
-	struct attr_hash *tbl, *newtbl;
+	struct attr_hash *tbl, **pnext;
 
 	tmp.parent = parent ?: &tmp;
 	tmp.template = tmpl;
@@ -279,22 +279,23 @@ alloc_attr(kdump_ctx *ctx, struct attr_data *parent,
 	i = hash = key_hash_index(path);
 	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
 	do {
-		newtbl = &ctx->attr;
-		do {
-			tbl = newtbl;
+		pnext = &ctx->attr;
+		while (*pnext) {
+			tbl = *pnext;
 			if (!tbl->table[i].parent)
 				return &tbl->table[i];
-			newtbl = tbl->next;
-		} while (newtbl);
+			pnext = &tbl->next;
+		}
 		i = (i + 1) % ATTR_HASH_SIZE;
 	} while (i != ehash);
 
-	newtbl = calloc(1, sizeof(struct attr_hash));
-	if (!newtbl)
+	tbl = calloc(1, sizeof(struct attr_hash));
+	if (!tbl)
 		return NULL;
-	tbl->next = newtbl;
+	tbl->next = *pnext;
+	*pnext = tbl;
 
-	return &newtbl->table[hash];
+	return &tbl->table[hash];
 }
 
 /**  Clear (unset) an attribute.
@@ -434,13 +435,13 @@ cleanup_attr(kdump_ctx *ctx)
 
 	clear_attrs(ctx);
 
-	tblnext = ctx->attr.next;
+	tblnext = ctx->attr;
 	while(tblnext) {
 		tbl = tblnext;
 		tblnext = tbl->next;
 		free(tbl);
 	}
-	ctx->attr.next = NULL;
+	ctx->attr = NULL;
 
 	dtnext = ctx->tmpl;
 	while(dtnext) {
@@ -630,7 +631,7 @@ add_attr(kdump_ctx *ctx, const char *dir, const struct attr_template *tmpl,
 {
 	struct attr_data *parent, *attr;
 
-	parent = (struct attr_data*) lookup_attr_raw(ctx, dir);
+	parent = lookup_attr_raw(ctx, dir);
 	if (!parent)
 		return set_error(ctx, kdump_nokey,
 				 "No such path");

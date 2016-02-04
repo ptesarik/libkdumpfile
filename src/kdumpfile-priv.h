@@ -395,7 +395,7 @@ struct _tag_kdump_ctx {
 	struct attr_data *global_attrs[NR_GLOBAL_ATTRS];
 
 	/* attribute hash */
-	struct attr_hash attr;
+	struct attr_hash *attr;
 
 	void *xen_map;
 	unsigned long xen_map_size;
@@ -591,7 +591,7 @@ kdump_status add_attr_template(kdump_ctx *ctx, const char *path,
 kdump_status init_attrs(kdump_ctx *ctx);
 
 #define lookup_attr INTERNAL_NAME(lookup_attr)
-const struct attr_data *lookup_attr(const kdump_ctx *ctx, const char *key);
+struct attr_data *lookup_attr(const kdump_ctx *ctx, const char *key);
 
 /**  Check if an attribute is set.
  * @param data  Pointer to the attribute data.
