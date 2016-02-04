@@ -133,16 +133,16 @@ typedef enum _tag_kdump_byte_order {
 /**  Type of a Xen dump.
  */
 typedef enum _tag_kdump_xen_type {
-	kdump_xen_none,		/*< Not running under Xen */
-	kdump_xen_system,	/*< Comlete dump of a Xen machine */
-	kdump_xen_domain,	/*< Dump of a single domain */
+	kdump_xen_none,		/**< Not running under Xen */
+	kdump_xen_system,	/**< Comlete dump of a Xen machine */
+	kdump_xen_domain,	/**< Dump of a single domain */
 } kdump_xen_type_t;
 
 /**  Xen physmap translation type.
  */
 typedef enum _tag_kdump_xen_xlat {
-	kdump_xen_auto,		/*< Auto-translated physmap */
-	kdump_xen_nonauto	/*< Non-auto-translated physmap */
+	kdump_xen_auto,		/**< Auto-translated physmap */
+	kdump_xen_nonauto	/**< Non-auto-translated physmap */
 } kdump_xen_xlat_t;
 
 /**  Initialize a new dump file object.

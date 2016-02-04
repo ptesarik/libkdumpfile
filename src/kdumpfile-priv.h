@@ -212,7 +212,7 @@ enum global_keyidx {
 
 #include "static-attr.def"
 
-	NR_GLOBAL_ATTRS,	/*< Total number of global attributes. */
+	NR_GLOBAL_ATTRS,	/**< Total number of global attributes. */
 	GKI_static_last = NR_GLOBAL_ATTRS - 1
 
 #undef ATTR
@@ -250,8 +250,8 @@ typedef kdump_status attr_post_fn(
 /**  Attribute ops
  */
 struct attr_ops {
-	attr_pre_fn *pre_set;   /*< Called before attr_set. */
-	attr_post_fn *post_set; /*< Called after attr_set(). */
+	attr_pre_fn *pre_set;   /**< Called before attr_set. */
+	attr_post_fn *post_set; /**< Called after attr_set(). */
 };
 
 /**  Attribute template.
@@ -276,15 +276,15 @@ struct attr_data {
 	const struct attr_template *template;
 
 	unsigned isset : 1;
-	unsigned dynstr : 1;	/*< Dynamically allocated string */
-	unsigned indirect : 1;	/*< Actual value is at @c *pval */
-	unsigned acthook : 1;	/*< Set when executing a hook */
+	unsigned dynstr : 1;	/**< Dynamically allocated string */
+	unsigned indirect : 1;	/**< Actual value is at @c *pval */
+	unsigned acthook : 1;	/**< Set when executing a hook */
 	unsigned dyntmpl : 1;	/**< Dynamically allocated template */
 
 	union {
 		union kdump_attr_value val;
-		struct attr_data *dir;	      /*< For @c kdump_directory */
-		union kdump_attr_value *pval; /*< Pointer to indirect value */
+		struct attr_data *dir;	      /**< For @c kdump_directory */
+		union kdump_attr_value *pval; /**< Pointer to indirect value */
 	};
 };
 
