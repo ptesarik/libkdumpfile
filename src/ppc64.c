@@ -1,5 +1,7 @@
-/* Functions for the ppc64 architecture.
-   Copyright (C) 2015
+/**  @file src/ppc64.c
+ * Functions for the ppc64 architecture.
+ */
+/* Copyright (C) 2015 Free Software Foundation, Inc.
 
    This file is free software; you can redistribute it and/or modify
    it under the terms of either

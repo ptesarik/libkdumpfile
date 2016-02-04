@@ -1,5 +1,7 @@
-/* Virtual-to-physical address translation.
-   Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
+/**  @file src/vtop.c
+ * Virtual-to-physical address translation.
+ */
+/* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
 
    This file is free software; you can redistribute it and/or modify
    it under the terms of either

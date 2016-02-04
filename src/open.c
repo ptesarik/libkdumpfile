@@ -1,5 +1,7 @@
-/* Routines for opening dumps.
-   Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
+/**  @file src/open.c
+ * Routines for opening dumps.
+ */
+/* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
 
    This file is free software; you can redistribute it and/or modify
    it under the terms of either

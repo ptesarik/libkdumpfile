@@ -1,6 +1,8 @@
-/* Routines to read diskdump/compressed kdump files.
-   Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
-  
+/**  @file src/diskdump.c
+ * Routines to read diskdump/compressed kdump files.
+ */
+/* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
+
    This file is free software; you can redistribute it and/or modify
    it under the terms of either
 

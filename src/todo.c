@@ -1,5 +1,7 @@
-/* TODO items - formats which are not yet supported.
-   Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
+/**  @file src/todo.c
+ * TODO items - formats which are not yet supported.
+ */
+/* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
 
    This file is free software; you can redistribute it and/or modify
    it under the terms of either

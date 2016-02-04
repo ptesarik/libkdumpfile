@@ -1,5 +1,7 @@
-/* Functions for the x86-64 architecture.
-   Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
+/**  @file src/x86_64.c
+ * Functions for the x86-64 architecture.
+ */
+/* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
 
    This file is free software; you can redistribute it and/or modify
    it under the terms of either
