@@ -266,16 +266,6 @@ struct attr_template {
 	const struct attr_ops *ops;
 };
 
-/**  Dynamically allocated attribute template.
- *
- * Dynamically allocated templates are maintained in a linked list,
- * so they need a separate type with a @c next field.
- */
-struct dyn_attr_template {
-	struct dyn_attr_template *next;
-	struct attr_template template;
-};
-
 /**  Data type for storing attribute value in each instance.
  *
  * Note that this structure does not include type, because it must be
@@ -289,6 +279,7 @@ struct attr_data {
 	unsigned dynstr : 1;	/*< Dynamically allocated string */
 	unsigned indirect : 1;	/*< Actual value is at @c *pval */
 	unsigned acthook : 1;	/*< Set when executing a hook */
+	unsigned dyntmpl : 1;	/**< Dynamically allocated template */
 
 	union {
 		union kdump_attr_value val;
@@ -381,9 +372,6 @@ struct _tag_kdump_ctx {
 	/* address translation */
 	struct vtop_map vtop_map;
 	struct vtop_map vtop_map_xen;
-
-	/* attribute templates */
-	struct dyn_attr_template *tmpl;
 
 	/* static attributes */
 #define ATTR(dir, key, field, type, ctype, ...)	\

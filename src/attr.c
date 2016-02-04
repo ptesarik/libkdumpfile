@@ -303,20 +303,33 @@ alloc_attr(kdump_ctx *ctx, struct attr_data *parent,
 static void
 clear_attr(struct attr_data *attr)
 {
-	if (attr->template->type == kdump_directory) {
-		struct attr_data *child = attr->dir;
-		while (child) {
-			struct attr_data *next = child->next;
+	struct attr_data *child;
+	if (attr->template->type == kdump_directory)
+		for (child = attr->dir; child; child = child->next)
 			clear_attr(child);
-			child = next;
-		}
-	}
 
 	attr->isset = 0;
 	if (attr->dynstr) {
 		attr->dynstr = 0;
 		free((void*) attr_value(attr)->string);
 	}
+}
+
+/**  Deallocate attribute (and its children).
+ */
+static void
+dealloc_attr(struct attr_data *attr)
+{
+	struct attr_data *child;
+	if (attr->template->type == kdump_directory)
+		for (child = attr->dir; child; child = child->next)
+			dealloc_attr(child);
+
+	if (attr->dynstr)
+		free((void*) attr_value(attr)->string);
+	if (attr->dyntmpl)
+		free((void*) attr->template);
+	attr->parent = NULL;
 }
 
 /**  Allocate a new attribute in any directory.
@@ -350,7 +363,7 @@ kdump_status
 add_attr_template(kdump_ctx *ctx, const char *path,
 		  enum kdump_attr_type type)
 {
-	struct dyn_attr_template *dt;
+	struct attr_template *tmpl;
 	struct attr_data *attr, *parent;
 	char *keyname;
 
@@ -371,27 +384,25 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 		return set_error(ctx, kdump_invalid,
 				 "Path is a leaf attribute");
 
-	dt = malloc(sizeof *dt + strlen(path) + 1);
-	if (!dt)
+	tmpl = malloc(sizeof *tmpl + strlen(path) + 1);
+	if (!tmpl)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate attribute template");
 
-	keyname = (char*) (dt + 1);
+	keyname = (char*) (tmpl + 1);
 	strcpy(keyname, path);
-	dt->template.key = keyname;
-	dt->template.parent = parent->template;
-	dt->template.type = type;
-	dt->template.ops = NULL;
+	tmpl->key = keyname;
+	tmpl->parent = parent->template;
+	tmpl->type = type;
+	tmpl->ops = NULL;
 
-	attr = new_attr(ctx, parent, &dt->template);
+	attr = new_attr(ctx, parent, tmpl);
 	if (!attr) {
-		free(dt);
+		free(tmpl);
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate attribute");
 	}
-
-	dt->next = ctx->tmpl;
-	ctx->tmpl = dt;
+	attr->dyntmpl = 1;
 
 	return kdump_ok;
 }
@@ -431,9 +442,8 @@ void
 cleanup_attr(kdump_ctx *ctx)
 {
 	struct attr_hash *tbl, *tblnext;
-	struct dyn_attr_template *dt, *dtnext;
 
-	clear_attrs(ctx);
+	dealloc_attr(ctx->global_attrs[GKI_dir_root]);
 
 	tblnext = ctx->attr;
 	while(tblnext) {
@@ -442,14 +452,6 @@ cleanup_attr(kdump_ctx *ctx)
 		free(tbl);
 	}
 	ctx->attr = NULL;
-
-	dtnext = ctx->tmpl;
-	while(dtnext) {
-		dt = dtnext;
-		dtnext = dt->next;
-		free(dt);
-	}
-	ctx->tmpl = NULL;
 }
 
 /**  Initialize statically allocated attributes
