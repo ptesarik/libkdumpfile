@@ -1,5 +1,5 @@
-/**  @file src/attr.c
- * Attribute handling.
+/** @internal @file src/attr.c
+ * @brief Attribute handling.
  */
 /* Copyright (C) 2015 Petr Tesarik <ptesarik@suse.cz>
 

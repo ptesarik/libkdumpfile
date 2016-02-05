@@ -1,5 +1,5 @@
-/**  @file src/open.c
- * Routines for opening dumps.
+/** @internal @file src/open.c
+ * @brief Routines for opening dumps.
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
 

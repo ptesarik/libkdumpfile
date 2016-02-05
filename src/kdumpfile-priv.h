@@ -1,5 +1,5 @@
-/**  @file src/kdumpfile-priv.h
- * Private interfaces for libkdumpfile (kernel coredump file access).
+/** @internal @file src/kdumpfile-priv.h
+ * @brief Private interfaces for libkdumpfile (kernel coredump file access).
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
 

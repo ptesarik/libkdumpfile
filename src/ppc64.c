@@ -1,5 +1,5 @@
-/**  @file src/ppc64.c
- * Functions for the ppc64 architecture.
+/** @internal @file src/ppc64.c
+ * @brief Functions for the ppc64 architecture.
  */
 /* Copyright (C) 2015 Free Software Foundation, Inc.
 

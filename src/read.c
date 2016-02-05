@@ -1,5 +1,5 @@
-/**  @file src/read.c
- * Routines for reading dumps.
+/** @internal @file src/read.c
+ * @brief Routines for reading dumps.
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
 

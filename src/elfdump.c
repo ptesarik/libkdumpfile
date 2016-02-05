@@ -1,5 +1,5 @@
-/**  @file src/elfdump.c
- * Routines to work with ELF kdump files.
+/** @internal @file src/elfdump.c
+ * @brief Routines to work with ELF kdump files.
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
 

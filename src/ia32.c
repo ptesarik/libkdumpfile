@@ -1,5 +1,5 @@
-/**  @file src/ia32.c
- * Functions for the Intel 32-bit (x86) architecture.
+/** @internal @file src/ia32.c
+ * @brief Functions for the Intel 32-bit (x86) architecture.
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
 
@@ -410,3 +410,4 @@ const struct arch_ops ia32_ops = {
 	.vtop = ia32_vtop,
 	.cleanup = ia32_cleanup,
 };
+

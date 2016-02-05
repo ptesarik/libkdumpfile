@@ -1,5 +1,5 @@
-/**  @file src/lkcd.c
- * Routines to read LKCD dump files.
+/** @internal @file src/lkcd.c
+ * @brief Routines to read LKCD dump files.
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
 

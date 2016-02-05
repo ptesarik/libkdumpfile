@@ -1,5 +1,5 @@
-/**  @file src/todo.c
- * TODO items - formats which are not yet supported.
+/** @internal @file src/todo.c
+ * @brief TODO items - formats which are not yet supported.
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
 

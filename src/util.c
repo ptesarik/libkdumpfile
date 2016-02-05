@@ -1,5 +1,5 @@
-/**  @file src/util.c
- * Utility functions.
+/** @internal @file src/util.c
+ * @brief Utility functions.
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
 

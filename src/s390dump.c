@@ -1,5 +1,5 @@
-/**  @file src/s390dump.c
- * Routines to read S390 dump files.
+/** @internal @file src/s390dump.c
+ * @brief Routines to read S390 dump files.
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
 

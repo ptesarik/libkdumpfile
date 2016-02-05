@@ -1,5 +1,5 @@
-/**  @file src/devmem.c
- * Routines to read from /dev/mem.
+/** @internal @file src/devmem.c
+ * @brief Routines to read from /dev/mem.
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
 

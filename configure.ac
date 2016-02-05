@@ -33,6 +33,14 @@ LT_INIT
 
 DX_INIT_DOXYGEN([$PACKAGE_NAME],[Doxyfile],[doc])
 
+AC_ARG_ENABLE(internal-doc,
+  [AS_HELP_STRING([--enable-internal-doc],
+    [Generate documentation for internal APIs @<:@default=no@:>@])],
+  [], [enable_internal_doc=no])
+AS_IF([test "x$enable_internal_doc" != xno],
+    [DX_ENV_APPEND(ENABLE_INTERNAL, YES)],
+    [DX_ENV_APPEND(ENABLE_INTERNAL, NO)])
+
 AC_CHECK_SIZEOF(long)
 
 AC_SUBST(REQUIRES_PRIVATE)

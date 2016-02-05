@@ -1,5 +1,5 @@
-/**  @file src/vtop.c
- * Virtual-to-physical address translation.
+/** @internal @file src/vtop.c
+ * @brief Virtual-to-physical address translation.
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
 

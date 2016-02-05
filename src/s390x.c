@@ -1,5 +1,5 @@
-/**  @file src/s390x.c
- * Functions for the s390x architecture.
+/** @internal @file src/s390x.c
+ * @brief Functions for the s390x architecture.
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
 
