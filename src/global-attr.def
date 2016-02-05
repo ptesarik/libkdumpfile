@@ -24,7 +24,12 @@
 ATTR(root, "", dir_root, directory, struct attr_data *)
 ATTR(root, "arch", dir_arch, directory, struct attr_data *)
 ATTR(root, "cpu", dir_cpu, directory, struct attr_data *)
+ATTR(root, "format", dir_format, directory, struct attr_data *)
 ATTR(root, "linux", dir_linux, directory, struct attr_data *)
+
+/* format name */
+ATTR(format, "name", format_name, string, const char *)
+ATTR(format, "longname", format_longname, string, const char *)
 
 /* utsname */
 ATTR(linux, "uts", dir_linux_uts, directory, struct attr_data *)

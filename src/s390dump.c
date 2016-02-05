@@ -130,7 +130,7 @@ s390_probe(kdump_ctx *ctx)
 		return set_error(ctx, kdump_unsupported,
 				 "Invalid S390DUMP signature");
 
-	ctx->format = "S390";
+	set_attr_static_string(ctx, GATTR(GKI_format_longname), "S390 Dump");
 	set_byte_order(ctx, kdump_big_endian);
 
 	pos = dump32toh(ctx, dh->h1.hdr_size) +
@@ -189,6 +189,7 @@ s390_cleanup(kdump_ctx *ctx)
 }
 
 const struct format_ops s390dump_ops = {
+	.name = "s390dump",
 	.probe = s390_probe,
 	.read_page = s390_read_page,
 	.cleanup = s390_cleanup,

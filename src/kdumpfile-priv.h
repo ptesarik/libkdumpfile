@@ -67,6 +67,13 @@ enum kdump_arch {
 };
 
 struct format_ops {
+	/**  Format name (identifier).
+	 * This is a unique identifier for the dump file format. In other
+	 * words, there is a 1:1 mapping between this identifier and the
+	 * access methods for the corresponding dump file.
+	 */
+	const char *name;
+
 	/* Probe for a given file format.
 	 * Input:
 	 *   ctx->buffer     MAX_PAGE_SIZE bytes from the file beginning
@@ -353,7 +360,6 @@ struct vtop_map {
 
 struct _tag_kdump_ctx {
 	int fd;			/* dump file descriptor */
-	const char *format;	/* file format (descriptive name) */
 
 	/* format-specific fields */
 	const struct format_ops *ops;
@@ -404,8 +410,8 @@ struct _tag_kdump_ctx {
 #define elfdump_ops INTERNAL_NAME(elfdump_ops)
 extern const struct format_ops elfdump_ops;
 
-#define kvm_ops INTERNAL_NAME(kvm_ops)
-extern const struct format_ops kvm_ops;
+#define qemu_ops INTERNAL_NAME(qemu_ops)
+extern const struct format_ops qemu_ops;
 
 #define libvirt_ops INTERNAL_NAME(libvirt_ops)
 extern const struct format_ops libvirt_ops;

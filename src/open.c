@@ -43,7 +43,7 @@ static kdump_status setup_version_code(kdump_ctx *ctx);
 
 static const struct format_ops *formats[] = {
 	&elfdump_ops,
-	&kvm_ops,
+	&qemu_ops,
 	&libvirt_ops,
 	&xc_save_ops,
 	&xc_core_ops,
@@ -138,6 +138,8 @@ kdump_open_known(kdump_ctx *ctx)
 {
 	const struct attr_data *attr;
 	kdump_status res;
+
+	set_attr_static_string(ctx, GATTR(GKI_format_name), ctx->ops->name);
 
 	if (!lookup_attr(ctx, GATTR(GKI_linux_uts_sysname)))
 		/* If this fails, it is not fatal. */

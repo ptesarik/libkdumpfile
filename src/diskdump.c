@@ -680,9 +680,11 @@ diskdump_probe(kdump_ctx *ctx)
 		{ 'K', 'D', 'U', 'M', 'P', ' ', ' ', ' ' };
 
 	if (!memcmp(ctx->buffer, magic_diskdump, sizeof magic_diskdump))
-		ctx->format = "diskdump";
+		set_attr_static_string(ctx, GATTR(GKI_format_longname),
+				       "Diskdump");
 	else if (!memcmp(ctx->buffer, magic_kdump, sizeof magic_kdump))
-		ctx->format = "compressed kdump";
+		set_attr_static_string(ctx, GATTR(GKI_format_longname),
+				       "Compressed KDUMP");
 	else
 		return set_error(ctx, kdump_unsupported,
 				 "Unknown diskdump signature");
@@ -704,6 +706,7 @@ diskdump_cleanup(kdump_ctx *ctx)
 }
 
 const struct format_ops diskdump_ops = {
+	.name = "diskdump",
 	.probe = diskdump_probe,
 	.read_page = diskdump_read_page,
 	.cleanup = diskdump_cleanup,

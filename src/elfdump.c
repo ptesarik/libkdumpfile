@@ -42,7 +42,7 @@
 # define EM_AARCH64      183
 #endif
 
-static const struct format_ops xen_domU_ops;
+static const struct format_ops xc_core_elf_ops;
 
 struct xen_p2m {
 	uint64_t pfn;
@@ -654,7 +654,7 @@ open_common(kdump_ctx *ctx)
 		if (!ctx->xen_map)
 			return set_error(ctx, kdump_unsupported,
 					 "Missing Xen P2M mapping");
-		ctx->ops = &xen_domU_ops;
+		ctx->ops = &xc_core_elf_ops;
 	}
 
 	return kdump_ok;
@@ -695,14 +695,16 @@ elf_probe(kdump_ctx *ctx)
         if ((elf32->e_ident[EI_CLASS] == ELFCLASS32) &&
 	    (dump16toh(ctx, elf32->e_type) == ET_CORE) &&
 	    (dump32toh(ctx, elf32->e_version) == EV_CURRENT)) {
-		ctx->format = "ELF dump, 32-bit";
+		set_attr_static_string(ctx, GATTR(GKI_format_longname),
+				       "ELF32 dump");
 		ret = init_elf32(ctx, elf32);
 		if (ret == kdump_ok)
 			ret = open_common(ctx);
 	} else if ((elf64->e_ident[EI_CLASS] == ELFCLASS64) &&
 		   (dump16toh(ctx, elf64->e_type) == ET_CORE) &&
 		   (dump32toh(ctx, elf64->e_version) == EV_CURRENT)) {
-		ctx->format = "ELF dump, 64-bit";
+		set_attr_static_string(ctx, GATTR(GKI_format_longname),
+				       "ELF64 dump");
 		ret = init_elf64(ctx, elf64);
 		if (ret == kdump_ok)
 			ret = open_common(ctx);
@@ -735,12 +737,14 @@ elf_cleanup(kdump_ctx *ctx)
 };
 
 const struct format_ops elfdump_ops = {
+	.name = "elf",
 	.probe = elf_probe,
 	.read_page = elf_read_page,
 	.cleanup = elf_cleanup,
 };
 
-static const struct format_ops xen_domU_ops = {
+static const struct format_ops xc_core_elf_ops = {
+	.name = "xc_core_elf",
 	.read_page = xc_read_page,
 	.read_kpage = xc_read_kpage,
 	.mfn_to_pfn = xc_mfn_to_pfn,

@@ -113,13 +113,6 @@ kdump_enum_attr_val(kdump_ctx *ctx, const struct kdump_attr *parent,
 	return kdump_ok;
 }
 
-
-const char *
-kdump_format(kdump_ctx *ctx)
-{
-	return ctx->format;
-}
-
 kdump_byte_order_t
 kdump_byte_order(kdump_ctx *ctx)
 {
@@ -169,6 +162,12 @@ kdump_get_string_attr(kdump_ctx *ctx, const char *key)
 	return (attr && attr->template->type == kdump_string)
 		? attr_value(attr)->string
 		: NULL;
+}
+
+const char *
+kdump_format(kdump_ctx *ctx)
+{
+	return kdump_get_string_attr(ctx, GATTR(GKI_format_name));
 }
 
 const char *

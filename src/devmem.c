@@ -147,7 +147,8 @@ devmem_probe(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		return ret;
 
-	ctx->format = "live source";
+	set_attr_static_string(ctx, GATTR(GKI_format_longname),
+			       "Live memory source");
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 	set_byte_order(ctx, kdump_little_endian);
 #else
@@ -164,6 +165,7 @@ devmem_probe(kdump_ctx *ctx)
 }
 
 const struct format_ops devmem_ops = {
+	.name = "memory",
 	.probe = devmem_probe,
 	.read_page = devmem_read_page,
 };

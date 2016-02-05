@@ -35,7 +35,7 @@
 #include <string.h>
 
 static kdump_status
-kvm_probe(kdump_ctx *ctx)
+qemu_probe(kdump_ctx *ctx)
 {
 	static const char magic[] =
 		{ 'Q', 'E', 'V', 'M' };
@@ -43,13 +43,15 @@ kvm_probe(kdump_ctx *ctx)
 	if (memcmp(ctx->buffer, magic, sizeof magic))
 		return kdump_unsupported;
 
-	/* KVM dump not yet implemented */
-	ctx->format = "KVM";
+	/* QEMU snapshot not yet implemented */
+	set_attr_static_string(ctx, GATTR(GKI_format_longname),
+			       "QEMU snapshot");
 	return kdump_unsupported;
 }
 
-const struct format_ops kvm_ops = {
-	.probe = kvm_probe,
+const struct format_ops qemu_ops = {
+	.name = "qemu",
+	.probe = qemu_probe,
 };
 
 static kdump_status
@@ -61,12 +63,14 @@ libvirt_probe(kdump_ctx *ctx)
 	if (memcmp(ctx->buffer, magic, sizeof magic))
 		return kdump_unsupported;
 
-	/* Libvirt dump not yet implemented */
-	ctx->format = "Libvirt";
+	/* Libvirt core dump not yet implemented */
+	set_attr_static_string(ctx, GATTR(GKI_format_longname),
+			       "Libvirt core dump");
 	return kdump_unsupported;
 }
 
 const struct format_ops libvirt_ops = {
+	.name = "libvirt",
 	.probe = libvirt_probe,
 };
 
@@ -81,11 +85,13 @@ xc_save_probe(kdump_ctx *ctx)
 		return kdump_unsupported;
 
 	/* Xen xc_save not yet implemented */
-	ctx->format = "Xen xc_save";
+	set_attr_static_string(ctx, GATTR(GKI_format_longname),
+			       "Xen xc_save");
 	return kdump_unsupported;
 }
 
 const struct format_ops xc_save_ops = {
+	.name = "xc_save",
 	.probe = xc_save_probe,
 };
 
@@ -101,9 +107,11 @@ xc_core_probe(kdump_ctx *ctx)
 
 	firstbyte = *(unsigned char*)ctx->buffer;
 	if (firstbyte == 0xed)
-		ctx->format = "Xen xc_core";
+		set_attr_static_string(ctx, GATTR(GKI_format_longname),
+				       "Xen xc_core");
 	else if (firstbyte == 0xee)
-		ctx->format = "Xen xc_core hvm";
+		set_attr_static_string(ctx, GATTR(GKI_format_longname),
+				       "Xen xc_core (HVM)");
 	else
 		return kdump_unsupported;
 
@@ -112,6 +120,7 @@ xc_core_probe(kdump_ctx *ctx)
 }
 
 const struct format_ops xc_core_ops = {
+	.name = "xc_core",
 	.probe = xc_core_probe,
 };
 
@@ -125,10 +134,12 @@ mclxcd_probe(kdump_ctx *ctx)
 		return kdump_unsupported;
 
 	/* MCLXCD dump not yet implemented */
-	ctx->format = "MCLXCD";
+	set_attr_static_string(ctx, GATTR(GKI_format_longname),
+			       "Mision Critical Linux Crash Dump");
 	return kdump_unsupported;
 }
 
 const struct format_ops mclxcd_ops = {
+	.name = "mclxcd",
 	.probe = mclxcd_probe,
 };

@@ -313,7 +313,7 @@ struct pfn_block {
 /* Maximum size of the format name: the version field is a 32-bit integer,
  * so it cannot be longer than 10 decimal digits.
  */
-#define LKCD_FORMAT_PFX	"LKCD v"
+#define LKCD_FORMAT_PFX	"Linux Kernel Crash Dump v"
 #define MAX_FORMAT_NAME	(sizeof(LKCD_FORMAT_PFX) + 10)
 
 struct lkcd_priv {
@@ -835,11 +835,12 @@ open_common(kdump_ctx *ctx)
 
 	lkcdp->version = base_version(dump32toh(ctx, dh->dh_version));
 	snprintf(lkcdp->format, sizeof(lkcdp->format),
-		 "LKCD v%u", lkcdp->version);
+		 LKCD_FORMAT_PFX "%u", lkcdp->version);
 
 	lkcdp->data_offset = LKCD_OFFSET_TO_FIRST_PAGE;
 
-	ctx->format = lkcdp->format;
+	set_attr_static_string(ctx, GATTR(GKI_format_longname),
+			       lkcdp->format);
 
 	ret = set_page_size(ctx, dump32toh(ctx, dh->dh_page_size));
 	if (ret != kdump_ok)
@@ -961,6 +962,7 @@ lkcd_cleanup(kdump_ctx *ctx)
 }
 
 const struct format_ops lkcd_ops = {
+	.name = "lkcd",
 	.probe = lkcd_probe,
 	.read_page = lkcd_read_page,
 	.cleanup = lkcd_cleanup,
