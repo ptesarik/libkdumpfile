@@ -481,19 +481,19 @@ const char *kdump_arch_name(kdump_ctx *ctx);
 kdump_xen_type_t kdump_xen_type(kdump_ctx *ctx);
 
 /**  Get target page size.
- * @params ctx  Dump file object.
+ * @param ctx  Dump file object.
  * @returns     Target page size (in bytes).
  */
 size_t kdump_pagesize(kdump_ctx *ctx);
 
 /**  Get target page shift.
- * @params ctx  Dump file object.
+ * @param ctx  Dump file object.
  * @returns     Target page shift (in bits).
  */
 unsigned kdump_pageshift(kdump_ctx *ctx);
 
 /**  Get target kernel physical base.
- * @params ctx  Dump file object.
+ * @param ctx  Dump file object.
  * @returns     Physical address where the kernel is loaded.
  */
 kdump_paddr_t kdump_phys_base(kdump_ctx *ctx);
@@ -562,7 +562,7 @@ unsigned kdump_num_cpus(kdump_ctx *ctx);
  * @param[out] value  Register value.
  * @returns           Error status.
  *
- * Get the value of register @index on CPU @cpu. Register indexing is
+ * Get the value of register @p index on CPU @p cpu. Register indexing is
  * architecture-specific, but the numbering of general registers follows
  * whatever order is used in `struct elf_prstatus`.
  */
