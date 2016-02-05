@@ -37,7 +37,11 @@
 #include <endian.h>
 
 /* Minimize chance of name clashes (in a static link) */
+#ifndef PIC
 #define INTERNAL_NAME(x)	_libkdump_priv_ ## x
+#else
+#define INTERNAL_NAME(x)	x
+#endif
 
 /* This should cover all possibilities:
  * - no supported architecture has less than 4K pages.
