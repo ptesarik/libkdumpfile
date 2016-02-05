@@ -1,7 +1,7 @@
+#include <Python.h>
 #include <kdumpfile.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <Python.h>
 
 typedef struct {
 	PyObject_HEAD
