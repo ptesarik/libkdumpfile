@@ -72,7 +72,6 @@ test_scripts = \
 	lkcd-duplicate-middle
 
 dist_check_DATA = \
-	lkcd-empty.data \
 	lkcd-basic.expect
 
 dist_check_SCRIPTS = \

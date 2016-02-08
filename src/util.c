@@ -547,11 +547,11 @@ paged_read(int fd, void *buffer, size_t size)
 		ssize_t rd = read(fd, buffer, chunksize);
 		if (rd < 0)
 			return rd;
+
+		buffer += rd;
+		todo -= rd;
 		if (rd != chunksize)
 			break;
-
-		buffer += chunksize;
-		todo -= chunksize;
 	}
 	return size - todo;
 }

@@ -12,6 +12,7 @@ arch_name = $arch
 page_shift = $page_shift
 page_offset = $page_offset
 panic_string = $panic
+dump_level = 1
 
 uts.sysname = $sysname
 uts.nodename = $node
@@ -22,8 +23,6 @@ uts.domainname = $domain
 
 NR_CPUS = 8
 num_cpus = 1
-
-DATA=$srcdir/lkcd-empty.data
 EOF
 rc=$?
 if [ $rc -ne 0 ]; then

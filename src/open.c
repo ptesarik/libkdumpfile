@@ -112,10 +112,9 @@ kdump_set_fd(kdump_ctx *ctx, int fd)
 	ctx->fd = fd;
 
 	rd = paged_read(ctx->fd, ctx->buffer, MAX_PAGE_SIZE);
-	if (rd != MAX_PAGE_SIZE)
-		return set_error(ctx, read_error(rd),
-				 "Cannot read %lu bytes at 0",
-				 MAX_PAGE_SIZE);
+	if (rd < 0)
+		return set_error(ctx, kdump_syserr, "Cannot read file header");
+	memset(ctx->buffer + rd, 0, MAX_PAGE_SIZE - rd);
 
 	for (i = 0; i < ARRAY_SIZE(formats); ++i) {
 		ctx->ops = formats[i];
