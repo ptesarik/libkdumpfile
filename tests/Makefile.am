@@ -60,6 +60,7 @@ test_scripts = \
 	elf-empty-s390 \
 	elf-empty-s390x \
 	elf-empty-x86_64 \
+	elf-basic \
 	lkcd-empty-i386 \
 	lkcd-empty-ppc64 \
 	lkcd-empty-x86_64 \
@@ -80,7 +81,7 @@ test_scripts = \
 
 dist_check_DATA = \
 	elf-empty.data \
-	lkcd-basic.expect
+	basic.expect
 
 dist_check_SCRIPTS = \
 	elf-empty \

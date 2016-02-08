@@ -1,6 +1,4 @@
-#
-# The actual call to mklkcd and dumpdata
-#
+#! /bin/sh
 
 mkdir -p out || exit 99
 
@@ -10,31 +8,34 @@ dumpfile="out/${name}.dump"
 resultfile="out/${name}.result"
 expectfile="$srcdir/basic.expect"
 
-echo "@0 $pageflags" >"$datafile"
+ei_class=2
+ei_data=1
+e_machine=62
+e_phoff=64
+page_size=4096
+
+echo "@phdr type=LOAD offset=$page_size memsz=$page_size" >"$datafile"
 cat "$expectfile" >> "$datafile"
 
-./mklkcd "$dumpfile" <<EOF
-arch_name = x86_64
-page_shift = 12
-page_offset = 0xffff880000000000
+./mkelf "$dumpfile" <<EOF
+ei_class = $ei_class
+ei_data = $ei_data
+e_machine = $e_machine
+e_phoff = $e_phoff
 
-NR_CPUS = 8
-num_cpus = 1
-
-compression = $compression
 DATA = $datafile
 EOF
 rc=$?
 if [ $rc -ne 0 ]; then
-    echo "Cannot create lkcd file" >&2
+    echo "Cannot create ELF file" >&2
     exit $rc
 fi
-echo "Created LKCD dump: $dumpfile"
+echo "Created ELF dump: $dumpfile"
 
 ./dumpdata "$dumpfile" 0 4096 >"$resultfile"
 rc=$?
 if [ $rc -ne 0 ]; then
-    echo "Cannot dump lkcd data" >&2
+    echo "Cannot dump ELF data" >&2
     exit $rc
 fi
 
