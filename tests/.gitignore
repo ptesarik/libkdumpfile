@@ -1,6 +1,7 @@
 # Resulting binaries
 checkattr
 dumpdata
+mkelf
 mklkcd
 privptr
 

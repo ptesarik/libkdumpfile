@@ -1,0 +1,19 @@
+#! /bin/sh
+
+#
+# elf-empty-x86_64
+#
+# Create an empty dump file and verify meta-attributes.
+#
+
+arch=x86_64
+byte_order=1
+ptr_size=8
+page_shift=12
+page_size=4096
+
+ei_class=2
+ei_data=1
+e_machine=62
+
+. "$srcdir"/elf-empty

@@ -38,6 +38,7 @@ checkattr_LDADD = \
 	$(LDADD) \
 	$(top_builddir)/src/libkdumpfile.la
 
+mkelf_SOURCES = mkelf.c
 mklkcd_SOURCES = mklkcd.c
 
 dumpdata_SOURCES = dumpdata.c
@@ -49,10 +50,14 @@ privptr_LDADD = $(top_builddir)/src/libkdumpfile.la
 check_PROGRAMS = \
 	checkattr \
 	dumpdata \
+	mkelf \
 	mklkcd \
 	privptr
 
 test_scripts = \
+	elf-empty-i386 \
+	elf-empty-i386-elf64 \
+	elf-empty-x86_64 \
 	lkcd-empty-i386 \
 	lkcd-empty-ppc64 \
 	lkcd-empty-x86_64 \
@@ -72,9 +77,11 @@ test_scripts = \
 	lkcd-duplicate-middle
 
 dist_check_DATA = \
+	elf-empty.data \
 	lkcd-basic.expect
 
 dist_check_SCRIPTS = \
+	elf-empty \
 	lkcd-empty \
 	lkcd-basic \
 	lkcd-wrong-page-size \

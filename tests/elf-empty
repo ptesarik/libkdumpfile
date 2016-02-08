@@ -1,0 +1,39 @@
+#
+# The actual call to mkelf and checkattr
+#
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+dumpfile="out/${name}.dump"
+
+./mkelf "$dumpfile" <<EOF
+ei_class = $ei_class
+ei_data = $ei_data
+e_machine = $e_machine
+e_phoff = $page_size
+
+DATA = $srcdir/elf-empty.data
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create ELF file" >&2
+    exit $rc
+fi
+echo "Created empty ELF dump: $dumpfile"
+
+./checkattr "$dumpfile" <<EOF
+arch = directory:
+arch.name = string: $arch
+arch.byte_order = number: $byte_order
+arch.ptr_size = number: $ptr_size
+arch.page_shift = number: $page_shift
+arch.page_size = number: $page_size
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Attribute check failed" >&2
+    exit $rc
+fi
+
+exit 0

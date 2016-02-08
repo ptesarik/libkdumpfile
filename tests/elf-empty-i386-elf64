@@ -1,0 +1,19 @@
+#! /bin/sh
+
+#
+# elf-empty-i386-elf64
+#
+# Create an empty ELF64 dump file and verify meta-attributes.
+#
+
+arch=i386
+byte_order=1
+ptr_size=4
+page_shift=12
+page_size=4096
+
+ei_class=2
+ei_data=1
+e_machine=3
+
+. "$srcdir"/elf-empty
