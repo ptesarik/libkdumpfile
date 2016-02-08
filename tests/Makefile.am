@@ -57,6 +57,8 @@ check_PROGRAMS = \
 test_scripts = \
 	elf-empty-i386 \
 	elf-empty-i386-elf64 \
+	elf-empty-s390 \
+	elf-empty-s390x \
 	elf-empty-x86_64 \
 	lkcd-empty-i386 \
 	lkcd-empty-ppc64 \

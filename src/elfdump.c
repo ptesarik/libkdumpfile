@@ -75,12 +75,14 @@ struct elfdump_priv {
 	char *strtab;
 
 	off_t xen_pages_offset;
+
+	int elfclass;
 };
 
 static void elf_cleanup(kdump_ctx *ctx);
 
 static enum kdump_arch
-mach2arch(unsigned mach)
+mach2arch(unsigned mach, int elfclass)
 {
 	switch(mach) {
 	case EM_AARCH64:
@@ -93,7 +95,9 @@ mach2arch(unsigned mach)
 	case EM_MIPS:	return ARCH_MIPS;
 	case EM_PPC:	return ARCH_PPC;
 	case EM_PPC64:	return ARCH_PPC64;
-	case EM_S390:	return ARCH_S390;
+	case EM_S390:	return (elfclass == ELFCLASS64
+				? ARCH_S390X
+				: ARCH_S390);
 	case EM_386:	return ARCH_X86;
 	case EM_X86_64:	return ARCH_X86_64;
 	default:	return ARCH_UNKNOWN;
@@ -551,9 +555,12 @@ process_elf_notes(kdump_ctx *ctx, void *notes)
 		p += seg->size;
 	}
 
-	ret = set_arch(ctx, mach2arch(get_arch_machine(ctx)));
-	if (ret != kdump_ok)
-		return ret;
+	if (!isset_arch_name(ctx)) {
+		uint_fast16_t mach = get_arch_machine(ctx);
+		ret = set_arch(ctx, mach2arch(mach, edp->elfclass));
+		if (ret != kdump_ok)
+			return ret;
+	}
 
 	p = notes;
 	for (i = 0; i < edp->num_note_segments; ++i) {
@@ -695,6 +702,7 @@ elf_probe(kdump_ctx *ctx)
         if ((elf32->e_ident[EI_CLASS] == ELFCLASS32) &&
 	    (dump16toh(ctx, elf32->e_type) == ET_CORE) &&
 	    (dump32toh(ctx, elf32->e_version) == EV_CURRENT)) {
+		edp->elfclass = ELFCLASS32;
 		set_attr_static_string(ctx, GATTR(GKI_format_longname),
 				       "ELF32 dump");
 		ret = init_elf32(ctx, elf32);
@@ -703,6 +711,7 @@ elf_probe(kdump_ctx *ctx)
 	} else if ((elf64->e_ident[EI_CLASS] == ELFCLASS64) &&
 		   (dump16toh(ctx, elf64->e_type) == ET_CORE) &&
 		   (dump32toh(ctx, elf64->e_version) == EV_CURRENT)) {
+		edp->elfclass = ELFCLASS64;
 		set_attr_static_string(ctx, GATTR(GKI_format_longname),
 				       "ELF64 dump");
 		ret = init_elf64(ctx, elf64);

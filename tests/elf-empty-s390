@@ -1,0 +1,19 @@
+#! /bin/sh
+
+#
+# elf-empty-s390
+#
+# Create an empty dump file and verify meta-attributes.
+#
+
+arch=s390
+byte_order=0
+ptr_size=4
+page_shift=12
+page_size=4096
+
+ei_class=1
+ei_data=2
+e_machine=22
+
+. "$srcdir"/elf-empty
