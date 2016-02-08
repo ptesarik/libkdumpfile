@@ -62,6 +62,7 @@ test_scripts = \
 	elf-empty-x86_64 \
 	elf-basic \
 	elf-short-page \
+	elf-fractional \
 	lkcd-empty-i386 \
 	lkcd-empty-ppc64 \
 	lkcd-empty-x86_64 \

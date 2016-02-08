@@ -108,20 +108,21 @@ static kdump_status
 elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
-	kdump_paddr_t addr = pfn * get_page_size(ctx);
-	kdump_paddr_t segoff;
-	int i;
+	kdump_paddr_t addr, endaddr;
 	off_t pos;
 	ssize_t rd;
+	int i;
 
 	if (pfn == ctx->last_pfn)
 		return kdump_ok;
 
+	addr = pfn << get_page_shift(ctx);
+	endaddr = addr + get_page_size(ctx);
 	for (i = 0; i < edp->num_load_segments; i++) {
 		struct load_segment *pls = &edp->load_segments[i];
-		segoff = addr - pls->phys;
-		if (segoff < pls->size) {
-			pos = pls->file_offset + segoff;
+		if (addr >= pls->phys &&
+		    endaddr <= pls->phys + pls->size) {
+			pos = pls->file_offset + addr - pls->phys;
 			break;
 		}
 	}

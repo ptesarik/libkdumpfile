@@ -1,0 +1,51 @@
+#! /bin/sh
+
+#
+# Create an ELF file with a page that is included twice (with different
+# virtual addresses), but the first occurence is incomplete.
+#
+
+mkdir -p out || exit 99
+
+
+name=$( basename "$0" )
+datafile="out/${name}.data"
+dumpfile="out/${name}.dump"
+
+magic="4E 6F 4D 61 67 69 63 21"
+cat >"$datafile" <<EOF
+@phdr type=LOAD vaddr=0x101000 paddr=0x1000 offset=0x1000 memsz=0x600
+00*0x600
+@phdr type=LOAD vaddr=0x201000 paddr=0x1000 offset=0x2000 memsz=0x1000
+00*4088
+$magic
+EOF
+
+./mkelf "$dumpfile" <<EOF
+ei_class = 2
+ei_data = 1
+e_machine = 62
+e_phoff = 64
+
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create ELF file" >&2
+    exit $rc
+fi
+echo "Created ELF dump: $dumpfile"
+
+result=$( ./dumpdata "$dumpfile" 0x1ff8 8 )
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot read data" >&2
+    exit $rc
+fi
+echo "Data: $result"
+if [ "$result" != "$magic" ] ; then
+    echo "Wrong data found" >&2
+    exit 1
+fi
+
+exit 0
