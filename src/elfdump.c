@@ -110,29 +110,23 @@ elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	struct elfdump_priv *edp = ctx->fmtdata;
 	kdump_paddr_t addr = pfn * get_page_size(ctx);
 	kdump_paddr_t segoff;
+	int i;
 	off_t pos;
 	ssize_t rd;
 
 	if (pfn == ctx->last_pfn)
 		return kdump_ok;
 
-	if (edp->num_load_segments == 1) {
-		pos = (off_t)addr + (off_t)edp->load_segments[0].file_offset;
-	} else {
-		struct load_segment *pls;
-		int i;
-		for (i = 0; i < edp->num_load_segments; i++) {
-			pls = &edp->load_segments[i];
-			segoff = addr - pls->phys;
-			if (segoff < pls->size) {
-				pos = pls->file_offset + segoff;
-				break;
-			}
+	for (i = 0; i < edp->num_load_segments; i++) {
+		struct load_segment *pls = &edp->load_segments[i];
+		segoff = addr - pls->phys;
+		if (segoff < pls->size) {
+			pos = pls->file_offset + segoff;
+			break;
 		}
-		if (i >= edp->num_load_segments)
-	                return set_error(ctx, kdump_nodata,
-					 "Page not found");
 	}
+	if (i >= edp->num_load_segments)
+		return set_error(ctx, kdump_nodata, "Page not found");
 
 	/* read page data */
 	rd = pread(ctx->fd, ctx->page, get_page_size(ctx), pos);
