@@ -62,8 +62,9 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 
 	self->ctx = kdump_init();
 
-	if (! self->ctx) {
-		PyErr_SetString(PyExc_RuntimeError, "Cannot kdump_init()");
+	if (!self->ctx) {
+		PyErr_SetString(PyExc_MemoryError,
+				"Could not create kdump context");
 		Py_XDECREF(self);
 		Py_XDECREF(fo);
 		self = NULL;
@@ -71,7 +72,8 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 	}
 
 	if (kdump_set_fd(self->ctx, fd)) {
-		PyErr_SetString(PyExc_RuntimeError, "Cannot kdump_set_fd()");
+		PyErr_Format(PyExc_RuntimeError, "kdump_set_fd failed: %s",
+			     kdump_err_str(self->ctx));
 		Py_XDECREF(self);
 		Py_XDECREF(fo);
 		self = NULL;
@@ -101,35 +103,59 @@ kdumpfile_dealloc(PyObject *_self)
 	self->ob_type->tp_free((PyObject*)self);
 }
 
+static PyObject *exception_map(kdump_status status)
+{
+	switch (status) {
+	case kdump_ok:		return NULL;
+	case kdump_syserr:	return PyExc_SystemError;
+	case kdump_unsupported: return PyExc_TypeError;
+	case kdump_nodata:	return PyExc_IndexError;
+	case kdump_dataerr:	return PyExc_IOError;
+	case kdump_invalid:	return PyExc_IOError;
+	case kdump_nokey:	return PyExc_KeyError;
+	case kdump_eof:		return PyExc_EOFError;
+	default:		return PyExc_RuntimeError;
+	};
+}
+
 static PyObject *kdumpfile_read (PyObject *_self, PyObject *args, PyObject *kw)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
 	PyObject *obj;
 	kdump_paddr_t addr;
+	kdump_status status;
 	int addrspace;
 	unsigned long size;
 	static char *keywords[] = {"addrspace", "address", "size", NULL};
 	size_t r;
 
-	if (! PyArg_ParseTupleAndKeywords(args, kw, "ikk:", keywords, &addrspace, &addr, &size)) {
-		Py_RETURN_NONE;
-	}
+	if (!PyArg_ParseTupleAndKeywords(args, kw, "ikk:", keywords,
+					 &addrspace, &addr, &size))
+		return NULL;
 
-	if (! size) {
-		PyErr_SetString(PyExc_RuntimeError, "Zero size");
+	if (!size) {
+		PyErr_SetString(PyExc_ValueError, "Zero size buffer");
 		return NULL;
 	}
 
-	obj = PyByteArray_FromStringAndSize(0, size);
-
-	if (! obj) {
-		PyErr_SetString(PyExc_RuntimeError, "Cannot create buffer");
+	obj = PyByteArray_FromStringAndSize(NULL, size);
+	if (!obj)
 		return NULL;
-	}
 
-	if ((r = kdump_read(self->ctx, addrspace, addr, PyByteArray_AS_STRING(obj), size)) != size) {
+	r = size;
+	status = kdump_readp(self->ctx, addrspace, addr,
+			     PyByteArray_AS_STRING(obj), &r);
+	if (status != kdump_ok) {
 		Py_XDECREF(obj);
-		PyErr_SetString(PyExc_RuntimeError, "Cannot read");
+		PyErr_Format(exception_map(status), "Cannot read: %s",
+			     kdump_err_str(self->ctx));
+		return NULL;
+	}
+
+	if (r != size) {
+		Py_XDECREF(obj);
+		PyErr_Format(PyExc_IOError, "Cannot read: %s",
+			     kdump_err_str(self->ctx));
 		return NULL;
 	}
 	return obj;
@@ -146,7 +172,7 @@ static int kdumpfile_dir2obj_it(void *data, const char *key, const struct kdump_
 {
 	struct attr2obj_data *cb_data = (struct attr2obj_data *)data;
 	PyObject *v = kdumpfile_attr2obj(cb_data->ctx, valp);
-	if (! v) return 1;
+	if (!v) return 1;
 	PyDict_SetItem(cb_data->dict, PyString_FromString(key), v);
 	return 0;
 }
@@ -163,10 +189,12 @@ static PyObject *kdumpfile_dir2obj(kdump_ctx *ctx, const struct kdump_attr *attr
 		return NULL;
 	}
 
+	/* This dictionary will be mutable. Is that intended? */
 	return cb_data.dict;
 }
 
-static PyObject *kdumpfile_attr2obj(kdump_ctx *ctx, const struct kdump_attr *attr)
+static PyObject *kdumpfile_attr2obj(kdump_ctx *ctx,
+				    const struct kdump_attr *attr)
 {
 	switch (attr->type) {
 		case kdump_number:
@@ -177,25 +205,26 @@ static PyObject *kdumpfile_attr2obj(kdump_ctx *ctx, const struct kdump_attr *att
 			return PyString_FromString(attr->val.string);
 		case kdump_directory:
 			return kdumpfile_dir2obj(ctx, attr);
-		default:
-			PyErr_SetString(PyExc_RuntimeError, "Unhandled attr type");
-			return NULL;
 	}
+
+	PyErr_Format(PyExc_TypeError, "Unhandled attr type (%d)", attr->type);
+	return NULL;
 }
 
-static PyObject *kdumpfile_getattr(PyObject *_self, PyObject *args, PyObject *kw)
+static PyObject *kdumpfile_getattr(PyObject *_self, PyObject *args,
+				   PyObject *kw)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
 	static char *keywords[] = {"name", NULL};
 	struct kdump_attr attr;
 	const char *name;
 
-	if (! PyArg_ParseTupleAndKeywords(args, kw, "s:", keywords, &name)) {
-		Py_RETURN_NONE;
-	}
+	if (!PyArg_ParseTupleAndKeywords(args, kw, "s:", keywords, &name))
+		return NULL;
 
 	if (kdump_get_attr(self->ctx, name, &attr) != kdump_ok) {
-		Py_RETURN_NONE;
+		PyErr_Format(PyExc_KeyError, "no such attribute `%s'", name);
+		return NULL;
 	}
 
 	return kdumpfile_attr2obj(self->ctx, &attr);
@@ -230,10 +259,10 @@ static PyObject *kdumpfile_get_symbol_func (PyObject *_self, void *_data)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
 
-	if (! self->cb_get_symbol)
+	if (!self->cb_get_symbol)
 		Py_RETURN_NONE;
-	Py_INCREF(self->cb_get_symbol);
 
+	Py_INCREF(self->cb_get_symbol);
 	return self->cb_get_symbol;
 }
 
@@ -241,13 +270,12 @@ int kdumpfile_set_symbol_func(PyObject *_self, PyObject *_set, void *_data)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
 
-	if (! PyCallable_Check(_set)) {
-		PyErr_SetString(PyExc_RuntimeError, "Argument must be callable");
-		return 1;
+	if (!PyCallable_Check(_set)) {
+		PyErr_SetString(PyExc_TypeError, "value must be callable");
+		return -1;
 	}
 
-	if (self->cb_get_symbol)
-		Py_XDECREF(self->cb_get_symbol);
+	Py_XDECREF(self->cb_get_symbol);
 	self->cb_get_symbol = _set;
 	Py_INCREF(self->cb_get_symbol);
 	return 0;
@@ -315,11 +343,6 @@ static PyTypeObject kdumpfile_object_type =
 	kdumpfile_new,                  /* tp_new */
 };
 
-static inline void pyncref(char* c)
-{
-	Py_INCREF((PyObject*)c);
-}
-
 PyMODINIT_FUNC
 init_kdumpfile (void)
 {
@@ -333,6 +356,6 @@ init_kdumpfile (void)
 
 	if (!mod) return;
 
-	pyncref((char*)&kdumpfile_object_type);
+	Py_INCREF((PyObject *)&kdumpfile_object_type);
 	PyModule_AddObject(mod, "kdumpfile", (PyObject*)&kdumpfile_object_type);
 }
