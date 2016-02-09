@@ -52,7 +52,6 @@ struct page_data_elf {
 			unsigned long long sh_type;
 			unsigned long long sh_flags;
 			unsigned long long sh_addr;
-			unsigned long long sh_offset;
 			unsigned long long sh_link;
 			unsigned long long sh_info;
 			unsigned long long sh_addralign;
@@ -61,7 +60,6 @@ struct page_data_elf {
 		struct {
 			unsigned long long p_type;
 			unsigned long long p_flags;
-			unsigned long long p_offset;
 			unsigned long long p_vaddr;
 			unsigned long long p_paddr;
 			unsigned long long p_memsz;
@@ -69,6 +67,7 @@ struct page_data_elf {
 		} phdr;
 	};
 
+	off_t filepos;
 	off_t filesz;
 
 	int (*parsehdr)(struct page_data *pg, char *p);
@@ -291,7 +290,7 @@ parseshdr(struct page_data *pg, char *p)
 		else if (!strcmp(p, "addr"))
 			num = pgelf->shdr.sh_addr = numarg(v);
 		else if (!strcmp(p, "offset"))
-			num = pgelf->shdr.sh_offset = numarg(v);
+			num = pgelf->filepos = numarg(v);
 		else if (!strcmp(p, "link"))
 			num = pgelf->shdr.sh_link = numarg(v);
 		else if (!strcmp(p, "info"))
@@ -311,11 +310,6 @@ parseshdr(struct page_data *pg, char *p)
 		}
 
 		p = endp;
-	}
-
-	if (fseek(pgelf->f, pgelf->shdr.sh_offset, SEEK_SET) != 0) {
-		perror("seek section data");
-		return TEST_ERR;
 	}
 
 	return TEST_OK;
@@ -364,7 +358,7 @@ parsephdr(struct page_data *pg, char *p)
 		else if (!strcmp(p, "flags"))
 			num = pgelf->phdr.p_flags = numarg(v);
 		else if (!strcmp(p, "offset"))
-			num = pgelf->phdr.p_offset = numarg(v);
+			num = pgelf->filepos = numarg(v);
 		else if (!strcmp(p, "vaddr"))
 			num = pgelf->phdr.p_vaddr = numarg(v);
 		else if (!strcmp(p, "paddr"))
@@ -386,11 +380,6 @@ parsephdr(struct page_data *pg, char *p)
 		p = endp;
 	}
 
-	if (fseek(pgelf->f, pgelf->phdr.p_offset, SEEK_SET) != 0) {
-		perror("seek segment data");
-		return TEST_ERR;
-	}
-
 	return TEST_OK;
 }
 
@@ -407,6 +396,7 @@ parseheader(struct page_data *pg, char *p)
 			return rc;
 	}
 
+	pgelf->filepos += pgelf->filesz;
 	pgelf->filesz = 0;
 
 	while (*p && isspace(*p))
@@ -443,7 +433,7 @@ finshdr32(struct page_data *pg)
 	shdr.sh_type = htodump32(be, pgelf->shdr.sh_type);
 	shdr.sh_flags = htodump32(be, pgelf->shdr.sh_flags);
 	shdr.sh_addr = htodump32(be, pgelf->shdr.sh_addr);
-	shdr.sh_offset = htodump32(be, pgelf->shdr.sh_offset);
+	shdr.sh_offset = htodump32(be, pgelf->filepos);
 	shdr.sh_size = htodump32(be, pgelf->filesz);
 	shdr.sh_link = htodump32(be, pgelf->shdr.sh_link);
 	shdr.sh_info = htodump32(be, pgelf->shdr.sh_info);
@@ -476,7 +466,7 @@ finshdr64(struct page_data *pg)
 	shdr.sh_type = htodump32(be, pgelf->shdr.sh_type);
 	shdr.sh_flags = htodump64(be, pgelf->shdr.sh_flags);
 	shdr.sh_addr = htodump64(be, pgelf->shdr.sh_addr);
-	shdr.sh_offset = htodump64(be, pgelf->shdr.sh_offset);
+	shdr.sh_offset = htodump64(be, pgelf->filepos);
 	shdr.sh_size = htodump64(be, pgelf->filesz);
 	shdr.sh_link = htodump32(be, pgelf->shdr.sh_link);
 	shdr.sh_info = htodump32(be, pgelf->shdr.sh_info);
@@ -505,8 +495,11 @@ finphdr32(struct page_data *pg)
 	Elf32_Phdr phdr;
 	off_t off;
 
+	if (!pgelf->phdr.p_memsz)
+		pgelf->phdr.p_memsz = pgelf->filesz;
+
 	phdr.p_type = htodump32(be, pgelf->phdr.p_type);
-	phdr.p_offset = htodump32(be, pgelf->phdr.p_offset);
+	phdr.p_offset = htodump32(be, pgelf->filepos);
 	phdr.p_vaddr = htodump32(be, pgelf->phdr.p_vaddr);
 	phdr.p_paddr = htodump32(be, pgelf->phdr.p_paddr);
 	phdr.p_filesz = htodump32(be, pgelf->filesz);
@@ -536,9 +529,12 @@ finphdr64(struct page_data *pg)
 	Elf64_Phdr phdr;
 	off_t off;
 
+	if (!pgelf->phdr.p_memsz)
+		pgelf->phdr.p_memsz = pgelf->filesz;
+
 	phdr.p_type = htodump32(be, pgelf->phdr.p_type);
 	phdr.p_flags = htodump64(be, pgelf->phdr.p_flags);
-	phdr.p_offset = htodump64(be, pgelf->phdr.p_offset);
+	phdr.p_offset = htodump64(be, pgelf->filepos);
 	phdr.p_vaddr = htodump32(be, pgelf->phdr.p_vaddr);
 	phdr.p_paddr = htodump64(be, pgelf->phdr.p_paddr);
 	phdr.p_filesz = htodump64(be, pgelf->filesz);
@@ -565,9 +561,14 @@ writepage(struct page_data *pg)
 {
 	struct page_data_elf *pgelf = pg->priv;
 
+	if (fseek(pgelf->f, pgelf->filepos, SEEK_SET) != 0) {
+		perror("seek data");
+		return TEST_ERR;
+	}
+
 	pgelf->filesz += pg->len;
 	if (fwrite(pg->buf, 1, pg->len, pgelf->f) != pg->len) {
-		perror("write page data");
+		perror("write data");
 		return TEST_ERR;
 	}
 
