@@ -58,6 +58,7 @@ AC_CONFIG_FILES([
 	examples/Makefile
 	src/Makefile
 	python/Makefile
+	python/kdumpfile/Makefile
 	tests/Makefile
 	libkdumpfile.pc
 ])
