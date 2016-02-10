@@ -10,6 +10,31 @@ typedef struct {
 	PyObject *cb_get_symbol;
 } kdumpfile_object;
 
+static PyObject *SysErrException;
+static PyObject *UnsupportedException;
+static PyObject *NoDataException;
+static PyObject *DataErrException;
+static PyObject *InvalidException;
+static PyObject *NoKeyException;
+static PyObject *EOFException;
+
+static PyObject *
+exception_map(kdump_status status)
+{
+	switch (status) {
+	case kdump_syserr:      return SysErrException;
+	case kdump_unsupported: return UnsupportedException;
+	case kdump_nodata:      return NoDataException;
+	case kdump_dataerr:     return DataErrException;
+	case kdump_invalid:     return InvalidException;
+	case kdump_nokey:       return NoKeyException;
+	case kdump_eof:         return EOFException;
+	/* If we raise an exception with status == kdump_ok, it's a bug. */
+	case kdump_ok:
+	default:                return PyExc_RuntimeError;
+	};
+}
+
 static kdump_status cb_get_symbol(kdump_ctx *ctx, const char *name, kdump_addr_t *addr)
 {
 	kdumpfile_object *self;
@@ -64,7 +89,7 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 
 	status = kdump_init_ctx(self->ctx);
 	if (status != kdump_ok) {
-		PyErr_Format(PyExc_RuntimeError,
+		PyErr_Format(SysErrException,
 			     "Couldn't initialize kdump context: %s",
 			     kdump_err_str(self->ctx));
 		goto fail;
@@ -73,8 +98,8 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 	fd = fileno(PyFile_AsFile(fo));
 	status = kdump_set_fd(self->ctx, fd);
 	if (status != kdump_ok) {
-		PyErr_Format(PyExc_RuntimeError, "Cannot open dump file: %s",
-			     kdump_err_str(self->ctx));
+		PyErr_Format(exception_map(status),
+			     "Cannot open dump: %s", kdump_err_str(self->ctx));
 		goto fail;
 	}
 
@@ -135,8 +160,7 @@ static PyObject *kdumpfile_read (PyObject *_self, PyObject *args, PyObject *kw)
 			     PyByteArray_AS_STRING(obj), &r);
 	if (status != kdump_ok) {
 		Py_XDECREF(obj);
-		PyErr_Format(PyExc_RuntimeError, "Cannot read: %s",
-			     kdump_err_str(self->ctx));
+		PyErr_Format(exception_map(status), kdump_err_str(self->ctx));
 		return NULL;
 	}
 
@@ -267,6 +291,47 @@ int kdumpfile_set_symbol_func(PyObject *_self, PyObject *_set, void *_data)
 	return 0;
 }
 
+static void
+cleanup_exceptions(void)
+{
+	Py_XDECREF(SysErrException);
+	Py_XDECREF(UnsupportedException);
+	Py_XDECREF(NoDataException);
+	Py_XDECREF(DataErrException);
+	Py_XDECREF(InvalidException);
+	Py_XDECREF(NoKeyException);
+	Py_XDECREF(EOFException);
+}
+
+static int lookup_exceptions (void)
+{
+	PyObject *mod = PyImport_ImportModule("kdumpfile.exceptions");
+	if (!mod)
+		return -1;
+
+#define lookup_exception(name)				\
+do {							\
+	name = PyObject_GetAttrString(mod, #name);	\
+	if (!name)					\
+		goto fail;				\
+} while(0)
+
+	lookup_exception(SysErrException);
+	lookup_exception(UnsupportedException);
+	lookup_exception(NoDataException);
+	lookup_exception(DataErrException);
+	lookup_exception(InvalidException);
+	lookup_exception(EOFException);
+#undef lookup_exception
+
+	Py_XDECREF(mod);
+	return 0;
+fail:
+	cleanup_exceptions();
+	Py_XDECREF(mod);
+	return -1;
+}
+
 static PyGetSetDef kdumpfile_object_getset[] = {
 	{"KDUMP_KPHYSADDR", kdumpfile_getconst, NULL, 
 		"KDUMP_KPHYSADDR - get by kernel physical address",
@@ -329,24 +394,31 @@ static PyTypeObject kdumpfile_object_type =
 	kdumpfile_new,                  /* tp_new */
 };
 
-static inline void pyncref(char* c)
-{
-	Py_INCREF((PyObject*)c);
-}
-
 PyMODINIT_FUNC
 init_kdumpfile (void)
 {
 	PyObject *mod;
+	int ret;
 
 	if (PyType_Ready(&kdumpfile_object_type) < 0) 
 		return;
 
+	ret = lookup_exceptions();
+	if (ret)
+		return;
+
 	mod = Py_InitModule3("_kdumpfile", NULL,
 			"kdumpfile - interface to libkdumpfile");
+	if (!mod)
+		goto fail;
 
-	if (!mod) return;
-
-	pyncref((char*)&kdumpfile_object_type);
-	PyModule_AddObject(mod, "kdumpfile", (PyObject*)&kdumpfile_object_type);
+	Py_INCREF((PyObject *)&kdumpfile_object_type);
+	ret = PyModule_AddObject(mod, "kdumpfile",
+				 (PyObject*)&kdumpfile_object_type);
+	if (ret)
+		goto fail;
+	return;
+fail:
+	cleanup_exceptions();
+	Py_XDECREF(mod);
 }
