@@ -1,5 +1,7 @@
 LIBKDUMPFILE_0 {
   global:
+    kdump_alloc_ctx;
+    kdump_init_ctx;
     kdump_init;
     kdump_free;
     kdump_err_str;
