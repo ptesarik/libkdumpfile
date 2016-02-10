@@ -51,9 +51,10 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 		    return NULL;
 
 	self = (kdumpfile_object*) type->tp_alloc (type, 0);
+	if (!self)
+		return NULL;
 
 	self->ctx = kdump_init();
-
 	if (! self->ctx) {
 		PyErr_SetString(PyExc_RuntimeError, "Cannot kdump_init()");
 		Py_XDECREF(self);
@@ -104,21 +105,18 @@ static PyObject *kdumpfile_read (PyObject *_self, PyObject *args, PyObject *kw)
 	static char *keywords[] = {"addrspace", "address", "size", NULL};
 	size_t r;
 
-	if (! PyArg_ParseTupleAndKeywords(args, kw, "ikk:", keywords, &addrspace, &addr, &size)) {
-		Py_RETURN_NONE;
-	}
+	if (!PyArg_ParseTupleAndKeywords(args, kw, "ikk:",
+					 keywords, &addrspace, &addr, &size))
+		return NULL;
 
-	if (! size) {
-		PyErr_SetString(PyExc_RuntimeError, "Zero size");
+	if (!size) {
+		PyErr_SetString(PyExc_ValueError, "Zero size buffer");
 		return NULL;
 	}
 
 	obj = PyByteArray_FromStringAndSize(0, size);
-
-	if (! obj) {
-		PyErr_SetString(PyExc_RuntimeError, "Cannot create buffer");
+	if (!obj)
 		return NULL;
-	}
 
 	r = size;
 	status = kdump_readp(self->ctx, addrspace, addr,
@@ -195,9 +193,8 @@ static PyObject *kdumpfile_getattr(PyObject *_self, PyObject *args, PyObject *kw
 	struct kdump_attr attr;
 	const char *name;
 
-	if (! PyArg_ParseTupleAndKeywords(args, kw, "s:", keywords, &name)) {
-		Py_RETURN_NONE;
-	}
+	if (!PyArg_ParseTupleAndKeywords(args, kw, "s:", keywords, &name))
+		return NULL;
 
 	if (kdump_get_attr(self->ctx, name, &attr) != kdump_ok) {
 		Py_RETURN_NONE;
