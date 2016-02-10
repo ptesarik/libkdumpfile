@@ -106,6 +106,7 @@ static PyObject *kdumpfile_read (PyObject *_self, PyObject *args, PyObject *kw)
 	kdumpfile_object *self = (kdumpfile_object*)_self;
 	PyObject *obj;
 	kdump_paddr_t addr;
+	kdump_status status;
 	int addrspace;
 	unsigned long size;
 	static char *keywords[] = {"addrspace", "address", "size", NULL};
@@ -127,9 +128,21 @@ static PyObject *kdumpfile_read (PyObject *_self, PyObject *args, PyObject *kw)
 		return NULL;
 	}
 
-	if ((r = kdump_read(self->ctx, addrspace, addr, PyByteArray_AS_STRING(obj), size)) != size) {
+	r = size;
+	status = kdump_readp(self->ctx, addrspace, addr,
+			     PyByteArray_AS_STRING(obj), &r);
+	if (status != kdump_ok) {
 		Py_XDECREF(obj);
-		PyErr_SetString(PyExc_RuntimeError, "Cannot read");
+		PyErr_Format(PyExc_RuntimeError, "Cannot read: %s",
+			     kdump_err_str(self->ctx));
+		return NULL;
+	}
+
+	if (r != size) {
+		Py_XDECREF(obj);
+		PyErr_Format(PyExc_IOError,
+			     "Got %d bytes, expected %d bytes: %s",
+			     r, size, kdump_err_str(self->ctx));
 		return NULL;
 	}
 	return obj;
