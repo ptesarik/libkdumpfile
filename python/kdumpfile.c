@@ -44,20 +44,12 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 	kdumpfile_object *self = NULL;
 	static char *keywords[] = {"file", NULL};
 	PyObject *fo = NULL;
-	FILE *f;
 	int fd;
 
 	if (!PyArg_ParseTupleAndKeywords (args, kw, "O!", keywords,
 				    &PyFile_Type, &fo))
 		    return NULL;
 
-	Py_INCREF(fo);
-	f = PyFile_AsFile(fo);
-
-	if (! f || (fd = fileno(f)) < 0) {
-		PyErr_SetString(PyExc_RuntimeError, "Not file");
-		goto end;
-	}
 	self = (kdumpfile_object*) type->tp_alloc (type, 0);
 
 	self->ctx = kdump_init();
@@ -65,20 +57,20 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 	if (! self->ctx) {
 		PyErr_SetString(PyExc_RuntimeError, "Cannot kdump_init()");
 		Py_XDECREF(self);
-		Py_XDECREF(fo);
 		self = NULL;
 		goto end;
 	}
 
+	fd = fileno(PyFile_AsFile(fo));
 	if (kdump_set_fd(self->ctx, fd)) {
 		PyErr_SetString(PyExc_RuntimeError, "Cannot kdump_set_fd()");
 		Py_XDECREF(self);
-		Py_XDECREF(fo);
 		self = NULL;
 		goto end;
 	}
 
 	self->file = fo;
+	Py_INCREF(fo);
 
 	self->cb_get_symbol = NULL;
 	kdump_cb_get_symbol_val(self->ctx, cb_get_symbol);
