@@ -43,6 +43,7 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 {
 	kdumpfile_object *self = NULL;
 	static char *keywords[] = {"file", NULL};
+	kdump_status status;
 	PyObject *fo = NULL;
 	int fd;
 
@@ -54,20 +55,27 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 	if (!self)
 		return NULL;
 
-	self->ctx = kdump_init();
-	if (! self->ctx) {
-		PyErr_SetString(PyExc_RuntimeError, "Cannot kdump_init()");
-		Py_XDECREF(self);
-		self = NULL;
-		goto end;
+	self->ctx = kdump_alloc_ctx();
+	if (!self->ctx) {
+		PyErr_SetString(PyExc_MemoryError,
+				"Couldn't allocate kdump context");
+		goto fail;
+	}
+
+	status = kdump_init_ctx(self->ctx);
+	if (status != kdump_ok) {
+		PyErr_Format(PyExc_RuntimeError,
+			     "Couldn't initialize kdump context: %s",
+			     kdump_err_str(self->ctx));
+		goto fail;
 	}
 
 	fd = fileno(PyFile_AsFile(fo));
-	if (kdump_set_fd(self->ctx, fd)) {
-		PyErr_SetString(PyExc_RuntimeError, "Cannot kdump_set_fd()");
-		Py_XDECREF(self);
-		self = NULL;
-		goto end;
+	status = kdump_set_fd(self->ctx, fd);
+	if (status != kdump_ok) {
+		PyErr_Format(PyExc_RuntimeError, "Cannot open dump file: %s",
+			     kdump_err_str(self->ctx));
+		goto fail;
 	}
 
 	self->file = fo;
@@ -76,8 +84,12 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 	self->cb_get_symbol = NULL;
 	kdump_cb_get_symbol_val(self->ctx, cb_get_symbol);
 	kdump_set_priv(self->ctx, self);
-end:
+
 	return (PyObject*)self;
+
+fail:
+	Py_XDECREF(self);
+	return NULL;
 }
 
 static void
