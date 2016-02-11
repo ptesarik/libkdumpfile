@@ -19,9 +19,6 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-pyexec_LTLIBRARIES = _kdumpfile.la
+pykdumpfiledir = $(pythondir)/kdumpfile
 
-_kdumpfile_la_SOURCES = kdumpfile.c
-_kdumpfile_la_CPPFLAGS = $(PYTHON_CFLAGS) -I$(top_srcdir)/src
-_kdumpfile_la_LDFLAGS = -module -avoid-version -export-symbols-regex init_kdumpfile
-_kdumpfile_la_LIBADD = $(top_builddir)/src/libkdumpfile.la
+pykdumpfile_DATA = __init__.py

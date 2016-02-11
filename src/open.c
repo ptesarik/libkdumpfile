@@ -55,24 +55,43 @@ static const struct format_ops *formats[] = {
 };
 
 kdump_ctx *
-kdump_init(void)
+kdump_alloc_ctx(void)
 {
-	kdump_ctx *ctx;
+	return calloc(1, sizeof (kdump_ctx));
+}
 
-	ctx = calloc(1, sizeof *ctx);
-	if (!ctx)
-		return NULL;
-
-	if (init_attrs(ctx) != kdump_ok) {
-		free(ctx);
-		return NULL;
-	}
+kdump_status
+kdump_init_ctx(kdump_ctx *ctx)
+{
+	kdump_status status;
+	status = init_attrs(ctx);
+	if (status != kdump_ok)
+		return status;
 
 	ctx->last_pfn = -(kdump_paddr_t)1;
 	ctx->cb_get_symbol_val = kdump_vmcoreinfo_symbol;
 	ctx->cb_get_symbol_val_xen = kdump_vmcoreinfo_symbol_xen;
 
 	init_vtop_maps(ctx);
+
+	return kdump_ok;
+}
+
+kdump_ctx *
+kdump_init(void)
+{
+	kdump_ctx *ctx;
+	kdump_status status;
+
+	ctx = kdump_alloc_ctx();
+	if (!ctx)
+		return NULL;
+
+	status = kdump_init_ctx(ctx);
+	if (status != kdump_ok) {
+		free(ctx);
+		return NULL;
+	}
 
 	return ctx;
 }

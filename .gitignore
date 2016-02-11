@@ -58,3 +58,9 @@ doc
 # Distribution tarballs
 libkdumpfile-*.tar.gz
 libkdumpfile-*.tar.bz2
+
+# Python bytecode
+*.pyc
+
+# Editor backup files
+*~

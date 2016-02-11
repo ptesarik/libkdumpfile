@@ -145,6 +145,23 @@ typedef enum _tag_kdump_xen_xlat {
 	kdump_xen_nonauto	/**< Non-auto-translated physmap */
 } kdump_xen_xlat_t;
 
+/**  Allocate a new dump file object.
+ * @returns Newly allocated object, or NULL on failure.
+ *
+ * Use this function to create a new @ref kdump_ctx. When the object
+ * is no longer needed, you should free all resources with @ref kdump_free.
+ */
+kdump_ctx *kdump_alloc_ctx(void);
+
+/**  Initialize an already allocated dump file object.
+ * @param ctx     Dump file object.
+ * @returns       Error status.
+ *
+ * Use this function to initialize a @ref kdump_ctx allocated using
+ * @ref kdump_alloc_ctx.
+ */
+kdump_status kdump_init_ctx(kdump_ctx *ctx);
+
 /**  Initialize a new dump file object.
  * @returns Newly allocated object, or NULL on failure.
  *

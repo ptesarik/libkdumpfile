@@ -10,6 +10,31 @@ typedef struct {
 	PyObject *cb_get_symbol;
 } kdumpfile_object;
 
+static PyObject *SysErrException;
+static PyObject *UnsupportedException;
+static PyObject *NoDataException;
+static PyObject *DataErrException;
+static PyObject *InvalidException;
+static PyObject *NoKeyException;
+static PyObject *EOFException;
+
+static PyObject *
+exception_map(kdump_status status)
+{
+	switch (status) {
+	case kdump_syserr:      return SysErrException;
+	case kdump_unsupported: return UnsupportedException;
+	case kdump_nodata:      return NoDataException;
+	case kdump_dataerr:     return DataErrException;
+	case kdump_invalid:     return InvalidException;
+	case kdump_nokey:       return NoKeyException;
+	case kdump_eof:         return EOFException;
+	/* If we raise an exception with status == kdump_ok, it's a bug. */
+	case kdump_ok:
+	default:                return PyExc_RuntimeError;
+	};
+}
+
 static kdump_status cb_get_symbol(kdump_ctx *ctx, const char *name, kdump_addr_t *addr)
 {
 	kdumpfile_object *self;
@@ -43,48 +68,53 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 {
 	kdumpfile_object *self = NULL;
 	static char *keywords[] = {"file", NULL};
+	kdump_status status;
 	PyObject *fo = NULL;
-	FILE *f;
 	int fd;
 
 	if (!PyArg_ParseTupleAndKeywords (args, kw, "O!", keywords,
 				    &PyFile_Type, &fo))
 		    return NULL;
 
-	Py_INCREF(fo);
-	f = PyFile_AsFile(fo);
-
-	if (! f || (fd = fileno(f)) < 0) {
-		PyErr_SetString(PyExc_RuntimeError, "Not file");
-		goto end;
-	}
 	self = (kdumpfile_object*) type->tp_alloc (type, 0);
+	if (!self)
+		return NULL;
 
-	self->ctx = kdump_init();
-
-	if (! self->ctx) {
-		PyErr_SetString(PyExc_RuntimeError, "Cannot kdump_init()");
-		Py_XDECREF(self);
-		Py_XDECREF(fo);
-		self = NULL;
-		goto end;
+	self->ctx = kdump_alloc_ctx();
+	if (!self->ctx) {
+		PyErr_SetString(PyExc_MemoryError,
+				"Couldn't allocate kdump context");
+		goto fail;
 	}
 
-	if (kdump_set_fd(self->ctx, fd)) {
-		PyErr_SetString(PyExc_RuntimeError, "Cannot kdump_set_fd()");
-		Py_XDECREF(self);
-		Py_XDECREF(fo);
-		self = NULL;
-		goto end;
+	status = kdump_init_ctx(self->ctx);
+	if (status != kdump_ok) {
+		PyErr_Format(SysErrException,
+			     "Couldn't initialize kdump context: %s",
+			     kdump_err_str(self->ctx));
+		goto fail;
+	}
+
+	fd = fileno(PyFile_AsFile(fo));
+	status = kdump_set_fd(self->ctx, fd);
+	if (status != kdump_ok) {
+		PyErr_Format(exception_map(status),
+			     "Cannot open dump: %s", kdump_err_str(self->ctx));
+		goto fail;
 	}
 
 	self->file = fo;
+	Py_INCREF(fo);
 
 	self->cb_get_symbol = NULL;
 	kdump_cb_get_symbol_val(self->ctx, cb_get_symbol);
 	kdump_set_priv(self->ctx, self);
-end:
+
 	return (PyObject*)self;
+
+fail:
+	Py_XDECREF(self);
+	return NULL;
 }
 
 static void
@@ -106,30 +136,39 @@ static PyObject *kdumpfile_read (PyObject *_self, PyObject *args, PyObject *kw)
 	kdumpfile_object *self = (kdumpfile_object*)_self;
 	PyObject *obj;
 	kdump_paddr_t addr;
+	kdump_status status;
 	int addrspace;
 	unsigned long size;
 	static char *keywords[] = {"addrspace", "address", "size", NULL};
 	size_t r;
 
-	if (! PyArg_ParseTupleAndKeywords(args, kw, "ikk:", keywords, &addrspace, &addr, &size)) {
-		Py_RETURN_NONE;
-	}
+	if (!PyArg_ParseTupleAndKeywords(args, kw, "ikk:",
+					 keywords, &addrspace, &addr, &size))
+		return NULL;
 
-	if (! size) {
-		PyErr_SetString(PyExc_RuntimeError, "Zero size");
+	if (!size) {
+		PyErr_SetString(PyExc_ValueError, "Zero size buffer");
 		return NULL;
 	}
 
 	obj = PyByteArray_FromStringAndSize(0, size);
+	if (!obj)
+		return NULL;
 
-	if (! obj) {
-		PyErr_SetString(PyExc_RuntimeError, "Cannot create buffer");
+	r = size;
+	status = kdump_readp(self->ctx, addrspace, addr,
+			     PyByteArray_AS_STRING(obj), &r);
+	if (status != kdump_ok) {
+		Py_XDECREF(obj);
+		PyErr_Format(exception_map(status), kdump_err_str(self->ctx));
 		return NULL;
 	}
 
-	if ((r = kdump_read(self->ctx, addrspace, addr, PyByteArray_AS_STRING(obj), size)) != size) {
+	if (r != size) {
 		Py_XDECREF(obj);
-		PyErr_SetString(PyExc_RuntimeError, "Cannot read");
+		PyErr_Format(PyExc_IOError,
+			     "Got %d bytes, expected %d bytes: %s",
+			     r, size, kdump_err_str(self->ctx));
 		return NULL;
 	}
 	return obj;
@@ -190,9 +229,8 @@ static PyObject *kdumpfile_getattr(PyObject *_self, PyObject *args, PyObject *kw
 	struct kdump_attr attr;
 	const char *name;
 
-	if (! PyArg_ParseTupleAndKeywords(args, kw, "s:", keywords, &name)) {
-		Py_RETURN_NONE;
-	}
+	if (!PyArg_ParseTupleAndKeywords(args, kw, "s:", keywords, &name))
+		return NULL;
 
 	if (kdump_get_attr(self->ctx, name, &attr) != kdump_ok) {
 		Py_RETURN_NONE;
@@ -251,6 +289,47 @@ int kdumpfile_set_symbol_func(PyObject *_self, PyObject *_set, void *_data)
 	self->cb_get_symbol = _set;
 	Py_INCREF(self->cb_get_symbol);
 	return 0;
+}
+
+static void
+cleanup_exceptions(void)
+{
+	Py_XDECREF(SysErrException);
+	Py_XDECREF(UnsupportedException);
+	Py_XDECREF(NoDataException);
+	Py_XDECREF(DataErrException);
+	Py_XDECREF(InvalidException);
+	Py_XDECREF(NoKeyException);
+	Py_XDECREF(EOFException);
+}
+
+static int lookup_exceptions (void)
+{
+	PyObject *mod = PyImport_ImportModule("kdumpfile.exceptions");
+	if (!mod)
+		return -1;
+
+#define lookup_exception(name)				\
+do {							\
+	name = PyObject_GetAttrString(mod, #name);	\
+	if (!name)					\
+		goto fail;				\
+} while(0)
+
+	lookup_exception(SysErrException);
+	lookup_exception(UnsupportedException);
+	lookup_exception(NoDataException);
+	lookup_exception(DataErrException);
+	lookup_exception(InvalidException);
+	lookup_exception(EOFException);
+#undef lookup_exception
+
+	Py_XDECREF(mod);
+	return 0;
+fail:
+	cleanup_exceptions();
+	Py_XDECREF(mod);
+	return -1;
 }
 
 static PyGetSetDef kdumpfile_object_getset[] = {
@@ -315,24 +394,31 @@ static PyTypeObject kdumpfile_object_type =
 	kdumpfile_new,                  /* tp_new */
 };
 
-static inline void pyncref(char* c)
-{
-	Py_INCREF((PyObject*)c);
-}
-
 PyMODINIT_FUNC
 init_kdumpfile (void)
 {
 	PyObject *mod;
+	int ret;
 
 	if (PyType_Ready(&kdumpfile_object_type) < 0) 
 		return;
 
+	ret = lookup_exceptions();
+	if (ret)
+		return;
+
 	mod = Py_InitModule3("_kdumpfile", NULL,
 			"kdumpfile - interface to libkdumpfile");
+	if (!mod)
+		goto fail;
 
-	if (!mod) return;
-
-	pyncref((char*)&kdumpfile_object_type);
-	PyModule_AddObject(mod, "kdumpfile", (PyObject*)&kdumpfile_object_type);
+	Py_INCREF((PyObject *)&kdumpfile_object_type);
+	ret = PyModule_AddObject(mod, "kdumpfile",
+				 (PyObject*)&kdumpfile_object_type);
+	if (ret)
+		goto fail;
+	return;
+fail:
+	cleanup_exceptions();
+	Py_XDECREF(mod);
 }
