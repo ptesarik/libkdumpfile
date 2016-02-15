@@ -21,4 +21,4 @@
 
 pykdumpfiledir = $(pythondir)/kdumpfile
 
-pykdumpfile_DATA = __init__.py
+pykdumpfile_DATA = __init__.py exceptions.py
