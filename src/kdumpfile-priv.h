@@ -53,7 +53,15 @@
 /* General macros */
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
+/** Bits per byte.
+ * Use this instead of a magic constant to illustrate why something
+ * is multiplied by 8. */
+#define BITS_PER_BYTE	8
+
 typedef kdump_addr_t kdump_pfn_t;
+
+/** Bits for kdump_pfn_t */
+#define PFN_BITS		(BITS_PER_BYTE * sizeof(kdump_pfn_t))
 
 enum kdump_arch {
 	ARCH_UNKNOWN = 0,
@@ -699,6 +707,66 @@ kphys_is_machphys(kdump_ctx *ctx)
 	return get_xen_type(ctx) == kdump_xen_none ||
 		(get_xen_type(ctx) == kdump_xen_domain &&
 		 get_xen_xlat(ctx) == kdump_xen_auto);
+}
+
+/* Caching */
+
+/** Number of bits used for cache flags.
+ * Cache flags are stored in the high bits of a cached PFN.
+ * This number must be big enough to hold all possible flags
+ * and small enough to leave enough bits for the actual PFN.
+ *
+ * Since @ref kdump_pfn_t is the same size as @ref kdump_addr_t,
+ * this number must be smaller than the minimum page shift.
+ */
+#define CF_BITS			2
+#define CF_MASK			(((kdump_pfn_t)1 << CF_BITS) - 1)
+#define CF_SHIFT		(PFN_BITS - CF_BITS)
+#define CACHE_FLAGS_PFN(f)	((kdump_pfn_t)(f) << CF_SHIFT)
+#define CACHE_PFN_FLAGS(pfn)	(((pfn) >> CF_SHIFT) & CF_MASK)
+
+/**  Cache flags.
+ *
+ * These flags are stored in the top 2 bits of the @c pfn field.
+ * Note that @ref cf_valid is zero, so the PFN for valid entries can
+ * be used directly (without masking off any bits).
+ */
+enum cache_flags {
+	cf_valid,		/**< Valid (active) cache entry */
+	cf_probe,		/**< In flight, target probe list */
+	cf_precious,		/**< In flight, target precious list */
+	cf_error,		/**< Error cache entry (invalid) */
+};
+
+/**  Cache entry.
+ */
+struct cache_entry {
+	kdump_pfn_t pfn;	/**< PFN in the cache; highest @ref CF_BITS
+				 *   are used for cache flags. */
+	unsigned next;		/**< Index of next entry in evict list. */
+	unsigned prev;		/**< Index of previous entry in evict list. */
+	void *data;		/**< Pointer to page data. */
+};
+
+struct cache;
+
+struct cache *cache_alloc(unsigned n, size_t size);
+void cache_free(struct cache *);
+void cache_flush(struct cache *);
+
+struct cache_entry *cache_get_entry(struct cache *, kdump_pfn_t);
+void cache_insert(struct cache *, struct cache_entry *);
+void cache_discard(struct cache *, struct cache_entry *);
+
+/**  Check if a cache entry is valid.
+ *
+ * @param entry  Cache entry.
+ * @returns      Non-zero if the data is valid, zero otherwise.
+ */
+static inline int
+cache_entry_valid(struct cache_entry *entry)
+{
+	return CACHE_PFN_FLAGS(entry->pfn) == cf_valid;
 }
 
 /* Older glibc didn't have the byteorder macros */

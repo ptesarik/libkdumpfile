@@ -22,6 +22,7 @@
 lib_LTLIBRARIES = libkdumpfile.la
 libkdumpfile_la_SOURCES = \
 	attr.c \
+	cache.c \
 	context.c \
 	devmem.c \
 	diskdump.c \
