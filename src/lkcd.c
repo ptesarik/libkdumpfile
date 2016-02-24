@@ -317,6 +317,8 @@ struct pfn_block {
 #define MAX_FORMAT_NAME	(sizeof(LKCD_FORMAT_PFX) + 10)
 
 struct lkcd_priv {
+	struct cache *cache;	/**< Page cache. */
+
 	off_t data_offset;	/* offset to 1st page */
 	off_t last_offset;	/* offset of last page parsed so far */
 	off_t end_offset;	/* offset of end marker */
@@ -674,7 +676,7 @@ get_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 }
 
 static kdump_status
-lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
+lkcd_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
 	struct dump_page dp;
@@ -683,11 +685,6 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 	ssize_t rd;
 	void *buf;
 	kdump_status ret;
-
-	if (pfn == ctx->last_pfn) {
-		*pbuf = ctx->page;
-		return kdump_ok;
-	}
 
 	off = 0;
 	ret = get_page_desc(ctx, pfn, &dp, &off);
@@ -708,7 +705,7 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 			return set_error(ctx, kdump_dataerr,
 					 "Wrong page size: %lu",
 					 (unsigned long) dp.dp_size);
-		buf = ctx->page;
+		buf = ce->data;
 		break;
 	default:
 		return set_error(ctx, kdump_unsupported,
@@ -723,12 +720,11 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 				 (unsigned long long) off);
 
 	if (type == DUMP_RAW)
-		goto out;
+		return kdump_ok;
 
 	if (lkcdp->compression == DUMP_COMPRESS_RLE) {
 		size_t retlen = get_page_size(ctx);
-		int ret = uncompress_rle(ctx->page, &retlen,
-					 buf, dp.dp_size);
+		int ret = uncompress_rle(ce->data, &retlen, buf, dp.dp_size);
 		if (ret)
 			return set_error(ctx, kdump_dataerr,
 					 "Decompression failed: %d", ret);
@@ -739,8 +735,7 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 	} else if (lkcdp->compression == DUMP_COMPRESS_GZIP) {
 #if USE_ZLIB
 		uLongf retlen = get_page_size(ctx);
-		int ret = uncompress(ctx->page, &retlen,
-				     buf, dp.dp_size);
+		int ret = uncompress(ce->data, &retlen, buf, dp.dp_size);
 		if (ret != Z_OK)
 			return set_error(ctx, kdump_dataerr,
 					 "Decompression failed: %d", ret);
@@ -758,10 +753,28 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 				 "Unknown compression method: %d",
 				 lkcdp->compression);
 
-  out:
-	*pbuf = ctx->page;
-	ctx->last_pfn = pfn;
 	return kdump_ok;
+}
+
+static kdump_status
+lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
+{
+	struct lkcd_priv *lkcdp = ctx->fmtdata;
+	struct cache_entry *ce;
+	kdump_status ret;
+
+	ce = cache_get_entry(lkcdp->cache, pfn);
+	*pbuf = ce->data;
+	if (cache_entry_valid(ce))
+		return kdump_ok;
+
+	ret = lkcd_read_cache(ctx, pfn, ce);
+	if (ret == kdump_ok)
+		cache_insert(lkcdp->cache, ce);
+	else
+		cache_discard(lkcdp->cache, ce);
+
+	return ret;
 }
 
 static inline unsigned long
@@ -835,7 +848,9 @@ open_common(kdump_ctx *ctx)
 	lkcdp = ctx_malloc(sizeof *lkcdp, ctx, "LKCD private data");
 	if (!lkcdp)
 		return kdump_syserr;
+	ctx->fmtdata = lkcdp;
 
+	lkcdp->cache = NULL;
 	lkcdp->version = base_version(dump32toh(ctx, dh->dh_version));
 	snprintf(lkcdp->format, sizeof(lkcdp->format),
 		 LKCD_FORMAT_PFX "%u", lkcdp->version);
@@ -848,8 +863,6 @@ open_common(kdump_ctx *ctx)
 	ret = set_page_size(ctx, dump32toh(ctx, dh->dh_page_size));
 	if (ret != kdump_ok)
 		return ret;
-
-	ctx->fmtdata = lkcdp;
 
 	switch(lkcdp->version) {
 	case LKCD_DUMP_V1:
@@ -954,10 +967,25 @@ free_level1(struct pfn_block ***level1, unsigned long n)
 	}
 }
 
+static kdump_status
+lkcd_realloc_caches(kdump_ctx *ctx)
+{
+	struct lkcd_priv *lkcdp = ctx->fmtdata;
+
+	if (lkcdp->cache)
+		cache_free(lkcdp->cache);
+
+	lkcdp->cache = def_cache_alloc(ctx);
+	return lkcdp->cache ? kdump_ok : kdump_syserr;
+}
+
 static void
 lkcd_cleanup(kdump_ctx *ctx)
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
+
+	if (lkcdp->cache)
+		cache_free(lkcdp->cache);
 
 	free_level1(lkcdp->pfn_level1, lkcdp->l1_size);
 	free(lkcdp);
@@ -968,5 +996,6 @@ const struct format_ops lkcd_ops = {
 	.name = "lkcd",
 	.probe = lkcd_probe,
 	.read_page = lkcd_read_page,
+	.realloc_caches = lkcd_realloc_caches,
 	.cleanup = lkcd_cleanup,
 };
