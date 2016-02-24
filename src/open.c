@@ -68,6 +68,7 @@ kdump_init_ctx(kdump_ctx *ctx)
 	if (status != kdump_ok)
 		return status;
 
+	set_attr_number(ctx, GATTR(GKI_cache_size), DEFAULT_CACHE_SIZE);
 	ctx->last_pfn = -(kdump_paddr_t)1;
 	ctx->cb_get_symbol_val = kdump_vmcoreinfo_symbol;
 	ctx->cb_get_symbol_val_xen = kdump_vmcoreinfo_symbol_xen;

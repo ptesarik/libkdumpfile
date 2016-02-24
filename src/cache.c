@@ -476,3 +476,29 @@ cache_free(struct cache *cache)
 	free(cache->data);
 	free(cache);
 }
+
+/**  Allocate a cache with default parameters.
+ * @param ctx  Dump file object.
+ * @returns    The allocated cache, or @c NULL on failure.
+ *
+ * This is a shorthand for allocating a cache with @c cache.size
+ * elements of @c arch.page_size bytes each.
+ */
+struct cache *
+def_cache_alloc(kdump_ctx *ctx)
+{
+	const struct attr_data *attr;
+	unsigned cache_size;
+	struct cache *cache;
+
+	attr = lookup_attr(ctx, GATTR(GKI_cache_size));
+	cache_size = attr
+		? attr_value(attr)->number
+		: DEFAULT_CACHE_SIZE;
+	cache = cache_alloc(cache_size, get_page_size(ctx));
+	if (!cache)
+		set_error(ctx, kdump_syserr,
+			  "Cannot allocate cache (%u * %zu bytes)",
+			  cache_size, get_page_size(ctx));
+	return cache;
+}

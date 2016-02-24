@@ -711,6 +711,12 @@ kphys_is_machphys(kdump_ctx *ctx)
 
 /* Caching */
 
+/** Default cache size.
+ * The size is chosen so that it does not do much harm in constrained
+ * environments. On a dump with 4K pages, it takes up 256K.
+ */
+#define DEFAULT_CACHE_SIZE	64
+
 /** Number of bits used for cache flags.
  * Cache flags are stored in the high bits of a cached PFN.
  * This number must be big enough to hold all possible flags
@@ -751,6 +757,7 @@ struct cache_entry {
 struct cache;
 
 struct cache *cache_alloc(unsigned n, size_t size);
+struct cache *def_cache_alloc(kdump_ctx *ctx);
 void cache_free(struct cache *);
 void cache_flush(struct cache *);
 
