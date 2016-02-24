@@ -149,6 +149,7 @@ struct page_desc {
 };
 
 struct disk_dump_priv {
+	struct cache *cache;	/* page cache */
 	unsigned char *bitmap;	/* for compressed dumps */
 	off_t descoff;		/* position of page descriptor table */
 };
@@ -195,24 +196,15 @@ pfn_to_pdpos(kdump_ctx *ctx, unsigned long pfn)
 }
 
 static kdump_status
-diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
+diskdump_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 {
 	struct page_desc pd;
 	off_t pd_pos;
 	void *buf;
 	ssize_t rd;
 
-	if (pfn == ctx->last_pfn) {
-		*pbuf = ctx->page;
-		return kdump_ok;
-	}
-
-	if (pfn >= get_max_pfn(ctx))
-		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
-
 	if (!page_is_dumpable(ctx, pfn)) {
-		memset(ctx->page, 0, get_page_size(ctx));
-		ctx->last_pfn =  -(kdump_paddr_t)1;
+		memset(ce->data, 0, get_page_size(ctx));
 		return kdump_ok;
 	}
 
@@ -239,7 +231,7 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 			return set_error(ctx, kdump_dataerr,
 					 "Wrong page size: %lu",
 					 (unsigned long)pd.size);
-		buf = ctx->page;
+		buf = ce->data;
 	}
 
 	/* read page data */
@@ -252,8 +244,7 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 	if (pd.flags & DUMP_DH_COMPRESSED_ZLIB) {
 #if USE_ZLIB
 		uLongf retlen = get_page_size(ctx);
-		int ret = uncompress(ctx->page, &retlen,
-				     buf, pd.size);
+		int ret = uncompress(ce->data, &retlen, buf, pd.size);
 		if (ret != Z_OK)
 			return set_error(ctx, kdump_dataerr,
 					 "Decompression failed: %d", ret);
@@ -270,7 +261,7 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 #if USE_LZO
 		lzo_uint retlen = get_page_size(ctx);
 		int ret = lzo1x_decompress_safe((lzo_bytep)buf, pd.size,
-						(lzo_bytep)ctx->page, &retlen,
+						(lzo_bytep)ce->data, &retlen,
 						LZO1X_MEM_DECOMPRESS);
 		if (ret != LZO_E_OK)
 			return set_error(ctx, kdump_dataerr,
@@ -289,7 +280,7 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 		size_t retlen = get_page_size(ctx);
 		snappy_status ret;
 		ret = snappy_uncompress((char *)buf, pd.size,
-					(char *)ctx->page, &retlen);
+					(char *)ce->data, &retlen);
 		if (ret != SNAPPY_OK)
 			return set_error(ctx, kdump_dataerr,
 					 "Decompression failed: %d",
@@ -305,9 +296,30 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 #endif
 	}
 
-	*pbuf = ctx->page;
-	ctx->last_pfn = pfn;
 	return kdump_ok;
+}
+
+static kdump_status
+diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
+{
+	struct disk_dump_priv *ddp = ctx->fmtdata;
+	struct cache_entry *ce;
+	kdump_status ret;
+
+	if (pfn >= get_max_pfn(ctx))
+		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
+
+	ce = cache_get_entry(ddp->cache, pfn);
+	*pbuf = ce->data;
+	if (cache_entry_valid(ce))
+		return kdump_ok;
+
+	ret = diskdump_read_cache(ctx, pfn, ce);
+	if (ret == kdump_ok)
+		cache_insert(ddp->cache, ce);
+	else
+		cache_discard(ddp->cache, ce);
+	return ret;
 }
 
 static kdump_status
@@ -695,12 +707,26 @@ diskdump_probe(kdump_ctx *ctx)
 	return open_common(ctx);
 }
 
+static kdump_status
+diskdump_realloc_caches(kdump_ctx *ctx)
+{
+	struct disk_dump_priv *ddp = ctx->fmtdata;
+
+	if (ddp->cache)
+		cache_free(ddp->cache);
+
+	ddp->cache = def_cache_alloc(ctx);
+	return ddp->cache ? kdump_ok : kdump_syserr;
+}
+
 static void
 diskdump_cleanup(kdump_ctx *ctx)
 {
 	struct disk_dump_priv *ddp = ctx->fmtdata;
 
 	if (ddp) {
+		if (ddp->cache)
+			cache_free(ddp->cache);
 		if (ddp->bitmap)
 			free(ddp->bitmap);
 		free(ddp);
@@ -712,5 +738,6 @@ const struct format_ops diskdump_ops = {
 	.name = "diskdump",
 	.probe = diskdump_probe,
 	.read_page = diskdump_read_page,
+	.realloc_caches = diskdump_realloc_caches,
 	.cleanup = diskdump_cleanup,
 };
