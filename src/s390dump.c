@@ -86,6 +86,8 @@ struct end_marker {
 } __attribute__((packed));
 
 struct s390dump_priv {
+	struct cache *cache;	/**< Page cache. */
+
 	off_t dataoff;		/* offset of data (size of s390 header) */
 };
 
@@ -96,26 +98,28 @@ s390_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 {
 	struct s390dump_priv *sdp = ctx->fmtdata;
 	kdump_paddr_t addr = pfn * get_page_size(ctx);
+	struct cache_entry *ce;
 	off_t pos;
 	ssize_t rd;
-
-	if (pfn == ctx->last_pfn) {
-		pbuf = ctx->page;
-		return kdump_ok;
-	}
 
 	if (pfn >= get_max_pfn(ctx))
 		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 
+	ce = cache_get_entry(sdp->cache, pfn);
+	*pbuf = ce->data;
+	if (cache_entry_valid(ce))
+		return kdump_ok;
+
 	pos = (off_t)addr + (off_t)sdp->dataoff;
-	rd = pread(ctx->fd, ctx->page, get_page_size(ctx), pos);
-	if (rd != get_page_size(ctx))
+	rd = pread(ctx->fd, ce->data, get_page_size(ctx), pos);
+	if (rd != get_page_size(ctx)) {
+		cache_discard(sdp->cache, ce);
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu",
 				 (unsigned long long) pos);
+	}
 
-	*pbuf = ctx->page;
-	ctx->last_pfn = pfn;
+	cache_insert(sdp->cache, ce);
 	return kdump_ok;
 }
 
@@ -175,6 +179,10 @@ s390_probe(kdump_ctx *ctx)
 				(unsigned long) dump32toh(ctx, dh->h1.arch));
 	}
 
+	sdp->cache = def_cache_alloc(ctx);
+	if (!sdp->cache)
+		ret = kdump_syserr;
+
  out:
 	if (ret != kdump_ok)
 		s390_cleanup(ctx);
@@ -182,10 +190,25 @@ s390_probe(kdump_ctx *ctx)
 	return ret;
 }
 
+static kdump_status
+s390_realloc_caches(kdump_ctx *ctx)
+{
+	struct s390dump_priv *sdp = ctx->fmtdata;
+
+	if (sdp->cache)
+		cache_free(sdp->cache);
+
+	sdp->cache = def_cache_alloc(ctx);
+	return sdp->cache ? kdump_ok : kdump_syserr;
+}
+
 static void
 s390_cleanup(kdump_ctx *ctx)
 {
 	struct s390dump_priv *sdp = ctx->fmtdata;
+
+	if (sdp->cache)
+		cache_free(sdp->cache);
 
 	free(sdp);
 	ctx->fmtdata = NULL;
@@ -195,5 +218,6 @@ const struct format_ops s390dump_ops = {
 	.name = "s390dump",
 	.probe = s390_probe,
 	.read_page = s390_read_page,
+	.realloc_caches = s390_realloc_caches,
 	.cleanup = s390_cleanup,
 };
