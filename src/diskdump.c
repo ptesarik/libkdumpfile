@@ -195,15 +195,17 @@ pfn_to_pdpos(kdump_ctx *ctx, unsigned long pfn)
 }
 
 static kdump_status
-diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
+diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 {
 	struct page_desc pd;
 	off_t pd_pos;
 	void *buf;
 	ssize_t rd;
 
-	if (pfn == ctx->last_pfn)
+	if (pfn == ctx->last_pfn) {
+		*pbuf = ctx->page;
 		return kdump_ok;
+	}
 
 	if (pfn >= get_max_pfn(ctx))
 		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
@@ -303,6 +305,7 @@ diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 #endif
 	}
 
+	*pbuf = ctx->page;
 	ctx->last_pfn = pfn;
 	return kdump_ok;
 }

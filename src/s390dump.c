@@ -92,15 +92,17 @@ struct s390dump_priv {
 static void s390_cleanup(kdump_ctx *ctx);
 
 static kdump_status
-s390_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
+s390_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 {
 	struct s390dump_priv *sdp = ctx->fmtdata;
 	kdump_paddr_t addr = pfn * get_page_size(ctx);
 	off_t pos;
 	ssize_t rd;
 
-	if (pfn == ctx->last_pfn)
+	if (pfn == ctx->last_pfn) {
+		pbuf = ctx->page;
 		return kdump_ok;
+	}
 
 	if (pfn >= get_max_pfn(ctx))
 		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
@@ -112,6 +114,7 @@ s390_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 				 "Cannot read page data at %llu",
 				 (unsigned long long) pos);
 
+	*pbuf = ctx->page;
 	ctx->last_pfn = pfn;
 	return kdump_ok;
 }

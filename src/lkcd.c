@@ -674,7 +674,7 @@ get_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 }
 
 static kdump_status
-lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
+lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
 	struct dump_page dp;
@@ -684,8 +684,10 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	void *buf;
 	kdump_status ret;
 
-	if (pfn == ctx->last_pfn)
+	if (pfn == ctx->last_pfn) {
+		*pbuf = ctx->page;
 		return kdump_ok;
+	}
 
 	off = 0;
 	ret = get_page_desc(ctx, pfn, &dp, &off);
@@ -757,6 +759,7 @@ lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 				 lkcdp->compression);
 
   out:
+	*pbuf = ctx->page;
 	ctx->last_pfn = pfn;
 	return kdump_ok;
 }

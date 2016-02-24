@@ -105,7 +105,7 @@ mach2arch(unsigned mach, int elfclass)
 }
 
 static kdump_status
-elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
+elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
 	kdump_paddr_t addr, endaddr;
@@ -113,8 +113,10 @@ elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 	ssize_t rd;
 	int i;
 
-	if (pfn == ctx->last_pfn)
+	if (pfn == ctx->last_pfn) {
+		*pbuf = ctx->page;
 		return kdump_ok;
+	}
 
 	addr = pfn << get_page_shift(ctx);
 	endaddr = addr + get_page_size(ctx);
@@ -136,6 +138,7 @@ elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn)
 				 "Cannot read page data at %llu",
 				 (unsigned long long) pos);
 
+	*pbuf = ctx->page;
 	ctx->last_pfn = pfn;
 	return kdump_ok;
 }
@@ -189,7 +192,7 @@ pfn_to_idx(kdump_ctx *ctx, kdump_pfn_t pfn)
 }
 
 static kdump_status
-xc_read_kpage(kdump_ctx *ctx, kdump_pfn_t pfn)
+xc_read_kpage(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
 	unsigned long idx;
@@ -207,7 +210,8 @@ xc_read_kpage(kdump_ctx *ctx, kdump_pfn_t pfn)
 				 "Cannot read page data at %llu",
 				 (unsigned long long) offset);
 
-	return 0;
+	*pbuf = ctx->page;
+	return kdump_ok;
 }
 
 static unsigned long
@@ -245,7 +249,7 @@ xc_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 }
 
 static kdump_status
-xc_read_page(kdump_ctx *ctx, kdump_pfn_t mfn)
+xc_read_page(kdump_ctx *ctx, kdump_pfn_t mfn, void **pbuf)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
 	unsigned long idx;
@@ -263,7 +267,8 @@ xc_read_page(kdump_ctx *ctx, kdump_pfn_t mfn)
 				 "Cannot read page data at %llu",
 				 (unsigned long long) offset);
 
-	return 0;
+	*pbuf = ctx->page;
+	return kdump_ok;
 }
 
 static kdump_status

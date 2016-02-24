@@ -101,18 +101,16 @@ struct format_ops {
 	/* Read a (machine physical) page from the dump file.
 	 * Input:
 	 *   ctx->fd         core dump file descriptor open for reading
-	 *   ctx->page       pointer to a page-sized buffer
 	 *   ctx->buffer     temporary buffer of MAX_PAGE_SIZE bytes
 	 * Return:
 	 *   kdump_ok        buffer is filled with page data
 	 *   kdump_nodata    data for the given page is not present
 	 */
-	kdump_status (*read_page)(kdump_ctx *, kdump_pfn_t);
+	kdump_status (*read_page)(kdump_ctx *, kdump_pfn_t, void **);
 
 	/* Read a kernel physical page from the dump file.
 	 * Input:
 	 *   ctx->fd         core dump file descriptor open for reading
-	 *   ctx->page       pointer to a page-sized buffer
 	 *   ctx->buffer     temporary buffer of MAX_PAGE_SIZE bytes
 	 * Return:
 	 *   kdump_ok        buffer is filled with page data
@@ -123,7 +121,7 @@ struct format_ops {
 	 * fall back to first translating KPHYSADDR to MACHPHYSADDR and
 	 * use @ref read_page.
 	 */
-	kdump_status (*read_kpage)(kdump_ctx *, kdump_pfn_t);
+	kdump_status (*read_kpage)(kdump_ctx *, kdump_pfn_t, void **);
 
 	/* Translate a machine frame number to physical frame number.
 	 *   ctx->fmtdata    initialized in probe()
