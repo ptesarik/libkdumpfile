@@ -391,7 +391,6 @@ struct _tag_kdump_ctx {
 	/* read_page internals */
 	void *buffer;		/* temporary buffer */
 	void *page;		/* page data buffer */
-	kdump_pfn_t last_pfn;	/* last read PFN */
 
 	/* address translation */
 	struct vtop_map vtop_map;
