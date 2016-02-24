@@ -141,6 +141,12 @@ struct format_ops {
 	 */
 	kdump_status (*mfn_to_pfn)(kdump_ctx *, kdump_pfn_t, kdump_pfn_t *);
 
+	/** Reallocate any format-specific caches.
+	 * @param ctx  Dump file object.
+	 * @returns    Status (@ref kdump_ok on success).
+	 */
+	kdump_status (*realloc_caches)(kdump_ctx *ctx);
+
 	/* Clean up all private data.
 	 */
 	void (*cleanup)(kdump_ctx *);
@@ -696,6 +702,9 @@ extern const struct attr_ops page_size_ops;
 
 #define page_shift_ops INTERNAL_NAME(page_shift_ops)
 extern const struct attr_ops page_shift_ops;
+
+#define cache_size_ops INTERNAL_NAME(cache_size_ops)
+extern const struct attr_ops cache_size_ops;
 
 /* Xen */
 

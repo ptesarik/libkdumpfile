@@ -290,8 +290,17 @@ page_size_pre_hook(kdump_ctx *ctx, struct attr_data *attr,
 	return set_page_shift(ctx, ffsl((unsigned long)page_size) - 1);
 }
 
+static kdump_status
+page_size_post_hook(kdump_ctx *ctx, struct attr_data *attr)
+{
+	return ctx->ops && ctx->ops->realloc_caches
+		? ctx->ops->realloc_caches(ctx)
+		: kdump_ok;
+}
+
 const struct attr_ops page_size_ops = {
 	.pre_set = page_size_pre_hook,
+	.post_set = page_size_post_hook,
 };
 
 static kdump_status

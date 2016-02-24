@@ -502,3 +502,15 @@ def_cache_alloc(kdump_ctx *ctx)
 			  cache_size, get_page_size(ctx));
 	return cache;
 }
+
+static kdump_status
+cache_size_post_hook(kdump_ctx *ctx, struct attr_data *attr)
+{
+	return ctx->ops && ctx->ops->realloc_caches
+		? ctx->ops->realloc_caches(ctx)
+		: kdump_ok;
+}
+
+const struct attr_ops cache_size_ops = {
+	.post_set = cache_size_post_hook,
+};

@@ -29,7 +29,7 @@ ATTR(root, "format", dir_format, directory, struct attr_data *)
 ATTR(root, "linux", dir_linux, directory, struct attr_data *)
 
 /* cache */
-ATTR(cache, "size", cache_size, number, unsigned)
+ATTR(cache, "size", cache_size, number, unsigned, .ops = &cache_size_ops)
 
 /* format name */
 ATTR(format, "name", format_name, string, const char *)
