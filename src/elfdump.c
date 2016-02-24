@@ -63,6 +63,8 @@ struct section {
 };
 
 struct elfdump_priv {
+	struct cache *cache;	/**< Page cache. */
+
 	int num_load_segments;
 	struct load_segment *load_segments;
 	int num_note_segments;
@@ -105,18 +107,13 @@ mach2arch(unsigned mach, int elfclass)
 }
 
 static kdump_status
-elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
+elf_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
 	kdump_paddr_t addr, endaddr;
 	off_t pos;
 	ssize_t rd;
 	int i;
-
-	if (pfn == ctx->last_pfn) {
-		*pbuf = ctx->page;
-		return kdump_ok;
-	}
 
 	addr = pfn << get_page_shift(ctx);
 	endaddr = addr + get_page_size(ctx);
@@ -132,17 +129,35 @@ elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 		return set_error(ctx, kdump_nodata, "Page not found");
 
 	/* read page data */
-	rd = pread(ctx->fd, ctx->page, get_page_size(ctx), pos);
+	rd = pread(ctx->fd, ce->data, get_page_size(ctx), pos);
 	if (rd != get_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu",
 				 (unsigned long long) pos);
 
-	*pbuf = ctx->page;
-	ctx->last_pfn = pfn;
 	return kdump_ok;
 }
 
+static kdump_status
+elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
+{
+	struct elfdump_priv *edp = ctx->fmtdata;
+	struct cache_entry *ce;
+	kdump_status ret;
+
+	ce = cache_get_entry(edp->cache, pfn);
+	*pbuf = ce->data;
+	if (cache_entry_valid(ce))
+		return kdump_ok;
+
+	ret = elf_read_cache(ctx, pfn, ce);
+	if (ret == kdump_ok)
+		cache_insert(edp->cache, ce);
+	else
+		cache_discard(edp->cache, ce);
+
+	return ret;
+}
 static void
 get_max_pfn_xen_auto(kdump_ctx *ctx)
 {
@@ -195,6 +210,7 @@ static kdump_status
 xc_read_kpage(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
+	struct cache_entry *ce;
 	unsigned long idx;
 	off_t offset;
 	ssize_t rd;
@@ -203,14 +219,21 @@ xc_read_kpage(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 	if (idx == ~0UL)
 		return set_error(ctx, kdump_nodata, "Page not found");
 
+	ce = cache_get_entry(edp->cache, idx);
+	*pbuf = ce->data;
+	if (cache_entry_valid(ce))
+		return kdump_ok;
+
 	offset = edp->xen_pages_offset + (off_t)idx * get_page_size(ctx);
-	rd = pread(ctx->fd, ctx->page, get_page_size(ctx), offset);
-	if (rd != get_page_size(ctx))
+	rd = pread(ctx->fd, ce->data, get_page_size(ctx), offset);
+	if (rd != get_page_size(ctx)) {
+		cache_discard(edp->cache, ce);
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu",
 				 (unsigned long long) offset);
+	}
 
-	*pbuf = ctx->page;
+	cache_insert(edp->cache, ce);
 	return kdump_ok;
 }
 
@@ -252,6 +275,7 @@ static kdump_status
 xc_read_page(kdump_ctx *ctx, kdump_pfn_t mfn, void **pbuf)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
+	struct cache_entry *ce;
 	unsigned long idx;
 	off_t offset;
 	ssize_t rd;
@@ -260,14 +284,21 @@ xc_read_page(kdump_ctx *ctx, kdump_pfn_t mfn, void **pbuf)
 	if (idx == ~0UL)
 		return set_error(ctx, kdump_nodata, "Page not found");
 
+	ce = cache_get_entry(edp->cache, idx);
+	*pbuf = ce->data;
+	if (cache_entry_valid(ce))
+		return kdump_ok;
+
 	offset = edp->xen_pages_offset + (off_t)idx * get_page_size(ctx);
-	rd = pread(ctx->fd, ctx->page, get_page_size(ctx), offset);
-	if (rd != get_page_size(ctx))
+	rd = pread(ctx->fd, ce->data, get_page_size(ctx), offset);
+	if (rd != get_page_size(ctx)) {
+		cache_discard(edp->cache, ce);
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu",
 				 (unsigned long long) offset);
+	}
 
-	*pbuf = ctx->page;
+	cache_insert(edp->cache, ce);
 	return kdump_ok;
 }
 
@@ -728,12 +759,26 @@ elf_probe(kdump_ctx *ctx)
 	return ret;
 }
 
+static kdump_status
+elf_realloc_caches(kdump_ctx *ctx)
+{
+	struct elfdump_priv *edp = ctx->fmtdata;
+
+	if (edp->cache)
+		cache_free(edp->cache);
+
+	edp->cache = def_cache_alloc(ctx);
+	return edp->cache ? kdump_ok : kdump_syserr;
+}
+
 static void
 elf_cleanup(kdump_ctx *ctx)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
 
 	if (edp) {
+		if (edp->cache)
+			cache_free(edp->cache);
 		if (edp->load_segments)
 			free(edp->load_segments);
 		if (edp->sections)
@@ -749,6 +794,7 @@ const struct format_ops elfdump_ops = {
 	.name = "elf",
 	.probe = elf_probe,
 	.read_page = elf_read_page,
+	.realloc_caches = elf_realloc_caches,
 	.cleanup = elf_cleanup,
 };
 
@@ -757,5 +803,6 @@ static const struct format_ops xc_core_elf_ops = {
 	.read_page = xc_read_page,
 	.read_kpage = xc_read_kpage,
 	.mfn_to_pfn = xc_mfn_to_pfn,
+	.realloc_caches = elf_realloc_caches,
 	.cleanup = elf_cleanup,
 };
