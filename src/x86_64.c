@@ -364,9 +364,13 @@ static const struct attr_template reg_names[] = {
 static const struct attr_template tmpl_pid =
 	{ "pid", NULL, kdump_number };
 
+/**  Private data for the x86_64 arch-specific methods.
+ */
 struct x86_64_data {
-	uint64_t *pgt;		/**< Linux kernel top-level page table */
-	uint64_t *pgt_xen;	/**< Xen hypervisor top-level page table */
+	kdump_addrspace_t pml4_as; /**< Linux kernel PML4 address space */
+	kdump_addr_t pml4;	   /**< Linux kernel PML4 address */
+
+	kdump_addr_t xen_pml4;	   /**< Xen hypervisor PML4 address */
 };
 
 static kdump_status x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
@@ -386,12 +390,17 @@ add_noncanonical_region(kdump_ctx *ctx, struct vtop_map *map)
 static kdump_status
 x86_64_init(kdump_ctx *ctx)
 {
+	struct x86_64_data *archdata;
 	kdump_status ret;
 
-	ctx->archdata = calloc(1, sizeof(struct x86_64_data));
-	if (!ctx->archdata)
+	archdata = calloc(1, sizeof(struct x86_64_data));
+	if (!archdata)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate x86_64 private data");
+	ctx->archdata = archdata;
+
+	archdata->pml4 = ~(kdump_addr_t)0;
+	archdata->xen_pml4 = ~(kdump_addr_t)0;
 
 	ret = add_noncanonical_region(ctx, &ctx->vtop_map);
 	if (ret != kdump_ok)
@@ -408,14 +417,11 @@ x86_64_init(kdump_ctx *ctx)
 }
 
 static kdump_status
-read_pgt(kdump_ctx *ctx)
+get_pml4(kdump_ctx *ctx)
 {
 	struct x86_64_data *archdata = ctx->archdata;
 	kdump_vaddr_t pgtaddr;
-	uint64_t *pgt;
-	kdump_addrspace_t as;
 	kdump_status ret;
-	size_t sz;
 
 	ret = get_symbol_val(ctx, "init_level4_pgt", &pgtaddr);
 	if (ret == kdump_ok) {
@@ -424,32 +430,21 @@ read_pgt(kdump_ctx *ctx)
 					 "Wrong page directory address: 0x%llx",
 					 (unsigned long long) pgtaddr);
 
-		pgtaddr -= __START_KERNEL_map - get_phys_base(ctx);
-		as = KDUMP_KPHYSADDR;
+		archdata->pml4_as = KDUMP_KPHYSADDR;
+		archdata->pml4 =
+			pgtaddr - __START_KERNEL_map - get_phys_base(ctx);
 	} else if (ret == kdump_nodata) {
 		const struct attr_data *attr;
 		attr = lookup_attr(ctx, "cpu.0.reg.cr3");
 		if (!attr)
 			return set_error(ctx, kdump_nodata,
 					 "Cannot get CR3 value");
-		pgtaddr = attr_value(attr)->number;
-		as = KDUMP_MACHPHYSADDR;
+		archdata->pml4_as = KDUMP_MACHPHYSADDR;
+		archdata->pml4 = attr_value(attr)->number;
 	} else
 		return ret;
 
-
-	pgt = ctx_malloc(PAGE_SIZE, ctx, "page table");
-	if (!pgt)
-		return kdump_syserr;
-
-	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, as, pgtaddr, pgt, &sz);
-	if (ret == kdump_ok)
-		archdata->pgt = pgt;
-	else
-		free(pgt);
-
-	return ret;
+	return kdump_ok;
 }
 
 static struct layout_def*
@@ -521,7 +516,7 @@ x86_64_vtop_init(kdump_ctx *ctx)
 	unsigned i;
 	kdump_status ret;
 
-	ret = read_pgt(ctx);
+	ret = get_pml4(ctx);
 	if (ret == kdump_ok)
 		layout = layout_by_pgt(ctx);
 	else if (ret != kdump_nodata)
@@ -570,8 +565,6 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 {
 	struct x86_64_data *archdata = ctx->archdata;
 	kdump_addr_t pgtaddr;
-	uint64_t *pgt;
-	size_t sz;
 	kdump_status res;
 
 	res = add_noncanonical_region(ctx, &ctx->vtop_map_xen);
@@ -599,18 +592,8 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 		return set_error(ctx, res,
 				 "Cannot set up initial kernel mapping");
 
-	pgt = ctx_malloc(PAGE_SIZE, ctx, "Xen page table");
-	if (!pgt)
-		return kdump_syserr;
-
-	sz = PAGE_SIZE;
-	res = kdump_readp(ctx, KDUMP_XENVADDR, pgtaddr, pgt, &sz);
-	if (res == kdump_ok)
-		archdata->pgt_xen = pgt;
-	else
-		free(pgt);
-
-	return res;
+	archdata->xen_pml4 = pgtaddr;
+	return kdump_ok;
 }
 
 static kdump_status
@@ -706,20 +689,13 @@ x86_64_process_load(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t paddr)
 static void
 x86_64_cleanup(kdump_ctx *ctx)
 {
-	struct x86_64_data *archdata = ctx->archdata;
-
-	if (archdata->pgt)
-		free(archdata->pgt);
-	if (archdata->pgt_xen)
-		free(archdata->pgt_xen);
-
-	free(archdata);
+	free(ctx->archdata);
 	ctx->archdata = NULL;
 }
 
 static kdump_status
 x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
-	       uint64_t *pgt)
+	       kdump_addrspace_t pml4_as, kdump_addr_t pml4)
 {
 	uint64_t *tbl;
 	uint64_t pgd, pud, pmd, pte;
@@ -727,14 +703,20 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	struct page_io pio;
 	kdump_status ret;
 
-	if (!pgt)
+	if (pml4 == ~(kdump_addr_t)0)
 		return set_error(ctx, kdump_invalid,
 				 "VTOP translation not initialized");
 
 	/* These page table levels are likely to be hit again soon. */
 	pio.precious = 1;
 
-	pgd = pgt[pgd_index(vaddr)];
+	pio.pfn = pml4 >> PAGE_SHIFT;
+	ret = raw_read_page(ctx, pml4_as, &pio);
+	if (ret != kdump_ok)
+		return ret;
+	tbl = pio.buf;
+
+	pgd = tbl[pgd_index(vaddr)];
 	if (!(pgd & _PAGE_PRESENT))
 		return set_error(ctx, kdump_nodata,
 				 "Page directory pointer not present:"
@@ -804,14 +786,16 @@ static kdump_status
 x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	struct x86_64_data *archdata = ctx->archdata;
-	return x86_64_pt_walk(ctx, vaddr, paddr, archdata->pgt);
+	return x86_64_pt_walk(ctx, vaddr, paddr,
+			      archdata->pml4_as, archdata->pml4);
 }
 
 static kdump_status
 x86_64_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	struct x86_64_data *archdata = ctx->archdata;
-	return x86_64_pt_walk(ctx, vaddr, paddr, archdata->pgt_xen);
+	return x86_64_pt_walk(ctx, vaddr, paddr,
+			      KDUMP_XENVADDR, archdata->xen_pml4);
 }
 
 static kdump_status
