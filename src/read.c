@@ -181,6 +181,7 @@ kdump_readp(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	    void *buffer, size_t *plength)
 {
 	read_page_fn readfn;
+	struct page_io pio;
 	size_t remain;
 	kdump_status ret;
 
@@ -190,9 +191,9 @@ kdump_readp(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	if (ret != kdump_ok)
 		return ret;
 
+	pio.precious = 0;
 	remain = *plength;
 	while (remain) {
-		struct page_io pio;
 		size_t off, partlen;
 
 		pio.pfn = addr >> get_page_shift(ctx);
@@ -233,6 +234,7 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		  char **pstr)
 {
 	read_page_fn readfn;
+	struct page_io pio;
 	char *str = NULL, *newstr, *endp;
 	size_t length = 0, newlength;
 	kdump_status ret;
@@ -243,8 +245,8 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	if (ret != kdump_ok)
 		return ret;
 
+	pio.precious = 0;
 	do {
-		struct page_io pio;
 		size_t off, partlen;
 
 		pio.pfn = addr >> get_page_shift(ctx);

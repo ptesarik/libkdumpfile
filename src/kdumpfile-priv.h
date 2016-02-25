@@ -85,6 +85,7 @@ enum kdump_arch {
 struct page_io {
 	kdump_pfn_t pfn;	/**< PFN under I/O. */
 	void *buf;		/**< Buffer address. */
+	int precious;		/**< Is this page precious? */
 };
 
 struct format_ops {

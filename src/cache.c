@@ -577,9 +577,11 @@ def_read_cache(kdump_ctx *ctx, struct page_io *pio,
 		return kdump_ok;
 
 	ret = fn(ctx, idx, entry);
-	if (ret == kdump_ok)
+	if (ret == kdump_ok) {
+		if (pio->precious)
+			cache_make_precious(ctx->cache, entry);
 		cache_insert(ctx->cache, entry);
-	else
+	} else
 		cache_discard(ctx->cache, entry);
 	return ret;
 }
