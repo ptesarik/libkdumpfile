@@ -716,7 +716,7 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 		return ret;
 	tbl = pio.buf;
 
-	pgd = tbl[pgd_index(vaddr)];
+	pgd = dump64toh(ctx, tbl[pgd_index(vaddr)]);
 	if (!(pgd & _PAGE_PRESENT))
 		return set_error(ctx, kdump_nodata,
 				 "Page directory pointer not present:"
@@ -730,7 +730,7 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 		return ret;
 	tbl = pio.buf;
 
-	pud = tbl[pud_index(vaddr)];
+	pud = dump64toh(ctx, tbl[pud_index(vaddr)]);
 	if (!(pud & _PAGE_PRESENT))
 		return set_error(ctx, kdump_nodata,
 				 "Page directory not present:"
@@ -752,7 +752,7 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 		return ret;
 	tbl = pio.buf;
 
-	pmd = tbl[pmd_index(vaddr)];
+	pmd = dump64toh(ctx, tbl[pmd_index(vaddr)]);
 	if (!(pmd & _PAGE_PRESENT))
 		return set_error(ctx, kdump_nodata,
 				 "Page table not present: pmd[%u] = 0x%llx",
@@ -770,7 +770,7 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 		return ret;
 	tbl = pio.buf;
 
-	pte = tbl[pte_index(vaddr)];
+	pte = dump64toh(ctx, tbl[pte_index(vaddr)]);
 	if (!(pte & _PAGE_PRESENT))
 		return set_error(ctx, kdump_nodata,
 				 "Page not present: pte[%u] = 0x%llx",
