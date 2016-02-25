@@ -43,10 +43,6 @@
 struct ppc64_data {
 	struct {
 		size_t size;
-		char *l4;
-		char *l3;
-		char *l2;
-		char *l1;
 
 		kdump_vaddr_t l4_mask;
 		kdump_vaddr_t l2_mask;
@@ -344,11 +340,6 @@ ppc64_init(kdump_ctx *ctx)
 	archdata->pg.l3_shift = archdata->pg.l2_size + archdata->pg.l2_shift;
 	archdata->pg.l4_shift = archdata->pg.l3_size + archdata->pg.l3_shift;
 
-	archdata->pg.l4 = calloc(1, pagesize);
-	archdata->pg.l3 = calloc(1, pagesize);
-	archdata->pg.l2 = calloc(1, pagesize);
-	archdata->pg.l1 = calloc(1, pagesize);
-
 	ret = get_symbol_val(ctx, "swapper_pg_dir", &pgtaddr);
 	if (ret == kdump_ok) {
 		if (ret != kdump_ok)
@@ -362,12 +353,6 @@ static void
 ppc64_cleanup(kdump_ctx *ctx)
 {
 	struct ppc64_data *archdata = ctx->archdata;
-
-#define FREE(x) if((x)){free(x);(x)=NULL;}
-	FREE (archdata->pg.l1)
-	FREE (archdata->pg.l2)
-	FREE (archdata->pg.l3)
-	FREE (archdata->pg.l4)
 
 	free(archdata);
 	ctx->archdata = NULL;
