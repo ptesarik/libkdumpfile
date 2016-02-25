@@ -65,7 +65,6 @@ struct ppc64_data {
 
 		kdump_vaddr_t pg;
 	} pg;
-	int pgttype;
 };
 
 static const struct attr_template reg_names[] = {
