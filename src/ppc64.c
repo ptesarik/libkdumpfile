@@ -40,17 +40,22 @@
 #define VIRTADDR_BITS_MAX	64
 #define VIRTADDR_MAX		UINT64_MAX
 
+/** Definition of a paging form.
+ */
+struct paging_form {
+	unsigned page_bits;
+	unsigned l1_bits;
+	unsigned l2_bits;
+	unsigned l3_bits;
+	unsigned l4_bits;
+};
+
 struct ppc64_data {
+	struct paging_form pgform;
 	struct {
 		size_t size;
 
-		kdump_vaddr_t l4_mask;
 		kdump_vaddr_t l2_mask;
-
-		int l1_size;
-		int l2_size;
-		int l3_size;
-		int l4_size;
 
 		int l1_shift;
 		int l2_shift;
@@ -143,34 +148,54 @@ static int ishuge(kdump_vaddr_t pte)
 		return NORMAL;
 }
 
-static void vaddr_split (struct ppc64_data *archdata, kdump_vaddr_t addr,
-	int *l4, int *l3, int *l2, int *l1, kdump_vaddr_t *off)
+/**  Individual parts of a virtual address.
+ */
+struct vaddr_parts {
+	unsigned off;		/**< Offset inside page */
+	unsigned l1;		/**< Level-1 page table index */
+	unsigned l2;		/**< Level-2 page table index */
+	unsigned l3;		/**< Level-3 page table index */
+	unsigned l4;		/**< Level-4 page table index */
+};
+
+/**  Split a virtual addres into individual parts.
+ * @param[in]  pgform  Paging form definition.
+ * @param[in]  addr    Virtual address to be split.
+ * @param[out] parts   Parts of the address.
+ */
+static void
+vaddr_split(const struct paging_form *pgform, kdump_vaddr_t addr,
+	    struct vaddr_parts *parts)
 {
-	*l4 = (addr >> archdata->pg.l4_shift) & archdata->pg.l4_mask;
-	*l3 = (addr >> archdata->pg.l3_shift) & ((1 << archdata->pg.l3_size) - 1);
-	*l2 = (addr >> archdata->pg.l2_shift) & ((1 << archdata->pg.l2_size) - 1);
-	*l1 = (addr >> archdata->pg.l1_shift) & ((1 << archdata->pg.l1_size) - 1);
-	*off = addr & ((1 << archdata->pg.l1_size) - 1);
+	parts->off = addr & (((kdump_vaddr_t)1 << pgform->page_bits) - 1);
+	addr >>= pgform->page_bits;
+	parts->l1 = addr & (((kdump_vaddr_t)1 << pgform->l1_bits) - 1);
+	addr >>= pgform->l1_bits;
+	parts->l2 = addr & (((kdump_vaddr_t)1 << pgform->l2_bits) - 1);
+	addr >>= pgform->l2_bits;
+	parts->l3 = addr & (((kdump_vaddr_t)1 << pgform->l3_bits) - 1);
+	addr >>= pgform->l3_bits;
+	parts->l4 = addr & (((kdump_vaddr_t)1 << pgform->l4_bits) - 1);
 }
 
 static kdump_status
 ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	struct ppc64_data *archdata = ctx->archdata;
-	int l1, l2, l3, l4;
+	struct vaddr_parts split;
 	kdump_vaddr_t l1e, l2e, l3e, l4e, e, pt;
-	kdump_vaddr_t addr, pagemask;
+	kdump_vaddr_t pagemask;
 	size_t ps = kdump_ptr_size(ctx);
 	int huge;
 	kdump_status res;
 
-	vaddr_split (archdata, vaddr, &l4, &l3, &l2, &l1, &addr);
+	vaddr_split(&archdata->pgform, vaddr, &split);
 
 	pagemask = archdata->pg.size-1;
 
-	L("reading l4 %lx\n", archdata->pg.pg + l4*ps);
+	L("reading l4 %lx\n", archdata->pg.pg + split.l4*ps);
 
-	res = kdump_readp(ctx, KDUMP_KVADDR, archdata->pg.pg + l4*ps,
+	res = kdump_readp(ctx, KDUMP_KVADDR, archdata->pg.pg + split.l4*ps,
 			  &l4e, &ps);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot read L4");
@@ -187,14 +212,14 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	L("l4 => %lx\n", l4e);
 
-	if (archdata->pg.l3_size != 0) {
+	if (archdata->pgform.l3_bits != 0) {
 		/* TODO: DO ! e = ?*/
 		l3e = 0;
 		return set_error(ctx, kdump_unsupported, "L3 %lx != 0 not yet supported", l3e);
 	} else
 		e = l4e;
 
-	res = kdump_readp(ctx, KDUMP_KVADDR, e + l2*ps, &l2e, &ps);
+	res = kdump_readp(ctx, KDUMP_KVADDR, e + split.l2*ps, &l2e, &ps);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot read L2");
 
@@ -209,7 +234,7 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	}
 
 	e = (l2e & (~archdata->pg.l2_mask)) +
-		ps*((vaddr>>archdata->pg.l1_shift) & ((1<<archdata->pg.l1_size)-1));
+		ps*((vaddr>>archdata->pg.l1_shift) & ((1<<archdata->pgform.l1_bits)-1));
 
 	L("l2 => %lx %lx ==> %lx\n", l2e, (l2e & (~archdata->pg.l2_mask)), e);
 
@@ -323,10 +348,11 @@ ppc64_init(kdump_ctx *ctx)
 	pagesize = get_page_size(ctx);
 
 	if (pagesize == _64K) {
-		archdata->pg.l1_size = 12;
-		archdata->pg.l2_size = 12;
-		archdata->pg.l3_size = 0;
-		archdata->pg.l4_size = 4;
+		archdata->pgform.page_bits = 16;
+		archdata->pgform.l1_bits = 12;
+		archdata->pgform.l2_bits = 12;
+		archdata->pgform.l3_bits = 0;
+		archdata->pgform.l4_bits = 4;
 		archdata->pg.l2_mask = 0x1ff;
 		archdata->pg.pte_shift = 30;
 
@@ -336,9 +362,9 @@ ppc64_init(kdump_ctx *ctx)
 	archdata->pg.size = pagesize;
 
 	archdata->pg.l1_shift = get_page_shift(ctx);
-	archdata->pg.l2_shift = archdata->pg.l1_size + archdata->pg.l1_shift;
-	archdata->pg.l3_shift = archdata->pg.l2_size + archdata->pg.l2_shift;
-	archdata->pg.l4_shift = archdata->pg.l3_size + archdata->pg.l3_shift;
+	archdata->pg.l2_shift = archdata->pgform.l1_bits + archdata->pg.l1_shift;
+	archdata->pg.l3_shift = archdata->pgform.l2_bits + archdata->pg.l2_shift;
+	archdata->pg.l4_shift = archdata->pgform.l3_bits + archdata->pg.l3_shift;
 
 	ret = get_symbol_val(ctx, "swapper_pg_dir", &pgtaddr);
 	if (ret == kdump_ok) {
