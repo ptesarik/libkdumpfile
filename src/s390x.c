@@ -115,8 +115,10 @@ struct os_info {
 	/* possibly more fields up to PAGE_SIZE */
 } __attribute__ ((packed));
 
+/**  Private data for the s390x arch-specific methods.
+ */
 struct s390x_data {
-	uint64_t *pgt;
+	kdump_paddr_t pgdir;	/**< Top-level page directory address */
 	int pgttype;
 };
 
@@ -124,18 +126,39 @@ struct vtop_control {
 	kdump_vaddr_t vaddr;
 	kdump_paddr_t paddr;
 
-	uint64_t *tbl;
 	int tbltype;
 	unsigned len, off;
-	uint64_t tmp[PTRS_PER_XLAT_MAX];
 };
+
+static kdump_status
+read_pte(kdump_ctx *ctx, struct vtop_control *ctl, unsigned idx,
+	 uint64_t *pentry)
+{
+	kdump_paddr_t addr;
+	struct page_io pio;
+	uint64_t *p;
+	kdump_status ret;
+
+	addr = ctl->paddr + idx * sizeof(uint64_t);
+	pio.pfn = addr >> PAGE_SHIFT;
+	pio.precious = ctl->tbltype > 0;
+	ret = raw_read_page(ctx, KDUMP_KPHYSADDR, &pio);
+	if (ret != kdump_ok)
+		return set_error(ctx, ret,
+				 "Cannot read page table entry at %016llx",
+				 (unsigned long long)addr);
+
+	p = pio.buf + (addr & ~PAGE_MASK);
+	*pentry = dump64toh(ctx, *p);
+	return kdump_ok;
+}
 
 static kdump_status
 xlat(kdump_ctx *ctx, struct vtop_control *ctl)
 {
 	unsigned idx;
 	uint64_t entry;
-	size_t sz;
+	kdump_status res;
 
 	switch(ctl->tbltype) {
 	case 3: idx = reg1_index(ctl->vaddr); break;
@@ -153,7 +176,10 @@ xlat(kdump_ctx *ctx, struct vtop_control *ctl)
 				 "Page table index %u not within %u and %u",
 				 idx, ctl->off, ctl->len);
 
-	entry = dump64toh(ctx, ctl->tbl[idx]);
+	res = read_pte(ctx, ctl, idx, &entry);
+	if (res != kdump_ok)
+		return res;
+
 	if (PTE_I(entry))
 		return set_error(ctx, kdump_nodata,
 				 "Page table not present: tbl%u[%u] = 0x%llx",
@@ -183,13 +209,9 @@ xlat(kdump_ctx *ctx, struct vtop_control *ctl)
 		ctl->off = 0;
 		ctl->len = PTRS_PER_PTE;
 	}
-	ctl->tbl = ctl->tmp;
 	--ctl->tbltype;
 
-	sz = (ctl->len - ctl->off) * sizeof(uint64_t);
-	return kdump_readp(ctx, KDUMP_KPHYSADDR,
-			   ctl->paddr + ctl->off * sizeof(uint64_t),
-			   ctl->tbl + ctl->off, &sz);
+	return kdump_ok;
 }
 
 static kdump_status
@@ -200,14 +222,14 @@ s390x_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	uint64_t entry;
 	kdump_status ret;
 
-	if (!archdata->pgt)
+	if (archdata->pgdir == ~(kdump_addr_t)0)
 		return set_error(ctx, kdump_invalid,
 				 "VTOP translation not initialized");
 
 	/* TODO: This should be initialised from kernel_asce, but for
 	 * now, just assume that the top-level table is always maximum size.
 	 */
-	ctl.tbl = archdata->pgt;
+	ctl.paddr = archdata->pgdir;
 	ctl.tbltype = archdata->pgttype;
 	ctl.len = (3 + 1) * PTRS_PER_PAGE;
 	ctl.off = 0 * PTRS_PER_PAGE;
@@ -230,7 +252,10 @@ s390x_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 		}
 	}
 
-	entry = dump64toh(ctx, ctl.tbl[pte_index(vaddr)]);
+	ret = read_pte(ctx, &ctl, pte_index(ctl.vaddr), &entry);
+	if (ret != kdump_ok)
+		return ret;
+
 	if (PTE_I(entry))
 		return set_error(ctx, kdump_nodata,
 				 "Page not present: pte[%u] = 0x%llx",
@@ -248,40 +273,35 @@ static int
 determine_pgttype(kdump_ctx *ctx)
 {
 	struct s390x_data *archdata = ctx->archdata;
+	uint64_t entry, *p, *endp;
 	unsigned i;
+	kdump_status res;
 
+	p = endp = NULL;
 	for (i = 0; i < PTRS_PER_PGD; ++i) {
-		uint64_t entry = dump64toh(ctx, archdata->pgt[i]);
-		if (!PTE_I(entry))
-			return PTE_TT(entry);
+		if (p >= endp) {
+			kdump_paddr_t addr;
+			struct page_io pio;
+
+			addr = archdata->pgdir + i * sizeof(uint64_t);
+			pio.pfn = addr >> PAGE_SHIFT;
+			pio.precious = 0;
+			res = raw_read_page(ctx, KDUMP_KPHYSADDR, &pio);
+			if (res != kdump_ok)
+				return set_error(ctx, res,
+						 "Page table at %016llx",
+						 (unsigned long long)addr);
+			p = pio.buf + (addr & ~PAGE_MASK);
+			endp = pio.buf + PAGE_SIZE;
+		}
+		entry = dump64toh(ctx, *p++);
+		if (!PTE_I(entry)) {
+			archdata->pgttype = PTE_TT(entry);
+			return kdump_ok;
+		}
 	}
 
-	/* If there are no valid entries, the pgt cannot be used
-	 * for translation anyway, and this number does not matter.
-	 */
-	return 0;
-}
-
-static kdump_status
-read_pgt(kdump_ctx *ctx, kdump_vaddr_t pgtaddr)
-{
-	struct s390x_data *archdata = ctx->archdata;
-	uint64_t *pgt;
-	size_t sz;
-	kdump_status ret;
-
-	pgt = ctx_malloc(sizeof(uint64_t) * PTRS_PER_PGD, ctx, "page table");
-	if (!pgt)
-		return kdump_syserr;
-
-	sz = sizeof(uint64_t) * PTRS_PER_PGD;
-	ret = kdump_readp(ctx, KDUMP_KPHYSADDR, pgtaddr, pgt, &sz);
-	if (ret == kdump_ok)
-		archdata->pgt = pgt;
-	else
-		free(pgt);
-
-	return ret;
+	return set_error(ctx, kdump_nodata, "Empty top-level page table");
 }
 
 static kdump_status
@@ -293,11 +313,11 @@ s390x_vtop_init(kdump_ctx *ctx)
 
 	ret = get_symbol_val(ctx, "swapper_pg_dir", &addr);
 	if (ret == kdump_ok) {
-		ret = read_pgt(ctx, addr);
+		archdata->pgdir = addr;
+		ret = determine_pgttype(ctx);
 		if (ret != kdump_ok)
-			return ret;
-
-		archdata->pgttype = determine_pgttype(ctx);
+			return set_error(ctx, ret,
+					 "Cannot determine paging type");
 		ret = set_vtop_xlat(&ctx->vtop_map,
 				    0, VIRTADDR_MAX,
 				    KDUMP_XLAT_VTOP, 0);
@@ -321,7 +341,7 @@ s390x_vtop_init(kdump_ctx *ctx)
 				    KDUMP_XLAT_DIRECT, 0);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret, "Cannot set up directmap");
-	} else if (!archdata->pgt)
+	} else if (archdata->pgdir == ~(kdump_addr_t)0)
 		return set_error(ctx, kdump_nodata,
 				 "Cannot determine size of direct mapping");
 
@@ -466,12 +486,16 @@ process_lowcore_info(kdump_ctx *ctx)
 static kdump_status
 s390x_init(kdump_ctx *ctx)
 {
+	struct s390x_data *archdata;
 	kdump_status ret;
 
-	ctx->archdata = calloc(1, sizeof(struct s390x_data));
-	if (!ctx->archdata)
+	archdata = calloc(1, sizeof(struct s390x_data));
+	if (!archdata)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate s390x private data");
+	ctx->archdata = archdata;
+
+	archdata->pgdir = ~(kdump_addr_t)0;
 
 	process_lowcore_info(ctx);
 	clear_error(ctx);
@@ -489,9 +513,6 @@ static void
 s390x_cleanup(kdump_ctx *ctx)
 {
 	struct s390x_data *archdata = ctx->archdata;
-
-	if (archdata->pgt)
-		free(archdata->pgt);
 
 	free(archdata);
 	ctx->archdata = NULL;
