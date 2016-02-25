@@ -122,13 +122,8 @@ static const struct attr_template reg_names[] = {
 	REG(rx8),
 	REG(rx9),
 };
-	
-#define _64K (1<<16)
 
-#define PAGE_SIZE (kdump_pagesize(a))
-#define PAGE_OFFSET(a) (PAGE_SIZE(a)-1)
-#define PAGE_MASK(a) (~PAGE_OFFSET(a))
-#define PAGE_BASE(a,x) ((x) & PAGE_MASK(a))
+#define _64K (1<<16)
 
 #define PD_HUGE           0x8000000000000000
 #define HUGE_PTE_MASK     0x03
