@@ -35,21 +35,20 @@
 #include <string.h>
 #include <stdlib.h>
 
-typedef kdump_status (*read_page_fn)(kdump_ctx *, kdump_pfn_t, void **);
+typedef kdump_status (*read_page_fn)(kdump_ctx *, struct page_io *);
 
 static kdump_status
-read_kpage_generic(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
+read_kpage_generic(kdump_ctx *ctx, struct page_io *pio)
 {
-	kdump_pfn_t mfn;
 	kdump_status res;
 
-	res = ctx->arch_ops->pfn_to_mfn(ctx, pfn, &mfn);
+	res = ctx->arch_ops->pfn_to_mfn(ctx, pio->pfn, &pio->pfn);
 	if (res != kdump_ok)
 		return res;
 
-	res = ctx->ops->read_page(ctx, mfn, pbuf);
+	res = ctx->ops->read_page(ctx, pio);
 	return set_error(ctx, res, "Cannot read MFN %llx",
-			 (unsigned long long) pfn);
+			 (unsigned long long) pio->pfn);
 }
 
 static inline read_page_fn
@@ -69,63 +68,65 @@ read_kphys_page_fn(kdump_ctx *ctx)
 }
 
 static kdump_status
-read_kvpage_machphys(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
+read_kvpage_machphys(kdump_ctx *ctx, struct page_io *pio)
 {
 	kdump_vaddr_t vaddr;
 	kdump_maddr_t maddr;
 	kdump_status ret;
 
-	vaddr = pfn << get_page_shift(ctx);
+	vaddr = pio->pfn << get_page_shift(ctx);
 	ret = kdump_vtom(ctx, vaddr, &maddr);
 	if (ret != kdump_ok)
 		return ret;
 
-	return ctx->ops->read_page(ctx, maddr >> get_page_shift(ctx), pbuf);
+	pio->pfn = maddr >> get_page_shift(ctx);
+	return ctx->ops->read_page(ctx, pio);
 }
 
 static kdump_status
-read_kvpage_kphys(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
+read_kvpage_kphys(kdump_ctx *ctx, struct page_io *pio)
 {
 	kdump_vaddr_t vaddr;
 	kdump_paddr_t paddr;
 	kdump_status ret;
 
-	vaddr = pfn << get_page_shift(ctx);
+	vaddr = pio->pfn << get_page_shift(ctx);
 	ret = kdump_vtop(ctx, vaddr, &paddr);
 	if (ret != kdump_ok)
 		return ret;
 
-	pfn = paddr >> get_page_shift(ctx);
-	return ctx->ops->read_kpage(ctx, pfn, pbuf);
+	pio->pfn = paddr >> get_page_shift(ctx);
+	return ctx->ops->read_kpage(ctx, pio);
 }
 
 static kdump_status
-read_kvpage_choose(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
+read_kvpage_choose(kdump_ctx *ctx, struct page_io *pio)
 {
 	kdump_vaddr_t vaddr;
 	const struct kdump_xlat *xlat;
 
-	vaddr = pfn << get_page_shift(ctx);
+	vaddr = pio->pfn << get_page_shift(ctx);
 	xlat = get_vtop_xlat(&ctx->vtop_map, vaddr);
 	if (xlat->method != KDUMP_XLAT_VTOP)
-		return read_kvpage_kphys(ctx, pfn, pbuf);
+		return read_kvpage_kphys(ctx, pio);
 	else
-		return read_kvpage_machphys(ctx, pfn, pbuf);
+		return read_kvpage_machphys(ctx, pio);
 }
 
 static kdump_status
-read_xenvpage(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
+read_xenvpage(kdump_ctx *ctx, struct page_io *pio)
 {
 	kdump_vaddr_t vaddr;
 	kdump_paddr_t paddr;
 	kdump_status ret;
 
-	vaddr = pfn << get_page_shift(ctx);
+	vaddr = pio->pfn << get_page_shift(ctx);
 	ret = kdump_vtop_xen(ctx, vaddr, &paddr);
 	if (ret != kdump_ok)
 		return ret;
 
-	return ctx->ops->read_page(ctx, paddr >> get_page_shift(ctx), pbuf);
+	pio->pfn = paddr >> get_page_shift(ctx);
+	return ctx->ops->read_page(ctx, pio);
 }
 
 static kdump_status
@@ -180,7 +181,6 @@ kdump_readp(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	    void *buffer, size_t *plength)
 {
 	read_page_fn readfn;
-	void *readbuf;
 	size_t remain;
 	kdump_status ret;
 
@@ -192,9 +192,11 @@ kdump_readp(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 
 	remain = *plength;
 	while (remain) {
+		struct page_io pio;
 		size_t off, partlen;
 
-		ret = readfn(ctx, addr / get_page_size(ctx), &readbuf);
+		pio.pfn = addr >> get_page_shift(ctx);
+		ret = readfn(ctx, &pio);
 		if (ret != kdump_ok)
 			break;
 
@@ -202,7 +204,7 @@ kdump_readp(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		partlen = get_page_size(ctx) - off;
 		if (partlen > remain)
 			partlen = remain;
-		memcpy(buffer, readbuf + off, partlen);
+		memcpy(buffer, pio.buf + off, partlen);
 		addr += partlen;
 		buffer += partlen;
 		remain -= partlen;
@@ -231,7 +233,6 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		  char **pstr)
 {
 	read_page_fn readfn;
-	void *readbuf;
 	char *str = NULL, *newstr, *endp;
 	size_t length = 0, newlength;
 	kdump_status ret;
@@ -243,17 +244,19 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		return ret;
 
 	do {
+		struct page_io pio;
 		size_t off, partlen;
 
-		ret = readfn(ctx, addr / get_page_size(ctx), &readbuf);
+		pio.pfn = addr >> get_page_shift(ctx);
+		ret = readfn(ctx, &pio);
 		if (ret != kdump_ok)
 			break;
 
 		off = addr % get_page_size(ctx);
 		partlen = get_page_size(ctx) - off;
-		endp = memchr(readbuf + off, 0, partlen);
+		endp = memchr(pio.buf + off, 0, partlen);
 		if (endp)
-			partlen = endp - ((char*)readbuf + off);
+			partlen = endp - ((char*)pio.buf + off);
 
 		newlength = length + partlen;
 		newstr = realloc(str, newlength + 1);
@@ -264,7 +267,7 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 					 "Cannot enlarge string to %zu bytes",
 					 newlength + 1);
 		}
-		memcpy(newstr + length, readbuf + off, partlen);
+		memcpy(newstr + length, pio.buf + off, partlen);
 		length = newlength;
 		str = newstr;
 

@@ -755,17 +755,17 @@ lkcd_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 }
 
 static kdump_status
-lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
+lkcd_read_page(kdump_ctx *ctx, struct page_io *pio)
 {
 	struct cache_entry *ce;
 	kdump_status ret;
 
-	ce = cache_get_entry(ctx->cache, pfn);
-	*pbuf = ce->data;
+	ce = cache_get_entry(ctx->cache, pio->pfn);
+	pio->buf = ce->data;
 	if (cache_entry_valid(ce))
 		return kdump_ok;
 
-	ret = lkcd_read_cache(ctx, pfn, ce);
+	ret = lkcd_read_cache(ctx, pio->pfn, ce);
 	if (ret == kdump_ok)
 		cache_insert(ctx->cache, ce);
 	else

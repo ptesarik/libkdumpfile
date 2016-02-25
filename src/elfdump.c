@@ -137,17 +137,17 @@ elf_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 }
 
 static kdump_status
-elf_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
+elf_read_page(kdump_ctx *ctx, struct page_io *pio)
 {
 	struct cache_entry *ce;
 	kdump_status ret;
 
-	ce = cache_get_entry(ctx->cache, pfn);
-	*pbuf = ce->data;
+	ce = cache_get_entry(ctx->cache, pio->pfn);
+	pio->buf = ce->data;
 	if (cache_entry_valid(ce))
 		return kdump_ok;
 
-	ret = elf_read_cache(ctx, pfn, ce);
+	ret = elf_read_cache(ctx, pio->pfn, ce);
 	if (ret == kdump_ok)
 		cache_insert(ctx->cache, ce);
 	else
@@ -204,7 +204,7 @@ pfn_to_idx(kdump_ctx *ctx, kdump_pfn_t pfn)
 }
 
 static kdump_status
-xc_read_kpage(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
+xc_read_kpage(kdump_ctx *ctx, struct page_io *pio)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
 	struct cache_entry *ce;
@@ -212,12 +212,12 @@ xc_read_kpage(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 	off_t offset;
 	ssize_t rd;
 
-	idx = pfn_to_idx(ctx, pfn);
+	idx = pfn_to_idx(ctx, pio->pfn);
 	if (idx == ~0UL)
 		return set_error(ctx, kdump_nodata, "Page not found");
 
 	ce = cache_get_entry(ctx->cache, idx);
-	*pbuf = ce->data;
+	pio->buf = ce->data;
 	if (cache_entry_valid(ce))
 		return kdump_ok;
 
@@ -269,7 +269,7 @@ xc_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 }
 
 static kdump_status
-xc_read_page(kdump_ctx *ctx, kdump_pfn_t mfn, void **pbuf)
+xc_read_page(kdump_ctx *ctx, struct page_io *pio)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
 	struct cache_entry *ce;
@@ -277,12 +277,12 @@ xc_read_page(kdump_ctx *ctx, kdump_pfn_t mfn, void **pbuf)
 	off_t offset;
 	ssize_t rd;
 
-	idx = mfn_to_idx(ctx, mfn);
+	idx = mfn_to_idx(ctx, pio->pfn);
 	if (idx == ~0UL)
 		return set_error(ctx, kdump_nodata, "Page not found");
 
 	ce = cache_get_entry(ctx->cache, idx);
-	*pbuf = ce->data;
+	pio->buf = ce->data;
 	if (cache_entry_valid(ce))
 		return kdump_ok;
 

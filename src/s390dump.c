@@ -92,19 +92,19 @@ struct s390dump_priv {
 static void s390_cleanup(kdump_ctx *ctx);
 
 static kdump_status
-s390_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
+s390_read_page(kdump_ctx *ctx, struct page_io *pio)
 {
 	struct s390dump_priv *sdp = ctx->fmtdata;
-	kdump_paddr_t addr = pfn * get_page_size(ctx);
+	kdump_paddr_t addr = pio->pfn << get_page_shift(ctx);
 	struct cache_entry *ce;
 	off_t pos;
 	ssize_t rd;
 
-	if (pfn >= get_max_pfn(ctx))
+	if (pio->pfn >= get_max_pfn(ctx))
 		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 
-	ce = cache_get_entry(ctx->cache, pfn);
-	*pbuf = ce->data;
+	ce = cache_get_entry(ctx->cache, pio->pfn);
+	pio->buf = ce->data;
 	if (cache_entry_valid(ce))
 		return kdump_ok;
 

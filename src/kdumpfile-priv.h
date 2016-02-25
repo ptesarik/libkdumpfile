@@ -78,6 +78,15 @@ enum kdump_arch {
 	ARCH_X86_64,
 };
 
+/**  Page I/O information.
+ * This structure is used to pass information between @ref kdump_read
+ * and the format-specific I/O methods.
+ */
+struct page_io {
+	kdump_pfn_t pfn;	/**< PFN under I/O. */
+	void *buf;		/**< Buffer address. */
+};
+
 struct format_ops {
 	/**  Format name (identifier).
 	 * This is a unique identifier for the dump file format. In other
@@ -114,7 +123,7 @@ struct format_ops {
 	 *   kdump_ok        buffer is filled with page data
 	 *   kdump_nodata    data for the given page is not present
 	 */
-	kdump_status (*read_page)(kdump_ctx *, kdump_pfn_t, void **);
+	kdump_status (*read_page)(kdump_ctx *ctx, struct page_io *pio);
 
 	/* Read a kernel physical page from the dump file.
 	 * Input:
@@ -129,7 +138,7 @@ struct format_ops {
 	 * fall back to first translating KPHYSADDR to MACHPHYSADDR and
 	 * use @ref read_page.
 	 */
-	kdump_status (*read_kpage)(kdump_ctx *, kdump_pfn_t, void **);
+	kdump_status (*read_kpage)(kdump_ctx *ctx, struct page_io *pio);
 
 	/* Translate a machine frame number to physical frame number.
 	 *   ctx->fmtdata    initialized in probe()
