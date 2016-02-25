@@ -53,8 +53,6 @@ struct paging_form {
 struct ppc64_data {
 	struct paging_form pgform;
 	struct {
-		size_t size;
-
 		kdump_vaddr_t l2_mask;
 
 		unsigned l1_shift;
@@ -191,7 +189,7 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	vaddr_split(&archdata->pgform, vaddr, &split);
 
-	pagemask = archdata->pg.size-1;
+	pagemask = get_page_size(ctx) - 1;
 
 	L("reading l4 %lx\n", archdata->pg.pg + split.l4*ps);
 
@@ -359,8 +357,6 @@ ppc64_init(kdump_ctx *ctx)
 
 	} else
 		return set_error(ctx, kdump_nodata, "PAGESIZE == %d", pagesize);
-
-	archdata->pg.size = pagesize;
 
 	shift = get_page_shift(ctx);
 	archdata->pg.l1_shift = shift;
