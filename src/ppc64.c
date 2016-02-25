@@ -57,10 +57,10 @@ struct ppc64_data {
 
 		kdump_vaddr_t l2_mask;
 
-		int l1_shift;
-		int l2_shift;
-		int l3_shift;
-		int l4_shift;
+		unsigned l1_shift;
+		unsigned l2_shift;
+		unsigned l3_shift;
+		unsigned l4_shift;
 
 		int pte_shift;
 
@@ -335,6 +335,7 @@ ppc64_init(kdump_ctx *ctx)
 {
 	struct ppc64_data *archdata;
 	kdump_vaddr_t pgtaddr;
+	unsigned shift;
 	kdump_status ret;
 	int pagesize;
 
@@ -361,10 +362,14 @@ ppc64_init(kdump_ctx *ctx)
 
 	archdata->pg.size = pagesize;
 
-	archdata->pg.l1_shift = get_page_shift(ctx);
-	archdata->pg.l2_shift = archdata->pgform.l1_bits + archdata->pg.l1_shift;
-	archdata->pg.l3_shift = archdata->pgform.l2_bits + archdata->pg.l2_shift;
-	archdata->pg.l4_shift = archdata->pgform.l3_bits + archdata->pg.l3_shift;
+	shift = get_page_shift(ctx);
+	archdata->pg.l1_shift = shift;
+	shift += archdata->pgform.l1_bits;
+	archdata->pg.l2_shift = shift;
+	shift += archdata->pgform.l2_bits;
+	archdata->pg.l3_shift = shift;
+	shift += archdata->pgform.l3_bits;
+	archdata->pg.l4_shift = shift;
 
 	ret = get_symbol_val(ctx, "swapper_pg_dir", &pgtaddr);
 	if (ret == kdump_ok) {
