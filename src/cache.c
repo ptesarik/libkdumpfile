@@ -88,15 +88,13 @@ prec_cache_empty(struct cache *cache)
  *
  * @param cache  Cache object.
  * @param entry  Cache entry to be removed.
- * @returns      Pointer to the cache entry (value of @ref entry).
+ * @param idx    Cache entry index.
  */
-static struct cache_entry *
-remove_entry(struct cache *cache, struct cache_entry *entry)
+static void
+remove_entry(struct cache *cache, struct cache_entry *entry, unsigned idx)
 {
 	struct cache_entry *prev, *next;
-	unsigned idx;
 
-	idx = entry - cache->ce;
 	if (cache->eprec == idx)
 		cache->eprec = entry->next;
 	if (cache->eprobe == idx)
@@ -106,8 +104,6 @@ remove_entry(struct cache *cache, struct cache_entry *entry)
 	next->prev = entry->prev;
 	prev = &cache->ce[entry->prev];
 	prev->next = entry->next;
-
-	return entry;
 }
 
 /**  Move a cache entry to the MRU position of the precious list.
@@ -122,7 +118,7 @@ use_precious(struct cache *cache, struct cache_entry *entry)
 	unsigned idx = entry - cache->ce;
 
 	if (cache->split != idx && cache->split != entry->prev) {
-		remove_entry(cache, entry);
+		remove_entry(cache, entry, idx);
 
 		prev = &cache->ce[cache->split];
 		next = &cache->ce[prev->next];
@@ -220,7 +216,7 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry)
 	if (cache->split == idx)
 		cache->split = entry->prev;
 
-	remove_entry(cache, entry);
+	remove_entry(cache, entry, idx);
 	entry->pfn |= CACHE_FLAGS_PFN(cf_precious);
 }
 
@@ -342,7 +338,7 @@ get_missed_entry(struct cache *cache, kdump_pfn_t pfn)
 	if (cache->gprobe == idx)
 		cache->gprobe = entry->prev;
 
-	remove_entry(cache, entry);
+	remove_entry(cache, entry, idx);
 	entry->pfn = pfn | CACHE_FLAGS_PFN(cf_probe);
 
 	if (!entry->data)
