@@ -323,7 +323,7 @@ read_pgt(kdump_ctx *ctx, kdump_vaddr_t pgtaddr)
 	return ret;
 }
 
-kdump_status
+static kdump_status
 read_os_info_from_lowcore(kdump_ctx *ctx)
 {
 	unsigned char os_info_buf[PAGE_SIZE];

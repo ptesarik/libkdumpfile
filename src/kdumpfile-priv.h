@@ -765,15 +765,28 @@ struct cache_entry {
 	void *data;		/**< Pointer to page data. */
 };
 
+#define cache_alloc INTERNAL_NAME(cache_alloc)
 struct cache *cache_alloc(unsigned n, size_t size);
+
+#define cache_free INTERNAL_NAME(cache_free)
 void cache_free(struct cache *);
+
+#define cache_flush INTERNAL_NAME(cache_flush)
 void cache_flush(struct cache *);
 
+#define cache_get_entry INTERNAL_NAME(cache_get_entry)
 struct cache_entry *cache_get_entry(struct cache *, kdump_pfn_t);
+
+#define cache_insert INTERNAL_NAME(cache_insert)
 void cache_insert(struct cache *, struct cache_entry *);
+
+#define cache_discard INTERNAL_NAME(cache_discard)
 void cache_discard(struct cache *, struct cache_entry *);
+
+#define cache_make_precious INTERNAL_NAME(cache_make_precious)
 void cache_make_precious(struct cache *cache, struct cache_entry *entry);
 
+#define def_realloc_caches INTERNAL_NAME(def_realloc_caches)
 kdump_status def_realloc_caches(kdump_ctx *ctx);
 
 /**  Check if a cache entry is valid.

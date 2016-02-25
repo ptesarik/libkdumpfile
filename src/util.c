@@ -422,7 +422,7 @@ create_attr_path(kdump_ctx *ctx, char *path, enum kdump_attr_type type)
 			 "Cannot add attribute '%s'", path);
 }
 
-kdump_status
+static kdump_status
 add_parsed_row(kdump_ctx *ctx, const char *path,
 	       const char *key, const char *val)
 {
