@@ -263,13 +263,40 @@ determine_pgttype(kdump_ctx *ctx)
 }
 
 static kdump_status
+read_pgt(kdump_ctx *ctx, kdump_vaddr_t pgtaddr)
+{
+	struct s390x_data *archdata = ctx->archdata;
+	uint64_t *pgt;
+	size_t sz;
+	kdump_status ret;
+
+	pgt = ctx_malloc(sizeof(uint64_t) * PTRS_PER_PGD, ctx, "page table");
+	if (!pgt)
+		return kdump_syserr;
+
+	sz = sizeof(uint64_t) * PTRS_PER_PGD;
+	ret = kdump_readp(ctx, KDUMP_KPHYSADDR, pgtaddr, pgt, &sz);
+	if (ret == kdump_ok)
+		archdata->pgt = pgt;
+	else
+		free(pgt);
+
+	return ret;
+}
+
+static kdump_status
 s390x_vtop_init(kdump_ctx *ctx)
 {
 	struct s390x_data *archdata = ctx->archdata;
 	kdump_vaddr_t addr;
 	kdump_status ret;
 
-	if (archdata->pgt) {
+	ret = get_symbol_val(ctx, "swapper_pg_dir", &addr);
+	if (ret == kdump_ok) {
+		ret = read_pgt(ctx, addr);
+		if (ret != kdump_ok)
+			return ret;
+
 		archdata->pgttype = determine_pgttype(ctx);
 		ret = set_vtop_xlat(&ctx->vtop_map,
 				    0, VIRTADDR_MAX,
@@ -299,28 +326,6 @@ s390x_vtop_init(kdump_ctx *ctx)
 				 "Cannot determine size of direct mapping");
 
 	return kdump_ok;
-}
-
-static kdump_status
-read_pgt(kdump_ctx *ctx, kdump_vaddr_t pgtaddr)
-{
-	struct s390x_data *archdata = ctx->archdata;
-	uint64_t *pgt;
-	size_t sz;
-	kdump_status ret;
-
-	pgt = ctx_malloc(sizeof(uint64_t) * PTRS_PER_PGD, ctx, "page table");
-	if (!pgt)
-		return kdump_syserr;
-
-	sz = sizeof(uint64_t) * PTRS_PER_PGD;
-	ret = kdump_readp(ctx, KDUMP_KPHYSADDR, pgtaddr, pgt, &sz);
-	if (ret == kdump_ok)
-		archdata->pgt = pgt;
-	else
-		free(pgt);
-
-	return ret;
 }
 
 static kdump_status
@@ -461,7 +466,6 @@ process_lowcore_info(kdump_ctx *ctx)
 static kdump_status
 s390x_init(kdump_ctx *ctx)
 {
-	kdump_vaddr_t pgtaddr;
 	kdump_status ret;
 
 	ctx->archdata = calloc(1, sizeof(struct s390x_data));
@@ -471,13 +475,6 @@ s390x_init(kdump_ctx *ctx)
 
 	process_lowcore_info(ctx);
 	clear_error(ctx);
-
-	ret = get_symbol_val(ctx, "swapper_pg_dir", &pgtaddr);
-	if (ret == kdump_ok) {
-		ret = read_pgt(ctx, pgtaddr);
-		if (ret != kdump_ok)
-			return ret;
-	}
 
 	ret = set_vtop_xlat(&ctx->vtop_map,
 			    0, VIRTADDR_MAX,
