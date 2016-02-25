@@ -298,7 +298,7 @@ ppc64_vtop_init(kdump_ctx *ctx)
 		return set_error(ctx, res, "Cannot read vmlist.addr");
 
 	addr = dump64toh(ctx, addr);
-	addr += strtoull(val, NULL, 16);
+	addr += strtoull(val, NULL, 10);
 
 	res = kdump_readp(ctx, KDUMP_KVADDR, addr, &vmal, &sz);
 	if (res != kdump_ok)
