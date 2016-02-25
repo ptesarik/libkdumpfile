@@ -266,35 +266,32 @@ static kdump_status
 ppc64_vtop_init(kdump_ctx *ctx)
 {
 	kdump_vaddr_t addr, vmal;
-	kdump_status ret;
 	const char *val;
 	size_t sz = kdump_ptr_size(ctx);
 	kdump_status res;
 
-	val = kdump_vmcoreinfo_row(ctx, "SYMBOL(_stext)");
-	if (!val)
-		return set_error(ctx, kdump_nodata, "No _stext in VMCOREINFO");
-
-	addr = strtoull(val, NULL, 16);
-
+	res = get_symbol_val(ctx, "_stext", &addr);
+	if (res != kdump_ok)
+		return set_error(ctx, kdump_nodata,
+				 "Cannot resolve _stext");
 	set_phys_base(ctx, addr);
 
 	flush_vtop_map(&ctx->vtop_map);
-	ret = set_vtop_xlat(&ctx->vtop_map,
+	res = set_vtop_xlat(&ctx->vtop_map,
 			    addr, addr + 0x1000000000000000,
 			    KDUMP_XLAT_DIRECT, addr);
-	if (ret != kdump_ok)
-		return set_error(ctx, ret, "Cannot set up directmap");
+	if (res != kdump_ok)
+		return set_error(ctx, res, "Cannot set up directmap");
 
-	val = kdump_vmcoreinfo_row(ctx, "SYMBOL(vmlist)");
-	if (!val)
-		return set_error(ctx, kdump_nodata, "No SYMBOL(vmlist) in VMCOREINFO");
-
-	addr = strtoull(val, NULL, 16);
+	res = get_symbol_val(ctx, "vmlist", &addr);
+	if (res != kdump_ok)
+		return set_error(ctx, kdump_nodata,
+				 "Cannot resolve vmlist");
 
 	val = kdump_vmcoreinfo_row(ctx, "OFFSET(vm_struct.addr)");
 	if (!val)
-		return set_error(ctx, kdump_nodata, "No OFFSET(vm_struct.addr) in VMCOREINFO");
+		return set_error(ctx, kdump_nodata,
+				 "No OFFSET(vm_struct.addr) in VMCOREINFO");
 
 	res = kdump_readp(ctx, KDUMP_KVADDR, addr, &addr, &sz);
 	if (res != kdump_ok)
@@ -309,11 +306,11 @@ ppc64_vtop_init(kdump_ctx *ctx)
 
 	vmal = dump64toh(ctx, vmal);
 
-	ret = set_vtop_xlat(&ctx->vtop_map,
+	res = set_vtop_xlat(&ctx->vtop_map,
 			    vmal, VIRTADDR_MAX,
 			    KDUMP_XLAT_VTOP, addr);
-	if (ret != kdump_ok)
-		return set_error(ctx, ret, "Cannot set up pagetable mapping");
+	if (res != kdump_ok)
+		return set_error(ctx, res, "Cannot set up pagetable mapping");
 
 	return kdump_ok;
 }
