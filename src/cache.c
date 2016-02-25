@@ -556,6 +556,34 @@ cache_free(struct cache *cache)
 	free(cache);
 }
 
+/**  Default way to handle cached reads.
+ *
+ * @param ctx  Dump file object.
+ * @param pio  Page I/O control.
+ * @param fn   Read function.
+ * @param idx  Page index passed to @ref fn (usually PFN).
+ * @returns    Error status.
+ */
+kdump_status
+def_read_cache(kdump_ctx *ctx, struct page_io *pio,
+	       read_cache_fn *fn, kdump_pfn_t idx)
+{
+	struct cache_entry *entry;
+	kdump_status ret;
+
+	entry = cache_get_entry(ctx->cache, idx);
+	pio->buf = entry->data;
+	if (cache_entry_valid(entry))
+		return kdump_ok;
+
+	ret = fn(ctx, idx, entry);
+	if (ret == kdump_ok)
+		cache_insert(ctx->cache, entry);
+	else
+		cache_discard(ctx->cache, entry);
+	return ret;
+}
+
 /**  Re-allocate a cache with default parameters.
  * @param ctx  Dump file object.
  * @returns    Error status.

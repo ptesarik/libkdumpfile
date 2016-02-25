@@ -757,21 +757,7 @@ lkcd_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 static kdump_status
 lkcd_read_page(kdump_ctx *ctx, struct page_io *pio)
 {
-	struct cache_entry *ce;
-	kdump_status ret;
-
-	ce = cache_get_entry(ctx->cache, pio->pfn);
-	pio->buf = ce->data;
-	if (cache_entry_valid(ce))
-		return kdump_ok;
-
-	ret = lkcd_read_cache(ctx, pio->pfn, ce);
-	if (ret == kdump_ok)
-		cache_insert(ctx->cache, ce);
-	else
-		cache_discard(ctx->cache, ce);
-
-	return ret;
+	return def_read_cache(ctx, pio, lkcd_read_cache, pio->pfn);
 }
 
 static inline unsigned long

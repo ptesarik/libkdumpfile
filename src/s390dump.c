@@ -92,33 +92,30 @@ struct s390dump_priv {
 static void s390_cleanup(kdump_ctx *ctx);
 
 static kdump_status
-s390_read_page(kdump_ctx *ctx, struct page_io *pio)
+s390_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 {
 	struct s390dump_priv *sdp = ctx->fmtdata;
-	kdump_paddr_t addr = pio->pfn << get_page_shift(ctx);
-	struct cache_entry *ce;
+	kdump_paddr_t addr = pfn << get_page_shift(ctx);
 	off_t pos;
 	ssize_t rd;
 
-	if (pio->pfn >= get_max_pfn(ctx))
-		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
-
-	ce = cache_get_entry(ctx->cache, pio->pfn);
-	pio->buf = ce->data;
-	if (cache_entry_valid(ce))
-		return kdump_ok;
-
 	pos = (off_t)addr + (off_t)sdp->dataoff;
 	rd = pread(ctx->fd, ce->data, get_page_size(ctx), pos);
-	if (rd != get_page_size(ctx)) {
-		cache_discard(ctx->cache, ce);
+	if (rd != get_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu",
 				 (unsigned long long) pos);
-	}
 
-	cache_insert(ctx->cache, ce);
 	return kdump_ok;
+}
+
+static kdump_status
+s390_read_page(kdump_ctx *ctx, struct page_io *pio)
+{
+	if (pio->pfn >= get_max_pfn(ctx))
+		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
+
+	return def_read_cache(ctx, pio, s390_read_cache, pio->pfn);
 }
 
 static kdump_status

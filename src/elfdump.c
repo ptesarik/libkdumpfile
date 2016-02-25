@@ -139,22 +139,9 @@ elf_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 static kdump_status
 elf_read_page(kdump_ctx *ctx, struct page_io *pio)
 {
-	struct cache_entry *ce;
-	kdump_status ret;
-
-	ce = cache_get_entry(ctx->cache, pio->pfn);
-	pio->buf = ce->data;
-	if (cache_entry_valid(ce))
-		return kdump_ok;
-
-	ret = elf_read_cache(ctx, pio->pfn, ce);
-	if (ret == kdump_ok)
-		cache_insert(ctx->cache, ce);
-	else
-		cache_discard(ctx->cache, ce);
-
-	return ret;
+	return def_read_cache(ctx, pio, elf_read_cache, pio->pfn);
 }
+
 static void
 get_max_pfn_xen_auto(kdump_ctx *ctx)
 {
@@ -204,34 +191,31 @@ pfn_to_idx(kdump_ctx *ctx, kdump_pfn_t pfn)
 }
 
 static kdump_status
-xc_read_kpage(kdump_ctx *ctx, struct page_io *pio)
+xc_read_cache(kdump_ctx *ctx, kdump_pfn_t idx, struct cache_entry *ce)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
-	struct cache_entry *ce;
-	unsigned long idx;
 	off_t offset;
 	ssize_t rd;
+
+	offset = edp->xen_pages_offset + ((off_t)idx << get_page_shift(ctx));
+	rd = pread(ctx->fd, ce->data, get_page_size(ctx), offset);
+	if (rd != get_page_size(ctx))
+		return set_error(ctx, read_error(rd),
+				 "Cannot read page data at %llu",
+				 (unsigned long long) offset);
+	return kdump_ok;
+}
+
+static kdump_status
+xc_read_kpage(kdump_ctx *ctx, struct page_io *pio)
+{
+	unsigned long idx;
 
 	idx = pfn_to_idx(ctx, pio->pfn);
 	if (idx == ~0UL)
 		return set_error(ctx, kdump_nodata, "Page not found");
 
-	ce = cache_get_entry(ctx->cache, idx);
-	pio->buf = ce->data;
-	if (cache_entry_valid(ce))
-		return kdump_ok;
-
-	offset = edp->xen_pages_offset + (off_t)idx * get_page_size(ctx);
-	rd = pread(ctx->fd, ce->data, get_page_size(ctx), offset);
-	if (rd != get_page_size(ctx)) {
-		cache_discard(ctx->cache, ce);
-		return set_error(ctx, read_error(rd),
-				 "Cannot read page data at %llu",
-				 (unsigned long long) offset);
-	}
-
-	cache_insert(ctx->cache, ce);
-	return kdump_ok;
+	return def_read_cache(ctx, pio, xc_read_cache, idx);
 }
 
 static unsigned long
@@ -271,32 +255,13 @@ xc_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 static kdump_status
 xc_read_page(kdump_ctx *ctx, struct page_io *pio)
 {
-	struct elfdump_priv *edp = ctx->fmtdata;
-	struct cache_entry *ce;
 	unsigned long idx;
-	off_t offset;
-	ssize_t rd;
 
 	idx = mfn_to_idx(ctx, pio->pfn);
 	if (idx == ~0UL)
 		return set_error(ctx, kdump_nodata, "Page not found");
 
-	ce = cache_get_entry(ctx->cache, idx);
-	pio->buf = ce->data;
-	if (cache_entry_valid(ce))
-		return kdump_ok;
-
-	offset = edp->xen_pages_offset + (off_t)idx * get_page_size(ctx);
-	rd = pread(ctx->fd, ce->data, get_page_size(ctx), offset);
-	if (rd != get_page_size(ctx)) {
-		cache_discard(ctx->cache, ce);
-		return set_error(ctx, read_error(rd),
-				 "Cannot read page data at %llu",
-				 (unsigned long long) offset);
-	}
-
-	cache_insert(ctx->cache, ce);
-	return kdump_ok;
+	return def_read_cache(ctx, pio, xc_read_cache, idx);
 }
 
 static kdump_status

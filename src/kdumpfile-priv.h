@@ -795,6 +795,13 @@ void cache_discard(struct cache *, struct cache_entry *);
 #define cache_make_precious INTERNAL_NAME(cache_make_precious)
 void cache_make_precious(struct cache *cache, struct cache_entry *entry);
 
+typedef kdump_status read_cache_fn(
+	kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *entry);
+
+#define def_read_cache INTERNAL_NAME(def_read_cache)
+kdump_status def_read_cache(kdump_ctx *ctx, struct page_io *pio,
+			    read_cache_fn *fn, kdump_pfn_t idx);
+
 #define def_realloc_caches INTERNAL_NAME(def_realloc_caches)
 kdump_status def_realloc_caches(kdump_ctx *ctx);
 
