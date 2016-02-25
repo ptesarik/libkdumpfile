@@ -99,11 +99,11 @@ devmem_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 	off_t pos = pfn * get_page_size(ctx);
 	ssize_t rd;
 
-	rd = pread(ctx->fd, ctx->page, get_page_size(ctx), pos);
+	rd = pread(ctx->fd, ctx->buffer, get_page_size(ctx), pos);
 	if (rd != get_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read memory device");
-	*pbuf = ctx->page;
+	*pbuf = ctx->buffer;
 	return kdump_ok;
 }
 

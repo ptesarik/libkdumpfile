@@ -299,8 +299,6 @@ kdump_free(kdump_ctx *ctx)
 		ctx->ops->cleanup(ctx);
 	if (ctx->arch_ops && ctx->arch_ops->cleanup)
 		ctx->arch_ops->cleanup(ctx);
-	if (ctx->page)
-		free(ctx->page);
 	if (ctx->buffer)
 		free(ctx->buffer);
 	if (ctx->xen_map)

@@ -390,7 +390,6 @@ struct _tag_kdump_ctx {
 
 	/* read_page internals */
 	void *buffer;		/* temporary buffer */
-	void *page;		/* page data buffer */
 
 	/* address translation */
 	struct vtop_map vtop_map;

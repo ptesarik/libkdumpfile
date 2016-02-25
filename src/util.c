@@ -274,18 +274,11 @@ page_size_pre_hook(kdump_ctx *ctx, struct attr_data *attr,
 		   union kdump_attr_value *newval)
 {
 	size_t page_size = newval->number;
-	void *page = realloc(ctx->page, page_size);
 
 	/* It must be a power of 2 */
 	if (page_size != (page_size & ~(page_size - 1)))
 		return set_error(ctx, kdump_dataerr,
 				 "Invalid page size: %zu", page_size);
-
-	if (!page)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate page buffer (%zu bytes)",
-				 page_size);
-	ctx->page = page;
 
 	return set_page_shift(ctx, ffsl((unsigned long)page_size) - 1);
 }
