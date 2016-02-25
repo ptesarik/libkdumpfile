@@ -84,26 +84,37 @@ prec_cache_empty(struct cache *cache)
 	return cache->ce[cache->split].next == cache->gprec;
 }
 
-/**  Remove a cache entry from the list.
+/**  Remove a cache entry from a list.
+ *
+ * @param cache  Cache object.
+ * @param entry  Cache entry to be removed.
+ */
+static void
+remove_entry(struct cache *cache, struct cache_entry *entry)
+{
+	struct cache_entry *prev, *next;
+
+	next = &cache->ce[entry->next];
+	next->prev = entry->prev;
+	prev = &cache->ce[entry->prev];
+	prev->next = entry->next;
+}
+
+/**  Remove an active cache entry from the list.
  *
  * @param cache  Cache object.
  * @param entry  Cache entry to be removed.
  * @param idx    Cache entry index.
  */
 static void
-remove_entry(struct cache *cache, struct cache_entry *entry, unsigned idx)
+remove_active(struct cache *cache, struct cache_entry *entry, unsigned idx)
 {
-	struct cache_entry *prev, *next;
-
 	if (cache->eprec == idx)
 		cache->eprec = entry->next;
 	if (cache->eprobe == idx)
 		cache->eprobe = entry->prev;
 
-	next = &cache->ce[entry->next];
-	next->prev = entry->prev;
-	prev = &cache->ce[entry->prev];
-	prev->next = entry->next;
+	remove_entry(cache, entry);
 }
 
 /**  Move a cache entry to the MRU position of the precious list.
@@ -118,7 +129,7 @@ use_precious(struct cache *cache, struct cache_entry *entry)
 	unsigned idx = entry - cache->ce;
 
 	if (cache->split != idx && cache->split != entry->prev) {
-		remove_entry(cache, entry, idx);
+		remove_active(cache, entry, idx);
 
 		prev = &cache->ce[cache->split];
 		next = &cache->ce[prev->next];
@@ -216,7 +227,7 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry)
 	if (cache->split == idx)
 		cache->split = entry->prev;
 
-	remove_entry(cache, entry, idx);
+	remove_active(cache, entry, idx);
 	entry->pfn |= CACHE_FLAGS_PFN(cf_precious);
 }
 
@@ -338,7 +349,7 @@ get_missed_entry(struct cache *cache, kdump_pfn_t pfn)
 	if (cache->gprobe == idx)
 		cache->gprobe = entry->prev;
 
-	remove_entry(cache, entry, idx);
+	remove_active(cache, entry, idx);
 	entry->pfn = pfn | CACHE_FLAGS_PFN(cf_probe);
 
 	if (!entry->data)
