@@ -772,6 +772,7 @@ void cache_flush(struct cache *);
 struct cache_entry *cache_get_entry(struct cache *, kdump_pfn_t);
 void cache_insert(struct cache *, struct cache_entry *);
 void cache_discard(struct cache *, struct cache_entry *);
+void cache_make_precious(struct cache *cache, struct cache_entry *entry);
 
 kdump_status def_realloc_caches(kdump_ctx *ctx);
 

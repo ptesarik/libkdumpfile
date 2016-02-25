@@ -137,6 +137,22 @@ add_inflight(struct cache *cache, struct cache_entry *entry, unsigned idx)
 	cache->inflight = idx;
 }
 
+/**  Ensure that an in-flight entry goes to the precious list, eventually.
+ *
+ * @param cache  Cache object.
+ * @param entry  Cache entry.
+ */
+void
+cache_make_precious(struct cache *cache, struct cache_entry *entry)
+{
+	if (CACHE_PFN_FLAGS(entry->pfn) == cf_probe) {
+		++cache->dsplit;
+		--cache->nprobe;
+		entry->pfn = CACHE_PFN(entry->pfn) |
+			CACHE_FLAGS_PFN(cf_precious);
+	}
+}
+
 /**  Move a cache entry to the MRU position of the precious list.
  *
  * @param cache  Cache object.
@@ -358,8 +374,10 @@ get_inflight_entry(struct cache *cache, kdump_pfn_t pfn)
 	idx = cache->inflight;
 	for (n = cache->ninflight; n; --n) {
 		entry = &cache->ce[idx];
-		if (CACHE_PFN(entry->pfn) == pfn)
+		if (CACHE_PFN(entry->pfn) == pfn) {
+			cache_make_precious(cache, entry);
 			return entry;
+		}
 		idx = entry->next;
 	}
 
