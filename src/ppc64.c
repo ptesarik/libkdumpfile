@@ -325,7 +325,7 @@ ppc64_init(kdump_ctx *ctx)
 
 	ctx->archdata = archdata;
 
-	pagesize = kdump_pagesize(ctx);
+	pagesize = get_page_size(ctx);
 
 	if (pagesize == _64K) {
 		archdata->pg.l1_size = 12;
@@ -340,7 +340,7 @@ ppc64_init(kdump_ctx *ctx)
 
 	archdata->pg.size = pagesize;
 
-	archdata->pg.l1_shift = kdump_pageshift(ctx);
+	archdata->pg.l1_shift = get_page_shift(ctx);
 	archdata->pg.l2_shift = archdata->pg.l1_size + archdata->pg.l1_shift;
 	archdata->pg.l3_shift = archdata->pg.l2_size + archdata->pg.l2_shift;
 	archdata->pg.l4_shift = archdata->pg.l3_size + archdata->pg.l3_shift;
