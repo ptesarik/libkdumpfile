@@ -740,6 +740,7 @@ kphys_is_machphys(kdump_ctx *ctx)
 #define CF_SHIFT		(PFN_BITS - CF_BITS)
 #define CACHE_FLAGS_PFN(f)	((kdump_pfn_t)(f) << CF_SHIFT)
 #define CACHE_PFN_FLAGS(pfn)	(((pfn) >> CF_SHIFT) & CF_MASK)
+#define CACHE_PFN(pfn)		((pfn) & ~(CACHE_FLAGS_PFN(CF_MASK)))
 
 /**  Cache flags.
  *

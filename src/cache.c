@@ -46,16 +46,19 @@ struct cache {
 	unsigned gprec;		 /**< Index of MRU precious ghost entry */
 	unsigned eprec;		 /**< End of precious entries; this is the
 				  *   index of the first unused entry */
-	unsigned gprobe;	 /**< Index of MRU probed ghost elentry */
+	unsigned gprobe;	 /**< Index of MRU probed ghost entry */
 	unsigned eprobe;	 /**< End of probed entries; this is the
 				  *   index of the first unused entry */
 	unsigned nprobe;	 /**< Total number of probe list entries,
 				  *   including ghost and in-flight entries */
 	unsigned cap;		 /**< Total cache capacity */
+	unsigned inflight;	 /**< Index of first in-flight entry */
+	unsigned ninflight;	 /**< Number of in-flight entries */
 	struct cache_entry ce[]; /**< Cache entries */
 };
 
 static struct cache_entry *get_ghost_entry(struct cache *, kdump_pfn_t);
+static struct cache_entry *get_inflight_entry(struct cache *, kdump_pfn_t);
 static struct cache_entry *get_missed_entry(struct cache *, kdump_pfn_t);
 
 /**  Check whether the probed cache is empty.
@@ -115,6 +118,23 @@ remove_active(struct cache *cache, struct cache_entry *entry, unsigned idx)
 		cache->eprobe = entry->prev;
 
 	remove_entry(cache, entry);
+}
+
+/**  Add an entry to the inflight list.
+ *
+ * @param cache  Cache object.
+ * @param entry  Cache entry to be removed.
+ * @param idx    Cache entry index.
+ */
+static void
+add_inflight(struct cache *cache, struct cache_entry *entry, unsigned idx)
+{
+	if (cache->ninflight++) {
+		entry->next = cache->inflight;
+		entry->prev = cache->ce[cache->inflight].prev;
+	} else
+		entry->next = entry->prev = idx;
+	cache->inflight = idx;
 }
 
 /**  Move a cache entry to the MRU position of the precious list.
@@ -228,6 +248,7 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry)
 		cache->split = entry->prev;
 
 	remove_active(cache, entry, idx);
+	add_inflight(cache, entry, idx);
 	entry->pfn |= CACHE_FLAGS_PFN(cf_precious);
 }
 
@@ -273,6 +294,8 @@ cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
 	}
 
 	entry = get_ghost_entry(cache, pfn);
+	if (!entry)
+		entry = get_inflight_entry(cache, pfn);
 	if (!entry)
 		entry = get_missed_entry(cache, pfn);
 
@@ -320,6 +343,29 @@ get_ghost_entry(struct cache *cache, kdump_pfn_t pfn)
 	return NULL;
 }
 
+/**  Get the in-flight entry for a given PFN.
+ *
+ * @param cache  Cache object.
+ * @param pfn    PFN to be searched.
+ * @returns      In-flight entry, or @c NULL if not found.
+ */
+static struct cache_entry *
+get_inflight_entry(struct cache *cache, kdump_pfn_t pfn)
+{
+	struct cache_entry *entry;
+	unsigned idx, n;
+
+	idx = cache->inflight;
+	for (n = cache->ninflight; n; --n) {
+		entry = &cache->ce[idx];
+		if (CACHE_PFN(entry->pfn) == pfn)
+			return entry;
+		idx = entry->next;
+	}
+
+	return NULL;
+}
+
 /**  Get a cache entry for a given missed PFN.
  *
  * @param cache  Cache object.
@@ -350,6 +396,7 @@ get_missed_entry(struct cache *cache, kdump_pfn_t pfn)
 		cache->gprobe = entry->prev;
 
 	remove_active(cache, entry, idx);
+	add_inflight(cache, entry, idx);
 	entry->pfn = pfn | CACHE_FLAGS_PFN(cf_probe);
 
 	if (!entry->data)
@@ -367,8 +414,14 @@ void
 cache_insert(struct cache *cache, struct cache_entry *entry)
 {
 	struct cache_entry *prev, *next;
-	unsigned idx = entry - cache->ce;
+	unsigned idx;
 
+	if (cache_entry_valid(entry))
+		return;
+	if (cache->ninflight--)
+		remove_entry(cache, entry);
+
+	idx = entry - cache->ce;
 	prev = &cache->ce[cache->split];
 	next = &cache->ce[prev->next];
 
@@ -441,6 +494,7 @@ cache_flush(struct cache *cache)
 	cache->gprobe = cache->cap - 1;
 	cache->eprobe = cache->cap - 1;
 	cache->nprobe = 0;
+	cache->ninflight = 0;
 }
 
 /**  Allocate a cache object.
