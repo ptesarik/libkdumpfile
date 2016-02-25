@@ -488,6 +488,10 @@ struct timeval_64 {
 	int64_t tv_usec;
 };
 
+#define raw_read_page INTERNAL_NAME(raw_read_page)
+kdump_status raw_read_page(kdump_ctx *ctx, kdump_addrspace_t as,
+			   struct page_io *pio);
+
 /* utils */
 
 #define set_error INTERNAL_NAME(set_error)
