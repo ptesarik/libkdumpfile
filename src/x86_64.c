@@ -721,15 +721,18 @@ static kdump_status
 x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	       uint64_t *pgt)
 {
-	uint64_t tbl[PTRS_PER_PAGE];
+	uint64_t *tbl;
 	uint64_t pgd, pud, pmd, pte;
 	kdump_paddr_t base;
-	size_t sz;
+	struct page_io pio;
 	kdump_status ret;
 
 	if (!pgt)
 		return set_error(ctx, kdump_invalid,
 				 "VTOP translation not initialized");
+
+	/* These page table levels are likely to be hit again soon. */
+	pio.precious = 1;
 
 	pgd = pgt[pgd_index(vaddr)];
 	if (!(pgd & _PAGE_PRESENT))
@@ -738,12 +741,12 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 				 " pgd[%u] = 0x%llx",
 				 (unsigned) pgd_index(vaddr),
 				 (unsigned long long) pgd);
-	base = pgd & ~PHYSADDR_MASK & PAGE_MASK;
+	pio.pfn = (pgd & ~PHYSADDR_MASK) >> PAGE_SHIFT;
 
-	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, KDUMP_MACHPHYSADDR, base, tbl, &sz);
+	ret = raw_read_page(ctx, KDUMP_MACHPHYSADDR, &pio);
 	if (ret != kdump_ok)
 		return ret;
+	tbl = pio.buf;
 
 	pud = tbl[pud_index(vaddr)];
 	if (!(pud & _PAGE_PRESENT))
@@ -757,12 +760,15 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 		*paddr = base + (vaddr & ~PUD_PSE_MASK);
 		return kdump_ok;
 	}
-	base = pud & ~PHYSADDR_MASK & PAGE_MASK;
+	pio.pfn = (pud & ~PHYSADDR_MASK) >> PAGE_SHIFT;
 
-	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, KDUMP_MACHPHYSADDR, base, tbl, &sz);
+	/* Let the default cache algorithm decide the lowest 2 levels. */
+	pio.precious = 0;
+
+	ret = raw_read_page(ctx, KDUMP_MACHPHYSADDR, &pio);
 	if (ret != kdump_ok)
 		return ret;
+	tbl = pio.buf;
 
 	pmd = tbl[pmd_index(vaddr)];
 	if (!(pmd & _PAGE_PRESENT))
@@ -775,12 +781,12 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 		*paddr = base + (vaddr & ~PMD_PSE_MASK);
 		return kdump_ok;
 	}
-	base = pmd & ~PHYSADDR_MASK & PAGE_MASK;
+	pio.pfn = (pmd & ~PHYSADDR_MASK) >> PAGE_SHIFT;
 
-	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, KDUMP_MACHPHYSADDR, base, tbl, &sz);
+	ret = raw_read_page(ctx, KDUMP_MACHPHYSADDR, &pio);
 	if (ret != kdump_ok)
 		return ret;
+	tbl = pio.buf;
 
 	pte = tbl[pte_index(vaddr)];
 	if (!(pte & _PAGE_PRESENT))
