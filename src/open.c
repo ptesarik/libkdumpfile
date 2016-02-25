@@ -144,6 +144,8 @@ kdump_set_fd(kdump_ctx *ctx, int fd)
 		if (ret != kdump_unsupported)
 			return ret;
 
+		if (ctx->cache)
+			cache_free(ctx->cache);
 		clear_attrs(ctx);
 		clear_error(ctx);
 	}
@@ -299,6 +301,8 @@ kdump_free(kdump_ctx *ctx)
 		ctx->ops->cleanup(ctx);
 	if (ctx->arch_ops && ctx->arch_ops->cleanup)
 		ctx->arch_ops->cleanup(ctx);
+	if (ctx->cache)
+		cache_free(ctx->cache);
 	if (ctx->buffer)
 		free(ctx->buffer);
 	if (ctx->xen_map)

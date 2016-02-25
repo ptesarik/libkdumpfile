@@ -149,7 +149,6 @@ struct page_desc {
 };
 
 struct disk_dump_priv {
-	struct cache *cache;	/* page cache */
 	unsigned char *bitmap;	/* for compressed dumps */
 	off_t descoff;		/* position of page descriptor table */
 };
@@ -302,23 +301,22 @@ diskdump_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 static kdump_status
 diskdump_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 {
-	struct disk_dump_priv *ddp = ctx->fmtdata;
 	struct cache_entry *ce;
 	kdump_status ret;
 
 	if (pfn >= get_max_pfn(ctx))
 		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 
-	ce = cache_get_entry(ddp->cache, pfn);
+	ce = cache_get_entry(ctx->cache, pfn);
 	*pbuf = ce->data;
 	if (cache_entry_valid(ce))
 		return kdump_ok;
 
 	ret = diskdump_read_cache(ctx, pfn, ce);
 	if (ret == kdump_ok)
-		cache_insert(ddp->cache, ce);
+		cache_insert(ctx->cache, ce);
 	else
-		cache_discard(ddp->cache, ce);
+		cache_discard(ctx->cache, ce);
 	return ret;
 }
 
@@ -707,26 +705,12 @@ diskdump_probe(kdump_ctx *ctx)
 	return open_common(ctx);
 }
 
-static kdump_status
-diskdump_realloc_caches(kdump_ctx *ctx)
-{
-	struct disk_dump_priv *ddp = ctx->fmtdata;
-
-	if (ddp->cache)
-		cache_free(ddp->cache);
-
-	ddp->cache = def_cache_alloc(ctx);
-	return ddp->cache ? kdump_ok : kdump_syserr;
-}
-
 static void
 diskdump_cleanup(kdump_ctx *ctx)
 {
 	struct disk_dump_priv *ddp = ctx->fmtdata;
 
 	if (ddp) {
-		if (ddp->cache)
-			cache_free(ddp->cache);
 		if (ddp->bitmap)
 			free(ddp->bitmap);
 		free(ddp);
@@ -738,6 +722,6 @@ const struct format_ops diskdump_ops = {
 	.name = "diskdump",
 	.probe = diskdump_probe,
 	.read_page = diskdump_read_page,
-	.realloc_caches = diskdump_realloc_caches,
+	.realloc_caches = def_realloc_caches,
 	.cleanup = diskdump_cleanup,
 };

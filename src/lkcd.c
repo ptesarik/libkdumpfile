@@ -317,8 +317,6 @@ struct pfn_block {
 #define MAX_FORMAT_NAME	(sizeof(LKCD_FORMAT_PFX) + 10)
 
 struct lkcd_priv {
-	struct cache *cache;	/**< Page cache. */
-
 	off_t data_offset;	/* offset to 1st page */
 	off_t last_offset;	/* offset of last page parsed so far */
 	off_t end_offset;	/* offset of end marker */
@@ -759,20 +757,19 @@ lkcd_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 static kdump_status
 lkcd_read_page(kdump_ctx *ctx, kdump_pfn_t pfn, void **pbuf)
 {
-	struct lkcd_priv *lkcdp = ctx->fmtdata;
 	struct cache_entry *ce;
 	kdump_status ret;
 
-	ce = cache_get_entry(lkcdp->cache, pfn);
+	ce = cache_get_entry(ctx->cache, pfn);
 	*pbuf = ce->data;
 	if (cache_entry_valid(ce))
 		return kdump_ok;
 
 	ret = lkcd_read_cache(ctx, pfn, ce);
 	if (ret == kdump_ok)
-		cache_insert(lkcdp->cache, ce);
+		cache_insert(ctx->cache, ce);
 	else
-		cache_discard(lkcdp->cache, ce);
+		cache_discard(ctx->cache, ce);
 
 	return ret;
 }
@@ -850,7 +847,6 @@ open_common(kdump_ctx *ctx)
 		return kdump_syserr;
 	ctx->fmtdata = lkcdp;
 
-	lkcdp->cache = NULL;
 	lkcdp->version = base_version(dump32toh(ctx, dh->dh_version));
 	snprintf(lkcdp->format, sizeof(lkcdp->format),
 		 LKCD_FORMAT_PFX "%u", lkcdp->version);
@@ -967,25 +963,10 @@ free_level1(struct pfn_block ***level1, unsigned long n)
 	}
 }
 
-static kdump_status
-lkcd_realloc_caches(kdump_ctx *ctx)
-{
-	struct lkcd_priv *lkcdp = ctx->fmtdata;
-
-	if (lkcdp->cache)
-		cache_free(lkcdp->cache);
-
-	lkcdp->cache = def_cache_alloc(ctx);
-	return lkcdp->cache ? kdump_ok : kdump_syserr;
-}
-
 static void
 lkcd_cleanup(kdump_ctx *ctx)
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
-
-	if (lkcdp->cache)
-		cache_free(lkcdp->cache);
 
 	free_level1(lkcdp->pfn_level1, lkcdp->l1_size);
 	free(lkcdp);
@@ -996,6 +977,6 @@ const struct format_ops lkcd_ops = {
 	.name = "lkcd",
 	.probe = lkcd_probe,
 	.read_page = lkcd_read_page,
-	.realloc_caches = lkcd_realloc_caches,
+	.realloc_caches = def_realloc_caches,
 	.cleanup = lkcd_cleanup,
 };

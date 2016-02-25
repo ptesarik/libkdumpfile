@@ -477,15 +477,16 @@ cache_free(struct cache *cache)
 	free(cache);
 }
 
-/**  Allocate a cache with default parameters.
+/**  Re-allocate a cache with default parameters.
  * @param ctx  Dump file object.
- * @returns    The allocated cache, or @c NULL on failure.
+ * @returns    Error status.
  *
- * This is a shorthand for allocating a cache with @c cache.size
- * elements of @c arch.page_size bytes each.
+ * This function can be used as the @c realloc_caches method if
+ * the cache is organized as @c cache.size elements of @c arch.page_size
+ * bytes each.
  */
-struct cache *
-def_cache_alloc(kdump_ctx *ctx)
+kdump_status
+def_realloc_caches(kdump_ctx *ctx)
 {
 	const struct attr_data *attr;
 	unsigned cache_size;
@@ -497,10 +498,15 @@ def_cache_alloc(kdump_ctx *ctx)
 		: DEFAULT_CACHE_SIZE;
 	cache = cache_alloc(cache_size, get_page_size(ctx));
 	if (!cache)
-		set_error(ctx, kdump_syserr,
-			  "Cannot allocate cache (%u * %zu bytes)",
-			  cache_size, get_page_size(ctx));
-	return cache;
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate cache (%u * %zu bytes)",
+				 cache_size, get_page_size(ctx));
+
+	if (ctx->cache)
+		cache_free(ctx->cache);
+	ctx->cache = cache;
+
+	return kdump_ok;
 }
 
 static kdump_status

@@ -371,6 +371,8 @@ struct vtop_map {
 	struct kdump_vaddr_region *region;
 };
 
+struct cache;
+
 /* Maximum length of the error message */
 #define ERRBUF	160
 
@@ -389,7 +391,8 @@ struct _tag_kdump_ctx {
 	void *priv;
 
 	/* read_page internals */
-	void *buffer;		/* temporary buffer */
+	struct cache *cache;	/**< Page cache. */
+	void *buffer;		/**< Temporary buffer. */
 
 	/* address translation */
 	struct vtop_map vtop_map;
@@ -761,16 +764,15 @@ struct cache_entry {
 	void *data;		/**< Pointer to page data. */
 };
 
-struct cache;
-
 struct cache *cache_alloc(unsigned n, size_t size);
-struct cache *def_cache_alloc(kdump_ctx *ctx);
 void cache_free(struct cache *);
 void cache_flush(struct cache *);
 
 struct cache_entry *cache_get_entry(struct cache *, kdump_pfn_t);
 void cache_insert(struct cache *, struct cache_entry *);
 void cache_discard(struct cache *, struct cache_entry *);
+
+kdump_status def_realloc_caches(kdump_ctx *ctx);
 
 /**  Check if a cache entry is valid.
  *
