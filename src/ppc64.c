@@ -140,9 +140,6 @@ static const struct attr_template reg_names[] = {
  */
 #define HUGEPD_SHIFT_MASK 0x3f
 
-static int vtoplog = 0;
-#define L(format, ...) if (vtoplog) fprintf (stderr, __FILE__":%d: " format, __LINE__, ##__VA_ARGS__)
-
 /**  Individual parts of a virtual address.
  */
 struct vaddr_parts {
@@ -261,15 +258,10 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	struct ppc64_data *archdata = ctx->archdata;
 	struct vaddr_parts split;
 	kdump_vaddr_t l1e, l2e, l3e, l4e, e;
-	kdump_vaddr_t pagemask;
 	size_t ps = kdump_ptr_size(ctx);
 	kdump_status res;
 
 	vaddr_split(&archdata->pgform, vaddr, &split);
-
-	pagemask = get_page_size(ctx) - 1;
-
-	L("reading l4 %lx\n", archdata->pg.pg + split.l4*ps);
 
 	res = kdump_readp(ctx, KDUMP_KVADDR, archdata->pg.pg + split.l4*ps,
 			  &l4e, &ps);
@@ -291,8 +283,6 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	e = (l4e & (~archdata->pg.l4_mask)) + split.l3 * ps;
 
-	L("l4 => %lx\n", l4e);
-
 	if (archdata->pgform.l3_bits != 0) {
 		res = kdump_readp(ctx, KDUMP_KVADDR, e, &l3e, &ps);
 		if (res != kdump_ok)
@@ -313,8 +303,6 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	e = (l3e & (~archdata->pg.l3_mask)) + split.l2 *ps;
 
-	L("l3 => %lx\n", l3e);
-
 	res = kdump_readp(ctx, KDUMP_KVADDR, e, &l2e, &ps);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot read L2");
@@ -334,8 +322,6 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	e = (l2e & (~archdata->pg.l2_mask)) + split.l1 * ps;
 
-	L("l2 => %lx %lx ==> %lx\n", l2e, (l2e & (~archdata->pg.l2_mask)), e);
-
 	res = kdump_readp(ctx, KDUMP_KVADDR, e, &l1e, &ps);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot read L1");
@@ -343,10 +329,6 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	l1e = dump64toh(ctx, l1e);
 
 	if (!l1e) goto notfound;
-
-	L("l1 %lx => %lx\n", l1e,
-		(((l1e>>archdata->pg.rpn_shift)<<archdata->pg.l1_shift)&~(pagemask))
-		+((pagemask)&vaddr));
 
 	*paddr = vtop_final(vaddr, l1e,
 			    archdata->pg.rpn_shift, archdata->pg.l1_shift);
