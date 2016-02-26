@@ -123,28 +123,23 @@ static const struct attr_template reg_names[] = {
 
 #define _64K (1<<16)
 
-#define PD_HUGE           0x8000000000000000
+/**  A page table entry is huge if the bottom two bits != 00.
+ */
 #define HUGE_PTE_MASK     0x03
+
+/**  Page entry flag for a huge page directory.
+ * The corresponding entry is huge if the most significant bit is zero.
+ */
+#define PD_HUGE           ((uint64_t)1 << 63)
+
+/**  Page shift of a huge page directory.
+ * If PD_HUGE is zero, the huge page shift is stored in the least
+ * significant bits of the entry.
+ */
 #define HUGEPD_SHIFT_MASK 0x3f
 
 static int vtoplog = 0;
 #define L(format, ...) if (vtoplog) fprintf (stderr, __FILE__":%d: " format, __LINE__, ##__VA_ARGS__)
-
-enum {
-	NORMAL = 0,
-	HUGEPG,
-	HUGEPD
-};
-
-static int ishuge(kdump_vaddr_t pte)
-{
-	if (pte & HUGE_PTE_MASK)
-		return HUGEPG;
-	else if ((pte & PD_HUGE) == 0)
-		return HUGEPD;
-	else
-		return NORMAL;
-}
 
 /**  Individual parts of a virtual address.
  */
@@ -193,15 +188,79 @@ vtop_final(kdump_vaddr_t vaddr, uint64_t pte,
 	return ((pte >> rpn_shift) << page_shift) + (vaddr & mask);
 }
 
+/**  Check whether a page table entry is huge.
+ * @param pte  Page table entry (value).
+ * @returns    Non-zero if this is a huge page entry.
+ */
+static inline int
+is_hugepte(uint64_t pte)
+{
+	return (pte & HUGE_PTE_MASK) != 0x0;
+}
+
+/**  Check whether a page directory is huge.
+ * @param pte  Page table entry (value).
+ * @returns    Non-zero if this is a huge page directory entry.
+ */
+static inline int
+is_hugepd(uint64_t pte)
+{
+	return !(pte & PD_HUGE);
+}
+
+/**  Get the huge page directory shift.
+ * @param entry  Huge page directory entry.
+ * @returns      Huge page bit shift.
+ */
+static inline unsigned
+hugepd_shift(uint64_t hpde)
+{
+	return hpde & HUGEPD_SHIFT_MASK;
+}
+
+/**  Translate a huge page using its directory entry.
+ */
+static kdump_status
+ppc64_vtop_hugepd(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
+		  uint64_t hpde, unsigned pdshift)
+{
+	struct ppc64_data *archdata = ctx->archdata;
+	kdump_vaddr_t mask, base;
+	unsigned long idx;
+	uint64_t pte;
+	size_t sz;
+	kdump_status res;
+
+	base = (hpde & ~HUGEPD_SHIFT_MASK) | PD_HUGE;
+	mask = ((kdump_vaddr_t)1 << pdshift) - 1;
+	idx = (vaddr & mask) >> hugepd_shift(hpde);
+
+	sz = sizeof(uint64_t);
+	res = kdump_readp(ctx,
+			  KDUMP_KVADDR, base + idx * sizeof(uint64_t),
+			  &pte, &sz);
+	if (res != kdump_ok)
+		return set_error(ctx, res, "Cannot read hugepage");
+
+	pte = dump64toh(ctx, pte);
+	if (!pte)
+		return set_error(ctx, kdump_nodata,
+				 "Page not present: pte[%lu] = 0x%llx",
+				 idx, (unsigned long long) pte);
+
+	*paddr = vtop_final(vaddr, pte, archdata->pg.rpn_shift,
+			    hugepd_shift(hpde));
+	return kdump_ok;
+}
+
 static kdump_status
 ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	struct ppc64_data *archdata = ctx->archdata;
 	struct vaddr_parts split;
-	kdump_vaddr_t l1e, l2e, l3e, l4e, e, pt;
+	kdump_vaddr_t l1e, l2e, l3e, l4e, e;
 	kdump_vaddr_t pagemask;
 	size_t ps = kdump_ptr_size(ctx);
-	int huge;
 	kdump_status res;
 
 	vaddr_split(&archdata->pgform, vaddr, &split);
@@ -219,11 +278,14 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	if (!l4e) goto notfound;
 
-	huge = ishuge(l4e);
-	if (huge) {
-		e = l4e;
-		goto gohuge;
+	if (is_hugepte(l4e)) {
+		*paddr = vtop_final(vaddr, l4e, archdata->pg.rpn_shift,
+				    archdata->pg.l4_shift);
+		return kdump_ok;
 	}
+	if (is_hugepd(l4e))
+		return ppc64_vtop_hugepd(ctx, vaddr, paddr,
+					 l4e, archdata->pg.l4_shift);
 
 	L("l4 => %lx\n", l4e);
 
@@ -242,11 +304,14 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	if (!l2e) goto notfound;
 
-	huge = ishuge(l2e);
-	if (huge) {
-		e = l2e;
-		goto gohuge;
+	if (is_hugepte(l2e)) {
+		*paddr = vtop_final(vaddr, l2e, archdata->pg.rpn_shift,
+				    archdata->pg.l2_shift);
+		return kdump_ok;
 	}
+	if (is_hugepd(l2e))
+		return ppc64_vtop_hugepd(ctx, vaddr, paddr,
+					 l2e, archdata->pg.l2_shift);
 
 	e = (l2e & (~archdata->pg.l2_mask)) +
 		ps*((vaddr>>archdata->pg.l1_shift) & ((1<<archdata->pgform.l1_bits)-1));
@@ -272,21 +337,6 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	return kdump_ok;
 
-gohuge:
-	res = kdump_readp(ctx,
-			  KDUMP_KVADDR, (e & ~HUGEPD_SHIFT_MASK) | PD_HUGE,
-			  &pt, &ps);
-	if (res != kdump_ok)
-
-		return set_error(ctx, res, "Cannot read hugepage");
-
-	pt = dump64toh(ctx, e);
-
-	if (!pt) goto notfound;
-
-	*paddr = (((pt>>archdata->pg.rpn_shift)<<archdata->pg.l1_shift)&~(pagemask));
-
-	return kdump_ok;
 notfound:
 	return kdump_nodata;
 }
