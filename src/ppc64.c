@@ -313,14 +313,11 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 		return ppc64_vtop_hugepd(ctx, vaddr, paddr,
 					 l2e, archdata->pg.l2_shift);
 
-	e = (l2e & (~archdata->pg.l2_mask)) +
-		ps*((vaddr>>archdata->pg.l1_shift) & ((1<<archdata->pgform.l1_bits)-1));
+	e = (l2e & (~archdata->pg.l2_mask)) + split.l1 * ps;
 
 	L("l2 => %lx %lx ==> %lx\n", l2e, (l2e & (~archdata->pg.l2_mask)), e);
 
-	res = kdump_readp(ctx,
-			  KDUMP_KVADDR, (l2e&~(pagemask)) + (e&(pagemask)),
-			  &l1e, &ps);
+	res = kdump_readp(ctx, KDUMP_KVADDR, e, &l1e, &ps);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot read L1");
 
