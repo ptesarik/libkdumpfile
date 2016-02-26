@@ -54,6 +54,8 @@ struct ppc64_data {
 	struct paging_form pgform;
 	struct {
 		kdump_vaddr_t l2_mask;
+		kdump_vaddr_t l3_mask;
+		kdump_vaddr_t l4_mask;
 
 		unsigned l1_shift;
 		unsigned l2_shift;
@@ -287,16 +289,33 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 		return ppc64_vtop_hugepd(ctx, vaddr, paddr,
 					 l4e, archdata->pg.l4_shift);
 
+	e = (l4e & (~archdata->pg.l4_mask)) + split.l3 * ps;
+
 	L("l4 => %lx\n", l4e);
 
 	if (archdata->pgform.l3_bits != 0) {
-		/* TODO: DO ! e = ?*/
-		l3e = 0;
-		return set_error(ctx, kdump_unsupported, "L3 %lx != 0 not yet supported", l3e);
-	} else
-		e = l4e;
+		res = kdump_readp(ctx, KDUMP_KVADDR, e, &l3e, &ps);
+		if (res != kdump_ok)
+			return set_error(ctx, res, "Cannot read L3");
 
-	res = kdump_readp(ctx, KDUMP_KVADDR, e + split.l2*ps, &l2e, &ps);
+		l3e = dump64toh(ctx, l3e);
+
+		if (is_hugepte(l3e)) {
+			*paddr = vtop_final(vaddr, l3e, archdata->pg.rpn_shift,
+					    archdata->pg.l3_shift);
+			return kdump_ok;
+		}
+		if (is_hugepd(l3e))
+			return ppc64_vtop_hugepd(ctx, vaddr, paddr,
+						 l3e, archdata->pg.l3_shift);
+	} else
+		l3e = e;
+
+	e = (l3e & (~archdata->pg.l3_mask)) + split.l2 *ps;
+
+	L("l3 => %lx\n", l3e);
+
+	res = kdump_readp(ctx, KDUMP_KVADDR, e, &l2e, &ps);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot read L2");
 
@@ -417,6 +436,8 @@ ppc64_init(kdump_ctx *ctx)
 		archdata->pgform.l3_bits = 0;
 		archdata->pgform.l4_bits = 4;
 		archdata->pg.l2_mask = 0x1ff;
+		archdata->pg.l3_mask = 0x1ff;
+		archdata->pg.l4_mask = 0x1ff;
 		archdata->pg.rpn_shift = 30;
 
 	} else
