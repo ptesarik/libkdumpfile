@@ -492,6 +492,10 @@ struct timeval_64 {
 kdump_status raw_read_page(kdump_ctx *ctx, kdump_addrspace_t as,
 			   struct page_io *pio);
 
+#define read_u64 INTERNAL_NAME(read_u64)
+kdump_status read_u64(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+		      char *what, uint64_t *result);
+
 /* utils */
 
 #define set_error INTERNAL_NAME(set_error)
