@@ -60,7 +60,7 @@ struct ppc64_data {
 		unsigned l3_shift;
 		unsigned l4_shift;
 
-		int pte_shift;
+		int rpn_shift;	/**< Real Page Number shift. */
 
 		kdump_vaddr_t pg;
 	} pg;
@@ -176,6 +176,23 @@ vaddr_split(const struct paging_form *pgform, kdump_vaddr_t addr,
 	parts->l4 = addr & (((kdump_vaddr_t)1 << pgform->l4_bits) - 1);
 }
 
+/**  Get the translated address using its PTE and page shift.
+ * @param vaddr       Virtual address to be translated.
+ * @param pte         Last-level page table entry.
+ * @param rpn_shift   Real Page Number shift.
+ * @param page_shift  Page shift.
+ *
+ * On PowerPC, the PFN in the page table entry is shifted left by
+ * @ref rpn_shift bits (allowing to store more flags in the lower bits).
+ */
+static inline kdump_addr_t
+vtop_final(kdump_vaddr_t vaddr, uint64_t pte,
+	   unsigned rpn_shift, unsigned page_shift)
+{
+	kdump_addr_t mask = ((kdump_addr_t)1 << page_shift) - 1;
+	return ((pte >> rpn_shift) << page_shift) + (vaddr & mask);
+}
+
 static kdump_status
 ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
@@ -247,11 +264,11 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	if (!l1e) goto notfound;
 
 	L("l1 %lx => %lx\n", l1e,
-		(((l1e>>archdata->pg.pte_shift)<<archdata->pg.l1_shift)&~(pagemask))
+		(((l1e>>archdata->pg.rpn_shift)<<archdata->pg.l1_shift)&~(pagemask))
 		+((pagemask)&vaddr));
 
-	*paddr = (((l1e>>archdata->pg.pte_shift)<<archdata->pg.l1_shift)&~(pagemask))
-		+((pagemask)&vaddr);
+	*paddr = vtop_final(vaddr, l1e,
+			    archdata->pg.rpn_shift, archdata->pg.l1_shift);
 
 	return kdump_ok;
 
@@ -267,7 +284,7 @@ gohuge:
 
 	if (!pt) goto notfound;
 
-	*paddr = (((pt>>archdata->pg.pte_shift)<<archdata->pg.l1_shift)&~(pagemask));
+	*paddr = (((pt>>archdata->pg.rpn_shift)<<archdata->pg.l1_shift)&~(pagemask));
 
 	return kdump_ok;
 notfound:
@@ -353,7 +370,7 @@ ppc64_init(kdump_ctx *ctx)
 		archdata->pgform.l3_bits = 0;
 		archdata->pgform.l4_bits = 4;
 		archdata->pg.l2_mask = 0x1ff;
-		archdata->pg.pte_shift = 30;
+		archdata->pg.rpn_shift = 30;
 
 	} else
 		return set_error(ctx, kdump_nodata, "PAGESIZE == %d", pagesize);
