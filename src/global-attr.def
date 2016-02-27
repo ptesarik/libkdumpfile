@@ -30,6 +30,8 @@ ATTR(root, "linux", dir_linux, directory, struct attr_data *)
 
 /* cache */
 ATTR(cache, "size", cache_size, number, unsigned, .ops = &cache_size_ops)
+ATTR(cache, "hits", cache_hits, number, unsigned long)
+ATTR(cache, "misses", cache_misses, number, unsigned long)
 
 /* format name */
 ATTR(format, "name", format_name, string, const char *)

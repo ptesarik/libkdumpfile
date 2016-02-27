@@ -54,6 +54,10 @@ struct cache {
 	unsigned cap;		 /**< Total cache capacity */
 	unsigned inflight;	 /**< Index of first in-flight entry */
 	unsigned ninflight;	 /**< Number of in-flight entries */
+
+	union kdump_attr_value hits;   /**< Cache hits */
+	union kdump_attr_value misses; /**< Cache misses */
+
 	struct cache_entry ce[]; /**< Cache entries */
 };
 
@@ -295,6 +299,7 @@ cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
 		entry = &cache->ce[idx];
 		if (entry->pfn == pfn) {
 			use_precious(cache, entry);
+			++cache->hits.number;
 			return entry;
 		}
 		idx = entry->next;
@@ -308,10 +313,13 @@ cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
 			++cache->dsplit;
 			--cache->nprobe;
 			use_precious(cache, entry);
+			++cache->hits.number;
 			return entry;
 		}
 		idx = entry->prev;
 	}
+
+	++cache->misses.number;
 
 	entry = get_ghost_entry(cache, pfn);
 	if (!entry)
@@ -538,6 +546,8 @@ cache_alloc(unsigned n, size_t size)
 		return cache;
 	cache->elemsize = size;
 	cache->cap = n;
+	cache->hits.number = 0;
+	cache->misses.number = 0;
 
 	cache->data = malloc(cache->cap * cache->elemsize);
 	if (!cache->data) {
@@ -618,6 +628,8 @@ def_realloc_caches(kdump_ctx *ctx)
 	if (ctx->cache)
 		cache_free(ctx->cache);
 	ctx->cache = cache;
+	set_attr_indirect(ctx, GATTR(GKI_cache_hits), &cache->hits);
+	set_attr_indirect(ctx, GATTR(GKI_cache_misses), &cache->misses);
 
 	return kdump_ok;
 }
