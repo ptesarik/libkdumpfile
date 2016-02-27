@@ -112,8 +112,12 @@ remove_entry(struct cache *cache, struct cache_entry *entry)
 static void
 remove_active(struct cache *cache, struct cache_entry *entry, unsigned idx)
 {
+	if (cache->gprec == idx)
+		cache->gprec = entry->next;
 	if (cache->eprec == idx)
 		cache->eprec = entry->next;
+	if (cache->gprobe == idx)
+		cache->gprobe = entry->prev;
 	if (cache->eprobe == idx)
 		cache->eprobe = entry->prev;
 
