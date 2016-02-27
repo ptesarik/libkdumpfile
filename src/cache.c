@@ -38,8 +38,6 @@
 /**  Simple cache.
  */
 struct cache {
-	void *data;		 /**< Actual cache data */
-	size_t elemsize;	 /**< Element data size */
 	unsigned split;		 /**< Split point between probed and precious
 				  *   entries (index of MRU probed entry) */
 	int dsplit;		 /**< Desired split point change */
@@ -58,6 +56,8 @@ struct cache {
 	union kdump_attr_value hits;   /**< Cache hits */
 	union kdump_attr_value misses; /**< Cache misses */
 
+	size_t elemsize;	 /**< Element data size */
+	void *data;		 /**< Actual cache data */
 	struct cache_entry ce[]; /**< Cache entries */
 };
 
