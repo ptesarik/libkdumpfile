@@ -648,6 +648,10 @@ attr_value(const struct attr_data *attr)
 kdump_status set_attr(kdump_ctx *ctx, struct attr_data *attr,
 		      union kdump_attr_value val);
 
+#define set_attr_indirect INTERNAL_NAME(set_attr_indirect)
+kdump_status set_attr_indirect(kdump_ctx *ctx, const char *key,
+			       union kdump_attr_value *pval);
+
 #define set_attr_number INTERNAL_NAME(set_attr_number)
 kdump_status set_attr_number(kdump_ctx *ctx, const char *key,
 			     kdump_num_t num);

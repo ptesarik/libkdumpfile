@@ -531,6 +531,33 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr, union kdump_attr_value val)
 	return kdump_ok;
 }
 
+/**  Set an indirect attribute.
+ * @param ctx   Dump file object.
+ * @param key   Key name.
+ * @param pval  Pointer to the value.
+ * @returns     Error status.
+ *
+ * The attribute is set to the value pointed to by *val and the same
+ * location is used to store the attribute value.
+ * The @ref val pointer must be valid as long as the attribute can be
+ * accessed.
+ */
+kdump_status
+set_attr_indirect(kdump_ctx *ctx, const char *key,
+		  union kdump_attr_value *pval)
+{
+	struct attr_data *attr;
+
+	attr = lookup_attr_raw(ctx, key);
+	if (!attr)
+		return set_error(ctx, kdump_nokey, "No such key");
+
+	clear_attr(attr);
+	attr->pval = pval;
+	attr->indirect = 1;
+	return set_attr(ctx, attr, *pval);
+}
+
 /**  Set a numeric attribute of a dump file object.
  * @param ctx  Dump file object.
  * @param key  Key name.
