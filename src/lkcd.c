@@ -36,10 +36,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if USE_ZLIB
-# include <zlib.h>
-#endif
-
 #define LKCD_DUMP_V1                  (0x1)  /* DUMP_VERSION_NUMBER */
 #define LKCD_DUMP_V2                  (0x2)  /* DUMP_VERSION_NUMBER */
 #define LKCD_DUMP_V3                  (0x3)  /* DUMP_VERSION_NUMBER */
@@ -731,21 +727,9 @@ lkcd_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 					 "Wrong uncompressed size: %lu",
 					 (unsigned long) retlen);
 	} else if (lkcdp->compression == DUMP_COMPRESS_GZIP) {
-#if USE_ZLIB
-		uLongf retlen = get_page_size(ctx);
-		int ret = uncompress(ce->data, &retlen, buf, dp.dp_size);
-		if (ret != Z_OK)
-			return set_error(ctx, kdump_dataerr,
-					 "Decompression failed: %d", ret);
-		if (retlen != get_page_size(ctx))
-			return set_error(ctx, kdump_dataerr,
-					 "Wrong uncompressed size: %lu",
-					 (unsigned long) retlen);
-#else
-		return set_error(ctx, kdump_unsupported,
-				 "Unsupported compression method: %s",
-				 "zlib");
-#endif
+		ret = uncompress_page_gzip(ctx, ce->data, buf, dp.dp_size);
+		if (ret != kdump_ok)
+			return ret;
 	} else
 		return set_error(ctx, kdump_unsupported,
 				 "Unknown compression method: %d",

@@ -37,6 +37,10 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#if USE_ZLIB
+# include <zlib.h>
+#endif
+
 kdump_status
 set_error(kdump_ctx *ctx, kdump_status ret, const char *msgfmt, ...)
 {
@@ -402,6 +406,75 @@ uncompress_rle(unsigned char *dst, size_t *pdstlen,
 
 	*pdstlen -= remain;
 	return 0;
+}
+
+#if USE_ZLIB
+static kdump_status
+set_zlib_error(kdump_ctx *ctx, const char *what,
+	       const z_stream *zstream, int err)
+{
+	if (err == Z_ERRNO)
+		return set_error(ctx, kdump_syserr, "%s", what);
+
+	if (!zstream->msg)
+		return set_error(ctx, kdump_dataerr,
+				 "%s: error %d", what, err);
+
+	return set_error(ctx, kdump_dataerr,
+			 "%s: %s", what, zstream->msg);
+}
+#endif
+
+/**  Uncompress a gzipp'ed page.
+ * @param ctx     Dump file object.
+ * @param dst     Destination buffer.
+ * @param src     Source (compressed) data.
+ * @param srclen  Length of source data.
+ */
+kdump_status
+uncompress_page_gzip(kdump_ctx *ctx, unsigned char *dst,
+		     unsigned char *src, size_t srclen)
+{
+#if USE_ZLIB
+	z_stream zstream;
+	int res;
+
+	memset(&zstream, 0, sizeof zstream);
+	zstream.next_in = (z_const Bytef *)src;
+	zstream.avail_in = srclen;
+	zstream.next_out = dst;
+	zstream.avail_out = get_page_size(ctx);
+
+	res = inflateInit(&zstream);
+	if (res != Z_OK)
+		return set_zlib_error(ctx, "Cannot init zlib", &zstream, res);
+
+	res = inflate(&zstream, Z_FINISH);
+	if (res != Z_STREAM_END) {
+		inflateEnd(&zstream);
+		if (res == Z_NEED_DICT ||
+		    (res == Z_BUF_ERROR && zstream.avail_in == 0))
+			res = Z_DATA_ERROR;
+		return set_zlib_error(ctx, "Decompresion failed",
+				      &zstream, res);
+	}
+
+	res = inflateEnd(&zstream);
+	if (res != Z_OK)
+		return set_zlib_error(ctx, "Decompression failed",
+				      &zstream, res);
+
+	if (zstream.avail_out)
+		return set_error(ctx, kdump_dataerr,
+				 "Wrong uncompressed size: %lu",
+				 (unsigned long) zstream.total_out);
+
+	return kdump_ok;
+
+#else
+	return set_error(ctx, kdump_unsupported,
+			 "Unsupported compression method: %s", "zlib");
+#endif
 }
 
 static kdump_status

@@ -36,9 +36,6 @@
 #include <unistd.h>
 #include <string.h>
 
-#if USE_ZLIB
-# include <zlib.h>
-#endif
 #if USE_LZO
 # include <lzo/lzo1x.h>
 #endif
@@ -201,6 +198,7 @@ diskdump_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 	off_t pd_pos;
 	void *buf;
 	ssize_t rd;
+	kdump_status ret;
 
 	if (!page_is_dumpable(ctx, pfn)) {
 		memset(ce->data, 0, get_page_size(ctx));
@@ -241,21 +239,9 @@ diskdump_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 				 (unsigned long long) pd.offset);
 
 	if (pd.flags & DUMP_DH_COMPRESSED_ZLIB) {
-#if USE_ZLIB
-		uLongf retlen = get_page_size(ctx);
-		int ret = uncompress(ce->data, &retlen, buf, pd.size);
-		if (ret != Z_OK)
-			return set_error(ctx, kdump_dataerr,
-					 "Decompression failed: %d", ret);
-		if (retlen != get_page_size(ctx))
-			return set_error(ctx, kdump_dataerr,
-					 "Wrong uncompressed size: %lu",
-					 (unsigned long) retlen);
-#else
-		return set_error(ctx, kdump_unsupported,
-				 "Unsupported compression method: %s",
-				 "zlib");
-#endif
+		ret = uncompress_page_gzip(ctx, ce->data, buf, pd.size);
+		if (ret != kdump_ok)
+			return ret;
 	} else if (pd.flags & DUMP_DH_COMPRESSED_LZO) {
 #if USE_LZO
 		lzo_uint retlen = get_page_size(ctx);

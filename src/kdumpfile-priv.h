@@ -522,6 +522,10 @@ int uts_looks_sane(struct new_utsname *uts);
 int uncompress_rle(unsigned char *dst, size_t *pdstlen,
 		   const unsigned char *src, size_t srclen);
 
+#define uncompress_page_gzip INTERNAL_NAME(uncompress_page_gzip)
+kdump_status uncompress_page_gzip(kdump_ctx *ctx, unsigned char *dst,
+				  unsigned char *src, size_t srclen);
+
 #define store_vmcoreinfo INTERNAL_NAME(store_vmcoreinfo)
 kdump_status store_vmcoreinfo(kdump_ctx *ctx, const char *path,
 			      void *data, size_t len);
