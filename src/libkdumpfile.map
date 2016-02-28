@@ -17,6 +17,7 @@ LIBKDUMPFILE_0 {
     kdump_read;
     kdump_readp;
     kdump_read_string;
+    kdump_set_attr;
     kdump_get_attr;
     kdump_get_string_attr;
     kdump_enum_attr;

@@ -196,7 +196,7 @@ lookup_attr_part(const kdump_ctx *ctx, const char *key, size_t keylen)
  *
  * This function does not check whether an attribute is set, or not.
  */
-static struct attr_data *
+struct attr_data *
 lookup_attr_raw(const kdump_ctx *ctx, const char *key)
 {
 	if (!key || key > GATTR(NR_GLOBAL_ATTRS))

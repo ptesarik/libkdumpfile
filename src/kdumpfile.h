@@ -388,6 +388,15 @@ struct kdump_attr {
 	union kdump_attr_value val;
 };
 
+/**  Set a dump file attribute.
+ * @param ctx  Dump file object.
+ * @param key  Attribute key.
+ * @param valp New attribute value.
+ * @returns    Error status.
+ */
+kdump_status kdump_set_attr(kdump_ctx *ctx, const char *key,
+			    const struct kdump_attr *valp);
+
 /**  Get a dump file attribute.
  * @param ctx  Dump file object.
  * @param key  Attribute key.

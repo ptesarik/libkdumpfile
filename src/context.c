@@ -43,6 +43,24 @@ kdump_err_str(kdump_ctx *ctx)
 }
 
 kdump_status
+kdump_set_attr(kdump_ctx *ctx, const char *key,
+	       const struct kdump_attr *valp)
+{
+	struct attr_data *d;
+
+	clear_error(ctx);
+
+	d = lookup_attr_raw(ctx, key);
+	if (!d)
+		return set_error(ctx, kdump_nodata, "No such key");
+
+	if (valp->type != d->template->type)
+		return set_error(ctx, kdump_invalid, "Type mismatch");
+
+	return set_attr(ctx, d, valp->val);
+}
+
+kdump_status
 kdump_get_attr(kdump_ctx *ctx, const char *key,
 	       struct kdump_attr *valp)
 {
