@@ -635,6 +635,16 @@ def_realloc_caches(kdump_ctx *ctx)
 }
 
 static kdump_status
+cache_size_pre_hook(kdump_ctx *ctx, struct attr_data *attr,
+		    union kdump_attr_value *val)
+{
+	if (val->number > UINT_MAX)
+		return set_error(ctx, kdump_invalid,
+				 "Cache size too big (max %u)", UINT_MAX);
+	return kdump_ok;
+}
+
+static kdump_status
 cache_size_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 {
 	return ctx->ops && ctx->ops->realloc_caches
@@ -643,5 +653,6 @@ cache_size_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 }
 
 const struct attr_ops cache_size_ops = {
+	.pre_set = cache_size_pre_hook,
 	.post_set = cache_size_post_hook,
 };
