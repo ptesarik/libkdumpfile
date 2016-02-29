@@ -42,11 +42,9 @@ struct cache {
 				  *   entries (index of MRU probed entry) */
 	int dsplit;		 /**< Desired split point change */
 	unsigned gprec;		 /**< Index of MRU precious ghost entry */
-	unsigned eprec;		 /**< End of precious entries; this is the
-				  *   index of the first unused entry */
+	unsigned ngprec;	 /**< Number of ghost precious entries */
 	unsigned gprobe;	 /**< Index of MRU probed ghost entry */
-	unsigned eprobe;	 /**< End of probed entries; this is the
-				  *   index of the first unused entry */
+	unsigned ngprobe;	 /**< Number of ghost probe entries */
 	unsigned nprobetotal;	 /**< Total number of probe list entries,
 				  *   including ghost and in-flight entries */
 	unsigned cap;		 /**< Total cache capacity */
@@ -61,9 +59,25 @@ struct cache {
 	struct cache_entry ce[]; /**< Cache entries */
 };
 
-static struct cache_entry *get_ghost_entry(struct cache *, kdump_pfn_t);
-static struct cache_entry *get_inflight_entry(struct cache *, kdump_pfn_t);
-static struct cache_entry *get_missed_entry(struct cache *, kdump_pfn_t);
+/**  Temporary information needed during a cache search.
+ * This is grouped in a structure to avoid passing an inordinate number
+ * of parameters among the various helper functions.
+ */
+struct cache_search {
+	unsigned eprec;		/**< End of precious entries; this is the
+				 *   index of the first unused entry. */
+	unsigned eprobe;	/**< End of probed entries; this is the
+				 *   index of the first unused entry. */
+};
+
+static struct cache_entry *get_ghost_entry(
+	struct cache *cache, kdump_pfn_t pfn,
+	struct cache_search *cs);
+static struct cache_entry *get_inflight_entry(
+	struct cache *cache, kdump_pfn_t pfn);
+static struct cache_entry *get_missed_entry(
+	struct cache *cache, kdump_pfn_t pfn,
+	struct cache_search *cs);
 
 /**  Check whether the probed cache is empty.
  *
@@ -118,12 +132,8 @@ remove_active(struct cache *cache, struct cache_entry *entry, unsigned idx)
 {
 	if (cache->gprec == idx)
 		cache->gprec = entry->next;
-	if (cache->eprec == idx)
-		cache->eprec = entry->next;
 	if (cache->gprobe == idx)
 		cache->gprobe = entry->prev;
-	if (cache->eprobe == idx)
-		cache->eprobe = entry->prev;
 
 	remove_entry(cache, entry);
 }
@@ -181,10 +191,6 @@ use_precious(struct cache *cache, struct cache_entry *entry)
 		prev->next = idx;
 		entry->prev = next->prev;
 		next->prev = idx;
-
-		if (cache->eprec == entry->next &&
-		    cache->eprec != cache->gprec)
-			cache->eprec = idx;
 	}
 
 	cache->split = entry->prev;
@@ -221,10 +227,12 @@ reinit_entry(struct cache *cache, struct cache_entry *entry)
 	if (delta <= 0) {
 		evict = cache->ce[cache->gprobe].next;
 		cache->gprobe = evict;
+		++cache->ngprobe;
 	} else {
 		--cache->dsplit;
 		evict = cache->ce[cache->gprec].prev;
 		cache->gprec = evict;
+		++cache->ngprec;
 	}
 	entry->data = cache->ce[evict].data;
 	cache->ce[evict].data = NULL;
@@ -259,11 +267,13 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry)
 		++cache->dsplit;
 		evict = cache->ce[cache->gprobe].next;
 		cache->gprobe = evict;
+		++cache->ngprobe;
 	} else {
 		if (cache->gprobe == idx)
 			cache->gprobe = entry->prev;
 		evict = cache->ce[cache->gprec].prev;
 		cache->gprec = evict;
+		++cache->ngprec;
 	}
 	entry->data = cache->ce[evict].data;
 	cache->ce[evict].data = NULL;
@@ -290,6 +300,7 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry)
 struct cache_entry *
 cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
 {
+	struct cache_search cs;
 	struct cache_entry *entry;
 	unsigned idx;
 
@@ -321,11 +332,11 @@ cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
 
 	++cache->misses.number;
 
-	entry = get_ghost_entry(cache, pfn);
+	entry = get_ghost_entry(cache, pfn, &cs);
 	if (!entry)
 		entry = get_inflight_entry(cache, pfn);
 	if (!entry)
-		entry = get_missed_entry(cache, pfn);
+		entry = get_missed_entry(cache, pfn, &cs);
 
 	return entry;
 }
@@ -334,39 +345,51 @@ cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
  *
  * @param cache  Cache object.
  * @param pfn    PFN to be searched.
+ * @param cs     Cache search info.
  * @returns      Ghost entry, or @c NULL if not found.
+ *
+ * If no entry is found (function returns @c NULL), the @c epreca and
+ * @c eprobe fields in @ref cs are updated. Otherwise (if an entry is
+ * found), their values are undefined.
  */
 static struct cache_entry *
-get_ghost_entry(struct cache *cache, kdump_pfn_t pfn)
+get_ghost_entry(struct cache *cache, kdump_pfn_t pfn,
+		struct cache_search *cs)
 {
 	struct cache_entry *entry;
-	unsigned idx;
+	unsigned n, idx;
 
 	/* Search precious ghost entries */
+	n = cache->ngprec;
 	idx = cache->gprec;
-	while (idx != cache->eprec) {
+	while (n--) {
 		entry = &cache->ce[idx];
 		if (entry->pfn == pfn) {
 			if (!probe_cache_empty(cache))
 				--cache->dsplit;
+			--cache->ngprec;
 			reuse_ghost_entry(cache, entry);
 			return entry;
 		}
 		idx = entry->next;
 	}
+	cs->eprec = idx;
 
 	/* Search probed ghost entries */
+	n = cache->ngprobe;
 	idx = cache->gprobe;
-	while (idx != cache->eprobe) {
+	while (n--) {
 		entry = &cache->ce[idx];
 		if (entry->pfn == pfn) {
 			++cache->dsplit;
+			--cache->ngprobe;
 			--cache->nprobetotal;
 			reuse_ghost_entry(cache, entry);
 			return entry;
 		}
 		idx = entry->prev;
 	}
+	cs->eprobe = idx;
 
 	return NULL;
 }
@@ -400,21 +423,26 @@ get_inflight_entry(struct cache *cache, kdump_pfn_t pfn)
  *
  * @param cache  Cache object.
  * @param pfn    Requested PFN.
+ * @param cs     Cache search info.
  * @returns      A new cache entry.
  */
 static struct cache_entry *
-get_missed_entry(struct cache *cache, kdump_pfn_t pfn)
+get_missed_entry(struct cache *cache, kdump_pfn_t pfn,
+		 struct cache_search *cs)
 {
 	struct cache_entry *entry;
 	unsigned idx;
 
 	if (cache->nprobetotal == cache->cap) {
-		idx = cache->ce[cache->eprobe].next;
+		idx = cache->ce[cs->eprobe].next;
 		entry = &cache->ce[idx];
+		if (cache->ngprobe)
+			--cache->ngprobe;
 	} else {
-		idx = cache->eprobe;
+		idx = cs->eprobe;
 		entry = &cache->ce[idx];
-		cache->eprobe = entry->prev;
+		if (entry->next == cs->eprec && cache->ngprec)
+			--cache->ngprec;
 		++cache->nprobetotal;
 		if (entry->data)
 			--cache->dsplit;
@@ -457,22 +485,10 @@ cache_insert(struct cache *cache, struct cache_entry *entry)
 
 	switch (CACHE_PFN_FLAGS(entry->pfn)) {
 	case cf_probe:
-		if (cache->eprec == prev->next &&
-		    cache->eprec != cache->gprec)
-			cache->eprec = next->prev;
-		if (cache->eprobe == cache->split &&
-		    cache->eprobe != cache->gprobe)
-			cache->eprobe = idx;
 		cache->split = idx;
 		break;
 
 	case cf_precious:
-		if (cache->eprec == prev->next &&
-		    cache->eprec != cache->gprec)
-			cache->eprec = idx;
-		if (cache->eprobe == cache->split &&
-		    cache->eprobe != cache->gprobe)
-			cache->eprobe = prev->next;
 		break;
 	}
 	entry->pfn &= ~CACHE_FLAGS_PFN(CF_MASK);
@@ -520,9 +536,9 @@ cache_flush(struct cache *cache)
 	cache->split = cache->cap - 1;
 	cache->dsplit = 0;
 	cache->gprec = cache->cap;
-	cache->eprec = cache->cap;
+	cache->ngprec = 0;
 	cache->gprobe = cache->cap - 1;
-	cache->eprobe = cache->cap - 1;
+	cache->ngprobe = 0;
 	cache->nprobetotal = 0;
 	cache->ninflight = 0;
 }
