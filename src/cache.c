@@ -531,8 +531,8 @@ cache_flush(struct cache *cache)
 	n = 2 * cache->cap;
 	for (i = 0; i < n; ++i) {
 		struct cache_entry *entry = &cache->ce[i];
-		entry->next = (i + 1) % n;
-		entry->prev = (i - 1) % n;
+		entry->next = (i < n - 1) ? (i + 1) : 0;
+		entry->prev = (i > 0) ? (i - 1) : (n - 1);
 		entry->data = i < cache->cap
 			? cache->data + i * cache->elemsize
 			: NULL;
