@@ -81,32 +81,6 @@ static struct cache_entry *get_missed_entry(
 	struct cache *cache, kdump_pfn_t pfn,
 	struct cache_search *cs);
 
-/**  Check whether the probed cache is empty.
- *
- * @param cache  Cache object.
- *
- * Check if there are any cached entries on the probe list. It does not
- * count ghost entries.
- */
-static inline int
-probe_cache_empty(struct cache *cache)
-{
-	return cache->nprobe == 0;
-}
-
-/**  Check whether the precious cache is empty.
- *
- * @param cache  Cache object.
- *
- * Check if there are any cached entries on the probe list. It does not
- * count ghost entries.
- */
-static inline int
-prec_cache_empty(struct cache *cache)
-{
-	return cache->nprec == 0;
-}
-
 /**  Remove a cache entry from a list.
  *
  * @param cache  Cache object.
@@ -206,9 +180,9 @@ reinit_entry(struct cache *cache, struct cache_entry *entry,
 	unsigned evict;
 	int delta = cache->dsplit;
 
-	if (delta <= 0 && probe_cache_empty(cache))
+	if (delta <= 0 && cache->nprobe == 0)
 		delta = 1;
-	else if (delta > 0 && prec_cache_empty(cache))
+	else if (delta > 0 && cache->nprec == 0)
 		delta = 0;
 
 	if (delta <= 0) {
@@ -244,9 +218,9 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
 	unsigned idx, evict;
 	int delta = cache->dsplit;
 
-	if (delta < 0 && probe_cache_empty(cache))
+	if (delta < 0 && cache->nprobe == 0)
 		delta = 0;
-	else if (delta >= 0 && prec_cache_empty(cache))
+	else if (delta >= 0 && cache->nprec == 0)
 		delta = -1;
 
 	idx = entry - cache->ce;
@@ -356,7 +330,7 @@ get_ghost_entry(struct cache *cache, kdump_pfn_t pfn,
 	while (n--) {
 		entry = &cache->ce[idx];
 		if (entry->pfn == pfn) {
-			if (!probe_cache_empty(cache))
+			if (cache->nprobe != 0)
 				--cache->dsplit;
 			--cache->ngprec;
 			reuse_ghost_entry(cache, entry, cs);
