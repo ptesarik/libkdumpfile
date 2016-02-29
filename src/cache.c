@@ -401,19 +401,20 @@ get_missed_entry(struct cache *cache, kdump_pfn_t pfn,
 	struct cache_entry *entry;
 	unsigned idx;
 
-	if (cache->nprobetotal == cache->cap) {
-		idx = cache->ce[cs->eprobe].next;
-		entry = &cache->ce[idx];
-		if (cache->ngprobe)
-			--cache->ngprobe;
-		else
-			--cache->nprobe;
-	} else {
-		idx = cs->eprobe;
-		entry = &cache->ce[idx];
-		if (entry->next == cs->eprec && cache->ngprec)
-			--cache->ngprec;
-		++cache->nprobetotal;
+	++cache->nprobetotal;
+	idx = cs->eprobe;
+	entry = &cache->ce[idx];
+	if (entry->next == cs->eprec) {
+		if (cache->nprobetotal > cache->cap) {
+			idx = entry->next;
+			entry = &cache->ce[idx];
+			if (cache->ngprobe)
+				--cache->ngprobe;
+			else
+				--cache->nprobe;
+			--cache->nprobetotal;
+		} else if (cache->ngprec)
+			   --cache->ngprec;
 	}
 
 	if (!entry->data)
