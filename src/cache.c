@@ -123,18 +123,6 @@ remove_entry(struct cache *cache, struct cache_entry *entry)
 	prev->next = entry->next;
 }
 
-/**  Remove an active cache entry from the list.
- *
- * @param cache  Cache object.
- * @param entry  Cache entry to be removed.
- * @param idx    Cache entry index.
- */
-static void
-remove_active(struct cache *cache, struct cache_entry *entry, unsigned idx)
-{
-	remove_entry(cache, entry);
-}
-
 /**  Add an entry to the inflight list.
  *
  * @param cache  Cache object.
@@ -180,7 +168,7 @@ use_precious(struct cache *cache, struct cache_entry *entry)
 	unsigned idx = entry - cache->ce;
 
 	if (cache->split != idx && cache->split != entry->prev) {
-		remove_active(cache, entry, idx);
+		remove_entry(cache, entry);
 
 		prev = &cache->ce[cache->split];
 		next = &cache->ce[prev->next];
@@ -278,7 +266,7 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
 	if (cache->split == idx)
 		cache->split = entry->prev;
 
-	remove_active(cache, entry, idx);
+	remove_entry(cache, entry);
 	add_inflight(cache, entry, idx);
 	entry->pfn |= CACHE_FLAGS_PFN(cf_precious);
 }
@@ -459,7 +447,7 @@ get_missed_entry(struct cache *cache, kdump_pfn_t pfn,
 	if (cache->split == idx)
 		cache->split = entry->prev;
 
-	remove_active(cache, entry, idx);
+	remove_entry(cache, entry);
 	add_inflight(cache, entry, idx);
 	entry->pfn = pfn | CACHE_FLAGS_PFN(cf_probe);
 
