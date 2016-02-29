@@ -301,9 +301,8 @@ init_sections(kdump_ctx *ctx, unsigned snum)
 	return kdump_ok;
 }
 
-static void
-store_phdr(struct elfdump_priv *edp, unsigned type,
-	   off_t offset, kdump_vaddr_t vaddr, kdump_paddr_t paddr, off_t size)
+static struct load_segment *
+next_phdr(struct elfdump_priv *edp, unsigned type)
 {
 	struct load_segment *pls;
 
@@ -314,12 +313,9 @@ store_phdr(struct elfdump_priv *edp, unsigned type,
 		pls = edp->note_segments + edp->num_note_segments;
 		++edp->num_note_segments;
 	} else
-		return;
+		pls = NULL;
 
-	pls->file_offset = offset;
-	pls->phys = paddr;
-	pls->size = size;
-	pls->virt = vaddr;
+	return pls;
 }
 
 static void
@@ -405,10 +401,7 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 				 "Cannot seek to program headers at %llu",
 				 (unsigned long long) offset);
 	for (i = 0; i < dump16toh(ctx, ehdr->e_phnum); ++i) {
-		unsigned type;
-		off_t offset, filesz;
-		kdump_vaddr_t vaddr;
-		kdump_paddr_t paddr;
+		struct load_segment *pls;
 		ssize_t rd;
 
 		rd = read(ctx->fd, &prog, sizeof prog);
@@ -416,13 +409,13 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 			return set_error(ctx, read_error(rd),
 					 "Cannot read program header #%d", i);
 
-		type = dump32toh(ctx, prog.p_type);
-		offset = dump32toh(ctx, prog.p_offset);
-		vaddr = dump32toh(ctx, prog.p_vaddr);
-		paddr = dump32toh(ctx, prog.p_paddr);
-		filesz = dump32toh(ctx, prog.p_filesz);
-
-		store_phdr(edp, type, offset, vaddr, paddr, filesz);
+		pls = next_phdr(edp, dump32toh(ctx, prog.p_type));
+		if (pls) {
+			pls->file_offset = dump32toh(ctx, prog.p_offset);
+			pls->phys = dump32toh(ctx, prog.p_paddr);
+			pls->size = dump32toh(ctx, prog.p_filesz);
+			pls->virt = dump32toh(ctx, prog.p_vaddr);
+		}
 	}
 
 	offset = dump32toh(ctx, ehdr->e_shoff);
@@ -477,10 +470,7 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 				 "Cannot seek to program headers at %llu",
 				 (unsigned long long) offset);
 	for (i = 0; i < dump16toh(ctx, ehdr->e_phnum); ++i) {
-		unsigned type;
-		off_t offset, filesz;
-		kdump_vaddr_t vaddr;
-		kdump_paddr_t paddr;
+		struct load_segment *pls;
 		ssize_t rd;
 
 		rd = read(ctx->fd, &prog, sizeof prog);
@@ -488,13 +478,13 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 			return set_error(ctx, read_error(rd),
 					 "Cannot read program header #%d", i);
 
-		type = dump32toh(ctx, prog.p_type);
-		offset = dump64toh(ctx, prog.p_offset);
-		vaddr = dump64toh(ctx, prog.p_vaddr);
-		paddr = dump64toh(ctx, prog.p_paddr);
-		filesz = dump64toh(ctx, prog.p_filesz);
-
-		store_phdr(edp, type, offset, vaddr, paddr, filesz);
+		pls = next_phdr(edp, dump32toh(ctx, prog.p_type));
+		if (pls) {
+			pls->file_offset = dump64toh(ctx, prog.p_offset);
+			pls->phys = dump64toh(ctx, prog.p_paddr);
+			pls->size = dump64toh(ctx, prog.p_filesz);
+			pls->virt = dump64toh(ctx, prog.p_vaddr);
+		}
 	}
 
 	offset = dump32toh(ctx, ehdr->e_shoff);
