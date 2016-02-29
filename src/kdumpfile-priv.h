@@ -781,7 +781,6 @@ enum cache_flags {
 	cf_valid,		/**< Valid (active) cache entry */
 	cf_probe,		/**< In flight, target probe list */
 	cf_precious,		/**< In flight, target precious list */
-	cf_error,		/**< Error cache entry (invalid) */
 };
 
 /**  Cache entry.

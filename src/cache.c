@@ -479,8 +479,32 @@ cache_insert(struct cache *cache, struct cache_entry *entry)
 void
 cache_discard(struct cache *cache, struct cache_entry *entry)
 {
-	cache_insert(cache, entry);
-	entry->pfn |= CACHE_FLAGS_PFN(cf_error);
+	struct cache_entry *prev, *next;
+	unsigned n, idx, eprobe;
+
+	if (cache_entry_valid(entry))
+		return;
+	if (CACHE_PFN_FLAGS(entry->pfn) == cf_probe)
+		--cache->nprobetotal;
+
+	if (cache->ninflight--)
+		remove_entry(cache, entry);
+
+	n = cache->nprobe + cache->ngprobe;
+	eprobe = cache->split;
+	while (n--)
+		eprobe = cache->ce[eprobe].prev;
+
+	idx = entry - cache->ce;
+	if (eprobe == cache->split)
+		cache->split = idx;
+
+	prev = &cache->ce[eprobe];
+	next = &cache->ce[prev->next];
+	entry->next = prev->next;
+	prev->next = idx;
+	entry->prev = next->prev;
+	next->prev = idx;
 }
 
 /**  Flush all cache entries.
