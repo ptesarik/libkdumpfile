@@ -47,7 +47,7 @@ struct cache {
 	unsigned gprobe;	 /**< Index of MRU probed ghost entry */
 	unsigned eprobe;	 /**< End of probed entries; this is the
 				  *   index of the first unused entry */
-	unsigned nprobe;	 /**< Total number of probe list entries,
+	unsigned nprobetotal;	 /**< Total number of probe list entries,
 				  *   including ghost and in-flight entries */
 	unsigned cap;		 /**< Total cache capacity */
 	unsigned inflight;	 /**< Index of first in-flight entry */
@@ -155,7 +155,7 @@ cache_make_precious(struct cache *cache, struct cache_entry *entry)
 {
 	if (CACHE_PFN_FLAGS(entry->pfn) == cf_probe) {
 		++cache->dsplit;
-		--cache->nprobe;
+		--cache->nprobetotal;
 		entry->pfn = CACHE_PFN(entry->pfn) |
 			CACHE_FLAGS_PFN(cf_precious);
 	}
@@ -311,7 +311,7 @@ cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
 		entry = &cache->ce[idx];
 		if (entry->pfn == pfn) {
 			++cache->dsplit;
-			--cache->nprobe;
+			--cache->nprobetotal;
 			use_precious(cache, entry);
 			++cache->hits.number;
 			return entry;
@@ -361,7 +361,7 @@ get_ghost_entry(struct cache *cache, kdump_pfn_t pfn)
 		entry = &cache->ce[idx];
 		if (entry->pfn == pfn) {
 			++cache->dsplit;
-			--cache->nprobe;
+			--cache->nprobetotal;
 			reuse_ghost_entry(cache, entry);
 			return entry;
 		}
@@ -408,14 +408,14 @@ get_missed_entry(struct cache *cache, kdump_pfn_t pfn)
 	struct cache_entry *entry;
 	unsigned idx;
 
-	if (cache->nprobe == cache->cap) {
+	if (cache->nprobetotal == cache->cap) {
 		idx = cache->ce[cache->eprobe].next;
 		entry = &cache->ce[idx];
 	} else {
 		idx = cache->eprobe;
 		entry = &cache->ce[idx];
 		cache->eprobe = entry->prev;
-		++cache->nprobe;
+		++cache->nprobetotal;
 		if (entry->data)
 			--cache->dsplit;
 	}
@@ -523,7 +523,7 @@ cache_flush(struct cache *cache)
 	cache->eprec = cache->cap;
 	cache->gprobe = cache->cap - 1;
 	cache->eprobe = cache->cap - 1;
-	cache->nprobe = 0;
+	cache->nprobetotal = 0;
 	cache->ninflight = 0;
 }
 
