@@ -41,9 +41,9 @@ struct cache {
 	unsigned split;		 /**< Split point between probed and precious
 				  *   entries (index of MRU probed entry) */
 	int dsplit;		 /**< Desired split point change */
-	unsigned gprec;		 /**< Index of MRU precious ghost entry */
+	unsigned nprec;		 /**< Number of cached precious entries */
 	unsigned ngprec;	 /**< Number of ghost precious entries */
-	unsigned gprobe;	 /**< Index of MRU probed ghost entry */
+	unsigned nprobe;	 /**< Number of cached probe entries */
 	unsigned ngprobe;	 /**< Number of ghost probe entries */
 	unsigned nprobetotal;	 /**< Total number of probe list entries,
 				  *   including ghost and in-flight entries */
@@ -64,8 +64,10 @@ struct cache {
  * of parameters among the various helper functions.
  */
 struct cache_search {
+	unsigned gprec;		/**< Index of MRU precious ghost entry */
 	unsigned eprec;		/**< End of precious entries; this is the
 				 *   index of the first unused entry. */
+	unsigned gprobe;	/**< Index of MRU probed ghost entry */
 	unsigned eprobe;	/**< End of probed entries; this is the
 				 *   index of the first unused entry. */
 };
@@ -89,7 +91,7 @@ static struct cache_entry *get_missed_entry(
 static inline int
 probe_cache_empty(struct cache *cache)
 {
-	return cache->split == cache->gprobe;
+	return cache->nprobe == 0;
 }
 
 /**  Check whether the precious cache is empty.
@@ -102,7 +104,7 @@ probe_cache_empty(struct cache *cache)
 static inline int
 prec_cache_empty(struct cache *cache)
 {
-	return cache->ce[cache->split].next == cache->gprec;
+	return cache->nprec == 0;
 }
 
 /**  Remove a cache entry from a list.
@@ -130,11 +132,6 @@ remove_entry(struct cache *cache, struct cache_entry *entry)
 static void
 remove_active(struct cache *cache, struct cache_entry *entry, unsigned idx)
 {
-	if (cache->gprec == idx)
-		cache->gprec = entry->next;
-	if (cache->gprobe == idx)
-		cache->gprobe = entry->prev;
-
 	remove_entry(cache, entry);
 }
 
@@ -200,6 +197,7 @@ use_precious(struct cache *cache, struct cache_entry *entry)
  *
  * @param cache  Cache object.
  * @param entry  Entry to be reinitialized.
+ * @param cs     Cache search info.
  *
  * Evict an entry from the cache and use its data pointer for @ref entry.
  * The evicted entry is taken either from the probe list or from the
@@ -214,7 +212,8 @@ use_precious(struct cache *cache, struct cache_entry *entry)
  * @sa reuse_ghost_entry
  */
 static void
-reinit_entry(struct cache *cache, struct cache_entry *entry)
+reinit_entry(struct cache *cache, struct cache_entry *entry,
+	     struct cache_search *cs)
 {
 	unsigned evict;
 	int delta = cache->dsplit;
@@ -225,13 +224,13 @@ reinit_entry(struct cache *cache, struct cache_entry *entry)
 		delta = 0;
 
 	if (delta <= 0) {
-		evict = cache->ce[cache->gprobe].next;
-		cache->gprobe = evict;
+		evict = cache->ce[cs->gprobe].next;
+		--cache->nprobe;
 		++cache->ngprobe;
 	} else {
 		--cache->dsplit;
-		evict = cache->ce[cache->gprec].prev;
-		cache->gprec = evict;
+		evict = cache->ce[cs->gprec].prev;
+		--cache->nprec;
 		++cache->ngprec;
 	}
 	entry->data = cache->ce[evict].data;
@@ -242,6 +241,7 @@ reinit_entry(struct cache *cache, struct cache_entry *entry)
  *
  * @param cache  Cache object.
  * @param entry  Ghost entry to be reused.
+ * @param cs     Cache search info.
  *
  * Same as @ref reinit_entry, but designed for ghost entries.
  * This function is used for pages that will be added to the precious list,
@@ -250,7 +250,8 @@ reinit_entry(struct cache *cache, struct cache_entry *entry)
  * @sa reinit_entry
  */
 static void
-reuse_ghost_entry(struct cache *cache, struct cache_entry *entry)
+reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
+		  struct cache_search *cs)
 {
 	unsigned idx, evict;
 	int delta = cache->dsplit;
@@ -262,17 +263,13 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry)
 
 	idx = entry - cache->ce;
 	if (delta < 0) {
-		if (cache->gprec == idx)
-			cache->gprec = entry->next;
 		++cache->dsplit;
-		evict = cache->ce[cache->gprobe].next;
-		cache->gprobe = evict;
+		evict = cache->ce[cs->gprobe].next;
+		--cache->nprobe;
 		++cache->ngprobe;
 	} else {
-		if (cache->gprobe == idx)
-			cache->gprobe = entry->prev;
-		evict = cache->ce[cache->gprec].prev;
-		cache->gprec = evict;
+		evict = cache->ce[cs->gprec].prev;
+		--cache->nprec;
 		++cache->ngprec;
 	}
 	entry->data = cache->ce[evict].data;
@@ -302,11 +299,12 @@ cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
 {
 	struct cache_search cs;
 	struct cache_entry *entry;
-	unsigned idx;
+	unsigned n, idx;
 
 	/* Search precious entries */
+	n = cache->nprec;
 	idx = cache->ce[cache->split].next;
-	while (idx != cache->gprec) {
+	while (n--) {
 		entry = &cache->ce[idx];
 		if (entry->pfn == pfn) {
 			use_precious(cache, entry);
@@ -315,13 +313,17 @@ cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
 		}
 		idx = entry->next;
 	}
+	cs.gprec = idx;
 
 	/* Search probed entries */
+	n = cache->nprobe;
 	idx = cache->split;
-	while (idx != cache->gprobe) {
+	while (n--) {
 		entry = &cache->ce[idx];
 		if (entry->pfn == pfn) {
 			++cache->dsplit;
+			--cache->nprobe;
+			++cache->nprec;
 			--cache->nprobetotal;
 			use_precious(cache, entry);
 			++cache->hits.number;
@@ -329,6 +331,7 @@ cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
 		}
 		idx = entry->prev;
 	}
+	cs.gprobe = idx;
 
 	++cache->misses.number;
 
@@ -361,14 +364,14 @@ get_ghost_entry(struct cache *cache, kdump_pfn_t pfn,
 
 	/* Search precious ghost entries */
 	n = cache->ngprec;
-	idx = cache->gprec;
+	idx = cs->gprec;
 	while (n--) {
 		entry = &cache->ce[idx];
 		if (entry->pfn == pfn) {
 			if (!probe_cache_empty(cache))
 				--cache->dsplit;
 			--cache->ngprec;
-			reuse_ghost_entry(cache, entry);
+			reuse_ghost_entry(cache, entry, cs);
 			return entry;
 		}
 		idx = entry->next;
@@ -377,14 +380,14 @@ get_ghost_entry(struct cache *cache, kdump_pfn_t pfn,
 
 	/* Search probed ghost entries */
 	n = cache->ngprobe;
-	idx = cache->gprobe;
+	idx = cs->gprobe;
 	while (n--) {
 		entry = &cache->ce[idx];
 		if (entry->pfn == pfn) {
 			++cache->dsplit;
 			--cache->ngprobe;
 			--cache->nprobetotal;
-			reuse_ghost_entry(cache, entry);
+			reuse_ghost_entry(cache, entry, cs);
 			return entry;
 		}
 		idx = entry->prev;
@@ -438,6 +441,8 @@ get_missed_entry(struct cache *cache, kdump_pfn_t pfn,
 		entry = &cache->ce[idx];
 		if (cache->ngprobe)
 			--cache->ngprobe;
+		else
+			--cache->nprobe;
 	} else {
 		idx = cs->eprobe;
 		entry = &cache->ce[idx];
@@ -448,17 +453,15 @@ get_missed_entry(struct cache *cache, kdump_pfn_t pfn,
 			--cache->dsplit;
 	}
 
+	if (!entry->data)
+		reinit_entry(cache, entry, cs);
+
 	if (cache->split == idx)
 		cache->split = entry->prev;
-	if (cache->gprobe == idx)
-		cache->gprobe = entry->prev;
 
 	remove_active(cache, entry, idx);
 	add_inflight(cache, entry, idx);
 	entry->pfn = pfn | CACHE_FLAGS_PFN(cf_probe);
-
-	if (!entry->data)
-		reinit_entry(cache, entry);
 
 	return entry;
 }
@@ -485,10 +488,12 @@ cache_insert(struct cache *cache, struct cache_entry *entry)
 
 	switch (CACHE_PFN_FLAGS(entry->pfn)) {
 	case cf_probe:
+		++cache->nprobe;
 		cache->split = idx;
 		break;
 
 	case cf_precious:
+		++cache->nprec;
 		break;
 	}
 	entry->pfn &= ~CACHE_FLAGS_PFN(CF_MASK);
@@ -535,9 +540,9 @@ cache_flush(struct cache *cache)
 
 	cache->split = cache->cap - 1;
 	cache->dsplit = 0;
-	cache->gprec = cache->cap;
+	cache->nprec = 0;
 	cache->ngprec = 0;
-	cache->gprobe = cache->cap - 1;
+	cache->nprobe = 0;
 	cache->ngprobe = 0;
 	cache->nprobetotal = 0;
 	cache->ninflight = 0;
