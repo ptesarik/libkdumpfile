@@ -40,11 +40,11 @@
 struct cache {
 	unsigned split;		 /**< Split point between probed and precious
 				  *   entries (index of MRU probed entry) */
-	int dsplit;		 /**< Desired split point change */
 	unsigned nprec;		 /**< Number of cached precious entries */
 	unsigned ngprec;	 /**< Number of ghost precious entries */
 	unsigned nprobe;	 /**< Number of cached probe entries */
 	unsigned ngprobe;	 /**< Number of ghost probe entries */
+	unsigned dprobe;	 /**< Desired nubmer of cached probe entries */
 	unsigned nprobetotal;	 /**< Total number of probe list entries,
 				  *   including ghost and in-flight entries */
 	unsigned cap;		 /**< Total cache capacity */
@@ -123,7 +123,6 @@ void
 cache_make_precious(struct cache *cache, struct cache_entry *entry)
 {
 	if (CACHE_PFN_FLAGS(entry->pfn) == cf_probe) {
-		++cache->dsplit;
 		--cache->nprobetotal;
 		entry->pfn = CACHE_PFN(entry->pfn) |
 			CACHE_FLAGS_PFN(cf_precious);
@@ -163,13 +162,9 @@ use_precious(struct cache *cache, struct cache_entry *entry)
  *
  * Evict an entry from the cache and use its data pointer for @ref entry.
  * The evicted entry is taken either from the probe list or from the
- * precious list, depending on the value of @c dsplit.
+ * precious list, depending on the value of @c dprobe.
  * This function is used for pages that will be added to the probe list,
  * so it has bias towards the probe list.
- *
- * Note that @c dsplit is not updated when taking an entry from the
- * probe list. That's because the entry will be added back to the list
- * eventually, so there is no change in fact.
  *
  * @sa reuse_ghost_entry
  */
@@ -178,7 +173,7 @@ reinit_entry(struct cache *cache, struct cache_entry *entry,
 	     struct cache_search *cs)
 {
 	unsigned evict;
-	int delta = cache->dsplit;
+	int delta = cache->dprobe - cache->nprobe;
 
 	if (delta <= 0 && cache->nprobe == 0)
 		delta = 1;
@@ -190,7 +185,6 @@ reinit_entry(struct cache *cache, struct cache_entry *entry,
 		--cache->nprobe;
 		++cache->ngprobe;
 	} else {
-		--cache->dsplit;
 		evict = cache->ce[cs->gprec].prev;
 		--cache->nprec;
 		++cache->ngprec;
@@ -216,7 +210,7 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
 		  struct cache_search *cs)
 {
 	unsigned idx, evict;
-	int delta = cache->dsplit;
+	int delta = cache->dprobe - cache->nprobe;
 
 	if (delta < 0 && cache->nprobe == 0)
 		delta = 0;
@@ -225,7 +219,6 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
 
 	idx = entry - cache->ce;
 	if (delta < 0) {
-		++cache->dsplit;
 		evict = cache->ce[cs->gprobe].next;
 		--cache->nprobe;
 		++cache->ngprobe;
@@ -283,7 +276,6 @@ cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
 	while (n--) {
 		entry = &cache->ce[idx];
 		if (entry->pfn == pfn) {
-			++cache->dsplit;
 			--cache->nprobe;
 			++cache->nprec;
 			--cache->nprobetotal;
@@ -330,8 +322,13 @@ get_ghost_entry(struct cache *cache, kdump_pfn_t pfn,
 	while (n--) {
 		entry = &cache->ce[idx];
 		if (entry->pfn == pfn) {
-			if (cache->nprobe != 0)
-				--cache->dsplit;
+			int delta = cache->ngprobe > cache->ngprec
+				? cache->ngprobe / cache->ngprec
+				: 1;
+			if (cache->dprobe > delta)
+				cache->dprobe -= delta;
+			else
+				cache->dprobe = 0;
 			--cache->ngprec;
 			reuse_ghost_entry(cache, entry, cs);
 			return entry;
@@ -346,7 +343,13 @@ get_ghost_entry(struct cache *cache, kdump_pfn_t pfn,
 	while (n--) {
 		entry = &cache->ce[idx];
 		if (entry->pfn == pfn) {
-			++cache->dsplit;
+			int delta = cache->ngprec > cache->ngprobe
+				? cache->ngprec / cache->ngprobe
+				: 1;
+			if (cache->dprobe + delta < cache->cap)
+				cache->dprobe += delta;
+			else
+				cache->dprobe = cache->cap;
 			--cache->ngprobe;
 			--cache->nprobetotal;
 			reuse_ghost_entry(cache, entry, cs);
@@ -411,8 +414,6 @@ get_missed_entry(struct cache *cache, kdump_pfn_t pfn,
 		if (entry->next == cs->eprec && cache->ngprec)
 			--cache->ngprec;
 		++cache->nprobetotal;
-		if (entry->data)
-			--cache->dsplit;
 	}
 
 	if (!entry->data)
@@ -501,11 +502,11 @@ cache_flush(struct cache *cache)
 	}
 
 	cache->split = cache->cap - 1;
-	cache->dsplit = 0;
 	cache->nprec = 0;
 	cache->ngprec = 0;
 	cache->nprobe = 0;
 	cache->ngprobe = 0;
+	cache->dprobe = 0;
 	cache->nprobetotal = 0;
 	cache->ninflight = 0;
 }
