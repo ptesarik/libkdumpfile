@@ -46,13 +46,14 @@ static const struct format_ops xc_core_elf_ops;
 
 struct xen_p2m {
 	uint64_t pfn;
-	uint64_t gmfn; 
+	uint64_t gmfn;
 };
 
 struct load_segment {
 	off_t file_offset;
+	off_t filesz;
 	kdump_paddr_t phys;
-	off_t size;
+	kdump_addr_t memsz;
 	kdump_vaddr_t virt;
 };
 
@@ -118,7 +119,7 @@ elf_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 	for (i = 0; i < edp->num_load_segments; i++) {
 		struct load_segment *pls = &edp->load_segments[i];
 		if (addr >= pls->phys &&
-		    endaddr <= pls->phys + pls->size) {
+		    endaddr <= pls->phys + pls->filesz) {
 			pos = pls->file_offset + addr - pls->phys;
 			break;
 		}
@@ -412,8 +413,9 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 		pls = next_phdr(edp, dump32toh(ctx, prog.p_type));
 		if (pls) {
 			pls->file_offset = dump32toh(ctx, prog.p_offset);
+			pls->filesz = dump32toh(ctx, prog.p_filesz);
 			pls->phys = dump32toh(ctx, prog.p_paddr);
-			pls->size = dump32toh(ctx, prog.p_filesz);
+			pls->memsz = dump32toh(ctx, prog.p_memsz);
 			pls->virt = dump32toh(ctx, prog.p_vaddr);
 		}
 	}
@@ -481,8 +483,9 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 		pls = next_phdr(edp, dump32toh(ctx, prog.p_type));
 		if (pls) {
 			pls->file_offset = dump64toh(ctx, prog.p_offset);
+			pls->filesz = dump64toh(ctx, prog.p_filesz);
 			pls->phys = dump64toh(ctx, prog.p_paddr);
-			pls->size = dump64toh(ctx, prog.p_filesz);
+			pls->memsz = dump64toh(ctx, prog.p_memsz);
 			pls->virt = dump64toh(ctx, prog.p_vaddr);
 		}
 	}
@@ -525,17 +528,17 @@ process_elf_notes(kdump_ctx *ctx, void *notes)
 	for (i = 0; i < edp->num_note_segments; ++i) {
 		struct load_segment *seg = edp->note_segments + i;
 
-		rd = pread(ctx->fd, p, seg->size, seg->file_offset);
-		if (rd != seg->size)
+		rd = pread(ctx->fd, p, seg->filesz, seg->file_offset);
+		if (rd != seg->filesz)
 			return set_error(ctx, read_error(rd),
 					 "Cannot read ELF notes at %llu",
 					 (unsigned long long) seg->file_offset);
 
-		ret = process_noarch_notes(ctx, p, seg->size);
+		ret = process_noarch_notes(ctx, p, seg->filesz);
 		if (ret != kdump_ok)
 			return ret;
 
-		p += seg->size;
+		p += seg->filesz;
 	}
 
 	if (!isset_arch_name(ctx)) {
@@ -549,7 +552,7 @@ process_elf_notes(kdump_ctx *ctx, void *notes)
 	for (i = 0; i < edp->num_note_segments; ++i) {
 		struct load_segment *seg = edp->note_segments + i;
 
-		ret = process_arch_notes(ctx, p, seg->size);
+		ret = process_arch_notes(ctx, p, seg->filesz);
 		if (ret != kdump_ok)
 			return ret;
 	}
@@ -572,7 +575,7 @@ open_common(kdump_ctx *ctx)
 	/* read notes */
 	notesz = 0;
 	for (i = 0; i < edp->num_note_segments; ++i)
-		notesz += edp->note_segments[i].size;
+		notesz += edp->note_segments[i].filesz;
 	notes = ctx_malloc(notesz, ctx, "ELF notes");
 	if (!notes)
 		return kdump_syserr;
@@ -586,7 +589,7 @@ open_common(kdump_ctx *ctx)
 	for (i = 0; i < edp->num_load_segments; ++i) {
 		struct load_segment *seg = edp->load_segments + i;
 		unsigned long pfn =
-			(seg->phys + seg->size) >> get_page_shift(ctx);
+			(seg->phys + seg->filesz) >> get_page_shift(ctx);
 		if (pfn > get_max_pfn(ctx))
 			set_max_pfn(ctx, pfn);
 
