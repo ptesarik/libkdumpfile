@@ -127,11 +127,14 @@ static void
 add_inflight(struct cache *cache, struct cache_entry *entry, unsigned idx)
 {
 	if (cache->ninflight++) {
-		entry->next = cache->inflight;
-		entry->prev = cache->ce[cache->inflight].prev;
+		struct cache_entry *next = &cache->ce[cache->inflight];
+		struct cache_entry *prev = &cache->ce[next->prev];
+		entry->next = prev->next;
+		prev->next = idx;
+		entry->prev = next->prev;
+		next->prev = idx;
 	} else
-		entry->next = entry->prev = idx;
-	cache->inflight = idx;
+		cache->inflight = entry->next = entry->prev = idx;
 }
 
 /**  Ensure that an in-flight entry goes to the precious list, eventually.
@@ -457,10 +460,13 @@ cache_insert(struct cache *cache, struct cache_entry *entry)
 
 	if (cache_entry_valid(entry))
 		return;
-	if (cache->ninflight--)
-		remove_entry(cache, entry);
 
 	idx = entry - cache->ce;
+	if (cache->ninflight--) {
+		if (cache->inflight == idx)
+			cache->inflight = entry->next;
+		remove_entry(cache, entry);
+	}
 	add_entry(cache, entry, idx, cache->split);
 
 	switch (CACHE_PFN_FLAGS(entry->pfn)) {
@@ -494,15 +500,18 @@ cache_discard(struct cache *cache, struct cache_entry *entry)
 	if (CACHE_PFN_FLAGS(entry->pfn) == cf_probe)
 		--cache->nprobetotal;
 
-	if (cache->ninflight--)
+	idx = entry - cache->ce;
+	if (cache->ninflight--) {
+		if (cache->inflight == idx)
+			cache->inflight = entry->next;
 		remove_entry(cache, entry);
+	}
 
 	n = cache->nprobe + cache->ngprobe;
 	eprobe = cache->split;
 	while (n--)
 		eprobe = cache->ce[eprobe].prev;
 
-	idx = entry - cache->ce;
 	if (eprobe == cache->split)
 		cache->split = idx;
 
