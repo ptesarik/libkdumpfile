@@ -129,16 +129,19 @@ cache_make_precious(struct cache *cache, struct cache_entry *entry)
 	}
 }
 
-/**  Move a cache entry to the MRU position of the precious list.
+/**  Reuse a cached entry.
  *
  * @param cache  Cache object.
  * @param entry  Cache entry to be moved.
+ * @param idx    Index of @ref entry.
+ *
+ * Move a cache entry to the MRU position of the precious list.
  */
 static void
-use_precious(struct cache *cache, struct cache_entry *entry)
+reuse_cached_entry(struct cache *cache, struct cache_entry *entry,
+		   unsigned idx)
 {
 	struct cache_entry *prev, *next;
-	unsigned idx = entry - cache->ce;
 
 	if (cache->split != idx && cache->split != entry->prev) {
 		remove_entry(cache, entry);
@@ -152,6 +155,8 @@ use_precious(struct cache *cache, struct cache_entry *entry)
 	}
 
 	cache->split = entry->prev;
+
+	++cache->hits.number;
 }
 
 /**  Re-initialize an entry for a different page.
@@ -197,6 +202,7 @@ reinit_entry(struct cache *cache, struct cache_entry *entry,
  *
  * @param cache  Cache object.
  * @param entry  Ghost entry to be reused.
+ * @param idx    Index of @ref entry.
  * @param cs     Cache search info.
  *
  * Same as @ref reinit_entry, but designed for ghost entries.
@@ -207,9 +213,9 @@ reinit_entry(struct cache *cache, struct cache_entry *entry,
  */
 static void
 reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
-		  struct cache_search *cs)
+		  unsigned idx, struct cache_search *cs)
 {
-	unsigned idx, evict;
+	unsigned evict;
 	int delta = cache->dprobe - cache->nprobe;
 
 	if (delta < 0 && cache->nprobe == 0)
@@ -217,7 +223,6 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
 	else if (delta >= 0 && cache->nprec == 0)
 		delta = -1;
 
-	idx = entry - cache->ce;
 	if (delta < 0) {
 		evict = cache->ce[cs->gprobe].next;
 		--cache->nprobe;
@@ -262,8 +267,7 @@ cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
 	while (n--) {
 		entry = &cache->ce[idx];
 		if (entry->pfn == pfn) {
-			use_precious(cache, entry);
-			++cache->hits.number;
+			reuse_cached_entry(cache, entry, idx);
 			return entry;
 		}
 		idx = entry->next;
@@ -279,8 +283,7 @@ cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
 			--cache->nprobe;
 			++cache->nprec;
 			--cache->nprobetotal;
-			use_precious(cache, entry);
-			++cache->hits.number;
+			reuse_cached_entry(cache, entry, idx);
 			return entry;
 		}
 		idx = entry->prev;
@@ -330,7 +333,7 @@ get_ghost_entry(struct cache *cache, kdump_pfn_t pfn,
 			else
 				cache->dprobe = 0;
 			--cache->ngprec;
-			reuse_ghost_entry(cache, entry, cs);
+			reuse_ghost_entry(cache, entry, idx, cs);
 			return entry;
 		}
 		idx = entry->next;
@@ -352,7 +355,7 @@ get_ghost_entry(struct cache *cache, kdump_pfn_t pfn,
 				cache->dprobe = cache->cap;
 			--cache->ngprobe;
 			--cache->nprobetotal;
-			reuse_ghost_entry(cache, entry, cs);
+			reuse_ghost_entry(cache, entry, idx, cs);
 			return entry;
 		}
 		idx = entry->prev;
