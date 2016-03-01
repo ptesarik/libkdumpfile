@@ -81,6 +81,26 @@ static struct cache_entry *get_missed_entry(
 	struct cache *cache, kdump_pfn_t pfn,
 	struct cache_search *cs);
 
+/**  Add an entry to the list.
+ * @param cache   Cache object.
+ * @param entry   Cache entry to be added.
+ * @param idx     Index of @ref entry.
+ * @param insidx  Insertion point.
+ *
+ * The entry is added just after @ref insidx.
+ */
+static void
+add_entry(struct cache *cache, struct cache_entry *entry, unsigned idx,
+	  unsigned insidx)
+{
+	struct cache_entry *prev = &cache->ce[insidx];
+	struct cache_entry *next = &cache->ce[prev->next];
+	entry->next = prev->next;
+	prev->next = idx;
+	entry->prev = next->prev;
+	next->prev = idx;
+}
+
 /**  Remove a cache entry from a list.
  *
  * @param cache  Cache object.
@@ -141,17 +161,9 @@ static void
 reuse_cached_entry(struct cache *cache, struct cache_entry *entry,
 		   unsigned idx)
 {
-	struct cache_entry *prev, *next;
-
 	if (cache->split != idx && cache->split != entry->prev) {
 		remove_entry(cache, entry);
-
-		prev = &cache->ce[cache->split];
-		next = &cache->ce[prev->next];
-		entry->next = prev->next;
-		prev->next = idx;
-		entry->prev = next->prev;
-		next->prev = idx;
+		add_entry(cache, entry, idx, cache->split);
 	}
 
 	cache->split = entry->prev;
@@ -441,7 +453,6 @@ get_missed_entry(struct cache *cache, kdump_pfn_t pfn,
 void
 cache_insert(struct cache *cache, struct cache_entry *entry)
 {
-	struct cache_entry *prev, *next;
 	unsigned idx;
 
 	if (cache_entry_valid(entry))
@@ -450,8 +461,7 @@ cache_insert(struct cache *cache, struct cache_entry *entry)
 		remove_entry(cache, entry);
 
 	idx = entry - cache->ce;
-	prev = &cache->ce[cache->split];
-	next = &cache->ce[prev->next];
+	add_entry(cache, entry, idx, cache->split);
 
 	switch (CACHE_PFN_FLAGS(entry->pfn)) {
 	case cf_probe:
@@ -464,11 +474,6 @@ cache_insert(struct cache *cache, struct cache_entry *entry)
 		break;
 	}
 	entry->pfn &= ~CACHE_FLAGS_PFN(CF_MASK);
-
-	entry->next = prev->next;
-	prev->next = idx;
-	entry->prev = next->prev;
-	next->prev = idx;
 }
 
 /**  Discard an entry.
@@ -482,7 +487,6 @@ cache_insert(struct cache *cache, struct cache_entry *entry)
 void
 cache_discard(struct cache *cache, struct cache_entry *entry)
 {
-	struct cache_entry *prev, *next;
 	unsigned n, idx, eprobe;
 
 	if (cache_entry_valid(entry))
@@ -502,12 +506,7 @@ cache_discard(struct cache *cache, struct cache_entry *entry)
 	if (eprobe == cache->split)
 		cache->split = idx;
 
-	prev = &cache->ce[eprobe];
-	next = &cache->ce[prev->next];
-	entry->next = prev->next;
-	prev->next = idx;
-	entry->prev = next->prev;
-	next->prev = idx;
+	add_entry(cache, entry, idx, eprobe);
 }
 
 /**  Flush all cache entries.
