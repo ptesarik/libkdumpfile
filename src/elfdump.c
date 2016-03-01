@@ -105,34 +105,90 @@ mach2arch(unsigned mach, int elfclass)
 	}
 }
 
+/**  Find the LOAD segment that is closest to a physical address.
+ * @param edp	 ELF dump private data.
+ * @param paddr	 Requested physical address.
+ * @param dist	 Maximum allowed distance from @ref paddr.
+ * @returns	 Pointer to the closest LOAD segment, or @c NULL if none.
+ */
+static struct load_segment *
+find_closest_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
+		  unsigned long dist)
+{
+	unsigned long bestdist;
+	struct load_segment *bestload;
+	int i;
+
+	bestdist = dist;
+	bestload = NULL;
+	for (i = 0; i < edp->num_load_segments; i++) {
+		struct load_segment *pls = &edp->load_segments[i];
+		if (paddr >= pls->phys + pls->memsz)
+			continue;
+		if (paddr >= pls->phys)
+			return pls;	/* Exact match */
+		if (bestdist > pls->phys - paddr) {
+			bestdist = pls->phys - paddr;
+			bestload = pls;
+		}
+	}
+	return bestload;
+}
+
 static kdump_status
 elf_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
-	kdump_paddr_t addr, endaddr;
+	struct load_segment *pls;
+	kdump_paddr_t addr;
+	void *p, *endp;
 	off_t pos;
-	ssize_t rd;
-	int i;
+	ssize_t size, rd;
 
 	addr = pfn << get_page_shift(ctx);
-	endaddr = addr + get_page_size(ctx);
-	for (i = 0; i < edp->num_load_segments; i++) {
-		struct load_segment *pls = &edp->load_segments[i];
-		if (addr >= pls->phys &&
-		    endaddr <= pls->phys + pls->filesz) {
-			pos = pls->file_offset + addr - pls->phys;
+
+	p = ce->data;
+	endp = p + get_page_size(ctx);
+	while (p < endp) {
+		pls = find_closest_load(edp, addr, endp - p);
+		if (!pls)
 			break;
+
+		if (pls->phys > addr) {
+			memset(p, 0, pls->phys - addr);
+			p += pls->phys - addr;
+			addr = pls->phys;
+		}
+
+		pos = pls->file_offset + addr - pls->phys;
+		if (pls->phys + pls->filesz > addr) {
+			size = endp - p;
+			if (size > pls->phys + pls->filesz - addr)
+				size = pls->phys + pls->filesz - addr;
+
+			rd = pread(ctx->fd, p, size, pos);
+			if (rd != size)
+				return set_error(
+					ctx, read_error(rd),
+					"Cannot read page data at %llu",
+					(unsigned long long) pos);
+			p += size;
+			addr += size;
+		}
+		if (p < endp) {
+			size = endp - p;
+			if (size > pls->phys + pls->memsz - addr)
+				size = pls->phys + pls->memsz - addr;
+			memset(p, 0, size);
+			p += size;
+			addr += size;
 		}
 	}
-	if (i >= edp->num_load_segments)
-		return set_error(ctx, kdump_nodata, "Page not found");
 
-	/* read page data */
-	rd = pread(ctx->fd, ce->data, get_page_size(ctx), pos);
-	if (rd != get_page_size(ctx))
-		return set_error(ctx, read_error(rd),
-				 "Cannot read page data at %llu",
-				 (unsigned long long) pos);
+	if (p == ce->data)
+		return set_error(ctx, kdump_nodata, "Page not found");
+	else if (p < endp)
+		memset(p, 0, endp - p);
 
 	return kdump_ok;
 }
