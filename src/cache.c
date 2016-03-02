@@ -67,9 +67,13 @@ struct cache_search {
 	unsigned gprec;		/**< Index of MRU precious ghost entry */
 	unsigned eprec;		/**< End of precious entries; this is the
 				 *   index of the first unused entry. */
+	unsigned uprec;		/**< Index of LRU unused precious entry. */
+	unsigned nuprec;	/**< Number of unused precious entries. */
 	unsigned gprobe;	/**< Index of MRU probed ghost entry */
 	unsigned eprobe;	/**< End of probed entries; this is the
 				 *   index of the first unused entry. */
+	unsigned uprobe;	/**< Index of LRU unused probed entry. */
+	unsigned nuprobe;	/**< Number of unused probed entries. */
 };
 
 static struct cache_entry *get_ghost_entry(
@@ -195,17 +199,17 @@ reinit_entry(struct cache *cache, struct cache_entry *entry,
 	unsigned evict;
 	int delta = cache->dprobe - cache->nprobe;
 
-	if (delta <= 0 && cache->nprobe == 0)
+	if (delta <= 0 && cs->nuprobe == 0)
 		delta = 1;
-	else if (delta > 0 && cache->nprec == 0)
+	else if (delta > 0 && cs->nuprec == 0)
 		delta = 0;
 
 	if (delta <= 0) {
-		evict = cache->ce[cs->gprobe].next;
+		evict = cs->uprobe;
 		--cache->nprobe;
 		++cache->ngprobe;
 	} else {
-		evict = cache->ce[cs->gprec].prev;
+		evict = cs->uprec;
 		--cache->nprec;
 		++cache->ngprec;
 	}
@@ -233,17 +237,17 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
 	unsigned evict;
 	int delta = cache->dprobe - cache->nprobe;
 
-	if (delta < 0 && cache->nprobe == 0)
+	if (delta < 0 && cs->nuprobe == 0)
 		delta = 0;
-	else if (delta >= 0 && cache->nprec == 0)
+	else if (delta >= 0 && cs->nuprec == 0)
 		delta = -1;
 
 	if (delta < 0) {
-		evict = cache->ce[cs->gprobe].next;
+		evict = cs->uprobe;
 		--cache->nprobe;
 		++cache->ngprobe;
 	} else {
-		evict = cache->ce[cs->gprec].prev;
+		evict = cs->uprec;
 		--cache->nprec;
 		++cache->ngprec;
 	}
@@ -271,6 +275,9 @@ cache_get_entry_noref(struct cache *cache, kdump_pfn_t pfn)
 	struct cache_entry *entry;
 	unsigned n, idx;
 
+	cs.nuprec = 0;
+	cs.nuprobe = 0;
+
 	/* Search precious entries */
 	n = cache->nprec;
 	idx = cache->ce[cache->split].next;
@@ -279,6 +286,10 @@ cache_get_entry_noref(struct cache *cache, kdump_pfn_t pfn)
 		if (entry->pfn == pfn) {
 			reuse_cached_entry(cache, entry, idx);
 			return entry;
+		}
+		if (entry->refcnt == 0) {
+			cs.uprec = idx;
+			++cs.nuprec;
 		}
 		idx = entry->next;
 	}
@@ -296,14 +307,23 @@ cache_get_entry_noref(struct cache *cache, kdump_pfn_t pfn)
 			reuse_cached_entry(cache, entry, idx);
 			return entry;
 		}
+		if (entry->refcnt == 0) {
+			cs.uprobe = idx;
+			++cs.nuprobe;
+		}
 		idx = entry->prev;
 	}
 	cs.gprobe = idx;
 
 	entry = get_inflight_entry(cache, pfn);
 
-	if (!entry && cache->ninflight >= cache->cap)
-		return NULL;
+	if (!entry) {
+		unsigned inuse = (cache->nprec - cs.nuprec) +
+			(cache->nprobe - cs.nuprobe) +
+			cache->ninflight;
+		if (inuse >= cache->cap)
+			return NULL;
+	}
 
 	if (!entry)
 		entry = get_ghost_entry(cache, pfn, &cs);
