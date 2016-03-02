@@ -43,7 +43,8 @@
 #define FN_VMCOREINFO	"/sys/kernel/vmcoreinfo"
 
 struct devmem_priv {
-	struct cache_entry ce;
+	unsigned cache_size;
+	struct cache_entry *ce;
 };
 
 static kdump_status
@@ -101,16 +102,75 @@ static kdump_status
 devmem_read_page(kdump_ctx *ctx, struct page_io *pio)
 {
 	struct devmem_priv *dmp = ctx->fmtdata;
+	struct cache_entry *ce;
 	off_t pos = pio->pfn << get_page_shift(ctx);
 	ssize_t rd;
+	unsigned i;
 
-	dmp->ce.pfn = pio->pfn;
-	dmp->ce.data = ctx->buffer;
-	rd = pread(ctx->fd, dmp->ce.data, get_page_size(ctx), pos);
-	if (rd != get_page_size(ctx))
+	ce = NULL;
+	for (i = 0; i < dmp->cache_size; ++i) {
+		if (dmp->ce[i].pfn == pio->pfn) {
+			ce = &dmp->ce[i];
+			break;
+		} else if (dmp->ce[i].refcnt == 0)
+			ce = &dmp->ce[i];
+	}
+	if (!ce)
+		return set_error(ctx, kdump_busy,
+				 "Cache is fully utilized");
+	++ce->refcnt;
+
+	ce->pfn = pio->pfn;
+	rd = pread(ctx->fd, ce->data, get_page_size(ctx), pos);
+	if (rd != get_page_size(ctx)) {
+		--ce->refcnt;
 		return set_error(ctx, read_error(rd),
 				 "Cannot read memory device");
-	pio->ce = &dmp->ce;
+	}
+
+	pio->ce = ce;
+	return kdump_ok;
+}
+
+kdump_status
+devmem_realloc_caches(kdump_ctx *ctx)
+{
+	struct devmem_priv *dmp = ctx->fmtdata;
+	const struct attr_data *attr;
+	unsigned cache_size;
+	struct cache_entry *ce;
+	unsigned i;
+
+	attr = lookup_attr(ctx, GATTR(GKI_cache_size));
+	cache_size = attr
+		? attr_value(attr)->number
+		: DEFAULT_CACHE_SIZE;
+	ce = calloc(cache_size, sizeof *ce);
+	if (!ce)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate cache (%u * %zu bytes)",
+				 cache_size, sizeof *ce);
+
+	ce[0].data = ctx_malloc(cache_size * get_page_size(ctx),
+				ctx, "cache data");
+	if (!ce[0].data) {
+		free(ce);
+		return kdump_syserr;
+	}
+
+	ce[0].pfn = CACHE_FLAGS_PFN(-1);
+	for (i = 1; i < cache_size; ++i) {
+		ce[i].pfn = CACHE_FLAGS_PFN(-1);
+		ce[i].data = ce[i-1].data + get_page_size(ctx);
+	}
+
+	dmp->cache_size = cache_size;
+	if (dmp->ce) {
+		free(dmp->ce[0].data);
+		free(dmp->ce);
+	}
+	dmp->ce = ce;
+
 	return kdump_ok;
 }
 
@@ -129,6 +189,12 @@ devmem_probe(kdump_ctx *ctx)
 	    major(st.st_rdev) != 10))
 		return set_error(ctx, kdump_unsupported,
 				 "Not a memory dump character device");
+
+	dmp = ctx_malloc(sizeof *dmp, ctx, "Live source private data");
+	if (!dmp)
+		return kdump_syserr;
+	dmp->ce = NULL;
+	ctx->fmtdata = dmp;
 
 #if defined(__x86_64__)
 	ret = set_arch(ctx, ARCH_X86_64);
@@ -168,11 +234,6 @@ devmem_probe(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		return ret;
 
-	dmp = ctx_malloc(sizeof *dmp, ctx, "Live source private data");
-	if (!dmp)
-		return kdump_syserr;
-	ctx->fmtdata = dmp;
-
 	get_vmcoreinfo(ctx);
 
 	return kdump_ok;
@@ -181,6 +242,13 @@ devmem_probe(kdump_ctx *ctx)
 static void
 devmem_cleanup(kdump_ctx *ctx)
 {
+	struct devmem_priv *dmp = ctx->fmtdata;
+
+	if (dmp->ce) {
+		free(dmp->ce[0].data);
+		free(dmp->ce);
+	}
+
 	free(ctx->priv);
 	ctx->fmtdata = NULL;
 }
@@ -189,5 +257,6 @@ const struct format_ops devmem_ops = {
 	.name = "memory",
 	.probe = devmem_probe,
 	.read_page = devmem_read_page,
+	.realloc_caches = devmem_realloc_caches,
 	.cleanup = devmem_cleanup,
 };
