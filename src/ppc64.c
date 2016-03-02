@@ -234,7 +234,7 @@ ppc64_vtop_hugepd(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	ptep = ((hpde & ~HUGEPD_SHIFT_MASK) | PD_HUGE) +
 		idx * sizeof(uint64_t);
 
-	res = read_u64(ctx, KDUMP_KVADDR, ptep, "huge PTE", &pte);
+	res = read_u64(ctx, KDUMP_KVADDR, ptep, 0, "huge PTE", &pte);
 	if (res != kdump_ok)
 		return res;
 	if (!pte)
@@ -259,7 +259,7 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	pgdp = archdata->pg.pg +
 		split.pgd * sizeof(uint64_t);
-	res = read_u64(ctx, KDUMP_KVADDR, pgdp, "PGD entry", &pgd);
+	res = read_u64(ctx, KDUMP_KVADDR, pgdp, 1, "PGD entry", &pgd);
 	if (res != kdump_ok)
 		return res;
 	if (!pgd)
@@ -278,7 +278,7 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	pudp = (pgd & (~archdata->pg.pgd_mask));
 	if (archdata->pgform.pud_bits != 0) {
 		pudp += split.pud * sizeof(uint64_t);
-		res = read_u64(ctx, KDUMP_KVADDR, pudp, "PUD entry", &pud);
+		res = read_u64(ctx, KDUMP_KVADDR, pudp, 1, "PUD entry", &pud);
 		if (res != kdump_ok)
 			return res;
 
@@ -300,7 +300,7 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 		pmdp = pudp;
 
 	pmdp += split.pmd * sizeof(uint64_t);
-	res = read_u64(ctx, KDUMP_KVADDR, pmdp, "PMD entry", &pmd);
+	res = read_u64(ctx, KDUMP_KVADDR, pmdp, 0, "PMD entry", &pmd);
 	if (res != kdump_ok)
 		return res;
 	if (!pmd)
@@ -318,7 +318,7 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	ptep = (pmd & (~archdata->pg.pmd_mask)) +
 		split.pte * sizeof(uint64_t);
-	res = read_u64(ctx, KDUMP_KVADDR, ptep, "PTE entry", &pte);
+	res = read_u64(ctx, KDUMP_KVADDR, ptep, 0, "PTE entry", &pte);
 	if (res != kdump_ok)
 		return res;
 	if (!pte)

@@ -494,7 +494,7 @@ kdump_status raw_read_page(kdump_ctx *ctx, kdump_addrspace_t as,
 
 #define read_u64 INTERNAL_NAME(read_u64)
 kdump_status read_u64(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
-		      char *what, uint64_t *result);
+		      int precious, char *what, uint64_t *result);
 
 /* utils */
 
