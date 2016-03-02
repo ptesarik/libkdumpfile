@@ -36,6 +36,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <errno.h>
 
 #if USE_ZLIB
 # include <zlib.h>
@@ -50,7 +51,7 @@ set_error(kdump_ctx *ctx, kdump_status ret, const char *msgfmt, ...)
 
 	va_list ap;
 	char msgbuf[ERRBUF];
-	const char *msg;
+	const char *msg, *err;
 	int msglen;
 	size_t remain;
 
@@ -68,6 +69,17 @@ set_error(kdump_ctx *ctx, kdump_status ret, const char *msgfmt, ...)
 		msg = msgbuf;
 		if (msglen >= sizeof(msgbuf))
 			msglen = sizeof(msgbuf) - 1;
+		if (ret == kdump_syserr && !ctx->err_str &&
+		    msglen + 3 < sizeof(msgbuf)) {
+			memcpy(msgbuf + msglen, delim, sizeof(delim));
+			msglen += sizeof(delim);
+			remain = sizeof(msgbuf) - msglen;
+			err = strerror_r(errno, msgbuf + msglen, remain);
+			remain = sizeof(msgbuf) - msglen - 1;
+			strncpy(msgbuf + msglen, err, remain);
+			msgbuf[msglen + remain] = '\0';
+			msglen += strlen(msgbuf + msglen);
+		}
 	}
 
 	if (!ctx->err_str) {
