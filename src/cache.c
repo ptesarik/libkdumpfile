@@ -305,13 +305,17 @@ cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
 	}
 	cs.gprobe = idx;
 
-	++cache->misses.number;
+	entry = get_inflight_entry(cache, pfn);
 
-	entry = get_ghost_entry(cache, pfn, &cs);
+	if (!entry && cache->ninflight >= cache->cap)
+		return NULL;
+
 	if (!entry)
-		entry = get_inflight_entry(cache, pfn);
+		entry = get_ghost_entry(cache, pfn, &cs);
 	if (!entry)
 		entry = get_missed_entry(cache, pfn, &cs);
+
+	++cache->misses.number;
 
 	return entry;
 }
@@ -606,6 +610,10 @@ def_read_cache(kdump_ctx *ctx, struct page_io *pio,
 	kdump_status ret;
 
 	entry = cache_get_entry(ctx->cache, idx);
+	if (!entry)
+		return set_error(ctx, kdump_busy,
+				 "Cache is fully utilized");
+
 	pio->buf = entry->data;
 	if (cache_entry_valid(entry))
 		return kdump_ok;

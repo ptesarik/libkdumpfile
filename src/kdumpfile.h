@@ -114,6 +114,7 @@ typedef enum _tag_kdump_status {
 	kdump_invalid,		/**< Invalid value. */
 	kdump_nokey,		/**< No such attribute key. */
 	kdump_eof,		/**< Unexpected EOF. */
+	kdump_busy,		/**< Too many pending requests. */
 } kdump_status;
 
 /**  Target dump byte order.
