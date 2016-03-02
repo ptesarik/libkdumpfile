@@ -135,22 +135,10 @@ read_pte(kdump_ctx *ctx, struct vtop_control *ctl, unsigned idx,
 	 uint64_t *pentry)
 {
 	kdump_paddr_t addr;
-	struct page_io pio;
-	uint64_t *p;
-	kdump_status ret;
 
 	addr = ctl->paddr + idx * sizeof(uint64_t);
-	pio.pfn = addr >> PAGE_SHIFT;
-	pio.precious = ctl->tbltype > 0;
-	ret = raw_read_page(ctx, KDUMP_KPHYSADDR, &pio);
-	if (ret != kdump_ok)
-		return set_error(ctx, ret,
-				 "Cannot read page table entry at %016llx",
-				 (unsigned long long)addr);
-
-	p = pio.buf + (addr & ~PAGE_MASK);
-	*pentry = dump64toh(ctx, *p);
-	return kdump_ok;
+	return read_u64(ctx, KDUMP_KPHYSADDR, addr,
+			(ctl->tbltype > 0), "page table entry", pentry);
 }
 
 static kdump_status

@@ -697,40 +697,32 @@ static kdump_status
 x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	       kdump_addrspace_t pml4_as, kdump_addr_t pml4)
 {
-	uint64_t *tbl;
+	kdump_addr_t pgdp, pudp, pmdp, ptep;
 	uint64_t pgd, pud, pmd, pte;
 	kdump_paddr_t base;
-	struct page_io pio;
 	kdump_status ret;
 
 	if (pml4 == ~(kdump_addr_t)0)
 		return set_error(ctx, kdump_invalid,
 				 "VTOP translation not initialized");
 
-	/* These page table levels are likely to be hit again soon. */
-	pio.precious = 1;
-
-	pio.pfn = pml4 >> PAGE_SHIFT;
-	ret = raw_read_page(ctx, pml4_as, &pio);
+	pgdp = pml4 + pgd_index(vaddr) * sizeof(uint64_t);
+	ret = read_u64(ctx, pml4_as, pgdp, 1, "PGD entry", &pgd);
 	if (ret != kdump_ok)
 		return ret;
-	tbl = pio.buf;
 
-	pgd = dump64toh(ctx, tbl[pgd_index(vaddr)]);
 	if (!(pgd & _PAGE_PRESENT))
 		return set_error(ctx, kdump_nodata,
 				 "Page directory pointer not present:"
 				 " pgd[%u] = 0x%llx",
 				 (unsigned) pgd_index(vaddr),
 				 (unsigned long long) pgd);
-	pio.pfn = (pgd & ~PHYSADDR_MASK) >> PAGE_SHIFT;
 
-	ret = raw_read_page(ctx, KDUMP_MACHPHYSADDR, &pio);
+	pudp = (pgd & ~PHYSADDR_MASK) + pud_index(vaddr) * sizeof(uint64_t);
+	ret = read_u64(ctx, KDUMP_MACHPHYSADDR, pudp, 1, "PUD entry", &pud);
 	if (ret != kdump_ok)
 		return ret;
-	tbl = pio.buf;
 
-	pud = dump64toh(ctx, tbl[pud_index(vaddr)]);
 	if (!(pud & _PAGE_PRESENT))
 		return set_error(ctx, kdump_nodata,
 				 "Page directory not present:"
@@ -742,17 +734,12 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 		*paddr = base + (vaddr & ~PUD_PSE_MASK);
 		return kdump_ok;
 	}
-	pio.pfn = (pud & ~PHYSADDR_MASK) >> PAGE_SHIFT;
 
-	/* Let the default cache algorithm decide the lowest 2 levels. */
-	pio.precious = 0;
-
-	ret = raw_read_page(ctx, KDUMP_MACHPHYSADDR, &pio);
+	pmdp = (pud & ~PHYSADDR_MASK) + pmd_index(vaddr) * sizeof(uint64_t);
+	ret = read_u64(ctx, KDUMP_MACHPHYSADDR, pmdp, 0, "PMD entry", &pmd);
 	if (ret != kdump_ok)
 		return ret;
-	tbl = pio.buf;
 
-	pmd = dump64toh(ctx, tbl[pmd_index(vaddr)]);
 	if (!(pmd & _PAGE_PRESENT))
 		return set_error(ctx, kdump_nodata,
 				 "Page table not present: pmd[%u] = 0x%llx",
@@ -763,14 +750,12 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 		*paddr = base + (vaddr & ~PMD_PSE_MASK);
 		return kdump_ok;
 	}
-	pio.pfn = (pmd & ~PHYSADDR_MASK) >> PAGE_SHIFT;
 
-	ret = raw_read_page(ctx, KDUMP_MACHPHYSADDR, &pio);
+	ptep = (pmd & ~PHYSADDR_MASK) + pte_index(vaddr) * sizeof(uint64_t);
+	ret = read_u64(ctx, KDUMP_MACHPHYSADDR, ptep, 0, "PTE entry", &pte);
 	if (ret != kdump_ok)
 		return ret;
-	tbl = pio.buf;
 
-	pte = dump64toh(ctx, tbl[pte_index(vaddr)]);
 	if (!(pte & _PAGE_PRESENT))
 		return set_error(ctx, kdump_nodata,
 				 "Page not present: pte[%u] = 0x%llx",
