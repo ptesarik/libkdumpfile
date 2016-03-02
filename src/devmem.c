@@ -51,9 +51,9 @@ static kdump_status
 get_vmcoreinfo(kdump_ctx *ctx)
 {
 	FILE *f;
-	unsigned long long addr, length;
+	unsigned long long addr;
+	size_t length;
 	void *info;
-	ssize_t rd;
 	kdump_status ret;
 
 	f = fopen(FN_VMCOREINFO, "r");
@@ -61,7 +61,7 @@ get_vmcoreinfo(kdump_ctx *ctx)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot open %s", FN_VMCOREINFO);
 
-	if (fscanf(f, "%llx %llx", &addr, &length) == 2)
+	if (fscanf(f, "%llx %zx", &addr, &length) == 2)
 		ret = kdump_ok;
 	else if (ferror(f))
 		ret = set_error(ctx, kdump_syserr,
@@ -78,22 +78,10 @@ get_vmcoreinfo(kdump_ctx *ctx)
 	if (!info)
 		return kdump_syserr;
 
-	if (lseek(ctx->fd, addr, SEEK_SET) == (off_t)-1) {
-		ret = set_error(ctx, kdump_syserr,
-				"Cannot seek to VMCOREINFO");
-		goto out;
-	}
+	ret = kdump_readp(ctx, KDUMP_KPHYSADDR, addr, info, &length);
+	if (ret == kdump_ok)
+		ret = process_notes(ctx, info, length);
 
-	rd = paged_read(ctx->fd, info, length);
-	if (rd != length) {
-		ret = set_error(ctx, read_error(rd),
-				"Cannot read VMCOREINFO");
-		goto out;
-	}
-
-	ret = process_notes(ctx, info, length);
-
-  out:
 	free(info);
 	return ret;
 }
