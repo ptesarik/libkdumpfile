@@ -792,6 +792,7 @@ struct cache_entry {
 				 *   are used for cache flags. */
 	unsigned next;		/**< Index of next entry in evict list. */
 	unsigned prev;		/**< Index of previous entry in evict list. */
+	unsigned refcnt;	/**< Reference count. */
 	void *data;		/**< Pointer to page data. */
 };
 
@@ -806,6 +807,12 @@ void cache_flush(struct cache *);
 
 #define cache_get_entry INTERNAL_NAME(cache_get_entry)
 struct cache_entry *cache_get_entry(struct cache *, kdump_pfn_t);
+
+static inline unsigned
+cache_put_entry(struct cache_entry *entry)
+{
+	return --entry->refcnt;
+}
 
 #define cache_insert INTERNAL_NAME(cache_insert)
 void cache_insert(struct cache *, struct cache_entry *);

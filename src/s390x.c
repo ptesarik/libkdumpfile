@@ -261,6 +261,7 @@ static int
 determine_pgttype(kdump_ctx *ctx)
 {
 	struct s390x_data *archdata = ctx->archdata;
+	struct page_io pio;
 	uint64_t entry, *p, *endp;
 	unsigned i;
 	kdump_status res;
@@ -269,7 +270,9 @@ determine_pgttype(kdump_ctx *ctx)
 	for (i = 0; i < PTRS_PER_PGD; ++i) {
 		if (p >= endp) {
 			kdump_paddr_t addr;
-			struct page_io pio;
+
+			if (p)
+				cache_put_entry(pio.ce);
 
 			addr = archdata->pgdir + i * sizeof(uint64_t);
 			pio.pfn = addr >> PAGE_SHIFT;
@@ -284,10 +287,14 @@ determine_pgttype(kdump_ctx *ctx)
 		}
 		entry = dump64toh(ctx, *p++);
 		if (!PTE_I(entry)) {
+			cache_put_entry(pio.ce);
 			archdata->pgttype = PTE_TT(entry);
 			return kdump_ok;
 		}
 	}
+
+	if (p)
+		cache_put_entry(pio.ce);
 
 	return set_error(ctx, kdump_nodata, "Empty top-level page table");
 }

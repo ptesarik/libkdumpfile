@@ -258,19 +258,14 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
 	entry->pfn |= CACHE_FLAGS_PFN(cf_precious);
 }
 
-/**  Get the cache entry for a given PFN.
+/**  Search the cache for an entry.
  *
  * @param cache  Cache object.
  * @param pfn    PFN to be searched.
- * @returns      Pointer to a cache entry.
- *
- * On a cache hit (page data is found in the cache), the returned entry
- * denotes the cached page data.
- * On a cache miss, the returned entry can be used to load data into the
- * cache and store it for later use with @ref cache_set_entry.
+ * @returns      Pointer to a cache entry, or @c NULL if cache is full.
  */
-struct cache_entry *
-cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
+static struct cache_entry *
+cache_get_entry_noref(struct cache *cache, kdump_pfn_t pfn)
 {
 	struct cache_search cs;
 	struct cache_entry *entry;
@@ -316,6 +311,31 @@ cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
 		entry = get_missed_entry(cache, pfn, &cs);
 
 	++cache->misses.number;
+
+	return entry;
+}
+
+/**  Get the cache entry for a given PFN.
+ *
+ * @param cache  Cache object.
+ * @param pfn    PFN to be searched.
+ * @returns      Pointer to a cache entry, or @c NULL if cache is full.
+ *
+ * On a cache hit (page data is found in the cache), the returned entry
+ * denotes the cached page data.
+ * On a cache miss, the returned entry can be used to load data into the
+ * cache and store it for later use with @ref cache_insert.
+ *
+ * The reference count of the returned entry is incremented.
+ */
+struct cache_entry *
+cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
+{
+	struct cache_entry *entry;
+
+	entry = cache_get_entry_noref(cache, pfn);
+	if (entry)
+		++entry->refcnt;
 
 	return entry;
 }
@@ -456,6 +476,10 @@ get_missed_entry(struct cache *cache, kdump_pfn_t pfn,
  *
  * @param cache  Cache object.
  * @param entry  Cache entry (with data).
+ *
+ * Note that this function does **NOT** drop the reference to @ref entry.
+ * This is necessary to allow callers inserting an entry to the cache as
+ * soon as possible, while using the data afterwards.
  */
 void
 cache_insert(struct cache *cache, struct cache_entry *entry)
@@ -493,12 +517,19 @@ cache_insert(struct cache *cache, struct cache_entry *entry)
  *
  * Use this function to return an entry back into the cache without
  * providing any data. This can be used for error handling.
+ *
+ * This function first drops the reference to @ref entry and does
+ * nothing unless this was the last reference. This means that a caller
+ * who has a reference to @ref entry may still insert it to the cache after
+ * another caller discarded it.
  */
 void
 cache_discard(struct cache *cache, struct cache_entry *entry)
 {
 	unsigned n, idx, eprobe;
 
+	if (cache_put_entry(entry))
+		return;
 	if (cache_entry_valid(entry))
 		return;
 	if (CACHE_PFN_FLAGS(entry->pfn) == cf_probe)
@@ -536,6 +567,7 @@ cache_flush(struct cache *cache)
 		struct cache_entry *entry = &cache->ce[i];
 		entry->next = (i < n - 1) ? (i + 1) : 0;
 		entry->prev = (i > 0) ? (i - 1) : (n - 1);
+		entry->refcnt = 0;
 		entry->data = i < cache->cap
 			? cache->data + i * cache->elemsize
 			: NULL;

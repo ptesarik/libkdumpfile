@@ -224,6 +224,7 @@ kdump_readp(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		if (partlen > remain)
 			partlen = remain;
 		memcpy(buffer, pio.ce->data + off, partlen);
+		cache_put_entry(pio.ce);
 		addr += partlen;
 		buffer += partlen;
 		remain -= partlen;
@@ -281,6 +282,7 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		newlength = length + partlen;
 		newstr = realloc(str, newlength + 1);
 		if (!newstr) {
+			cache_put_entry(pio.ce);
 			if (str)
 				free(str);
 			return set_error(ctx, kdump_syserr,
@@ -288,6 +290,7 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 					 newlength + 1);
 		}
 		memcpy(newstr + length, pio.ce->data + off, partlen);
+		cache_put_entry(pio.ce);
 		length = newlength;
 		str = newstr;
 
@@ -330,5 +333,6 @@ read_u64(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 
 	p = pio.ce->data + (addr & (get_page_size(ctx) - 1));
 	*result = dump64toh(ctx, *p);
+	cache_put_entry(pio.ce);
 	return kdump_ok;
 }
