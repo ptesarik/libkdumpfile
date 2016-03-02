@@ -78,13 +78,15 @@ enum kdump_arch {
 	ARCH_X86_64,
 };
 
+struct cache_entry;
+
 /**  Page I/O information.
  * This structure is used to pass information between @ref kdump_read
  * and the format-specific I/O methods.
  */
 struct page_io {
 	kdump_pfn_t pfn;	/**< PFN under I/O. */
-	void *buf;		/**< Buffer address. */
+	struct cache_entry *ce;	/**< Buffer cache entry. */
 	int precious;		/**< Is this page precious? */
 };
 

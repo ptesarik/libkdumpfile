@@ -223,7 +223,7 @@ kdump_readp(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		partlen = get_page_size(ctx) - off;
 		if (partlen > remain)
 			partlen = remain;
-		memcpy(buffer, pio.buf + off, partlen);
+		memcpy(buffer, pio.ce->data + off, partlen);
 		addr += partlen;
 		buffer += partlen;
 		remain -= partlen;
@@ -274,9 +274,9 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 
 		off = addr % get_page_size(ctx);
 		partlen = get_page_size(ctx) - off;
-		endp = memchr(pio.buf + off, 0, partlen);
+		endp = memchr(pio.ce->data + off, 0, partlen);
 		if (endp)
-			partlen = endp - ((char*)pio.buf + off);
+			partlen = endp - ((char*)pio.ce->data + off);
 
 		newlength = length + partlen;
 		newstr = realloc(str, newlength + 1);
@@ -287,7 +287,7 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 					 "Cannot enlarge string to %zu bytes",
 					 newlength + 1);
 		}
-		memcpy(newstr + length, pio.buf + off, partlen);
+		memcpy(newstr + length, pio.ce->data + off, partlen);
 		length = newlength;
 		str = newstr;
 
@@ -328,7 +328,7 @@ read_u64(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 				 "Reading %s failed at %llx",
 				 what, (unsigned long long) addr);
 
-	p = pio.buf + (addr & (get_page_size(ctx) - 1));
+	p = pio.ce->data + (addr & (get_page_size(ctx) - 1));
 	*result = dump64toh(ctx, *p);
 	return kdump_ok;
 }

@@ -279,8 +279,8 @@ determine_pgttype(kdump_ctx *ctx)
 				return set_error(ctx, res,
 						 "Page table at %016llx",
 						 (unsigned long long)addr);
-			p = pio.buf + (addr & ~PAGE_MASK);
-			endp = pio.buf + PAGE_SIZE;
+			p = pio.ce->data + (addr & ~PAGE_MASK);
+			endp = pio.ce->data + PAGE_SIZE;
 		}
 		entry = dump64toh(ctx, *p++);
 		if (!PTE_I(entry)) {
