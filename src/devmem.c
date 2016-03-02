@@ -124,15 +124,10 @@ kdump_status
 devmem_realloc_caches(kdump_ctx *ctx)
 {
 	struct devmem_priv *dmp = ctx->fmtdata;
-	const struct attr_data *attr;
-	unsigned cache_size;
+	unsigned cache_size = get_cache_size(ctx);
 	struct cache_entry *ce;
 	unsigned i;
 
-	attr = lookup_attr(ctx, GATTR(GKI_cache_size));
-	cache_size = attr
-		? attr_value(attr)->number
-		: DEFAULT_CACHE_SIZE;
 	ce = calloc(cache_size, sizeof *ce);
 	if (!ce)
 		return set_error(ctx, kdump_syserr,

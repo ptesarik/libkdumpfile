@@ -660,6 +660,24 @@ def_read_cache(kdump_ctx *ctx, struct page_io *pio,
 	return ret;
 }
 
+/**  Get the configured cache size.
+ * @param ctx  Dump file object.
+ * @returns    Cache size.
+ *
+ * Get the cache size from "cache.size" attribute. If not set, return
+ * @ref DEFAULT_CACHE_SIZE.
+ */
+unsigned
+get_cache_size(kdump_ctx *ctx)
+{
+	const struct attr_data *attr;
+
+	attr = lookup_attr(ctx, GATTR(GKI_cache_size));
+	return attr
+		? attr_value(attr)->number
+		: DEFAULT_CACHE_SIZE;
+}
+
 /**  Re-allocate a cache with default parameters.
  * @param ctx  Dump file object.
  * @returns    Error status.
@@ -671,14 +689,9 @@ def_read_cache(kdump_ctx *ctx, struct page_io *pio,
 kdump_status
 def_realloc_caches(kdump_ctx *ctx)
 {
-	const struct attr_data *attr;
-	unsigned cache_size;
+	unsigned cache_size = get_cache_size(ctx);
 	struct cache *cache;
 
-	attr = lookup_attr(ctx, GATTR(GKI_cache_size));
-	cache_size = attr
-		? attr_value(attr)->number
-		: DEFAULT_CACHE_SIZE;
 	cache = cache_alloc(cache_size, get_page_size(ctx));
 	if (!cache)
 		return set_error(ctx, kdump_syserr,

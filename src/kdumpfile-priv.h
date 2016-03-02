@@ -796,6 +796,9 @@ struct cache_entry {
 	void *data;		/**< Pointer to page data. */
 };
 
+#define get_cache_size INTERNAL_NAME(get_cache_size)
+unsigned get_cache_size(kdump_ctx *ctx);
+
 #define cache_alloc INTERNAL_NAME(cache_alloc)
 struct cache *cache_alloc(unsigned n, size_t size);
 
