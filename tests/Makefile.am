@@ -101,8 +101,5 @@ dist_check_SCRIPTS = \
 TESTS = $(test_scripts) \
 	privptr
 
-XFAIL_TESTS = \
-	elf-multiread
-
 clean-local:
 	-rm -rf out

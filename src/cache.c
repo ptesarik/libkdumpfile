@@ -72,6 +72,8 @@
  * discarded.
  */
 struct cache {
+	mutex_t mutex;		 /**< Lock for changes to struct cache. */
+
 	unsigned split;		 /**< Split point between probed and precious
 				  *   entries (index of MRU probed entry) */
 	unsigned nprec;		 /**< Number of cached precious entries */
@@ -190,6 +192,23 @@ add_inflight(struct cache *cache, struct cache_entry *entry, unsigned idx)
 		cache->inflight = entry->next = entry->prev = idx;
 }
 
+/**  Ensure that a locked in-flight entry goes to the precious list.
+ *
+ * @param cache  Cache object (locked).
+ * @param entry  Cache entry.
+ *
+ * This function must be called with the cache mutex held.
+ */
+static void
+locked_cache_make_precious(struct cache *cache, struct cache_entry *entry)
+{
+	if (CACHE_PFN_FLAGS(entry->pfn) == cf_probe) {
+		--cache->nprobetotal;
+		entry->pfn = CACHE_PFN(entry->pfn) |
+			CACHE_FLAGS_PFN(cf_precious);
+	}
+}
+
 /**  Ensure that an in-flight entry goes to the precious list, eventually.
  *
  * @param cache  Cache object.
@@ -198,11 +217,9 @@ add_inflight(struct cache *cache, struct cache_entry *entry, unsigned idx)
 void
 cache_make_precious(struct cache *cache, struct cache_entry *entry)
 {
-	if (CACHE_PFN_FLAGS(entry->pfn) == cf_probe) {
-		--cache->nprobetotal;
-		entry->pfn = CACHE_PFN(entry->pfn) |
-			CACHE_FLAGS_PFN(cf_precious);
-	}
+	mutex_lock(&cache->mutex);
+	locked_cache_make_precious(cache, entry);
+	mutex_unlock(&cache->mutex);
 }
 
 /**  Reuse a cached entry.
@@ -295,6 +312,7 @@ reinit_entry(struct cache *cache, struct cache_entry *entry,
 		evict = evict_probe(cache, cs);
 	else
 		evict = evict_prec(cache, cs);
+
 	entry->data = evict->data;
 	evict->data = NULL;
 }
@@ -430,9 +448,11 @@ cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
 {
 	struct cache_entry *entry;
 
+	mutex_lock(&cache->mutex);
 	entry = cache_get_entry_noref(cache, pfn);
 	if (entry)
 		++entry->refcnt;
+	mutex_unlock(&cache->mutex);
 
 	return entry;
 }
@@ -517,7 +537,7 @@ get_inflight_entry(struct cache *cache, kdump_pfn_t pfn)
 	for (n = cache->ninflight; n; --n) {
 		entry = &cache->ce[idx];
 		if (CACHE_PFN(entry->pfn) == pfn) {
-			cache_make_precious(cache, entry);
+			locked_cache_make_precious(cache, entry);
 			return entry;
 		}
 		idx = entry->next;
@@ -583,8 +603,9 @@ cache_insert(struct cache *cache, struct cache_entry *entry)
 {
 	unsigned idx;
 
+	mutex_lock(&cache->mutex);
 	if (cache_entry_valid(entry))
-		return;
+		goto unlock;
 
 	idx = entry - cache->ce;
 	if (cache->ninflight--) {
@@ -605,6 +626,33 @@ cache_insert(struct cache *cache, struct cache_entry *entry)
 		break;
 	}
 	entry->pfn &= ~CACHE_FLAGS_PFN(CF_MASK);
+
+ unlock:
+	mutex_unlock(&cache->mutex);
+}
+
+/**  Drop a reference to a cache entry.
+ *
+ * @param cache  Cache object.
+ * @param entry  Cache entry.
+ */
+static inline void
+put_entry(struct cache *cache, struct cache_entry *entry)
+{
+	mutex_lock(&cache->mutex);
+	--entry->refcnt;
+	mutex_unlock(&cache->mutex);
+}
+
+/**  Public interface to put_entry().
+ *
+ * @param cache  Cache object.
+ * @param entry  Cache entry.
+ */
+void
+cache_put_entry(struct cache *cache, struct cache_entry *entry)
+{
+	put_entry(cache, entry);
 }
 
 /**  Discard an entry.
@@ -625,10 +673,11 @@ cache_discard(struct cache *cache, struct cache_entry *entry)
 {
 	unsigned n, idx, eprobe;
 
-	if (cache_put_entry(entry))
-		return;
+	mutex_lock(&cache->mutex);
+	if (--entry->refcnt)
+		goto unlock;
 	if (cache_entry_valid(entry))
-		return;
+		goto unlock;
 	if (CACHE_PFN_FLAGS(entry->pfn) == cf_probe)
 		--cache->nprobetotal;
 
@@ -648,6 +697,9 @@ cache_discard(struct cache *cache, struct cache_entry *entry)
 		cache->split = idx;
 
 	add_entry_after(cache, entry, idx, eprobe);
+
+ unlock:
+	mutex_unlock(&cache->mutex);
 }
 
 /**  Flush all cache entries.
@@ -697,6 +749,12 @@ cache_alloc(unsigned n, size_t size)
 		       2 * n * sizeof(struct cache_entry));
 	if (!cache)
 		return cache;
+
+	if (mutex_init(&cache->mutex, NULL)) {
+		free(cache);
+		return NULL;
+	}
+
 	cache->elemsize = size;
 	cache->cap = n;
 	cache->hits.number = 0;
@@ -719,6 +777,7 @@ cache_alloc(unsigned n, size_t size)
 void
 cache_free(struct cache *cache)
 {
+	mutex_destroy(&cache->mutex);
 	free(cache->data);
 	free(cache);
 }
@@ -764,7 +823,7 @@ def_read_cache(kdump_ctx *ctx, struct page_io *pio,
 void
 cache_unref_page(kdump_ctx *ctx, struct page_io *pio)
 {
-	cache_put_entry(pio->ce);
+	put_entry(ctx->cache, pio->ce);
 }
 
 /**  Get the configured cache size.

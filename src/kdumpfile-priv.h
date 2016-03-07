@@ -892,11 +892,8 @@ void cache_flush(struct cache *);
 #define cache_get_entry INTERNAL_NAME(cache_get_entry)
 struct cache_entry *cache_get_entry(struct cache *, kdump_pfn_t);
 
-static inline unsigned
-cache_put_entry(struct cache_entry *entry)
-{
-	return --entry->refcnt;
-}
+#define cache_put_entry INTERNAL_NAME(cache_put_entry)
+void cache_put_entry(struct cache *cache, struct cache_entry *entry);
 
 #define cache_insert INTERNAL_NAME(cache_insert)
 void cache_insert(struct cache *, struct cache_entry *);
