@@ -46,13 +46,14 @@ static const struct format_ops xc_core_elf_ops;
 
 struct xen_p2m {
 	uint64_t pfn;
-	uint64_t gmfn; 
+	uint64_t gmfn;
 };
 
 struct load_segment {
 	off_t file_offset;
+	off_t filesz;
 	kdump_paddr_t phys;
-	off_t size;
+	kdump_addr_t memsz;
 	kdump_vaddr_t virt;
 };
 
@@ -104,34 +105,90 @@ mach2arch(unsigned mach, int elfclass)
 	}
 }
 
+/**  Find the LOAD segment that is closest to a physical address.
+ * @param edp	 ELF dump private data.
+ * @param paddr	 Requested physical address.
+ * @param dist	 Maximum allowed distance from @ref paddr.
+ * @returns	 Pointer to the closest LOAD segment, or @c NULL if none.
+ */
+static struct load_segment *
+find_closest_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
+		  unsigned long dist)
+{
+	unsigned long bestdist;
+	struct load_segment *bestload;
+	int i;
+
+	bestdist = dist;
+	bestload = NULL;
+	for (i = 0; i < edp->num_load_segments; i++) {
+		struct load_segment *pls = &edp->load_segments[i];
+		if (paddr >= pls->phys + pls->memsz)
+			continue;
+		if (paddr >= pls->phys)
+			return pls;	/* Exact match */
+		if (bestdist > pls->phys - paddr) {
+			bestdist = pls->phys - paddr;
+			bestload = pls;
+		}
+	}
+	return bestload;
+}
+
 static kdump_status
 elf_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 {
 	struct elfdump_priv *edp = ctx->fmtdata;
-	kdump_paddr_t addr, endaddr;
+	struct load_segment *pls;
+	kdump_paddr_t addr;
+	void *p, *endp;
 	off_t pos;
-	ssize_t rd;
-	int i;
+	ssize_t size, rd;
 
 	addr = pfn << get_page_shift(ctx);
-	endaddr = addr + get_page_size(ctx);
-	for (i = 0; i < edp->num_load_segments; i++) {
-		struct load_segment *pls = &edp->load_segments[i];
-		if (addr >= pls->phys &&
-		    endaddr <= pls->phys + pls->size) {
-			pos = pls->file_offset + addr - pls->phys;
+
+	p = ce->data;
+	endp = p + get_page_size(ctx);
+	while (p < endp) {
+		pls = find_closest_load(edp, addr, endp - p);
+		if (!pls)
 			break;
+
+		if (pls->phys > addr) {
+			memset(p, 0, pls->phys - addr);
+			p += pls->phys - addr;
+			addr = pls->phys;
+		}
+
+		pos = pls->file_offset + addr - pls->phys;
+		if (pls->phys + pls->filesz > addr) {
+			size = endp - p;
+			if (size > pls->phys + pls->filesz - addr)
+				size = pls->phys + pls->filesz - addr;
+
+			rd = pread(ctx->fd, p, size, pos);
+			if (rd != size)
+				return set_error(
+					ctx, read_error(rd),
+					"Cannot read page data at %llu",
+					(unsigned long long) pos);
+			p += size;
+			addr += size;
+		}
+		if (p < endp) {
+			size = endp - p;
+			if (size > pls->phys + pls->memsz - addr)
+				size = pls->phys + pls->memsz - addr;
+			memset(p, 0, size);
+			p += size;
+			addr += size;
 		}
 	}
-	if (i >= edp->num_load_segments)
-		return set_error(ctx, kdump_nodata, "Page not found");
 
-	/* read page data */
-	rd = pread(ctx->fd, ce->data, get_page_size(ctx), pos);
-	if (rd != get_page_size(ctx))
-		return set_error(ctx, read_error(rd),
-				 "Cannot read page data at %llu",
-				 (unsigned long long) pos);
+	if (p == ce->data)
+		return set_error(ctx, kdump_nodata, "Page not found");
+	else if (p < endp)
+		memset(p, 0, endp - p);
 
 	return kdump_ok;
 }
@@ -301,9 +358,8 @@ init_sections(kdump_ctx *ctx, unsigned snum)
 	return kdump_ok;
 }
 
-static void
-store_phdr(struct elfdump_priv *edp, unsigned type,
-	   off_t offset, kdump_vaddr_t vaddr, kdump_paddr_t paddr, off_t size)
+static struct load_segment *
+next_phdr(struct elfdump_priv *edp, unsigned type)
 {
 	struct load_segment *pls;
 
@@ -314,12 +370,9 @@ store_phdr(struct elfdump_priv *edp, unsigned type,
 		pls = edp->note_segments + edp->num_note_segments;
 		++edp->num_note_segments;
 	} else
-		return;
+		pls = NULL;
 
-	pls->file_offset = offset;
-	pls->phys = paddr;
-	pls->size = size;
-	pls->virt = vaddr;
+	return pls;
 }
 
 static void
@@ -405,10 +458,7 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 				 "Cannot seek to program headers at %llu",
 				 (unsigned long long) offset);
 	for (i = 0; i < dump16toh(ctx, ehdr->e_phnum); ++i) {
-		unsigned type;
-		off_t offset, filesz;
-		kdump_vaddr_t vaddr;
-		kdump_paddr_t paddr;
+		struct load_segment *pls;
 		ssize_t rd;
 
 		rd = read(ctx->fd, &prog, sizeof prog);
@@ -416,13 +466,14 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 			return set_error(ctx, read_error(rd),
 					 "Cannot read program header #%d", i);
 
-		type = dump32toh(ctx, prog.p_type);
-		offset = dump32toh(ctx, prog.p_offset);
-		vaddr = dump32toh(ctx, prog.p_vaddr);
-		paddr = dump32toh(ctx, prog.p_paddr);
-		filesz = dump32toh(ctx, prog.p_filesz);
-
-		store_phdr(edp, type, offset, vaddr, paddr, filesz);
+		pls = next_phdr(edp, dump32toh(ctx, prog.p_type));
+		if (pls) {
+			pls->file_offset = dump32toh(ctx, prog.p_offset);
+			pls->filesz = dump32toh(ctx, prog.p_filesz);
+			pls->phys = dump32toh(ctx, prog.p_paddr);
+			pls->memsz = dump32toh(ctx, prog.p_memsz);
+			pls->virt = dump32toh(ctx, prog.p_vaddr);
+		}
 	}
 
 	offset = dump32toh(ctx, ehdr->e_shoff);
@@ -477,10 +528,7 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 				 "Cannot seek to program headers at %llu",
 				 (unsigned long long) offset);
 	for (i = 0; i < dump16toh(ctx, ehdr->e_phnum); ++i) {
-		unsigned type;
-		off_t offset, filesz;
-		kdump_vaddr_t vaddr;
-		kdump_paddr_t paddr;
+		struct load_segment *pls;
 		ssize_t rd;
 
 		rd = read(ctx->fd, &prog, sizeof prog);
@@ -488,13 +536,14 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 			return set_error(ctx, read_error(rd),
 					 "Cannot read program header #%d", i);
 
-		type = dump32toh(ctx, prog.p_type);
-		offset = dump64toh(ctx, prog.p_offset);
-		vaddr = dump64toh(ctx, prog.p_vaddr);
-		paddr = dump64toh(ctx, prog.p_paddr);
-		filesz = dump64toh(ctx, prog.p_filesz);
-
-		store_phdr(edp, type, offset, vaddr, paddr, filesz);
+		pls = next_phdr(edp, dump32toh(ctx, prog.p_type));
+		if (pls) {
+			pls->file_offset = dump64toh(ctx, prog.p_offset);
+			pls->filesz = dump64toh(ctx, prog.p_filesz);
+			pls->phys = dump64toh(ctx, prog.p_paddr);
+			pls->memsz = dump64toh(ctx, prog.p_memsz);
+			pls->virt = dump64toh(ctx, prog.p_vaddr);
+		}
 	}
 
 	offset = dump32toh(ctx, ehdr->e_shoff);
@@ -535,17 +584,17 @@ process_elf_notes(kdump_ctx *ctx, void *notes)
 	for (i = 0; i < edp->num_note_segments; ++i) {
 		struct load_segment *seg = edp->note_segments + i;
 
-		rd = pread(ctx->fd, p, seg->size, seg->file_offset);
-		if (rd != seg->size)
+		rd = pread(ctx->fd, p, seg->filesz, seg->file_offset);
+		if (rd != seg->filesz)
 			return set_error(ctx, read_error(rd),
 					 "Cannot read ELF notes at %llu",
 					 (unsigned long long) seg->file_offset);
 
-		ret = process_noarch_notes(ctx, p, seg->size);
+		ret = process_noarch_notes(ctx, p, seg->filesz);
 		if (ret != kdump_ok)
 			return ret;
 
-		p += seg->size;
+		p += seg->filesz;
 	}
 
 	if (!isset_arch_name(ctx)) {
@@ -559,7 +608,7 @@ process_elf_notes(kdump_ctx *ctx, void *notes)
 	for (i = 0; i < edp->num_note_segments; ++i) {
 		struct load_segment *seg = edp->note_segments + i;
 
-		ret = process_arch_notes(ctx, p, seg->size);
+		ret = process_arch_notes(ctx, p, seg->filesz);
 		if (ret != kdump_ok)
 			return ret;
 	}
@@ -582,7 +631,7 @@ open_common(kdump_ctx *ctx)
 	/* read notes */
 	notesz = 0;
 	for (i = 0; i < edp->num_note_segments; ++i)
-		notesz += edp->note_segments[i].size;
+		notesz += edp->note_segments[i].filesz;
 	notes = ctx_malloc(notesz, ctx, "ELF notes");
 	if (!notes)
 		return kdump_syserr;
@@ -596,7 +645,7 @@ open_common(kdump_ctx *ctx)
 	for (i = 0; i < edp->num_load_segments; ++i) {
 		struct load_segment *seg = edp->load_segments + i;
 		unsigned long pfn =
-			(seg->phys + seg->size) >> get_page_shift(ctx);
+			(seg->phys + seg->filesz) >> get_page_shift(ctx);
 		if (pfn > get_max_pfn(ctx))
 			set_max_pfn(ctx, pfn);
 
