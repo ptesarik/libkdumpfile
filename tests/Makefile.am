@@ -61,6 +61,7 @@ test_scripts = \
 	elf-empty-s390x \
 	elf-empty-x86_64 \
 	elf-basic \
+	elf-nonexistent \
 	elf-short-page \
 	elf-fractional \
 	lkcd-empty-i386 \

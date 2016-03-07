@@ -1,0 +1,41 @@
+#! /bin/sh
+
+#
+# Verify that reading a non-existent page fails.
+#
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+datafile="out/${name}.data"
+dumpfile="out/${name}.dump"
+
+cat >"$datafile" <<EOF
+@phdr type=LOAD offset=0x1000 memsz=0x1000
+00*0x1000
+EOF
+
+./mkelf "$dumpfile" <<EOF
+ei_class = 2
+ei_data = 1
+e_machine = 62
+e_phoff = 64
+
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create ELF file" >&2
+    exit $rc
+fi
+echo "Created ELF dump: $dumpfile"
+
+./dumpdata "$dumpfile" 0x1000 1
+rc=$?
+if [ $rc -eq 0 ]; then
+    echo "Dumping data should fail" >&2
+    exit 1
+elif [ $rc -ne 1 ]; then
+    echo "Unexpected error" >&2
+    exit 1
+fi
