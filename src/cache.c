@@ -757,6 +757,16 @@ def_read_cache(kdump_ctx *ctx, struct page_io *pio,
 	return ret;
 }
 
+/**  Drop a reference to an I/O page from the default cache.
+ * @param ctx  Dump file object.
+ * @param pio  Page I/O control.
+ */
+void
+cache_unref_page(kdump_ctx *ctx, struct page_io *pio)
+{
+	cache_put_entry(pio->ce);
+}
+
 /**  Get the configured cache size.
  * @param ctx  Dump file object.
  * @returns    Cache size.

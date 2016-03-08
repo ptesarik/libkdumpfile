@@ -120,6 +120,12 @@ devmem_read_page(kdump_ctx *ctx, struct page_io *pio)
 	return kdump_ok;
 }
 
+static void
+devmem_unref_page(kdump_ctx *ctx, struct page_io *pio)
+{
+	--pio->ce->refcnt;
+}
+
 kdump_status
 devmem_realloc_caches(kdump_ctx *ctx)
 {
@@ -240,6 +246,7 @@ const struct format_ops devmem_ops = {
 	.name = "memory",
 	.probe = devmem_probe,
 	.read_page = devmem_read_page,
+	.unref_page = devmem_unref_page,
 	.realloc_caches = devmem_realloc_caches,
 	.cleanup = devmem_cleanup,
 };

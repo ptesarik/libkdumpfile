@@ -218,6 +218,12 @@ struct format_ops {
 	 */
 	kdump_status (*read_kpage)(kdump_ctx *ctx, struct page_io *pio);
 
+	/** Drop a reference to a page.
+	 * @param ctx  Dump file object.
+	 * @param pio  Page I/O control.
+	 */
+	void (*unref_page)(kdump_ctx *ctx, struct page_io *pio);
+
 	/* Translate a machine frame number to physical frame number.
 	 *   ctx->fmtdata    initialized in probe()
 	 * Return:
@@ -907,6 +913,15 @@ typedef kdump_status read_cache_fn(
 #define def_read_cache INTERNAL_NAME(def_read_cache)
 kdump_status def_read_cache(kdump_ctx *ctx, struct page_io *pio,
 			    read_cache_fn *fn, kdump_pfn_t idx);
+
+#define cache_unref_page INTERNAL_NAME(cache_unref_page)
+void cache_unref_page(kdump_ctx *ctx, struct page_io *pio);
+
+static inline
+void unref_page(kdump_ctx *ctx, struct page_io *pio)
+{
+	ctx->ops->unref_page(ctx, pio);
+}
 
 #define def_realloc_caches INTERNAL_NAME(def_realloc_caches)
 kdump_status def_realloc_caches(kdump_ctx *ctx);

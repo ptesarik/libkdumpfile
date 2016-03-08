@@ -194,6 +194,7 @@ const struct format_ops s390dump_ops = {
 	.name = "s390dump",
 	.probe = s390_probe,
 	.read_page = s390_read_page,
+	.unref_page = cache_unref_page,
 	.realloc_caches = def_realloc_caches,
 	.cleanup = s390_cleanup,
 };

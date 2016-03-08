@@ -791,6 +791,7 @@ const struct format_ops elfdump_ops = {
 	.name = "elf",
 	.probe = elf_probe,
 	.read_page = elf_read_page,
+	.unref_page = cache_unref_page,
 	.realloc_caches = def_realloc_caches,
 	.cleanup = elf_cleanup,
 };
@@ -799,6 +800,7 @@ static const struct format_ops xc_core_elf_ops = {
 	.name = "xc_core_elf",
 	.read_page = xc_read_page,
 	.read_kpage = xc_read_kpage,
+	.unref_page = cache_unref_page,
 	.mfn_to_pfn = xc_mfn_to_pfn,
 	.realloc_caches = def_realloc_caches,
 	.cleanup = elf_cleanup,

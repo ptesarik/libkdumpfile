@@ -695,6 +695,7 @@ const struct format_ops diskdump_ops = {
 	.name = "diskdump",
 	.probe = diskdump_probe,
 	.read_page = diskdump_read_page,
+	.unref_page = cache_unref_page,
 	.realloc_caches = def_realloc_caches,
 	.cleanup = diskdump_cleanup,
 };

@@ -272,7 +272,7 @@ determine_pgttype(kdump_ctx *ctx)
 			kdump_paddr_t addr;
 
 			if (p)
-				cache_put_entry(pio.ce);
+				unref_page(ctx, &pio);
 
 			addr = archdata->pgdir + i * sizeof(uint64_t);
 			pio.pfn = addr >> PAGE_SHIFT;
@@ -287,14 +287,14 @@ determine_pgttype(kdump_ctx *ctx)
 		}
 		entry = dump64toh(ctx, *p++);
 		if (!PTE_I(entry)) {
-			cache_put_entry(pio.ce);
+			unref_page(ctx, &pio);
 			archdata->pgttype = PTE_TT(entry);
 			return kdump_ok;
 		}
 	}
 
 	if (p)
-		cache_put_entry(pio.ce);
+		unref_page(ctx, &pio);
 
 	return set_error(ctx, kdump_nodata, "Empty top-level page table");
 }

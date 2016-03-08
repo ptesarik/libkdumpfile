@@ -947,6 +947,7 @@ const struct format_ops lkcd_ops = {
 	.name = "lkcd",
 	.probe = lkcd_probe,
 	.read_page = lkcd_read_page,
+	.unref_page = cache_unref_page,
 	.realloc_caches = def_realloc_caches,
 	.cleanup = lkcd_cleanup,
 };
