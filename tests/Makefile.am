@@ -24,12 +24,14 @@ LDADD = libtestutil.a
 libtestutil_a_SOURCES = \
 	data.c \
 	param.c \
-	rle.c
+	rle.c \
+	slurp.c
 
 check_LIBRARIES = \
 	libtestutil.a
 
 check_HEADERS = \
+	diskdump.h \
 	lkcd.h \
 	testutil.h
 
@@ -38,6 +40,7 @@ checkattr_LDADD = \
 	$(LDADD) \
 	$(top_builddir)/src/libkdumpfile.la
 
+mkdiskdump_SOURCES = mkdiskdump.c
 mkelf_SOURCES = mkelf.c
 mklkcd_SOURCES = mklkcd.c
 
@@ -53,12 +56,17 @@ privptr_LDADD = $(top_builddir)/src/libkdumpfile.la
 check_PROGRAMS = \
 	checkattr \
 	dumpdata \
+	mkdiskdump \
 	mkelf \
 	mklkcd \
 	multiread \
 	privptr
 
 test_scripts = \
+	diskdump-empty-i386 \
+	diskdump-empty-ppc64 \
+	diskdump-empty-s390x \
+	diskdump-empty-x86_64 \
 	elf-empty-i386 \
 	elf-empty-i386-elf64 \
 	elf-empty-s390 \

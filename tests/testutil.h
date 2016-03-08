@@ -162,4 +162,13 @@ int process_data_file(struct page_data *pg, FILE *f);
 int compress_rle(unsigned char *dst, size_t *pdstlen,
 		 const unsigned char *src, size_t srclen);
 
+/* File content slurping */
+struct blob {
+	size_t length;
+	unsigned char data[];
+};
+
+struct blob *slurp(const char *fname);
+struct blob *slurp_file(FILE *f);
+
 #endif	/* testutil.h */

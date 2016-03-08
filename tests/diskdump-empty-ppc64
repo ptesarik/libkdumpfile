@@ -1,0 +1,23 @@
+#! /bin/sh
+
+#
+# diskdump-empty-ppc64
+#
+# Create an empty diskdump file and verify meta-attributes.
+#
+
+arch=ppc64
+byte_order=0
+ptr_size=8
+page_shift=16
+page_size=65536
+phys_base=0x3C0000
+
+node=test-node
+sysname=Linux
+release=3.4.5-test
+version="#1 SMP Fri Jan 22 14:02:42 UTC 2016 (1234567)"
+machine=ppc64
+domain="(none)"
+
+. "$srcdir"/diskdump-empty

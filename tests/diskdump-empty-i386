@@ -1,0 +1,23 @@
+#! /bin/sh
+
+#
+# diskdump-empty-i386
+#
+# Create an empty diskdump file and verify meta-attributes.
+#
+
+arch=i386
+byte_order=1
+ptr_size=4
+page_shift=12
+page_size=4096
+phys_base=0x3C0000
+
+node=test-node
+sysname=Linux
+release=3.4.5-test
+version="#1 SMP Fri Jan 22 14:02:42 UTC 2016 (1234567)"
+machine=i686
+domain="(none)"
+
+. "$srcdir"/diskdump-empty

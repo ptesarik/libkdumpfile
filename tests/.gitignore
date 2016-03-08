@@ -1,6 +1,7 @@
 # Resulting binaries
 checkattr
 dumpdata
+mkdiskdump
 mkelf
 mklkcd
 multiread

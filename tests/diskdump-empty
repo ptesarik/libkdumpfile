@@ -1,0 +1,60 @@
+#
+# The actual call to mklkcd and checkattr
+#
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+dumpfile="out/${name}.dump"
+
+./mkdiskdump "$dumpfile" <<EOF
+version = 6
+arch_name = $arch
+block_size = $page_size
+phys_base = $phys_base
+
+uts.sysname = $sysname
+uts.nodename = $node
+uts.release = $release
+uts.version = $version
+uts.machine = $machine
+uts.domainname = $domain
+
+nr_cpus = 1
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create diskdump file" >&2
+    exit $rc
+fi
+echo "Created empty diskdump dump: $dumpfile"
+
+./checkattr "$dumpfile" <<EOF
+format = directory:
+format.name = string: diskdump
+
+arch = directory:
+arch.name = string: $arch
+arch.byte_order = number: $byte_order
+arch.ptr_size = number: $ptr_size
+arch.page_shift = number: $page_shift
+arch.page_size = number: $page_size
+
+linux = directory:
+linux.version_code = number: 0x030405
+linux.uts = directory:
+linux.uts.sysname = string: $sysname
+linux.uts.nodename = string: $node
+linux.uts.release = string: $release
+linux.uts.version = string: $version
+linux.uts.machine = string: $machine
+linux.uts.domainname = string: $domain
+linux.phys_base = address: $phys_base
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Attribute check failed" >&2
+    exit $rc
+fi
+
+exit 0
