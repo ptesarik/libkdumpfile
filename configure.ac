@@ -53,6 +53,28 @@ kdump_COMPRESSION(zlib, ZLIB, z, uncompress)
 kdump_COMPRESSION(lzo, LZO, lzo2, lzo1x_decompress_safe)
 kdump_COMPRESSION(snappy, SNAPPY, snappy, snappy_uncompress)
 
+dnl check for pthread support
+AC_ARG_WITH(pthread,
+  [AS_HELP_STRING([--without-pthread],
+    [pthread support @<:@default=check@:>@])],
+  [],[with_pthread=check])
+AS_IF([test "x$with_pthread" != xno],
+  [AC_SEARCH_LIBS(pthread_create, pthread,
+    [PTHREAD_LIBS="-lpthread"
+     AS_VAR_APPEND(LIBS_PRIVATE, " -lpthread")
+     have_pthread=yes
+    ],[
+     have_pthread=no
+    ])
+  ],[have_pthread=no])
+AS_IF([test "x$have_pthread" = xyes],
+  [AC_DEFINE(USE_PTHREAD, 1, Define if you have pthread)],
+  [AS_IF([test "x$with_phtread" = xyes],
+    [AC_MSG_ERROR([pthread support requested but not found])
+    ])
+  ])
+AC_SUBST(PTHREAD_LIBS)
+
 AC_CONFIG_FILES([
 	Makefile
 	examples/Makefile
