@@ -44,6 +44,9 @@ mklkcd_SOURCES = mklkcd.c
 dumpdata_SOURCES = dumpdata.c
 dumpdata_LDADD = $(top_builddir)/src/libkdumpfile.la
 
+multiread_SOURCES = multiread.c
+multiread_LDADD = $(top_builddir)/src/libkdumpfile.la
+
 privptr_SOURCES = privptr.c
 privptr_LDADD = $(top_builddir)/src/libkdumpfile.la
 
@@ -52,6 +55,7 @@ check_PROGRAMS = \
 	dumpdata \
 	mkelf \
 	mklkcd \
+	multiread \
 	privptr
 
 test_scripts = \
@@ -64,6 +68,7 @@ test_scripts = \
 	elf-nonexistent \
 	elf-partial \
 	elf-fractional \
+	elf-multiread \
 	lkcd-empty-i386 \
 	lkcd-empty-ppc64 \
 	lkcd-empty-x86_64 \
@@ -95,6 +100,9 @@ dist_check_SCRIPTS = \
 
 TESTS = $(test_scripts) \
 	privptr
+
+XFAIL_TESTS = \
+	elf-multiread
 
 clean-local:
 	-rm -rf out

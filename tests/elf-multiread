@@ -1,0 +1,44 @@
+#! /bin/sh
+
+#
+# Test multi-threaded read of ELF dumps.
+#
+
+mkdir -p out || exit 99
+
+TIMEOUT=2
+NTHREADS=8
+
+name=$( basename "$0" )
+datafile="out/${name}.data"
+dumpfile="out/${name}.dump"
+
+cat >"$datafile" <<EOF
+@phdr type=LOAD offset=0x1000 memsz=0x80000
+EOF
+
+./mkelf "$dumpfile" <<EOF
+ei_class = 2
+ei_data = 1
+e_machine = 62
+e_phoff = 64
+
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create ELF file" >&2
+    exit $rc
+fi
+echo "Created ELF dump: $dumpfile"
+
+./multiread -t $TIMEOUT -n $NTHREADS "$dumpfile" 0x0 0x80
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Multi-threaded read failed" >&2
+    if [ $rc -ge 128 ] ; then
+	echo "Terminated by SIG"$( kill -l $rc )
+	rc=1
+    fi
+    exit $rc
+fi

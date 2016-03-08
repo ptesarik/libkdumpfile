@@ -3,6 +3,7 @@ checkattr
 dumpdata
 mkelf
 mklkcd
+multiread
 privptr
 
 # Test results
