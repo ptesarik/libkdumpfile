@@ -36,6 +36,40 @@
 #include <limits.h>
 
 /**  Simple cache.
+ *
+ * The cache is divided into five sections:
+ *   1. probed list: cached entries that have been hit only once
+ *   2. precious list: cached entries that have been hit more than once
+ *   3. ghost probe list: evicted entries from the probed list
+ *   4. ghost precious list: evicted entries from the precious list
+ *   5. unused pool: entries that haven't been used yet
+ *
+ * Cached entries have a non-NULL data pointer. Ghost entries do not have
+ * any data, so their data pointer is NULL.
+ *
+ * The cache is implemented as a circular list. This allows to move around
+ * entries without copying much data even if the cache is large.
+ * The list is organized as follows:
+ *
+ *               <-- ngprobe --> <- nprobe -> <- nprec -> <--- ngprec --->
+ *     +--------+---------------+------------+-----------+----------------+
+ *     | unused | ghost probed  |   probed   | precious  | ghost precious |
+ *     +--------+---------------+------------+-----------+----------------+
+ *             ^               ^            ^             ^                ^
+ *             eprobe          gprobe     split       gprec            eprec
+ *
+ *
+ * Only the @ref split index and the four sizes are stored in the structure.
+ * During a search, the remaining pointers are found as a side effect, and
+ * they are stored in @ref cache_search.
+ *
+ * Note that any section may be empty; some pointers will share the same
+ * value in such case.
+ *
+ * Also note that since the list is circular, unused entries are in fact
+ * between ghost probed and ghost precious lists. This part of the cache
+ * is usually empty; it's used only after a flush or when an entry is
+ * discarded.
  */
 struct cache {
 	unsigned split;		 /**< Split point between probed and precious
