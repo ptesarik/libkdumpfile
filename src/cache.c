@@ -85,7 +85,7 @@ static struct cache_entry *get_missed_entry(
 	struct cache *cache, kdump_pfn_t pfn,
 	struct cache_search *cs);
 
-/**  Add an entry to the list.
+/**  Add an entry to the list after a given point.
  * @param cache   Cache object.
  * @param entry   Cache entry to be added.
  * @param idx     Index of @ref entry.
@@ -94,11 +94,31 @@ static struct cache_entry *get_missed_entry(
  * The entry is added just after @ref insidx.
  */
 static void
-add_entry(struct cache *cache, struct cache_entry *entry, unsigned idx,
-	  unsigned insidx)
+add_entry_after(struct cache *cache, struct cache_entry *entry, unsigned idx,
+		unsigned insidx)
 {
 	struct cache_entry *prev = &cache->ce[insidx];
 	struct cache_entry *next = &cache->ce[prev->next];
+	entry->next = prev->next;
+	prev->next = idx;
+	entry->prev = next->prev;
+	next->prev = idx;
+}
+
+/**  Add an entry to the list before a given point.
+ * @param cache   Cache object.
+ * @param entry   Cache entry to be added.
+ * @param idx     Index of @ref entry.
+ * @param insidx  Insertion point.
+ *
+ * The entry is added just before @ref insidx.
+ */
+static void
+add_entry_before(struct cache *cache, struct cache_entry *entry, unsigned idx,
+		 unsigned insidx)
+{
+	struct cache_entry *next = &cache->ce[insidx];
+	struct cache_entry *prev = &cache->ce[next->prev];
 	entry->next = prev->next;
 	prev->next = idx;
 	entry->prev = next->prev;
@@ -130,14 +150,9 @@ remove_entry(struct cache *cache, struct cache_entry *entry)
 static void
 add_inflight(struct cache *cache, struct cache_entry *entry, unsigned idx)
 {
-	if (cache->ninflight++) {
-		struct cache_entry *next = &cache->ce[cache->inflight];
-		struct cache_entry *prev = &cache->ce[next->prev];
-		entry->next = prev->next;
-		prev->next = idx;
-		entry->prev = next->prev;
-		next->prev = idx;
-	} else
+	if (cache->ninflight++)
+		add_entry_before(cache, entry, idx, cache->inflight);
+	else
 		cache->inflight = entry->next = entry->prev = idx;
 }
 
@@ -170,7 +185,7 @@ reuse_cached_entry(struct cache *cache, struct cache_entry *entry,
 {
 	if (cache->split != idx && cache->split != entry->prev) {
 		remove_entry(cache, entry);
-		add_entry(cache, entry, idx, cache->split);
+		add_entry_after(cache, entry, idx, cache->split);
 	}
 
 	cache->split = entry->prev;
@@ -515,7 +530,7 @@ cache_insert(struct cache *cache, struct cache_entry *entry)
 			cache->inflight = entry->next;
 		remove_entry(cache, entry);
 	}
-	add_entry(cache, entry, idx, cache->split);
+	add_entry_after(cache, entry, idx, cache->split);
 
 	switch (CACHE_PFN_FLAGS(entry->pfn)) {
 	case cf_probe:
@@ -570,7 +585,7 @@ cache_discard(struct cache *cache, struct cache_entry *entry)
 	if (eprobe == cache->split)
 		cache->split = idx;
 
-	add_entry(cache, entry, idx, eprobe);
+	add_entry_after(cache, entry, idx, eprobe);
 }
 
 /**  Flush all cache entries.
