@@ -193,6 +193,44 @@ reuse_cached_entry(struct cache *cache, struct cache_entry *entry,
 	++cache->hits.number;
 }
 
+/**  Evict an entry from the probe list.
+ * @param cache  Cache object.
+ * @param cs     Cache search info.
+ * @returns      The evicted entry.
+ */
+static struct cache_entry *
+evict_probe(struct cache *cache, struct cache_search *cs)
+{
+	struct cache_entry *entry = &cache->ce[cs->uprobe];
+	if (entry->prev != cs->gprobe) {
+		if (cs->uprobe == cache->split)
+			cache->split = entry->prev;
+		remove_entry(cache, entry);
+		add_entry_after(cache, entry, cs->uprobe, cs->gprobe);
+	}
+	--cache->nprobe;
+	++cache->ngprobe;
+	return entry;
+}
+
+/**  Evict an entry from the precious list.
+ * @param cache  Cache object.
+ * @param cs     Cache search info.
+ * @returns      The evicted entry.
+ */
+static struct cache_entry *
+evict_prec(struct cache *cache, struct cache_search *cs)
+{
+	struct cache_entry *entry = &cache->ce[cs->uprec];
+	if (entry->next != cs->gprec) {
+		remove_entry(cache, entry);
+		add_entry_before(cache, entry, cs->uprec, cs->gprec);
+	}
+	--cache->nprec;
+	++cache->ngprec;
+	return entry;
+}
+
 /**  Re-initialize an entry for a different page.
  *
  * @param cache  Cache object.
@@ -211,7 +249,7 @@ static void
 reinit_entry(struct cache *cache, struct cache_entry *entry,
 	     struct cache_search *cs)
 {
-	unsigned evict;
+	struct cache_entry *evict;
 	int delta = cache->dprobe - cache->nprobe;
 
 	if (delta <= 0 && cs->nuprobe == 0)
@@ -219,17 +257,12 @@ reinit_entry(struct cache *cache, struct cache_entry *entry,
 	else if (delta > 0 && cs->nuprec == 0)
 		delta = 0;
 
-	if (delta <= 0) {
-		evict = cs->uprobe;
-		--cache->nprobe;
-		++cache->ngprobe;
-	} else {
-		evict = cs->uprec;
-		--cache->nprec;
-		++cache->ngprec;
-	}
-	entry->data = cache->ce[evict].data;
-	cache->ce[evict].data = NULL;
+	if (delta <= 0)
+		evict = evict_probe(cache, cs);
+	else
+		evict = evict_prec(cache, cs);
+	entry->data = evict->data;
+	evict->data = NULL;
 }
 
 /**  Reuse a ghost entry.
@@ -249,7 +282,7 @@ static void
 reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
 		  unsigned idx, struct cache_search *cs)
 {
-	unsigned evict;
+	struct cache_entry *evict;
 	int delta = cache->dprobe - cache->nprobe;
 
 	if (delta < 0 && cs->nuprobe == 0)
@@ -257,17 +290,12 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
 	else if (delta >= 0 && cs->nuprec == 0)
 		delta = -1;
 
-	if (delta < 0) {
-		evict = cs->uprobe;
-		--cache->nprobe;
-		++cache->ngprobe;
-	} else {
-		evict = cs->uprec;
-		--cache->nprec;
-		++cache->ngprec;
-	}
-	entry->data = cache->ce[evict].data;
-	cache->ce[evict].data = NULL;
+	if (delta < 0)
+		evict = evict_probe(cache, cs);
+	else
+		evict = evict_prec(cache, cs);
+	entry->data = evict->data;
+	evict->data = NULL;
 
 	if (cache->split == idx)
 		cache->split = entry->prev;
