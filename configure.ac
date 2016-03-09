@@ -75,17 +75,7 @@ AS_IF([test "x$have_pthread" = xyes],
   ])
 AC_SUBST(PTHREAD_LIBS)
 
-AC_CONFIG_FILES([
-	Makefile
-	examples/Makefile
-	src/Makefile
-	python/Makefile
-	python/kdumpfile/Makefile
-	tests/Makefile
-	libkdumpfile.pc
-])
-dnl AM_PATH_PYTHON(2.7.0)
-
+dnl check for Python
 AC_ARG_WITH(python,
 	AS_HELP_STRING([--with-python],[support for Python@<:@default=check@:>@]),[], [with_python=check])
 AS_IF([test "x$with_python" != xno],
@@ -102,5 +92,15 @@ AS_IF([test "x$with_python" != xno],
 	[have_python=no]
 )
 AM_CONDITIONAL([BUILD_PYTHON_EXT], test x$have_python = xyes)
+
+AC_CONFIG_FILES([
+	Makefile
+	examples/Makefile
+	src/Makefile
+	python/Makefile
+	python/kdumpfile/Makefile
+	tests/Makefile
+	libkdumpfile.pc
+])
 
 AC_OUTPUT
