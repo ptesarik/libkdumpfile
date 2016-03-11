@@ -414,6 +414,26 @@ attr_dir_traverse(PyObject *_self, visitproc visit, void *arg)
 	return 0;
 }
 
+static PyObject *
+attr_dir_getattro(PyObject *_self, PyObject *name)
+{
+	PyObject *ret;
+
+	ret = PyObject_GenericGetAttr(_self, name);
+	if (ret || !PyErr_ExceptionMatches(PyExc_AttributeError))
+		return ret;
+
+	PyErr_Clear();
+	ret = attr_dir_subscript(_self, name);
+	if (ret || !PyErr_ExceptionMatches(NoDataException))
+		return ret;
+
+	PyErr_Format(PyExc_AttributeError,
+		     "'%.50s' object has no attribute '%.400s'",
+		     Py_TYPE(_self)->tp_name, PyString_AS_STRING(name));
+	return NULL;
+}
+
 static PyTypeObject attr_dir_object_type =
 {
 	PyVarObject_HEAD_INIT (NULL, 0)
@@ -433,7 +453,7 @@ static PyTypeObject attr_dir_object_type =
 	0,				/* tp_hash */
 	0,				/* tp_call*/
 	0,				/* tp_str*/
-	0,				/* tp_getattro*/
+	attr_dir_getattro,		/* tp_getattro*/
 	0,				/* tp_setattro*/
 	0,				/* tp_as_buffer*/
 	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC, /* tp_flags*/
