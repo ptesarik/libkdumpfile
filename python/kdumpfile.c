@@ -18,6 +18,8 @@ static PyObject *InvalidException;
 static PyObject *NoKeyException;
 static PyObject *EOFException;
 
+static PyObject *attr_dir_new(kdumpfile_object *kdumpfile, const char *path);
+
 static PyObject *
 exception_map(kdump_status status)
 {
@@ -174,38 +176,9 @@ static PyObject *kdumpfile_read (PyObject *_self, PyObject *args, PyObject *kw)
 	return obj;
 }
 
-struct attr2obj_data {
-	kdump_ctx *ctx;
-	PyObject *dict;
-};
-
-static PyObject *kdumpfile_attr2obj(kdump_ctx *ctx, const struct kdump_attr *attr);
-
-static int kdumpfile_dir2obj_it(void *data, const char *key, const struct kdump_attr *valp)
-{
-	struct attr2obj_data *cb_data = (struct attr2obj_data *)data;
-	PyObject *v = kdumpfile_attr2obj(cb_data->ctx, valp);
-	if (! v) return 1;
-	PyDict_SetItem(cb_data->dict, PyString_FromString(key), v);
-	return 0;
-}
-
-static PyObject *kdumpfile_dir2obj(kdump_ctx *ctx, const struct kdump_attr *attr)
-{
-	struct attr2obj_data cb_data;
-
-	cb_data.ctx = ctx;
-	cb_data.dict = PyDict_New();
-
-	if (kdump_enum_attr_val(ctx, attr, kdumpfile_dir2obj_it, &cb_data)) {
-		Py_XDECREF(cb_data.dict);
-		return NULL;
-	}
-
-	return cb_data.dict;
-}
-
-static PyObject *kdumpfile_attr2obj(kdump_ctx *ctx, const struct kdump_attr *attr)
+static PyObject *
+attr_new(kdumpfile_object *kdumpfile, const char *path,
+	 const struct kdump_attr *attr)
 {
 	switch (attr->type) {
 		case kdump_number:
@@ -215,7 +188,7 @@ static PyObject *kdumpfile_attr2obj(kdump_ctx *ctx, const struct kdump_attr *att
 		case kdump_string:
 			return PyString_FromString(attr->val.string);
 		case kdump_directory:
-			return kdumpfile_dir2obj(ctx, attr);
+			return attr_dir_new(kdumpfile, path);
 		default:
 			PyErr_SetString(PyExc_RuntimeError, "Unhandled attr type");
 			return NULL;
@@ -236,7 +209,7 @@ static PyObject *kdumpfile_getattr(PyObject *_self, PyObject *args, PyObject *kw
 		Py_RETURN_NONE;
 	}
 
-	return kdumpfile_attr2obj(self->ctx, &attr);
+	return attr_new(self, name, &attr);
 }
 
 
@@ -378,6 +351,101 @@ static PyTypeObject kdumpfile_object_type =
 	kdumpfile_new,                  /* tp_new */
 };
 
+/* Attribute dictionary type */
+
+typedef struct {
+	PyObject_VAR_HEAD
+	kdumpfile_object *kdumpfile;
+	Py_ssize_t pathlen;
+	char path[];
+} attr_dir_object;
+
+static PyObject *
+attr_dir_subscript(PyObject *_self, PyObject *key)
+{
+	attr_dir_object *self = (attr_dir_object*)_self;
+	kdump_ctx *ctx;
+	Py_ssize_t keylen;
+	char *keystr, *attrpath;
+	struct kdump_attr attr;
+	kdump_status status;
+
+	if (PyString_AsStringAndSize(key, &keystr, &keylen))
+		return NULL;
+
+	ctx = self->kdumpfile->ctx;
+	if (self->path[0] != '\0') {
+		attrpath = alloca(Py_SIZE(self) + keylen + 1);
+		sprintf(attrpath, "%s.%s", self->path, keystr);
+	} else
+		attrpath = keystr;
+
+	status = kdump_get_attr(ctx, attrpath, &attr);
+	if (status != kdump_ok) {
+		PyErr_Format(exception_map(status), kdump_err_str(ctx));
+		return NULL;
+	}
+
+	return attr_new(self->kdumpfile, attrpath, &attr);
+}
+
+static PyMappingMethods attr_dir_as_mapping = {
+	NULL,			/* mp_length */
+	attr_dir_subscript,	/* mp_subscript */
+	NULL,			/* mp_ass_subscript */
+};
+
+static void
+attr_dir_dealloc(PyObject *_self)
+{
+	attr_dir_object *self = (attr_dir_object*)_self;
+
+	Py_XDECREF((PyObject*)self->kdumpfile);
+	Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+static PyTypeObject attr_dir_object_type =
+{
+	PyVarObject_HEAD_INIT (NULL, 0)
+	"_kdumpfile.attribute-directory",
+	sizeof(attr_dir_object),	/* tp_basicsize*/
+	sizeof(char),			/* tp_itemsize*/
+	/* methods */
+	attr_dir_dealloc,		/* tp_dealloc*/
+	0,				/* tp_print*/
+	0,				/* tp_getattr*/
+	0,				/* tp_setattr*/
+	0,				/* tp_compare*/
+	0,				/* tp_repr*/
+	0,				/* tp_as_number*/
+	0,				/* tp_as_sequence*/
+	&attr_dir_as_mapping,		/* tp_as_mapping*/
+	0,				/* tp_hash */
+	0,				/* tp_call*/
+	0,				/* tp_str*/
+	0,				/* tp_getattro*/
+	0,				/* tp_setattro*/
+	0,				/* tp_as_buffer*/
+	Py_TPFLAGS_DEFAULT,		/* tp_flags*/
+	0,				/* tp_doc */
+};
+
+static PyObject *
+attr_dir_new(kdumpfile_object *kdumpfile, const char *path)
+{
+	attr_dir_object *self;
+
+	self = PyObject_NewVar(attr_dir_object, &attr_dir_object_type,
+			       strlen(path) + 1);
+	if (self == NULL)
+		return NULL;
+
+	strcpy(self->path, path);
+	Py_INCREF((PyObject*)kdumpfile);
+	self->kdumpfile = kdumpfile;
+	return (PyObject*)self;
+}
+
 struct constdef {
 	const char *name;
 	int value;
@@ -398,7 +466,9 @@ init_kdumpfile (void)
 	const struct constdef *cdef;
 	int ret;
 
-	if (PyType_Ready(&kdumpfile_object_type) < 0) 
+	if (PyType_Ready(&kdumpfile_object_type) < 0)
+		return;
+	if (PyType_Ready(&attr_dir_object_type) < 0)
 		return;
 
 	ret = lookup_exceptions();
