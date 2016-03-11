@@ -365,13 +365,21 @@ attr_dir_subscript(PyObject *_self, PyObject *key)
 {
 	attr_dir_object *self = (attr_dir_object*)_self;
 	kdump_ctx *ctx;
+	PyObject *stringkey;
 	Py_ssize_t keylen;
 	char *keystr, *attrpath;
 	struct kdump_attr attr;
 	kdump_status status;
 
-	if (PyString_AsStringAndSize(key, &keystr, &keylen))
-		return NULL;
+	if (!PyString_Check(key)) {
+		stringkey = PyObject_Str(key);
+		if (!stringkey)
+			return stringkey;
+	} else
+		stringkey = key;
+
+	if (PyString_AsStringAndSize(stringkey, &keystr, &keylen))
+		goto fail;
 
 	ctx = self->kdumpfile->ctx;
 	if (self->path[0] != '\0') {
@@ -383,10 +391,15 @@ attr_dir_subscript(PyObject *_self, PyObject *key)
 	status = kdump_get_attr(ctx, attrpath, &attr);
 	if (status != kdump_ok) {
 		PyErr_Format(exception_map(status), kdump_err_str(ctx));
-		return NULL;
+		goto fail;
 	}
 
 	return attr_new(self->kdumpfile, attrpath, &attr);
+
+ fail:
+	if (stringkey != key)
+		Py_DECREF(stringkey);
+	return NULL;
 }
 
 static PyMappingMethods attr_dir_as_mapping = {
