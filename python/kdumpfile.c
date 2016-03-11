@@ -8,6 +8,7 @@ typedef struct {
 	kdump_ctx *ctx;
 	PyObject *file;
 	PyObject *cb_get_symbol;
+	PyObject *attr;
 } kdumpfile_object;
 
 static PyObject *SysErrException;
@@ -112,9 +113,15 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 	kdump_cb_get_symbol_val(self->ctx, cb_get_symbol);
 	kdump_set_priv(self->ctx, self);
 
+	self->attr = attr_dir_new(self, "");
+	if (!self->attr)
+		goto fail;
+
 	return (PyObject*)self;
 
 fail:
+	Py_XDECREF(self->attr);
+	Py_XDECREF(self->file);
 	Py_XDECREF(self);
 	return NULL;
 }
@@ -195,24 +202,6 @@ attr_new(kdumpfile_object *kdumpfile, const char *path,
 	}
 }
 
-static PyObject *kdumpfile_getattr(PyObject *_self, PyObject *args, PyObject *kw)
-{
-	kdumpfile_object *self = (kdumpfile_object*)_self;
-	static char *keywords[] = {"name", NULL};
-	struct kdump_attr attr;
-	const char *name;
-
-	if (!PyArg_ParseTupleAndKeywords(args, kw, "s:", keywords, &name))
-		return NULL;
-
-	if (kdump_get_attr(self->ctx, name, &attr) != kdump_ok) {
-		Py_RETURN_NONE;
-	}
-
-	return attr_new(self, name, &attr);
-}
-
-
 static PyObject *kdumpfile_vtop_init(PyObject *_self, PyObject *args)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
@@ -225,12 +214,22 @@ static PyObject *kdumpfile_vtop_init(PyObject *_self, PyObject *args)
 static PyMethodDef kdumpfile_object_methods[] = {
 	{"read",      (PyCFunction) kdumpfile_read, METH_VARARGS | METH_KEYWORDS,
 		"read (addrtype, address) -> buffer.\n" },
-	{"attr",      (PyCFunction) kdumpfile_getattr, METH_VARARGS | METH_KEYWORDS,
-		"Get dump attribute: attr(name) -> value.\n"},
 	{"vtop_init", (PyCFunction) kdumpfile_vtop_init, METH_NOARGS,
 		"Initialize virtual memory mapping\n"},
 	{NULL}  
 };
+
+static PyObject *
+kdumpfile_getattr(PyObject *_self, void *_data)
+{
+	kdumpfile_object *self = (kdumpfile_object*)_self;
+
+	if (!self->attr)
+		Py_RETURN_NONE;
+
+	Py_INCREF(self->attr);
+	return self->attr;
+}
 
 static PyObject *kdumpfile_get_symbol_func (PyObject *_self, void *_data)
 {
@@ -302,10 +301,13 @@ fail:
 
 
 static PyGetSetDef kdumpfile_object_getset[] = {
-	{"symbol_func", kdumpfile_get_symbol_func, kdumpfile_set_symbol_func,
-		"Callback function called by libkdumpfile for symbol resolving",
-		NULL},
-	{NULL}
+	{ "attr", kdumpfile_getattr, NULL,
+	  "Access to libkdumpfile attributes",
+	  NULL },
+	{ "symbol_func", kdumpfile_get_symbol_func, kdumpfile_set_symbol_func,
+	  "Callback function called by libkdumpfile for symbol resolving",
+	  NULL },
+	{ NULL }
 };
 
 static PyTypeObject kdumpfile_object_type = 
