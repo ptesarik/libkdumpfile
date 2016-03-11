@@ -259,11 +259,6 @@ static PyMethodDef kdumpfile_object_methods[] = {
 	{NULL}  
 };
 
-static PyObject *kdumpfile_getconst (PyObject *_self, void *_value)
-{
-	return PyInt_FromLong((long)_value);
-}
-
 static PyObject *kdumpfile_get_symbol_func (PyObject *_self, void *_data)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
@@ -332,19 +327,8 @@ fail:
 	return -1;
 }
 
+
 static PyGetSetDef kdumpfile_object_getset[] = {
-	{"KDUMP_KPHYSADDR", kdumpfile_getconst, NULL, 
-		"KDUMP_KPHYSADDR - get by kernel physical address",
-		(void*)KDUMP_KPHYSADDR},
-	{"KDUMP_MACHPHYSADDR", kdumpfile_getconst, NULL, 
-		"KDUMP_MACHPHYSADDR - get by machine physical address",
-		(void*)KDUMP_MACHPHYSADDR},
-	{"KDUMP_KVADDR", kdumpfile_getconst, NULL, 
-		"KDUMP_KVADDR - get by kernel virtual address",
-		(void*)KDUMP_KVADDR},
-	{"KDUMP_XENVADDR", kdumpfile_getconst, NULL, 
-		"KDUMP_XENKVADDR - get by xen virtual address",
-		(void*)KDUMP_XENVADDR},
 	{"symbol_func", kdumpfile_get_symbol_func, kdumpfile_set_symbol_func,
 		"Callback function called by libkdumpfile for symbol resolving",
 		NULL},
@@ -394,10 +378,24 @@ static PyTypeObject kdumpfile_object_type =
 	kdumpfile_new,                  /* tp_new */
 };
 
+struct constdef {
+	const char *name;
+	int value;
+};
+
+static const struct constdef kdumpfile_constants[] = {
+	{ "KDUMP_KPHYSADDR", KDUMP_KPHYSADDR },
+        { "KDUMP_MACHPHYSADDR", KDUMP_MACHPHYSADDR },
+	{ "KDUMP_KVADDR", KDUMP_KVADDR },
+	{ "KDUMP_XENVADDR", KDUMP_XENVADDR },
+	{ NULL, 0 }
+};
+
 PyMODINIT_FUNC
 init_kdumpfile (void)
 {
 	PyObject *mod;
+	const struct constdef *cdef;
 	int ret;
 
 	if (PyType_Ready(&kdumpfile_object_type) < 0) 
@@ -417,6 +415,11 @@ init_kdumpfile (void)
 				 (PyObject*)&kdumpfile_object_type);
 	if (ret)
 		goto fail;
+
+	for (cdef = kdumpfile_constants; cdef->name; ++cdef)
+		if (PyModule_AddIntConstant(mod, cdef->name, cdef->value))
+			goto fail;
+
 	return;
 fail:
 	cleanup_exceptions();
