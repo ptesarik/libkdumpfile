@@ -400,8 +400,18 @@ attr_dir_dealloc(PyObject *_self)
 {
 	attr_dir_object *self = (attr_dir_object*)_self;
 
+	PyObject_GC_UnTrack(self);
 	Py_XDECREF((PyObject*)self->kdumpfile);
 	Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+static int
+attr_dir_traverse(PyObject *_self, visitproc visit, void *arg)
+{
+	attr_dir_object *self = (attr_dir_object*)_self;
+
+	Py_VISIT((PyObject*)self->kdumpfile);
+	return 0;
 }
 
 static PyTypeObject attr_dir_object_type =
@@ -426,8 +436,10 @@ static PyTypeObject attr_dir_object_type =
 	0,				/* tp_getattro*/
 	0,				/* tp_setattro*/
 	0,				/* tp_as_buffer*/
-	Py_TPFLAGS_DEFAULT,		/* tp_flags*/
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC, /* tp_flags*/
 	0,				/* tp_doc */
+	attr_dir_traverse,		/* tp_traverse */
+	0,				/* tp_clear */
 };
 
 static PyObject *
@@ -435,14 +447,15 @@ attr_dir_new(kdumpfile_object *kdumpfile, const char *path)
 {
 	attr_dir_object *self;
 
-	self = PyObject_NewVar(attr_dir_object, &attr_dir_object_type,
-			       strlen(path) + 1);
+	self = PyObject_GC_NewVar(attr_dir_object, &attr_dir_object_type,
+				  strlen(path) + 1);
 	if (self == NULL)
 		return NULL;
 
 	strcpy(self->path, path);
 	Py_INCREF((PyObject*)kdumpfile);
 	self->kdumpfile = kdumpfile;
+	PyObject_GC_Track(self);
 	return (PyObject*)self;
 }
 
