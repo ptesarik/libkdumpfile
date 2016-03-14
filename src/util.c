@@ -117,14 +117,20 @@ ctx_malloc(size_t size, kdump_ctx *ctx, const char *desc)
 	return ret;
 }
 
+static inline void
+add_to_hash(unsigned long *hash, unsigned long x)
+{
+	*hash += x;
+	*hash *= 9;
+}
+
 unsigned long
 mem_hash(const char *s, size_t len)
 {
 	unsigned long hash = 0;
 
 	while (len >= sizeof(unsigned long)) {
-		hash += *(unsigned long*)s;
-		hash *= 9;
+		add_to_hash(&hash, *(unsigned long*)s);
 		s += sizeof(unsigned long);
 		len -= sizeof(unsigned long);
 	}
@@ -137,6 +143,63 @@ unsigned long
 string_hash(const char *s)
 {
 	return mem_hash(s, strlen(s));
+}
+
+/**  Initialize a partial hash.
+ * @param[out] phash  Partial hash state.
+ */
+void
+phash_init(struct phash *hash)
+{
+	hash->val = 0UL;
+	hash->idx = 0;
+}
+
+/**  Update a partial hash with a memory area.
+ * @param[in,out] phash  Partial hash state.
+ * @param[in]     s      Start of memory area with new data to be hashed.
+ * @param[in]     len    Number of bytes at @ref s to be hashed.
+ */
+void
+phash_update(struct phash *ph, const char *s, size_t len)
+{
+	if (ph->idx) {
+		while (ph->idx < sizeof(unsigned long)) {
+			ph->part.bytes[ph->idx] = *s++;
+			--len;
+			++ph->idx;
+		}
+		add_to_hash(&ph->val, ph->part.num);
+		ph->idx = 0;
+	}
+
+	while (len >= sizeof(unsigned long)) {
+		add_to_hash(&ph->val, *(unsigned long*)s);
+		s += sizeof(unsigned long);
+		len -= sizeof(unsigned long);
+	}
+	while (len--)
+		ph->part.bytes[ph->idx++] = *s++;
+}
+
+/**  Get the current hash value.
+ * @param[in]  phash  Partial hash state.
+ *
+ * This function returns the hash value, as if the has was computed from
+ * all data passed to @ref phash_update() so far. However, it is possible
+ * to update @ref phash again after calling this function and repeat this
+ * process indefinitely.
+ */
+unsigned long
+phash_value(const struct phash *ph)
+{
+	unsigned long hash = ph->val;
+	unsigned i;
+
+	for (i = 0; i < ph->idx; ++i)
+		hash += (unsigned long)ph->part.bytes[i] <<
+			(8 * (ph->idx - i - 1));
+	return hash;
 }
 
 static size_t

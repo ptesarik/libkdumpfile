@@ -644,6 +644,30 @@ unsigned long string_hash(const char *s);
 #define mem_hash INTERNAL_NAME(mem_hash)
 unsigned long mem_hash(const char *s, size_t len);
 
+/**  Partial hash.
+ * This structure is used to store the state of the hashing algorithm,
+ * while making incremental updates.
+ */
+struct phash {
+	unsigned long val;	/**< Current hash value. */
+	unsigned idx;		/**< Index in @ref part. */
+	union {
+		/** Partial data as bytes. */
+		unsigned char bytes[sizeof(unsigned long)];
+		/** Partial data as an unsigned long number. */
+		unsigned long num;
+	} part;			/**< Partial data. */
+};
+
+#define phash_init INTERNAL_NAME(phash_init)
+void phash_init(struct phash *hash);
+
+#define phash_update INTERNAL_NAME(phash_update)
+void phash_update(struct phash *ph, const char *s, size_t len);
+
+#define phash_value INTERNAL_NAME(phash_value)
+unsigned long phash_value(const struct phash *ph);
+
 /* Knuth recommends primes in approximately golden ratio to the maximum
  * integer representable by a machine word for multiplicative hashing.
  */
