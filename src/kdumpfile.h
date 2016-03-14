@@ -366,28 +366,28 @@ kdump_status kdump_read_string(kdump_ctx *ctx,
 
 /**  Dump file attribute value type.
  */
-enum kdump_attr_type {
+typedef enum kdump_attr_type {
 	kdump_nil,
 	kdump_directory,
 	kdump_number,
 	kdump_address,
 	kdump_string,
-};
+} kdump_attr_type_t;
 
 /**  Dump file attribute value.
  */
-union kdump_attr_value {
+typedef union kdump_attr_value {
 	kdump_num_t number;
 	kdump_addr_t address;
 	const char *string;
-};
+} kdump_attr_value_t;
 
 /**  Dump file attribute: type + value.
  */
-struct kdump_attr {
-	enum kdump_attr_type type;
-	union kdump_attr_value val;
-};
+typedef struct kdump_attr {
+	kdump_attr_type_t type;
+	kdump_attr_value_t val;
+} kdump_attr_t;
 
 /**  Attribute iterator.
  * Iterators are used to iterate over all children of a directory
@@ -421,7 +421,7 @@ typedef struct kdump_attr_iter {
  * @returns    Error status.
  */
 kdump_status kdump_set_attr(kdump_ctx *ctx, const char *key,
-			    const struct kdump_attr *valp);
+			    const kdump_attr_t *valp);
 
 /**  Get a dump file attribute.
  * @param ctx  Dump file object.
@@ -430,7 +430,7 @@ kdump_status kdump_set_attr(kdump_ctx *ctx, const char *key,
  * @returns    Error status.
  */
 kdump_status kdump_get_attr(kdump_ctx *ctx, const char *key,
-			    struct kdump_attr *valp);
+			    kdump_attr_t *valp);
 
 /** Get a string attribute.
  *
@@ -448,7 +448,7 @@ const char *kdump_get_string_attr(kdump_ctx *ctx, const char *key);
  * @returns     Non-zero if enumeration should stop.
  */
 typedef int kdump_enum_attr_fn(void *data, const char *key,
-			       const struct kdump_attr *valp);
+			       const kdump_attr_t *valp);
 
 /**  Enumerate an attribute directory.
  * @param ctx      Dump file object.
@@ -468,7 +468,7 @@ kdump_status kdump_enum_attr(kdump_ctx *ctx, const char *path,
  * @returns        Error status.
  */
 kdump_status kdump_enum_attr_val(kdump_ctx *ctx,
-				 const struct kdump_attr *parent,
+				 const kdump_attr_t *parent,
 				 kdump_enum_attr_fn *cb, void *cb_data);
 
 /**  Get an attribute iterator.
@@ -512,7 +512,7 @@ void kdump_attr_iter_end(kdump_ctx *ctx, kdump_attr_iter_t *iter);
  */
 kdump_status kdump_attr_iter_data(kdump_ctx *ctx,
 				  const kdump_attr_iter_t *iter,
-				  struct kdump_attr *valp);
+				  kdump_attr_t *valp);
 
 /**  Get target dump format.
  * @param ctx  Dump file object.

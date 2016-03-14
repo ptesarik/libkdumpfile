@@ -56,7 +56,7 @@ main(int argc, char **argv)
 {
 	kdump_ctx *ctx;
 	kdump_attr_iter_t it;
-	struct kdump_attr attr;
+	kdump_attr_t attr;
 	unsigned seen[ARRAY_SIZE(attrs)];
 	unsigned i;
 	kdump_status res;
