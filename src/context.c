@@ -43,24 +43,6 @@ kdump_err_str(kdump_ctx *ctx)
 }
 
 kdump_status
-kdump_set_attr(kdump_ctx *ctx, const char *key,
-	       const struct kdump_attr *valp)
-{
-	struct attr_data *d;
-
-	clear_error(ctx);
-
-	d = lookup_attr_raw(ctx, key);
-	if (!d)
-		return set_error(ctx, kdump_nodata, "No such key");
-
-	if (valp->type != d->template->type)
-		return set_error(ctx, kdump_invalid, "Type mismatch");
-
-	return set_attr(ctx, d, valp->val);
-}
-
-kdump_status
 kdump_get_attr(kdump_ctx *ctx, const char *key,
 	       struct kdump_attr *valp)
 {
@@ -76,6 +58,81 @@ kdump_get_attr(kdump_ctx *ctx, const char *key,
 	}
 
 	return set_error(ctx, kdump_nodata, "Key has no value");
+}
+
+/**  Set an attribute value with type check.
+ * @param ctx   Dump file object.
+ * @param attr  Attribute to be modified.
+ * @param valp  New value for the attribute.
+ */
+static kdump_status
+check_set_attr(kdump_ctx *ctx, struct attr_data *attr,
+	       const kdump_attr_t *valp)
+{
+	if (valp->type != attr->template->type)
+		return set_error(ctx, kdump_invalid, "Type mismatch");
+
+	return set_attr(ctx, attr, valp->val);
+}
+
+kdump_status
+kdump_set_attr(kdump_ctx *ctx, const char *key,
+	       const struct kdump_attr *valp)
+{
+	struct attr_data *d;
+
+	clear_error(ctx);
+
+	d = lookup_attr_raw(ctx, key);
+	if (!d)
+		return set_error(ctx, kdump_nodata, "No such key");
+
+	return check_set_attr(ctx, d, valp);
+}
+
+kdump_status
+kdump_attr_ref(kdump_ctx *ctx, const char *key, kdump_attr_ref_t *ref)
+{
+	struct attr_data *d;
+
+	clear_error(ctx);
+
+	d = lookup_attr_raw(ctx, key);
+	if (!d)
+		return set_error(ctx, kdump_nokey, "No such key");
+
+	ref->_ptr = d;
+	return kdump_ok;
+}
+
+void
+kdump_attr_unref(kdump_ctx *ctx, kdump_attr_ref_t *ref)
+{
+	clear_error(ctx);
+}
+
+kdump_status
+kdump_attr_ref_get(kdump_ctx *ctx, const kdump_attr_ref_t *ref,
+		   kdump_attr_t *valp)
+{
+	const struct attr_data *d = ref->_ptr;
+
+	clear_error(ctx);
+
+	if (!attr_isset(d))
+		return set_error(ctx, kdump_nodata, "Key has no value");
+
+	valp->type = d->template->type;
+	valp->val = *attr_value(d);
+	return kdump_ok;
+}
+
+kdump_status
+kdump_attr_ref_set(kdump_ctx *ctx, kdump_attr_ref_t *ref,
+		   const kdump_attr_t *valp)
+{
+	clear_error(ctx);
+	return check_set_attr(ctx, ref->_ptr, valp);
 }
 
 kdump_status

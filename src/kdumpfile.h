@@ -389,6 +389,17 @@ typedef struct kdump_attr {
 	kdump_attr_value_t val;
 } kdump_attr_t;
 
+/**  Reference to an attribute.
+ * This type is used to make a fixed-size reference to an attribute,
+ * rather than its (variable-size) key path.
+ *
+ * This type is opaque. No assumptions should be made by the caller
+ * about the meaning of the pointer.
+ */
+typedef struct kdump_attr_ref {
+	void *_ptr;		/**< Reference (private field). */
+} kdump_attr_ref_t;
+
 /**  Attribute iterator.
  * Iterators are used to iterate over all children of a directory
  * attribute. This is a public structure, so callers can allocate
@@ -435,11 +446,52 @@ kdump_status kdump_get_attr(kdump_ctx *ctx, const char *key,
 /** Get a string attribute.
  *
  * @param ctx  Dump file object.
- * @param key  Attribut key.
+ * @param key  Attribute key.
  * @returns    The attribute value, @c NULL if not found or if the
  *             attribute is not a string.
  */
 const char *kdump_get_string_attr(kdump_ctx *ctx, const char *key);
+
+/** Get a reference to an attribute
+ * @param      ctx  Dump file object.
+ * @param[in]  key  Attribute key.
+ * @param[out] ref  Attribute reference (initialized on successful return).
+ * @returns    Error status.
+ *
+ * A reference is a persistent pointer to the attribute, which stays
+ * valid until the reference is dropped using @ref kdump_drop_attr_ref,
+ * or the whole dump file object is destroyed.
+ */
+kdump_status kdump_attr_ref(kdump_ctx *ctx, const char *key,
+			    kdump_attr_ref_t *ref);
+
+/**  Drop a reference to an attribute.
+ * @param ctx   Dump file object.
+ * @param ref   Attribute reference.
+ */
+void kdump_attr_unref(kdump_ctx *ctx, kdump_attr_ref_t *ref);
+
+/**  Get attribute data by reference.
+ * @param      ctx   Dump file object.
+ * @param[in]  ref   Attribute reference.
+ * @param[out] valp  Attribute value (filled on successful return).
+ *
+ * This works just like @ref kdump_get_attr, except that the attribute
+ * is denoted by a reference rather than by its key path.
+ */
+kdump_status kdump_attr_ref_get(kdump_ctx *ctx, const kdump_attr_ref_t *ref,
+				kdump_attr_t *valp);
+
+/**  Set attribute data by reference.
+ * @param      ctx   Dump file object.
+ * @param[in]  ref   Attribute reference.
+ * @param[in]  valp  New attribute value.
+ *
+ * This works just like @ref kdump_set_attr, except that the attribute
+ * is denoted by a reference rather than by its key path.
+ */
+kdump_status kdump_attr_ref_set(kdump_ctx *ctx, kdump_attr_ref_t *ref,
+				const kdump_attr_t *valp);
 
 /**  Type for kdump_enum_attr callback function.
  * @param data  Data pointer which was passed to @ref kdump_enum_attr.
