@@ -131,6 +131,76 @@ kdump_enum_attr_val(kdump_ctx *ctx, const struct kdump_attr *parent,
 	return kdump_ok;
 }
 
+static kdump_status
+set_iter_pos(kdump_attr_iter_t *iter, const struct attr_data *attr)
+{
+	iter->key = attr ? attr->template->key : NULL;
+	iter->_pos = attr;
+	return kdump_ok;
+}
+
+kdump_status
+kdump_attr_iter_start(kdump_ctx *ctx, const char *path,
+		      kdump_attr_iter_t *iter)
+{
+	const struct attr_data *d;
+
+	clear_error(ctx);
+
+	d = lookup_attr_raw(ctx, path);
+	if (!d)
+		return set_error(ctx, kdump_nokey, "No such path");
+	if (!attr_isset(d))
+		return set_error(ctx, kdump_nodata, "Key has no value");
+	if (d->template->type != kdump_directory)
+		return set_error(ctx, kdump_invalid,
+				 "Path is a leaf attribute");
+
+	return set_iter_pos(iter, d->dir);
+}
+
+kdump_status
+kdump_attr_iter_next(kdump_ctx *ctx, kdump_attr_iter_t *iter)
+{
+	const struct attr_data *d;
+
+	clear_error(ctx);
+
+	if (!iter->_pos)
+		return set_error(ctx, kdump_invalid, "End of iteration");
+
+	do {
+		d = (const struct attr_data*)iter->_pos;
+		d = d->next;
+	} while (d && !attr_isset(d));
+
+	return set_iter_pos(iter, d);
+}
+
+void
+kdump_attr_iter_end(kdump_ctx *ctx, kdump_attr_iter_t *iter)
+{
+	clear_error(ctx);
+}
+
+kdump_status
+kdump_attr_iter_data(kdump_ctx *ctx, const kdump_attr_iter_t *iter,
+		     struct kdump_attr *valp)
+{
+	const struct attr_data *d;
+
+	clear_error(ctx);
+
+	if (!iter->key)
+		return set_error(ctx, kdump_invalid, "Invalid iterator");
+
+	d = (const struct attr_data*) iter->_pos;
+	valp->type = d->template->type;
+	valp->val = *attr_value(d);
+
+	return kdump_ok;
+}
+
 kdump_byte_order_t
 kdump_byte_order(kdump_ctx *ctx)
 {

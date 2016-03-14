@@ -389,6 +389,31 @@ struct kdump_attr {
 	union kdump_attr_value val;
 };
 
+/**  Attribute iterator.
+ * Iterators are used to iterate over all children of a directory
+ * attribute. This is a public structure, so callers can allocate
+ * it e.g. on stack.
+ *
+ * Note that the attribute name is stored in the structure, but
+ * the attribute value is not. This allows to keep the same ABI
+ * while implementing special attribute handling (e.g. calculate
+ * the value on the fly).
+ */
+typedef struct kdump_attr_iter {
+	/** Attribute key.
+	 * This is the attribute's name relative to parent (no dots),
+	 * or @c NULL if end of iteration has been reached.
+	 */
+	const char *key;
+
+	/** Iterator position.
+	 * This is a private field; it must not be modified or otherwise
+	 * interpreted by callers. It points to an internal structure
+	 * which may change layout without affecting the ABI.
+	 */
+	const void *_pos;
+} kdump_attr_iter_t;
+
 /**  Set a dump file attribute.
  * @param ctx  Dump file object.
  * @param key  Attribute key.
@@ -445,6 +470,49 @@ kdump_status kdump_enum_attr(kdump_ctx *ctx, const char *path,
 kdump_status kdump_enum_attr_val(kdump_ctx *ctx,
 				 const struct kdump_attr *parent,
 				 kdump_enum_attr_fn *cb, void *cb_data);
+
+/**  Get an attribute iterator.
+ * @param      ctx   Dump file object.
+ * @param[in]  path  Path to an attribute directory.
+ * @param[out] iter  Attribute iterator.
+ * @returns          Error status.
+ *
+ * On return, the iterator is set to the first child attribute. If the
+ * attribute directory is empty, this function sets the @c key field
+ * of @ref iter to @c NULL and returns @ref kdump_ok.
+ */
+kdump_status kdump_attr_iter_start(kdump_ctx *ctx, const char *path,
+				   kdump_attr_iter_t *iter);
+
+/**  Advance an attribute iterator.
+ * @param ctx   Dump file object.
+ * @param iter  Attribute iterator.
+ * @returns     Error status.
+ *
+ * If there are no more items in the iteration, this function sets
+ * the @c key field of @ref iter to @c NULL and returns @ref kdump_ok.
+ * If you try to advance past end of iteration, this function returns
+ * @ref kdump_invalid.
+ */
+kdump_status kdump_attr_iter_next(kdump_ctx *ctx, kdump_attr_iter_t *iter);
+
+/**  De-initialize an attribute iterator.
+ * @param ctx   Dump file object.
+ * @param iter  Attribute iterator.
+ * @returns     Error status.
+ *
+ * This function must be called when an iterator is no longer needed.
+ */
+void kdump_attr_iter_end(kdump_ctx *ctx, kdump_attr_iter_t *iter);
+
+/**  Get attribute iterator data.
+ * @param      ctx   Dump file object.
+ * @param[in]  iter  Attribute iterator.
+ * @param[out] valp  Attribute value (filled on successful return).
+ */
+kdump_status kdump_attr_iter_data(kdump_ctx *ctx,
+				  const kdump_attr_iter_t *iter,
+				  struct kdump_attr *valp);
 
 /**  Get target dump format.
  * @param ctx  Dump file object.

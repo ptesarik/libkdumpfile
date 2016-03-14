@@ -35,6 +35,11 @@ check_HEADERS = \
 	lkcd.h \
 	testutil.h
 
+attriter_SOURCES = attriter.c
+attriter_LDADD = \
+	$(LDADD) \
+	$(top_builddir)/src/libkdumpfile.la
+
 checkattr_SOURCES = checkattr.c
 checkattr_LDADD = \
 	$(LDADD) \
@@ -54,6 +59,7 @@ privptr_SOURCES = privptr.c
 privptr_LDADD = $(top_builddir)/src/libkdumpfile.la
 
 check_PROGRAMS = \
+	attriter \
 	checkattr \
 	dumpdata \
 	mkdiskdump \
@@ -107,6 +113,7 @@ dist_check_SCRIPTS = \
 	$(test_scripts)
 
 TESTS = $(test_scripts) \
+	attriter \
 	privptr
 
 clean-local:
