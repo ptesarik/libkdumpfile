@@ -738,6 +738,11 @@ struct attr_data *lookup_attr_raw(const kdump_ctx *ctx, const char *key);
 #define lookup_attr INTERNAL_NAME(lookup_attr)
 struct attr_data *lookup_attr(const kdump_ctx *ctx, const char *key);
 
+#define lookup_dir_attr INTERNAL_NAME(lookup_dir_attr)
+struct attr_data *lookup_dir_attr(const kdump_ctx *ctx,
+				  const struct attr_data *dir,
+				  const char *key);
+
 /**  Check if an attribute is set.
  * @param data  Pointer to the attribute data.
  * @returns     Non-zero if attribute data is valid.

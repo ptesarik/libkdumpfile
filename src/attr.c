@@ -160,6 +160,63 @@ keycmp(const struct attr_data *attr, const char *key, size_t len)
 	return memcmp(attr->template->key, key, len);
 }
 
+/**  Update a partial hash with an attribute directory path.
+ * @param ph   Partial hash state.
+ * @param dir  (Leaf) attribute directory attribute.
+ *
+ * Note that this function's intended use is a lookup under the
+ * directory, and the hash includes a terminating dot ("."). This
+ * may not be particularly useful for other purposes, but is good
+ * enough for the intended one and simplifies the implementation.
+ */
+static void
+path_hash(struct phash *ph, const struct attr_data *dir)
+{
+	const struct attr_template *tmpl;
+	if (dir->parent != dir) {
+		path_hash(ph, dir->parent);
+		tmpl = dir->template;
+		phash_update(ph, tmpl->key, strlen(tmpl->key));
+		phash_update(ph, ".", 1);
+	}
+}
+
+/**  Look up a child attribute of a given directory.
+ * @param ctx   Dump file object.
+ * @param dir   Directory attribute.
+ * @param key   Key name relative to @ref dir.
+ * @returns     Stored attribute or @c NULL if not found.
+ */
+struct attr_data *
+lookup_dir_attr(const kdump_ctx *ctx, const struct attr_data *dir,
+		const char *key)
+{
+	struct phash ph;
+	unsigned ehash, i;
+	struct attr_hash *tbl;
+
+	phash_init(&ph);
+	path_hash(&ph, dir);
+	phash_update(&ph, key, strlen(key));
+	i = fold_hash(phash_value(&ph), ATTR_HASH_BITS);
+	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
+	do {
+		tbl = ctx->attr;
+		do {
+			struct attr_data *d = &tbl->table[i];
+			if (!d->parent)
+				break;
+			if (d->parent == dir &&
+			    !strcmp(d->template->key, key))
+				return d;
+			tbl = tbl->next;
+		} while (tbl);
+		i = (i + 1) % ATTR_HASH_SIZE;
+	} while (i != ehash);
+
+	return NULL;
+}
+
 /**  Look up attribute value by name.
  * @param ctx     Dump file object.
  * @param key     Key name.
