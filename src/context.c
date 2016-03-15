@@ -126,6 +126,23 @@ kdump_attr_ref(kdump_ctx *ctx, const char *key, kdump_attr_ref_t *ref)
 	return kdump_ok;
 }
 
+kdump_status
+kdump_sub_attr_ref(kdump_ctx *ctx, const kdump_attr_ref_t *base,
+		   const char *subkey, kdump_attr_ref_t *ref)
+{
+	struct attr_data *dir, *attr;
+
+	clear_error(ctx);
+
+	dir = ref_attr(base);
+	attr = lookup_dir_attr(ctx, dir, subkey);
+	if (!attr)
+		return set_error(ctx, kdump_nokey, "No such key");
+
+	mkref(ref, attr);
+	return kdump_ok;
+}
+
 void
 kdump_attr_unref(kdump_ctx *ctx, kdump_attr_ref_t *ref)
 {

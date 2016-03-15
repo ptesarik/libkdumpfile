@@ -21,6 +21,7 @@ LIBKDUMPFILE_0 {
     kdump_get_attr;
     kdump_get_string_attr;
     kdump_attr_ref;
+    kdump_sub_attr_ref;
     kdump_attr_unref;
     kdump_attr_ref_get;
     kdump_attr_ref_set;

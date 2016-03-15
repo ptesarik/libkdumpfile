@@ -58,6 +58,9 @@ multiread_LDADD = $(top_builddir)/src/libkdumpfile.la
 privptr_SOURCES = privptr.c
 privptr_LDADD = $(top_builddir)/src/libkdumpfile.la
 
+subattr_SOURCES = subattr.c
+subattr_LDADD = $(top_builddir)/src/libkdumpfile.la
+
 check_PROGRAMS = \
 	attriter \
 	checkattr \
@@ -66,7 +69,8 @@ check_PROGRAMS = \
 	mkelf \
 	mklkcd \
 	multiread \
-	privptr
+	privptr \
+	subattr
 
 test_scripts = \
 	diskdump-empty-i386 \
@@ -114,7 +118,8 @@ dist_check_SCRIPTS = \
 
 TESTS = $(test_scripts) \
 	attriter \
-	privptr
+	privptr \
+	subattr
 
 clean-local:
 	-rm -rf out

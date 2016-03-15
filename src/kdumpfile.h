@@ -469,6 +469,16 @@ const char *kdump_get_string_attr(kdump_ctx *ctx, const char *key);
 kdump_status kdump_attr_ref(kdump_ctx *ctx, const char *key,
 			    kdump_attr_ref_t *ref);
 
+/** Get a reference to a subordinate attribute
+ * @param      ctx     Dump file object.
+ * @param[in]  base    Reference to base attribute.
+ * @param[in]  subkey  Attribute key, relative to @ref base.
+ * @param[out] ref     Attribute reference (initialized on successful return).
+ * @returns    Error status.
+ */
+kdump_status kdump_sub_attr_ref(kdump_ctx *ctx, const kdump_attr_ref_t *base,
+				const char *subkey, kdump_attr_ref_t *ref);
+
 /**  Drop a reference to an attribute.
  * @param ctx   Dump file object.
  * @param ref   Attribute reference.
