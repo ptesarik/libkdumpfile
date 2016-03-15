@@ -192,6 +192,29 @@ set_iter_pos(kdump_attr_iter_t *iter, struct attr_data *attr)
 	return kdump_ok;
 }
 
+/**  Get an attribute iterator by attribute data.
+ * @param      ctx   Dump file object.
+ * @param[in]  attr  Attribute directory data.
+ * @param[out] iter  Attribute iterator.
+ * @returns          Error status.
+ *
+ * This is the common implementation of @ref kdump_attr_iter_start
+ * and @ref kdump_attr_ref_iter_start, which takes an attribute data
+ * pointer as argument.
+ */
+static kdump_status
+attr_iter_start(kdump_ctx *ctx, const struct attr_data *attr,
+		kdump_attr_iter_t *iter)
+{
+	if (!attr_isset(attr))
+		return set_error(ctx, kdump_nodata, "Key has no value");
+	if (attr->template->type != kdump_directory)
+		return set_error(ctx, kdump_invalid,
+				 "Path is a leaf attribute");
+
+	return set_iter_pos(iter, attr->dir);
+}
+
 kdump_status
 kdump_attr_iter_start(kdump_ctx *ctx, const char *path,
 		      kdump_attr_iter_t *iter)
@@ -203,13 +226,16 @@ kdump_attr_iter_start(kdump_ctx *ctx, const char *path,
 	d = lookup_attr_raw(ctx, path);
 	if (!d)
 		return set_error(ctx, kdump_nokey, "No such path");
-	if (!attr_isset(d))
-		return set_error(ctx, kdump_nodata, "Key has no value");
-	if (d->template->type != kdump_directory)
-		return set_error(ctx, kdump_invalid,
-				 "Path is a leaf attribute");
 
-	return set_iter_pos(iter, d->dir);
+	return attr_iter_start(ctx, d, iter);
+}
+
+kdump_status
+kdump_attr_ref_iter_start(kdump_ctx *ctx, const kdump_attr_ref_t *ref,
+			  kdump_attr_iter_t *iter)
+{
+	clear_error(ctx);
+	return attr_iter_start(ctx, ref_attr(ref), iter);
 }
 
 kdump_status

@@ -525,6 +525,19 @@ kdump_status kdump_enum_attr(kdump_ctx *ctx, const char *path,
 kdump_status kdump_attr_iter_start(kdump_ctx *ctx, const char *path,
 				   kdump_attr_iter_t *iter);
 
+/**  Get an attribute iterator by reference.
+ * @param      ctx   Dump file object.
+ * @param[in]  ref   Reference to an attribute directory.
+ * @param[out] iter  Attribute iterator.
+ * @returns          Error status.
+ *
+ * This works just like @ref kdump_attr_iter_start, but use an
+ * attribute reference rather than its key path.
+ */
+kdump_status kdump_attr_ref_iter_start(kdump_ctx *ctx,
+				       const kdump_attr_ref_t *ref,
+				       kdump_attr_iter_t *iter);
+
 /**  Advance an attribute iterator.
  * @param ctx   Dump file object.
  * @param iter  Attribute iterator.
