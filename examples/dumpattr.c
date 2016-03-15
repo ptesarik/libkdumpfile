@@ -9,49 +9,62 @@
 
 #include <kdumpfile.h>
 
-struct attr_data {
-	kdump_ctx *ctx;
-	const char *path;
-	int indent;
-};
-
 static int
-list_attr_recursive(void *data, const char *key,
-		    const struct kdump_attr *valp)
+list_attr_recursive(kdump_ctx *ctx, kdump_attr_ref_t *dir, int indent)
 {
-	struct attr_data *ad = data;
-	const char *oldpath;
-	char *newpath;
+	kdump_attr_iter_t it;
+	kdump_attr_t attr;
+	kdump_status status;
+	int ret;
 
-	printf("%*s%s: ", ad->indent * 2, "", key);
-	switch (valp->type) {
-	case kdump_string:
-		printf("%s\n", valp->val.string);
-		break;
-	case kdump_number:
-		printf("%llu\n", (unsigned long long) valp->val.number);
-		break;
-	case kdump_address:
-		printf("%llx\n", (unsigned long long) valp->val.address);
-		break;
-	case kdump_directory:
-		putchar('\n');
-		++ad->indent;
-		oldpath = ad->path;
-		if (oldpath) {
-			newpath = alloca(strlen(oldpath) + strlen(key) + 2);
-			sprintf(newpath, "%s.%s", oldpath, key);
-			ad->path = newpath;
-		} else
-			ad->path = key;
-		kdump_enum_attr(ad->ctx, ad->path, list_attr_recursive, ad);
-		ad->path = oldpath;
-		--ad->indent;
-		break;
-	default:
-		printf("<unknown>\n");
+	status = kdump_attr_ref_iter_start(ctx, dir, &it);
+	if (status != kdump_ok) {
+		fprintf(stderr, "kdump_attr_ref_iter_start failed: %s\n",
+			kdump_err_str(ctx));
+		return -1;
 	}
-	return 0;
+
+	ret = 0;
+	while (it.key) {
+		printf("%*s%s: ", indent * 2, "", it.key);
+
+		status = kdump_attr_ref_get(ctx, &it.pos, &attr);
+		if (status != kdump_ok) {
+			fprintf(stderr, "kdump_attr_ref_get failed: %s\n",
+				kdump_err_str(ctx));
+			ret = -1;
+			break;
+		}
+
+		switch (attr.type) {
+		case kdump_string:
+			printf("%s\n", attr.val.string);
+			break;
+		case kdump_number:
+			printf("%llu\n", (unsigned long long) attr.val.number);
+			break;
+		case kdump_address:
+			printf("%llx\n", (unsigned long long) attr.val.address);
+			break;
+		case kdump_directory:
+			putchar('\n');
+			list_attr_recursive(ctx, &it.pos, indent + 1);
+			break;
+		default:
+			printf("<unknown>\n");
+		}
+
+		status = kdump_attr_iter_next(ctx, &it);
+		if (status != kdump_ok) {
+			fprintf(stderr, "kdump_attr_iter_next failed: %s\n",
+				kdump_err_str(ctx));
+			ret = -1;
+			break;
+		}
+	}
+
+	kdump_attr_iter_end(ctx, &it);
+	return ret;
 }
 
 int
@@ -84,17 +97,21 @@ main(int argc, char **argv)
 		return 2;
 	}
 
-	struct attr_data data;
-	data.ctx = ctx;
-	data.path = argv[2];
-	data.indent = 0;
-	res = kdump_enum_attr(ctx, data.path, list_attr_recursive, &data);
+	kdump_attr_ref_t root;
+	res = kdump_attr_ref(ctx, NULL, &root);
 	if (res != kdump_ok) {
-		fprintf(stderr, "kdump_enum_attr failed: %s\n",
+		fprintf(stderr, "kdump_attr_ref failed: %s\n",
 			kdump_err_str(ctx));
 		kdump_free(ctx);
 		return 2;
 	}
+
+	if (list_attr_recursive(ctx, &root, 0)) {
+		kdump_free(ctx);
+		return 2;
+	}
+
+	kdump_attr_unref(ctx, &root);
 
 	kdump_free(ctx);
 	close(fd);
