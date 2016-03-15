@@ -187,6 +187,9 @@ kdump_enum_attr(kdump_ctx *ctx, const char *path,
 static kdump_status
 set_iter_pos(kdump_attr_iter_t *iter, struct attr_data *attr)
 {
+	while (attr && !attr_isset(attr))
+		attr = attr->next;
+
 	iter->key = attr ? attr->template->key : NULL;
 	mkref(&iter->pos, attr);
 	return kdump_ok;
@@ -249,11 +252,7 @@ kdump_attr_iter_next(kdump_ctx *ctx, kdump_attr_iter_t *iter)
 	if (!d)
 		return set_error(ctx, kdump_invalid, "End of iteration");
 
-	do {
-		d = d->next;
-	} while (d && !attr_isset(d));
-
-	return set_iter_pos(iter, d);
+	return set_iter_pos(iter, d->next);
 }
 
 void
