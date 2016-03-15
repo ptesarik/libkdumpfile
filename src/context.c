@@ -43,21 +43,22 @@ kdump_err_str(kdump_ctx *ctx)
 }
 
 kdump_status
-kdump_get_attr(kdump_ctx *ctx, const char *key,
-	       struct kdump_attr *valp)
+kdump_get_attr(kdump_ctx *ctx, const char *key, kdump_attr_t *valp)
 {
 	const struct attr_data *d;
 
 	clear_error(ctx);
 
-	d = lookup_attr(ctx, key);
-	if (d) {
-		valp->type = d->template->type;
-		valp->val = *attr_value(d);
-		return kdump_ok;
-	}
+	d = lookup_attr_raw(ctx, key);
+	if (!d)
+		return set_error(ctx, kdump_nokey, "No such key");
+	if (!attr_isset(d))
+		return set_error(ctx, kdump_nodata, "Key has no value");
 
-	return set_error(ctx, kdump_nodata, "Key has no value");
+	valp->type = d->template->type;
+	valp->val = *attr_value(d);
+	return kdump_ok;
+
 }
 
 /**  Set an attribute value with type check.
