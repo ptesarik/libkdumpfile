@@ -340,8 +340,12 @@ ssize_t kdump_read(kdump_ctx *ctx,
  * This function works just like @ref kdump_read, but instead of returning
  * the number of bytes, it returns the error status. The lenght of the
  * buffer pointed to by @c plength is updated to reflect the actual number
- * of bytes read from the dump file. Note that this number may be non-zero
- * even if the call itself fails.
+ * of bytes read from the dump file.
+ *
+ * If @c kdump_readp returns @ref kdump_ok, then all requested bytes have
+ * been read successfully, and the value referenced by @ref plength is not
+ * changed. However, if the read fails, some bytes may already have been
+ * read, and their number is reported in this variable.
  */
 kdump_status kdump_readp(kdump_ctx *ctx,
 			 kdump_addrspace_t as, kdump_addr_t addr,

@@ -175,13 +175,6 @@ static PyObject *kdumpfile_read (PyObject *_self, PyObject *args, PyObject *kw)
 		return NULL;
 	}
 
-	if (r != size) {
-		Py_XDECREF(obj);
-		PyErr_Format(PyExc_IOError,
-			     "Got %d bytes, expected %d bytes: %s",
-			     r, size, kdump_err_str(self->ctx));
-		return NULL;
-	}
 	return obj;
 }
 
