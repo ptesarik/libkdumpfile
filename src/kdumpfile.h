@@ -493,25 +493,6 @@ kdump_status kdump_attr_ref_get(kdump_ctx *ctx, const kdump_attr_ref_t *ref,
 kdump_status kdump_attr_ref_set(kdump_ctx *ctx, kdump_attr_ref_t *ref,
 				const kdump_attr_t *valp);
 
-/**  Type for kdump_enum_attr callback function.
- * @param data  Data pointer which was passed to @ref kdump_enum_attr.
- * @param key   Key name.
- * @param valp  Attribute value.
- * @returns     Non-zero if enumeration should stop.
- */
-typedef int kdump_enum_attr_fn(void *data, const char *key,
-			       const kdump_attr_t *valp);
-
-/**  Enumerate an attribute directory.
- * @param ctx      Dump file object.
- * @param path     Path to the attribute.
- * @param cb       Callback function.
- * @param cb_data  Data that is passed to the callback function.
- * @returns     Error status.
- */
-kdump_status kdump_enum_attr(kdump_ctx *ctx, const char *path,
-			     kdump_enum_attr_fn *cb, void *cb_data);
-
 /**  Get an attribute iterator.
  * @param      ctx   Dump file object.
  * @param[in]  path  Path to an attribute directory.

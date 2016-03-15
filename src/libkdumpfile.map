@@ -24,7 +24,6 @@ LIBKDUMPFILE_0 {
     kdump_attr_unref;
     kdump_attr_ref_get;
     kdump_attr_ref_set;
-    kdump_enum_attr;
     kdump_attr_iter_start;
     kdump_attr_ref_iter_start;
     kdump_attr_iter_next;

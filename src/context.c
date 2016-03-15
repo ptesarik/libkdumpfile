@@ -155,35 +155,6 @@ kdump_attr_ref_set(kdump_ctx *ctx, kdump_attr_ref_t *ref,
 	return check_set_attr(ctx, ref_attr(ref), valp);
 }
 
-kdump_status
-kdump_enum_attr(kdump_ctx *ctx, const char *path,
-		kdump_enum_attr_fn *cb, void *cb_data)
-{
-	const struct attr_data *parent, *d;
-
-	clear_error(ctx);
-
-	parent = lookup_attr(ctx, path);
-	if (!parent)
-		return set_error(ctx, kdump_nodata, "No such path");
-	if (parent->template->type != kdump_directory)
-		return set_error(ctx, kdump_invalid,
-				 "Path is a leaf attribute");
-
-	for (d = parent->dir; d; d = d->next) {
-		struct kdump_attr attr;
-
-		if (!attr_isset(d))
-			continue;
-
-		attr.type = d->template->type;
-		attr.val = *attr_value(d);
-		if (cb(cb_data, d->template->key, &attr))
-			break;
-	}
-	return kdump_ok;
-}
-
 static kdump_status
 set_iter_pos(kdump_attr_iter_t *iter, struct attr_data *attr)
 {
