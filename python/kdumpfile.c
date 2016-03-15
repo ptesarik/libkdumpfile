@@ -360,7 +360,6 @@ static PyTypeObject kdumpfile_object_type =
 typedef struct {
 	PyObject_VAR_HEAD
 	kdumpfile_object *kdumpfile;
-	Py_ssize_t pathlen;
 	char path[];
 } attr_dir_object;
 
