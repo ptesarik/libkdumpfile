@@ -307,8 +307,7 @@ static PyGetSetDef kdumpfile_object_getset[] = {
 
 static PyTypeObject kdumpfile_object_type = 
 {
-	PyObject_HEAD_INIT (0) 
-	0,
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_kdumpfile.kdumpfile",         /* tp_name*/ 
 	sizeof (kdumpfile_object),      /* tp_basicsize*/ 
 	0,                              /* tp_itemsize*/ 
