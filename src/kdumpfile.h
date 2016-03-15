@@ -393,8 +393,9 @@ typedef struct kdump_attr {
  * This type is used to make a fixed-size reference to an attribute,
  * rather than its (variable-size) key path.
  *
- * This type is opaque. No assumptions should be made by the caller
- * about the meaning of the pointer.
+ * This type points to an internal structure which may change layout
+ * without affecting the ABI, so callers must not make any attempts
+ * to interpret that data.
  */
 typedef struct kdump_attr_ref {
 	void *_ptr;		/**< Reference (private field). */
@@ -418,11 +419,10 @@ typedef struct kdump_attr_iter {
 	const char *key;
 
 	/** Iterator position.
-	 * This is a private field; it must not be modified or otherwise
-	 * interpreted by callers. It points to an internal structure
-	 * which may change layout without affecting the ABI.
+	 * This field must not be modified by callers, but it can
+	 * be used as an argument to the reference-handling functions.
 	 */
-	const void *_pos;
+	kdump_attr_ref_t pos;
 } kdump_attr_iter_t;
 
 /**  Set a dump file attribute.
@@ -545,15 +545,6 @@ kdump_status kdump_attr_iter_next(kdump_ctx *ctx, kdump_attr_iter_t *iter);
  * This function must be called when an iterator is no longer needed.
  */
 void kdump_attr_iter_end(kdump_ctx *ctx, kdump_attr_iter_t *iter);
-
-/**  Get attribute iterator data.
- * @param      ctx   Dump file object.
- * @param[in]  iter  Attribute iterator.
- * @param[out] valp  Attribute value (filled on successful return).
- */
-kdump_status kdump_attr_iter_data(kdump_ctx *ctx,
-				  const kdump_attr_iter_t *iter,
-				  kdump_attr_t *valp);
 
 /**  Get target dump format.
  * @param ctx  Dump file object.

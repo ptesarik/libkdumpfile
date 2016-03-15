@@ -90,6 +90,26 @@ kdump_set_attr(kdump_ctx *ctx, const char *key,
 	return check_set_attr(ctx, d, valp);
 }
 
+/**  Convert attribute data to an attribute reference.
+ * @param[out] ref   Attribute reference.
+ * @param[in]  attr  Attribute data.
+ */
+static inline void
+mkref(kdump_attr_ref_t *ref, struct attr_data *attr)
+{
+	ref->_ptr = attr;
+}
+
+/**  Convert an attribute reference to attribute data.
+ * @param ref  Attribute reference.
+ * @returns    Attribute data.
+ */
+static inline struct attr_data *
+ref_attr(const kdump_attr_ref_t *ref)
+{
+	return ref->_ptr;
+}
+
 kdump_status
 kdump_attr_ref(kdump_ctx *ctx, const char *key, kdump_attr_ref_t *ref)
 {
@@ -101,7 +121,7 @@ kdump_attr_ref(kdump_ctx *ctx, const char *key, kdump_attr_ref_t *ref)
 	if (!d)
 		return set_error(ctx, kdump_nokey, "No such key");
 
-	ref->_ptr = d;
+	mkref(ref, d);
 	return kdump_ok;
 }
 
@@ -115,7 +135,7 @@ kdump_status
 kdump_attr_ref_get(kdump_ctx *ctx, const kdump_attr_ref_t *ref,
 		   kdump_attr_t *valp)
 {
-	const struct attr_data *d = ref->_ptr;
+	const struct attr_data *d = ref_attr(ref);
 
 	clear_error(ctx);
 
@@ -132,7 +152,7 @@ kdump_attr_ref_set(kdump_ctx *ctx, kdump_attr_ref_t *ref,
 		   const kdump_attr_t *valp)
 {
 	clear_error(ctx);
-	return check_set_attr(ctx, ref->_ptr, valp);
+	return check_set_attr(ctx, ref_attr(ref), valp);
 }
 
 kdump_status
@@ -165,10 +185,10 @@ kdump_enum_attr(kdump_ctx *ctx, const char *path,
 }
 
 static kdump_status
-set_iter_pos(kdump_attr_iter_t *iter, const struct attr_data *attr)
+set_iter_pos(kdump_attr_iter_t *iter, struct attr_data *attr)
 {
 	iter->key = attr ? attr->template->key : NULL;
-	iter->_pos = attr;
+	mkref(&iter->pos, attr);
 	return kdump_ok;
 }
 
@@ -176,7 +196,7 @@ kdump_status
 kdump_attr_iter_start(kdump_ctx *ctx, const char *path,
 		      kdump_attr_iter_t *iter)
 {
-	const struct attr_data *d;
+	struct attr_data *d;
 
 	clear_error(ctx);
 
@@ -195,15 +215,15 @@ kdump_attr_iter_start(kdump_ctx *ctx, const char *path,
 kdump_status
 kdump_attr_iter_next(kdump_ctx *ctx, kdump_attr_iter_t *iter)
 {
-	const struct attr_data *d;
+	struct attr_data *d;
 
 	clear_error(ctx);
 
-	if (!iter->_pos)
+	d = ref_attr(&iter->pos);
+	if (!d)
 		return set_error(ctx, kdump_invalid, "End of iteration");
 
 	do {
-		d = (const struct attr_data*)iter->_pos;
 		d = d->next;
 	} while (d && !attr_isset(d));
 
@@ -214,24 +234,6 @@ void
 kdump_attr_iter_end(kdump_ctx *ctx, kdump_attr_iter_t *iter)
 {
 	clear_error(ctx);
-}
-
-kdump_status
-kdump_attr_iter_data(kdump_ctx *ctx, const kdump_attr_iter_t *iter,
-		     struct kdump_attr *valp)
-{
-	const struct attr_data *d;
-
-	clear_error(ctx);
-
-	if (!iter->key)
-		return set_error(ctx, kdump_invalid, "Invalid iterator");
-
-	d = (const struct attr_data*) iter->_pos;
-	valp->type = d->template->type;
-	valp->val = *attr_value(d);
-
-	return kdump_ok;
 }
 
 kdump_byte_order_t

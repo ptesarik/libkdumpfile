@@ -121,7 +121,7 @@ main(int argc, char **argv)
 			} else
 				seen[i] = 1;
 
-			res = kdump_attr_iter_data(ctx, &it, &attr);
+			res = kdump_attr_ref_get(ctx, &it.pos, &attr);
 			if (res != kdump_ok) {
 				fprintf(stderr, "Cannot get value of %s: %s\n",
 					it.key, kdump_err_str(ctx));
