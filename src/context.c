@@ -135,7 +135,7 @@ kdump_sub_attr_ref(kdump_ctx *ctx, const kdump_attr_ref_t *base,
 	clear_error(ctx);
 
 	dir = ref_attr(base);
-	attr = lookup_dir_attr(ctx, dir, subkey);
+	attr = lookup_dir_attr(ctx, dir, subkey, strlen(subkey));
 	if (!attr)
 		return set_error(ctx, kdump_nokey, "No such key");
 

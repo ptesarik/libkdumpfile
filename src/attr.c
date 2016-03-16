@@ -77,17 +77,6 @@ key_hash_index(const char *key)
 	return fold_hash(string_hash(key), ATTR_HASH_BITS);
 }
 
-/**  Calculate the hash index of a partial key path.
- * @param key     Key path.
- * @param keylen  Initial portion of @c key to be considered.
- * @returns       Desired index in the hash table.
- */
-static unsigned
-part_hash_index(const char *key, size_t keylen)
-{
-	return fold_hash(mem_hash(key, keylen), ATTR_HASH_BITS);
-}
-
 /**  Get the length of an attribute path
  * @param attr  Attribute data.
  * @returns     Length of the full path string.
@@ -134,32 +123,6 @@ make_attr_path(const struct attr_data *attr, char *endp)
 	return endp;
 }
 
-/**  Compare if attribute data correponds to a given key.
- * @param attr  Attribute data.
- * @param key   Key path.
- * @param len   Initial portion of @c key to be considered.
- * @returns     Zero if the data is stored under the given key,
- *              non-zero otherwise.
- */
-static int
-keycmp(const struct attr_data *attr, const char *key, size_t len)
-{
-	const char *p;
-
-	while ( (p = memrchr(key, '.', len)) ) {
-		size_t partlen = key + len - p - 1;
-		int res = strncmp(attr->template->key, p + 1, partlen);
-		if (res)
-			return res;
-		if (attr->template->key[partlen] != '\0')
-			return 1;
-		attr = attr->parent;
-		len = p - key;
-	}
-
-	return memcmp(attr->template->key, key, len);
-}
-
 /**  Compare if attribute data correponds to a key relative to base.
  * @param attr  Attribute data.
  * @param dir   Base directory attribute.
@@ -169,8 +132,8 @@ keycmp(const struct attr_data *attr, const char *key, size_t len)
  *              non-zero otherwise.
  */
 static int
-keycmp_dir(const struct attr_data *attr, const struct attr_data *dir,
-	   const char *key, size_t len)
+keycmp(const struct attr_data *attr, const struct attr_data *dir,
+       const char *key, size_t len)
 {
 	const char *p;
 	size_t partlen;
@@ -213,16 +176,16 @@ path_hash(struct phash *ph, const struct attr_data *dir)
 }
 
 /**  Look up a child attribute of a given directory.
- * @param ctx   Dump file object.
- * @param dir   Directory attribute.
- * @param key   Key name relative to @ref dir.
- * @returns     Stored attribute or @c NULL if not found.
+ * @param ctx     Dump file object.
+ * @param dir     Directory attribute.
+ * @param key     Key name relative to @ref dir.
+ * @param keylen  Initial portion of @c key to be considered.
+ * @returns       Stored attribute or @c NULL if not found.
  */
 struct attr_data *
 lookup_dir_attr(const kdump_ctx *ctx, const struct attr_data *dir,
-		const char *key)
+		const char *key, size_t keylen)
 {
-	size_t keylen = strlen(key);
 	struct phash ph;
 	unsigned ehash, i;
 	struct attr_hash *tbl;
@@ -238,7 +201,7 @@ lookup_dir_attr(const kdump_ctx *ctx, const struct attr_data *dir,
 			struct attr_data *d = &tbl->table[i];
 			if (!d->parent)
 				break;
-			if (!keycmp_dir(d, dir, key, keylen))
+			if (!keycmp(d, dir, key, keylen))
 				return d;
 			tbl = tbl->next;
 		} while (tbl);
@@ -257,24 +220,8 @@ lookup_dir_attr(const kdump_ctx *ctx, const struct attr_data *dir,
 static struct attr_data*
 lookup_attr_part(const kdump_ctx *ctx, const char *key, size_t keylen)
 {
-	unsigned ehash, i;
-	struct attr_hash *tbl;
-
-	i = part_hash_index(key, keylen);
-	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
-	do {
-		tbl = ctx->attr;
-		do {
-			if (!tbl->table[i].parent)
-				break;
-			if (!keycmp(&tbl->table[i], key, keylen))
-				return &tbl->table[i];
-			tbl = tbl->next;
-		} while (tbl);
-		i = (i + 1) % ATTR_HASH_SIZE;
-	} while (i != ehash);
-
-	return NULL;
+	return lookup_dir_attr(ctx, ctx->global_attrs[GKI_dir_root],
+			       key, keylen);
 }
 
 /**  Look up raw attribute data by name.
