@@ -45,6 +45,11 @@ checkattr_LDADD = \
 	$(LDADD) \
 	$(top_builddir)/src/libkdumpfile.la
 
+clearattr_SOURCES = clearattr.c
+clearattr_LDADD = \
+	$(LDADD) \
+	$(top_builddir)/src/libkdumpfile.la
+
 mkdiskdump_SOURCES = mkdiskdump.c
 mkelf_SOURCES = mkelf.c
 mklkcd_SOURCES = mklkcd.c
@@ -64,6 +69,7 @@ subattr_LDADD = $(top_builddir)/src/libkdumpfile.la
 check_PROGRAMS = \
 	attriter \
 	checkattr \
+	clearattr \
 	dumpdata \
 	mkdiskdump \
 	mkelf \
@@ -118,6 +124,7 @@ dist_check_SCRIPTS = \
 
 TESTS = $(test_scripts) \
 	attriter \
+	clearattr \
 	privptr \
 	subattr
 

@@ -885,8 +885,17 @@ kdump_status add_attr_static_string(kdump_ctx *ctx, const char *path,
 				    const struct attr_template *tmpl,
 				    const char *str);
 
-#define clear_attrs INTERNAL_NAME(clear_attrs)
-void clear_attrs(kdump_ctx *ctx);
+#define clear_attr INTERNAL_NAME(clear_attr)
+void clear_attr(struct attr_data *attr);
+
+/**  Clear (unset) all attributes.
+ * @param ctx   Dump file object.
+ */
+static inline void
+clear_attrs(kdump_ctx *ctx)
+{
+	clear_attr(ctx->global_attrs[GKI_dir_root]);
+}
 
 #define cleanup_attr INTERNAL_NAME(cleanup_attr)
 void cleanup_attr(kdump_ctx *ctx);

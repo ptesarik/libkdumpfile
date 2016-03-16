@@ -1,6 +1,7 @@
 # Resulting binaries
 attriter
 checkattr
+clearattr
 dumpdata
 mkdiskdump
 mkelf

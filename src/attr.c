@@ -336,8 +336,9 @@ alloc_attr(kdump_ctx *ctx, struct attr_data *parent,
 }
 
 /**  Clear (unset) an attribute.
+ * @param attr  Attribute to be cleared.
  */
-static void
+void
 clear_attr(struct attr_data *attr)
 {
 	struct attr_data *child;
@@ -461,15 +462,6 @@ instantiate_path(struct attr_data *attr)
 			break;
 		attr = attr->parent;
 	}
-}
-
-/**  Clear (unset) all attributes.
- * @param ctx   Dump file object.
- */
-void
-clear_attrs(kdump_ctx *ctx)
-{
-	clear_attr(ctx->global_attrs[GKI_dir_root]);
 }
 
 /**  Free all memory used by attributes.
