@@ -51,7 +51,6 @@ static kdump_status cb_get_symbol(kdump_ctx *ctx, const char *name, kdump_addr_t
 
 	if (! self->cb_get_symbol) {
 		PyErr_SetString(PyExc_RuntimeError, "Callback symbol-resolving function not set");
-		printf ("aa\n");
 		return kdump_nodata;
 	}
 
@@ -59,7 +58,6 @@ static kdump_status cb_get_symbol(kdump_ctx *ctx, const char *name, kdump_addr_t
 
 	if (! PyLong_Check(ret)) {
 		PyErr_SetString(PyExc_RuntimeError, "Callback of symbol-resolving function returned no long");
-		printf ("bb\n");
 		return kdump_nodata;
 	}
 
