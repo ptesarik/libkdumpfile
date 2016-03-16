@@ -160,6 +160,37 @@ keycmp(const struct attr_data *attr, const char *key, size_t len)
 	return memcmp(attr->template->key, key, len);
 }
 
+/**  Compare if attribute data correponds to a key relative to base.
+ * @param attr  Attribute data.
+ * @param dir   Base directory attribute.
+ * @param key   Key path.
+ * @param len   Initial portion of @c key to be considered.
+ * @returns     Zero if the data is stored under the given key,
+ *              non-zero otherwise.
+ */
+static int
+keycmp_dir(const struct attr_data *attr, const struct attr_data *dir,
+	   const char *key, size_t len)
+{
+	const char *p;
+	size_t partlen;
+	int res;
+
+	do {
+		p = memrchr(key, '.', len) ?: key - 1;
+		partlen = key + len - p - 1;
+		res = strncmp(attr->template->key, p + 1, partlen);
+		if (res)
+			return res;
+		if (attr->template->key[partlen] != '\0')
+			return 1;
+		attr = attr->parent;
+		len = p - key;
+	} while (p > key);
+
+	return attr == dir ? 0 : 1;
+}
+
 /**  Update a partial hash with an attribute directory path.
  * @param ph   Partial hash state.
  * @param dir  (Leaf) attribute directory attribute.
@@ -191,13 +222,14 @@ struct attr_data *
 lookup_dir_attr(const kdump_ctx *ctx, const struct attr_data *dir,
 		const char *key)
 {
+	size_t keylen = strlen(key);
 	struct phash ph;
 	unsigned ehash, i;
 	struct attr_hash *tbl;
 
 	phash_init(&ph);
 	path_hash(&ph, dir);
-	phash_update(&ph, key, strlen(key));
+	phash_update(&ph, key, keylen);
 	i = fold_hash(phash_value(&ph), ATTR_HASH_BITS);
 	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
 	do {
@@ -206,8 +238,7 @@ lookup_dir_attr(const kdump_ctx *ctx, const struct attr_data *dir,
 			struct attr_data *d = &tbl->table[i];
 			if (!d->parent)
 				break;
-			if (d->parent == dir &&
-			    !strcmp(d->template->key, key))
+			if (!keycmp_dir(d, dir, key, keylen))
 				return d;
 			tbl = tbl->next;
 		} while (tbl);
