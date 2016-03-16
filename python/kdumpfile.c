@@ -435,10 +435,94 @@ attr_dir_subscript(PyObject *_self, PyObject *key)
 	return NULL;
 }
 
+static int
+attr_dir_ass_subscript(PyObject *_self, PyObject *key, PyObject *value)
+{
+	attr_dir_object *self = (attr_dir_object*)_self;
+	unsigned PY_LONG_LONG num;
+	PyObject *conv;
+	kdump_ctx *ctx;
+	kdump_attr_t attr;
+	kdump_attr_ref_t ref;
+	kdump_status status;
+
+	if (lookup_attribute(self, key, &ref))
+		return -1;
+
+	attr.type = value
+		? kdump_attr_ref_type(&ref)
+		: kdump_nil;
+	ctx = self->kdumpfile->ctx;
+
+	conv = value;
+	switch (attr.type) {
+	case kdump_nil:		/* used for deletions */
+		break;
+
+	case kdump_number:
+	case kdump_address:
+		if (PyLong_Check(value)) {
+			num = PyLong_AsUnsignedLongLong(value);
+			if (PyErr_Occurred())
+				goto fail;
+		} else if (PyInt_Check(value)) {
+			num = PyInt_AsLong(value);
+			if (PyErr_Occurred())
+				goto fail;
+		} else {
+			PyErr_Format(PyExc_TypeError,
+				     "need an integer, not %.200s",
+				     Py_TYPE(value)->tp_name);
+			goto fail;
+		}
+
+		if (attr.type == kdump_number)
+			attr.val.number = num;
+		else
+			attr.val.address = num;
+		break;
+
+	case kdump_string:
+		if (!PyString_Check(value)) {
+			conv = PyObject_Str(value);
+			if (!conv)
+				goto fail;
+		}
+		if (! (attr.val.string = PyString_AsString(conv)) )
+			goto fail;
+		break;
+
+	default:
+		PyErr_Format(PyExc_TypeError, "Cannot assign to %s",
+			     (attr.type == kdump_directory
+			      ? "a directory"
+			      : "an unknown type"));
+		goto fail;
+	}
+
+	status = kdump_attr_ref_set(ctx, &ref, &attr);
+	kdump_attr_unref(ctx, &ref);
+	if (conv != value)
+		Py_DECREF(conv);
+
+	if (status != kdump_ok) {
+		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
+		return -1;
+	}
+
+	return 0;
+
+ fail:
+	kdump_attr_unref(ctx, &ref);
+	if (conv != value)
+		Py_DECREF(conv);
+	return -1;
+}
+
 static PyMappingMethods attr_dir_as_mapping = {
 	NULL,			/* mp_length */
 	attr_dir_subscript,	/* mp_subscript */
-	NULL,			/* mp_ass_subscript */
+	attr_dir_ass_subscript,	/* mp_ass_subscript */
 };
 
 static void
@@ -481,6 +565,26 @@ attr_dir_getattro(PyObject *_self, PyObject *name)
 	return NULL;
 }
 
+static int
+attr_dir_setattro(PyObject *_self, PyObject *name, PyObject *value)
+{
+	int ret;
+
+	ret = PyObject_GenericSetAttr(_self, name, value);
+	if (!ret || !PyErr_ExceptionMatches(PyExc_AttributeError))
+		return ret;
+
+	PyErr_Clear();
+	ret = attr_dir_ass_subscript(_self, name, value);
+	if (!ret || !PyErr_ExceptionMatches(PyExc_KeyError))
+		return ret;
+
+	PyErr_Format(PyExc_AttributeError,
+		     "'%.50s' object has no attribute '%.400s'",
+		     Py_TYPE(_self)->tp_name, PyString_AS_STRING(name));
+	return -1;
+}
+
 static PyTypeObject attr_dir_object_type =
 {
 	PyVarObject_HEAD_INIT (NULL, 0)
@@ -501,7 +605,7 @@ static PyTypeObject attr_dir_object_type =
 	0,				/* tp_call*/
 	0,				/* tp_str*/
 	attr_dir_getattro,		/* tp_getattro*/
-	0,				/* tp_setattro*/
+	attr_dir_setattro,		/* tp_setattro*/
 	0,				/* tp_as_buffer*/
 	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC, /* tp_flags*/
 	0,				/* tp_doc */
