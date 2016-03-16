@@ -297,6 +297,7 @@ do {							\
 	lookup_exception(NoDataException);
 	lookup_exception(DataErrException);
 	lookup_exception(InvalidException);
+	lookup_exception(NoKeyException);
 	lookup_exception(EOFException);
 #undef lookup_exception
 
