@@ -21,7 +21,8 @@ static PyObject *EOFException;
 
 static PyTypeObject attr_iter_object_type;
 
-static PyObject *attr_dir_new(kdumpfile_object *kdumpfile, const char *path);
+static PyObject *attr_dir_new(kdumpfile_object *kdumpfile,
+			      const kdump_attr_ref_t *baseref);
 
 static PyObject *
 exception_map(kdump_status status)
@@ -73,6 +74,7 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 {
 	kdumpfile_object *self = NULL;
 	static char *keywords[] = {"file", NULL};
+	kdump_attr_ref_t rootref;
 	kdump_status status;
 	PyObject *fo = NULL;
 	int fd;
@@ -115,9 +117,19 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 	kdump_cb_get_symbol_val(self->ctx, cb_get_symbol);
 	kdump_set_priv(self->ctx, self);
 
-	self->attr = attr_dir_new(self, "");
-	if (!self->attr)
+	status = kdump_attr_ref(self->ctx, NULL, &rootref);
+	if (status != kdump_ok) {
+		PyErr_Format(exception_map(status),
+			     "Cannot reference root attribute: %s",
+			     kdump_err_str(self->ctx));
 		goto fail;
+	}
+
+	self->attr = attr_dir_new(self, &rootref);
+	if (!self->attr) {
+		kdump_attr_unref(self->ctx, &rootref);
+		goto fail;
+	}
 
 	return (PyObject*)self;
 
@@ -179,9 +191,11 @@ static PyObject *kdumpfile_read (PyObject *_self, PyObject *args, PyObject *kw)
 }
 
 static PyObject *
-attr_new(kdumpfile_object *kdumpfile, const char *path,
-	 const struct kdump_attr *attr)
+attr_new(kdumpfile_object *kdumpfile, kdump_attr_ref_t *ref, kdump_attr_t *attr)
 {
+	if (attr->type != kdump_directory)
+		kdump_attr_unref(kdumpfile->ctx, ref);
+
 	switch (attr->type) {
 		case kdump_number:
 			return PyLong_FromUnsignedLong(attr->val.number);
@@ -190,7 +204,7 @@ attr_new(kdumpfile_object *kdumpfile, const char *path,
 		case kdump_string:
 			return PyString_FromString(attr->val.string);
 		case kdump_directory:
-			return attr_dir_new(kdumpfile, path);
+			return attr_dir_new(kdumpfile, ref);
 		default:
 			PyErr_SetString(PyExc_RuntimeError, "Unhandled attr type");
 			return NULL;
@@ -350,9 +364,9 @@ static PyTypeObject kdumpfile_object_type =
 /* Attribute dictionary type */
 
 typedef struct {
-	PyObject_VAR_HEAD
+	PyObject_HEAD
 	kdumpfile_object *kdumpfile;
-	char path[];
+	kdump_attr_ref_t baseref;
 } attr_dir_object;
 
 static PyObject *attr_iter_new(attr_dir_object *attr_dir);
@@ -363,9 +377,9 @@ attr_dir_subscript(PyObject *_self, PyObject *key)
 	attr_dir_object *self = (attr_dir_object*)_self;
 	kdump_ctx *ctx;
 	PyObject *stringkey;
-	Py_ssize_t keylen;
-	char *keystr, *attrpath;
-	struct kdump_attr attr;
+	char *keystr;
+	kdump_attr_t attr;
+	kdump_attr_ref_t ref;
 	kdump_status status;
 
 	if (!PyString_Check(key)) {
@@ -375,23 +389,25 @@ attr_dir_subscript(PyObject *_self, PyObject *key)
 	} else
 		stringkey = key;
 
-	if (PyString_AsStringAndSize(stringkey, &keystr, &keylen))
+	keystr = PyString_AsString(stringkey);
+	if (!keystr)
 		goto fail;
 
 	ctx = self->kdumpfile->ctx;
-	if (self->path[0] != '\0') {
-		attrpath = alloca(Py_SIZE(self) + keylen + 1);
-		sprintf(attrpath, "%s.%s", self->path, keystr);
-	} else
-		attrpath = keystr;
-
-	status = kdump_get_attr(ctx, attrpath, &attr);
+	status = kdump_sub_attr_ref(ctx, &self->baseref, keystr, &ref);
 	if (status != kdump_ok) {
-		PyErr_Format(exception_map(status), kdump_err_str(ctx));
+		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
 		goto fail;
 	}
 
-	return attr_new(self->kdumpfile, attrpath, &attr);
+	status = kdump_attr_ref_get(ctx, &ref, &attr);
+	if (status != kdump_ok) {
+		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
+		kdump_attr_unref(ctx, &ref);
+		goto fail;
+	}
+
+	return attr_new(self->kdumpfile, &ref, &attr);
 
  fail:
 	if (stringkey != key)
@@ -411,6 +427,7 @@ attr_dir_dealloc(PyObject *_self)
 	attr_dir_object *self = (attr_dir_object*)_self;
 
 	PyObject_GC_UnTrack(self);
+	kdump_attr_unref(self->kdumpfile->ctx, &self->baseref);
 	Py_XDECREF((PyObject*)self->kdumpfile);
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -477,18 +494,17 @@ static PyTypeObject attr_dir_object_type =
 };
 
 static PyObject *
-attr_dir_new(kdumpfile_object *kdumpfile, const char *path)
+attr_dir_new(kdumpfile_object *kdumpfile, const kdump_attr_ref_t *baseref)
 {
 	attr_dir_object *self;
 
-	self = PyObject_GC_NewVar(attr_dir_object, &attr_dir_object_type,
-				  strlen(path) + 1);
+	self = PyObject_GC_New(attr_dir_object, &attr_dir_object_type);
 	if (self == NULL)
 		return NULL;
 
-	strcpy(self->path, path);
 	Py_INCREF((PyObject*)kdumpfile);
 	self->kdumpfile = kdumpfile;
+	self->baseref = *baseref;
 	PyObject_GC_Track(self);
 	return (PyObject*)self;
 }
@@ -512,7 +528,8 @@ attr_iter_new(attr_dir_object *attr_dir)
 	if (self == NULL)
 		return NULL;
 
-	status = kdump_attr_iter_start(ctx, attr_dir->path, &self->iter);
+	status = kdump_attr_ref_iter_start(ctx, &attr_dir->baseref,
+					   &self->iter);
 	if (status != kdump_ok) {
 		PyErr_Format(exception_map(status), kdump_err_str(ctx));
 		Py_DECREF(self);
