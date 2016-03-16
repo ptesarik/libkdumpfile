@@ -113,9 +113,11 @@ test_scripts = \
 
 dist_check_DATA = \
 	elf-empty.data \
-	basic.expect
+	basic.expect \
+	partial.expect
 
 dist_check_SCRIPTS = \
+	diskdump-empty \
 	elf-empty \
 	lkcd-empty \
 	lkcd-basic \
