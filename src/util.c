@@ -174,26 +174,6 @@ phash_update(struct phash *ph, const char *s, size_t len)
 		ph->part.bytes[ph->idx++] = *s++;
 }
 
-/**  Get the current hash value.
- * @param[in]  phash  Partial hash state.
- *
- * This function returns the hash value, as if the has was computed from
- * all data passed to @ref phash_update() so far. However, it is possible
- * to update @ref phash again after calling this function and repeat this
- * process indefinitely.
- */
-unsigned long
-phash_value(const struct phash *ph)
-{
-	unsigned long hash = ph->val;
-	unsigned i;
-
-	for (i = 0; i < ph->idx; ++i)
-		hash += (unsigned long)ph->part.bytes[i] <<
-			(8 * (ph->idx - i - 1));
-	return hash;
-}
-
 static size_t
 arch_ptr_size(enum kdump_arch arch)
 {

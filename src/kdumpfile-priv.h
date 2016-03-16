@@ -710,8 +710,50 @@ phash_init(struct phash *hash)
 #define phash_update INTERNAL_NAME(phash_update)
 void phash_update(struct phash *ph, const char *s, size_t len);
 
-#define phash_value INTERNAL_NAME(phash_value)
-unsigned long phash_value(const struct phash *ph);
+#if SIZEOF_LONG == 8
+# define belongtoh(x)	be64toh(x)
+#elif SIZEOF_LONG == 4
+# define belongtoh(x)	be32toh(x)
+#elif __BYTE_ORDER == __BIG_ENDIAN
+# define belongtoh(x)	(x)
+#else
+/**  Convert a big-endian unsigned long to host order.
+ * @param x  Number in big-endian order.
+ * @returns  @ref x in host order.
+ */
+static inline unsigned long
+belongtoh(unsigned long x)
+{
+	unsigned long ret;
+	unsigned i;
+
+	ret = x & 0xff;
+	for (i = 1; i < sizeof(unsigned long); ++i) {
+		x >>= BITS_PER_BYTE;
+		ret <<= BITS_PER_BYTE;
+		ret |= x & 0xff;
+	}
+	return ret;
+}
+#endif
+
+/**  Get the current hash value.
+ * @param[in]  phash  Partial hash state.
+ *
+ * This function returns the hash value, as if the has was computed from
+ * all data passed to @ref phash_update() so far. However, it is possible
+ * to update @ref phash again after calling this function and repeat this
+ * process indefinitely.
+ */
+static inline unsigned long
+phash_value(const struct phash *ph)
+{
+	unsigned long hash = ph->val;
+	if (ph->idx)
+		hash += (belongtoh(ph->part.num) >>
+			 (BITS_PER_BYTE * (sizeof(ph->part) - ph->idx)));
+	return hash;
+}
 
 /* Knuth recommends primes in approximately golden ratio to the maximum
  * integer representable by a machine word for multiplicative hashing.
