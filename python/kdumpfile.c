@@ -19,6 +19,7 @@ static PyObject *InvalidException;
 static PyObject *NoKeyException;
 static PyObject *EOFException;
 
+static PyTypeObject attr_dir_object_type;
 static PyTypeObject attr_iter_object_type;
 
 static PyObject *attr_dir_new(kdumpfile_object *kdumpfile,
@@ -525,6 +526,22 @@ static PyMappingMethods attr_dir_as_mapping = {
 	attr_dir_ass_subscript,	/* mp_ass_subscript */
 };
 
+static PyObject *
+attr_dir_new(kdumpfile_object *kdumpfile, const kdump_attr_ref_t *baseref)
+{
+	attr_dir_object *self;
+
+	self = PyObject_GC_New(attr_dir_object, &attr_dir_object_type);
+	if (self == NULL)
+		return NULL;
+
+	Py_INCREF((PyObject*)kdumpfile);
+	self->kdumpfile = kdumpfile;
+	self->baseref = *baseref;
+	PyObject_GC_Track(self);
+	return (PyObject*)self;
+}
+
 static void
 attr_dir_dealloc(PyObject *_self)
 {
@@ -616,22 +633,6 @@ static PyTypeObject attr_dir_object_type =
 	(getiterfunc)attr_iter_new,	/* tp_iter */
 	0,				/* tp_iternext */
 };
-
-static PyObject *
-attr_dir_new(kdumpfile_object *kdumpfile, const kdump_attr_ref_t *baseref)
-{
-	attr_dir_object *self;
-
-	self = PyObject_GC_New(attr_dir_object, &attr_dir_object_type);
-	if (self == NULL)
-		return NULL;
-
-	Py_INCREF((PyObject*)kdumpfile);
-	self->kdumpfile = kdumpfile;
-	self->baseref = *baseref;
-	PyObject_GC_Track(self);
-	return (PyObject*)self;
-}
 
 /* Attribute iterator type */
 
