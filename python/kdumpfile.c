@@ -150,7 +150,7 @@ kdumpfile_dealloc(PyObject *_self)
 	}
 
 	if (self->file) Py_XDECREF(self->file);
-	self->ob_type->tp_free((PyObject*)self);
+	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 static PyObject *kdumpfile_read (PyObject *_self, PyObject *args, PyObject *kw)
