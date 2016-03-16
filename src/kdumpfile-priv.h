@@ -659,8 +659,15 @@ struct phash {
 	} part;			/**< Partial data. */
 };
 
-#define phash_init INTERNAL_NAME(phash_init)
-void phash_init(struct phash *hash);
+/**  Initialize a partial hash.
+ * @param[out] phash  Partial hash state.
+ */
+static inline void
+phash_init(struct phash *hash)
+{
+	hash->val = 0UL;
+	hash->idx = 0;
+}
 
 #define phash_update INTERNAL_NAME(phash_update)
 void phash_update(struct phash *ph, const char *s, size_t len);
