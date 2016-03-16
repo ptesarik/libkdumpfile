@@ -372,53 +372,66 @@ typedef struct {
 
 static PyObject *attr_iter_new(attr_dir_object *attr_dir);
 
+static int
+lookup_attribute(attr_dir_object *self, PyObject *key, kdump_attr_ref_t *ref)
+{
+	PyObject *stringkey;
+	char *keystr;
+	int ret;
+
+	if (!PyString_Check(key)) {
+		stringkey = PyObject_Str(key);
+		if (!stringkey)
+			return -1;
+	} else
+		stringkey = key;
+
+	ret = -1;
+
+	keystr = PyString_AsString(stringkey);
+	if (keystr) {
+		kdump_ctx *ctx = self->kdumpfile->ctx;
+		kdump_status status;
+
+		status = kdump_sub_attr_ref(ctx, &self->baseref, keystr, ref);
+		if (status == kdump_ok)
+			ret = 0;
+		else if (status == kdump_nokey)
+			PyErr_SetObject(PyExc_KeyError, key);
+		else
+			PyErr_SetString(exception_map(status),
+					kdump_err_str(ctx));
+	}
+
+	if (stringkey != key)
+		Py_DECREF(stringkey);
+
+	return ret;
+}
+
 static PyObject *
 attr_dir_subscript(PyObject *_self, PyObject *key)
 {
 	attr_dir_object *self = (attr_dir_object*)_self;
 	kdump_ctx *ctx;
-	PyObject *stringkey;
-	char *keystr;
 	kdump_attr_t attr;
 	kdump_attr_ref_t ref;
 	kdump_status status;
 
-	if (!PyString_Check(key)) {
-		stringkey = PyObject_Str(key);
-		if (!stringkey)
-			return stringkey;
-	} else
-		stringkey = key;
-
-	keystr = PyString_AsString(stringkey);
-	if (!keystr)
-		goto fail;
+	if (lookup_attribute(self, key, &ref))
+		return NULL;
 
 	ctx = self->kdumpfile->ctx;
-	status = kdump_sub_attr_ref(ctx, &self->baseref, keystr, &ref);
-	if (status == kdump_nokey) {
-		PyErr_SetObject(PyExc_KeyError, key);
-		goto fail;
-	} else if (status != kdump_ok) {
-		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
-		goto fail;
-	}
-
 	status = kdump_attr_ref_get(ctx, &ref, &attr);
-	if (status == kdump_nodata) {
+	if (status == kdump_ok)
+		return attr_new(self->kdumpfile, &ref, &attr);
+
+	if (status == kdump_nodata)
 		PyErr_SetObject(PyExc_KeyError, key);
-		goto fail;
-	} else if (status != kdump_ok) {
+	else
 		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
-		kdump_attr_unref(ctx, &ref);
-		goto fail;
-	}
 
-	return attr_new(self->kdumpfile, &ref, &attr);
-
- fail:
-	if (stringkey != key)
-		Py_DECREF(stringkey);
+	kdump_attr_unref(ctx, &ref);
 	return NULL;
 }
 
