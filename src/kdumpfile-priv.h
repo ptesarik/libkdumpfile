@@ -176,6 +176,14 @@ typedef kdump_addr_t kdump_pfn_t;
 /** Bits for kdump_pfn_t */
 #define PFN_BITS		(BITS_PER_BYTE * sizeof(kdump_pfn_t))
 
+/** Error status for non-matching probe.
+ * This error status must never be returned through the public API.
+ * It is intended to let the open method know that the file cannot
+ * be handled by the current format operations, but it is not really
+ * an error.
+ */
+#define kdump_noprobe	((kdump_status)-1)
+
 enum kdump_arch {
 	ARCH_UNKNOWN = 0,
 	ARCH_AARCH64,
@@ -225,9 +233,8 @@ struct format_ops {
 	 *   ctx->ops        possibly modified
 	 * Return:
 	 *   kdump_ok        can be handled by these ops
-	 *   kdump_unsupported dump file format does not match
-	 *   kdump_syserr    OS error (e.g. read or memory allocation)
-	 *   kdump_dataerr   file data is not valid
+	 *   kdump_noprobe   cannot be handled by these ops
+	 *   or any other kdump_* error status
 	 */
 	kdump_status (*probe)(kdump_ctx *);
 

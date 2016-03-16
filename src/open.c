@@ -142,7 +142,7 @@ kdump_set_fd(kdump_ctx *ctx, int fd)
 		ret = ctx->ops->probe(ctx);
 		if (ret == kdump_ok)
 			return kdump_open_known(ctx);
-		if (ret != kdump_unsupported)
+		if (ret != kdump_noprobe)
 			return ret;
 
 		ctx->ops = NULL;

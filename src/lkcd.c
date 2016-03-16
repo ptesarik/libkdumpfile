@@ -894,8 +894,8 @@ lkcd_probe(kdump_ctx *ctx)
 	else if (!memcmp(ctx->buffer, magic_be, sizeof magic_be))
 		set_byte_order(ctx, kdump_big_endian);
 	else
-		return set_error(ctx, kdump_unsupported,
-				 "Unknown LKCD signature");
+		return set_error(ctx, kdump_noprobe,
+				 "Unrecognized LKCD signature");
 
 	return open_common(ctx);
 }

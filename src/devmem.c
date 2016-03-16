@@ -176,7 +176,7 @@ devmem_probe(kdump_ctx *ctx)
 	if (!S_ISCHR(st.st_mode) ||
 	    (st.st_rdev != makedev(1, 1) &&
 	    major(st.st_rdev) != 10))
-		return set_error(ctx, kdump_unsupported,
+		return set_error(ctx, kdump_noprobe,
 				 "Not a memory dump character device");
 
 	dmp = ctx_malloc(sizeof *dmp, ctx, "Live source private data");

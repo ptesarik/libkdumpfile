@@ -719,7 +719,7 @@ elf_probe(kdump_ctx *ctx)
 	kdump_status ret;
 
 	if (memcmp(eheader, ELFMAG, SELFMAG))
-		return set_error(ctx, kdump_unsupported,
+		return set_error(ctx, kdump_noprobe,
 				 "Invalid ELF signature");
 
 	edp = calloc(1, sizeof *edp);

@@ -672,8 +672,8 @@ diskdump_probe(kdump_ctx *ctx)
 		set_attr_static_string(ctx, GATTR(GKI_format_longname),
 				       "Compressed KDUMP");
 	else
-		return set_error(ctx, kdump_unsupported,
-				 "Unknown diskdump signature");
+		return set_error(ctx, kdump_noprobe,
+				 "Unrecognized diskdump signature");
 
 	return open_common(ctx);
 }

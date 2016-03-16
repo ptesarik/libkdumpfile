@@ -129,7 +129,7 @@ s390_probe(kdump_ctx *ctx)
 	kdump_status ret;
 
 	if (be64toh(dh->h1.magic) != S390_MAGIC)
-		return set_error(ctx, kdump_unsupported,
+		return set_error(ctx, kdump_noprobe,
 				 "Invalid S390DUMP signature");
 
 	set_attr_static_string(ctx, GATTR(GKI_format_longname), "S390 Dump");

@@ -41,12 +41,12 @@ qemu_probe(kdump_ctx *ctx)
 		{ 'Q', 'E', 'V', 'M' };
 
 	if (memcmp(ctx->buffer, magic, sizeof magic))
-		return kdump_unsupported;
+		return kdump_noprobe;
 
-	/* QEMU snapshot not yet implemented */
 	set_attr_static_string(ctx, GATTR(GKI_format_longname),
 			       "QEMU snapshot");
-	return kdump_unsupported;
+	return set_error(ctx, kdump_unsupported,
+			 "%s files not yet implemented", "QEMU snapshot");
 }
 
 const struct format_ops qemu_ops = {
@@ -61,12 +61,12 @@ libvirt_probe(kdump_ctx *ctx)
 		{ 'L', 'i', 'b', 'v' };
 
 	if (memcmp(ctx->buffer, magic, sizeof magic))
-		return kdump_unsupported;
+		return kdump_noprobe;
 
-	/* Libvirt core dump not yet implemented */
 	set_attr_static_string(ctx, GATTR(GKI_format_longname),
 			       "Libvirt core dump");
-	return kdump_unsupported;
+	return set_error(ctx, kdump_unsupported,
+			 "%s files not yet implemented", "Libvirt core dump");
 }
 
 const struct format_ops libvirt_ops = {
@@ -82,12 +82,12 @@ xc_save_probe(kdump_ctx *ctx)
 		  's', 't', 'R', 'e', 'c', 'o', 'r', 'd' };
 
 	if (memcmp(ctx->buffer, magic, sizeof magic))
-		return kdump_unsupported;
+		return kdump_noprobe;
 
-	/* Xen xc_save not yet implemented */
 	set_attr_static_string(ctx, GATTR(GKI_format_longname),
 			       "Xen xc_save");
-	return kdump_unsupported;
+	return set_error(ctx, kdump_unsupported,
+			 "%s files not yet implemented", "Xen xc_save");
 }
 
 const struct format_ops xc_save_ops = {
@@ -103,7 +103,7 @@ xc_core_probe(kdump_ctx *ctx)
 	unsigned char firstbyte;
 
 	if (memcmp(ctx->buffer + 1, magic, sizeof magic))
-		return kdump_unsupported;
+		return kdump_noprobe;
 
 	firstbyte = *(unsigned char*)ctx->buffer;
 	if (firstbyte == 0xed)
@@ -113,10 +113,10 @@ xc_core_probe(kdump_ctx *ctx)
 		set_attr_static_string(ctx, GATTR(GKI_format_longname),
 				       "Xen xc_core (HVM)");
 	else
-		return kdump_unsupported;
+		return kdump_noprobe;
 
-	/* Xen xc_core not yet implemented */
-	return kdump_unsupported;
+	return set_error(ctx, kdump_unsupported,
+			 "%s files not yet implemented", "Xen xc_core");
 }
 
 const struct format_ops xc_core_ops = {
@@ -131,12 +131,13 @@ mclxcd_probe(kdump_ctx *ctx)
 		{ 0xdd, 0xcc, 0x8b, 0x9a };
 
 	if (memcmp(ctx->buffer, magic, sizeof magic))
-		return kdump_unsupported;
+		return kdump_noprobe;
 
-	/* MCLXCD dump not yet implemented */
 	set_attr_static_string(ctx, GATTR(GKI_format_longname),
 			       "Mision Critical Linux Crash Dump");
-	return kdump_unsupported;
+	return set_error(ctx, kdump_unsupported,
+			 "%s files not yet implemented",
+			 "Mision Critical Linux Crash Dump");
 }
 
 const struct format_ops mclxcd_ops = {
