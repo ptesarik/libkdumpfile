@@ -396,13 +396,19 @@ attr_dir_subscript(PyObject *_self, PyObject *key)
 
 	ctx = self->kdumpfile->ctx;
 	status = kdump_sub_attr_ref(ctx, &self->baseref, keystr, &ref);
-	if (status != kdump_ok) {
+	if (status == kdump_nokey) {
+		PyErr_SetObject(PyExc_KeyError, key);
+		goto fail;
+	} else if (status != kdump_ok) {
 		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
 		goto fail;
 	}
 
 	status = kdump_attr_ref_get(ctx, &ref, &attr);
-	if (status != kdump_ok) {
+	if (status == kdump_nodata) {
+		PyErr_SetObject(PyExc_KeyError, key);
+		goto fail;
+	} else if (status != kdump_ok) {
 		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
 		kdump_attr_unref(ctx, &ref);
 		goto fail;
@@ -453,7 +459,7 @@ attr_dir_getattro(PyObject *_self, PyObject *name)
 
 	PyErr_Clear();
 	ret = attr_dir_subscript(_self, name);
-	if (ret || !PyErr_ExceptionMatches(NoDataException))
+	if (ret || !PyErr_ExceptionMatches(PyExc_KeyError))
 		return ret;
 
 	PyErr_Format(PyExc_AttributeError,
