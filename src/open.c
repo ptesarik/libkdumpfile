@@ -121,6 +121,7 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 kdump_status
 kdump_set_fd(kdump_ctx *ctx, int fd)
 {
+	struct attr_data *d;
 	ssize_t rd;
 	kdump_status ret;
 	int i;
@@ -144,13 +145,15 @@ kdump_set_fd(kdump_ctx *ctx, int fd)
 		if (ret != kdump_unsupported)
 			return ret;
 
+		ctx->ops = NULL;
 		if (ctx->cache)
 			cache_free(ctx->cache);
 		clear_attrs(ctx);
+		d = ctx->global_attrs[GKI_cache_size];
+		set_attr(ctx, d, *attr_value(d));
 		clear_error(ctx);
 	}
 
-	ctx->ops = NULL;
 	return set_error(ctx, kdump_unsupported, "Unknown file format");
 }
 
