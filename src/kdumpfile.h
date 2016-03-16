@@ -485,6 +485,12 @@ kdump_status kdump_sub_attr_ref(kdump_ctx *ctx, const kdump_attr_ref_t *base,
  */
 void kdump_attr_unref(kdump_ctx *ctx, kdump_attr_ref_t *ref);
 
+/**  Get the type of an attribute by reference.
+ * @param ref  Attribute reference.
+ * @returns    Attribute type.
+ */
+kdump_attr_type_t kdump_attr_ref_type(kdump_attr_ref_t *ref);
+
 /**  Get attribute data by reference.
  * @param      ctx   Dump file object.
  * @param[in]  ref   Attribute reference.

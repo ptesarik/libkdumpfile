@@ -149,6 +149,12 @@ kdump_attr_unref(kdump_ctx *ctx, kdump_attr_ref_t *ref)
 	clear_error(ctx);
 }
 
+kdump_attr_type_t
+kdump_attr_ref_type(kdump_attr_ref_t *ref)
+{
+	return ref_attr(ref)->template->type;
+}
+
 kdump_status
 kdump_attr_ref_get(kdump_ctx *ctx, const kdump_attr_ref_t *ref,
 		   kdump_attr_t *valp)
