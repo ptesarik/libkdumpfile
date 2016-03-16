@@ -32,7 +32,9 @@
 
 #include "testutil.h"
 
-#define ATTRPATH	"linux.uts.sysname"
+#define ATTRDIR		"linux.uts"
+#define ATTRNAME	"sysname"
+#define ATTRPATH	ATTRDIR "." ATTRNAME
 #define ATTRVALUE	"Linux"
 
 int
@@ -59,7 +61,7 @@ main(int argc, char **argv)
 		return TEST_FAIL;
 	}
 
-	status = kdump_attr_ref(ctx, NULL, &ref);
+	status = kdump_attr_ref(ctx, "linux", &ref);
 	if (status != kdump_ok) {
 		fprintf(stderr, "kdump_attr_ref failed: %s\n",
 			kdump_err_str(ctx));
@@ -68,23 +70,23 @@ main(int argc, char **argv)
 
 	rc = TEST_OK;
 
-	status = kdump_sub_attr_ref(ctx, &ref, "linux", &subref);
+	status = kdump_sub_attr_ref(ctx, &ref, "uts", &subref);
 	if (status == kdump_ok) {
 		status = kdump_attr_ref_get(ctx, &subref, &attr);
 		if (attr.type != kdump_directory) {
 			fprintf(stderr, "Wrong type for %s: %d\n",
-				"linux", (int) attr.type);
+				ATTRDIR, (int) attr.type);
 			rc = TEST_FAIL;
 		} else
-			printf("%s is a directory\n", "linux");
+			printf("%s is a directory\n", ATTRDIR);
 		kdump_attr_unref(ctx, &subref);
 	} else {
 		fprintf(stderr, "kdump_sub_attr_ref failed for %s: %s\n",
-			"linux", kdump_err_str(ctx));
+			ATTRDIR, kdump_err_str(ctx));
 		rc = TEST_FAIL;
 	}
 
-	status = kdump_sub_attr_ref(ctx, &ref, ATTRPATH, &subref);
+	status = kdump_sub_attr_ref(ctx, &ref, "uts.sysname", &subref);
 	if (status == kdump_ok) {
 		status = kdump_attr_ref_get(ctx, &subref, &attr);
 		if (attr.type != kdump_string) {

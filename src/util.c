@@ -164,13 +164,15 @@ void
 phash_update(struct phash *ph, const char *s, size_t len)
 {
 	if (ph->idx) {
-		while (ph->idx < sizeof(unsigned long)) {
+		while (len && ph->idx < sizeof(unsigned long)) {
 			ph->part.bytes[ph->idx] = *s++;
 			--len;
 			++ph->idx;
 		}
-		add_to_hash(&ph->val, ph->part.num);
-		ph->idx = 0;
+		if (ph->idx >= sizeof(unsigned long)) {
+			add_to_hash(&ph->val, ph->part.num);
+			ph->idx = 0;
+		}
 	}
 
 	while (len >= sizeof(unsigned long)) {
