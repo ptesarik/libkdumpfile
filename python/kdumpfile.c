@@ -712,7 +712,7 @@ attr_iter_next(PyObject *_self)
 
 static PyTypeObject attr_iter_object_type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	"_libkdumpfile.attribute-iterator",
+	"_kdumpfile.attribute-iterator",
 	sizeof(attr_iter_object),	/* tp_basicsize */
 	0,				/* tp_itemsize */
 	/* methods */
