@@ -627,6 +627,32 @@ set_attr_address(kdump_ctx *ctx, const char *key, kdump_addr_t addr)
 	return set_attr(ctx, attr, val);
 }
 
+/**  Set a string attribute's value.
+ * @param ctx   Dump file object.
+ * @param attr  An attribute string.
+ * @param str   New string value.
+ * @returns     Error status.
+ */
+kdump_status
+set_raw_attr_string(kdump_ctx *ctx, struct attr_data *attr, const char *str)
+{
+	char *dynstr = strdup(str);
+	kdump_attr_value_t val;
+	kdump_status res;
+
+	if (!dynstr)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate string");
+
+	clear_attr(attr);
+	attr->dynstr = 1;
+	val.string = dynstr;
+	res = set_attr(ctx, attr, val);
+	if (res != kdump_ok)
+		free(dynstr);
+	return res;
+}
+
 /**  Set a string attribute of a dump file object.
  * @param ctx  Dump file object.
  * @param key  Key name.
@@ -637,22 +663,12 @@ kdump_status
 set_attr_string(kdump_ctx *ctx, const char *key, const char *str)
 {
 	struct attr_data *attr;
-	char *dynstr;
-	union kdump_attr_value val;
 
 	attr = lookup_attr_raw(ctx, key);
 	if (!attr)
 		return set_error(ctx, kdump_nokey, "No such key");
 
-	dynstr = strdup(str);
-	if (!dynstr)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate string");
-
-	clear_attr(attr);
-	attr->dynstr = 1;
-	val.string = dynstr;
-	return set_attr(ctx, attr, val);
+	return set_raw_attr_string(ctx, attr, str);
 }
 
 /**  Set a static string attribute of a dump file object.

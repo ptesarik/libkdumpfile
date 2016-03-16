@@ -78,6 +78,9 @@ check_set_attr(kdump_ctx *ctx, struct attr_data *attr,
 	if (valp->type != attr->template->type)
 		return set_error(ctx, kdump_invalid, "Type mismatch");
 
+	if (valp->type == kdump_string)
+		return set_raw_attr_string(ctx, attr, valp->val.string);
+
 	return set_attr(ctx, attr, valp->val);
 }
 
