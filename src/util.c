@@ -340,7 +340,9 @@ arch_name_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 		int page_shift = default_page_shift(ctx->arch);
 		if (!page_shift)
 			return kdump_ok;
-		set_page_shift(ctx, page_shift);
+
+		/* Call do_arch_init() via hooks. */
+		return set_page_shift(ctx, page_shift);
 	}
 
 	return do_arch_init(ctx);
