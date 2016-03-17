@@ -444,9 +444,10 @@ attr_dir_ass_subscript(PyObject *_self, PyObject *key, PyObject *value)
 	kdump_attr_t attr;
 	kdump_attr_ref_t ref;
 	kdump_status status;
+	int ret = -1;
 
 	if (lookup_attribute(self, key, &ref))
-		return -1;
+		return ret;
 
 	attr.type = value
 		? kdump_attr_ref_type(&ref)
@@ -469,16 +470,16 @@ attr_dir_ass_subscript(PyObject *_self, PyObject *key, PyObject *value)
 		if (PyLong_Check(value)) {
 			num = PyLong_AsUnsignedLongLong(value);
 			if (PyErr_Occurred())
-				goto fail;
+				goto out;
 		} else if (PyInt_Check(value)) {
 			num = PyInt_AsLong(value);
 			if (PyErr_Occurred())
-				goto fail;
+				goto out;
 		} else {
 			PyErr_Format(PyExc_TypeError,
 				     "need an integer, not %.200s",
 				     Py_TYPE(value)->tp_name);
-			goto fail;
+			goto out;
 		}
 
 		if (attr.type == kdump_number)
@@ -491,35 +492,29 @@ attr_dir_ass_subscript(PyObject *_self, PyObject *key, PyObject *value)
 		if (!PyString_Check(value)) {
 			conv = PyObject_Str(value);
 			if (!conv)
-				goto fail;
+				goto out;
 		}
 		if (! (attr.val.string = PyString_AsString(conv)) )
-			goto fail;
+			goto out;
 		break;
 
 	default:
 		PyErr_SetString(PyExc_TypeError,
 				"assignment to an unknown type");
-		goto fail;
+		goto out;
 	}
 
 	status = kdump_attr_ref_set(ctx, &ref, &attr);
-	kdump_attr_unref(ctx, &ref);
-	if (conv != value)
-		Py_DECREF(conv);
-
-	if (status != kdump_ok) {
+	if (status != kdump_ok)
 		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
-		return -1;
-	}
+	else
+		ret = 0;
 
-	return 0;
-
- fail:
+ out:
 	kdump_attr_unref(ctx, &ref);
 	if (conv != value)
 		Py_DECREF(conv);
-	return -1;
+	return ret;
 }
 
 static PyMappingMethods attr_dir_as_mapping = {
