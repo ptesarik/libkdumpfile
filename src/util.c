@@ -379,14 +379,14 @@ const struct attr_ops page_shift_ops = {
  * but let's make sure that it is present in the destination.
  */
 static kdump_status
-set_uts_string(kdump_ctx *ctx, const char *key, const char *src)
+set_uts_string(kdump_ctx *ctx, struct attr_data *attr, const char *src)
 {
 	char str[NEW_UTS_LEN + 1];
 
 	memcpy(str, src, NEW_UTS_LEN);
 	str[NEW_UTS_LEN] = 0;
-	return set_error(ctx, set_attr_string(ctx, key, str),
-			 "Cannot set attribute %s", key);
+	return set_error(ctx, set_raw_attr_string(ctx, attr, str),
+			 "Cannot set attribute %s", attr->template->key);
 }
 
 kdump_status
@@ -410,7 +410,7 @@ set_uts(kdump_ctx *ctx, const struct new_utsname *src)
 	kdump_status res;
 
 	for (i = 0; i < ARRAY_SIZE(defs); ++i) {
-		res = set_uts_string(ctx, GATTR(defs[i].idx),
+		res = set_uts_string(ctx, ctx->global_attrs[defs[i].idx],
 				     (const char*)src + defs[i].off);
 		if (res != kdump_ok)
 			return res;
