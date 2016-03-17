@@ -458,6 +458,12 @@ attr_dir_ass_subscript(PyObject *_self, PyObject *key, PyObject *value)
 	case kdump_nil:		/* used for deletions */
 		break;
 
+	case kdump_directory:
+		/* TODO: We may want to enforce a specific type or even
+		 * a specific value for directory instantiation.
+		 */
+		break;
+
 	case kdump_number:
 	case kdump_address:
 		if (PyLong_Check(value)) {
@@ -492,10 +498,8 @@ attr_dir_ass_subscript(PyObject *_self, PyObject *key, PyObject *value)
 		break;
 
 	default:
-		PyErr_Format(PyExc_TypeError, "Cannot assign to %s",
-			     (attr.type == kdump_directory
-			      ? "a directory"
-			      : "an unknown type"));
+		PyErr_SetString(PyExc_TypeError,
+				"assignment to an unknown type");
 		goto fail;
 	}
 
