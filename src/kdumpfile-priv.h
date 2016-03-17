@@ -639,9 +639,6 @@ kdump_status set_error(kdump_ctx *ctx, kdump_status ret,
 #define ctx_malloc INTERNAL_NAME(ctx_malloc)
 void *ctx_malloc(size_t size, kdump_ctx *ctx, const char *desc);
 
-#define machine_arch INTERNAL_NAME(machine_arch)
-enum kdump_arch machine_arch(const char *machine);
-
 #define set_arch INTERNAL_NAME(set_arch)
 kdump_status set_arch(kdump_ctx *ctx, enum kdump_arch arch);
 
@@ -959,6 +956,9 @@ extern const struct attr_ops page_shift_ops;
 
 #define cache_size_ops INTERNAL_NAME(cache_size_ops)
 extern const struct attr_ops cache_size_ops;
+
+#define uts_machine_ops INTERNAL_NAME(uts_machine_ops)
+extern const struct attr_ops uts_machine_ops;
 
 /* Xen */
 

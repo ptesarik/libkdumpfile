@@ -809,7 +809,6 @@ open_common(kdump_ctx *ctx)
 {
 	struct dump_header_common *dh = ctx->buffer;
 	struct lkcd_priv *lkcdp;
-	const struct attr_data *attr;
 	kdump_status ret;
 
 	lkcdp = ctx_malloc(sizeof *lkcdp, ctx, "LKCD private data");
@@ -863,16 +862,6 @@ open_common(kdump_ctx *ctx)
 
 	lkcdp->pfn_level1 = NULL;
 	lkcdp->l1_size = 0;
-
-	attr = lookup_attr(ctx, GATTR(GKI_linux_uts_machine));
-	if (!attr) {
-		ret = set_error(ctx, kdump_nodata, "Architecture is not set");
-		goto err_free;
-	}
-
-	ret = set_arch(ctx, machine_arch(attr_value(attr)->string));
-	if (ret != kdump_ok)
-		goto err_free;
 
 	return kdump_ok;
 

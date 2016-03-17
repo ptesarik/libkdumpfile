@@ -43,7 +43,8 @@ ATTR(linux_uts, "sysname", linux_uts_sysname, string, const char *)
 ATTR(linux_uts, "nodename", linux_uts_nodename, string, const char *)
 ATTR(linux_uts, "release", linux_uts_release, string, const char *)
 ATTR(linux_uts, "version", linux_uts_version, string, const char *)
-ATTR(linux_uts, "machine", linux_uts_machine, string, const char *)
+ATTR(linux_uts, "machine", linux_uts_machine, string, const char *,
+     .ops = &uts_machine_ops)
 ATTR(linux_uts, "domainname", linux_uts_domainname, string, const char *)
 
 /* Linux vmcoreinfo */

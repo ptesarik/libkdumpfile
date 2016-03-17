@@ -323,7 +323,6 @@ read_notes(kdump_ctx *ctx, off_t off, size_t size)
 {
 	void *notes;
 	ssize_t rd;
-	const struct attr_data *attr;
 	kdump_status ret = kdump_ok;
 
 	notes = ctx_malloc(size, ctx, "notes");
@@ -344,21 +343,11 @@ read_notes(kdump_ctx *ctx, off_t off, size_t size)
 		goto out;
 	}
 
-	attr = lookup_attr(ctx, GATTR(GKI_linux_uts_machine));
-	if (!attr) {
-		ret = set_error(ctx, kdump_nodata, "Architecture is not set");
-		goto out;
+	if (isset_arch_name(ctx)) {
+		ret = process_arch_notes(ctx, notes, size);
+		if (ret != kdump_ok)
+			ret = set_error(ctx, ret, "Cannot process arch notes");
 	}
-
-	ret = set_arch(ctx, machine_arch(attr_value(attr)->string));
-	if (ret != kdump_ok) {
-		ret = set_error(ctx, ret, "Cannot set architecture");
-		goto out;
-	}
-
-	ret = process_arch_notes(ctx, notes, size);
-	if (ret != kdump_ok)
-		ret = set_error(ctx, ret, "Cannot process arch notes");
 
  out:
 	free(notes);
@@ -638,17 +627,6 @@ open_common(kdump_ctx *ctx)
 		if (ret != kdump_ok)
 			goto err_cleanup;
 	}
-
-	if (!isset_arch_name(ctx)) {
-		const struct attr_data *attr =
-			lookup_attr(ctx, GATTR(GKI_linux_uts_machine));
-		ret = attr
-			? set_arch(ctx, machine_arch(attr_value(attr)->string))
-			: set_error(ctx, kdump_nodata,
-				    "Architecture is not set");
-	}
-	if (ret != kdump_ok)
-		goto err_cleanup;
 
 	return ret;
 

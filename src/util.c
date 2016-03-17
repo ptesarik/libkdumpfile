@@ -196,7 +196,7 @@ arch_ptr_size(enum kdump_arch arch)
 
 }
 
-enum kdump_arch
+static enum kdump_arch
 machine_arch(const char *machine)
 {
 	if (!strcmp(machine, "alpha"))
@@ -319,6 +319,24 @@ set_arch(kdump_ctx *ctx, enum kdump_arch arch)
 
 	return kdump_ok;
 }
+
+static kdump_status
+uts_machine_post_hook(kdump_ctx *ctx, struct attr_data *attr)
+{
+	enum kdump_arch arch;
+
+	if (isset_arch_name(ctx))
+		return kdump_ok;
+
+	arch = machine_arch(attr_value(attr)->string);
+	return arch != ARCH_UNKNOWN
+		? set_arch(ctx, arch)
+		: kdump_ok;
+}
+
+const struct attr_ops uts_machine_ops = {
+	.post_set = uts_machine_post_hook,
+};
 
 static kdump_status
 page_size_pre_hook(kdump_ctx *ctx, struct attr_data *attr,
