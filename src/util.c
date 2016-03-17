@@ -298,27 +298,38 @@ arch_name(enum kdump_arch arch)
 	return NULL;
 }
 
-kdump_status
-set_arch(kdump_ctx *ctx, enum kdump_arch arch)
+static kdump_status
+arch_name_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 {
+	ctx->arch = machine_arch(attr_value(attr)->string);
+
+	if (ctx->arch_ops && ctx->arch_ops->cleanup)
+		ctx->arch_ops->cleanup(ctx);
+	ctx->arch_ops = NULL;
+
+	if (ctx->arch == ARCH_UNKNOWN)
+		return kdump_ok;
+
+	set_ptr_size(ctx, arch_ptr_size(ctx->arch));
+
 	if (!isset_page_size(ctx)) {
-		int page_shift = default_page_shift(arch);
+		int page_shift = default_page_shift(ctx->arch);
 		if (!page_shift)
-			return set_error(ctx, kdump_unsupported,
-					 "No default page size");
+			return kdump_ok;
 		set_page_shift(ctx, page_shift);
 	}
 
-	ctx->arch_ops = arch_ops(arch);
-
-	set_ptr_size(ctx, arch_ptr_size(arch));
-	set_arch_name(ctx, arch_name(arch));
-
+	ctx->arch_ops = arch_ops(ctx->arch);
 	if (ctx->arch_ops && ctx->arch_ops->init)
 		return ctx->arch_ops->init(ctx);
 
 	return kdump_ok;
 }
+
+const struct attr_ops arch_name_ops = {
+	.post_set = arch_name_post_hook,
+};
+
 
 static kdump_status
 uts_machine_post_hook(kdump_ctx *ctx, struct attr_data *attr)
@@ -330,7 +341,7 @@ uts_machine_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 
 	arch = machine_arch(attr_value(attr)->string);
 	return arch != ARCH_UNKNOWN
-		? set_arch(ctx, arch)
+		? set_arch_name(ctx, arch_name(arch))
 		: kdump_ok;
 }
 

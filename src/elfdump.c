@@ -82,26 +82,26 @@ struct elfdump_priv {
 
 static void elf_cleanup(kdump_ctx *ctx);
 
-static enum kdump_arch
+static const char *
 mach2arch(unsigned mach, int elfclass)
 {
 	switch(mach) {
 	case EM_AARCH64:
-			return ARCH_AARCH64;
-	case EM_ARM:	return ARCH_ARM;
+			return "aarch64";
+	case EM_ARM:	return "arm";
 	case EM_ALPHA:
 	case EM_FAKE_ALPHA:
-			return ARCH_ALPHA;
-	case EM_IA_64:	return ARCH_IA64;
-	case EM_MIPS:	return ARCH_MIPS;
-	case EM_PPC:	return ARCH_PPC;
-	case EM_PPC64:	return ARCH_PPC64;
+			return "alpha";
+	case EM_IA_64:	return "ia64";
+	case EM_MIPS:	return "mips";
+	case EM_PPC:	return "ppc";
+	case EM_PPC64:	return "ppc64";
 	case EM_S390:	return (elfclass == ELFCLASS64
-				? ARCH_S390X
-				: ARCH_S390);
-	case EM_386:	return ARCH_X86;
-	case EM_X86_64:	return ARCH_X86_64;
-	default:	return ARCH_UNKNOWN;
+				? "s390x"
+				: "s390");
+	case EM_386:	return "i386";
+	case EM_X86_64:	return "x86_64";
+	default:	return NULL;
 	}
 }
 
@@ -599,9 +599,12 @@ process_elf_notes(kdump_ctx *ctx, void *notes)
 
 	if (!isset_arch_name(ctx)) {
 		uint_fast16_t mach = get_arch_machine(ctx);
-		ret = set_arch(ctx, mach2arch(mach, edp->elfclass));
-		if (ret != kdump_ok)
-			return ret;
+		const char *arch = mach2arch(mach, edp->elfclass);
+		if (arch) {
+			ret = set_arch_name(ctx, arch);
+			if (ret != kdump_ok)
+				return ret;
+		}
 	}
 
 	p = notes;

@@ -528,7 +528,8 @@ struct _tag_kdump_ctx {
 
 	/* arch-specific fields */
 	const struct arch_ops *arch_ops;
-	void *archdata;		/* private data */
+	void *archdata;		/**< Arch-specific private data. */
+	enum kdump_arch arch;	/**< Internal-only arch index. */
 
 	/* user private data */
 	void *priv;
@@ -638,9 +639,6 @@ kdump_status set_error(kdump_ctx *ctx, kdump_status ret,
 
 #define ctx_malloc INTERNAL_NAME(ctx_malloc)
 void *ctx_malloc(size_t size, kdump_ctx *ctx, const char *desc);
-
-#define set_arch INTERNAL_NAME(set_arch)
-kdump_status set_arch(kdump_ctx *ctx, enum kdump_arch arch);
 
 #define set_uts INTERNAL_NAME(set_uts)
 kdump_status set_uts(kdump_ctx *ctx, const struct new_utsname *src);
@@ -956,6 +954,9 @@ extern const struct attr_ops page_shift_ops;
 
 #define cache_size_ops INTERNAL_NAME(cache_size_ops)
 extern const struct attr_ops cache_size_ops;
+
+#define arch_name_ops INTERNAL_NAME(arch_name_ops)
+extern const struct attr_ops arch_name_ops;
 
 #define uts_machine_ops INTERNAL_NAME(uts_machine_ops)
 extern const struct attr_ops uts_machine_ops;

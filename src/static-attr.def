@@ -24,7 +24,8 @@
 ATTR(root, "max_pfn", max_pfn, number, kdump_pfn_t)
 
 /* architecture name */
-ATTR(arch, "name", arch_name, string, const char *)
+ATTR(arch, "name", arch_name, string, const char *,
+     .ops = &arch_name_ops)
 
 /* ELF machine ID (e_machine field) */
 ATTR(arch, "machine", arch_machine, number, uint_fast16_t)

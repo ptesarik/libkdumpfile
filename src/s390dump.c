@@ -161,11 +161,11 @@ s390_probe(kdump_ctx *ctx)
 
 	switch (dump32toh(ctx, dh->h1.arch)) {
 	case S390_ARCH_32BIT:
-		set_arch(ctx, ARCH_S390);
+		set_arch_name(ctx, "s390");
 		break;
 
 	case S390_ARCH_64BIT:
-		set_arch(ctx, ARCH_S390X);
+		set_arch_name(ctx, "s390x");
 		break;
 
 	default:
