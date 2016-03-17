@@ -511,6 +511,39 @@ init_attrs(kdump_ctx *ctx)
 	return kdump_ok;
 }
 
+/**  Check whether an attribute has a given value.
+ * @param attr    Attribute data.
+ * @param newval  Checked value.
+ * @returns       Non-zero if attribute already has this value,
+ *                zero otherwise.
+ */
+static int
+attr_has_value(struct attr_data *attr, kdump_attr_value_t newval)
+{
+	const kdump_attr_value_t *oldval = attr_value(attr);
+
+	if (!attr_isset(attr))
+		return 0;
+
+	switch (attr->template->type) {
+	case kdump_directory:
+		return 1;
+
+	case kdump_number:
+		return oldval->number == newval.number;
+
+	case kdump_address:
+		return oldval->address == newval.address;
+
+	case kdump_string:
+		return !strcmp(oldval->string, newval.string);
+
+	case kdump_nil:
+	default:
+		return 0;	/* Should not happen */
+	}
+}
+
 /**  Set an attribute of a dump file object.
  * @param ctx   Dump file object.
  * @param attr  Attribute (detached).
@@ -523,18 +556,14 @@ init_attrs(kdump_ctx *ctx)
 kdump_status
 set_attr(kdump_ctx *ctx, struct attr_data *attr, union kdump_attr_value val)
 {
+	int skiphooks = attr_has_value(attr, val);
 	kdump_status res;
-	const struct attr_ops *ops;
 
-	if (!attr->acthook) {
-		ops = attr->template->ops;
-		if (ops && ops->pre_set) {
-			attr->acthook = 1;
-			res = ops->pre_set(ctx, attr, &val);
-			attr->acthook = 0;
-			if (res != kdump_ok)
-				return res;
-		}
+	if (!skiphooks) {
+		const struct attr_ops *ops = attr->template->ops;
+		if (ops && ops->pre_set &&
+		    (res = ops->pre_set(ctx, attr, &val)) != kdump_ok)
+			return res;
 	}
 
 	if (attr->indirect)
@@ -545,14 +574,11 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr, union kdump_attr_value val)
 	instantiate_path(attr->parent);
 	attr->isset = 1;
 
-	if (!attr->acthook) {
-		ops = attr->template->ops;
-		if (ops && ops->post_set) {
-			attr->acthook = 1;
-			res = ops->post_set(ctx, attr);
-			attr->acthook = 0;
+	if (!skiphooks) {
+		const struct attr_ops *ops = attr->template->ops;
+		if (ops && ops->post_set &&
+		    (res = ops->post_set(ctx, attr)) != kdump_ok)
 			return res;
-		}
 	}
 
 	return kdump_ok;

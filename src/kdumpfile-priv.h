@@ -394,6 +394,9 @@ struct attr_data;
  * This function is called before making a change to an attribute.
  * If this function returns an error code, it is passed up the chain,
  * and no other action is taken.
+ *
+ * This function is not called if the attribute value does not change
+ * as a result of calling @ref attr_set.
  */
 typedef kdump_status attr_pre_fn(
 	kdump_ctx *ctx, struct attr_data *attr, union kdump_attr_value *val);
@@ -406,6 +409,9 @@ typedef kdump_status attr_pre_fn(
  * This function is called after making a change to an attribute.
  * If this function returns an error code, it is passed up the chain,
  * but the value had been changed already.
+ *
+ * This function is not called if the attribute value does not change
+ * as a result of calling @ref attr_set.
  */
 typedef kdump_status attr_post_fn(
 	kdump_ctx *ctx, struct attr_data *attr);
@@ -438,10 +444,9 @@ struct attr_data {
 	struct attr_data *next, *parent;
 	const struct attr_template *template;
 
-	unsigned isset : 1;
+	unsigned isset : 1;	/**< Zero if attribute has no value */
 	unsigned dynstr : 1;	/**< Dynamically allocated string */
 	unsigned indirect : 1;	/**< Actual value is at @c *pval */
-	unsigned acthook : 1;	/**< Set when executing a hook */
 	unsigned dyntmpl : 1;	/**< Dynamically allocated template */
 
 	union {
