@@ -546,9 +546,9 @@ attr_has_value(struct attr_data *attr, kdump_attr_value_t newval)
 
 /**  Set an attribute of a dump file object.
  * @param ctx   Dump file object.
- * @param attr  Attribute (detached).
- * @param val   New value for the object.
- * @returns     Error status (see below).
+ * @param attr  Attribute data.
+ * @param val   New value for the object (ignored for directories).
+ * @returns     Error status.
  *
  * This function works both for statically allocated and dynamically
  * allocated attributes.
@@ -566,10 +566,12 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr, union kdump_attr_value val)
 			return res;
 	}
 
-	if (attr->indirect)
-		*attr->pval = val;
-	else
-		attr->val = val;
+	if (attr->template->type != kdump_directory) {
+		if (attr->indirect)
+			*attr->pval = val;
+		else
+			attr->val = val;
+	}
 
 	instantiate_path(attr->parent);
 	attr->isset = 1;
