@@ -562,8 +562,11 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr, union kdump_attr_value val)
 	if (!skiphooks) {
 		const struct attr_ops *ops = attr->template->ops;
 		if (ops && ops->pre_set &&
-		    (res = ops->pre_set(ctx, attr, &val)) != kdump_ok)
+		    (res = ops->pre_set(ctx, attr, &val)) != kdump_ok) {
+			if (attr->dynstr)
+				free((void*) val.string);
 			return res;
+		}
 	}
 
 	if (attr->template->type != kdump_directory) {
@@ -666,7 +669,6 @@ set_raw_attr_string(kdump_ctx *ctx, struct attr_data *attr, const char *str)
 {
 	char *dynstr = strdup(str);
 	kdump_attr_value_t val;
-	kdump_status res;
 
 	if (!dynstr)
 		return set_error(ctx, kdump_syserr,
@@ -675,10 +677,7 @@ set_raw_attr_string(kdump_ctx *ctx, struct attr_data *attr, const char *str)
 	clear_attr(attr);
 	attr->dynstr = 1;
 	val.string = dynstr;
-	res = set_attr(ctx, attr, val);
-	if (res != kdump_ok)
-		free(dynstr);
-	return res;
+	return set_attr(ctx, attr, val);
 }
 
 /**  Set a string attribute of a dump file object.
