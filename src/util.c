@@ -298,6 +298,29 @@ arch_name(enum kdump_arch arch)
 	return NULL;
 }
 
+/**  Perform arch-specific initialization.
+ * @param ctx  Dump file object.
+ * @returns    Error status.
+ *
+ * This function should be called when all arch-specific attributes
+ * are ready:
+ *   - arch.name (sets arch_ops)
+ *   - arch.byte_order
+ *   - arch.ptr_size
+ *   - arch.page_size and arch.page_shift
+ *   - cache has been allocated
+ */
+static kdump_status
+do_arch_init(kdump_ctx *ctx)
+{
+	ctx->arch_init_done = 1;
+	ctx->arch_ops = arch_ops(ctx->arch);
+	if (ctx->arch_ops && ctx->arch_ops->init)
+		return ctx->arch_ops->init(ctx);
+
+	return kdump_ok;
+}
+
 static kdump_status
 arch_name_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 {
@@ -306,6 +329,7 @@ arch_name_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 	if (ctx->arch_ops && ctx->arch_ops->cleanup)
 		ctx->arch_ops->cleanup(ctx);
 	ctx->arch_ops = NULL;
+	ctx->arch_init_done = 0;
 
 	if (ctx->arch == ARCH_UNKNOWN)
 		return kdump_ok;
@@ -319,11 +343,7 @@ arch_name_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 		set_page_shift(ctx, page_shift);
 	}
 
-	ctx->arch_ops = arch_ops(ctx->arch);
-	if (ctx->arch_ops && ctx->arch_ops->init)
-		return ctx->arch_ops->init(ctx);
-
-	return kdump_ok;
+	return do_arch_init(ctx);
 }
 
 const struct attr_ops arch_name_ops = {
@@ -366,9 +386,21 @@ page_size_pre_hook(kdump_ctx *ctx, struct attr_data *attr,
 static kdump_status
 page_size_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 {
-	return ctx->ops && ctx->ops->realloc_caches
-		? ctx->ops->realloc_caches(ctx)
-		: kdump_ok;
+	kdump_status res;
+
+	if (ctx->ops && ctx->ops->realloc_caches) {
+		res = ctx->ops->realloc_caches(ctx);
+		if (res != kdump_ok)
+			return res;
+	}
+
+	if (isset_arch_name(ctx) && !ctx->arch_init_done) {
+		res = do_arch_init(ctx);
+		if (res != kdump_ok)
+			return res;
+	}
+
+	return kdump_ok;
 }
 
 const struct attr_ops page_size_ops = {

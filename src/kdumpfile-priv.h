@@ -530,6 +530,7 @@ struct _tag_kdump_ctx {
 	const struct arch_ops *arch_ops;
 	void *archdata;		/**< Arch-specific private data. */
 	enum kdump_arch arch;	/**< Internal-only arch index. */
+	int arch_init_done;	/**< Non-zero if arch init has been called. */
 
 	/* user private data */
 	void *priv;
