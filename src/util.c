@@ -308,6 +308,21 @@ arch_name(enum kdump_arch arch)
 	return NULL;
 }
 
+/**  Look up an architecture by its canonical name.
+ * @param name  Canonical architecture name.
+ * @returns     Architecture index, or @c ARCH_UNKNOWN if not found.
+ */
+static enum kdump_arch
+arch_index(const char *name)
+{
+	enum kdump_arch arch;
+	if (*name)
+		for (arch = 0; arch < ARRAY_SIZE(canon_arch_names); ++arch)
+			if (!strcmp(name, canon_arch_names[arch]))
+				return arch;
+	return ARCH_UNKNOWN;
+}
+
 /**  Perform arch-specific initialization.
  * @param ctx  Dump file object.
  * @returns    Error status.
@@ -334,7 +349,7 @@ do_arch_init(kdump_ctx *ctx)
 static kdump_status
 arch_name_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 {
-	ctx->arch = machine_arch(attr_value(attr)->string);
+	ctx->arch = arch_index(attr_value(attr)->string);
 
 	if (ctx->arch_ops && ctx->arch_ops->cleanup)
 		ctx->arch_ops->cleanup(ctx);
