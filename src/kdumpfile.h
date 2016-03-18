@@ -590,25 +590,26 @@ kdump_byte_order_t kdump_byte_order(kdump_ctx *ctx);
  */
 size_t kdump_ptr_size(kdump_ctx *ctx);
 
+#define KDUMP_ARCH_AARCH64	"aarch64"
+#define KDUMP_ARCH_ALPHA	"alpha"
+#define KDUMP_ARCH_ARM		"arm"
+#define KDUMP_ARCH_IA32		"ia32"
+#define KDUMP_ARCH_IA64		"ia64"
+#define KDUMP_ARCH_MIPS		"mips"
+#define KDUMP_ARCH_PPC		"ppc"
+#define KDUMP_ARCH_PPC64	"ppc64"
+#define KDUMP_ARCH_S390		"s390"
+#define KDUMP_ARCH_S390X	"s390x"
+#define KDUMP_ARCH_X86_64	"x86_64"
+
 /**  Return the name of the architecture.
  * @param ctx  Dump file object.
  * @returns    Name of the target architecture, or @c NULL (see below).
  *
  * Unlike @ref kdump_machine, which may contain the name of a particular
  * platform (e.g. "i586" v. "i686") or may not even be initialised,
- * this function always returns the detected architecture from a fixed
- * list below:
- *   - aarch64
- *   - alpha
- *   - arm
- *   - ia32
- *   - ia64
- *   - mips
- *   - ppc
- *   - ppc64
- *   - s390
- *   - s390x
- *   - x86_64
+ * this function always returns one of the @c KDUMP_ARCH_xxx strings
+ * defined above.
  *
  * Note: this function may return @c NULL if the target architecture
  *       was not detected for some reason.
