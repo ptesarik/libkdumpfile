@@ -19,6 +19,8 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
+AM_CFLAGS = -fvisibility=hidden
+
 lib_LTLIBRARIES = libkdumpfile.la
 libkdumpfile_la_SOURCES = \
 	attr.c \

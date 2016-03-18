@@ -32,7 +32,10 @@
 #define _KDUMPFILE_PRIV_H	1
 
 #include "config.h"
+
+#pragma GCC visibility push(default)
 #include "kdumpfile.h"
+#pragma GCC visibility pop
 
 #include <endian.h>
 
