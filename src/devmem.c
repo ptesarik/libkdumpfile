@@ -186,25 +186,25 @@ devmem_probe(kdump_ctx *ctx)
 	ctx->fmtdata = dmp;
 
 #if defined(__x86_64__)
-	ret = set_arch_name(ctx, "x86_64");
+	ret = set_arch_name(ctx, KDUMP_ARCH_X86_64);
 #elif defined(__i386__)
-	ret = set_arch_name(ctx, "ia32");
+	ret = set_arch_name(ctx, KDUMP_ARCH_IA32);
 #elif defined(__powerpc64__)
-	ret = set_arch_name(ctx, "ppc64");
+	ret = set_arch_name(ctx, KDUMP_ARCH_PPC64);
 #elif defined(__powerpc__)
-	ret = set_arch_name(ctx, "ppc");
+	ret = set_arch_name(ctx, KDUMP_ARCH_PPC);
 #elif defined(__s390x__)
-	ret = set_arch_name(ctx, "s390x");
+	ret = set_arch_name(ctx, KDUMP_ARCH_S390X);
 #elif defined(__s390__)
-	ret = set_arch_name(ctx, "s390");
+	ret = set_arch_name(ctx, KDUMP_ARCH_S390);
 #elif defined(__ia64__)
-	ret = set_arch_name(ctx, "ia64");
+	ret = set_arch_name(ctx, KDUMP_ARCH_IA64);
 #elif defined(__aarch64__)
-	ret = set_arch_name(ctx, "aarch64");
+	ret = set_arch_name(ctx, KDUMP_ARCH_AARCH64);
 #elif defined(__arm__)
-	ret = set_arch_name(ctx, "arm");
+	ret = set_arch_name(ctx, KDUMP_ARCH_ARM);
 #elif defined(__alpha__)
-	ret = set_arch_name(ctx, "alpha");
+	ret = set_arch_name(ctx, KDUMP_ARCH_ALPHA);
 #endif
 	if (ret != kdump_ok)
 		return ret;

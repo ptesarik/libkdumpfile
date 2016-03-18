@@ -87,20 +87,20 @@ mach2arch(unsigned mach, int elfclass)
 {
 	switch(mach) {
 	case EM_AARCH64:
-			return "aarch64";
-	case EM_ARM:	return "arm";
+			return KDUMP_ARCH_AARCH64;
+	case EM_ARM:	return KDUMP_ARCH_ARM;
 	case EM_ALPHA:
 	case EM_FAKE_ALPHA:
-			return "alpha";
-	case EM_IA_64:	return "ia64";
-	case EM_MIPS:	return "mips";
-	case EM_PPC:	return "ppc";
-	case EM_PPC64:	return "ppc64";
+			return KDUMP_ARCH_ALPHA;
+	case EM_IA_64:	return KDUMP_ARCH_IA64;
+	case EM_MIPS:	return KDUMP_ARCH_MIPS;
+	case EM_PPC:	return KDUMP_ARCH_PPC;
+	case EM_PPC64:	return KDUMP_ARCH_PPC64;
 	case EM_S390:	return (elfclass == ELFCLASS64
-				? "s390x"
-				: "s390");
-	case EM_386:	return "ia32";
-	case EM_X86_64:	return "x86_64";
+				? KDUMP_ARCH_S390X
+				: KDUMP_ARCH_S390);
+	case EM_386:	return KDUMP_ARCH_IA32;
+	case EM_X86_64:	return KDUMP_ARCH_X86_64;
 	default:	return NULL;
 	}
 }
