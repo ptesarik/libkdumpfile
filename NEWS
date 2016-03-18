@@ -4,6 +4,11 @@
   * Caching of dump pages.
   * Improved Doxygen documentation (run 'make doxygen-doc').
   * Private pointer API (kdump_set_priv, kdump_get_priv).
+  * Attribute references.
+  * Attribute iterators.
+  * API and ABI changed:
+    - REMOVED callback enumeration.
+    - CHANGED the canonical architecture name from "i386" to "ia32".
 
 0.2.0
 -----
