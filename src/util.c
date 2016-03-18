@@ -186,10 +186,10 @@ arch_ptr_size(enum kdump_arch arch)
 		return 8;	/* 64 bits */
 
 	case ARCH_ARM:
-	case ARCH_PPC:
+	case ARCH_IA32:
 	case ARCH_MIPS:
+	case ARCH_PPC:
 	case ARCH_S390:
-	case ARCH_X86:
 	default:
 		return 4;	/* 32 bits */
 	}
@@ -217,7 +217,7 @@ machine_arch(const char *machine)
 	else if (!strcmp(machine, "i386") ||
 		 !strcmp(machine, "i586") ||
 		 !strcmp(machine, "i686"))
-		return ARCH_X86;
+		return ARCH_IA32;
 	else if (!strcmp(machine, "x86_64"))
 		return ARCH_X86_64;
 	else if (!strcmp(machine, "arm64") ||
@@ -242,7 +242,7 @@ default_page_shift(enum kdump_arch arch)
 		[ARCH_PPC64] = 0,
 		[ARCH_S390] = 12,
 		[ARCH_S390X] = 12,
-		[ARCH_X86] = 12,
+		[ARCH_IA32] = 12,
 		[ARCH_X86_64] = 12,
 	};
 
@@ -265,9 +265,9 @@ arch_ops(enum kdump_arch arch)
 		/* TODO */
 		break;
 
+	case ARCH_IA32:		return &ia32_ops;
 	case ARCH_PPC64:	return &ppc64_ops;
 	case ARCH_S390X:	return &s390x_ops;
-	case ARCH_X86:		return &ia32_ops;
 	case ARCH_X86_64:	return &x86_64_ops;
 
 	default:
@@ -284,13 +284,13 @@ arch_name(enum kdump_arch arch)
 		[ARCH_AARCH64] = "aarch64",
 		[ARCH_ALPHA] = "alpha",
 		[ARCH_ARM] = "arm",
+		[ARCH_IA32] = "ia32",
 		[ARCH_IA64] = "ia64",
 		[ARCH_MIPS] = "mips",
 		[ARCH_PPC] = "ppc",
 		[ARCH_PPC64] = "ppc64",
 		[ARCH_S390] = "s390",
 		[ARCH_S390X] = "s390x",
-		[ARCH_X86] = "i386",
 		[ARCH_X86_64] = "x86_64",
 	};
 	if (arch < ARRAY_SIZE(names))

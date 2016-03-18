@@ -648,7 +648,7 @@ setup_arch(void)
 	if (!strcmp(arch_name, "x86_64")) {
 		be = data_le;
 		writeheader = writeheader_64;
-	} else if (!strcmp(arch_name, "i386")) {
+	} else if (!strcmp(arch_name, "ia32")) {
 		be = data_le;
 		writeheader = writeheader_32;
 	} else if (!strcmp(arch_name, "ppc64") ||

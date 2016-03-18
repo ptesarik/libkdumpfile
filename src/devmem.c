@@ -188,7 +188,7 @@ devmem_probe(kdump_ctx *ctx)
 #if defined(__x86_64__)
 	ret = set_arch_name(ctx, "x86_64");
 #elif defined(__i386__)
-	ret = set_arch_name(ctx, "i386");
+	ret = set_arch_name(ctx, "ia32");
 #elif defined(__powerpc64__)
 	ret = set_arch_name(ctx, "ppc64");
 #elif defined(__powerpc__)

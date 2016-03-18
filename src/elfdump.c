@@ -99,7 +99,7 @@ mach2arch(unsigned mach, int elfclass)
 	case EM_S390:	return (elfclass == ELFCLASS64
 				? "s390x"
 				: "s390");
-	case EM_386:	return "i386";
+	case EM_386:	return "ia32";
 	case EM_X86_64:	return "x86_64";
 	default:	return NULL;
 	}

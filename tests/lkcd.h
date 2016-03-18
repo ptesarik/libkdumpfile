@@ -120,9 +120,9 @@ struct dump_header_asm_x86_64 {
 	/* uint64_t dha_stack_ptr[NR_CPUS]; */
 } __attribute__((packed));
 
-/* i386 stuff */
+/* ia32 stuff */
 
-struct pt_regs_i386 {
+struct pt_regs_ia32 {
 	uint32_t ebx;
 	uint32_t ecx;
 	uint32_t edx;
@@ -140,20 +140,20 @@ struct pt_regs_i386 {
 	uint32_t xss;
 } __attribute__((packed));
 
-#define DUMP_ASM_MAGIC_NUMBER_I386	0xdeaddeadULL
-#define DUMP_ASM_VERSION_NUMBER_I386	3
+#define DUMP_ASM_MAGIC_NUMBER_IA32	0xdeaddeadULL
+#define DUMP_ASM_VERSION_NUMBER_IA32	3
 
-struct dump_header_asm_i386 {
+struct dump_header_asm_ia32 {
 	uint64_t dha_magic_number;
 	uint32_t dha_version;
 	uint32_t dha_header_size;
 	uint32_t dha_esp;
 	uint32_t dha_eip;
-	struct pt_regs_i386 dha_regs;
+	struct pt_regs_ia32 dha_regs;
 
 	uint32_t dha_smp_num_cpus;
 	uint32_t dha_dumping_cpu;
-	/* struct pt_regs_i386 dha_smp_regs[NR_CPUS]; */
+	/* struct pt_regs_ia32 dha_smp_regs[NR_CPUS]; */
 	/* uint32_t dha_smp_current_task[NR_CPUS]; */
 	/* uint32_t dha_stack[NR_CPUS]; */
 	/* uint32_t dha_stack_ptr[NR_CPUS]; */

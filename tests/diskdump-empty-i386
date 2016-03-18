@@ -6,7 +6,7 @@
 # Create an empty diskdump file and verify meta-attributes.
 #
 
-arch=i386
+arch=ia32
 byte_order=1
 ptr_size=4
 page_shift=12

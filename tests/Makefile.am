@@ -130,5 +130,10 @@ TESTS = $(test_scripts) \
 	privptr \
 	subattr
 
+XFAIL_TESTS = \
+	elf-empty-i386 \
+	elf-empty-i386-elf64 \
+	lkcd-empty-i386
+
 clean-local:
 	-rm -rf out

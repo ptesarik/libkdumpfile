@@ -286,18 +286,18 @@ writeheader_asm_x86_64(FILE *f)
 }
 
 static int
-writeheader_asm_i386(FILE *f)
+writeheader_asm_ia32(FILE *f)
 {
-	struct dump_header_asm_i386 asmhdr;
+	struct dump_header_asm_ia32 asmhdr;
 	size_t sz;
 	off_t off;
 	unsigned i;
 
 	memset(&asmhdr, 0, sizeof asmhdr);
-	asmhdr.dha_magic_number = htodump64(be, DUMP_ASM_MAGIC_NUMBER_I386);
-	asmhdr.dha_version = htodump32(be, DUMP_ASM_VERSION_NUMBER_I386);
+	asmhdr.dha_magic_number = htodump64(be, DUMP_ASM_MAGIC_NUMBER_IA32);
+	asmhdr.dha_version = htodump32(be, DUMP_ASM_VERSION_NUMBER_IA32);
 	sz = sizeof asmhdr +
-		NR_CPUS * sizeof(struct pt_regs_i386) + /* dha_smp_regs */
+		NR_CPUS * sizeof(struct pt_regs_ia32) + /* dha_smp_regs */
 		NR_CPUS * sizeof(uint32_t) + /* dha_smp_current_task */
 		NR_CPUS * sizeof(uint32_t) + /* dha_stack */
 		NR_CPUS * sizeof(uint32_t);  /* dha_stack_ptr */
@@ -311,7 +311,7 @@ writeheader_asm_i386(FILE *f)
 		return -1;
 	}
 
-	off = NR_CPUS * sizeof(struct pt_regs_i386);
+	off = NR_CPUS * sizeof(struct pt_regs_ia32);
 
 	if (fseek(f, off, SEEK_CUR) != 0) {
 		perror("seek dha_smp_current_task");
@@ -684,9 +684,9 @@ setup_arch(void)
 	if (!strcmp(arch_name, "x86_64")) {
 		be = 0;
 		writeheader_asm = writeheader_asm_x86_64;
-	} else if (!strcmp(arch_name, "i386")) {
+	} else if (!strcmp(arch_name, "ia32")) {
 		be = 0;
-		writeheader_asm = writeheader_asm_i386;
+		writeheader_asm = writeheader_asm_ia32;
 	} else if (!strcmp(arch_name, "ppc64")) {
 		be = 1;
 		writeheader_asm = writeheader_asm_ppc64;
