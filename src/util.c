@@ -277,24 +277,34 @@ arch_ops(enum kdump_arch arch)
 	return NULL;
 }
 
+/** Maximum length of a canonical arch name, including terminating NUL. */
+#define MAX_ARCH_NAME_LEN 8
+/** List of canonical architecture names. */
+static const char canon_arch_names[][MAX_ARCH_NAME_LEN] =
+{
+#define DEF_ARCH(name)	[ARCH_ ## name] = KDUMP_ARCH_ ## name "\0"
+	DEF_ARCH(AARCH64),
+	DEF_ARCH(ALPHA),
+	DEF_ARCH(ARM),
+	DEF_ARCH(IA32),
+	DEF_ARCH(IA64),
+	DEF_ARCH(MIPS),
+	DEF_ARCH(PPC),
+	DEF_ARCH(PPC64),
+	DEF_ARCH(S390),
+	DEF_ARCH(S390X),
+	DEF_ARCH(X86_64),
+};
+
+/**  Get the canonical name of an architecture.
+ * @param arch  Architecture index.
+ * @returns     Canonical name, or @c NULL for invalid index.
+ */
 static const char *
 arch_name(enum kdump_arch arch)
 {
-	static const char *const names[] = {
-		[ARCH_AARCH64] = "aarch64",
-		[ARCH_ALPHA] = "alpha",
-		[ARCH_ARM] = "arm",
-		[ARCH_IA32] = "ia32",
-		[ARCH_IA64] = "ia64",
-		[ARCH_MIPS] = "mips",
-		[ARCH_PPC] = "ppc",
-		[ARCH_PPC64] = "ppc64",
-		[ARCH_S390] = "s390",
-		[ARCH_S390X] = "s390x",
-		[ARCH_X86_64] = "x86_64",
-	};
-	if (arch < ARRAY_SIZE(names))
-		return names[arch];
+	if (arch < ARRAY_SIZE(canon_arch_names))
+		return canon_arch_names[arch];
 	return NULL;
 }
 
