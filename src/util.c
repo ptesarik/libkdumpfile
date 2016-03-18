@@ -196,37 +196,41 @@ arch_ptr_size(enum kdump_arch arch)
 
 }
 
-static enum kdump_arch
-machine_arch(const char *machine)
+/**  Translate a utsname machine to a canonical architecture name.
+ * @param machine  Machine name (as found in utsname).
+ * @returns        Canonical architecture name, or @c NULL if not found.
+ */
+static const char *
+machine_arch_name(const char *machine)
 {
 	if (!strcmp(machine, "alpha"))
-		return ARCH_ALPHA;
+		return KDUMP_ARCH_ALPHA;
 	else if (!strcmp(machine, "ia64"))
-		return ARCH_IA64;
+		return KDUMP_ARCH_IA64;
 	else if (!strcmp(machine, "mips"))
-		return ARCH_MIPS;
+		return KDUMP_ARCH_MIPS;
 	else if (!strcmp(machine, "ppc"))
-		return ARCH_PPC;
+		return KDUMP_ARCH_PPC;
 	else if (!strcmp(machine, "ppc64") ||
 		 !strcmp(machine, "ppc64le"))
-		return ARCH_PPC64;
+		return KDUMP_ARCH_PPC64;
 	else if (!strcmp(machine, "s390"))
-		return ARCH_S390;
+		return KDUMP_ARCH_S390;
 	else if (!strcmp(machine, "s390x"))
-		return ARCH_S390X;
+		return KDUMP_ARCH_S390X;
 	else if (!strcmp(machine, "i386") ||
 		 !strcmp(machine, "i586") ||
 		 !strcmp(machine, "i686"))
-		return ARCH_IA32;
+		return KDUMP_ARCH_IA32;
 	else if (!strcmp(machine, "x86_64"))
-		return ARCH_X86_64;
+		return KDUMP_ARCH_X86_64;
 	else if (!strcmp(machine, "arm64") ||
 		 !strcmp(machine, "aarch64"))
-		return ARCH_AARCH64;
+		return KDUMP_ARCH_AARCH64;
 	else if (!strncmp(machine, "arm", 3))
-		return ARCH_ARM;
+		return KDUMP_ARCH_ARM;
 	else
-		return ARCH_UNKNOWN;
+		return NULL;
 }
 
 static size_t
@@ -295,18 +299,6 @@ static const char canon_arch_names[][MAX_ARCH_NAME_LEN] =
 	DEF_ARCH(S390X),
 	DEF_ARCH(X86_64),
 };
-
-/**  Get the canonical name of an architecture.
- * @param arch  Architecture index.
- * @returns     Canonical name, or @c NULL for invalid index.
- */
-static const char *
-arch_name(enum kdump_arch arch)
-{
-	if (arch < ARRAY_SIZE(canon_arch_names))
-		return canon_arch_names[arch];
-	return NULL;
-}
 
 /**  Look up an architecture by its canonical name.
  * @param name  Canonical architecture name.
@@ -381,14 +373,14 @@ const struct attr_ops arch_name_ops = {
 static kdump_status
 uts_machine_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 {
-	enum kdump_arch arch;
+	const char *arch;
 
 	if (isset_arch_name(ctx))
 		return kdump_ok;
 
-	arch = machine_arch(attr_value(attr)->string);
-	return arch != ARCH_UNKNOWN
-		? set_arch_name(ctx, arch_name(arch))
+	arch = machine_arch_name(attr_value(attr)->string);
+	return arch
+		? set_arch_name(ctx, arch)
 		: kdump_ok;
 }
 
