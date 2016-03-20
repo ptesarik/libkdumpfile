@@ -35,8 +35,11 @@
 #include <stdint.h>
 #include <unistd.h>
 
+/** Major version (1st number in the release tag). */
 #define KDUMPFILE_VER_MAJOR	0
+/** Minor version (2nd number in the release tag). */
 #define KDUMPFILE_VER_MINOR	2
+/** Micro version (3rd number in the release tag). */
 #define KDUMPFILE_VER_MICRO	0
 
 #ifdef  __cplusplus
@@ -371,26 +374,26 @@ kdump_status kdump_read_string(kdump_ctx *ctx,
 /**  Dump file attribute value type.
  */
 typedef enum kdump_attr_type {
-	kdump_nil,
-	kdump_directory,
-	kdump_number,
-	kdump_address,
-	kdump_string,
+	kdump_nil,		/**< No type; used for deletions. */
+	kdump_directory,	/**< Attribute directory. */
+	kdump_number,		/**< General number. */
+	kdump_address,		/**< Address or symbol value. */
+	kdump_string,		/**< String attribute. */
 } kdump_attr_type_t;
 
 /**  Dump file attribute value.
  */
 typedef union kdump_attr_value {
-	kdump_num_t number;
-	kdump_addr_t address;
-	const char *string;
+	kdump_num_t number;	/**< Valid if type is @ref kdump_number. */
+	kdump_addr_t address;	/**< Valid if type is @ref kdump_address.  */
+	const char *string;	/**< Valid if type is @ref kdump_string. */
 } kdump_attr_value_t;
 
 /**  Dump file attribute: type + value.
  */
 typedef struct kdump_attr {
-	kdump_attr_type_t type;
-	kdump_attr_value_t val;
+	kdump_attr_type_t type;	/**< Attribute type. */
+	kdump_attr_value_t val;	/**< Attribute value. */
 } kdump_attr_t;
 
 /**  Reference to an attribute.
@@ -590,17 +593,26 @@ kdump_byte_order_t kdump_byte_order(kdump_ctx *ctx);
  */
 size_t kdump_ptr_size(kdump_ctx *ctx);
 
-#define KDUMP_ARCH_AARCH64	"aarch64"
-#define KDUMP_ARCH_ALPHA	"alpha"
-#define KDUMP_ARCH_ARM		"arm"
-#define KDUMP_ARCH_IA32		"ia32"
-#define KDUMP_ARCH_IA64		"ia64"
-#define KDUMP_ARCH_MIPS		"mips"
-#define KDUMP_ARCH_PPC		"ppc"
-#define KDUMP_ARCH_PPC64	"ppc64"
-#define KDUMP_ARCH_S390		"s390"
-#define KDUMP_ARCH_S390X	"s390x"
-#define KDUMP_ARCH_X86_64	"x86_64"
+/** @defgroup arch_xxx Canonical Architecture Names
+ * @{
+ * Recognized values of the @c arch.name attribute. These macros should
+ * be used instead of the actual string to prevent typos. Note that it
+ * is not an error to set the @c arch.name attribute to a value that is
+ * not recognized by the library. However, some functionality may be
+ * unavailable (e.g. virtual-to-physical address translation).
+ */
+#define KDUMP_ARCH_AARCH64	"aarch64" /**< AArch64 (ARM64) */
+#define KDUMP_ARCH_ALPHA	"alpha"	  /**< DEC Alpha */
+#define KDUMP_ARCH_ARM		"arm"	  /**< ARM, 32-bit */
+#define KDUMP_ARCH_IA32		"ia32"	  /**< Intel i386, i586, i686 */
+#define KDUMP_ARCH_IA64		"ia64"	  /**< Intel Itanium */
+#define KDUMP_ARCH_MIPS		"mips"	  /**< MIPS, 32-bit */
+#define KDUMP_ARCH_PPC		"ppc"	  /**< Power ISA, 32-bit */
+#define KDUMP_ARCH_PPC64	"ppc64"	  /**< Power ISA, 64-bit */
+#define KDUMP_ARCH_S390		"s390"	  /**< IBM z/Architecture, 31-bit */
+#define KDUMP_ARCH_S390X	"s390x"	  /**< IBM z/Architecture, 64-bit */
+#define KDUMP_ARCH_X86_64	"x86_64"  /**< AMD64, Intel 64 */
+/* @} */
 
 /**  Return the name of the architecture.
  * @param ctx  Dump file object.
