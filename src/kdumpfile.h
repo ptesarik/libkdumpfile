@@ -343,7 +343,7 @@ ssize_t kdump_read(kdump_ctx *ctx,
  * of bytes read from the dump file.
  *
  * If @c kdump_readp returns @ref kdump_ok, then all requested bytes have
- * been read successfully, and the value referenced by @ref plength is not
+ * been read successfully, and the value referenced by @p plength is not
  * changed. However, if the read fails, some bytes may already have been
  * read, and their number is reported in this variable.
  */
@@ -463,7 +463,7 @@ const char *kdump_get_string_attr(kdump_ctx *ctx, const char *key);
  * @returns    Error status.
  *
  * A reference is a persistent pointer to the attribute, which stays
- * valid until the reference is dropped using @ref kdump_drop_attr_ref,
+ * valid until the reference is dropped using @ref kdump_attr_unref,
  * or the whole dump file object is destroyed.
  */
 kdump_status kdump_attr_ref(kdump_ctx *ctx, const char *key,
@@ -472,7 +472,7 @@ kdump_status kdump_attr_ref(kdump_ctx *ctx, const char *key,
 /** Get a reference to a subordinate attribute
  * @param      ctx     Dump file object.
  * @param[in]  base    Reference to base attribute.
- * @param[in]  subkey  Attribute key, relative to @ref base.
+ * @param[in]  subkey  Attribute key, relative to @p base.
  * @param[out] ref     Attribute reference (initialized on successful return).
  * @returns    Error status.
  */
@@ -521,7 +521,7 @@ kdump_status kdump_attr_ref_set(kdump_ctx *ctx, kdump_attr_ref_t *ref,
  *
  * On return, the iterator is set to the first child attribute. If the
  * attribute directory is empty, this function sets the @c key field
- * of @ref iter to @c NULL and returns @ref kdump_ok.
+ * of @p iter to @c NULL and returns @ref kdump_ok.
  */
 kdump_status kdump_attr_iter_start(kdump_ctx *ctx, const char *path,
 				   kdump_attr_iter_t *iter);
@@ -545,7 +545,7 @@ kdump_status kdump_attr_ref_iter_start(kdump_ctx *ctx,
  * @returns     Error status.
  *
  * If there are no more items in the iteration, this function sets
- * the @c key field of @ref iter to @c NULL and returns @ref kdump_ok.
+ * the @c key field of @p iter to @c NULL and returns @ref kdump_ok.
  * If you try to advance past end of iteration, this function returns
  * @ref kdump_invalid.
  */

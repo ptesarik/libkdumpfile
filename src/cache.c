@@ -594,7 +594,7 @@ get_missed_entry(struct cache *cache, kdump_pfn_t pfn,
  * @param cache  Cache object.
  * @param entry  Cache entry (with data).
  *
- * Note that this function does **NOT** drop the reference to @ref entry.
+ * Note that this function does **NOT** drop the reference to @p entry.
  * This is necessary to allow callers inserting an entry to the cache as
  * soon as possible, while using the data afterwards.
  */
@@ -663,9 +663,9 @@ cache_put_entry(struct cache *cache, struct cache_entry *entry)
  * Use this function to return an entry back into the cache without
  * providing any data. This can be used for error handling.
  *
- * This function first drops the reference to @ref entry and does
+ * This function first drops the reference to @p entry and does
  * nothing unless this was the last reference. This means that a caller
- * who has a reference to @ref entry may still insert it to the cache after
+ * who has a reference to @p entry may still insert it to the cache after
  * another caller discarded it.
  */
 void
@@ -787,7 +787,7 @@ cache_free(struct cache *cache)
  * @param ctx  Dump file object.
  * @param pio  Page I/O control.
  * @param fn   Read function.
- * @param idx  Page index passed to @ref fn (usually PFN).
+ * @param idx  Page index passed to @p fn (usually PFN).
  * @returns    Error status.
  */
 kdump_status

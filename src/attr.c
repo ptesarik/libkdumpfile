@@ -178,7 +178,7 @@ path_hash(struct phash *ph, const struct attr_data *dir)
 /**  Look up a child attribute of a given directory.
  * @param ctx     Dump file object.
  * @param dir     Directory attribute.
- * @param key     Key name relative to @ref dir.
+ * @param key     Key name relative to @p dir.
  * @param keylen  Initial portion of @c key to be considered.
  * @returns       Stored attribute or @c NULL if not found.
  */
@@ -595,9 +595,9 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr, union kdump_attr_value val)
  * @param pval  Pointer to the value.
  * @returns     Error status.
  *
- * The attribute is set to the value pointed to by *val and the same
+ * The attribute is set to the value pointed to by @p pval and the same
  * location is used to store the attribute value.
- * The @ref val pointer must be valid as long as the attribute can be
+ * The @p pval pointer must be valid as long as the attribute can be
  * accessed.
  */
 kdump_status

@@ -399,7 +399,7 @@ struct attr_data;
  * and no other action is taken.
  *
  * This function is not called if the attribute value does not change
- * as a result of calling @ref attr_set.
+ * as a result of calling @ref set_attr.
  */
 typedef kdump_status attr_pre_fn(
 	kdump_ctx *ctx, struct attr_data *attr, union kdump_attr_value *val);
@@ -414,7 +414,7 @@ typedef kdump_status attr_pre_fn(
  * but the value had been changed already.
  *
  * This function is not called if the attribute value does not change
- * as a result of calling @ref attr_set.
+ * as a result of calling @ref set_attr.
  */
 typedef kdump_status attr_post_fn(
 	kdump_ctx *ctx, struct attr_data *attr);
@@ -422,8 +422,8 @@ typedef kdump_status attr_post_fn(
 /**  Attribute ops
  */
 struct attr_ops {
-	attr_pre_fn *pre_set;   /**< Called before attr_set. */
-	attr_post_fn *post_set; /**< Called after attr_set(). */
+	attr_pre_fn *pre_set;   /**< Called before value change. */
+	attr_post_fn *post_set; /**< Called after value change. */
 };
 
 /**  Attribute template.
