@@ -410,42 +410,42 @@ kdump_vmcoreinfo_xen(kdump_ctx *ctx)
 }
 
 static const char*
-vmcoreinfo_row(kdump_ctx *ctx, const char *key, const char *base)
+vmcoreinfo_row(kdump_ctx *ctx, const char *key, const struct attr_data *base)
 {
-	char attrkey[strlen(base) + sizeof(".vmcoreinfo.lines.")
-		     + strlen(key)];
+	const struct attr_data *attr;
 
 	clear_error(ctx);
 
-	sprintf(attrkey, "%s.vmcoreinfo.lines.%s", base, key);
-	return kdump_get_string_attr(ctx, attrkey);
+	attr = lookup_dir_attr(ctx, base, key, strlen(key));
+	return (attr && attr_isset(attr))
+		? attr_value(attr)->string
+		: NULL;
 }
 
 const char *
 kdump_vmcoreinfo_row(kdump_ctx *ctx, const char *key)
 {
-	return vmcoreinfo_row(ctx, key, "linux");
+	return vmcoreinfo_row(ctx, key,
+			      ctx->global_attrs[GKI_linux_vmcoreinfo_lines]);
 }
 
 const char *
 kdump_vmcoreinfo_row_xen(kdump_ctx *ctx, const char *key)
 {
-	return vmcoreinfo_row(ctx, key, "xen");
+	return vmcoreinfo_row(ctx, key,
+			      ctx->global_attrs[GKI_xen_vmcoreinfo_lines]);
 }
 
 static kdump_status
 vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname, kdump_addr_t *symvalue,
-		  const char *base)
+		  const struct attr_data *base)
 {
-	char attrkey[strlen(base) + sizeof(".vmcoreinfo.SYMBOL.") +
-		     strlen(symname)];
 	const struct attr_data *attr;
 
 	clear_error(ctx);
 
-	sprintf(attrkey, "%s.vmcoreinfo.SYMBOL.%s", base, symname);
-	attr = lookup_attr(ctx, attrkey);
-	if (!attr)
+	attr = lookup_dir_attr(ctx, base, symname, strlen(symname));
+	if (!attr || !attr_isset(attr))
 		return set_error(ctx, kdump_nodata, "Key has no value");
 
 	*symvalue = attr_value(attr)->address;
@@ -456,14 +456,16 @@ kdump_status
 kdump_vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname,
 			kdump_addr_t *symvalue)
 {
-	return vmcoreinfo_symbol(ctx, symname, symvalue, "linux");
+	return vmcoreinfo_symbol(ctx, symname, symvalue,
+				 ctx->global_attrs[GKI_linux_symbol]);
 }
 
 kdump_status
 kdump_vmcoreinfo_symbol_xen(kdump_ctx *ctx, const char *symname,
 			    kdump_addr_t *symvalue)
 {
-	return vmcoreinfo_symbol(ctx, symname, symvalue, "xen");
+	return vmcoreinfo_symbol(ctx, symname, symvalue,
+				 ctx->global_attrs[GKI_xen_symbol]);
 }
 
 kdump_get_symbol_val_fn *
