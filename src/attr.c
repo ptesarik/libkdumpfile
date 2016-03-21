@@ -396,6 +396,8 @@ new_attr(kdump_ctx *ctx, struct attr_data *parent,
 
 /**  Add an attribute template.
  * @param ctx   Dump file object.
+ * @param path  Full path of the new key.
+ * @param type  Attribute type.
  */
 kdump_status
 add_attr_template(kdump_ctx *ctx, const char *path,

@@ -146,7 +146,7 @@ string_hash(const char *s)
 }
 
 /**  Update a partial hash with a memory area.
- * @param[in,out] phash  Partial hash state.
+ * @param[in,out] ph     Partial hash state.
  * @param[in]     s      Start of memory area with new data to be hashed.
  * @param[in]     len    Number of bytes at @p s to be hashed.
  */

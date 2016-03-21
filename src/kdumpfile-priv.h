@@ -174,6 +174,11 @@ mutex_unlock(mutex_t *mutex)
  * is multiplied by 8. */
 #define BITS_PER_BYTE	8
 
+/** Type of a Page Frame Number (PFN).
+ * This type is big enough to represent any PFN. It is equal to
+ * @ref kdump_addr_t, because there is probably no type that would
+ * have @c arch.page_shift less bits than @ref kdump_addr_t.
+ */
 typedef kdump_addr_t kdump_pfn_t;
 
 /** Bits for kdump_pfn_t */
