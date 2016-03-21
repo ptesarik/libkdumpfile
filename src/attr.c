@@ -249,7 +249,7 @@ struct attr_data *
 lookup_attr(const kdump_ctx *ctx, const char *key)
 {
 	struct attr_data *d = lookup_attr_raw(ctx, key);
-	return d && attr_isset(d) ? d : NULL;
+	return (d && validate_attr(ctx, d) == kdump_ok) ? d : NULL;
 }
 
 /**  Look up attribute parent by name.

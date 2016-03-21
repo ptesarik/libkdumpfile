@@ -434,9 +434,9 @@ get_pml4(kdump_ctx *ctx)
 		archdata->pml4 =
 			pgtaddr - __START_KERNEL_map - get_phys_base(ctx);
 	} else if (ret == kdump_nodata) {
-		const struct attr_data *attr;
+		struct attr_data *attr;
 		attr = lookup_attr(ctx, "cpu.0.reg.cr3");
-		if (!attr)
+		if (!attr || validate_attr(ctx, attr) != kdump_ok)
 			return set_error(ctx, kdump_nodata,
 					 "Cannot get CR3 value");
 		archdata->pml4_as = KDUMP_MACHPHYSADDR;

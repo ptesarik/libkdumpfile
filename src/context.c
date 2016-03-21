@@ -45,14 +45,14 @@ kdump_err_str(kdump_ctx *ctx)
 kdump_status
 kdump_get_attr(kdump_ctx *ctx, const char *key, kdump_attr_t *valp)
 {
-	const struct attr_data *d;
+	struct attr_data *d;
 
 	clear_error(ctx);
 
 	d = lookup_attr_raw(ctx, key);
 	if (!d)
 		return set_error(ctx, kdump_nokey, "No such key");
-	if (!attr_isset(d))
+	if (validate_attr(ctx, d) != kdump_ok)
 		return set_error(ctx, kdump_nodata, "Key has no value");
 
 	valp->type = d->template->type;
@@ -167,11 +167,11 @@ kdump_status
 kdump_attr_ref_get(kdump_ctx *ctx, const kdump_attr_ref_t *ref,
 		   kdump_attr_t *valp)
 {
-	const struct attr_data *d = ref_attr(ref);
+	struct attr_data *d = ref_attr(ref);
 
 	clear_error(ctx);
 
-	if (!attr_isset(d))
+	if (validate_attr(ctx, d) != kdump_ok)
 		return set_error(ctx, kdump_nodata, "Key has no value");
 
 	valp->type = d->template->type;
@@ -412,12 +412,12 @@ kdump_vmcoreinfo_xen(kdump_ctx *ctx)
 static const char*
 vmcoreinfo_row(kdump_ctx *ctx, const char *key, const struct attr_data *base)
 {
-	const struct attr_data *attr;
+	struct attr_data *attr;
 
 	clear_error(ctx);
 
 	attr = lookup_dir_attr(ctx, base, key, strlen(key));
-	return (attr && attr_isset(attr))
+	return (attr && validate_attr(ctx, attr) == kdump_ok)
 		? attr_value(attr)->string
 		: NULL;
 }
@@ -440,13 +440,15 @@ static kdump_status
 vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname, kdump_addr_t *symvalue,
 		  const struct attr_data *base)
 {
-	const struct attr_data *attr;
+	struct attr_data *attr;
 
 	clear_error(ctx);
 
 	attr = lookup_dir_attr(ctx, base, symname, strlen(symname));
-	if (!attr || !attr_isset(attr))
-		return set_error(ctx, kdump_nodata, "Key has no value");
+	if (!attr)
+		return set_error(ctx, kdump_nodata, "Symbol not found");
+	if (validate_attr(ctx, attr) != kdump_ok)
+		return set_error(ctx, kdump_nodata, "Symbol has no value");
 
 	*symvalue = attr_value(attr)->address;
 	return kdump_ok;

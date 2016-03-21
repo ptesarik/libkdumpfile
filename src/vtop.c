@@ -254,7 +254,7 @@ map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	 const struct vtop_map *map)
 {
 	const struct kdump_xlat *xlat;
-	const struct attr_data *attr;
+	struct attr_data *attr;
 
 	xlat = get_vtop_xlat(map, vaddr);
 	switch (xlat->method) {
@@ -275,7 +275,7 @@ map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 
 	case KDUMP_XLAT_KTEXT:
 		attr = ctx->global_attrs[map->phys_base];
-		if (!attr_isset(attr))
+		if (validate_attr(ctx, attr) != kdump_ok)
 			return set_error(ctx, kdump_nodata,
 					 "Unknown kernel physical base");
 		*paddr = vaddr - xlat->phys_off + attr_value(attr)->address;

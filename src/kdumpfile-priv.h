@@ -856,6 +856,17 @@ attr_isset(const struct attr_data *data)
 	return data->isset;
 }
 
+/**  Validate attribute data.
+ * @param ctx   Dump file object.
+ * @param attr  Attribute data.
+ * @returns     Error status.
+ */
+static inline kdump_status
+validate_attr(const kdump_ctx *ctx, struct attr_data *attr)
+{
+	return attr_isset(attr) ? kdump_ok : kdump_nodata;
+}
+
 static inline const union kdump_attr_value *
 attr_value(const struct attr_data *attr)
 {
