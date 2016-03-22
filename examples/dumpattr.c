@@ -98,7 +98,7 @@ main(int argc, char **argv)
 	}
 
 	kdump_attr_ref_t root;
-	res = kdump_attr_ref(ctx, NULL, &root);
+	res = kdump_attr_ref(ctx, argv[2], &root);
 	if (res != kdump_ok) {
 		fprintf(stderr, "kdump_attr_ref failed: %s\n",
 			kdump_err_str(ctx));
