@@ -836,9 +836,6 @@ kdump_status add_attr_template(kdump_ctx *ctx, const char *path,
 #define init_attrs INTERNAL_NAME(init_attrs)
 kdump_status init_attrs(kdump_ctx *ctx);
 
-#define lookup_attr_raw INTERNAL_NAME(lookup_attr_raw)
-struct attr_data *lookup_attr_raw(const kdump_ctx *ctx, const char *key);
-
 #define lookup_attr INTERNAL_NAME(lookup_attr)
 struct attr_data *lookup_attr(const kdump_ctx *ctx, const char *key);
 

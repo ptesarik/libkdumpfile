@@ -49,7 +49,7 @@ kdump_get_attr(kdump_ctx *ctx, const char *key, kdump_attr_t *valp)
 
 	clear_error(ctx);
 
-	d = lookup_attr_raw(ctx, key);
+	d = lookup_attr(ctx, key);
 	if (!d)
 		return set_error(ctx, kdump_nokey, "No such key");
 	if (validate_attr(ctx, d) != kdump_ok)
@@ -92,7 +92,7 @@ kdump_set_attr(kdump_ctx *ctx, const char *key,
 
 	clear_error(ctx);
 
-	d = lookup_attr_raw(ctx, key);
+	d = lookup_attr(ctx, key);
 	if (!d)
 		return set_error(ctx, kdump_nodata, "No such key");
 
@@ -126,7 +126,7 @@ kdump_attr_ref(kdump_ctx *ctx, const char *key, kdump_attr_ref_t *ref)
 
 	clear_error(ctx);
 
-	d = lookup_attr_raw(ctx, key);
+	d = lookup_attr(ctx, key);
 	if (!d)
 		return set_error(ctx, kdump_nokey, "No such key");
 
@@ -229,7 +229,7 @@ kdump_attr_iter_start(kdump_ctx *ctx, const char *path,
 
 	clear_error(ctx);
 
-	d = lookup_attr_raw(ctx, path);
+	d = lookup_attr(ctx, path);
 	if (!d)
 		return set_error(ctx, kdump_nokey, "No such path");
 
@@ -382,7 +382,7 @@ kdump_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 {
 	char *key;
 	const char *regname;
-	const struct attr_data *attr;
+	struct attr_data *attr;
 
 	clear_error(ctx);
 
@@ -397,7 +397,7 @@ kdump_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 	key = alloca(sizeof("cpu.") + 20 + sizeof(".reg.") + strlen(regname));
 	sprintf(key, "cpu.%u.reg.%s", cpu, regname);
 	attr = lookup_attr(ctx, key);
-	if (!attr)
+	if (!attr || validate_attr(ctx, attr) != kdump_ok)
 		return set_error(ctx, kdump_nodata, "Cannot read '%s'", key);
 
 	*value = attr_value(attr)->number;

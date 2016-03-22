@@ -224,31 +224,19 @@ lookup_attr_part(const kdump_ctx *ctx, const char *key, size_t keylen)
 			       key, keylen);
 }
 
-/**  Look up raw attribute data by name.
+/**  Look up attribute data by name.
  * @param ctx   Dump file object.
- * @param key   Key name.
+ * @param key   Key name, or @c NULL for the root attribute.
  * @returns     Stored attribute or @c NULL if not found.
  *
  * This function does not check whether an attribute is set, or not.
  */
 struct attr_data *
-lookup_attr_raw(const kdump_ctx *ctx, const char *key)
+lookup_attr(const kdump_ctx *ctx, const char *key)
 {
 	return key
 		? lookup_attr_part(ctx, key, strlen(key))
 		: ctx->global_attrs[GKI_dir_root];
-}
-
-/**  Look up attribute data by name.
- * @param ctx   Dump file object.
- * @param key   Key name.
- * @returns     Stored attribute or @c NULL if not found.
- */
-struct attr_data *
-lookup_attr(const kdump_ctx *ctx, const char *key)
-{
-	struct attr_data *d = lookup_attr_raw(ctx, key);
-	return (d && validate_attr(ctx, d) == kdump_ok) ? d : NULL;
 }
 
 /**  Look up attribute parent by name.
@@ -406,7 +394,7 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 	struct attr_data *attr, *parent;
 	char *keyname;
 
-	attr = lookup_attr_raw(ctx, path);
+	attr = lookup_attr(ctx, path);
 	if (attr) {
 		if (attr->template->type == type)
 			return kdump_ok;
@@ -695,7 +683,7 @@ add_attr(kdump_ctx *ctx, const char *dir, const struct attr_template *tmpl,
 {
 	struct attr_data *parent, *attr;
 
-	parent = lookup_attr_raw(ctx, dir);
+	parent = lookup_attr(ctx, dir);
 	if (!parent)
 		return set_error(ctx, kdump_nokey,
 				 "No such path");
