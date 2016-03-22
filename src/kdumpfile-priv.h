@@ -881,28 +881,24 @@ kdump_status set_attr(kdump_ctx *ctx, struct attr_data *attr,
 		      union kdump_attr_value val);
 
 #define set_attr_indirect INTERNAL_NAME(set_attr_indirect)
-kdump_status set_attr_indirect(kdump_ctx *ctx, const char *key,
+kdump_status set_attr_indirect(kdump_ctx *ctx, struct attr_data *attr,
 			       union kdump_attr_value *pval);
 
 #define set_attr_number INTERNAL_NAME(set_attr_number)
-kdump_status set_attr_number(kdump_ctx *ctx, const char *key,
+kdump_status set_attr_number(kdump_ctx *ctx, struct attr_data *attr,
 			     kdump_num_t num);
 
 #define set_attr_address INTERNAL_NAME(set_attr_address)
-kdump_status set_attr_address(kdump_ctx *ctx, const char *key,
+kdump_status set_attr_address(kdump_ctx *ctx, struct attr_data *key,
 			      kdump_addr_t addr);
 
 #define set_attr_string INTERNAL_NAME(set_attr_string)
-kdump_status set_attr_string(kdump_ctx *ctx, const char *key,
+kdump_status set_attr_string(kdump_ctx *ctx, struct attr_data *attr,
 			     const char *str);
 
 #define set_attr_static_string INTERNAL_NAME(set_attr_static_string)
-kdump_status set_attr_static_string(kdump_ctx *ctx, const char *key,
+kdump_status set_attr_static_string(kdump_ctx *ctx, struct attr_data *attr,
 				    const char *str);
-
-#define set_raw_attr_string INTERNAL_NAME(set_raw_attr_string)
-kdump_status set_raw_attr_string(kdump_ctx *ctx, struct attr_data *attr,
-				 const char *str);
 
 #define add_attr_number INTERNAL_NAME(add_attr_number)
 kdump_status add_attr_number(kdump_ctx *ctx, const char *path,

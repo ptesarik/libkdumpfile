@@ -447,7 +447,7 @@ set_uts_string(kdump_ctx *ctx, struct attr_data *attr, const char *src)
 
 	memcpy(str, src, NEW_UTS_LEN);
 	str[NEW_UTS_LEN] = 0;
-	return set_error(ctx, set_raw_attr_string(ctx, attr, str),
+	return set_error(ctx, set_attr_string(ctx, attr, str),
 			 "Cannot set attribute %s", attr->template->key);
 }
 
@@ -631,6 +631,7 @@ add_parsed_row(kdump_ctx *ctx, const char *path,
 	size_t len;
 	unsigned long long num;
 	enum kdump_attr_type attr_type;
+	struct attr_data *attr;
 	kdump_status res;
 
 	attrkey = alloca(strlen(path) + strlen(key) + sizeof(".lines"));
@@ -645,7 +646,11 @@ add_parsed_row(kdump_ctx *ctx, const char *path,
 	res = create_attr_path(ctx, attrkey, kdump_string);
 	if (res != kdump_ok)
 		return res;
-	res = set_attr_string(ctx, attrkey, val);
+	attr = lookup_attr_raw(ctx, attrkey);
+	if (!attr)
+		return set_error(ctx, kdump_nokey,
+				 "Cannot find attribute '%s'", attrkey);
+	res = set_attr_string(ctx, attr, val);
 	if (res != kdump_ok)
 		return set_error(ctx, res,
 				 "Cannot set vmcoreinfo '%s'", key);
@@ -690,10 +695,14 @@ add_parsed_row(kdump_ctx *ctx, const char *path,
 	res = create_attr_path(ctx, attrkey, attr_type);
 	if (res != kdump_ok)
 		return res;
+	attr = lookup_attr_raw(ctx, attrkey);
+	if (!attr)
+		return set_error(ctx, kdump_nokey,
+				 "Cannot find attribute '%s'", attrkey);
 	return set_error(ctx,
 			 (attr_type == kdump_number)
-			 ? set_attr_number(ctx, attrkey, num)
-			 : set_attr_address(ctx, attrkey, num),
+			 ? set_attr_number(ctx, attr, num)
+			 : set_attr_address(ctx, attr, num),
 			 "Cannot set %s", attrkey);
 }
 
@@ -702,6 +711,7 @@ store_vmcoreinfo(kdump_ctx *ctx, const char *path, void *data, size_t len)
 {
 	char key[strlen(path) + sizeof(".lines")];
 	char *raw, *p, *endp, *val;
+	struct attr_data *attr;
 	kdump_status res;
 
 	raw = ctx_malloc(len + 1, ctx, "VMCOREINFO");
@@ -711,7 +721,13 @@ store_vmcoreinfo(kdump_ctx *ctx, const char *path, void *data, size_t len)
 	raw[len] = '\0';
 
 	stpcpy(stpcpy(key, path), ".raw");
-	res = set_attr_string(ctx, key, raw);
+	attr = lookup_attr_raw(ctx, key);
+	if (!attr) {
+		free(raw);
+		return set_error(ctx, kdump_nokey,
+				 "Unknown VMCOREINFO attribute: '%s'", key);
+	}
+	res = set_attr_string(ctx, attr, raw);
 	if (res != kdump_ok) {
 		free(raw);
 		return set_error(ctx, res, "Cannot set '%s'", key);
@@ -853,5 +869,7 @@ set_cpu_regs32(kdump_ctx *ctx, unsigned cpu,
 kdump_status
 set_format_longname(kdump_ctx *ctx, const char *name)
 {
-	return set_attr_static_string(ctx, GATTR(GKI_format_longname), name);
+	return set_attr_static_string(ctx,
+				      ctx->global_attrs[GKI_format_longname],
+				      name);
 }

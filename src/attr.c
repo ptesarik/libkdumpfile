@@ -593,7 +593,7 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr, union kdump_attr_value val)
 
 /**  Set an indirect attribute.
  * @param ctx   Dump file object.
- * @param key   Key name.
+ * @param attr  Attribute data.
  * @param pval  Pointer to the value.
  * @returns     Error status.
  *
@@ -603,15 +603,9 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr, union kdump_attr_value val)
  * accessed.
  */
 kdump_status
-set_attr_indirect(kdump_ctx *ctx, const char *key,
+set_attr_indirect(kdump_ctx *ctx, struct attr_data *attr,
 		  union kdump_attr_value *pval)
 {
-	struct attr_data *attr;
-
-	attr = lookup_attr_raw(ctx, key);
-	if (!attr)
-		return set_error(ctx, kdump_nokey, "No such key");
-
 	clear_attr(attr);
 	attr->pval = pval;
 	attr->indirect = 1;
@@ -620,19 +614,14 @@ set_attr_indirect(kdump_ctx *ctx, const char *key,
 
 /**  Set a numeric attribute of a dump file object.
  * @param ctx  Dump file object.
- * @param key  Key name.
+ * @param attr Attribute data.
  * @param num  Key value (numeric).
  * @returns    Error status.
  */
 kdump_status
-set_attr_number(kdump_ctx *ctx, const char *key, kdump_num_t num)
+set_attr_number(kdump_ctx *ctx, struct attr_data *attr, kdump_num_t num)
 {
-	struct attr_data *attr;
 	union kdump_attr_value val;
-
-	attr = lookup_attr_raw(ctx, key);
-	if (!attr)
-		return set_error(ctx, kdump_nokey, "No such key");
 
 	clear_attr(attr);
 	val.number = num;
@@ -641,19 +630,14 @@ set_attr_number(kdump_ctx *ctx, const char *key, kdump_num_t num)
 
 /**  Set an address attribute of a dump file object.
  * @param ctx   Dump file object.
- * @param key   Key name.
+ * @param attr  Attribute data.
  * @param addr  Key value (address).
  * @returns     Error status.
  */
 kdump_status
-set_attr_address(kdump_ctx *ctx, const char *key, kdump_addr_t addr)
+set_attr_address(kdump_ctx *ctx, struct attr_data *attr, kdump_addr_t addr)
 {
-	struct attr_data *attr;
 	union kdump_attr_value val;
-
-	attr = lookup_attr_raw(ctx, key);
-	if (!attr)
-		return set_error(ctx, kdump_nokey, "No such key");
 
 	clear_attr(attr);
 	val.address = addr;
@@ -667,7 +651,7 @@ set_attr_address(kdump_ctx *ctx, const char *key, kdump_addr_t addr)
  * @returns     Error status.
  */
 kdump_status
-set_raw_attr_string(kdump_ctx *ctx, struct attr_data *attr, const char *str)
+set_attr_string(kdump_ctx *ctx, struct attr_data *attr, const char *str)
 {
 	char *dynstr = strdup(str);
 	kdump_attr_value_t val;
@@ -682,39 +666,17 @@ set_raw_attr_string(kdump_ctx *ctx, struct attr_data *attr, const char *str)
 	return set_attr(ctx, attr, val);
 }
 
-/**  Set a string attribute of a dump file object.
- * @param ctx  Dump file object.
- * @param key  Key name.
- * @param str  Key value (string).
- * @returns    Error status.
- */
-kdump_status
-set_attr_string(kdump_ctx *ctx, const char *key, const char *str)
-{
-	struct attr_data *attr;
-
-	attr = lookup_attr_raw(ctx, key);
-	if (!attr)
-		return set_error(ctx, kdump_nokey, "No such key");
-
-	return set_raw_attr_string(ctx, attr, str);
-}
-
 /**  Set a static string attribute of a dump file object.
  * @param ctx  Dump file object.
- * @param key  Key name.
+ * @param attr Attribute data.
  * @param str  Key value (static string).
  * @returns    Error status.
  */
 kdump_status
-set_attr_static_string(kdump_ctx *ctx, const char *key, const char *str)
+set_attr_static_string(kdump_ctx *ctx, struct attr_data *attr,
+		       const char *str)
 {
-	struct attr_data *attr;
 	union kdump_attr_value val;
-
-	attr = lookup_attr_raw(ctx, key);
-	if (!attr)
-		return set_error(ctx, kdump_nokey, "No such key");
 
 	clear_attr(attr);
 	val.string = str;

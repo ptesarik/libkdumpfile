@@ -208,26 +208,30 @@ process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 	} else
 		return kdump_ok;
 
-	res = set_attr_number(ctx, GATTR(GKI_xen_ver_major), major);
+	res = set_attr_number(ctx, ctx->global_attrs[GKI_xen_ver_major],
+			      major);
 	if (res != kdump_ok)
 		return res;
 
-	res = set_attr_number(ctx, GATTR(GKI_xen_ver_minor), minor);
+	res = set_attr_number(ctx, ctx->global_attrs[GKI_xen_ver_minor],
+			      minor);
 	if (res != kdump_ok)
 		return res;
 
-	res = set_attr_address(ctx, GATTR(GKI_xen_ver_extra_addr), extra);
+	res = set_attr_address(ctx, ctx->global_attrs[GKI_xen_ver_extra_addr],
+			       extra);
 	if (res != kdump_ok)
 		return res;
 
 	if (version >= 1) {
-		res = set_attr_address(ctx, GATTR(GKI_xen_p2m_mfn), p2m_mfn);
+		res = set_attr_address(ctx, ctx->global_attrs[GKI_xen_p2m_mfn],
+				       p2m_mfn);
 		if (res != kdump_ok)
 			return res;
 	}
 
 	if (version >= 2) {
-		res = set_attr_address(ctx, GATTR(GKI_xen_phys_start),
+		res = set_attr_address(ctx, ctx->global_attrs[GKI_xen_phys_start],
 				       phys_start);
 		if (res != kdump_ok)
 			return res;
@@ -260,17 +264,20 @@ process_xen_dumpcore_version(kdump_ctx *ctx, void *data, size_t len)
 	} else
 		return kdump_ok;
 
-	res = set_attr_number(ctx, GATTR(GKI_xen_ver_major), major);
+	res = set_attr_number(ctx, ctx->global_attrs[GKI_xen_ver_major],
+			      major);
 	if (res != kdump_ok)
 		return res;
 
-	res = set_attr_number(ctx, GATTR(GKI_xen_ver_minor), minor);
+	res = set_attr_number(ctx, ctx->global_attrs[GKI_xen_ver_minor],
+			      minor);
 	if (res != kdump_ok)
 		return res;
 
 	memcpy(extra_str, extra, XEN_EXTRA_VERSION_SZ);
 	extra_str[XEN_EXTRA_VERSION_SZ] = '\0';
-	res = set_attr_string(ctx, GATTR(GKI_xen_ver_extra), extra_str);
+	res = set_attr_string(ctx, ctx->global_attrs[GKI_xen_ver_extra],
+			      extra_str);
 	if (res != kdump_ok)
 		return res;
 
@@ -346,7 +353,9 @@ process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
 
 	val = kdump_vmcoreinfo_row(ctx, "OSRELEASE");
 	if (val) {
-		ret = set_attr_string(ctx, GATTR(GKI_linux_uts_release), val);
+		ret = set_attr_string(ctx,
+				      ctx->global_attrs[GKI_linux_uts_release],
+				      val);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret,
 					 "Cannot set UTS release");

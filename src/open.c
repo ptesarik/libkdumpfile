@@ -68,7 +68,8 @@ kdump_init_ctx(kdump_ctx *ctx)
 	if (status != kdump_ok)
 		return status;
 
-	set_attr_number(ctx, GATTR(GKI_cache_size), DEFAULT_CACHE_SIZE);
+	set_attr_number(ctx, ctx->global_attrs[GKI_cache_size],
+			DEFAULT_CACHE_SIZE);
 
 	ctx->cb_get_symbol_val = kdump_vmcoreinfo_symbol;
 	ctx->cb_get_symbol_val_xen = kdump_vmcoreinfo_symbol_xen;
@@ -163,7 +164,8 @@ kdump_open_known(kdump_ctx *ctx)
 	const struct attr_data *attr;
 	kdump_status res;
 
-	set_attr_static_string(ctx, GATTR(GKI_format_name), ctx->ops->name);
+	set_attr_static_string(ctx, ctx->global_attrs[GKI_format_name],
+			       ctx->ops->name);
 
 	if (!lookup_attr(ctx, GATTR(GKI_linux_uts_sysname)))
 		/* If this fails, it is not fatal. */
@@ -176,7 +178,9 @@ kdump_open_known(kdump_ctx *ctx)
 		res = kdump_read_string(ctx, KDUMP_MACHPHYSADDR,
 					attr_value(attr)->address, &extra);
 		if (res == kdump_ok) {
-			set_attr_string(ctx, GATTR(GKI_xen_ver_extra), extra);
+			set_attr_string(ctx,
+					ctx->global_attrs[GKI_xen_ver_extra],
+					extra);
 			free(extra);
 		}
 	}
