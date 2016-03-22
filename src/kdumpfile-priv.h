@@ -422,11 +422,26 @@ typedef kdump_status attr_pre_fn(
 typedef kdump_status attr_post_fn(
 	kdump_ctx *ctx, struct attr_data *attr);
 
+/**  Type for attribute validation hooks.
+ * @param ctx      Dump file object.
+ * @param attr     Attribute.
+ * @returns        Error status.
+ *
+ * This function is called by @ref validate_attr before checking
+ * that the attribute has a value. The hook is intended for lazy
+ * initialization of attributes which should be listed in the hierarchy
+ * even before the value is known (presumably because getting its value
+ * needs considerable resources).
+ */
+typedef kdump_status attr_validate_fn(
+	kdump_ctx *ctx, struct attr_data *attr);
+
 /**  Attribute ops
  */
 struct attr_ops {
-	attr_pre_fn *pre_set;   /**< Called before value change. */
-	attr_post_fn *post_set; /**< Called after value change. */
+	attr_pre_fn *pre_set;	    /**< Called before value change. */
+	attr_post_fn *post_set;	    /**< Called after value change. */
+	attr_validate_fn *validate; /**< Called before validating value. */
 };
 
 /**  Attribute template.
@@ -854,22 +869,14 @@ attr_isset(const struct attr_data *data)
 	return data->isset;
 }
 
-/**  Validate attribute data.
- * @param ctx   Dump file object.
- * @param attr  Attribute data.
- * @returns     Error status.
- */
-static inline kdump_status
-validate_attr(const kdump_ctx *ctx, struct attr_data *attr)
-{
-	return attr_isset(attr) ? kdump_ok : kdump_nodata;
-}
-
 static inline const union kdump_attr_value *
 attr_value(const struct attr_data *attr)
 {
 	return attr->indirect ? attr->pval : &attr->val;
 }
+
+#define validate_attr INTERNAL_NAME(validate_attr)
+kdump_status validate_attr(kdump_ctx *ctx, struct attr_data *attr);
 
 #define set_attr INTERNAL_NAME(set_attr)
 kdump_status set_attr(kdump_ctx *ctx, struct attr_data *attr,

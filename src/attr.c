@@ -790,3 +790,18 @@ kdump_status add_attr_static_string(kdump_ctx *ctx, const char *path,
 	val.string = str;
 	return set_attr(ctx, attr, val);
 }
+
+/**  Validate attribute data.
+ * @param ctx   Dump file object.
+ * @param attr  Attribute data.
+ * @returns     Error status.
+ */
+kdump_status
+validate_attr(kdump_ctx *ctx, struct attr_data *attr)
+{
+	if (!attr_isset(attr))
+		return kdump_nodata;
+	if (!attr->template->ops || !attr->template->ops->validate)
+		return kdump_ok;
+	return attr->template->ops->validate(ctx, attr);
+}
