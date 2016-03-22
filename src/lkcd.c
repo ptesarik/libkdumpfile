@@ -630,8 +630,8 @@ search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 		else
 			return error_dup(ctx, off, block, curpfn);
 
-		if (pfn >= get_max_pfn(ctx))
-			set_max_pfn(ctx, pfn + 1);
+		if (curpfn >= get_max_pfn(ctx))
+			set_max_pfn(ctx, curpfn + 1);
 
 		off += sizeof(struct dump_page) + dp->dp_size;
 		lkcdp->last_offset = off;
