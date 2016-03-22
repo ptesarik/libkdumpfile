@@ -805,3 +805,44 @@ validate_attr(kdump_ctx *ctx, struct attr_data *attr)
 		return kdump_ok;
 	return attr->template->ops->validate(ctx, attr);
 }
+
+/**  Add a template override to an attribute.
+ * @param attr      Attribute data.
+ * @param override  Override definition.
+ */
+void
+attr_add_override(struct attr_data *attr, struct attr_override *override)
+{
+	const struct attr_template *tmpl = attr->template;
+
+	if (tmpl->ops)
+		override->ops = *tmpl->ops;
+	else
+		memset(&override->ops, 0, sizeof override->ops);
+
+	override->template.key = tmpl->key;
+	override->template.parent = attr->template;
+	override->template.type = tmpl->type;
+	override->template.ops = &override->ops;
+
+	attr->template = &override->template;
+}
+
+/**  Remove a template override from an attribute.
+ * @param attr      Attribute data.
+ * @param override  Override definition to be removed.
+ */
+void
+attr_remove_override(struct attr_data *attr, struct attr_override *override)
+{
+	const struct attr_template *tmpl, **pprev;
+	pprev = &attr->template;
+	do {
+		tmpl = *pprev;
+		if (tmpl == &override->template) {
+			*pprev = tmpl->parent;
+			break;
+		}
+		pprev = &((struct attr_template*)tmpl)->parent;
+	} while (tmpl->parent != tmpl);
+}

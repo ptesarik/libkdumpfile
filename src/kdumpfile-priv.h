@@ -982,6 +982,25 @@ extern const struct attr_ops arch_name_ops;
 #define uts_machine_ops INTERNAL_NAME(uts_machine_ops)
 extern const struct attr_ops uts_machine_ops;
 
+/**  Attribute template override.
+ *
+ * This structure is used for temporary overrides of an existing
+ * attribute template. The @c parent member in the @c template
+ * field is used to link multiple overrides.
+ */
+struct attr_override {
+	struct attr_template template; /**< Modified template. */
+	struct attr_ops ops;	       /**< Modified attribute ops. */
+};
+
+#define attr_add_override INTERNAL_NAME(attr_add_override)
+void attr_add_override(struct attr_data *attr,
+		       struct attr_override *override);
+
+#define attr_remove_override INTERNAL_NAME(attr_remove_override)
+void attr_remove_override(struct attr_data *attr,
+			  struct attr_override *override);
+
 /* Xen */
 
 /**  Check if kernel physical address space is equal to machine physical one.
