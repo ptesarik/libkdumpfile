@@ -9,11 +9,13 @@
 
 #include <kdumpfile.h>
 
+static int list_attr_recursive(kdump_ctx *, kdump_attr_ref_t *, int);
+static int show_attr(kdump_ctx *, kdump_attr_ref_t *, int, const char *);
+
 static int
 list_attr_recursive(kdump_ctx *ctx, kdump_attr_ref_t *dir, int indent)
 {
 	kdump_attr_iter_t it;
-	kdump_attr_t attr;
 	kdump_status status;
 	int ret;
 
@@ -26,33 +28,9 @@ list_attr_recursive(kdump_ctx *ctx, kdump_attr_ref_t *dir, int indent)
 
 	ret = 0;
 	while (it.key) {
-		printf("%*s%s: ", indent * 2, "", it.key);
-
-		status = kdump_attr_ref_get(ctx, &it.pos, &attr);
-		if (status != kdump_ok) {
-			fprintf(stderr, "kdump_attr_ref_get failed: %s\n",
-				kdump_err_str(ctx));
-			ret = -1;
+		ret = show_attr(ctx, &it.pos, indent, it.key);
+		if (ret)
 			break;
-		}
-
-		switch (attr.type) {
-		case kdump_string:
-			printf("%s\n", attr.val.string);
-			break;
-		case kdump_number:
-			printf("%llu\n", (unsigned long long) attr.val.number);
-			break;
-		case kdump_address:
-			printf("%llx\n", (unsigned long long) attr.val.address);
-			break;
-		case kdump_directory:
-			putchar('\n');
-			list_attr_recursive(ctx, &it.pos, indent + 1);
-			break;
-		default:
-			printf("<unknown>\n");
-		}
 
 		status = kdump_attr_iter_next(ctx, &it);
 		if (status != kdump_ok) {
@@ -65,6 +43,46 @@ list_attr_recursive(kdump_ctx *ctx, kdump_attr_ref_t *dir, int indent)
 
 	kdump_attr_iter_end(ctx, &it);
 	return ret;
+}
+
+static int
+show_attr(kdump_ctx *ctx, kdump_attr_ref_t *ref, int indent, const char *key)
+{
+	kdump_attr_t attr;
+	kdump_status status;
+
+	if (key && *key) {
+		printf("%*s%s: ", indent * 2, "", key);
+		++indent;
+	}
+
+	status = kdump_attr_ref_get(ctx, ref, &attr);
+	if (status != kdump_ok) {
+		fprintf(stderr, "kdump_attr_ref_get failed: %s\n",
+			kdump_err_str(ctx));
+		return -1;
+	}
+
+	switch (attr.type) {
+	case kdump_string:
+		printf("%s\n", attr.val.string);
+		break;
+	case kdump_number:
+		printf("%llu\n", (unsigned long long) attr.val.number);
+		break;
+	case kdump_address:
+		printf("%llx\n", (unsigned long long) attr.val.address);
+		break;
+	case kdump_directory:
+		if (key && *key)
+			putchar('\n');
+		list_attr_recursive(ctx, ref, indent);
+		break;
+	default:
+		printf("<unknown>\n");
+	}
+
+	return 0;
 }
 
 int
@@ -106,7 +124,7 @@ main(int argc, char **argv)
 		return 2;
 	}
 
-	if (list_attr_recursive(ctx, &root, 0)) {
+	if (show_attr(ctx, &root, 0, argv[2])) {
 		kdump_free(ctx);
 		return 2;
 	}
