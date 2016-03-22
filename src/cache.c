@@ -836,10 +836,8 @@ cache_unref_page(kdump_ctx *ctx, struct page_io *pio)
 unsigned
 get_cache_size(kdump_ctx *ctx)
 {
-	const struct attr_data *attr;
-
-	attr = lookup_attr(ctx, GATTR(GKI_cache_size));
-	return attr
+	struct attr_data *attr = ctx->global_attrs[GKI_cache_size];
+	return validate_attr(ctx, attr) == kdump_ok
 		? attr_value(attr)->number
 		: DEFAULT_CACHE_SIZE;
 }

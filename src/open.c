@@ -167,13 +167,13 @@ kdump_open_known(kdump_ctx *ctx)
 	set_attr_static_string(ctx, ctx->global_attrs[GKI_format_name],
 			       ctx->ops->name);
 
-	if (!lookup_attr(ctx, GATTR(GKI_linux_uts_sysname)))
+	if (!attr_isset(ctx->global_attrs[GKI_linux_uts_sysname]))
 		/* If this fails, it is not fatal. */
 		use_kernel_utsname(ctx);
 
 	/* If this fails, it is not fatal. */
-	attr = lookup_attr(ctx, GATTR(GKI_xen_ver_extra_addr));
-	if (attr) {
+	attr = ctx->global_attrs[GKI_xen_ver_extra_addr];
+	if (attr_isset(attr)) {
 		char *extra;
 		res = kdump_read_string(ctx, KDUMP_MACHPHYSADDR,
 					attr_value(attr)->address, &extra);
@@ -266,8 +266,8 @@ setup_version_code(kdump_ctx *ctx)
 	char *endp;
 	long a, b, c;
 
-	rel = lookup_attr(ctx, GATTR(GKI_linux_uts_release));
-	if (!rel)
+	rel = ctx->global_attrs[GKI_linux_uts_release];
+	if (!attr_isset(rel))
 		return set_error(ctx, kdump_nodata,
 				 "Cannot get kernel release");
 

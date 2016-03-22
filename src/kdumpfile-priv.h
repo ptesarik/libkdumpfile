@@ -389,8 +389,6 @@ enum global_keyidx {
 #undef ATTR
 };
 
-#define GATTR(idx)	((const char*)-(intptr_t)(idx))
-
 struct attr_data;
 
 /**  Type for early attribute hooks.

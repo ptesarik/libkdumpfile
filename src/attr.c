@@ -234,10 +234,9 @@ lookup_attr_part(const kdump_ctx *ctx, const char *key, size_t keylen)
 struct attr_data *
 lookup_attr_raw(const kdump_ctx *ctx, const char *key)
 {
-	if (!key || key > GATTR(NR_GLOBAL_ATTRS))
-		return ctx->global_attrs[-(intptr_t)key];
-
-	return lookup_attr_part(ctx, key, strlen(key));
+	return key
+		? lookup_attr_part(ctx, key, strlen(key))
+		: ctx->global_attrs[GKI_dir_root];
 }
 
 /**  Look up attribute data by name.
