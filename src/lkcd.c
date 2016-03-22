@@ -323,6 +323,9 @@ struct lkcd_priv {
 	struct pfn_block ***pfn_level1;
 	unsigned l1_size;
 
+	kdump_pfn_t max_pfn;
+	struct attr_override max_pfn_override;
+
 	char format[MAX_FORMAT_NAME];
 };
 
@@ -630,8 +633,8 @@ search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 		else
 			return error_dup(ctx, off, block, curpfn);
 
-		if (curpfn >= get_max_pfn(ctx))
-			set_max_pfn(ctx, curpfn + 1);
+		if (curpfn >= lkcdp->max_pfn)
+			lkcdp->max_pfn = curpfn + 1;
 
 		off += sizeof(struct dump_page) + dp->dp_size;
 		lkcdp->last_offset = off;
@@ -667,6 +670,33 @@ get_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 		off += block->offs[idx - block->idx3 - 1];
 	*dataoff = off + sizeof *dp;
 	return read_page_desc(ctx, dp, off);
+}
+
+static kdump_status
+lkcd_max_pfn_validate(kdump_ctx *ctx, struct attr_data *attr)
+{
+	struct lkcd_priv *lkcdp = ctx->fmtdata;
+	const struct attr_ops *parent_ops;
+
+	parent_ops = lkcdp->max_pfn_override.template.parent->ops;
+	attr_remove_override(ctx->global_attrs[GKI_max_pfn],
+			     &lkcdp->max_pfn_override);
+
+	if (lkcdp->last_offset != lkcdp->end_offset) {
+		struct dump_page dummy_dp;
+		off_t dummy_off;
+		kdump_status res;
+
+		res = search_page_desc(ctx, ~(kdump_pfn_t)0,
+				       &dummy_dp, &dummy_off);
+		if (res != kdump_ok && res != kdump_nodata)
+			return set_error(ctx, res, "Cannot get max_pfn");
+	}
+	set_max_pfn(ctx, lkcdp->max_pfn);
+
+	if (parent_ops && parent_ops->validate)
+		return parent_ops->validate(ctx, attr);
+	return kdump_ok;
 }
 
 static kdump_status
@@ -858,9 +888,15 @@ open_common(kdump_ctx *ctx)
 
 	lkcdp->last_offset = lkcdp->data_offset;
 	lkcdp->end_offset = 0;
+	lkcdp->max_pfn = 0;
 
 	lkcdp->pfn_level1 = NULL;
 	lkcdp->l1_size = 0;
+
+	attr_add_override(ctx->global_attrs[GKI_max_pfn],
+			  &lkcdp->max_pfn_override);
+	lkcdp->max_pfn_override.ops.validate = lkcd_max_pfn_validate;
+	set_max_pfn(ctx, 0);
 
 	return kdump_ok;
 
@@ -926,6 +962,8 @@ lkcd_cleanup(kdump_ctx *ctx)
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
 
+	attr_remove_override(ctx->global_attrs[GKI_max_pfn],
+			     &lkcdp->max_pfn_override);
 	free_level1(lkcdp->pfn_level1, lkcdp->l1_size);
 	free(lkcdp);
 	ctx->fmtdata = NULL;
