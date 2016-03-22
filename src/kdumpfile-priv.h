@@ -691,6 +691,9 @@ kdump_status set_cpu_regs32(kdump_ctx *ctx, unsigned cpu,
 			    const struct attr_template *tmpl,
 			    uint32_t *regs, unsigned num);
 
+#define set_format_longname INTERNAL_NAME(set_format_longname)
+kdump_status set_format_longname(kdump_ctx *ctx, const char *name);
+
 /* hashing */
 #define string_hash INTERNAL_NAME(string_hash)
 unsigned long string_hash(const char *s);

@@ -43,8 +43,7 @@ qemu_probe(kdump_ctx *ctx)
 	if (memcmp(ctx->buffer, magic, sizeof magic))
 		return kdump_noprobe;
 
-	set_attr_static_string(ctx, GATTR(GKI_format_longname),
-			       "QEMU snapshot");
+	set_format_longname(ctx, "QEMU snapshot");
 	return set_error(ctx, kdump_unsupported,
 			 "%s files not yet implemented", "QEMU snapshot");
 }
@@ -63,8 +62,7 @@ libvirt_probe(kdump_ctx *ctx)
 	if (memcmp(ctx->buffer, magic, sizeof magic))
 		return kdump_noprobe;
 
-	set_attr_static_string(ctx, GATTR(GKI_format_longname),
-			       "Libvirt core dump");
+	set_format_longname(ctx, "Libvirt core dump");
 	return set_error(ctx, kdump_unsupported,
 			 "%s files not yet implemented", "Libvirt core dump");
 }
@@ -84,8 +82,7 @@ xc_save_probe(kdump_ctx *ctx)
 	if (memcmp(ctx->buffer, magic, sizeof magic))
 		return kdump_noprobe;
 
-	set_attr_static_string(ctx, GATTR(GKI_format_longname),
-			       "Xen xc_save");
+	set_format_longname(ctx, "Xen xc_save");
 	return set_error(ctx, kdump_unsupported,
 			 "%s files not yet implemented", "Xen xc_save");
 }
@@ -107,11 +104,9 @@ xc_core_probe(kdump_ctx *ctx)
 
 	firstbyte = *(unsigned char*)ctx->buffer;
 	if (firstbyte == 0xed)
-		set_attr_static_string(ctx, GATTR(GKI_format_longname),
-				       "Xen xc_core");
+		set_format_longname(ctx, "Xen xc_core");
 	else if (firstbyte == 0xee)
-		set_attr_static_string(ctx, GATTR(GKI_format_longname),
-				       "Xen xc_core (HVM)");
+		set_format_longname(ctx, "Xen xc_core (HVM)");
 	else
 		return kdump_noprobe;
 
@@ -133,8 +128,7 @@ mclxcd_probe(kdump_ctx *ctx)
 	if (memcmp(ctx->buffer, magic, sizeof magic))
 		return kdump_noprobe;
 
-	set_attr_static_string(ctx, GATTR(GKI_format_longname),
-			       "Mision Critical Linux Crash Dump");
+	set_format_longname(ctx, "Mision Critical Linux Crash Dump");
 	return set_error(ctx, kdump_unsupported,
 			 "%s files not yet implemented",
 			 "Mision Critical Linux Crash Dump");

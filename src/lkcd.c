@@ -822,8 +822,7 @@ open_common(kdump_ctx *ctx)
 
 	lkcdp->data_offset = LKCD_OFFSET_TO_FIRST_PAGE;
 
-	set_attr_static_string(ctx, GATTR(GKI_format_longname),
-			       lkcdp->format);
+	set_format_longname(ctx, lkcdp->format);
 
 	ret = set_page_size(ctx, dump32toh(ctx, dh->dh_page_size));
 	if (ret != kdump_ok)

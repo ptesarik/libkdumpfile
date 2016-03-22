@@ -209,8 +209,7 @@ devmem_probe(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		return ret;
 
-	set_attr_static_string(ctx, GATTR(GKI_format_longname),
-			       "Live memory source");
+	set_format_longname(ctx, "Live memory source");
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 	set_byte_order(ctx, kdump_little_endian);
 #else

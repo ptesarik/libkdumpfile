@@ -644,11 +644,9 @@ diskdump_probe(kdump_ctx *ctx)
 		{ 'K', 'D', 'U', 'M', 'P', ' ', ' ', ' ' };
 
 	if (!memcmp(ctx->buffer, magic_diskdump, sizeof magic_diskdump))
-		set_attr_static_string(ctx, GATTR(GKI_format_longname),
-				       "Diskdump");
+		set_format_longname(ctx, "Diskdump");
 	else if (!memcmp(ctx->buffer, magic_kdump, sizeof magic_kdump))
-		set_attr_static_string(ctx, GATTR(GKI_format_longname),
-				       "Compressed KDUMP");
+		set_format_longname(ctx, "Compressed KDUMP");
 	else
 		return set_error(ctx, kdump_noprobe,
 				 "Unrecognized diskdump signature");
