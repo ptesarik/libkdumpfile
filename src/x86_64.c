@@ -435,10 +435,11 @@ get_pml4(kdump_ctx *ctx)
 			pgtaddr - __START_KERNEL_map - get_phys_base(ctx);
 	} else if (ret == kdump_nodata) {
 		struct attr_data *attr;
+		clear_error(ctx);
 		attr = lookup_attr(ctx, "cpu.0.reg.cr3");
 		if (!attr || validate_attr(ctx, attr) != kdump_ok)
 			return set_error(ctx, kdump_nodata,
-					 "Cannot get CR3 value");
+					 "Cannot find top-level page table");
 		archdata->pml4_as = KDUMP_MACHPHYSADDR;
 		archdata->pml4 = attr_value(attr)->number;
 	} else
