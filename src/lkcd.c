@@ -787,12 +787,12 @@ init_v1(kdump_ctx *ctx)
 	struct dump_header_v1_32 *dh32 = ctx->buffer;
 	struct dump_header_v1_64 *dh64 = ctx->buffer;
 
+	lkcdp->compression = DUMP_COMPRESS_RLE;
 	if (!uts_looks_sane(&dh32->dh_utsname) &&
 	    uts_looks_sane(&dh64->dh_utsname))
 		set_uts(ctx, &dh64->dh_utsname);
 	else
 		set_uts(ctx, &dh32->dh_utsname);
-	lkcdp->compression = DUMP_COMPRESS_RLE;
 
 	return kdump_ok;
 }
@@ -806,15 +806,15 @@ init_v2(kdump_ctx *ctx)
 
 	if (!uts_looks_sane(&dh32->dh_utsname) &&
 	    uts_looks_sane(&dh64->dh_utsname)) {
-		set_uts(ctx, &dh64->dh_utsname);
 		lkcdp->compression = (lkcdp->version >= LKCD_DUMP_V5)
 			? dump32toh(ctx, dh64->dh_dump_compress)
 			: DUMP_COMPRESS_RLE;
+		set_uts(ctx, &dh64->dh_utsname);
 	} else {
-		set_uts(ctx, &dh32->dh_utsname);
 		lkcdp->compression = (lkcdp->version >= LKCD_DUMP_V5)
 			? dump32toh(ctx, dh32->dh_dump_compress)
 			: DUMP_COMPRESS_RLE;
+		set_uts(ctx, &dh32->dh_utsname);
 	}
 
 	return kdump_ok;
@@ -826,10 +826,13 @@ init_v8(kdump_ctx *ctx)
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
 	struct dump_header_v8 *dh = ctx->buffer;
 
-	set_uts(ctx, &dh->dh_utsname);
 	lkcdp->compression = dump32toh(ctx, dh->dh_dump_compress);
-	if (lkcdp->version >= LKCD_DUMP_V9)
+	if (lkcdp->version >= LKCD_DUMP_V9) {
 		lkcdp->data_offset = dump64toh(ctx, dh->dh_dump_buffer_size);
+		lkcdp->last_offset = lkcdp->data_offset;
+	}
+
+	set_uts(ctx, &dh->dh_utsname);
 
 	return kdump_ok;
 }
@@ -849,14 +852,24 @@ open_common(kdump_ctx *ctx)
 	lkcdp->version = base_version(dump32toh(ctx, dh->dh_version));
 	snprintf(lkcdp->format, sizeof(lkcdp->format),
 		 LKCD_FORMAT_PFX "%u", lkcdp->version);
+	set_format_longname(ctx, lkcdp->format);
 
 	lkcdp->data_offset = LKCD_OFFSET_TO_FIRST_PAGE;
+	lkcdp->last_offset = lkcdp->data_offset;
+	lkcdp->end_offset = 0;
+	lkcdp->max_pfn = 0;
 
-	set_format_longname(ctx, lkcdp->format);
+	lkcdp->pfn_level1 = NULL;
+	lkcdp->l1_size = 0;
 
 	ret = set_page_size(ctx, dump32toh(ctx, dh->dh_page_size));
 	if (ret != kdump_ok)
 		return ret;
+
+	attr_add_override(ctx->global_attrs[GKI_max_pfn],
+			  &lkcdp->max_pfn_override);
+	lkcdp->max_pfn_override.ops.validate = lkcd_max_pfn_validate;
+	set_max_pfn(ctx, 0);
 
 	switch(lkcdp->version) {
 	case LKCD_DUMP_V1:
@@ -885,18 +898,6 @@ open_common(kdump_ctx *ctx)
 
 	if (ret != kdump_ok)
 		goto err_free;
-
-	lkcdp->last_offset = lkcdp->data_offset;
-	lkcdp->end_offset = 0;
-	lkcdp->max_pfn = 0;
-
-	lkcdp->pfn_level1 = NULL;
-	lkcdp->l1_size = 0;
-
-	attr_add_override(ctx->global_attrs[GKI_max_pfn],
-			  &lkcdp->max_pfn_override);
-	lkcdp->max_pfn_override.ops.validate = lkcd_max_pfn_validate;
-	set_max_pfn(ctx, 0);
 
 	return kdump_ok;
 
