@@ -472,10 +472,13 @@ set_uts(kdump_ctx *ctx, const struct new_utsname *src)
 	kdump_status res;
 
 	for (i = 0; i < ARRAY_SIZE(defs); ++i) {
-		res = set_uts_string(ctx, ctx->global_attrs[defs[i].idx],
-				     (const char*)src + defs[i].off);
-		if (res != kdump_ok)
-			return res;
+		struct attr_data *d = ctx->global_attrs[defs[i].idx];
+		const char *s = (const char*)src + defs[i].off;
+		if (*s || !attr_isset(d)) {
+			res = set_uts_string(ctx, d, s);
+			if (res != kdump_ok)
+				return res;
+		}
 	}
 
 	return kdump_ok;
