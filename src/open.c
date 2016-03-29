@@ -119,17 +119,20 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 	return kdump_ok;
 }
 
-kdump_status
-kdump_set_fd(kdump_ctx *ctx, int fd)
+/**  Set dump file descriptor.
+ * @param ctx   Dump file object.
+ * @param fd    File descriptor.
+ * @returns     Error status.
+ *
+ * Probe the given file for known file formats and initialize it for use.
+ */
+static kdump_status
+set_fd(kdump_ctx *ctx, int fd)
 {
 	struct attr_data *d;
 	ssize_t rd;
 	kdump_status ret;
 	int i;
-
-	ctx->buffer = ctx_malloc(MAX_PAGE_SIZE, ctx, "scratch buffer");
-	if (!ctx->buffer)
-		return kdump_syserr;
 
 	ctx->fd = fd;
 
@@ -192,6 +195,24 @@ kdump_open_known(kdump_ctx *ctx)
 
 	clear_error(ctx);
 	return kdump_ok;
+}
+
+kdump_status
+kdump_set_fd(kdump_ctx *ctx, int fd)
+{
+	kdump_status ret;
+
+	clear_error(ctx);
+
+	ctx->buffer = ctx_malloc(MAX_PAGE_SIZE, ctx, "file header buffer");
+	if (!ctx->buffer)
+		return kdump_syserr;
+
+	ret = set_fd(ctx, fd);
+
+	free(ctx->buffer);
+	ctx->buffer = NULL;
+	return ret;
 }
 
 /* struct new_utsname is inside struct uts_namespace, preceded by a struct
