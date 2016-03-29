@@ -807,7 +807,7 @@ x86_64_pfn_to_mfn(kdump_ctx *ctx, kdump_pfn_t pfn, kdump_pfn_t *mfn)
 	uint64_t idx, l2_idx, l3_idx;
 	kdump_status res;
 
-	attr = ctx->global_attrs[GKI_xen_p2m_mfn];
+	attr = gattr(ctx, GKI_xen_p2m_mfn);
 	if (!attr_isset(attr))
 		return kdump_nodata;
 	mfn_tbl = attr_value(attr)->address;

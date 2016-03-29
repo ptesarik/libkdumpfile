@@ -325,43 +325,43 @@ kdump_get_string_attr(kdump_ctx *ctx, const char *key)
 const char *
 kdump_format(kdump_ctx *ctx)
 {
-	return get_string_attr(ctx, ctx->global_attrs[GKI_format_name]);
+	return get_string_attr(ctx, gattr(ctx, GKI_format_name));
 }
 
 const char *
 kdump_sysname(kdump_ctx *ctx)
 {
-	return get_string_attr(ctx, ctx->global_attrs[GKI_linux_uts_sysname]);
+	return get_string_attr(ctx, gattr(ctx, GKI_linux_uts_sysname));
 }
 
 const char *
 kdump_nodename(kdump_ctx *ctx)
 {
-	return get_string_attr(ctx, ctx->global_attrs[GKI_linux_uts_nodename]);
+	return get_string_attr(ctx, gattr(ctx, GKI_linux_uts_nodename));
 }
 
 const char *
 kdump_release(kdump_ctx *ctx)
 {
-	return get_string_attr(ctx, ctx->global_attrs[GKI_linux_uts_release]);
+	return get_string_attr(ctx, gattr(ctx, GKI_linux_uts_release));
 }
 
 const char *
 kdump_version(kdump_ctx *ctx)
 {
-	return get_string_attr(ctx, ctx->global_attrs[GKI_linux_uts_version]);
+	return get_string_attr(ctx, gattr(ctx, GKI_linux_uts_version));
 }
 
 const char *
 kdump_machine(kdump_ctx *ctx)
 {
-	return get_string_attr(ctx, ctx->global_attrs[GKI_linux_uts_machine]);
+	return get_string_attr(ctx, gattr(ctx, GKI_linux_uts_machine));
 }
 
 const char *
 kdump_domainname(kdump_ctx *ctx)
 {
-	return get_string_attr(ctx, ctx->global_attrs[GKI_linux_uts_domainname]);
+	return get_string_attr(ctx, gattr(ctx, GKI_linux_uts_domainname));
 }
 
 unsigned
@@ -407,13 +407,13 @@ kdump_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 const char *
 kdump_vmcoreinfo(kdump_ctx *ctx)
 {
-	return get_string_attr(ctx, ctx->global_attrs[GKI_linux_vmcoreinfo_raw]);
+	return get_string_attr(ctx, gattr(ctx, GKI_linux_vmcoreinfo_raw));
 }
 
 const char *
 kdump_vmcoreinfo_xen(kdump_ctx *ctx)
 {
-	return get_string_attr(ctx, ctx->global_attrs[GKI_xen_vmcoreinfo_raw]);
+	return get_string_attr(ctx, gattr(ctx, GKI_xen_vmcoreinfo_raw));
 }
 
 static const char*
@@ -433,14 +433,14 @@ const char *
 kdump_vmcoreinfo_row(kdump_ctx *ctx, const char *key)
 {
 	return vmcoreinfo_row(ctx, key,
-			      ctx->global_attrs[GKI_linux_vmcoreinfo_lines]);
+			      gattr(ctx, GKI_linux_vmcoreinfo_lines));
 }
 
 const char *
 kdump_vmcoreinfo_row_xen(kdump_ctx *ctx, const char *key)
 {
 	return vmcoreinfo_row(ctx, key,
-			      ctx->global_attrs[GKI_xen_vmcoreinfo_lines]);
+			      gattr(ctx, GKI_xen_vmcoreinfo_lines));
 }
 
 static kdump_status
@@ -466,7 +466,7 @@ kdump_vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname,
 			kdump_addr_t *symvalue)
 {
 	return vmcoreinfo_symbol(ctx, symname, symvalue,
-				 ctx->global_attrs[GKI_linux_symbol]);
+				 gattr(ctx, GKI_linux_symbol));
 }
 
 kdump_status
@@ -474,7 +474,7 @@ kdump_vmcoreinfo_symbol_xen(kdump_ctx *ctx, const char *symname,
 			    kdump_addr_t *symvalue)
 {
 	return vmcoreinfo_symbol(ctx, symname, symvalue,
-				 ctx->global_attrs[GKI_xen_symbol]);
+				 gattr(ctx, GKI_xen_symbol));
 }
 
 kdump_get_symbol_val_fn *

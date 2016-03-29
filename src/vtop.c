@@ -274,7 +274,7 @@ map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 		return kdump_ok;
 
 	case KDUMP_XLAT_KTEXT:
-		attr = ctx->global_attrs[map->phys_base];
+		attr = gattr(ctx, map->phys_base);
 		if (validate_attr(ctx, attr) != kdump_ok)
 			return set_error(ctx, kdump_nodata,
 					 "Unknown kernel physical base");

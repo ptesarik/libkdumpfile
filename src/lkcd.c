@@ -683,7 +683,7 @@ lkcd_max_pfn_validate(kdump_ctx *ctx, struct attr_data *attr)
 	const struct attr_ops *parent_ops;
 
 	parent_ops = lkcdp->max_pfn_override.template.parent->ops;
-	attr_remove_override(ctx->global_attrs[GKI_max_pfn],
+	attr_remove_override(gattr(ctx, GKI_max_pfn),
 			     &lkcdp->max_pfn_override);
 
 	if (lkcdp->last_offset != lkcdp->end_offset) {
@@ -895,7 +895,7 @@ open_common(kdump_ctx *ctx, void *hdr)
 	lkcdp->pfn_level1 = NULL;
 	lkcdp->l1_size = 0;
 
-	attr_add_override(ctx->global_attrs[GKI_page_size],
+	attr_add_override(gattr(ctx, GKI_page_size),
 			  &lkcdp->page_size_override);
 	lkcdp->page_size_override.ops.post_set = lkcd_realloc_compressed;
 	lkcdp->compressed = NULL;
@@ -904,7 +904,7 @@ open_common(kdump_ctx *ctx, void *hdr)
 	if (ret != kdump_ok)
 		return ret;
 
-	attr_add_override(ctx->global_attrs[GKI_max_pfn],
+	attr_add_override(gattr(ctx, GKI_max_pfn),
 			  &lkcdp->max_pfn_override);
 	lkcdp->max_pfn_override.ops.validate = lkcd_max_pfn_validate;
 	set_max_pfn(ctx, 0);
@@ -1001,9 +1001,9 @@ lkcd_cleanup(kdump_ctx *ctx)
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
 
-	attr_remove_override(ctx->global_attrs[GKI_page_size],
+	attr_remove_override(gattr(ctx, GKI_page_size),
 			     &lkcdp->page_size_override);
-	attr_remove_override(ctx->global_attrs[GKI_max_pfn],
+	attr_remove_override(gattr(ctx, GKI_max_pfn),
 			     &lkcdp->max_pfn_override);
 	free_level1(lkcdp->pfn_level1, lkcdp->l1_size);
 	if (lkcdp->compressed)

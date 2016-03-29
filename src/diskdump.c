@@ -635,7 +635,7 @@ open_common(kdump_ctx *ctx, void *hdr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate diskdump private data");
 
-	attr_add_override(ctx->global_attrs[GKI_page_size],
+	attr_add_override(gattr(ctx, GKI_page_size),
 			  &ddp->page_size_override);
 	ddp->page_size_override.ops.post_set = diskdump_realloc_compressed;
 	ddp->compressed = NULL;
@@ -698,7 +698,7 @@ diskdump_cleanup(kdump_ctx *ctx)
 	struct disk_dump_priv *ddp = ctx->fmtdata;
 
 	if (ddp) {
-		attr_remove_override(ctx->global_attrs[GKI_page_size],
+		attr_remove_override(gattr(ctx, GKI_page_size),
 				     &ddp->page_size_override);
 		if (ddp->bitmap)
 			free(ddp->bitmap);

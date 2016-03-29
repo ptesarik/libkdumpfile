@@ -220,8 +220,7 @@ lookup_dir_attr(const kdump_ctx *ctx, const struct attr_data *dir,
 static struct attr_data*
 lookup_attr_part(const kdump_ctx *ctx, const char *key, size_t keylen)
 {
-	return lookup_dir_attr(ctx, ctx->global_attrs[GKI_dir_root],
-			       key, keylen);
+	return lookup_dir_attr(ctx, gattr(ctx, GKI_dir_root), key, keylen);
 }
 
 /**  Look up attribute data by name.
@@ -236,7 +235,7 @@ lookup_attr(const kdump_ctx *ctx, const char *key)
 {
 	return key
 		? lookup_attr_part(ctx, key, strlen(key))
-		: ctx->global_attrs[GKI_dir_root];
+		: gattr(ctx, GKI_dir_root);
 }
 
 /**  Look up attribute parent by name.
@@ -254,7 +253,7 @@ lookup_attr_parent(const kdump_ctx *ctx, const char **pkey)
 
 	p = strrchr(*pkey, '.');
 	if (!p)
-		return ctx->global_attrs[GKI_dir_root];
+		return gattr(ctx, GKI_dir_root);
 
 	key = *pkey;
 	*pkey = p + 1;
@@ -461,7 +460,7 @@ cleanup_attr(kdump_ctx *ctx)
 {
 	struct attr_hash *tbl, *tblnext;
 
-	dealloc_attr(ctx->global_attrs[GKI_dir_root]);
+	dealloc_attr(gattr(ctx, GKI_dir_root));
 
 	tblnext = ctx->attr;
 	while(tblnext) {

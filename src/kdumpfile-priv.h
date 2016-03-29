@@ -855,6 +855,17 @@ struct attr_data *lookup_dir_attr(const kdump_ctx *ctx,
 				  const struct attr_data *dir,
 				  const char *key, size_t keylen);
 
+/**  Attribute data by global key index.
+ * @param ctx  Dump file object.
+ * @param idx  Global key index.
+ * @returns    Attribute data.
+ */
+static inline struct attr_data *
+gattr(const kdump_ctx *ctx, enum global_keyidx idx)
+{
+	return ctx->global_attrs[idx];
+}
+
 /**  Check if an attribute is set.
  * @param data  Pointer to the attribute data.
  * @returns     Non-zero if attribute data is valid.
@@ -922,7 +933,7 @@ void clear_attr(struct attr_data *attr);
 static inline void
 clear_attrs(kdump_ctx *ctx)
 {
-	clear_attr(ctx->global_attrs[GKI_dir_root]);
+	clear_attr(gattr(ctx, GKI_dir_root));
 }
 
 #define cleanup_attr INTERNAL_NAME(cleanup_attr)
@@ -936,20 +947,21 @@ void cleanup_attr(kdump_ctx *ctx);
 	{							\
 		return ctx->name.type;				\
 	}
-#define DEFINE_SET_ACCESSOR(name, type, ctype)				\
-	static inline kdump_status					\
-	set_ ## name(kdump_ctx *ctx, ctype newval)			\
-	{								\
-		union kdump_attr_value val;				\
-		val.type = newval;					\
-		return set_attr(ctx, ctx->global_attrs[GKI_ ## name],	\
-				val);					\
+#define DEFINE_SET_ACCESSOR(name, type, ctype)			\
+	static inline kdump_status				\
+	set_ ## name(kdump_ctx *ctx, ctype newval)		\
+	{							\
+		struct attr_data *d = gattr(ctx, GKI_ ## name);	\
+		union kdump_attr_value val;			\
+		val.type = newval;				\
+		return set_attr(ctx, d,	val); 			\
 	}
-#define DEFINE_ISSET_ACCESSOR(name)					\
-	static inline int						\
-	isset_ ## name(kdump_ctx *ctx)					\
-	{								\
-		return attr_isset(ctx->global_attrs[GKI_ ## name]);	\
+#define DEFINE_ISSET_ACCESSOR(name)				\
+	static inline int					\
+	isset_ ## name(kdump_ctx *ctx)				\
+	{							\
+		struct attr_data *d = gattr(ctx, GKI_ ## name);	\
+		return attr_isset(d);				\
 	}
 
 #define DEFINE_ACCESSORS(name, type, ctype)	\

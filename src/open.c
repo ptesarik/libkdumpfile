@@ -68,8 +68,7 @@ kdump_init_ctx(kdump_ctx *ctx)
 	if (status != kdump_ok)
 		return status;
 
-	set_attr_number(ctx, ctx->global_attrs[GKI_cache_size],
-			DEFAULT_CACHE_SIZE);
+	set_attr_number(ctx, gattr(ctx, GKI_cache_size), DEFAULT_CACHE_SIZE);
 
 	ctx->cb_get_symbol_val = kdump_vmcoreinfo_symbol;
 	ctx->cb_get_symbol_val_xen = kdump_vmcoreinfo_symbol_xen;
@@ -154,7 +153,7 @@ set_fd(kdump_ctx *ctx, int fd, void *buf)
 		if (ctx->cache)
 			cache_free(ctx->cache);
 		clear_attrs(ctx);
-		d = ctx->global_attrs[GKI_cache_size];
+		d = gattr(ctx, GKI_cache_size);
 		set_attr(ctx, d, *attr_value(d));
 		clear_error(ctx);
 	}
@@ -168,22 +167,21 @@ kdump_open_known(kdump_ctx *ctx)
 	const struct attr_data *attr;
 	kdump_status res;
 
-	set_attr_static_string(ctx, ctx->global_attrs[GKI_format_name],
+	set_attr_static_string(ctx, gattr(ctx, GKI_format_name),
 			       ctx->ops->name);
 
-	if (!attr_isset(ctx->global_attrs[GKI_linux_uts_sysname]))
+	if (!attr_isset(gattr(ctx, GKI_linux_uts_sysname)))
 		/* If this fails, it is not fatal. */
 		use_kernel_utsname(ctx);
 
 	/* If this fails, it is not fatal. */
-	attr = ctx->global_attrs[GKI_xen_ver_extra_addr];
+	attr = gattr(ctx, GKI_xen_ver_extra_addr);
 	if (attr_isset(attr)) {
 		char *extra;
 		res = kdump_read_string(ctx, KDUMP_MACHPHYSADDR,
 					attr_value(attr)->address, &extra);
 		if (res == kdump_ok) {
-			set_attr_string(ctx,
-					ctx->global_attrs[GKI_xen_ver_extra],
+			set_attr_string(ctx, gattr(ctx, GKI_xen_ver_extra),
 					extra);
 			free(extra);
 		}
@@ -288,7 +286,7 @@ setup_version_code(kdump_ctx *ctx)
 	char *endp;
 	long a, b, c;
 
-	rel = ctx->global_attrs[GKI_linux_uts_release];
+	rel = gattr(ctx, GKI_linux_uts_release);
 	if (!attr_isset(rel))
 		return set_error(ctx, kdump_nodata,
 				 "Cannot get kernel release");

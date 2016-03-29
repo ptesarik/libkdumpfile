@@ -472,7 +472,7 @@ set_uts(kdump_ctx *ctx, const struct new_utsname *src)
 	kdump_status res;
 
 	for (i = 0; i < ARRAY_SIZE(defs); ++i) {
-		struct attr_data *d = ctx->global_attrs[defs[i].idx];
+		struct attr_data *d = gattr(ctx, defs[i].idx);
 		const char *s = (const char*)src + defs[i].off;
 		if (*s || !attr_isset(d)) {
 			res = set_uts_string(ctx, d, s);
@@ -872,7 +872,6 @@ set_cpu_regs32(kdump_ctx *ctx, unsigned cpu,
 kdump_status
 set_format_longname(kdump_ctx *ctx, const char *name)
 {
-	return set_attr_static_string(ctx,
-				      ctx->global_attrs[GKI_format_longname],
+	return set_attr_static_string(ctx, gattr(ctx, GKI_format_longname),
 				      name);
 }
