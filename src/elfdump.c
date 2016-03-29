@@ -713,11 +713,11 @@ open_common(kdump_ctx *ctx)
 }
 
 static kdump_status
-elf_probe(kdump_ctx *ctx)
+elf_probe(kdump_ctx *ctx, void *hdr)
 {
-	unsigned char *eheader = ctx->buffer;
-	Elf32_Ehdr *elf32 = ctx->buffer;
-	Elf64_Ehdr *elf64 = ctx->buffer;
+	unsigned char *eheader = hdr;
+	Elf32_Ehdr *elf32 = hdr;
+	Elf64_Ehdr *elf64 = hdr;
 	struct elfdump_priv *edp;
 	kdump_status ret;
 

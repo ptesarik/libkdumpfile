@@ -35,12 +35,12 @@
 #include <string.h>
 
 static kdump_status
-qemu_probe(kdump_ctx *ctx)
+qemu_probe(kdump_ctx *ctx, void *hdr)
 {
 	static const char magic[] =
 		{ 'Q', 'E', 'V', 'M' };
 
-	if (memcmp(ctx->buffer, magic, sizeof magic))
+	if (memcmp(hdr, magic, sizeof magic))
 		return kdump_noprobe;
 
 	set_format_longname(ctx, "QEMU snapshot");
@@ -54,12 +54,12 @@ const struct format_ops qemu_ops = {
 };
 
 static kdump_status
-libvirt_probe(kdump_ctx *ctx)
+libvirt_probe(kdump_ctx *ctx, void *hdr)
 {
 	static const char magic[] =
 		{ 'L', 'i', 'b', 'v' };
 
-	if (memcmp(ctx->buffer, magic, sizeof magic))
+	if (memcmp(hdr, magic, sizeof magic))
 		return kdump_noprobe;
 
 	set_format_longname(ctx, "Libvirt core dump");
@@ -73,13 +73,13 @@ const struct format_ops libvirt_ops = {
 };
 
 static kdump_status
-xc_save_probe(kdump_ctx *ctx)
+xc_save_probe(kdump_ctx *ctx, void *hdr)
 {
 	static const char magic[] =
 		{ 'L', 'i', 'n', 'u', 'x', 'G', 'u', 'e',
 		  's', 't', 'R', 'e', 'c', 'o', 'r', 'd' };
 
-	if (memcmp(ctx->buffer, magic, sizeof magic))
+	if (memcmp(hdr, magic, sizeof magic))
 		return kdump_noprobe;
 
 	set_format_longname(ctx, "Xen xc_save");
@@ -93,16 +93,16 @@ const struct format_ops xc_save_ops = {
 };
 
 static kdump_status
-xc_core_probe(kdump_ctx *ctx)
+xc_core_probe(kdump_ctx *ctx, void *hdr)
 {
 	static const char magic[] =
 		{ 0xeb, 0x0f, 0xf0 };
 	unsigned char firstbyte;
 
-	if (memcmp(ctx->buffer + 1, magic, sizeof magic))
+	if (memcmp(hdr + 1, magic, sizeof magic))
 		return kdump_noprobe;
 
-	firstbyte = *(unsigned char*)ctx->buffer;
+	firstbyte = *(unsigned char*)hdr;
 	if (firstbyte == 0xed)
 		set_format_longname(ctx, "Xen xc_core");
 	else if (firstbyte == 0xee)
@@ -120,12 +120,12 @@ const struct format_ops xc_core_ops = {
 };
 
 static kdump_status
-mclxcd_probe(kdump_ctx *ctx)
+mclxcd_probe(kdump_ctx *ctx, void *hdr)
 {
 	static const char magic[] =
 		{ 0xdd, 0xcc, 0x8b, 0x9a };
 
-	if (memcmp(ctx->buffer, magic, sizeof magic))
+	if (memcmp(hdr, magic, sizeof magic))
 		return kdump_noprobe;
 
 	set_format_longname(ctx, "Mision Critical Linux Crash Dump");

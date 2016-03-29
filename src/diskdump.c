@@ -619,10 +619,10 @@ try_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh)
 }
 
 static kdump_status
-open_common(kdump_ctx *ctx)
+open_common(kdump_ctx *ctx, void *hdr)
 {
-	struct disk_dump_header_32 *dh32 = ctx->buffer;
-	struct disk_dump_header_64 *dh64 = ctx->buffer;
+	struct disk_dump_header_32 *dh32 = hdr;
+	struct disk_dump_header_64 *dh64 = hdr;
 	struct disk_dump_priv *ddp;
 	struct setup_data sd;
 	kdump_status ret;
@@ -674,22 +674,22 @@ open_common(kdump_ctx *ctx)
 }
 
 static kdump_status
-diskdump_probe(kdump_ctx *ctx)
+diskdump_probe(kdump_ctx *ctx, void *hdr)
 {
 	static const char magic_diskdump[] =
 		{ 'D', 'I', 'S', 'K', 'D', 'U', 'M', 'P' };
 	static const char magic_kdump[] =
 		{ 'K', 'D', 'U', 'M', 'P', ' ', ' ', ' ' };
 
-	if (!memcmp(ctx->buffer, magic_diskdump, sizeof magic_diskdump))
+	if (!memcmp(hdr, magic_diskdump, sizeof magic_diskdump))
 		set_format_longname(ctx, "Diskdump");
-	else if (!memcmp(ctx->buffer, magic_kdump, sizeof magic_kdump))
+	else if (!memcmp(hdr, magic_kdump, sizeof magic_kdump))
 		set_format_longname(ctx, "Compressed KDUMP");
 	else
 		return set_error(ctx, kdump_noprobe,
 				 "Unrecognized diskdump signature");
 
-	return open_common(ctx);
+	return open_common(ctx, hdr);
 }
 
 static void

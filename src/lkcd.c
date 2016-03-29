@@ -814,11 +814,11 @@ base_version(uint32_t version)
 }
 
 static kdump_status
-init_v1(kdump_ctx *ctx)
+init_v1(kdump_ctx *ctx, void *hdr)
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
-	struct dump_header_v1_32 *dh32 = ctx->buffer;
-	struct dump_header_v1_64 *dh64 = ctx->buffer;
+	struct dump_header_v1_32 *dh32 = hdr;
+	struct dump_header_v1_64 *dh64 = hdr;
 
 	lkcdp->compression = DUMP_COMPRESS_RLE;
 	if (!uts_looks_sane(&dh32->dh_utsname) &&
@@ -831,11 +831,11 @@ init_v1(kdump_ctx *ctx)
 }
 
 static kdump_status
-init_v2(kdump_ctx *ctx)
+init_v2(kdump_ctx *ctx, void *hdr)
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
-	struct dump_header_v2_32 *dh32 = ctx->buffer;
-	struct dump_header_v2_64 *dh64 = ctx->buffer;
+	struct dump_header_v2_32 *dh32 = hdr;
+	struct dump_header_v2_64 *dh64 = hdr;
 
 	if (!uts_looks_sane(&dh32->dh_utsname) &&
 	    uts_looks_sane(&dh64->dh_utsname)) {
@@ -854,10 +854,10 @@ init_v2(kdump_ctx *ctx)
 }
 
 static kdump_status
-init_v8(kdump_ctx *ctx)
+init_v8(kdump_ctx *ctx, void *hdr)
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
-	struct dump_header_v8 *dh = ctx->buffer;
+	struct dump_header_v8 *dh = hdr;
 
 	lkcdp->compression = dump32toh(ctx, dh->dh_dump_compress);
 	if (lkcdp->version >= LKCD_DUMP_V9) {
@@ -871,9 +871,9 @@ init_v8(kdump_ctx *ctx)
 }
 
 static kdump_status
-open_common(kdump_ctx *ctx)
+open_common(kdump_ctx *ctx, void *hdr)
 {
-	struct dump_header_common *dh = ctx->buffer;
+	struct dump_header_common *dh = hdr;
 	struct lkcd_priv *lkcdp;
 	kdump_status ret;
 
@@ -911,7 +911,7 @@ open_common(kdump_ctx *ctx)
 
 	switch(lkcdp->version) {
 	case LKCD_DUMP_V1:
-		ret = init_v1(ctx);
+		ret = init_v1(ctx, hdr);
 		break;
 
 	case LKCD_DUMP_V2:
@@ -919,13 +919,13 @@ open_common(kdump_ctx *ctx)
 	case LKCD_DUMP_V5:
 	case LKCD_DUMP_V6:
 	case LKCD_DUMP_V7:
-		ret = init_v2(ctx);
+		ret = init_v2(ctx, hdr);
 		break;
 
 	case LKCD_DUMP_V8:
 	case LKCD_DUMP_V9:
 	case LKCD_DUMP_V10:
-		ret = init_v8(ctx);
+		ret = init_v8(ctx, hdr);
 		break;
 
 	default:
@@ -945,22 +945,22 @@ open_common(kdump_ctx *ctx)
 }
 
 static kdump_status
-lkcd_probe(kdump_ctx *ctx)
+lkcd_probe(kdump_ctx *ctx, void *hdr)
 {
 	static const char magic_le[] =
 		{ 0xed, 0x23, 0x8f, 0x61, 0x73, 0x01, 0x19, 0xa8 };
 	static const char magic_be[] =
 		{ 0xa8, 0x19, 0x01, 0x73, 0x61, 0x8f, 0x23, 0xed };
 
-	if (!memcmp(ctx->buffer, magic_le, sizeof magic_le))
+	if (!memcmp(hdr, magic_le, sizeof magic_le))
 		set_byte_order(ctx, kdump_little_endian);
-	else if (!memcmp(ctx->buffer, magic_be, sizeof magic_be))
+	else if (!memcmp(hdr, magic_be, sizeof magic_be))
 		set_byte_order(ctx, kdump_big_endian);
 	else
 		return set_error(ctx, kdump_noprobe,
 				 "Unrecognized LKCD signature");
 
-	return open_common(ctx);
+	return open_common(ctx, hdr);
 }
 
 static void

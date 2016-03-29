@@ -122,12 +122,13 @@ kdump_fdopen(kdump_ctx **pctx, int fd)
 /**  Set dump file descriptor.
  * @param ctx   Dump file object.
  * @param fd    File descriptor.
+ * @param buf   Temporary buffer.
  * @returns     Error status.
  *
  * Probe the given file for known file formats and initialize it for use.
  */
 static kdump_status
-set_fd(kdump_ctx *ctx, int fd)
+set_fd(kdump_ctx *ctx, int fd, void *buf)
 {
 	struct attr_data *d;
 	ssize_t rd;
@@ -136,14 +137,14 @@ set_fd(kdump_ctx *ctx, int fd)
 
 	ctx->fd = fd;
 
-	rd = paged_read(ctx->fd, ctx->buffer, MAX_PAGE_SIZE);
+	rd = paged_read(ctx->fd, buf, MAX_PAGE_SIZE);
 	if (rd < 0)
 		return set_error(ctx, kdump_syserr, "Cannot read file header");
-	memset(ctx->buffer + rd, 0, MAX_PAGE_SIZE - rd);
+	memset(buf + rd, 0, MAX_PAGE_SIZE - rd);
 
 	for (i = 0; i < ARRAY_SIZE(formats); ++i) {
 		ctx->ops = formats[i];
-		ret = ctx->ops->probe(ctx);
+		ret = ctx->ops->probe(ctx, buf);
 		if (ret == kdump_ok)
 			return kdump_open_known(ctx);
 		if (ret != kdump_noprobe)
@@ -200,18 +201,18 @@ kdump_open_known(kdump_ctx *ctx)
 kdump_status
 kdump_set_fd(kdump_ctx *ctx, int fd)
 {
+	void *buffer;
 	kdump_status ret;
 
 	clear_error(ctx);
 
-	ctx->buffer = ctx_malloc(MAX_PAGE_SIZE, ctx, "file header buffer");
-	if (!ctx->buffer)
+	buffer = ctx_malloc(MAX_PAGE_SIZE, ctx, "file header buffer");
+	if (!buffer)
 		return kdump_syserr;
 
-	ret = set_fd(ctx, fd);
+	ret = set_fd(ctx, fd, buffer);
 
-	free(ctx->buffer);
-	ctx->buffer = NULL;
+	free(buffer);
 	return ret;
 }
 
@@ -331,8 +332,6 @@ kdump_free(kdump_ctx *ctx)
 		ctx->arch_ops->cleanup(ctx);
 	if (ctx->cache)
 		cache_free(ctx->cache);
-	if (ctx->buffer)
-		free(ctx->buffer);
 	if (ctx->xen_map)
 		free(ctx->xen_map);
 	flush_vtop_map(&ctx->vtop_map);

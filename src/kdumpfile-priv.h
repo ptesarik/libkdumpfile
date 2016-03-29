@@ -229,7 +229,6 @@ struct format_ops {
 
 	/* Probe for a given file format.
 	 * Input:
-	 *   ctx->buffer     MAX_PAGE_SIZE bytes from the file beginning
 	 *   ctx->ops        ops with the probe function
 	 * Output:
 	 *   ctx->format     descriptive name of the file format
@@ -244,12 +243,11 @@ struct format_ops {
 	 *   kdump_noprobe   cannot be handled by these ops
 	 *   or any other kdump_* error status
 	 */
-	kdump_status (*probe)(kdump_ctx *);
+	kdump_status (*probe)(kdump_ctx *ctx, void *hdr);
 
 	/* Read a (machine physical) page from the dump file.
 	 * Input:
 	 *   ctx->fd         core dump file descriptor open for reading
-	 *   ctx->buffer     temporary buffer of MAX_PAGE_SIZE bytes
 	 * Return:
 	 *   kdump_ok        buffer is filled with page data
 	 *   kdump_nodata    data for the given page is not present
@@ -259,7 +257,6 @@ struct format_ops {
 	/* Read a kernel physical page from the dump file.
 	 * Input:
 	 *   ctx->fd         core dump file descriptor open for reading
-	 *   ctx->buffer     temporary buffer of MAX_PAGE_SIZE bytes
 	 * Return:
 	 *   kdump_ok        buffer is filled with page data
 	 *   kdump_nodata    data for the given page is not present
@@ -558,7 +555,6 @@ struct _tag_kdump_ctx {
 
 	/* read_page internals */
 	struct cache *cache;	/**< Page cache. */
-	void *buffer;		/**< Temporary buffer. */
 
 	/* address translation */
 	struct vtop_map vtop_map;

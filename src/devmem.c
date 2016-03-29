@@ -164,7 +164,7 @@ devmem_realloc_caches(kdump_ctx *ctx)
 }
 
 static kdump_status
-devmem_probe(kdump_ctx *ctx)
+devmem_probe(kdump_ctx *ctx, void *hdr)
 {
 	struct devmem_priv *dmp;
 	struct stat st;

@@ -119,9 +119,9 @@ s390_read_page(kdump_ctx *ctx, struct page_io *pio)
 }
 
 static kdump_status
-s390_probe(kdump_ctx *ctx)
+s390_probe(kdump_ctx *ctx, void *hdr)
 {
-	struct dump_header *dh = ctx->buffer;
+	struct dump_header *dh = hdr;
 	struct s390dump_priv *sdp;
 	struct end_marker marker;
 	off_t pos;
