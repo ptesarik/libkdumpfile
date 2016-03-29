@@ -148,6 +148,10 @@ struct page_desc {
 struct disk_dump_priv {
 	unsigned char *bitmap;	/* for compressed dumps */
 	off_t descoff;		/* position of page descriptor table */
+
+	/** Overridden methods for arch.page_size attribute. */
+	struct attr_override page_size_override;
+	void *compressed;	/**< Buffer for compressed page data. */
 };
 
 struct setup_data {
@@ -178,9 +182,8 @@ page_is_dumpable(kdump_ctx *ctx, unsigned int nr)
 }
 
 static off_t
-pfn_to_pdpos(kdump_ctx *ctx, unsigned long pfn)
+pfn_to_pdpos(struct disk_dump_priv *ddp, unsigned long pfn)
 {
-	struct disk_dump_priv *ddp = ctx->fmtdata;
 	unsigned i, n;
 
 	n = 0;
@@ -194,6 +197,7 @@ pfn_to_pdpos(kdump_ctx *ctx, unsigned long pfn)
 static kdump_status
 diskdump_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 {
+	struct disk_dump_priv *ddp = ctx->fmtdata;
 	struct page_desc pd;
 	off_t pd_pos;
 	void *buf;
@@ -205,7 +209,7 @@ diskdump_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 		return kdump_ok;
 	}
 
-	pd_pos = pfn_to_pdpos(ctx, pfn);
+	pd_pos = pfn_to_pdpos(ddp, pfn);
 	rd = pread(ctx->fd, &pd, sizeof pd, pd_pos);
 	if (rd != sizeof pd)
 		return set_error(ctx, read_error(rd),
@@ -222,7 +226,7 @@ diskdump_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 			return set_error(ctx, kdump_dataerr,
 					 "Wrong compressed size: %lu",
 					 (unsigned long)pd.size);
-		buf = ctx->buffer;
+		buf = ddp->compressed;
 	} else {
 		if (pd.size != get_page_size(ctx))
 			return set_error(ctx, kdump_dataerr,
@@ -291,6 +295,35 @@ diskdump_read_page(kdump_ctx *ctx, struct page_io *pio)
 		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 
 	return def_read_cache(ctx, pio, diskdump_read_cache, pio->pfn);
+}
+
+/** Reallocate buffer for compressed data.
+ * @param ctx   Dump file object.
+ * @param attr  "arch.page_size" attribute.
+ * @returns     Error status.
+ *
+ * This function is used as a post-set handler for @c arch.page_size
+ * to ensure that there is always a sufficiently large buffer for
+ * compressed pages.
+ */
+static kdump_status
+diskdump_realloc_compressed(kdump_ctx *ctx, struct attr_data *attr)
+{
+	const struct attr_ops *parent_ops;
+	struct disk_dump_priv *ddp = ctx->fmtdata;
+	size_t newsz = attr_value(attr)->number;
+	void *newbuf;
+
+	newbuf = realloc(ddp->compressed, newsz);
+	if (!newbuf)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate buffer for compressed data");
+	ddp->compressed = newbuf;
+
+	parent_ops = ddp->page_size_override.template.parent->ops;
+	return (parent_ops && parent_ops->post_set)
+		? parent_ops->post_set(ctx, attr)
+		: kdump_ok;
 }
 
 static kdump_status
@@ -602,6 +635,11 @@ open_common(kdump_ctx *ctx)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate diskdump private data");
 
+	attr_add_override(ctx->global_attrs[GKI_page_size],
+			  &ddp->page_size_override);
+	ddp->page_size_override.ops.post_set = diskdump_realloc_compressed;
+	ddp->compressed = NULL;
+
 	ctx->fmtdata = ddp;
 
 	if (uts_looks_sane(&dh32->utsname))
@@ -660,8 +698,12 @@ diskdump_cleanup(kdump_ctx *ctx)
 	struct disk_dump_priv *ddp = ctx->fmtdata;
 
 	if (ddp) {
+		attr_remove_override(ctx->global_attrs[GKI_page_size],
+				     &ddp->page_size_override);
 		if (ddp->bitmap)
 			free(ddp->bitmap);
+		if (ddp->compressed)
+			free(ddp->compressed);
 		free(ddp);
 		ctx->fmtdata = NULL;
 	}

@@ -323,6 +323,10 @@ struct lkcd_priv {
 	struct pfn_block ***pfn_level1;
 	unsigned l1_size;
 
+	/** Overridden methods for arch.page_size attribute. */
+	struct attr_override page_size_override;
+	void *compressed;	/**< Buffer for compressed page data. */
+
 	kdump_pfn_t max_pfn;
 	struct attr_override max_pfn_override;
 
@@ -722,7 +726,7 @@ lkcd_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 			return set_error(ctx, kdump_dataerr,
 					 "Wrong compressed size: %lu",
 					 (unsigned long) dp.dp_size);
-		buf = ctx->buffer;
+		buf = lkcdp->compressed;
 		break;
 	case DUMP_RAW:
 		if (dp.dp_size != get_page_size(ctx))
@@ -772,6 +776,35 @@ static kdump_status
 lkcd_read_page(kdump_ctx *ctx, struct page_io *pio)
 {
 	return def_read_cache(ctx, pio, lkcd_read_cache, pio->pfn);
+}
+
+/** Reallocate buffer for compressed data.
+ * @param ctx   Dump file object.
+ * @param attr  "arch.page_size" attribute.
+ * @returns     Error status.
+ *
+ * This function is used as a post-set handler for @c arch.page_size
+ * to ensure that there is always a sufficiently large buffer for
+ * compressed pages.
+ */
+static kdump_status
+lkcd_realloc_compressed(kdump_ctx *ctx, struct attr_data *attr)
+{
+	const struct attr_ops *parent_ops;
+	struct lkcd_priv *lkcdp = ctx->fmtdata;
+	size_t newsz = attr_value(attr)->number;
+	void *newbuf;
+
+	newbuf = realloc(lkcdp->compressed, newsz);
+	if (!newbuf)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate buffer for compressed data");
+	lkcdp->compressed = newbuf;
+
+	parent_ops = lkcdp->page_size_override.template.parent->ops;
+	return (parent_ops && parent_ops->post_set)
+		? parent_ops->post_set(ctx, attr)
+		: kdump_ok;
 }
 
 static inline unsigned long
@@ -861,6 +894,11 @@ open_common(kdump_ctx *ctx)
 
 	lkcdp->pfn_level1 = NULL;
 	lkcdp->l1_size = 0;
+
+	attr_add_override(ctx->global_attrs[GKI_page_size],
+			  &lkcdp->page_size_override);
+	lkcdp->page_size_override.ops.post_set = lkcd_realloc_compressed;
+	lkcdp->compressed = NULL;
 
 	ret = set_page_size(ctx, dump32toh(ctx, dh->dh_page_size));
 	if (ret != kdump_ok)
@@ -963,9 +1001,13 @@ lkcd_cleanup(kdump_ctx *ctx)
 {
 	struct lkcd_priv *lkcdp = ctx->fmtdata;
 
+	attr_remove_override(ctx->global_attrs[GKI_page_size],
+			     &lkcdp->page_size_override);
 	attr_remove_override(ctx->global_attrs[GKI_max_pfn],
 			     &lkcdp->max_pfn_override);
 	free_level1(lkcdp->pfn_level1, lkcdp->l1_size);
+	if (lkcdp->compressed)
+		free(lkcdp->compressed);
 	free(lkcdp);
 	ctx->fmtdata = NULL;
 }
