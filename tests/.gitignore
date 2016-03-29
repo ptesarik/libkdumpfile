@@ -9,6 +9,7 @@ mklkcd
 multiread
 privptr
 subattr
+thread-errstr
 
 # Test results
 *.log

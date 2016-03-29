@@ -66,6 +66,8 @@ privptr_LDADD = $(top_builddir)/src/libkdumpfile.la
 subattr_SOURCES = subattr.c
 subattr_LDADD = $(top_builddir)/src/libkdumpfile.la
 
+thread_errstr_LDADD = $(top_builddir)/src/libkdumpfile.la
+
 check_PROGRAMS = \
 	attriter \
 	checkattr \
@@ -76,7 +78,8 @@ check_PROGRAMS = \
 	mklkcd \
 	multiread \
 	privptr \
-	subattr
+	subattr \
+	thread-errstr
 
 test_scripts = \
 	diskdump-empty-i386 \
@@ -128,7 +131,11 @@ TESTS = $(test_scripts) \
 	attriter \
 	clearattr \
 	privptr \
-	subattr
+	subattr \
+	thread-errstr
+
+XFAIL_TESTS = \
+	thread-errstr
 
 clean-local:
 	-rm -rf out
