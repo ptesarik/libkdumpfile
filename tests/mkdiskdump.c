@@ -61,6 +61,9 @@ struct page_data_kdump {
 
 	void *cbuf;
 	size_t cbufsz;
+#if USE_LZO
+	lzo_bytep lzo_wrkmem;
+#endif
 
 	unsigned long skip;
 };
@@ -440,6 +443,23 @@ parseheader(struct page_data *pg, char *p)
 	return TEST_OK;
 }
 
+#if USE_ZLIB || USE_LZO || USE_SNAPPY
+static size_t
+enlarge_cbuf(struct page_data_kdump *pgkdump, size_t newsz)
+{
+	unsigned char *newbuf;
+
+	newbuf = realloc(pgkdump->cbuf, newsz);
+	if (!newbuf) {
+		perror("Cannot enlarge compression buffer");
+		return 0;
+	}
+	pgkdump->cbuf = newbuf;
+	pgkdump->cbufsz = newsz;
+	return newsz;
+}
+#endif
+
 #if USE_ZLIB
 static size_t
 do_gzip(struct page_data *pg)
@@ -449,16 +469,9 @@ do_gzip(struct page_data *pg)
 
 	clen = pgkdump->cbufsz;
 	while (compress(pgkdump->cbuf, &clen, pg->buf, pg->len) != Z_OK) {
-		unsigned char *newbuf;
-
-		clen = pgkdump->cbufsz + (block_size >> 2);
-		newbuf = realloc(pgkdump->cbuf, clen);
-		if (!newbuf) {
-			perror("Cannot allocate compression buffer");
-			return 0;
-		}
-		pgkdump->cbuf = newbuf;
-		pgkdump->cbufsz = clen;
+		clen = enlarge_cbuf(pgkdump, clen + (block_size >> 2));
+		if (!clen)
+			break;
 	}
 	return clen;
 }
@@ -468,7 +481,20 @@ do_gzip(struct page_data *pg)
 static size_t
 do_lzo(struct page_data *pg)
 {
-	return 0;
+	struct page_data_kdump *pgkdump = pg->priv;
+	lzo_uint clen;
+
+	clen = pg->len + pg->len / 16 + 64 + 3;
+	if (clen > pgkdump->cbufsz &&
+	    !(clen = enlarge_cbuf(pgkdump, clen)))
+		return clen;
+
+	if (lzo1x_1_compress(pg->buf, pg->len, pgkdump->cbuf, &clen,
+			     pgkdump->lzo_wrkmem) != LZO_E_OK) {
+		fprintf(stderr, "LZO compression failed\n");
+		clen = 0;
+	}
+	return clen;
 }
 #endif
 
@@ -476,7 +502,20 @@ do_lzo(struct page_data *pg)
 static size_t
 do_snappy(struct page_data *pg)
 {
-	return 0;
+	struct page_data_kdump *pgkdump = pg->priv;
+	size_t clen;
+
+	clen = snappy_max_compressed_length(pg->len);
+	if (clen > pgkdump->cbufsz &&
+	    !(clen = enlarge_cbuf(pgkdump, clen)))
+		return clen;
+
+	if (snappy_compress((const char*)pg->buf, pg->len,
+			    pgkdump->cbuf, &clen) != SNAPPY_OK) {
+		fprintf(stderr, "snappy compression failed\n");
+		clen = 0;
+	}
+	return clen;
 }
 #endif
 
@@ -592,6 +631,18 @@ writedata(FILE *f)
 	pgkdump.cbuf = NULL;
 	pgkdump.cbufsz = 0;
 
+#if USE_LZO
+	if (lzo_init() != LZO_E_OK) {
+		fprintf(stderr, "lzo_init() failed\n");
+		return TEST_ERR;
+	}
+	pgkdump.lzo_wrkmem = (lzo_bytep) malloc(LZO1X_1_MEM_COMPRESS);
+	if (!pgkdump.lzo_wrkmem) {
+		perror("Cannot allocate LZO work memory");
+		return TEST_ERR;
+	}
+#endif
+
 	pg.endian = be;
 	pg.priv = &pgkdump;
 	pg.parse_hdr = parseheader;
@@ -601,6 +652,9 @@ writedata(FILE *f)
 
 	if (pgkdump.cbuf)
 		free(pgkdump.cbuf);
+#if USE_LZO
+	free(pgkdump.lzo_wrkmem);
+#endif
 
 	return rc;
 }
