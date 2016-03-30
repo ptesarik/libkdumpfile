@@ -436,7 +436,7 @@ get_pml4(kdump_ctx *ctx)
 	} else if (ret == kdump_nodata) {
 		struct attr_data *attr;
 		clear_error(ctx);
-		attr = lookup_attr(ctx, "cpu.0.reg.cr3");
+		attr = lookup_attr(ctx->shared, "cpu.0.reg.cr3");
 		if (!attr || validate_attr(ctx, attr) != kdump_ok)
 			return set_error(ctx, kdump_nodata,
 					 "Cannot find top-level page table");

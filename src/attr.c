@@ -57,15 +57,15 @@ static const size_t static_offsets[] = {
 };
 
 /**  Get a pointer to the static value with a given index.
- * @param ctx  Dump file object.
- * @param idx  Static index.
- * @returns    Pointer to the static attribute value.
+ * @param shared  Dump file shared data.
+ * @param idx     Static index.
+ * @returns       Pointer to the static attribute value.
  */
 static inline union kdump_attr_value *
-static_attr_value(kdump_ctx *ctx, enum global_keyidx idx)
+static_attr_value(struct kdump_shared *shared, enum global_keyidx idx)
 {
 	return (union kdump_attr_value*)
-		((char*)ctx->shared + static_offsets[idx - GKI_static_first]);
+		((char*)shared + static_offsets[idx - GKI_static_first]);
 }
 
 /**  Calculate the hash index of a key path.
@@ -177,14 +177,15 @@ path_hash(struct phash *ph, const struct attr_data *dir)
 }
 
 /**  Look up a child attribute of a given directory.
- * @param ctx     Dump file object.
+ * @param shared  Dump file shared data.
  * @param dir     Directory attribute.
  * @param key     Key name relative to @p dir.
  * @param keylen  Initial portion of @c key to be considered.
  * @returns       Stored attribute or @c NULL if not found.
  */
 struct attr_data *
-lookup_dir_attr(const kdump_ctx *ctx, const struct attr_data *dir,
+lookup_dir_attr(const struct kdump_shared *shared,
+		const struct attr_data *dir,
 		const char *key, size_t keylen)
 {
 	struct phash ph;
@@ -197,7 +198,7 @@ lookup_dir_attr(const kdump_ctx *ctx, const struct attr_data *dir,
 	i = fold_hash(phash_value(&ph), ATTR_HASH_BITS);
 	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
 	do {
-		tbl = ctx->shared->attr;
+		tbl = shared->attr;
 		do {
 			struct attr_data *d = &tbl->table[i];
 			if (!d->parent)
@@ -213,52 +214,54 @@ lookup_dir_attr(const kdump_ctx *ctx, const struct attr_data *dir,
 }
 
 /**  Look up attribute value by name.
- * @param ctx     Dump file object.
+ * @param shared  Dump file shared data.
  * @param key     Key name.
  * @param keylen  Initial portion of @c key to be considered.
  * @returns       Stored attribute or @c NULL if not found.
  */
 static struct attr_data*
-lookup_attr_part(const kdump_ctx *ctx, const char *key, size_t keylen)
+lookup_attr_part(const struct kdump_shared *shared,
+		 const char *key, size_t keylen)
 {
-	return lookup_dir_attr(ctx, gattr(ctx, GKI_dir_root), key, keylen);
+	return lookup_dir_attr(shared, sgattr(shared, GKI_dir_root),
+			       key, keylen);
 }
 
 /**  Look up attribute data by name.
- * @param ctx   Dump file object.
- * @param key   Key name, or @c NULL for the root attribute.
- * @returns     Stored attribute or @c NULL if not found.
+ * @param shared  Dump file shared data.
+ * @param key     Key name, or @c NULL for the root attribute.
+ * @returns       Stored attribute or @c NULL if not found.
  *
  * This function does not check whether an attribute is set, or not.
  */
 struct attr_data *
-lookup_attr(const kdump_ctx *ctx, const char *key)
+lookup_attr(const struct kdump_shared *shared, const char *key)
 {
 	return key
-		? lookup_attr_part(ctx, key, strlen(key))
-		: gattr(ctx, GKI_dir_root);
+		? lookup_attr_part(shared, key, strlen(key))
+		: sgattr(shared, GKI_dir_root);
 }
 
 /**  Look up attribute parent by name.
- * @param ctx   Dump file object.
- * @param pkey  Pointer to key name. This pointer is updated to the last
- *              path component on return.
- * @returns     Stored attribute or @c NULL if not found.
+ * @param shared  Dump file shared data.
+ * @param pkey    Pointer to key name. This pointer is updated to the last
+ *                path component on return.
+ * @returns       Stored attribute or @c NULL if not found.
  *
  * This function does not check whether an attribute is set, or not.
  */
 static struct attr_data *
-lookup_attr_parent(const kdump_ctx *ctx, const char **pkey)
+lookup_attr_parent(const struct kdump_shared *shared, const char **pkey)
 {
 	const char *key, *p;
 
 	p = strrchr(*pkey, '.');
 	if (!p)
-		return gattr(ctx, GKI_dir_root);
+		return sgattr(shared, GKI_dir_root);
 
 	key = *pkey;
 	*pkey = p + 1;
-	return lookup_attr_part(ctx, key, p - key);
+	return lookup_attr_part(shared, key, p - key);
 }
 
 /**  Link a new attribute to its parent.
@@ -279,13 +282,13 @@ link_attr(struct attr_data *dir, struct attr_data *attr)
 }
 
 /**  Allocate an attribute from the hash table.
- * @param ctx     Dump file object.
+ * @param shared  Dump file shared data.
  * @param parent  Parent directory, or @c NULL.
  * @param tmpl    Attribute template.
  * @returns       Attribute data, or @c NULL on allocation failure.
  */
 static struct attr_data *
-alloc_attr(kdump_ctx *ctx, struct attr_data *parent,
+alloc_attr(struct kdump_shared *shared, struct attr_data *parent,
 	   const struct attr_template *tmpl)
 {
 	struct attr_data tmp;
@@ -303,7 +306,7 @@ alloc_attr(kdump_ctx *ctx, struct attr_data *parent,
 	i = hash = key_hash_index(path);
 	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
 	do {
-		pnext = &ctx->shared->attr;
+		pnext = &shared->attr;
 		while (*pnext) {
 			tbl = *pnext;
 			if (!tbl->table[i].parent)
@@ -358,19 +361,19 @@ dealloc_attr(struct attr_data *attr)
 }
 
 /**  Allocate a new attribute in any directory.
- * @param ctx     Dump file object.
+ * @param shared  Dump file shared data.
  * @param parent  Parent directory. If @c NULL, create a self-owned
  *                attribute (root directory).
  * @param tmpl    Attribute template.
  * @returns       Attribute data, or @c NULL on allocation failure.
  */
 static struct attr_data *
-new_attr(kdump_ctx *ctx, struct attr_data *parent,
+new_attr(struct kdump_shared *shared, struct attr_data *parent,
 	 const struct attr_template *tmpl)
 {
 	struct attr_data *attr;
 
-	attr = alloc_attr(ctx, parent, tmpl);
+	attr = alloc_attr(shared, parent, tmpl);
 	if (!attr)
 		return attr;
 
@@ -394,7 +397,7 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 	struct attr_data *attr, *parent;
 	char *keyname;
 
-	attr = lookup_attr(ctx, path);
+	attr = lookup_attr(ctx->shared, path);
 	if (attr) {
 		if (attr->template->type == type)
 			return kdump_ok;
@@ -403,7 +406,7 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 				 "Type conflict with existing template");
 	}
 
-	parent = lookup_attr_parent(ctx, &path);
+	parent = lookup_attr_parent(ctx->shared, &path);
 	if (!parent)
 		return set_error(ctx, kdump_nokey, "No such path");
 
@@ -423,7 +426,7 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 	tmpl->type = type;
 	tmpl->ops = NULL;
 
-	attr = new_attr(ctx, parent, tmpl);
+	attr = new_attr(ctx->shared, parent, tmpl);
 	if (!attr) {
 		free(tmpl);
 		return set_error(ctx, kdump_syserr,
@@ -484,7 +487,7 @@ init_attrs(kdump_ctx *ctx)
 		struct attr_data *attr, *parent;
 
 		parent = ctx->shared->global_attrs[tmpl->parent - global_keys];
-		attr = new_attr(ctx, parent, tmpl);
+		attr = new_attr(ctx->shared, parent, tmpl);
 		if (!attr)
 			return set_error(ctx, kdump_syserr,
 					 "Cannot initialize attribute %s",
@@ -493,7 +496,7 @@ init_attrs(kdump_ctx *ctx)
 
 		if (i >= GKI_static_first && i <= GKI_static_last) {
 			attr->indirect = 1;
-			attr->pval = static_attr_value(ctx, i);
+			attr->pval = static_attr_value(ctx->shared, i);
 		}
 	}
 
@@ -683,7 +686,7 @@ add_attr(kdump_ctx *ctx, const char *dir, const struct attr_template *tmpl,
 {
 	struct attr_data *parent, *attr;
 
-	parent = lookup_attr(ctx, dir);
+	parent = lookup_attr(ctx->shared, dir);
 	if (!parent)
 		return set_error(ctx, kdump_nokey,
 				 "No such path");
@@ -692,7 +695,7 @@ add_attr(kdump_ctx *ctx, const char *dir, const struct attr_template *tmpl,
 				 "Path is a leaf attribute");
 
 	instantiate_path(parent);
-	attr = new_attr(ctx, parent, tmpl);
+	attr = new_attr(ctx->shared, parent, tmpl);
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate attribute");

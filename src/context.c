@@ -49,7 +49,7 @@ kdump_get_attr(kdump_ctx *ctx, const char *key, kdump_attr_t *valp)
 
 	clear_error(ctx);
 
-	d = lookup_attr(ctx, key);
+	d = lookup_attr(ctx->shared, key);
 	if (!d)
 		return set_error(ctx, kdump_nokey, "No such key");
 	if (validate_attr(ctx, d) != kdump_ok)
@@ -92,7 +92,7 @@ kdump_set_attr(kdump_ctx *ctx, const char *key,
 
 	clear_error(ctx);
 
-	d = lookup_attr(ctx, key);
+	d = lookup_attr(ctx->shared, key);
 	if (!d)
 		return set_error(ctx, kdump_nodata, "No such key");
 
@@ -126,7 +126,7 @@ kdump_attr_ref(kdump_ctx *ctx, const char *key, kdump_attr_ref_t *ref)
 
 	clear_error(ctx);
 
-	d = lookup_attr(ctx, key);
+	d = lookup_attr(ctx->shared, key);
 	if (!d)
 		return set_error(ctx, kdump_nokey, "No such key");
 
@@ -143,7 +143,7 @@ kdump_sub_attr_ref(kdump_ctx *ctx, const kdump_attr_ref_t *base,
 	clear_error(ctx);
 
 	dir = ref_attr(base);
-	attr = lookup_dir_attr(ctx, dir, subkey, strlen(subkey));
+	attr = lookup_dir_attr(ctx->shared, dir, subkey, strlen(subkey));
 	if (!attr)
 		return set_error(ctx, kdump_nokey, "No such key");
 
@@ -229,7 +229,7 @@ kdump_attr_iter_start(kdump_ctx *ctx, const char *path,
 
 	clear_error(ctx);
 
-	d = lookup_attr(ctx, path);
+	d = lookup_attr(ctx->shared, path);
 	if (!d)
 		return set_error(ctx, kdump_nokey, "No such path");
 
@@ -318,7 +318,7 @@ get_string_attr(kdump_ctx *ctx, struct attr_data *attr)
 const char *
 kdump_get_string_attr(kdump_ctx *ctx, const char *key)
 {
-	struct attr_data *attr = lookup_attr(ctx, key);
+	struct attr_data *attr = lookup_attr(ctx->shared, key);
 	return attr ? get_string_attr(ctx, attr) : NULL;
 }
 
@@ -396,7 +396,7 @@ kdump_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 
 	key = alloca(sizeof("cpu.") + 20 + sizeof(".reg.") + strlen(regname));
 	sprintf(key, "cpu.%u.reg.%s", cpu, regname);
-	attr = lookup_attr(ctx, key);
+	attr = lookup_attr(ctx->shared, key);
 	if (!attr || validate_attr(ctx, attr) != kdump_ok)
 		return set_error(ctx, kdump_nodata, "Cannot read '%s'", key);
 
@@ -423,7 +423,7 @@ vmcoreinfo_row(kdump_ctx *ctx, const char *key, const struct attr_data *base)
 
 	clear_error(ctx);
 
-	attr = lookup_dir_attr(ctx, base, key, strlen(key));
+	attr = lookup_dir_attr(ctx->shared, base, key, strlen(key));
 	return (attr && validate_attr(ctx, attr) == kdump_ok)
 		? attr_value(attr)->string
 		: NULL;
@@ -451,7 +451,7 @@ vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname, kdump_addr_t *symvalue,
 
 	clear_error(ctx);
 
-	attr = lookup_dir_attr(ctx, base, symname, strlen(symname));
+	attr = lookup_dir_attr(ctx->shared, base, symname, strlen(symname));
 	if (!attr)
 		return set_error(ctx, kdump_nodata, "Symbol not found");
 	if (validate_attr(ctx, attr) != kdump_ok)

@@ -861,10 +861,11 @@ kdump_status add_attr_template(kdump_ctx *ctx, const char *path,
 kdump_status init_attrs(kdump_ctx *ctx);
 
 #define lookup_attr INTERNAL_NAME(lookup_attr)
-struct attr_data *lookup_attr(const kdump_ctx *ctx, const char *key);
+struct attr_data *lookup_attr(const struct kdump_shared *shared,
+			      const char *key);
 
 #define lookup_dir_attr INTERNAL_NAME(lookup_dir_attr)
-struct attr_data *lookup_dir_attr(const kdump_ctx *ctx,
+struct attr_data *lookup_dir_attr(const struct kdump_shared *shared,
 				  const struct attr_data *dir,
 				  const char *key, size_t keylen);
 

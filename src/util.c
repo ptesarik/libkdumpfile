@@ -649,7 +649,7 @@ add_parsed_row(kdump_ctx *ctx, const char *path,
 	res = create_attr_path(ctx, attrkey, kdump_string);
 	if (res != kdump_ok)
 		return res;
-	attr = lookup_attr(ctx, attrkey);
+	attr = lookup_attr(ctx->shared, attrkey);
 	if (!attr)
 		return set_error(ctx, kdump_nokey,
 				 "Cannot find attribute '%s'", attrkey);
@@ -698,7 +698,7 @@ add_parsed_row(kdump_ctx *ctx, const char *path,
 	res = create_attr_path(ctx, attrkey, attr_type);
 	if (res != kdump_ok)
 		return res;
-	attr = lookup_attr(ctx, attrkey);
+	attr = lookup_attr(ctx->shared, attrkey);
 	if (!attr)
 		return set_error(ctx, kdump_nokey,
 				 "Cannot find attribute '%s'", attrkey);
@@ -724,7 +724,7 @@ store_vmcoreinfo(kdump_ctx *ctx, const char *path, void *data, size_t len)
 	raw[len] = '\0';
 
 	stpcpy(stpcpy(key, path), ".raw");
-	attr = lookup_attr(ctx, key);
+	attr = lookup_attr(ctx->shared, key);
 	if (!attr) {
 		free(raw);
 		return set_error(ctx, kdump_nokey,
