@@ -145,8 +145,8 @@ process_core_note(kdump_ctx *ctx, uint32_t type,
 		  void *desc, size_t descsz)
 {
 	if (type == NT_PRSTATUS) {
-		if (ctx->arch_ops && ctx->arch_ops->process_prstatus)
-			return ctx->arch_ops->process_prstatus(
+		if (ctx->shared->arch_ops && ctx->shared->arch_ops->process_prstatus)
+			return ctx->shared->arch_ops->process_prstatus(
 				ctx, desc, descsz);
 	}
 
@@ -183,7 +183,7 @@ process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 			p2m_mfn = dump64toh(ctx, ((uint64_t*)data)[words-1]);
 			version = 1;
 		}
-		if (ctx->arch_ops == &x86_64_ops &&
+		if (ctx->shared->arch_ops == &x86_64_ops &&
 		    len >= sizeof(struct xen_crash_info_x86_64)) {
 			struct xen_crash_info_x86_64 *xinfo = data;
 			phys_start = dump64toh(ctx, xinfo->xen_phys_start);
@@ -199,7 +199,7 @@ process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 			version = 1;
 			p2m_mfn = dump32toh(ctx, ((uint32_t*)data)[words-1]);
 		}
-		if (ctx->arch_ops == &ia32_ops &&
+		if (ctx->shared->arch_ops == &ia32_ops &&
 		    len >= sizeof(struct xen_crash_info_x86)) {
 			struct xen_crash_info_x86 *xinfo = data;
 			phys_start = dump32toh(ctx, xinfo->xen_phys_start);

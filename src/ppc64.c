@@ -223,7 +223,7 @@ static kdump_status
 ppc64_vtop_hugepd(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 		  uint64_t hpde, unsigned pdshift)
 {
-	struct ppc64_data *archdata = ctx->archdata;
+	struct ppc64_data *archdata = ctx->shared->archdata;
 	kdump_vaddr_t mask, ptep;
 	unsigned long idx;
 	uint64_t pte;
@@ -249,7 +249,7 @@ ppc64_vtop_hugepd(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 static kdump_status
 ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	struct ppc64_data *archdata = ctx->archdata;
+	struct ppc64_data *archdata = ctx->shared->archdata;
 	struct vaddr_parts split;
 	kdump_vaddr_t pgdp, pudp, pmdp, ptep;
 	uint64_t pgd, pud, pmd, pte;
@@ -345,8 +345,8 @@ ppc64_vtop_init(kdump_ctx *ctx)
 				 "Cannot resolve _stext");
 	set_phys_base(ctx, addr);
 
-	flush_vtop_map(&ctx->vtop_map);
-	res = set_vtop_xlat(&ctx->vtop_map,
+	flush_vtop_map(&ctx->shared->vtop_map);
+	res = set_vtop_xlat(&ctx->shared->vtop_map,
 			    addr, addr + 0x1000000000000000,
 			    KDUMP_XLAT_DIRECT, addr);
 	if (res != kdump_ok)
@@ -375,7 +375,7 @@ ppc64_vtop_init(kdump_ctx *ctx)
 
 	vmal = dump64toh(ctx, vmal);
 
-	res = set_vtop_xlat(&ctx->vtop_map,
+	res = set_vtop_xlat(&ctx->shared->vtop_map,
 			    vmal, VIRTADDR_MAX,
 			    KDUMP_XLAT_VTOP, addr);
 	if (res != kdump_ok)
@@ -398,7 +398,7 @@ ppc64_init(kdump_ctx *ctx)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate ppc64 private data");
 
-	ctx->archdata = archdata;
+	ctx->shared->archdata = archdata;
 
 	pagesize = get_page_size(ctx);
 
@@ -437,10 +437,10 @@ ppc64_init(kdump_ctx *ctx)
 static void
 ppc64_cleanup(kdump_ctx *ctx)
 {
-	struct ppc64_data *archdata = ctx->archdata;
+	struct ppc64_data *archdata = ctx->shared->archdata;
 
 	free(archdata);
-	ctx->archdata = NULL;
+	ctx->shared->archdata = NULL;
 }
 
 #define ELF_NGREG 49

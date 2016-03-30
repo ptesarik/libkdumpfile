@@ -94,13 +94,13 @@ static void s390_cleanup(kdump_ctx *ctx);
 static kdump_status
 s390_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 {
-	struct s390dump_priv *sdp = ctx->fmtdata;
+	struct s390dump_priv *sdp = ctx->shared->fmtdata;
 	kdump_paddr_t addr = pfn << get_page_shift(ctx);
 	off_t pos;
 	ssize_t rd;
 
 	pos = (off_t)addr + (off_t)sdp->dataoff;
-	rd = pread(ctx->fd, ce->data, get_page_size(ctx), pos);
+	rd = pread(ctx->shared->fd, ce->data, get_page_size(ctx), pos);
 	if (rd != get_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu",
@@ -137,7 +137,7 @@ s390_probe(kdump_ctx *ctx, void *hdr)
 
 	pos = dump32toh(ctx, dh->h1.hdr_size) +
 		dump64toh(ctx, dh->h1.mem_size);
-	rd = pread(ctx->fd, &marker, sizeof marker, pos);
+	rd = pread(ctx->shared->fd, &marker, sizeof marker, pos);
 	if (rd != sizeof marker)
 		return set_error(ctx, read_error(rd),
 				 "Cannot read end marker at %llu",
@@ -150,7 +150,7 @@ s390_probe(kdump_ctx *ctx, void *hdr)
 	if (!sdp)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate s390dump private data");
-	ctx->fmtdata = sdp;
+	ctx->shared->fmtdata = sdp;
 
 	sdp->dataoff = dump32toh(ctx, dh->h1.hdr_size);
 	set_max_pfn(ctx, dump32toh(ctx, dh->h1.num_pages));
@@ -184,10 +184,10 @@ s390_probe(kdump_ctx *ctx, void *hdr)
 static void
 s390_cleanup(kdump_ctx *ctx)
 {
-	struct s390dump_priv *sdp = ctx->fmtdata;
+	struct s390dump_priv *sdp = ctx->shared->fmtdata;
 
 	free(sdp);
-	ctx->fmtdata = NULL;
+	ctx->shared->fmtdata = NULL;
 }
 
 const struct format_ops s390dump_ops = {

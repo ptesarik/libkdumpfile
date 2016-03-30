@@ -163,12 +163,12 @@ vtop_init(kdump_ctx *ctx, struct vtop_map *map, size_t init_ops_off)
 
 	clear_error(ctx);
 
-	if (!ctx->arch_ops)
+	if (!ctx->shared->arch_ops)
 		return set_error(ctx, kdump_unsupported,
 				 "Unsupported architecture");
 
 	arch_init = *(kdump_status (*const *)(kdump_ctx*))
-		((char*)ctx->arch_ops + init_ops_off);
+		((char*)ctx->shared->arch_ops + init_ops_off);
 	if (!arch_init)
 		return set_error(ctx, kdump_unsupported,
 				 "No vtop support for this architecture");
@@ -184,14 +184,14 @@ vtop_init(kdump_ctx *ctx, struct vtop_map *map, size_t init_ops_off)
 kdump_status
 kdump_vtop_init(kdump_ctx *ctx)
 {
-	return vtop_init(ctx, &ctx->vtop_map,
+	return vtop_init(ctx, &ctx->shared->vtop_map,
 			 offsetof(struct arch_ops, vtop_init));
 }
 
 kdump_status
 kdump_vtop_init_xen(kdump_ctx *ctx)
 {
-	return vtop_init(ctx, &ctx->vtop_map_xen,
+	return vtop_init(ctx, &ctx->shared->vtop_map_xen,
 			 offsetof(struct arch_ops, vtop_init_xen));
 }
 
@@ -217,13 +217,13 @@ vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	kdump_addr_t maddr;
 	kdump_status res;
 
-	if (!ctx->arch_ops || !ctx->arch_ops->vtop)
+	if (!ctx->shared->arch_ops || !ctx->shared->arch_ops->vtop)
 		return set_error_no_vtop(ctx);
 
 	if (kphys_is_machphys(ctx))
-		return ctx->arch_ops->vtop(ctx, vaddr, paddr);
+		return ctx->shared->arch_ops->vtop(ctx, vaddr, paddr);
 
-	res = ctx->arch_ops->vtop(ctx, vaddr, &maddr);
+	res = ctx->shared->arch_ops->vtop(ctx, vaddr, &maddr);
 	if (res != kdump_ok)
 		return res;
 
@@ -243,8 +243,8 @@ vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 kdump_status
 vtop_pgt_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	if (ctx->arch_ops && ctx->arch_ops->vtop_xen)
-		return ctx->arch_ops->vtop_xen(ctx, vaddr, paddr);
+	if (ctx->shared->arch_ops && ctx->shared->arch_ops->vtop_xen)
+		return ctx->shared->arch_ops->vtop_xen(ctx, vaddr, paddr);
 	else
 		return set_error_no_vtop(ctx);
 }
@@ -292,7 +292,7 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	clear_error(ctx);
 
-	return map_vtop(ctx, vaddr, paddr, &ctx->vtop_map);
+	return map_vtop(ctx, vaddr, paddr, &ctx->shared->vtop_map);
 }
 
 kdump_status
@@ -301,12 +301,12 @@ kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 	clear_error(ctx);
 
 	if (kphys_is_machphys(ctx))
-		return map_vtop(ctx, vaddr, maddr, &ctx->vtop_map);
+		return map_vtop(ctx, vaddr, maddr, &ctx->shared->vtop_map);
 
-	if (!ctx->arch_ops || !ctx->arch_ops->vtop)
+	if (!ctx->shared->arch_ops || !ctx->shared->arch_ops->vtop)
 		return set_error_no_vtop(ctx);
 
-	return ctx->arch_ops->vtop(ctx, vaddr, maddr);
+	return ctx->shared->arch_ops->vtop(ctx, vaddr, maddr);
 }
 
 kdump_status
@@ -318,7 +318,7 @@ kdump_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 		return set_error(ctx, kdump_nodata,
 				 "Not a Xen system dump");
 
-	return map_vtop(ctx, vaddr, paddr, &ctx->vtop_map_xen);
+	return map_vtop(ctx, vaddr, paddr, &ctx->shared->vtop_map_xen);
 }
 
 kdump_status
@@ -332,12 +332,12 @@ kdump_ptom(kdump_ctx *ctx, kdump_paddr_t paddr, kdump_maddr_t *maddr)
 		return kdump_ok;
 	}
 
-	if (!ctx->arch_ops || !ctx->arch_ops->pfn_to_mfn)
+	if (!ctx->shared->arch_ops || !ctx->shared->arch_ops->pfn_to_mfn)
 		return set_error(ctx, kdump_unsupported,
 				 "Not implemented");
 
 	pfn = paddr >> get_page_shift(ctx);
-	ret = ctx->arch_ops->pfn_to_mfn(ctx, pfn, &mfn);
+	ret = ctx->shared->arch_ops->pfn_to_mfn(ctx, pfn, &mfn);
 	if (ret == kdump_ok)
 		*maddr = (mfn << get_page_shift(ctx)) |
 			(paddr & (get_page_size(ctx) - 1));
@@ -353,20 +353,20 @@ kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
 
 	switch (get_xen_type(ctx)) {
 	case kdump_xen_system:
-		if (!ctx->arch_ops || !ctx->arch_ops->mfn_to_pfn)
+		if (!ctx->shared->arch_ops || !ctx->shared->arch_ops->mfn_to_pfn)
 			return set_error(ctx, kdump_unsupported,
 					 "Not implemented");
 		mfn = maddr >> get_page_shift(ctx);
-		ret = ctx->arch_ops->mfn_to_pfn(ctx, mfn, &pfn);
+		ret = ctx->shared->arch_ops->mfn_to_pfn(ctx, mfn, &pfn);
 		break;
 
 	case kdump_xen_domain:
 		if (get_xen_xlat(ctx) == kdump_xen_nonauto) {
-			if (!ctx->ops->mfn_to_pfn)
+			if (!ctx->shared->ops->mfn_to_pfn)
 				return set_error(ctx, kdump_unsupported,
 						 "Not implemented");
 			mfn = maddr >> get_page_shift(ctx);
-			ret = ctx->ops->mfn_to_pfn(ctx, mfn, &pfn);
+			ret = ctx->shared->ops->mfn_to_pfn(ctx, mfn, &pfn);
 			break;
 		}
 		/* else fall-through */
@@ -386,9 +386,9 @@ kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
 void
 init_vtop_maps(kdump_ctx *ctx)
 {
-	ctx->vtop_map.phys_base = GKI_phys_base;
-	ctx->vtop_map.vtop_pgt_fn = vtop_pgt;
+	ctx->shared->vtop_map.phys_base = GKI_phys_base;
+	ctx->shared->vtop_map.vtop_pgt_fn = vtop_pgt;
 
-	ctx->vtop_map_xen.phys_base = GKI_xen_phys_start;
-	ctx->vtop_map_xen.vtop_pgt_fn = vtop_pgt_xen;
+	ctx->shared->vtop_map_xen.phys_base = GKI_xen_phys_start;
+	ctx->shared->vtop_map_xen.vtop_pgt_fn = vtop_pgt_xen;
 }

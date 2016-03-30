@@ -50,7 +50,8 @@ static const struct attr_template global_keys[] = {
 
 static const size_t static_offsets[] = {
 #define ATTR(dir, key, field, type, ctype, ...)				\
-	[GKI_ ## field - GKI_static_first] = offsetof(kdump_ctx, field),
+	[GKI_ ## field - GKI_static_first] =				\
+		offsetof(struct kdump_shared, field),
 #include "static-attr.def"
 #undef ATTR
 };
@@ -64,7 +65,7 @@ static inline union kdump_attr_value *
 static_attr_value(kdump_ctx *ctx, enum global_keyidx idx)
 {
 	return (union kdump_attr_value*)
-		((char*)ctx + static_offsets[idx - GKI_static_first]);
+		((char*)ctx->shared + static_offsets[idx - GKI_static_first]);
 }
 
 /**  Calculate the hash index of a key path.
@@ -196,7 +197,7 @@ lookup_dir_attr(const kdump_ctx *ctx, const struct attr_data *dir,
 	i = fold_hash(phash_value(&ph), ATTR_HASH_BITS);
 	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
 	do {
-		tbl = ctx->attr;
+		tbl = ctx->shared->attr;
 		do {
 			struct attr_data *d = &tbl->table[i];
 			if (!d->parent)
@@ -302,7 +303,7 @@ alloc_attr(kdump_ctx *ctx, struct attr_data *parent,
 	i = hash = key_hash_index(path);
 	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
 	do {
-		pnext = &ctx->attr;
+		pnext = &ctx->shared->attr;
 		while (*pnext) {
 			tbl = *pnext;
 			if (!tbl->table[i].parent)
@@ -462,13 +463,13 @@ cleanup_attr(kdump_ctx *ctx)
 
 	dealloc_attr(gattr(ctx, GKI_dir_root));
 
-	tblnext = ctx->attr;
+	tblnext = ctx->shared->attr;
 	while(tblnext) {
 		tbl = tblnext;
 		tblnext = tbl->next;
 		free(tbl);
 	}
-	ctx->attr = NULL;
+	ctx->shared->attr = NULL;
 }
 
 /**  Initialize statically allocated attributes
@@ -482,13 +483,13 @@ init_attrs(kdump_ctx *ctx)
 		const struct attr_template *tmpl = &global_keys[i];
 		struct attr_data *attr, *parent;
 
-		parent = ctx->global_attrs[tmpl->parent - global_keys];
+		parent = ctx->shared->global_attrs[tmpl->parent - global_keys];
 		attr = new_attr(ctx, parent, tmpl);
 		if (!attr)
 			return set_error(ctx, kdump_syserr,
 					 "Cannot initialize attribute %s",
 					 tmpl->key);
-		ctx->global_attrs[i] = attr;
+		ctx->shared->global_attrs[i] = attr;
 
 		if (i >= GKI_static_first && i <= GKI_static_last) {
 			attr->indirect = 1;

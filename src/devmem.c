@@ -89,7 +89,7 @@ get_vmcoreinfo(kdump_ctx *ctx)
 static kdump_status
 devmem_read_page(kdump_ctx *ctx, struct page_io *pio)
 {
-	struct devmem_priv *dmp = ctx->fmtdata;
+	struct devmem_priv *dmp = ctx->shared->fmtdata;
 	struct cache_entry *ce;
 	off_t pos = pio->pfn << get_page_shift(ctx);
 	ssize_t rd;
@@ -109,7 +109,7 @@ devmem_read_page(kdump_ctx *ctx, struct page_io *pio)
 	++ce->refcnt;
 
 	ce->pfn = pio->pfn;
-	rd = pread(ctx->fd, ce->data, get_page_size(ctx), pos);
+	rd = pread(ctx->shared->fd, ce->data, get_page_size(ctx), pos);
 	if (rd != get_page_size(ctx)) {
 		--ce->refcnt;
 		return set_error(ctx, read_error(rd),
@@ -129,7 +129,7 @@ devmem_unref_page(kdump_ctx *ctx, struct page_io *pio)
 kdump_status
 devmem_realloc_caches(kdump_ctx *ctx)
 {
-	struct devmem_priv *dmp = ctx->fmtdata;
+	struct devmem_priv *dmp = ctx->shared->fmtdata;
 	unsigned cache_size = get_cache_size(ctx);
 	struct cache_entry *ce;
 	unsigned i;
@@ -170,7 +170,7 @@ devmem_probe(kdump_ctx *ctx, void *hdr)
 	struct stat st;
 	kdump_status ret;
 
-	if (fstat(ctx->fd, &st))
+	if (fstat(ctx->shared->fd, &st))
 		return set_error(ctx, kdump_syserr, "Cannot stat file");
 
 	if (!S_ISCHR(st.st_mode) ||
@@ -183,7 +183,7 @@ devmem_probe(kdump_ctx *ctx, void *hdr)
 	if (!dmp)
 		return kdump_syserr;
 	dmp->ce = NULL;
-	ctx->fmtdata = dmp;
+	ctx->shared->fmtdata = dmp;
 
 #if defined(__x86_64__)
 	ret = set_arch_name(ctx, KDUMP_ARCH_X86_64);
@@ -228,7 +228,7 @@ devmem_probe(kdump_ctx *ctx, void *hdr)
 static void
 devmem_cleanup(kdump_ctx *ctx)
 {
-	struct devmem_priv *dmp = ctx->fmtdata;
+	struct devmem_priv *dmp = ctx->shared->fmtdata;
 
 	if (dmp->ce) {
 		free(dmp->ce[0].data);
@@ -236,7 +236,7 @@ devmem_cleanup(kdump_ctx *ctx)
 	}
 
 	free(ctx->priv);
-	ctx->fmtdata = NULL;
+	ctx->shared->fmtdata = NULL;
 }
 
 const struct format_ops devmem_ops = {

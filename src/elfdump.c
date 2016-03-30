@@ -138,7 +138,7 @@ find_closest_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
 static kdump_status
 elf_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 {
-	struct elfdump_priv *edp = ctx->fmtdata;
+	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	struct load_segment *pls;
 	kdump_paddr_t addr;
 	void *p, *endp;
@@ -166,7 +166,7 @@ elf_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 			if (size > pls->phys + pls->filesz - addr)
 				size = pls->phys + pls->filesz - addr;
 
-			rd = pread(ctx->fd, p, size, pos);
+			rd = pread(ctx->shared->fd, p, size, pos);
 			if (rd != size)
 				return set_error(
 					ctx, read_error(rd),
@@ -206,7 +206,7 @@ get_max_pfn_xen_auto(kdump_ctx *ctx)
 	unsigned long i;
 	kdump_pfn_t max_pfn = 0;
 
-	for (i = 0, p = ctx->xen_map; i < ctx->xen_map_size; ++i, ++p)
+	for (i = 0, p = ctx->shared->xen_map; i < ctx->shared->xen_map_size; ++i, ++p)
 		if (*p >= max_pfn)
 			max_pfn = *p + 1;
 
@@ -220,7 +220,8 @@ get_max_pfn_xen_nonauto(kdump_ctx *ctx)
 	unsigned long i;
 	kdump_pfn_t max_pfn = 0;
 
-	for (i = 0, p = ctx->xen_map; i < ctx->xen_map_size; ++i, ++p)
+	for (i = 0, p = ctx->shared->xen_map; i < ctx->shared->xen_map_size;
+	     ++i, ++p)
 		if (p->pfn >= max_pfn)
 			max_pfn = p->pfn + 1;
 
@@ -233,13 +234,13 @@ pfn_to_idx(kdump_ctx *ctx, kdump_pfn_t pfn)
 	unsigned long i;
 
 	if (get_xen_xlat(ctx) == kdump_xen_auto) {
-		uint64_t *p = ctx->xen_map;
-		for (i = 0; i < ctx->xen_map_size; ++i, ++p)
+		uint64_t *p = ctx->shared->xen_map;
+		for (i = 0; i < ctx->shared->xen_map_size; ++i, ++p)
 			if (*p == pfn)
 				return i;
 	} else {
-		struct xen_p2m *p = ctx->xen_map;
-		for (i = 0; i < ctx->xen_map_size; ++i, ++p)
+		struct xen_p2m *p = ctx->shared->xen_map;
+		for (i = 0; i < ctx->shared->xen_map_size; ++i, ++p)
 			if (p->pfn == pfn)
 				return i;
 	}
@@ -250,12 +251,12 @@ pfn_to_idx(kdump_ctx *ctx, kdump_pfn_t pfn)
 static kdump_status
 xc_read_cache(kdump_ctx *ctx, kdump_pfn_t idx, struct cache_entry *ce)
 {
-	struct elfdump_priv *edp = ctx->fmtdata;
+	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	off_t offset;
 	ssize_t rd;
 
 	offset = edp->xen_pages_offset + ((off_t)idx << get_page_shift(ctx));
-	rd = pread(ctx->fd, ce->data, get_page_size(ctx), offset);
+	rd = pread(ctx->shared->fd, ce->data, get_page_size(ctx), offset);
 	if (rd != get_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu",
@@ -281,8 +282,8 @@ mfn_to_idx(kdump_ctx *ctx, kdump_pfn_t mfn)
 	unsigned long i;
 
 	if (get_xen_xlat(ctx) == kdump_xen_nonauto) {
-		struct xen_p2m *p = ctx->xen_map;
-		for (i = 0; i < ctx->xen_map_size; ++i, ++p)
+		struct xen_p2m *p = ctx->shared->xen_map;
+		for (i = 0; i < ctx->shared->xen_map_size; ++i, ++p)
 			if (p->gmfn == mfn)
 				return i;
 	}
@@ -293,7 +294,7 @@ mfn_to_idx(kdump_ctx *ctx, kdump_pfn_t mfn)
 static kdump_status
 xc_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 {
-	struct xen_p2m *p = ctx->xen_map;
+	struct xen_p2m *p = ctx->shared->xen_map;
 	unsigned long i;
 
 	if (get_xen_xlat(ctx) != kdump_xen_nonauto) {
@@ -301,7 +302,7 @@ xc_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 		return kdump_ok;
 	}
 
-	for (i = 0; i < ctx->xen_map_size; ++i, ++p)
+	for (i = 0; i < ctx->shared->xen_map_size; ++i, ++p)
 		if (p->gmfn == mfn) {
 			*pfn = p->pfn;
 			return kdump_ok;
@@ -324,7 +325,7 @@ xc_read_page(kdump_ctx *ctx, struct page_io *pio)
 static kdump_status
 init_segments(kdump_ctx *ctx, unsigned phnum)
 {
-	struct elfdump_priv *edp = ctx->fmtdata;
+	struct elfdump_priv *edp = ctx->shared->fmtdata;
 
 	if (!phnum)
 		return kdump_ok;
@@ -344,7 +345,7 @@ init_segments(kdump_ctx *ctx, unsigned phnum)
 static kdump_status
 init_sections(kdump_ctx *ctx, unsigned snum)
 {
-	struct elfdump_priv *edp = ctx->fmtdata;
+	struct elfdump_priv *edp = ctx->shared->fmtdata;
 
 	if (!snum)
 		return kdump_ok;
@@ -397,7 +398,7 @@ read_elf_sect(kdump_ctx *ctx, struct section *sect)
 	if (!buf)
 		return NULL;
 
-	if (pread(ctx->fd, buf, sect->size, sect->file_offset) == sect->size)
+	if (pread(ctx->shared->fd, buf, sect->size, sect->file_offset) == sect->size)
 		return buf;
 
 	free(buf);
@@ -407,7 +408,7 @@ read_elf_sect(kdump_ctx *ctx, struct section *sect)
 static kdump_status
 init_strtab(kdump_ctx *ctx, unsigned strtabidx)
 {
-	struct elfdump_priv *edp = ctx->fmtdata;
+	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	struct section *ps;
 
 	if (!strtabidx || strtabidx >= edp->num_sections)
@@ -435,7 +436,7 @@ strtab_entry(struct elfdump_priv *edp, unsigned index)
 static kdump_status
 init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 {
-	struct elfdump_priv *edp = ctx->fmtdata;
+	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	Elf32_Phdr prog;
 	Elf32_Shdr sect;
 	off_t offset;
@@ -453,7 +454,7 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 		return ret;
 
 	offset = dump32toh(ctx, ehdr->e_phoff);
-	if (lseek(ctx->fd, offset, SEEK_SET) < 0)
+	if (lseek(ctx->shared->fd, offset, SEEK_SET) < 0)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot seek to program headers at %llu",
 				 (unsigned long long) offset);
@@ -461,7 +462,7 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 		struct load_segment *pls;
 		ssize_t rd;
 
-		rd = read(ctx->fd, &prog, sizeof prog);
+		rd = read(ctx->shared->fd, &prog, sizeof prog);
 		if (rd != sizeof prog)
 			return set_error(ctx, read_error(rd),
 					 "Cannot read program header #%d", i);
@@ -477,14 +478,14 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 	}
 
 	offset = dump32toh(ctx, ehdr->e_shoff);
-	if (lseek(ctx->fd, offset, SEEK_SET) < 0)
+	if (lseek(ctx->shared->fd, offset, SEEK_SET) < 0)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot seek to section headers at %llu",
 				 (unsigned long long) offset);
 	for (i = 0; i < dump16toh(ctx, ehdr->e_shnum); ++i) {
 		ssize_t rd;
 
-		rd = read(ctx->fd, &sect, sizeof sect);
+		rd = read(ctx->shared->fd, &sect, sizeof sect);
 		if (rd != sizeof sect)
 			return set_error(ctx, read_error(rd),
 					 "Cannot read section header #%d", i);
@@ -504,7 +505,7 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 static kdump_status
 init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 {
-	struct elfdump_priv *edp = ctx->fmtdata;
+	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	Elf64_Phdr prog;
 	Elf64_Shdr sect;
 	off_t offset;
@@ -523,7 +524,7 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 
 
 	offset = dump64toh(ctx, ehdr->e_phoff);
-	if (lseek(ctx->fd, offset, SEEK_SET) < 0)
+	if (lseek(ctx->shared->fd, offset, SEEK_SET) < 0)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot seek to program headers at %llu",
 				 (unsigned long long) offset);
@@ -531,7 +532,7 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 		struct load_segment *pls;
 		ssize_t rd;
 
-		rd = read(ctx->fd, &prog, sizeof prog);
+		rd = read(ctx->shared->fd, &prog, sizeof prog);
 		if (rd != sizeof prog)
 			return set_error(ctx, read_error(rd),
 					 "Cannot read program header #%d", i);
@@ -547,14 +548,14 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 	}
 
 	offset = dump32toh(ctx, ehdr->e_shoff);
-	if (lseek(ctx->fd, offset, SEEK_SET) < 0)
+	if (lseek(ctx->shared->fd, offset, SEEK_SET) < 0)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot seek to section headers at %llu",
 				 (unsigned long long) offset);
 	for (i = 0; i < dump16toh(ctx, ehdr->e_shnum); ++i) {
 		ssize_t rd;
 
-		rd = read(ctx->fd, &sect, sizeof sect);
+		rd = read(ctx->shared->fd, &sect, sizeof sect);
 		if (rd != sizeof sect)
 			return set_error(ctx, read_error(rd),
 					 "Cannot read section header #%d", i);
@@ -574,7 +575,7 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 static kdump_status
 process_elf_notes(kdump_ctx *ctx, void *notes)
 {
-	struct elfdump_priv *edp = ctx->fmtdata;
+	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	void *p;
 	unsigned i;
 	ssize_t rd;
@@ -584,7 +585,7 @@ process_elf_notes(kdump_ctx *ctx, void *notes)
 	for (i = 0; i < edp->num_note_segments; ++i) {
 		struct load_segment *seg = edp->note_segments + i;
 
-		rd = pread(ctx->fd, p, seg->filesz, seg->file_offset);
+		rd = pread(ctx->shared->fd, p, seg->filesz, seg->file_offset);
 		if (rd != seg->filesz)
 			return set_error(ctx, read_error(rd),
 					 "Cannot read ELF notes at %llu",
@@ -622,7 +623,7 @@ process_elf_notes(kdump_ctx *ctx, void *notes)
 static kdump_status
 open_common(kdump_ctx *ctx)
 {
-	struct elfdump_priv *edp = ctx->fmtdata;
+	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	size_t notesz;
 	void *notes;
 	kdump_status ret;
@@ -652,8 +653,8 @@ open_common(kdump_ctx *ctx)
 		if (pfn > get_max_pfn(ctx))
 			set_max_pfn(ctx, pfn);
 
-		if (ctx->arch_ops && ctx->arch_ops->process_load) {
-			ret = ctx->arch_ops->process_load(
+		if (ctx->shared->arch_ops && ctx->shared->arch_ops->process_load) {
+			ret = ctx->shared->arch_ops->process_load(
 				ctx, seg->virt, seg->phys);
 			if (ret != kdump_ok)
 				return ret;
@@ -666,17 +667,17 @@ open_common(kdump_ctx *ctx)
 		if (!strcmp(name, ".xen_pages"))
 			edp->xen_pages_offset = sect->file_offset;
 		else if (!strcmp(name, ".xen_p2m")) {
-			ctx->xen_map = read_elf_sect(ctx, sect);
-			if (!ctx->xen_map)
+			ctx->shared->xen_map = read_elf_sect(ctx, sect);
+			if (!ctx->shared->xen_map)
 				return kdump_syserr;
-			ctx->xen_map_size = sect->size /sizeof(struct xen_p2m);
+			ctx->shared->xen_map_size = sect->size /sizeof(struct xen_p2m);
 			set_xen_xlat(ctx, kdump_xen_nonauto);
 			get_max_pfn_xen_nonauto(ctx);
 		} else if (!strcmp(name, ".xen_pfn")) {
-			ctx->xen_map = read_elf_sect(ctx, sect);
-			if (!ctx->xen_map)
+			ctx->shared->xen_map = read_elf_sect(ctx, sect);
+			if (!ctx->shared->xen_map)
 				return kdump_syserr;
-			ctx->xen_map_size = sect->size / sizeof(uint64_t);
+			ctx->shared->xen_map_size = sect->size / sizeof(uint64_t);
 			set_xen_xlat(ctx, kdump_xen_auto);
 			get_max_pfn_xen_auto(ctx);
 		} else if (!strcmp(name, ".note.Xen")) {
@@ -692,7 +693,7 @@ open_common(kdump_ctx *ctx)
 			void *data = read_elf_sect(ctx, sect);
 			if (!data)
 				return kdump_syserr;
-			ret = ctx->arch_ops->process_xen_prstatus(
+			ret = ctx->shared->arch_ops->process_xen_prstatus(
 				ctx, data, sect->size);
 			free(data);
 			if (ret != kdump_ok)
@@ -703,10 +704,10 @@ open_common(kdump_ctx *ctx)
 
 	if (edp->xen_pages_offset) {
 		set_xen_type(ctx, kdump_xen_domain);
-		if (!ctx->xen_map)
+		if (!ctx->shared->xen_map)
 			return set_error(ctx, kdump_unsupported,
 					 "Missing Xen P2M mapping");
-		ctx->ops = &xc_core_elf_ops;
+		ctx->shared->ops = &xc_core_elf_ops;
 	}
 
 	return kdump_ok;
@@ -729,7 +730,7 @@ elf_probe(kdump_ctx *ctx, void *hdr)
 	if (!edp)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate ELF dump private data");
-	ctx->fmtdata = edp;
+	ctx->shared->fmtdata = edp;
 
 	switch (eheader[EI_DATA]) {
 	case ELFDATA2LSB:
@@ -774,7 +775,7 @@ elf_probe(kdump_ctx *ctx, void *hdr)
 static void
 elf_cleanup(kdump_ctx *ctx)
 {
-	struct elfdump_priv *edp = ctx->fmtdata;
+	struct elfdump_priv *edp = ctx->shared->fmtdata;
 
 	if (edp) {
 		if (edp->load_segments)
@@ -784,7 +785,7 @@ elf_cleanup(kdump_ctx *ctx)
 		if (edp->strtab)
 			free(edp->strtab);
 		free(edp);
-		ctx->fmtdata = NULL;
+		ctx->shared->fmtdata = NULL;
 	}
 };
 

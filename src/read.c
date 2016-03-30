@@ -42,11 +42,11 @@ read_kpage_generic(kdump_ctx *ctx, struct page_io *pio)
 {
 	kdump_status res;
 
-	res = ctx->arch_ops->pfn_to_mfn(ctx, pio->pfn, &pio->pfn);
+	res = ctx->shared->arch_ops->pfn_to_mfn(ctx, pio->pfn, &pio->pfn);
 	if (res != kdump_ok)
 		return res;
 
-	res = ctx->ops->read_page(ctx, pio);
+	res = ctx->shared->ops->read_page(ctx, pio);
 	return set_error(ctx, res, "Cannot read MFN %llx",
 			 (unsigned long long) pio->pfn);
 }
@@ -55,13 +55,13 @@ static inline read_page_fn
 read_kphys_page_fn(kdump_ctx *ctx)
 {
 	if (kphys_is_machphys(ctx))
-		return ctx->ops->read_page;
+		return ctx->shared->ops->read_page;
 
-	if (ctx->ops->read_kpage)
-		return ctx->ops->read_kpage;
+	if (ctx->shared->ops->read_kpage)
+		return ctx->shared->ops->read_kpage;
 
-	if (ctx->ops->read_page &&
-	    ctx->arch_ops && ctx->arch_ops->pfn_to_mfn)
+	if (ctx->shared->ops->read_page &&
+	    ctx->shared->arch_ops && ctx->shared->arch_ops->pfn_to_mfn)
 		return read_kpage_generic;
 
 	return NULL;
@@ -80,7 +80,7 @@ read_kvpage_machphys(kdump_ctx *ctx, struct page_io *pio)
 		return ret;
 
 	pio->pfn = maddr >> get_page_shift(ctx);
-	return ctx->ops->read_page(ctx, pio);
+	return ctx->shared->ops->read_page(ctx, pio);
 }
 
 static kdump_status
@@ -96,7 +96,7 @@ read_kvpage_kphys(kdump_ctx *ctx, struct page_io *pio)
 		return ret;
 
 	pio->pfn = paddr >> get_page_shift(ctx);
-	return ctx->ops->read_kpage(ctx, pio);
+	return ctx->shared->ops->read_kpage(ctx, pio);
 }
 
 static kdump_status
@@ -106,7 +106,7 @@ read_kvpage_choose(kdump_ctx *ctx, struct page_io *pio)
 	const struct kdump_xlat *xlat;
 
 	vaddr = pio->pfn << get_page_shift(ctx);
-	xlat = get_vtop_xlat(&ctx->vtop_map, vaddr);
+	xlat = get_vtop_xlat(&ctx->shared->vtop_map, vaddr);
 	if (xlat->method != KDUMP_XLAT_VTOP)
 		return read_kvpage_kphys(ctx, pio);
 	else
@@ -126,7 +126,7 @@ read_xenvpage(kdump_ctx *ctx, struct page_io *pio)
 		return ret;
 
 	pio->pfn = paddr >> get_page_shift(ctx);
-	return ctx->ops->read_page(ctx, pio);
+	return ctx->shared->ops->read_page(ctx, pio);
 }
 
 static kdump_status
@@ -134,7 +134,7 @@ setup_readfn(kdump_ctx *ctx, kdump_addrspace_t as, read_page_fn *pfn)
 {
 	read_page_fn fn;
 
-	if (!ctx->ops)
+	if (!ctx->shared->ops)
 		return set_error(ctx, kdump_invalid,
 				 "File format not initialized");
 
@@ -145,21 +145,21 @@ setup_readfn(kdump_ctx *ctx, kdump_addrspace_t as, read_page_fn *pfn)
 		break;
 
 	case KDUMP_MACHPHYSADDR:
-		fn = ctx->ops->read_page;
+		fn = ctx->shared->ops->read_page;
 		break;
 
 	case KDUMP_KVADDR:
-		if (ctx->ops->read_page) {
-			if (ctx->ops->read_kpage)
+		if (ctx->shared->ops->read_page) {
+			if (ctx->shared->ops->read_kpage)
 				fn = read_kvpage_choose;
 			else
 				fn = read_kvpage_machphys;
-		} else if (ctx->ops->read_kpage)
+		} else if (ctx->shared->ops->read_kpage)
 			fn = read_kvpage_kphys;
 		break;
 
 	case KDUMP_XENVADDR:
-		if (ctx->ops->read_page)
+		if (ctx->shared->ops->read_page)
 			fn = read_xenvpage;
 		break;
 

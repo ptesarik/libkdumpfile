@@ -534,54 +534,65 @@ struct vtop_map {
 
 struct cache;
 
-/* Maximum length of the error message */
-#define ERRBUF	160
+/**  Shared state of the dump file object.
+ *
+ * This structure describes the data portion of the dump file object,
+ * which can be shared by many @ref kdump_ctx objects.
+ */
+struct kdump_shared {
+	unsigned refcnt;	/**< Reference count. */
 
-struct _tag_kdump_ctx {
-	int fd;			/* dump file descriptor */
+	int fd;			/**< Dump file descriptor. */
 
-	/* format-specific fields */
-	const struct format_ops *ops;
-	void *fmtdata;		/* private data */
+	const struct format_ops *ops; /**< File format operations. */
+	void *fmtdata;		      /**< File format private data. */
 
-	/* arch-specific fields */
-	const struct arch_ops *arch_ops;
-	void *archdata;		/**< Arch-specific private data. */
-	enum kdump_arch arch;	/**< Internal-only arch index. */
+	const struct arch_ops *arch_ops; /**< Arch-specific operations. */
+	void *archdata;			 /**< Arch-specific private data. */
+	enum kdump_arch arch;		 /**< Internal-only arch index. */
 	int arch_init_done;	/**< Non-zero if arch init has been called. */
 
-	/* user private data */
-	void *priv;
-
-	/* read_page internals */
 	struct cache *cache;	/**< Page cache. */
 
-	/* address translation */
-	struct vtop_map vtop_map;
-	struct vtop_map vtop_map_xen;
+	struct vtop_map vtop_map;     /**< Linux address translation. */
+	struct vtop_map vtop_map_xen; /**< Xen address translation. */
 
-	/* static attributes */
+	/* Attribute hash table. */
+	struct attr_hash *attr;
+
+	/** Global attributes. */
+	struct attr_data *global_attrs[NR_GLOBAL_ATTRS];
+
+	/** Static attributes. */
 #define ATTR(dir, key, field, type, ctype, ...)	\
 	union kdump_attr_value field;
 #include "static-attr.def"
 #undef ATTR
 
-	/* global attributes */
-	struct attr_data *global_attrs[NR_GLOBAL_ATTRS];
-
-	/* attribute hash */
-	struct attr_hash *attr;
-
+	/* Xen maps */
 	void *xen_map;
 	unsigned long xen_map_size;
+};
+
+/* Maximum length of the error message */
+#define ERRBUF	160
+
+/**  Representation of a dump file.
+ *
+ * This structure contains state information and a pointer to @c struct
+ * @ref kdump_shared.
+ */
+struct _tag_kdump_ctx {
+	struct kdump_shared *shared;
+
+	void *priv;		/**< User private data. */
 
 	/* callbacks */
 	kdump_get_symbol_val_fn *cb_get_symbol_val;
 	kdump_get_symbol_val_fn *cb_get_symbol_val_xen;
 
-	/* error messages */
-	char *err_str;		/* error string */
-	char err_buf[ERRBUF];	/* buffer for error string */
+	char *err_str;		/**< Error string. */
+	char err_buf[ERRBUF];	/**< Buffer for the error string. */
 };
 
 /* File formats */
@@ -863,7 +874,7 @@ struct attr_data *lookup_dir_attr(const kdump_ctx *ctx,
 static inline struct attr_data *
 gattr(const kdump_ctx *ctx, enum global_keyidx idx)
 {
-	return ctx->global_attrs[idx];
+	return ctx->shared->global_attrs[idx];
 }
 
 /**  Check if an attribute is set.
@@ -945,7 +956,7 @@ void cleanup_attr(kdump_ctx *ctx);
 	static inline ctype					\
 	get_ ## name(kdump_ctx *ctx)				\
 	{							\
-		return ctx->name.type;				\
+		return ctx->shared->name.type;			\
 	}
 #define DEFINE_SET_ACCESSOR(name, type, ctype)			\
 	static inline kdump_status				\
@@ -1107,7 +1118,7 @@ void cache_unref_page(kdump_ctx *ctx, struct page_io *pio);
 static inline
 void unref_page(kdump_ctx *ctx, struct page_io *pio)
 {
-	ctx->ops->unref_page(ctx, pio);
+	ctx->shared->ops->unref_page(ctx, pio);
 }
 
 #define def_realloc_caches INTERNAL_NAME(def_realloc_caches)

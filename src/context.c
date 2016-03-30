@@ -386,10 +386,10 @@ kdump_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
 
 	clear_error(ctx);
 
-	if (!ctx->arch_ops || !ctx->arch_ops->reg_name)
+	if (!ctx->shared->arch_ops || !ctx->shared->arch_ops->reg_name)
 		return set_error(ctx, kdump_nodata, "Registers not available");
 
-	regname = ctx->arch_ops->reg_name(index);
+	regname = ctx->shared->arch_ops->reg_name(index);
 	if (!regname)
 		return set_error(ctx, kdump_nodata,
 				 "Out-of-bounds register number");

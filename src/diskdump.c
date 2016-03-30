@@ -177,7 +177,7 @@ static void diskdump_cleanup(kdump_ctx *ctx);
 static inline int
 page_is_dumpable(kdump_ctx *ctx, unsigned int nr)
 {
-	struct disk_dump_priv *ddp = ctx->fmtdata;
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	return ddp->bitmap[nr>>3] & (1 << (nr & 7));
 }
 
@@ -197,7 +197,7 @@ pfn_to_pdpos(struct disk_dump_priv *ddp, unsigned long pfn)
 static kdump_status
 diskdump_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 {
-	struct disk_dump_priv *ddp = ctx->fmtdata;
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	struct page_desc pd;
 	off_t pd_pos;
 	void *buf;
@@ -210,7 +210,7 @@ diskdump_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 	}
 
 	pd_pos = pfn_to_pdpos(ddp, pfn);
-	rd = pread(ctx->fd, &pd, sizeof pd, pd_pos);
+	rd = pread(ctx->shared->fd, &pd, sizeof pd, pd_pos);
 	if (rd != sizeof pd)
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page descriptor at %llu",
@@ -236,7 +236,7 @@ diskdump_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 	}
 
 	/* read page data */
-	rd = pread(ctx->fd, buf, pd.size, pd.offset);
+	rd = pread(ctx->shared->fd, buf, pd.size, pd.offset);
 	if (rd != pd.size)
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu",
@@ -310,7 +310,7 @@ static kdump_status
 diskdump_realloc_compressed(kdump_ctx *ctx, struct attr_data *attr)
 {
 	const struct attr_ops *parent_ops;
-	struct disk_dump_priv *ddp = ctx->fmtdata;
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	size_t newsz = attr_value(attr)->number;
 	void *newbuf;
 
@@ -337,7 +337,7 @@ read_vmcoreinfo(kdump_ctx *ctx, off_t off, size_t size)
 	if (!info)
 		return kdump_syserr;
 
-	rd = pread(ctx->fd, info, size, off);
+	rd = pread(ctx->shared->fd, info, size, off);
 	if (rd != size)
 		ret = set_error(ctx, read_error(rd),
 				"Cannot read %zu VMCOREINFO bytes at %llu",
@@ -362,7 +362,7 @@ read_notes(kdump_ctx *ctx, off_t off, size_t size)
 	if (!notes)
 		return kdump_syserr;
 
-	rd = pread(ctx->fd, notes, size, off);
+	rd = pread(ctx->shared->fd, notes, size, off);
 	if (rd != size) {
 		ret = set_error(ctx, read_error(rd),
 				"Cannot read %zu note bytes at %llu",
@@ -392,7 +392,7 @@ static kdump_status
 read_bitmap(kdump_ctx *ctx, int32_t sub_hdr_size,
 	    int32_t bitmap_blocks)
 {
-	struct disk_dump_priv *ddp = ctx->fmtdata;
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	off_t off = (1 + sub_hdr_size) * get_page_size(ctx);
 	size_t bitmapsize;
 	kdump_pfn_t max_bitmap_pfn;
@@ -416,7 +416,7 @@ read_bitmap(kdump_ctx *ctx, int32_t sub_hdr_size,
 	if (! (ddp->bitmap = ctx_malloc(bitmapsize, ctx, "page bitmap")) )
 		return kdump_syserr;
 
-	rd = pread(ctx->fd, ddp->bitmap, bitmapsize, off);
+	rd = pread(ctx->shared->fd, ddp->bitmap, bitmapsize, off);
 	if (rd != bitmapsize)
 		return set_error(ctx, read_error(rd),
 				 "Cannot read %zu bytes of page bitmap"
@@ -474,7 +474,7 @@ read_sub_hdr_32(struct setup_data *sdp, int32_t header_version)
 	if (header_version < 1)
 		return kdump_ok;
 
-	rd = pread(ctx->fd, &subhdr, sizeof subhdr, get_page_size(ctx));
+	rd = pread(ctx->shared->fd, &subhdr, sizeof subhdr, get_page_size(ctx));
 	if (rd != sizeof subhdr)
 		return set_error(ctx, read_error(rd),
 				 "Cannot read subheader");
@@ -554,7 +554,7 @@ read_sub_hdr_64(struct setup_data *sdp, int32_t header_version)
 	if (header_version < 1)
 		return kdump_ok;
 
-	rd = pread(ctx->fd, &subhdr, sizeof subhdr, get_page_size(ctx));
+	rd = pread(ctx->shared->fd, &subhdr, sizeof subhdr, get_page_size(ctx));
 	if (rd != sizeof subhdr)
 		return set_error(ctx, read_error(rd),
 				 "Cannot read subheader");
@@ -640,7 +640,7 @@ open_common(kdump_ctx *ctx, void *hdr)
 	ddp->page_size_override.ops.post_set = diskdump_realloc_compressed;
 	ddp->compressed = NULL;
 
-	ctx->fmtdata = ddp;
+	ctx->shared->fmtdata = ddp;
 
 	if (uts_looks_sane(&dh32->utsname))
 		set_uts(ctx, &dh32->utsname);
@@ -695,7 +695,7 @@ diskdump_probe(kdump_ctx *ctx, void *hdr)
 static void
 diskdump_cleanup(kdump_ctx *ctx)
 {
-	struct disk_dump_priv *ddp = ctx->fmtdata;
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 
 	if (ddp) {
 		attr_remove_override(gattr(ctx, GKI_page_size),
@@ -705,7 +705,7 @@ diskdump_cleanup(kdump_ctx *ctx)
 		if (ddp->compressed)
 			free(ddp->compressed);
 		free(ddp);
-		ctx->fmtdata = NULL;
+		ctx->shared->fmtdata = NULL;
 	}
 }
 

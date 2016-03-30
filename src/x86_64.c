@@ -397,16 +397,16 @@ x86_64_init(kdump_ctx *ctx)
 	if (!archdata)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate x86_64 private data");
-	ctx->archdata = archdata;
+	ctx->shared->archdata = archdata;
 
 	archdata->pml4 = ~(kdump_addr_t)0;
 	archdata->xen_pml4 = ~(kdump_addr_t)0;
 
-	ret = add_noncanonical_region(ctx, &ctx->vtop_map);
+	ret = add_noncanonical_region(ctx, &ctx->shared->vtop_map);
 	if (ret != kdump_ok)
 		return ret;
 
-	ret = set_vtop_xlat(&ctx->vtop_map,
+	ret = set_vtop_xlat(&ctx->shared->vtop_map,
 			    __START_KERNEL_map, VIRTADDR_MAX,
 			    KDUMP_XLAT_KTEXT, __START_KERNEL_map);
 	if (ret != kdump_ok)
@@ -419,7 +419,7 @@ x86_64_init(kdump_ctx *ctx)
 static kdump_status
 get_pml4(kdump_ctx *ctx)
 {
-	struct x86_64_data *archdata = ctx->archdata;
+	struct x86_64_data *archdata = ctx->shared->archdata;
 	kdump_vaddr_t pgtaddr;
 	kdump_status ret;
 
@@ -529,14 +529,14 @@ x86_64_vtop_init(kdump_ctx *ctx)
 		return set_error(ctx, kdump_nodata,
 				 "Cannot determine virtual memory layout");
 
-	flush_vtop_map(&ctx->vtop_map);
-	ret = add_noncanonical_region(ctx, &ctx->vtop_map);
+	flush_vtop_map(&ctx->shared->vtop_map);
+	ret = add_noncanonical_region(ctx, &ctx->shared->vtop_map);
 	if (ret != kdump_ok)
 		return ret;
 
 	for (i = 0; i < layout->nregions; ++i) {
 		const struct region_def *def = &layout->regions[i];
-		ret = set_vtop_xlat(&ctx->vtop_map,
+		ret = set_vtop_xlat(&ctx->shared->vtop_map,
 				    def->first, def->last,
 				    def->method, def->phys_off);
 		if (ret != kdump_ok)
@@ -550,7 +550,7 @@ x86_64_vtop_init(kdump_ctx *ctx)
 			       &phys_base);
 		if (ret == kdump_nodata) {
 			clear_error(ctx);
-			remove_ktext_xlat(&ctx->vtop_map);
+			remove_ktext_xlat(&ctx->shared->vtop_map);
 		} else if (ret == kdump_ok)
 			set_phys_base(ctx, phys_base - KERNEL_map_skip);
 		else
@@ -564,11 +564,11 @@ x86_64_vtop_init(kdump_ctx *ctx)
 static kdump_status
 x86_64_vtop_init_xen(kdump_ctx *ctx)
 {
-	struct x86_64_data *archdata = ctx->archdata;
+	struct x86_64_data *archdata = ctx->shared->archdata;
 	kdump_addr_t pgtaddr;
 	kdump_status res;
 
-	res = add_noncanonical_region(ctx, &ctx->vtop_map_xen);
+	res = add_noncanonical_region(ctx, &ctx->shared->vtop_map_xen);
 	if (res != kdump_ok)
 		return res;
 
@@ -578,13 +578,13 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 
 	if (pgtaddr >= XEN_DIRECTMAP_START) {
 		/* Xen versions before 3.2.0 */
-		res = set_vtop_xlat(&ctx->vtop_map_xen,
+		res = set_vtop_xlat(&ctx->shared->vtop_map_xen,
 				    XEN_DIRECTMAP_START, XEN_DIRECTMAP_END_OLD,
 				    KDUMP_XLAT_DIRECT, XEN_DIRECTMAP_START);
 	} else {
 		kdump_vaddr_t xen_virt_start;
 		xen_virt_start = pgtaddr & ~((1ULL<<30) - 1);
-		res = set_vtop_xlat(&ctx->vtop_map_xen,
+		res = set_vtop_xlat(&ctx->shared->vtop_map_xen,
 				    xen_virt_start,
 				    xen_virt_start + XEN_VIRT_SIZE - 1,
 				    KDUMP_XLAT_KTEXT, xen_virt_start);
@@ -690,8 +690,8 @@ x86_64_process_load(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t paddr)
 static void
 x86_64_cleanup(kdump_ctx *ctx)
 {
-	free(ctx->archdata);
-	ctx->archdata = NULL;
+	free(ctx->shared->archdata);
+	ctx->shared->archdata = NULL;
 }
 
 static kdump_status
@@ -771,7 +771,7 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 static kdump_status
 x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	struct x86_64_data *archdata = ctx->archdata;
+	struct x86_64_data *archdata = ctx->shared->archdata;
 	return x86_64_pt_walk(ctx, vaddr, paddr,
 			      archdata->pml4_as, archdata->pml4);
 }
@@ -779,7 +779,7 @@ x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 static kdump_status
 x86_64_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	struct x86_64_data *archdata = ctx->archdata;
+	struct x86_64_data *archdata = ctx->shared->archdata;
 	return x86_64_pt_walk(ctx, vaddr, paddr,
 			      KDUMP_XENVADDR, archdata->xen_pml4);
 }

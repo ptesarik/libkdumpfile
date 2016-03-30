@@ -63,10 +63,21 @@ kdump_alloc_ctx(void)
 kdump_status
 kdump_init_ctx(kdump_ctx *ctx)
 {
+	struct kdump_shared *shared;
 	kdump_status status;
+
+	shared = calloc(1, sizeof *shared);
+	if (!shared)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate shared info");
+	shared->refcnt = 1;
+	ctx->shared = shared;
+
 	status = init_attrs(ctx);
-	if (status != kdump_ok)
+	if (status != kdump_ok) {
+		free(ctx->shared);
 		return status;
+	}
 
 	set_attr_number(ctx, gattr(ctx, GKI_cache_size), DEFAULT_CACHE_SIZE);
 
@@ -134,24 +145,24 @@ set_fd(kdump_ctx *ctx, int fd, void *buf)
 	kdump_status ret;
 	int i;
 
-	ctx->fd = fd;
+	ctx->shared->fd = fd;
 
-	rd = paged_read(ctx->fd, buf, MAX_PAGE_SIZE);
+	rd = paged_read(ctx->shared->fd, buf, MAX_PAGE_SIZE);
 	if (rd < 0)
 		return set_error(ctx, kdump_syserr, "Cannot read file header");
 	memset(buf + rd, 0, MAX_PAGE_SIZE - rd);
 
 	for (i = 0; i < ARRAY_SIZE(formats); ++i) {
-		ctx->ops = formats[i];
-		ret = ctx->ops->probe(ctx, buf);
+		ctx->shared->ops = formats[i];
+		ret = ctx->shared->ops->probe(ctx, buf);
 		if (ret == kdump_ok)
 			return kdump_open_known(ctx);
 		if (ret != kdump_noprobe)
 			return ret;
 
-		ctx->ops = NULL;
-		if (ctx->cache)
-			cache_free(ctx->cache);
+		ctx->shared->ops = NULL;
+		if (ctx->shared->cache)
+			cache_free(ctx->shared->cache);
 		clear_attrs(ctx);
 		d = gattr(ctx, GKI_cache_size);
 		set_attr(ctx, d, *attr_value(d));
@@ -168,7 +179,7 @@ kdump_open_known(kdump_ctx *ctx)
 	kdump_status res;
 
 	set_attr_static_string(ctx, gattr(ctx, GKI_format_name),
-			       ctx->ops->name);
+			       ctx->shared->ops->name);
 
 	if (!attr_isset(gattr(ctx, GKI_linux_uts_sysname)))
 		/* If this fails, it is not fatal. */
@@ -189,8 +200,8 @@ kdump_open_known(kdump_ctx *ctx)
 
 	setup_version_code(ctx);
 
-	flush_vtop_map(&ctx->vtop_map);
-	flush_vtop_map(&ctx->vtop_map_xen);
+	flush_vtop_map(&ctx->shared->vtop_map);
+	flush_vtop_map(&ctx->shared->vtop_map_xen);
 
 	clear_error(ctx);
 	return kdump_ok;
@@ -324,16 +335,19 @@ setup_version_code(kdump_ctx *ctx)
 void
 kdump_free(kdump_ctx *ctx)
 {
-	if (ctx->ops && ctx->ops->cleanup)
-		ctx->ops->cleanup(ctx);
-	if (ctx->arch_ops && ctx->arch_ops->cleanup)
-		ctx->arch_ops->cleanup(ctx);
-	if (ctx->cache)
-		cache_free(ctx->cache);
-	if (ctx->xen_map)
-		free(ctx->xen_map);
-	flush_vtop_map(&ctx->vtop_map);
-	flush_vtop_map(&ctx->vtop_map_xen);
-	cleanup_attr(ctx);
+	if (! --ctx->shared->refcnt) {
+		if (ctx->shared->ops && ctx->shared->ops->cleanup)
+			ctx->shared->ops->cleanup(ctx);
+		if (ctx->shared->arch_ops && ctx->shared->arch_ops->cleanup)
+			ctx->shared->arch_ops->cleanup(ctx);
+		if (ctx->shared->cache)
+			cache_free(ctx->shared->cache);
+		if (ctx->shared->xen_map)
+			free(ctx->shared->xen_map);
+		flush_vtop_map(&ctx->shared->vtop_map);
+		flush_vtop_map(&ctx->shared->vtop_map_xen);
+		cleanup_attr(ctx);
+		free(ctx->shared);
+	}
 	free(ctx);
 }

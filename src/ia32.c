@@ -157,12 +157,12 @@ ia32_init(kdump_ctx *ctx)
 {
 	kdump_status ret;
 
-	ctx->archdata = calloc(1, sizeof(struct ia32_data));
-	if (!ctx->archdata)
+	ctx->shared->archdata = calloc(1, sizeof(struct ia32_data));
+	if (!ctx->shared->archdata)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate ia32 private data");
 
-	ret = set_vtop_xlat(&ctx->vtop_map,
+	ret = set_vtop_xlat(&ctx->shared->vtop_map,
 			    __START_KERNEL_map, VIRTADDR_MAX,
 			    KDUMP_XLAT_DIRECT, __START_KERNEL_map);
 	if (ret != kdump_ok)
@@ -209,7 +209,7 @@ ia32_reg_name(unsigned index)
 static kdump_status
 read_pgt(kdump_ctx *ctx)
 {
-	struct ia32_data *archdata = ctx->archdata;
+	struct ia32_data *archdata = ctx->shared->archdata;
 	kdump_vaddr_t pgtaddr;
 	void *pgt;
 	kdump_status ret;
@@ -260,7 +260,7 @@ read_pgt(kdump_ctx *ctx)
 static kdump_status
 ia32_vtop_init(kdump_ctx *ctx)
 {
-	struct ia32_data *archdata = ctx->archdata;
+	struct ia32_data *archdata = ctx->shared->archdata;
 	const char *cfg;
 	kdump_status ret;
 
@@ -272,8 +272,8 @@ ia32_vtop_init(kdump_ctx *ctx)
 	if (ret != kdump_ok)
 		return ret;
 
-	flush_vtop_map(&ctx->vtop_map);
-	ret = set_vtop_xlat(&ctx->vtop_map,
+	flush_vtop_map(&ctx->shared->vtop_map);
+	ret = set_vtop_xlat(&ctx->shared->vtop_map,
 			    0, VIRTADDR_MAX,
 			    KDUMP_XLAT_VTOP, 0);
 	if (ret != kdump_ok)
@@ -285,19 +285,19 @@ ia32_vtop_init(kdump_ctx *ctx)
 static void
 ia32_cleanup(kdump_ctx *ctx)
 {
-	struct ia32_data *archdata = ctx->archdata;
+	struct ia32_data *archdata = ctx->shared->archdata;
 
 	if (archdata->pgt)
 		free(archdata->pgt);
 
 	free(archdata);
-	ctx->archdata = NULL;
+	ctx->shared->archdata = NULL;
 }
 
 static kdump_status
 ia32_vtop_nonpae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	struct ia32_data *archdata = ctx->archdata;
+	struct ia32_data *archdata = ctx->shared->archdata;
 	uint32_t tbl[PTRS_PER_PAGE_NONPAE];
 	uint32_t pgd, pte;
 	kdump_paddr_t base;
@@ -337,7 +337,7 @@ ia32_vtop_nonpae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 static kdump_status
 ia32_vtop_pae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	struct ia32_data *archdata = ctx->archdata;
+	struct ia32_data *archdata = ctx->shared->archdata;
 	uint64_t tbl[PTRS_PER_PAGE_PAE];
 	uint64_t pgd, pmd, pte;
 	kdump_paddr_t base;
@@ -391,7 +391,7 @@ ia32_vtop_pae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 static kdump_status
 ia32_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	struct ia32_data *archdata = ctx->archdata;
+	struct ia32_data *archdata = ctx->shared->archdata;
 
 	if (!archdata->pgt)
 		return set_error(ctx, kdump_invalid,

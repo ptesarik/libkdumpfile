@@ -330,10 +330,10 @@ arch_index(const char *name)
 static kdump_status
 do_arch_init(kdump_ctx *ctx)
 {
-	ctx->arch_init_done = 1;
-	ctx->arch_ops = arch_ops(ctx->arch);
-	if (ctx->arch_ops && ctx->arch_ops->init)
-		return ctx->arch_ops->init(ctx);
+	ctx->shared->arch_init_done = 1;
+	ctx->shared->arch_ops = arch_ops(ctx->shared->arch);
+	if (ctx->shared->arch_ops && ctx->shared->arch_ops->init)
+		return ctx->shared->arch_ops->init(ctx);
 
 	return kdump_ok;
 }
@@ -341,20 +341,20 @@ do_arch_init(kdump_ctx *ctx)
 static kdump_status
 arch_name_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 {
-	ctx->arch = arch_index(attr_value(attr)->string);
+	ctx->shared->arch = arch_index(attr_value(attr)->string);
 
-	if (ctx->arch_ops && ctx->arch_ops->cleanup)
-		ctx->arch_ops->cleanup(ctx);
-	ctx->arch_ops = NULL;
-	ctx->arch_init_done = 0;
+	if (ctx->shared->arch_ops && ctx->shared->arch_ops->cleanup)
+		ctx->shared->arch_ops->cleanup(ctx);
+	ctx->shared->arch_ops = NULL;
+	ctx->shared->arch_init_done = 0;
 
-	if (ctx->arch == ARCH_UNKNOWN)
+	if (ctx->shared->arch == ARCH_UNKNOWN)
 		return kdump_ok;
 
-	set_ptr_size(ctx, arch_ptr_size(ctx->arch));
+	set_ptr_size(ctx, arch_ptr_size(ctx->shared->arch));
 
 	if (!isset_page_size(ctx)) {
-		int page_shift = default_page_shift(ctx->arch);
+		int page_shift = default_page_shift(ctx->shared->arch);
 		if (!page_shift)
 			return kdump_ok;
 
@@ -407,13 +407,13 @@ page_size_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 {
 	kdump_status res;
 
-	if (ctx->ops && ctx->ops->realloc_caches) {
-		res = ctx->ops->realloc_caches(ctx);
+	if (ctx->shared->ops && ctx->shared->ops->realloc_caches) {
+		res = ctx->shared->ops->realloc_caches(ctx);
 		if (res != kdump_ok)
 			return res;
 	}
 
-	if (isset_arch_name(ctx) && !ctx->arch_init_done) {
+	if (isset_arch_name(ctx) && !ctx->shared->arch_init_done) {
 		res = do_arch_init(ctx);
 		if (res != kdump_ok)
 			return res;

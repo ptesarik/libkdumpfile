@@ -205,7 +205,7 @@ xlat(kdump_ctx *ctx, struct vtop_control *ctl)
 static kdump_status
 s390x_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	struct s390x_data *archdata = ctx->archdata;
+	struct s390x_data *archdata = ctx->shared->archdata;
 	struct vtop_control ctl;
 	uint64_t entry;
 	kdump_status ret;
@@ -260,7 +260,7 @@ s390x_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 static int
 determine_pgttype(kdump_ctx *ctx)
 {
-	struct s390x_data *archdata = ctx->archdata;
+	struct s390x_data *archdata = ctx->shared->archdata;
 	struct page_io pio;
 	uint64_t entry, *p, *endp;
 	unsigned i;
@@ -302,7 +302,7 @@ determine_pgttype(kdump_ctx *ctx)
 static kdump_status
 s390x_vtop_init(kdump_ctx *ctx)
 {
-	struct s390x_data *archdata = ctx->archdata;
+	struct s390x_data *archdata = ctx->shared->archdata;
 	kdump_vaddr_t addr;
 	kdump_status ret;
 
@@ -313,7 +313,7 @@ s390x_vtop_init(kdump_ctx *ctx)
 		if (ret != kdump_ok)
 			return set_error(ctx, ret,
 					 "Cannot determine paging type");
-		ret = set_vtop_xlat(&ctx->vtop_map,
+		ret = set_vtop_xlat(&ctx->shared->vtop_map,
 				    0, VIRTADDR_MAX,
 				    KDUMP_XLAT_VTOP, 0);
 		if (ret != kdump_ok)
@@ -331,7 +331,7 @@ s390x_vtop_init(kdump_ctx *ctx)
 			return ret;
 		highmem = dump64toh(ctx, highmem);
 
-		ret = set_vtop_xlat(&ctx->vtop_map,
+		ret = set_vtop_xlat(&ctx->shared->vtop_map,
 				    0, highmem,
 				    KDUMP_XLAT_DIRECT, 0);
 		if (ret != kdump_ok)
@@ -488,14 +488,14 @@ s390x_init(kdump_ctx *ctx)
 	if (!archdata)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate s390x private data");
-	ctx->archdata = archdata;
+	ctx->shared->archdata = archdata;
 
 	archdata->pgdir = ~(kdump_addr_t)0;
 
 	process_lowcore_info(ctx);
 	clear_error(ctx);
 
-	ret = set_vtop_xlat(&ctx->vtop_map,
+	ret = set_vtop_xlat(&ctx->shared->vtop_map,
 			    0, VIRTADDR_MAX,
 			    KDUMP_XLAT_DIRECT, 0);
 	if (ret != kdump_ok)
@@ -507,10 +507,10 @@ s390x_init(kdump_ctx *ctx)
 static void
 s390x_cleanup(kdump_ctx *ctx)
 {
-	struct s390x_data *archdata = ctx->archdata;
+	struct s390x_data *archdata = ctx->shared->archdata;
 
 	free(archdata);
-	ctx->archdata = NULL;
+	ctx->shared->archdata = NULL;
 }
 
 const struct arch_ops s390x_ops = {

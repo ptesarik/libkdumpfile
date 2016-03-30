@@ -338,7 +338,7 @@ static void lkcd_cleanup(kdump_ctx *ctx);
 static struct pfn_block **
 get_pfn_slot(kdump_ctx *ctx, kdump_pfn_t pfn)
 {
-	struct lkcd_priv *lkcdp = ctx->fmtdata;
+	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 	struct pfn_block **l2;
 	unsigned idx;
 
@@ -486,7 +486,7 @@ split_pfn_block(kdump_ctx *ctx, struct pfn_block *block, unsigned short idx)
 static struct pfn_block *
 lookup_pfn_block(kdump_ctx *ctx, kdump_pfn_t pfn, unsigned short tolerance)
 {
-	struct lkcd_priv *lkcdp = ctx->fmtdata;
+	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 	struct pfn_block **l2, *block;
 	unsigned idx;
 
@@ -538,7 +538,7 @@ idx_fits_block(unsigned idx, struct pfn_block *block)
 static kdump_status
 read_page_desc(kdump_ctx *ctx, struct dump_page *dp, off_t off)
 {
-	ssize_t rd = pread(ctx->fd, dp, sizeof *dp, off);
+	ssize_t rd = pread(ctx->shared->fd, dp, sizeof *dp, off);
 	if (rd != sizeof *dp)
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page descriptor at %llu",
@@ -568,7 +568,7 @@ static kdump_status
 search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 		 struct dump_page *dp, off_t *dataoff)
 {
-	struct lkcd_priv *lkcdp = ctx->fmtdata;
+	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 	off_t off;
 	kdump_pfn_t curpfn, blocktbl;
 	struct pfn_block *block;
@@ -679,7 +679,7 @@ get_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 static kdump_status
 lkcd_max_pfn_validate(kdump_ctx *ctx, struct attr_data *attr)
 {
-	struct lkcd_priv *lkcdp = ctx->fmtdata;
+	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 	const struct attr_ops *parent_ops;
 
 	parent_ops = lkcdp->max_pfn_override.template.parent->ops;
@@ -706,7 +706,7 @@ lkcd_max_pfn_validate(kdump_ctx *ctx, struct attr_data *attr)
 static kdump_status
 lkcd_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 {
-	struct lkcd_priv *lkcdp = ctx->fmtdata;
+	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 	struct dump_page dp;
 	unsigned type;
 	off_t off;
@@ -741,7 +741,7 @@ lkcd_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 	}
 
 	/* read page data */
-	rd = pread(ctx->fd, buf, dp.dp_size, off);
+	rd = pread(ctx->shared->fd, buf, dp.dp_size, off);
 	if (rd != dp.dp_size)
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu",
@@ -791,7 +791,7 @@ static kdump_status
 lkcd_realloc_compressed(kdump_ctx *ctx, struct attr_data *attr)
 {
 	const struct attr_ops *parent_ops;
-	struct lkcd_priv *lkcdp = ctx->fmtdata;
+	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 	size_t newsz = attr_value(attr)->number;
 	void *newbuf;
 
@@ -816,7 +816,7 @@ base_version(uint32_t version)
 static kdump_status
 init_v1(kdump_ctx *ctx, void *hdr)
 {
-	struct lkcd_priv *lkcdp = ctx->fmtdata;
+	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 	struct dump_header_v1_32 *dh32 = hdr;
 	struct dump_header_v1_64 *dh64 = hdr;
 
@@ -833,7 +833,7 @@ init_v1(kdump_ctx *ctx, void *hdr)
 static kdump_status
 init_v2(kdump_ctx *ctx, void *hdr)
 {
-	struct lkcd_priv *lkcdp = ctx->fmtdata;
+	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 	struct dump_header_v2_32 *dh32 = hdr;
 	struct dump_header_v2_64 *dh64 = hdr;
 
@@ -856,7 +856,7 @@ init_v2(kdump_ctx *ctx, void *hdr)
 static kdump_status
 init_v8(kdump_ctx *ctx, void *hdr)
 {
-	struct lkcd_priv *lkcdp = ctx->fmtdata;
+	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 	struct dump_header_v8 *dh = hdr;
 
 	lkcdp->compression = dump32toh(ctx, dh->dh_dump_compress);
@@ -880,7 +880,7 @@ open_common(kdump_ctx *ctx, void *hdr)
 	lkcdp = ctx_malloc(sizeof *lkcdp, ctx, "LKCD private data");
 	if (!lkcdp)
 		return kdump_syserr;
-	ctx->fmtdata = lkcdp;
+	ctx->shared->fmtdata = lkcdp;
 
 	lkcdp->version = base_version(dump32toh(ctx, dh->dh_version));
 	snprintf(lkcdp->format, sizeof(lkcdp->format),
@@ -999,7 +999,7 @@ free_level1(struct pfn_block ***level1, unsigned long n)
 static void
 lkcd_cleanup(kdump_ctx *ctx)
 {
-	struct lkcd_priv *lkcdp = ctx->fmtdata;
+	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 
 	attr_remove_override(gattr(ctx, GKI_page_size),
 			     &lkcdp->page_size_override);
@@ -1009,7 +1009,7 @@ lkcd_cleanup(kdump_ctx *ctx)
 	if (lkcdp->compressed)
 		free(lkcdp->compressed);
 	free(lkcdp);
-	ctx->fmtdata = NULL;
+	ctx->shared->fmtdata = NULL;
 }
 
 const struct format_ops lkcd_ops = {
