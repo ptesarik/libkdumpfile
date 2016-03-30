@@ -219,6 +219,8 @@ struct page_io {
 	int precious;		/**< Is this page precious? */
 };
 
+struct kdump_shared;
+
 struct format_ops {
 	/**  Format name (identifier).
 	 * This is a unique identifier for the dump file format. In other
@@ -292,7 +294,7 @@ struct format_ops {
 
 	/* Clean up all private data.
 	 */
-	void (*cleanup)(kdump_ctx *);
+	void (*cleanup)(struct kdump_shared *);
 };
 
 struct arch_ops {
@@ -352,7 +354,7 @@ struct arch_ops {
 
 	/* Clean up any arch-specific data
 	 */
-	void (*cleanup)(kdump_ctx *);
+	void (*cleanup)(struct kdump_shared *);
 };
 
 /* provide our own definition of new_utsname */
@@ -959,7 +961,7 @@ clear_attrs(kdump_ctx *ctx)
 }
 
 #define cleanup_attr INTERNAL_NAME(cleanup_attr)
-void cleanup_attr(kdump_ctx *ctx);
+void cleanup_attr(struct kdump_shared *shared);
 
 /* Accessor functions for static attributes */
 

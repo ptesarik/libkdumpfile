@@ -172,7 +172,7 @@ struct setup_data {
 	| DUMP_DH_COMPRESSED_SNAPPY	\
 		)
 
-static void diskdump_cleanup(kdump_ctx *ctx);
+static void diskdump_cleanup(struct kdump_shared *shared);
 
 static inline int
 page_is_dumpable(kdump_ctx *ctx, unsigned int nr)
@@ -669,7 +669,7 @@ open_common(kdump_ctx *ctx, void *hdr)
 	return ret;
 
  err_cleanup:
-	diskdump_cleanup(ctx);
+	diskdump_cleanup(ctx->shared);
 	return ret;
 }
 
@@ -693,19 +693,19 @@ diskdump_probe(kdump_ctx *ctx, void *hdr)
 }
 
 static void
-diskdump_cleanup(kdump_ctx *ctx)
+diskdump_cleanup(struct kdump_shared *shared)
 {
-	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
+	struct disk_dump_priv *ddp = shared->fmtdata;
 
 	if (ddp) {
-		attr_remove_override(gattr(ctx, GKI_page_size),
+		attr_remove_override(sgattr(shared, GKI_page_size),
 				     &ddp->page_size_override);
 		if (ddp->bitmap)
 			free(ddp->bitmap);
 		if (ddp->compressed)
 			free(ddp->compressed);
 		free(ddp);
-		ctx->shared->fmtdata = NULL;
+		shared->fmtdata = NULL;
 	}
 }
 

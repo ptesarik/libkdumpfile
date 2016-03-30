@@ -435,12 +435,12 @@ ppc64_init(kdump_ctx *ctx)
 }
 
 static void
-ppc64_cleanup(kdump_ctx *ctx)
+ppc64_cleanup(struct kdump_shared *shared)
 {
-	struct ppc64_data *archdata = ctx->shared->archdata;
+	struct ppc64_data *archdata = shared->archdata;
 
 	free(archdata);
-	ctx->shared->archdata = NULL;
+	shared->archdata = NULL;
 }
 
 #define ELF_NGREG 49

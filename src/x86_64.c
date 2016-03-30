@@ -688,10 +688,10 @@ x86_64_process_load(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t paddr)
 }
 
 static void
-x86_64_cleanup(kdump_ctx *ctx)
+x86_64_cleanup(struct kdump_shared *shared)
 {
-	free(ctx->shared->archdata);
-	ctx->shared->archdata = NULL;
+	free(shared->archdata);
+	shared->archdata = NULL;
 }
 
 static kdump_status

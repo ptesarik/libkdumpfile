@@ -80,7 +80,7 @@ struct elfdump_priv {
 	int elfclass;
 };
 
-static void elf_cleanup(kdump_ctx *ctx);
+static void elf_cleanup(struct kdump_shared *shared);
 
 static const char *
 mach2arch(unsigned mach, int elfclass)
@@ -767,15 +767,15 @@ elf_probe(kdump_ctx *ctx, void *hdr)
 				elf32->e_ident[EI_CLASS]);
 
 	if (ret != kdump_ok)
-		elf_cleanup(ctx);
+		elf_cleanup(ctx->shared);
 
 	return ret;
 }
 
 static void
-elf_cleanup(kdump_ctx *ctx)
+elf_cleanup(struct kdump_shared *shared)
 {
-	struct elfdump_priv *edp = ctx->shared->fmtdata;
+	struct elfdump_priv *edp = shared->fmtdata;
 
 	if (edp) {
 		if (edp->load_segments)
@@ -785,7 +785,7 @@ elf_cleanup(kdump_ctx *ctx)
 		if (edp->strtab)
 			free(edp->strtab);
 		free(edp);
-		ctx->shared->fmtdata = NULL;
+		shared->fmtdata = NULL;
 	}
 };
 

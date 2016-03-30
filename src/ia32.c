@@ -283,15 +283,15 @@ ia32_vtop_init(kdump_ctx *ctx)
 }
 
 static void
-ia32_cleanup(kdump_ctx *ctx)
+ia32_cleanup(struct kdump_shared *shared)
 {
-	struct ia32_data *archdata = ctx->shared->archdata;
+	struct ia32_data *archdata = shared->archdata;
 
 	if (archdata->pgt)
 		free(archdata->pgt);
 
 	free(archdata);
-	ctx->shared->archdata = NULL;
+	shared->archdata = NULL;
 }
 
 static kdump_status

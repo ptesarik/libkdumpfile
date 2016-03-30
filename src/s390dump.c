@@ -89,7 +89,7 @@ struct s390dump_priv {
 	off_t dataoff;		/* offset of data (size of s390 header) */
 };
 
-static void s390_cleanup(kdump_ctx *ctx);
+static void s390_cleanup(struct kdump_shared *shared);
 
 static kdump_status
 s390_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
@@ -176,18 +176,18 @@ s390_probe(kdump_ctx *ctx, void *hdr)
 
  out:
 	if (ret != kdump_ok)
-		s390_cleanup(ctx);
+		s390_cleanup(ctx->shared);
 
 	return ret;
 }
 
 static void
-s390_cleanup(kdump_ctx *ctx)
+s390_cleanup(struct kdump_shared *shared)
 {
-	struct s390dump_priv *sdp = ctx->shared->fmtdata;
+	struct s390dump_priv *sdp = shared->fmtdata;
 
 	free(sdp);
-	ctx->shared->fmtdata = NULL;
+	shared->fmtdata = NULL;
 }
 
 const struct format_ops s390dump_ops = {

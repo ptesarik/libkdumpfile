@@ -344,7 +344,7 @@ arch_name_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 	ctx->shared->arch = arch_index(attr_value(attr)->string);
 
 	if (ctx->shared->arch_ops && ctx->shared->arch_ops->cleanup)
-		ctx->shared->arch_ops->cleanup(ctx);
+		ctx->shared->arch_ops->cleanup(ctx->shared);
 	ctx->shared->arch_ops = NULL;
 	ctx->shared->arch_init_done = 0;
 

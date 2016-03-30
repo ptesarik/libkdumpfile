@@ -505,12 +505,12 @@ s390x_init(kdump_ctx *ctx)
 }
 
 static void
-s390x_cleanup(kdump_ctx *ctx)
+s390x_cleanup(struct kdump_shared *shared)
 {
-	struct s390x_data *archdata = ctx->shared->archdata;
+	struct s390x_data *archdata = shared->archdata;
 
 	free(archdata);
-	ctx->shared->archdata = NULL;
+	shared->archdata = NULL;
 }
 
 const struct arch_ops s390x_ops = {

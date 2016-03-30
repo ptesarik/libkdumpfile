@@ -333,7 +333,7 @@ struct lkcd_priv {
 	char format[MAX_FORMAT_NAME];
 };
 
-static void lkcd_cleanup(kdump_ctx *ctx);
+static void lkcd_cleanup(struct kdump_shared *shared);
 
 static struct pfn_block **
 get_pfn_slot(kdump_ctx *ctx, kdump_pfn_t pfn)
@@ -940,7 +940,7 @@ open_common(kdump_ctx *ctx, void *hdr)
 	return kdump_ok;
 
   err_free:
-	lkcd_cleanup(ctx);
+	lkcd_cleanup(ctx->shared);
 	return ret;
 }
 
@@ -997,19 +997,19 @@ free_level1(struct pfn_block ***level1, unsigned long n)
 }
 
 static void
-lkcd_cleanup(kdump_ctx *ctx)
+lkcd_cleanup(struct kdump_shared *shared)
 {
-	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
+	struct lkcd_priv *lkcdp = shared->fmtdata;
 
-	attr_remove_override(gattr(ctx, GKI_page_size),
+	attr_remove_override(sgattr(shared, GKI_page_size),
 			     &lkcdp->page_size_override);
-	attr_remove_override(gattr(ctx, GKI_max_pfn),
+	attr_remove_override(sgattr(shared, GKI_max_pfn),
 			     &lkcdp->max_pfn_override);
 	free_level1(lkcdp->pfn_level1, lkcdp->l1_size);
 	if (lkcdp->compressed)
 		free(lkcdp->compressed);
 	free(lkcdp);
-	ctx->shared->fmtdata = NULL;
+	shared->fmtdata = NULL;
 }
 
 const struct format_ops lkcd_ops = {

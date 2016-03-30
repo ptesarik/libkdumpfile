@@ -454,22 +454,22 @@ instantiate_path(struct attr_data *attr)
 }
 
 /**  Free all memory used by attributes.
- * @param ctx  Dump file object.
+ * @param shared  Shared data of a dump file object.
  */
 void
-cleanup_attr(kdump_ctx *ctx)
+cleanup_attr(struct kdump_shared *shared)
 {
 	struct attr_hash *tbl, *tblnext;
 
-	dealloc_attr(gattr(ctx, GKI_dir_root));
+	dealloc_attr(sgattr(shared, GKI_dir_root));
 
-	tblnext = ctx->shared->attr;
+	tblnext = shared->attr;
 	while(tblnext) {
 		tbl = tblnext;
 		tblnext = tbl->next;
 		free(tbl);
 	}
-	ctx->shared->attr = NULL;
+	shared->attr = NULL;
 }
 
 /**  Initialize statically allocated attributes

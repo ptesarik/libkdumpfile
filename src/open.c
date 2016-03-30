@@ -335,19 +335,20 @@ setup_version_code(kdump_ctx *ctx)
 void
 kdump_free(kdump_ctx *ctx)
 {
-	if (! --ctx->shared->refcnt) {
-		if (ctx->shared->ops && ctx->shared->ops->cleanup)
-			ctx->shared->ops->cleanup(ctx);
-		if (ctx->shared->arch_ops && ctx->shared->arch_ops->cleanup)
-			ctx->shared->arch_ops->cleanup(ctx);
-		if (ctx->shared->cache)
-			cache_free(ctx->shared->cache);
-		if (ctx->shared->xen_map)
-			free(ctx->shared->xen_map);
-		flush_vtop_map(&ctx->shared->vtop_map);
-		flush_vtop_map(&ctx->shared->vtop_map_xen);
-		cleanup_attr(ctx);
-		free(ctx->shared);
+	struct kdump_shared *shared = ctx->shared;
+	if (! --shared->refcnt) {
+		if (shared->ops && shared->ops->cleanup)
+			shared->ops->cleanup(shared);
+		if (shared->arch_ops && shared->arch_ops->cleanup)
+			shared->arch_ops->cleanup(shared);
+		if (shared->cache)
+			cache_free(shared->cache);
+		if (shared->xen_map)
+			free(shared->xen_map);
+		flush_vtop_map(&shared->vtop_map);
+		flush_vtop_map(&shared->vtop_map_xen);
+		cleanup_attr(shared);
+		free(shared);
 	}
 	free(ctx);
 }

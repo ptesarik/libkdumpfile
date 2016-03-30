@@ -226,17 +226,17 @@ devmem_probe(kdump_ctx *ctx, void *hdr)
 }
 
 static void
-devmem_cleanup(kdump_ctx *ctx)
+devmem_cleanup(struct kdump_shared *shared)
 {
-	struct devmem_priv *dmp = ctx->shared->fmtdata;
+	struct devmem_priv *dmp = shared->fmtdata;
 
 	if (dmp->ce) {
 		free(dmp->ce[0].data);
 		free(dmp->ce);
 	}
 
-	free(ctx->priv);
-	ctx->shared->fmtdata = NULL;
+	free(shared);
+	shared->fmtdata = NULL;
 }
 
 const struct format_ops devmem_ops = {
