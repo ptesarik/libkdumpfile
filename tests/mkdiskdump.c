@@ -565,8 +565,10 @@ writepage(struct page_data *pg)
 
 	flags = pgkdump->flags;
 
-	if (pg->len && compression != COMPRESS_NONE &&
-	    pgkdump->compress != compress_no) {
+	if (pg->len &&
+	    (pgkdump->compress == compress_yes ||
+	     (pgkdump->compress == compress_auto &&
+	      compression != COMPRESS_NONE))) {
 		buflen = compresspage(pg, &flags);
 		if (!buflen)
 			return TEST_ERR;
