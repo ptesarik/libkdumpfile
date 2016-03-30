@@ -79,7 +79,10 @@ run_reads(void *arg)
 static int
 run_threads(kdump_ctx *ctx, unsigned long nthreads, unsigned long cache_size)
 {
-	pthread_t tinfo[nthreads];
+	struct {
+		pthread_t id;
+		kdump_ctx *ctx;
+	} tinfo[nthreads];
 	pthread_attr_t attr;
 	struct kdump_attr val;
 	kdump_status res;
@@ -104,7 +107,13 @@ run_threads(kdump_ctx *ctx, unsigned long nthreads, unsigned long cache_size)
 	}
 
 	for (i = 0; i < nthreads; ++i) {
-		res = pthread_create(&tinfo[i], &attr, run_reads, ctx);
+		tinfo[i].ctx = kdump_clone(ctx);
+		if (!tinfo[i].ctx) {
+			fprintf(stderr, "kdump_clone: %s\n", strerror(res));
+			return TEST_ERR;
+		}
+		res = pthread_create(&tinfo[i].id, &attr, run_reads,
+				     tinfo[i].ctx);
 		if (res) {
 			fprintf(stderr, "pthread_create: %s\n", strerror(res));
 			return TEST_ERR;
@@ -114,7 +123,8 @@ run_threads(kdump_ctx *ctx, unsigned long nthreads, unsigned long cache_size)
 	rc = TEST_OK;
 	for (i = 0; i < nthreads; ++i) {
 		void *retval;
-		res = pthread_join(tinfo[i], &retval);
+		res = pthread_join(tinfo[i].id, &retval);
+		kdump_free(tinfo[i].ctx);
 		if (res) {
 			fprintf(stderr, "pthread_join: %s\n", strerror(res));
 			return TEST_ERR;
