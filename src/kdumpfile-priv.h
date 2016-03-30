@@ -866,7 +866,18 @@ struct attr_data *lookup_dir_attr(const kdump_ctx *ctx,
 				  const struct attr_data *dir,
 				  const char *key, size_t keylen);
 
-/**  Attribute data by global key index.
+/**  Attribute data by shared data and global key index.
+ * @param shared  Shared data of a dump file object.
+ * @param idx     Global key index.
+ * @returns       Attribute data.
+ */
+static inline struct attr_data *
+sgattr(const struct kdump_shared *shared, enum global_keyidx idx)
+{
+	return shared->global_attrs[idx];
+}
+
+/**  Attribute data by context and global key index.
  * @param ctx  Dump file object.
  * @param idx  Global key index.
  * @returns    Attribute data.
@@ -874,7 +885,7 @@ struct attr_data *lookup_dir_attr(const kdump_ctx *ctx,
 static inline struct attr_data *
 gattr(const kdump_ctx *ctx, enum global_keyidx idx)
 {
-	return ctx->shared->global_attrs[idx];
+	return sgattr(ctx->shared, idx);
 }
 
 /**  Check if an attribute is set.
