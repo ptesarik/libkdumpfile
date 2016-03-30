@@ -1,0 +1,52 @@
+#
+# The actual call to mkdiskdump and dumpdata
+#
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+datafile="out/${name}.data"
+dumpfile="out/${name}.dump"
+resultfile="out/${name}.result"
+expectfile="$srcdir/basic.expect"
+
+echo "@0 $pageflags" > "$datafile"
+cat "$expectfile" >> "$datafile"
+
+./mkdiskdump "$dumpfile" <<EOF
+version = 6
+arch_name = x86_64
+block_size = 4096
+phys_base = 0
+max_mapnr = 0x100
+sub_hdr_size = 1
+
+uts.sysname = Linux
+uts.nodename = test-node
+uts.release = 3.4.5-test
+uts.version = #1 SMP Fri Jan 22 14:02:42 UTC 2016 (1234567)
+uts.machine = x86_64
+uts.domainname = (none)
+
+nr_cpus = 1
+
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create DISKDUMP file" >&2
+    exit $rc
+fi
+echo "Created DISKDUMP dump: $dumpfile"
+
+./dumpdata "$dumpfile" 0 4096 >"$resultfile"
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot dump DISKDUMP data" >&2
+    exit $rc
+fi
+
+if ! diff "$expectfile" "$resultfile"; then
+    echo "Results do not match" >&2
+    exit 1
+fi

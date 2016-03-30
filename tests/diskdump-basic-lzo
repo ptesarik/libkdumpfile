@@ -1,0 +1,4 @@
+#! /bin/sh
+pageflags=lzo
+. "$srcdir"/diskdump-basic
+exit 0

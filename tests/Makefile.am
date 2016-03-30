@@ -86,6 +86,10 @@ test_scripts = \
 	diskdump-empty-ppc64 \
 	diskdump-empty-s390x \
 	diskdump-empty-x86_64 \
+	diskdump-basic-raw \
+	diskdump-basic-zlib \
+	diskdump-basic-lzo \
+	diskdump-basic-snappy \
 	elf-empty-i386 \
 	elf-empty-i386-elf64 \
 	elf-empty-s390 \

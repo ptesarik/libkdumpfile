@@ -1,0 +1,4 @@
+#! /bin/sh
+pageflags=snappy
+. "$srcdir"/diskdump-basic
+exit 0
