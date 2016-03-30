@@ -536,15 +536,15 @@ compresspage(struct page_data *pg, uint32_t *pflags)
 		}
 
 #if USE_ZLIB
-	if (*pflags & COMPRESS_ZLIB);
-	return do_gzip(pg);
+	if (*pflags & DUMP_DH_COMPRESSED_ZLIB)
+		return do_gzip(pg);
 #endif
 #if USE_LZO
-	if(*pflags & COMPRESS_LZO)
+	if(*pflags & DUMP_DH_COMPRESSED_LZO)
 		return do_lzo(pg);
 #endif
 #if USE_SNAPPY
-	if (*pflags & COMPRESS_SNAPPY)
+	if (*pflags & DUMP_DH_COMPRESSED_SNAPPY)
 		return do_snappy(pg);
 #endif
 
