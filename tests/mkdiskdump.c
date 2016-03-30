@@ -70,7 +70,9 @@ struct page_data_kdump {
 
 static endian_t be;
 static write_fn *writeheader;
-off_t dataoff;
+static off_t pdoff, dataoff;
+
+static unsigned char *bitmap1, *bitmap2;
 
 enum compress_method {
 	COMPRESS_NONE,
@@ -555,10 +557,55 @@ compresspage(struct page_data *pg, uint32_t *pflags)
 }
 
 static int
+markpage(struct page_data *pg)
+{
+	struct page_data_kdump *pgkdump = pg->priv;
+	unsigned long long pfn, blknum;
+	size_t idx;
+
+	pfn = pgkdump->addr / block_size;
+	blknum = (pfn / block_size) >> 3;
+	if (blknum >= bitmap_blocks / 2) {
+		fprintf(stderr, "PFN too large: %llu\n", pfn);
+		return TEST_ERR;
+	}
+
+	idx = pfn >> 3;
+	bitmap1[idx] |= 1U << (pfn & 7);
+	bitmap2[idx] |= 1U << (pfn & 7);
+
+	dataoff += sizeof(struct page_desc);
+	return TEST_OK;
+}
+
+static inline unsigned
+bitcount(unsigned x)
+{
+	return (uint32_t)((((x * 0x08040201) >> 3) & 0x11111111) * 0x11111111)
+		>> 28;
+}
+
+unsigned long
+bitmap_index(const unsigned char *bmp, unsigned long bit)
+{
+	unsigned long ret = 0;
+	unsigned char mask;
+	while (bit >= 8) {
+		ret += bitcount(*bmp++);
+		bit -= 8;
+	}
+	for (mask = 1; bit; --bit, mask <<= 1)
+		if (*bmp & mask)
+			++ret;
+	return ret;
+}
+
+static int
 writepage(struct page_data *pg)
 {
 	struct page_data_kdump *pgkdump = pg->priv;
 	struct page_desc pd;
+	unsigned long pdidx;
 	unsigned char *buf;
 	size_t buflen;
 	uint32_t flags;
@@ -590,6 +637,11 @@ writepage(struct page_data *pg)
 	pd.flags = htodump32(be, flags);
 	pd.page_flags = htodump64(be, 0);
 
+	pdidx = bitmap_index(bitmap2, pgkdump->addr / block_size);
+	if (fseek(pgkdump->f, pdoff + pdidx * sizeof pd, SEEK_SET) != 0) {
+		perror("seek page desc");
+		return TEST_ERR;
+	}
 	if (fwrite(&pd, sizeof pd, 1, pgkdump->f) != 1) {
 		perror("write page desc");
 		return TEST_ERR;
@@ -599,7 +651,6 @@ writepage(struct page_data *pg)
 		perror("seek page data");
 		return TEST_ERR;
 	}
-
 	if (fwrite(buf, 1, buflen, pgkdump->f) != buflen) {
 		perror("write page data");
 		return TEST_ERR;
@@ -620,12 +671,11 @@ writedata(FILE *f)
 {
 	struct page_data_kdump pgkdump;
 	struct page_data pg;
+	unsigned long bmp_blocks1;
 	int rc;
 
 	if (!data_file)
 		return TEST_OK;
-
-	printf("Creating page data\n");
 
 	pgkdump.f = f;
 	pgkdump.addr = 0;
@@ -645,6 +695,61 @@ writedata(FILE *f)
 	}
 #endif
 
+	if (!bitmap_blocks) {
+		bmp_blocks1 =
+			(((max_mapnr + 7) / 8) + block_size - 1) / block_size;
+		bitmap_blocks = bmp_blocks1 * 2;
+	} else
+		bmp_blocks1 = bitmap_blocks / 2;
+
+	pdoff = (1 + sub_hdr_size + bitmap_blocks) * block_size;
+	dataoff = pdoff;
+
+	printf("Creating page bitmap\n");
+
+	bitmap1 = calloc(bmp_blocks1, block_size);
+	if (!bitmap1) {
+		perror("Cannot allocate 1st bitmap");
+		rc = TEST_ERR;
+		goto out_wrkmem;
+	}
+
+	bitmap2 = calloc(bmp_blocks1, block_size);
+	if (!bitmap2) {
+		perror("Cannot allocate 2nd bitmap");
+		rc = TEST_ERR;
+		goto out_bitmap1;
+	}
+
+	pg.endian = be;
+	pg.priv = &pgkdump;
+	pg.parse_hdr = parseheader;
+	pg.write_page = markpage;
+
+	rc = process_data(&pg, data_file);
+	if (rc != TEST_OK)
+		goto out_bitmap2;
+
+	if (fseek(f, (1 + sub_hdr_size) * block_size, SEEK_SET) != 0) {
+		perror("seek bitmap");
+		rc = TEST_ERR;
+		goto out_bitmap2;
+	}
+	if (fwrite(bitmap1, block_size, bmp_blocks1, f) != bmp_blocks1) {
+		perror("write 1st bitmap");
+		rc = TEST_ERR;
+		goto out_bitmap2;
+	}
+	if (fwrite(bitmap2, block_size, bmp_blocks1, f) != bmp_blocks1) {
+		perror("write 2nd bitmap");
+		rc = TEST_ERR;
+		goto out_bitmap2;
+	}
+
+	printf("Creating page data\n");
+
+	dataoff += block_size - (dataoff - 1) % block_size - 1;
+
 	pg.endian = be;
 	pg.priv = &pgkdump;
 	pg.parse_hdr = parseheader;
@@ -654,6 +759,11 @@ writedata(FILE *f)
 
 	if (pgkdump.cbuf)
 		free(pgkdump.cbuf);
+ out_bitmap2:
+	free(bitmap2);
+ out_bitmap1:
+	free(bitmap1);
+ out_wrkmem:
 #if USE_LZO
 	free(pgkdump.lzo_wrkmem);
 #endif
