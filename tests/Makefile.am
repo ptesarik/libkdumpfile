@@ -134,8 +134,5 @@ TESTS = $(test_scripts) \
 	subattr \
 	thread-errstr
 
-XFAIL_TESTS = \
-	thread-errstr
-
 clean-local:
 	-rm -rf out

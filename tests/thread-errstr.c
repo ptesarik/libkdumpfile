@@ -133,7 +133,10 @@ get_novalue(void *arg)
 static int
 run_threads(kdump_ctx *ctx)
 {
-	pthread_t tinfo[2];
+	struct {
+		pthread_t id;
+		kdump_ctx *ctx;
+	} tinfo[2];
 	pthread_attr_t attr;
 	unsigned i;
 	int res, rc;
@@ -144,12 +147,20 @@ run_threads(kdump_ctx *ctx)
 		return TEST_ERR;
 	}
 
-	res = pthread_create(&tinfo[0], &attr, get_nokey, ctx);
+	if (! (tinfo[0].ctx = kdump_clone(ctx)) ) {
+		fprintf(stderr, "Cannot clone kdump_ctx: %s\n", strerror(res));
+		return TEST_ERR;
+	}
+	res = pthread_create(&tinfo[0].id, &attr, get_nokey, tinfo[0].ctx);
 	if (res) {
 		fprintf(stderr, "pthread_create: %s\n", strerror(res));
 		return TEST_ERR;
 	}
-	res = pthread_create(&tinfo[1], &attr, get_novalue, ctx);
+	if (! (tinfo[1].ctx = kdump_clone(ctx)) ) {
+		fprintf(stderr, "Cannot clone kdump_ctx: %s\n", strerror(res));
+		return TEST_ERR;
+	}
+	res = pthread_create(&tinfo[1].id, &attr, get_novalue, tinfo[1].ctx);
 	if (res) {
 		fprintf(stderr, "pthread_create: %s\n", strerror(res));
 		return TEST_ERR;
@@ -158,7 +169,8 @@ run_threads(kdump_ctx *ctx)
 	rc = TEST_OK;
 	for (i = 0; i < ARRAY_SIZE(tinfo); ++i) {
 		void *retval;
-		res = pthread_join(tinfo[i], &retval);
+		res = pthread_join(tinfo[i].id, &retval);
+		kdump_free(tinfo[i].ctx);
 		if (res) {
 			fprintf(stderr, "pthread_join: %s\n", strerror(res));
 			return TEST_ERR;
