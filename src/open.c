@@ -70,6 +70,12 @@ kdump_init_ctx(kdump_ctx *ctx)
 	if (!shared)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate shared info");
+	if (mutex_init(&shared->lock, NULL)) {
+		free(shared);
+		return set_error(ctx, kdump_syserr,
+				 "Cannot initialize shared data mutex");
+	}
+
 	list_init(&shared->ctx);
 
 	ctx->shared = shared;
@@ -77,6 +83,7 @@ kdump_init_ctx(kdump_ctx *ctx)
 
 	status = init_attrs(ctx);
 	if (status != kdump_ok) {
+		mutex_destroy(&ctx->shared->lock);
 		free(ctx->shared);
 		return status;
 	}
@@ -379,6 +386,7 @@ kdump_free(kdump_ctx *ctx)
 		flush_vtop_map(&shared->vtop_map);
 		flush_vtop_map(&shared->vtop_map_xen);
 		cleanup_attr(shared);
+		mutex_destroy(&shared->lock);
 		free(shared);
 	}
 	free(ctx);

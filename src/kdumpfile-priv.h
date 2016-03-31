@@ -475,6 +475,9 @@ struct cache;
  * which can be shared by many @ref kdump_ctx objects.
  */
 struct kdump_shared {
+	/** Guard accesses to shared data. */
+	mutex_t lock;
+
 	/** List of all refererring @c kdump_ctx structures.
 	 * Each @c kdump_ctx that holds a reference to this shared data
 	 * must be added to this list.
