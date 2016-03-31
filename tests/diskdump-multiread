@@ -1,0 +1,56 @@
+#! /bin/sh
+
+#
+# Test multi-threaded read of diskdump dumps.
+#
+
+mkdir -p out || exit 99
+
+TIMEOUT=2
+NTHREADS=8
+
+name=$( basename "$0" )
+datafile="out/${name}.data"
+dumpfile="out/${name}.dump"
+
+awk 'BEGIN {
+  for(pfn = 0; pfn < 0x80; ++pfn)
+    printf "@0x%x zlib\n%02x*0x1000\n", pfn * 0x1000, pfn
+}' >"$datafile"
+
+./mkdiskdump "$dumpfile" <<EOF
+version = 6
+arch_name = x86_64
+block_size = 0x1000
+phys_base = 0
+max_mapnr = 0x80
+sub_hdr_size = 1
+
+uts.sysname = Linux
+uts.nodename = test-node
+uts.release = 3.4.5-test
+uts.version = #1 SMP Fri Jan 22 14:02:42 UTC 2016 (1234567)
+uts.machine = x86_64
+uts.domainname = (none)
+
+nr_cpus = 1
+
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create DISKDUMP file" >&2
+    exit $rc
+fi
+echo "Created DISKDUMP file: $dumpfile"
+
+./multiread -t $TIMEOUT -n $NTHREADS "$dumpfile" 0x0 0x80
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Multi-threaded read failed" >&2
+    if [ $rc -ge 128 ] ; then
+	echo "Terminated by SIG"$( kill -l $rc )
+	rc=1
+    fi
+    exit $rc
+fi

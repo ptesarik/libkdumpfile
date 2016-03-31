@@ -90,6 +90,7 @@ test_scripts = \
 	diskdump-basic-zlib \
 	diskdump-basic-lzo \
 	diskdump-basic-snappy \
+	diskdump-multiread \
 	elf-empty-i386 \
 	elf-empty-i386-elf64 \
 	elf-empty-s390 \
@@ -137,6 +138,9 @@ TESTS = $(test_scripts) \
 	privptr \
 	subattr \
 	thread-errstr
+
+XFAIL_TESTS = \
+	diskdump-multiread
 
 clean-local:
 	-rm -rf out
