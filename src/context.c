@@ -35,6 +35,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
 
 const char *
 kdump_err_str(kdump_ctx *ctx)
@@ -495,4 +496,57 @@ void *
 kdump_get_priv(kdump_ctx *ctx)
 {
 	return ctx->priv;
+}
+
+/**  Allocate per-context data.
+ * @param shared  Dump file shared data.
+ * @param sz      Size of per-context data.
+ * @returns       Per-context slot number, or -1 on error.
+ *
+ * On error, @c errno is set to:
+ * - @c EAGAIN  All slots are already in use.
+ * - @c ENOMEM  Memory allocation failure.
+ */
+int
+per_ctx_alloc(struct kdump_shared *shared, size_t sz)
+{
+	kdump_ctx *ctx;
+	int slot;
+
+	/* Allocate a slot. */
+	for (slot = 0; slot < PER_CTX_SLOTS; ++slot)
+		if (!shared->per_ctx_size[slot])
+			break;
+	if (slot >= PER_CTX_SLOTS) {
+		errno = EAGAIN;
+		return -1;
+	}
+	shared->per_ctx_size[slot] = sz;
+
+	/* Allocate memory. */
+	list_for_each_entry(ctx, &shared->ctx, list)
+		if (! (ctx->data[slot] = malloc(sz)) ) {
+			while (ctx->list.prev != &shared->ctx) {
+				ctx = list_entry(ctx->list.prev,
+						 kdump_ctx, list);
+				free(ctx->data[slot]);
+			}
+			shared->per_ctx_size[slot] = 0;
+			return -1;
+		}
+
+	return slot;
+}
+
+/**  Free per-context data.
+ * @param shared  Dump file shared data.
+ * @param slot    Per-context slot number.
+ */
+void
+per_ctx_free(struct kdump_shared *shared, int slot)
+{
+	kdump_ctx *ctx;
+	list_for_each_entry(ctx, &shared->ctx, list)
+		free(ctx->data[slot]);
+	shared->per_ctx_size[slot] = 0;
 }

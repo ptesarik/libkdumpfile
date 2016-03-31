@@ -94,6 +94,21 @@ kdump_init_ctx(kdump_ctx *ctx)
 kdump_status
 kdump_init_clone(kdump_ctx *ctx, const kdump_ctx *orig)
 {
+	int slot;
+
+	for (slot = 0; slot < PER_CTX_SLOTS; ++slot) {
+		size_t sz = orig->shared->per_ctx_size[slot];
+		if (!sz)
+			continue;
+		if (! (ctx->data[slot] = malloc(sz)) ) {
+			while (slot-- > 0)
+				if (orig->shared->per_ctx_size[slot])
+					free(ctx->data[slot]);
+			return set_error(ctx, kdump_syserr,
+					 "Cannot allocate per-ctx data");
+		}
+	}
+
 	ctx->shared = orig->shared;
 	list_add(&ctx->list, &orig->shared->ctx);
 

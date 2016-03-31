@@ -538,6 +538,11 @@ struct vtop_map {
 
 struct cache;
 
+/** Number of per-context data slots.
+ * If needed, this number can be increased without breaking public ABI.
+ */
+#define PER_CTX_SLOTS	16
+
 /**  Shared state of the dump file object.
  *
  * This structure describes the data portion of the dump file object,
@@ -580,6 +585,9 @@ struct kdump_shared {
 	/* Xen maps */
 	void *xen_map;
 	unsigned long xen_map_size;
+
+	/** Size of per-context data. Zero means unallocated. */
+	size_t per_ctx_size[PER_CTX_SLOTS];
 };
 
 /* Maximum length of the error message */
@@ -602,9 +610,20 @@ struct _tag_kdump_ctx {
 	kdump_get_symbol_val_fn *cb_get_symbol_val;
 	kdump_get_symbol_val_fn *cb_get_symbol_val_xen;
 
+	/** Per-context data. */
+	void *data[PER_CTX_SLOTS];
+
 	char *err_str;		/**< Error string. */
 	char err_buf[ERRBUF];	/**< Buffer for the error string. */
 };
+
+/* Per-context data */
+
+#define per_ctx_alloc INTERNAL_NAME(per_ctx_alloc)
+int per_ctx_alloc(struct kdump_shared *shared, size_t sz);
+
+#define per_ctx_free INTERNAL_NAME(per_ctx_free)
+void per_ctx_free(struct kdump_shared *shared, int slot);
 
 /* File formats */
 
