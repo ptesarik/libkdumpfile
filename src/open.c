@@ -70,8 +70,10 @@ kdump_init_ctx(kdump_ctx *ctx)
 	if (!shared)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate shared info");
-	shared->refcnt = 1;
+	list_init(&shared->ctx);
+
 	ctx->shared = shared;
+	list_add(&ctx->list, &shared->ctx);
 
 	status = init_attrs(ctx);
 	if (status != kdump_ok) {
@@ -92,8 +94,9 @@ kdump_init_ctx(kdump_ctx *ctx)
 kdump_status
 kdump_init_clone(kdump_ctx *ctx, const kdump_ctx *orig)
 {
-	++orig->shared->refcnt;
 	ctx->shared = orig->shared;
+	list_add(&ctx->list, &orig->shared->ctx);
+
 	ctx->priv = orig->priv;
 	ctx->cb_get_symbol_val = orig->cb_get_symbol_val;
 	ctx->cb_get_symbol_val_xen = orig->cb_get_symbol_val_xen;
@@ -347,7 +350,9 @@ void
 kdump_free(kdump_ctx *ctx)
 {
 	struct kdump_shared *shared = ctx->shared;
-	if (! --shared->refcnt) {
+
+	list_del(&ctx->list);
+	if (list_empty(&shared->ctx)) {
 		if (shared->ops && shared->ops->cleanup)
 			shared->ops->cleanup(shared);
 		if (shared->arch_ops && shared->arch_ops->cleanup)

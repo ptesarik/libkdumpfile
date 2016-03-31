@@ -37,6 +37,8 @@
 #include "kdumpfile.h"
 #pragma GCC visibility pop
 
+#include "list.h"
+
 #include <endian.h>
 
 /* Minimize chance of name clashes (in a static link) */
@@ -542,7 +544,11 @@ struct cache;
  * which can be shared by many @ref kdump_ctx objects.
  */
 struct kdump_shared {
-	unsigned refcnt;	/**< Reference count. */
+	/** List of all refererring @c kdump_ctx structures.
+	 * Each @c kdump_ctx that holds a reference to this shared data
+	 * must be added to this list.
+	 */
+	struct list_head ctx;
 
 	int fd;			/**< Dump file descriptor. */
 
@@ -585,7 +591,10 @@ struct kdump_shared {
  * @ref kdump_shared.
  */
 struct _tag_kdump_ctx {
-	struct kdump_shared *shared;
+	struct kdump_shared *shared; /**< Dump file shared data. */
+
+	/** Node of the @c ctx list in @c struct @ref kdump_shared. */
+	struct list_head list;
 
 	void *priv;		/**< User private data. */
 
