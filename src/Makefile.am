@@ -52,6 +52,8 @@ include_HEADERS = \
 
 noinst_HEADERS = \
 	kdumpfile-priv.h \
+	list.h \
+	threads.h \
 	global-attr.def \
 	static-attr.def
 

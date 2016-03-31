@@ -38,6 +38,7 @@
 #pragma GCC visibility pop
 
 #include "list.h"
+#include "threads.h"
 
 #include <endian.h>
 
@@ -84,81 +85,6 @@
 #  define be64toh(x) (x)
 #  define le64toh(x) bswap_64(x)
 # endif
-#endif
-
-/* Multi-threading */
-#if USE_PTHREAD
-
-#include <pthread.h>
-
-typedef pthread_mutex_t mutex_t;
-typedef pthread_mutexattr_t mutexattr_t;
-
-static inline int
-mutex_init(mutex_t *mutex, const mutexattr_t *attr)
-{
-	return pthread_mutex_init(mutex, attr);
-}
-
-static inline int
-mutex_destroy(mutex_t *mutex)
-{
-	return pthread_mutex_destroy(mutex);
-}
-
-static inline int
-mutex_lock(mutex_t *mutex)
-{
-	return pthread_mutex_lock(mutex);
-}
-
-static inline int
-mutex_trylock(mutex_t *mutex)
-{
-	return pthread_mutex_trylock(mutex);
-}
-
-static inline int
-mutex_unlock(mutex_t *mutex)
-{
-	return pthread_mutex_unlock(mutex);
-}
-
-#else
-
-typedef struct { } mutex_t;
-typedef struct { } mutexattr_t;
-
-static inline int
-mutex_init(mutex_t *mutex, const mutexattr_t *attr)
-{
-	return 0;
-}
-
-static inline int
-mutex_destroy(mutex_t *mutex)
-{
-	return 0;
-}
-
-static inline int
-mutex_lock(mutex_t *mutex)
-{
-	return 0;
-}
-
-static inline int
-mutex_trylock(mutex_t *mutex)
-{
-	return 0;
-}
-
-static inline int
-mutex_unlock(mutex_t *mutex)
-{
-	return 0;
-}
-
 #endif
 
 /* This should cover all possibilities:
