@@ -1,0 +1,48 @@
+#! /bin/sh
+
+#
+# Test multi-threaded read of LKCD dumps.
+#
+
+mkdir -p out || exit 99
+
+TIMEOUT=2
+NTHREADS=8
+
+name=$( basename "$0" )
+datafile="out/${name}.data"
+dumpfile="out/${name}.dump"
+
+awk 'BEGIN {
+  for(pfn = 0; pfn < 0x80; ++pfn)
+    printf "@0x%x compress\n%02x*0x1000\n", pfn * 0x1000, pfn
+}' >"$datafile"
+
+./mklkcd "$dumpfile" <<EOF
+arch_name = x86_64
+page_shift = 12
+page_offset = 0xffff880000000000
+
+NR_CPUS = 8
+num_cpus = 1
+
+compression = 2
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create LKCD file" >&2
+    exit $rc
+fi
+echo "Created LKCD file: $dumpfile"
+
+./multiread -t $TIMEOUT -n $NTHREADS "$dumpfile" 0x0 0x80
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Multi-threaded read failed" >&2
+    if [ $rc -ge 128 ] ; then
+	echo "Terminated by SIG"$( kill -l $rc )
+	rc=1
+    fi
+    exit $rc
+fi

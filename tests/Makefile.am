@@ -107,6 +107,7 @@ test_scripts = \
 	lkcd-basic-raw \
 	lkcd-basic-rle \
 	lkcd-basic-gzip \
+	lkcd-multiread \
 	lkcd-long-page-raw \
 	lkcd-long-page-rle \
 	lkcd-long-page-gzip \
@@ -138,6 +139,9 @@ TESTS = $(test_scripts) \
 	privptr \
 	subattr \
 	thread-errstr
+
+XFAIL_TESTS = \
+	lkcd-multiread
 
 clean-local:
 	-rm -rf out
