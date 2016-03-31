@@ -124,7 +124,6 @@ run_threads(kdump_ctx *ctx, unsigned long nthreads, unsigned long cache_size)
 	for (i = 0; i < nthreads; ++i) {
 		void *retval;
 		res = pthread_join(tinfo[i].id, &retval);
-		kdump_free(tinfo[i].ctx);
 		if (res) {
 			fprintf(stderr, "pthread_join: %s\n", strerror(res));
 			return TEST_ERR;
@@ -134,6 +133,7 @@ run_threads(kdump_ctx *ctx, unsigned long nthreads, unsigned long cache_size)
 				i, (const char*) retval);
 			rc = TEST_FAIL;
 		}
+		kdump_free(tinfo[i].ctx);
 	}
 
 	return rc;
