@@ -151,7 +151,7 @@ struct disk_dump_priv {
 
 	/** Overridden methods for arch.page_size attribute. */
 	struct attr_override page_size_override;
-	void *compressed;	/**< Buffer for compressed page data. */
+	int cbuf_slot;		/**< Compressed data per-context slot. */
 };
 
 struct setup_data {
@@ -226,7 +226,7 @@ diskdump_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 			return set_error(ctx, kdump_dataerr,
 					 "Wrong compressed size: %lu",
 					 (unsigned long)pd.size);
-		buf = ddp->compressed;
+		buf = ctx->data[ddp->cbuf_slot];
 	} else {
 		if (pd.size != get_page_size(ctx))
 			return set_error(ctx, kdump_dataerr,
@@ -310,15 +310,18 @@ static kdump_status
 diskdump_realloc_compressed(kdump_ctx *ctx, struct attr_data *attr)
 {
 	const struct attr_ops *parent_ops;
-	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
-	size_t newsz = attr_value(attr)->number;
-	void *newbuf;
+	struct disk_dump_priv *ddp;
+	int newslot;
 
-	newbuf = realloc(ddp->compressed, newsz);
-	if (!newbuf)
+	newslot = per_ctx_alloc(ctx->shared, attr_value(attr)->number);
+	if (newslot < 0)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate buffer for compressed data");
-	ddp->compressed = newbuf;
+
+	ddp = ctx->shared->fmtdata;
+	if (ddp->cbuf_slot >= 0)
+		per_ctx_free(ctx->shared, ddp->cbuf_slot);
+	ddp->cbuf_slot = newslot;
 
 	parent_ops = ddp->page_size_override.template.parent->ops;
 	return (parent_ops && parent_ops->post_set)
@@ -638,7 +641,7 @@ open_common(kdump_ctx *ctx, void *hdr)
 	attr_add_override(gattr(ctx, GKI_page_size),
 			  &ddp->page_size_override);
 	ddp->page_size_override.ops.post_set = diskdump_realloc_compressed;
-	ddp->compressed = NULL;
+	ddp->cbuf_slot = -1;
 
 	ctx->shared->fmtdata = ddp;
 
@@ -702,8 +705,8 @@ diskdump_cleanup(struct kdump_shared *shared)
 				     &ddp->page_size_override);
 		if (ddp->bitmap)
 			free(ddp->bitmap);
-		if (ddp->compressed)
-			free(ddp->compressed);
+		if (ddp->cbuf_slot >= 0)
+			per_ctx_free(shared, ddp->cbuf_slot);
 		free(ddp);
 		shared->fmtdata = NULL;
 	}

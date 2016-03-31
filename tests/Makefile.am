@@ -139,8 +139,5 @@ TESTS = $(test_scripts) \
 	subattr \
 	thread-errstr
 
-XFAIL_TESTS = \
-	diskdump-multiread
-
 clean-local:
 	-rm -rf out
