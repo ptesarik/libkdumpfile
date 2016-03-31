@@ -325,7 +325,7 @@ struct lkcd_priv {
 
 	/** Overridden methods for arch.page_size attribute. */
 	struct attr_override page_size_override;
-	void *compressed;	/**< Buffer for compressed page data. */
+	int cbuf_slot;		/**< Compressed data per-context slot. */
 
 	kdump_pfn_t max_pfn;
 	struct attr_override max_pfn_override;
@@ -726,7 +726,7 @@ lkcd_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 			return set_error(ctx, kdump_dataerr,
 					 "Wrong compressed size: %lu",
 					 (unsigned long) dp.dp_size);
-		buf = lkcdp->compressed;
+		buf = ctx->data[lkcdp->cbuf_slot];
 		break;
 	case DUMP_RAW:
 		if (dp.dp_size != get_page_size(ctx))
@@ -791,15 +791,18 @@ static kdump_status
 lkcd_realloc_compressed(kdump_ctx *ctx, struct attr_data *attr)
 {
 	const struct attr_ops *parent_ops;
-	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
-	size_t newsz = attr_value(attr)->number;
-	void *newbuf;
+	struct lkcd_priv *lkcdp;
+	int newslot;
 
-	newbuf = realloc(lkcdp->compressed, newsz);
-	if (!newbuf)
+	newslot = per_ctx_alloc(ctx->shared, attr_value(attr)->number);
+	if (newslot < 0)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate buffer for compressed data");
-	lkcdp->compressed = newbuf;
+
+	lkcdp = ctx->shared->fmtdata;
+	if (lkcdp->cbuf_slot >= 0)
+		per_ctx_free(ctx->shared, lkcdp->cbuf_slot);
+	lkcdp->cbuf_slot = newslot;
 
 	parent_ops = lkcdp->page_size_override.template.parent->ops;
 	return (parent_ops && parent_ops->post_set)
@@ -898,7 +901,7 @@ open_common(kdump_ctx *ctx, void *hdr)
 	attr_add_override(gattr(ctx, GKI_page_size),
 			  &lkcdp->page_size_override);
 	lkcdp->page_size_override.ops.post_set = lkcd_realloc_compressed;
-	lkcdp->compressed = NULL;
+	lkcdp->cbuf_slot = -1;
 
 	ret = set_page_size(ctx, dump32toh(ctx, dh->dh_page_size));
 	if (ret != kdump_ok)
@@ -1006,8 +1009,8 @@ lkcd_cleanup(struct kdump_shared *shared)
 	attr_remove_override(sgattr(shared, GKI_max_pfn),
 			     &lkcdp->max_pfn_override);
 	free_level1(lkcdp->pfn_level1, lkcdp->l1_size);
-	if (lkcdp->compressed)
-		free(lkcdp->compressed);
+	if (lkcdp->cbuf_slot >= 0)
+		per_ctx_free(shared, lkcdp->cbuf_slot);
 	free(lkcdp);
 	shared->fmtdata = NULL;
 }
