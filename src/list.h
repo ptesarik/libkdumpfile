@@ -92,4 +92,21 @@ list_del(struct list_head *node)
 	node->next->prev = node->prev;
 }
 
+/**  Iterate over a list.
+ * @param cur   List node to be used as the loop cursor.
+ * @param head  List head.
+ */
+#define list_for_each(cur, head) \
+        for (cur = (head)->next; cur != (head); cur = cur->next)
+
+/**  Iterate over a list of a given type.
+ * @param cur    Typed pointer to be used as the loop cursor.
+ * @param head   List head.
+ * @param field  Name of the @c struct @ref list_head field inside @p cur.
+ */
+#define list_for_each_entry(cur, head, field)				\
+        for (cur = list_entry((head)->next, typeof(*(cur)), field);	\
+	     &(cur)->field != (head);					\
+	     cur = list_entry((cur)->field.next, typeof(*(cur)), field))
+
 #endif	/* list.h */
