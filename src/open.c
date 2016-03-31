@@ -116,8 +116,10 @@ kdump_init_clone(kdump_ctx *ctx, const kdump_ctx *orig)
 		}
 	}
 
+	mutex_lock(&orig->shared->lock);
 	ctx->shared = orig->shared;
 	list_add(&ctx->list, &orig->shared->ctx);
+	mutex_unlock(&orig->shared->lock);
 
 	ctx->priv = orig->priv;
 	ctx->cb_get_symbol_val = orig->cb_get_symbol_val;
@@ -372,9 +374,14 @@ void
 kdump_free(kdump_ctx *ctx)
 {
 	struct kdump_shared *shared = ctx->shared;
+	int isempty;
 
+	mutex_lock(&shared->lock);
 	list_del(&ctx->list);
-	if (list_empty(&shared->ctx)) {
+	isempty = list_empty(&shared->ctx);
+	mutex_unlock(&shared->lock);
+
+	if (isempty) {
 		if (shared->ops && shared->ops->cleanup)
 			shared->ops->cleanup(shared);
 		if (shared->arch_ops && shared->arch_ops->cleanup)
