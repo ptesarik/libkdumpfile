@@ -60,23 +60,6 @@ kdump_alloc_ctx(void)
 	return calloc(1, sizeof (kdump_ctx));
 }
 
-kdump_ctx *
-kdump_clone(kdump_ctx *origctx)
-{
-	kdump_ctx *ctx;
-
-	ctx = calloc(1, sizeof (kdump_ctx));
-	if (!ctx)
-		return ctx;
-
-	++origctx->shared->refcnt;
-	ctx->shared = origctx->shared;
-	ctx->priv = origctx->priv;
-	ctx->cb_get_symbol_val = origctx->cb_get_symbol_val;
-	ctx->cb_get_symbol_val_xen = origctx->cb_get_symbol_val_xen;
-	return ctx;
-}
-
 kdump_status
 kdump_init_ctx(kdump_ctx *ctx)
 {
@@ -103,6 +86,17 @@ kdump_init_ctx(kdump_ctx *ctx)
 
 	init_vtop_maps(ctx);
 
+	return kdump_ok;
+}
+
+kdump_status
+kdump_init_clone(kdump_ctx *ctx, const kdump_ctx *orig)
+{
+	++orig->shared->refcnt;
+	ctx->shared = orig->shared;
+	ctx->priv = orig->priv;
+	ctx->cb_get_symbol_val = orig->cb_get_symbol_val;
+	ctx->cb_get_symbol_val_xen = orig->cb_get_symbol_val_xen;
 	return kdump_ok;
 }
 

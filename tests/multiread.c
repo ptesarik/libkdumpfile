@@ -107,11 +107,19 @@ run_threads(kdump_ctx *ctx, unsigned long nthreads, unsigned long cache_size)
 	}
 
 	for (i = 0; i < nthreads; ++i) {
-		tinfo[i].ctx = kdump_clone(ctx);
+		tinfo[i].ctx = kdump_alloc_ctx();
 		if (!tinfo[i].ctx) {
-			fprintf(stderr, "kdump_clone: %s\n", strerror(res));
+			fprintf(stderr, "Cannot allocate clone: %s\n",
+				strerror(res));
 			return TEST_ERR;
 		}
+		res = kdump_init_clone(tinfo[i].ctx, ctx);
+		if (res != kdump_ok) {
+			fprintf(stderr, "Cannot initialize clone: %s\n",
+				kdump_err_str(tinfo[i].ctx));
+			return TEST_ERR;
+		}
+
 		res = pthread_create(&tinfo[i].id, &attr, run_reads,
 				     tinfo[i].ctx);
 		if (res) {

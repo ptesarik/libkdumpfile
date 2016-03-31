@@ -140,6 +140,7 @@ run_threads(kdump_ctx *ctx)
 	pthread_attr_t attr;
 	unsigned i;
 	int res, rc;
+	kdump_status status;
 
 	res = pthread_attr_init(&attr);
 	if (res) {
@@ -147,8 +148,14 @@ run_threads(kdump_ctx *ctx)
 		return TEST_ERR;
 	}
 
-	if (! (tinfo[0].ctx = kdump_clone(ctx)) ) {
-		fprintf(stderr, "Cannot clone kdump_ctx: %s\n", strerror(res));
+	if (! (tinfo[0].ctx = kdump_alloc_ctx()) ) {
+		fprintf(stderr, "Cannot allocate clone: %s\n", strerror(res));
+		return TEST_ERR;
+	}
+	status = kdump_init_clone(tinfo[0].ctx, ctx);
+	if (status != kdump_ok) {
+		fprintf(stderr, "Cannot initialize clone: %s\n",
+			kdump_err_str(tinfo[0].ctx));
 		return TEST_ERR;
 	}
 	res = pthread_create(&tinfo[0].id, &attr, get_nokey, tinfo[0].ctx);
@@ -156,8 +163,15 @@ run_threads(kdump_ctx *ctx)
 		fprintf(stderr, "pthread_create: %s\n", strerror(res));
 		return TEST_ERR;
 	}
-	if (! (tinfo[1].ctx = kdump_clone(ctx)) ) {
-		fprintf(stderr, "Cannot clone kdump_ctx: %s\n", strerror(res));
+
+	if (! (tinfo[1].ctx = kdump_alloc_ctx()) ) {
+		fprintf(stderr, "Cannot allocate clone: %s\n", strerror(res));
+		return TEST_ERR;
+	}
+	status = kdump_init_clone(tinfo[1].ctx, ctx);
+	if (status != kdump_ok) {
+		fprintf(stderr, "Cannot initialize clone: %s\n",
+			kdump_err_str(tinfo[1].ctx));
 		return TEST_ERR;
 	}
 	res = pthread_create(&tinfo[1].id, &attr, get_novalue, tinfo[1].ctx);

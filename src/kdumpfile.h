@@ -158,8 +158,9 @@ typedef enum _tag_kdump_xen_xlat {
 kdump_ctx *kdump_alloc_ctx(void);
 
 /**  Clone a dump file object.
- * @param ctx  Initialized dump file object.
- * @returns    Cloned object, or @c NULL on allocation failure.
+ * @param ctx   Unititialized dump file object.
+ * @param orig  Original dump file object.
+ * @returns     Error status.
  *
  * A cloned dump file object shares file descriptor, cache, attributes and
  * other data with the original. This data remains shared, i.e. changes
@@ -171,9 +172,9 @@ kdump_ctx *kdump_alloc_ctx(void);
  * - error string (see @ref kdump_err_str),
  *
  * However, private data and callbacks are initialized to their values
- * from the original @p ctx here.
+ * from the @p orig context here.
  */
-kdump_ctx *kdump_clone(kdump_ctx *ctx);
+kdump_status kdump_init_clone(kdump_ctx *ctx, const kdump_ctx *orig);
 
 /**  Initialize an already allocated dump file object.
  * @param ctx     Dump file object.
