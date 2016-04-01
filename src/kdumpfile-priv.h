@@ -477,38 +477,81 @@ struct kdump_shared {
 	 */
 	struct list_head ctx;
 
-	int fd;			/**< Dump file descriptor. */
+	/** Dump file descriptor.
+	 * Locking: Read-only after initialization.
+	 */
+	int fd;
 
-	const struct format_ops *ops; /**< File format operations. */
-	void *fmtdata;		      /**< File format private data. */
+	/** File format operations.
+	 * Locking: Read-only after initialization.
+	 */
+	const struct format_ops *ops;
+	/** File format private data.
+	 * Locking: Read-only after initialization.
+	 */
+	void *fmtdata;
 
-	const struct arch_ops *arch_ops; /**< Arch-specific operations. */
-	void *archdata;			 /**< Arch-specific private data. */
-	enum kdump_arch arch;		 /**< Internal-only arch index. */
-	int arch_init_done;	/**< Non-zero if arch init has been called. */
+	/** Arch-specific operations.
+	 * Locking: FIXME: can be changed through attributes!
+	 */
+	const struct arch_ops *arch_ops;
+	/** Arch-specific private data.
+	 * Locking: FIXME: can be changed through attributes!
+	 */
+	void *archdata;
+	/** Internal-only arch index.
+	 * Locking: FIXME: can be changed through attributes!
+	 */
+	enum kdump_arch arch;
+	/** Non-zero if arch init has been called.
+	 * Locking: FIXME: can be changed through attributes!
+	 */
+	int arch_init_done;
 
-	struct cache *cache;	/**< Page cache. */
+	/** Page cache.
+	 * Locking: FIXME: race during re-allocation!
+	 */
+	struct cache *cache;
 
-	struct vtop_map vtop_map;     /**< Linux address translation. */
-	struct vtop_map vtop_map_xen; /**< Xen address translation. */
+	/** Linux address translation.
+	 * Locking: FIXME
+	 */
+	struct vtop_map vtop_map;
+	/** Xen address translation.
+	 * Locking: FIXME
+	 */
+	struct vtop_map vtop_map_xen;
 
-	/* Attribute hash table. */
+	/* Attribute hash table.
+	 * Locking: FIXME
+	 */
 	struct attr_hash *attr;
 
-	/** Global attributes. */
+	/** Global attributes.
+	 * Locking: Read-only after initialization.
+	 */
 	struct attr_data *global_attrs[NR_GLOBAL_ATTRS];
 
-	/** Static attributes. */
+	/** Static attributes.
+	 * Locking: None (value is always valid).
+	 */
 #define ATTR(dir, key, field, type, ctype, ...)	\
 	kdump_attr_value_t field;
 #include "static-attr.def"
 #undef ATTR
 
-	/* Xen maps */
+	/** Xen p2m map.
+	 * Locking: Read-only after initialization.
+	 */
 	void *xen_map;
+	/** Xen map size.
+	 * Locking: Read-only after initialization.
+	 */
 	unsigned long xen_map_size;
 
-	/** Size of per-context data. Zero means unallocated. */
+	/** Size of per-context data. Zero means unallocated.
+	 * Locking: Mutex.
+	 */
 	size_t per_ctx_size[PER_CTX_SLOTS];
 };
 
