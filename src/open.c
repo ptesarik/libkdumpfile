@@ -70,7 +70,7 @@ kdump_init(kdump_ctx *ctx)
 	if (!shared)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate shared info");
-	if (mutex_init(&shared->lock, NULL)) {
+	if (rwlock_init(&shared->lock, NULL)) {
 		free(shared);
 		return set_error(ctx, kdump_syserr,
 				 "Cannot initialize shared data mutex");
@@ -83,7 +83,7 @@ kdump_init(kdump_ctx *ctx)
 
 	status = init_attrs(ctx);
 	if (status != kdump_ok) {
-		mutex_destroy(&ctx->shared->lock);
+		rwlock_destroy(&ctx->shared->lock);
 		free(ctx->shared);
 		return status;
 	}
@@ -103,6 +103,7 @@ kdump_clone(kdump_ctx *ctx, const kdump_ctx *orig)
 {
 	int slot;
 
+	rwlock_rdlock(&orig->shared->lock);
 	for (slot = 0; slot < PER_CTX_SLOTS; ++slot) {
 		size_t sz = orig->shared->per_ctx_size[slot];
 		if (!sz)
@@ -115,11 +116,12 @@ kdump_clone(kdump_ctx *ctx, const kdump_ctx *orig)
 					 "Cannot allocate per-ctx data");
 		}
 	}
+	rwlock_unlock(&orig->shared->lock);
 
-	mutex_lock(&orig->shared->lock);
+	rwlock_wrlock(&orig->shared->lock);
 	ctx->shared = orig->shared;
 	list_add(&ctx->list, &orig->shared->ctx);
-	mutex_unlock(&orig->shared->lock);
+	rwlock_unlock(&orig->shared->lock);
 
 	ctx->priv = orig->priv;
 	ctx->cb_get_symbol_val = orig->cb_get_symbol_val;
@@ -356,7 +358,7 @@ kdump_free(kdump_ctx *ctx)
 	int slot;
 	int isempty;
 
-	mutex_lock(&shared->lock);
+	rwlock_wrlock(&shared->lock);
 
 	for (slot = 0; slot < PER_CTX_SLOTS; ++slot)
 		if (shared->per_ctx_size[slot])
@@ -365,7 +367,7 @@ kdump_free(kdump_ctx *ctx)
 	list_del(&ctx->list);
 	isempty = list_empty(&shared->ctx);
 
-	mutex_unlock(&shared->lock);
+	rwlock_unlock(&shared->lock);
 
 	if (isempty) {
 		if (shared->ops && shared->ops->cleanup)
@@ -379,7 +381,7 @@ kdump_free(kdump_ctx *ctx)
 		flush_vtop_map(&shared->vtop_map);
 		flush_vtop_map(&shared->vtop_map_xen);
 		cleanup_attr(shared);
-		mutex_destroy(&shared->lock);
+		rwlock_destroy(&shared->lock);
 		free(shared);
 	}
 	free(ctx);

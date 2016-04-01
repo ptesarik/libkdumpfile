@@ -69,6 +69,39 @@ mutex_unlock(mutex_t *mutex)
 	return pthread_mutex_unlock(mutex);
 }
 
+typedef pthread_rwlock_t rwlock_t;
+typedef pthread_rwlockattr_t rwlockattr_t;
+
+static inline int
+rwlock_init(rwlock_t *rwlock, const rwlockattr_t *attr)
+{
+	return pthread_rwlock_init(rwlock, attr);
+}
+
+static inline int
+rwlock_destroy(rwlock_t *rwlock)
+{
+	return pthread_rwlock_destroy(rwlock);
+}
+
+static inline int
+rwlock_rdlock(rwlock_t *rwlock)
+{
+	return pthread_rwlock_rdlock(rwlock);
+}
+
+static inline int
+rwlock_wrlock(rwlock_t *rwlock)
+{
+	return pthread_rwlock_wrlock(rwlock);
+}
+
+static inline int
+rwlock_unlock(rwlock_t *rwlock)
+{
+	return pthread_rwlock_unlock(rwlock);
+}
+
 #else  /* USE_PTHREAD */
 
 typedef struct { } mutex_t;
@@ -100,6 +133,39 @@ mutex_trylock(mutex_t *mutex)
 
 static inline int
 mutex_unlock(mutex_t *mutex)
+{
+	return 0;
+}
+
+typedef struct { } rwlock_t;
+typedef struct { } rwlockattr_t;
+
+static inline int
+rwlock_init(rwlock_t *rwlock, const rwlockattr_t *attr)
+{
+	return 0;
+}
+
+static inline int
+rwlock_destroy(rwlock_t *rwlock)
+{
+	return 0;
+}
+
+static inline int
+rwlock_rdlock(rwlock_t *rwlock)
+{
+	return 0;
+}
+
+static inline int
+rwlock_wrlock(rwlock_t *rwlock)
+{
+	return 0;
+}
+
+static inline int
+rwlock_unlock(rwlock_t *rwlock)
 {
 	return 0;
 }

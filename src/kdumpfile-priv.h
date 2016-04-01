@@ -469,11 +469,12 @@ struct cache;
  */
 struct kdump_shared {
 	/** Guard accesses to shared data. */
-	mutex_t lock;
+	rwlock_t lock;
 
 	/** List of all refererring @c kdump_ctx structures.
 	 * Each @c kdump_ctx that holds a reference to this shared data
 	 * must be added to this list.
+	 * Locking: shared->lock
 	 */
 	struct list_head ctx;
 
@@ -550,7 +551,7 @@ struct kdump_shared {
 	unsigned long xen_map_size;
 
 	/** Size of per-context data. Zero means unallocated.
-	 * Locking: Mutex.
+	 * Locking: shared->lock
 	 */
 	size_t per_ctx_size[PER_CTX_SLOTS];
 };

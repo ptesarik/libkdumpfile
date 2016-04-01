@@ -485,7 +485,7 @@ per_ctx_alloc(struct kdump_shared *shared, size_t sz)
 	kdump_ctx *ctx;
 	int slot;
 
-	mutex_lock(&shared->lock);
+	rwlock_wrlock(&shared->lock);
 
 	/* Allocate a slot. */
 	for (slot = 0; slot < PER_CTX_SLOTS; ++slot)
@@ -501,7 +501,6 @@ per_ctx_alloc(struct kdump_shared *shared, size_t sz)
 	/* Allocate memory. */
 	list_for_each_entry(ctx, &shared->ctx, list)
 		if (! (ctx->data[slot] = malloc(sz)) ) {
-			mutex_lock(&shared->lock);
 			while (ctx->list.prev != &shared->ctx) {
 				ctx = list_entry(ctx->list.prev,
 						 kdump_ctx, list);
@@ -513,7 +512,7 @@ per_ctx_alloc(struct kdump_shared *shared, size_t sz)
 		}
 
  out:
-	mutex_unlock(&shared->lock);
+	rwlock_unlock(&shared->lock);
 	return slot;
 }
 
@@ -526,9 +525,9 @@ per_ctx_free(struct kdump_shared *shared, int slot)
 {
 	kdump_ctx *ctx;
 
-	mutex_lock(&shared->lock);
+	rwlock_wrlock(&shared->lock);
 	list_for_each_entry(ctx, &shared->ctx, list)
 		free(ctx->data[slot]);
 	shared->per_ctx_size[slot] = 0;
-	mutex_unlock(&shared->lock);
+	rwlock_unlock(&shared->lock);
 }
