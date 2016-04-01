@@ -180,8 +180,10 @@ set_fd(kdump_ctx *ctx, int fd, void *buf)
 			return ret;
 
 		ctx->shared->ops = NULL;
-		if (ctx->shared->cache)
-			cache_free(ctx->shared->cache);
+		if (ctx->shared->cache) {
+			cache_unref(ctx->shared->cache);
+			ctx->shared->cache = NULL;
+		}
 		clear_attrs(ctx);
 		d = gattr(ctx, GKI_cache_size);
 		set_attr(ctx, d, *attr_value(d));
@@ -375,7 +377,7 @@ kdump_free(kdump_ctx *ctx)
 		if (shared->arch_ops && shared->arch_ops->cleanup)
 			shared->arch_ops->cleanup(shared);
 		if (shared->cache)
-			cache_free(shared->cache);
+			cache_unref(shared->cache);
 		if (shared->xen_map)
 			free(shared->xen_map);
 		flush_vtop_map(&shared->vtop_map);

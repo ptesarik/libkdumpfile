@@ -143,6 +143,7 @@ struct cache_entry;
  */
 struct page_io {
 	kdump_pfn_t pfn;	/**< PFN under I/O. */
+	struct cache *cache;	/**< Referenced cache. */
 	struct cache_entry *ce;	/**< Buffer cache entry. */
 	int precious;		/**< Is this page precious? */
 };
@@ -1092,8 +1093,11 @@ unsigned get_cache_size(kdump_ctx *ctx);
 #define cache_alloc INTERNAL_NAME(cache_alloc)
 struct cache *cache_alloc(unsigned n, size_t size);
 
-#define cache_free INTERNAL_NAME(cache_free)
-void cache_free(struct cache *);
+#define cache_ref INTERNAL_NAME(cache_ref)
+struct cache *cache_ref(struct cache *);
+
+#define cache_unref INTERNAL_NAME(cache_unref)
+void cache_unref(struct cache *);
 
 #define cache_flush INTERNAL_NAME(cache_flush)
 void cache_flush(struct cache *);
