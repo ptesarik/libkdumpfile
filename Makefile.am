@@ -31,7 +31,9 @@ dist_noinst_DATA = \
 	COPYING.GPLv3 \
 	COPYING.LGPLv3 \
 	Doxyfile \
-	README.md
+	NEWS \
+	README.md \
+	threads.md
 
 pkgconfigdir=$(libdir)/pkgconfig
 pkgconfig_DATA=libkdumpfile.pc

@@ -171,8 +171,10 @@ kdump_ctx *kdump_alloc_ctx(void);
  * - callbacks (see @ref kdump_cb_get_symbol_val).
  * - error string (see @ref kdump_err_str),
  *
- * However, private data and callbacks are initialized to their values
- * from the @p orig context here.
+ * Private data and callbacks are initialized to their values from the
+ * @p orig context here.
+ *
+ * @sa @ref threads
  */
 kdump_status kdump_init_clone(kdump_ctx *ctx, const kdump_ctx *orig);
 
