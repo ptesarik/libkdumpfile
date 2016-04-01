@@ -614,7 +614,7 @@ kdump_byte_order_t kdump_byte_order(kdump_ctx *ctx);
  */
 size_t kdump_ptr_size(kdump_ctx *ctx);
 
-/** @defgroup arch_xxx Canonical Architecture Names
+/** @name Canonical Architecture Names
  * @{
  * Recognized values of the @c arch.name attribute. These macros should
  * be used instead of the actual string to prevent typos. Note that it
