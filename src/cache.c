@@ -87,8 +87,8 @@ struct cache {
 	unsigned inflight;	 /**< Index of first in-flight entry */
 	unsigned ninflight;	 /**< Number of in-flight entries */
 
-	union kdump_attr_value hits;   /**< Cache hits */
-	union kdump_attr_value misses; /**< Cache misses */
+	kdump_attr_value_t hits;   /**< Cache hits */
+	kdump_attr_value_t misses; /**< Cache misses */
 
 	size_t elemsize;	 /**< Element data size */
 	void *data;		 /**< Actual cache data */
@@ -873,7 +873,7 @@ def_realloc_caches(kdump_ctx *ctx)
 
 static kdump_status
 cache_size_pre_hook(kdump_ctx *ctx, struct attr_data *attr,
-		    union kdump_attr_value *val)
+		    kdump_attr_value_t *val)
 {
 	if (val->number > UINT_MAX)
 		return set_error(ctx, kdump_invalid,

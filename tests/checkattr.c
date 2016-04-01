@@ -38,9 +38,9 @@
 #include "testutil.h"
 
 static int
-check_attr(kdump_ctx *ctx, char *key, const struct kdump_attr *expect)
+check_attr(kdump_ctx *ctx, char *key, const kdump_attr_t *expect)
 {
-	struct kdump_attr attr;
+	kdump_attr_t attr;
 
 	printf("Checking %s... ", key);
 	if (kdump_get_attr(ctx, key, &attr) != kdump_ok) {
@@ -112,7 +112,7 @@ check_attr_val(kdump_ctx *ctx, char *key, char *val)
 	unsigned long long number;
 	char *string;
 	struct param param;
-	struct kdump_attr attr;
+	kdump_attr_t attr;
 	int rc;
 
 	sep = strchr(val, ':');

@@ -48,7 +48,7 @@ static void *
 run_reads(void *arg)
 {
 	kdump_ctx *ctx = arg;
-	struct kdump_attr attr;
+	kdump_attr_t attr;
 	unsigned page_shift;
 	unsigned long pfn;
 	char buf[1];
@@ -84,7 +84,7 @@ run_threads(kdump_ctx *ctx, unsigned long nthreads, unsigned long cache_size)
 		kdump_ctx *ctx;
 	} tinfo[nthreads];
 	pthread_attr_t attr;
-	struct kdump_attr val;
+	kdump_attr_t val;
 	kdump_status res;
 	unsigned i;
 	int rc;

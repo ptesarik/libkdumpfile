@@ -325,7 +325,7 @@ struct attr_data;
  * as a result of calling @ref set_attr.
  */
 typedef kdump_status attr_pre_fn(
-	kdump_ctx *ctx, struct attr_data *attr, union kdump_attr_value *val);
+	kdump_ctx *ctx, struct attr_data *attr, kdump_attr_value_t *val);
 
 /**  Type for late attribute hooks.
  * @param ctx      Dump file object.
@@ -372,7 +372,7 @@ struct attr_ops {
 struct attr_template {
 	const char *key;
 	const struct attr_template *parent;
-	enum kdump_attr_type type;
+	kdump_attr_type_t type;
 	const struct attr_ops *ops;
 };
 
@@ -391,9 +391,9 @@ struct attr_data {
 	unsigned dyntmpl : 1;	/**< Dynamically allocated template */
 
 	union {
-		union kdump_attr_value val;
-		struct attr_data *dir;	      /**< For @c kdump_directory */
-		union kdump_attr_value *pval; /**< Pointer to indirect value */
+		kdump_attr_value_t val;
+		struct attr_data *dir;	  /**< For @c kdump_directory */
+		kdump_attr_value_t *pval; /**< Pointer to indirect value */
 	};
 };
 
@@ -415,7 +415,7 @@ struct attr_hash {
 	struct attr_data table[ATTR_HASH_SIZE];
 };
 
-typedef enum _tag_kdump_xlat_method {
+typedef enum _kdump_xlat_method {
 	/* No mapping set */
 	KDUMP_XLAT_NONE,
 
@@ -500,7 +500,7 @@ struct kdump_shared {
 
 	/** Static attributes. */
 #define ATTR(dir, key, field, type, ctype, ...)	\
-	union kdump_attr_value field;
+	kdump_attr_value_t field;
 #include "static-attr.def"
 #undef ATTR
 
@@ -520,7 +520,7 @@ struct kdump_shared {
  * This structure contains state information and a pointer to @c struct
  * @ref kdump_shared.
  */
-struct _tag_kdump_ctx {
+struct _kdump_ctx {
 	struct kdump_shared *shared; /**< Dump file shared data. */
 
 	/** Node of the @c ctx list in @c struct @ref kdump_shared. */
@@ -805,7 +805,7 @@ kdump_status vtop_pgt_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 
 #define add_attr_template INTERNAL_NAME(add_attr_template)
 kdump_status add_attr_template(kdump_ctx *ctx, const char *path,
-			       enum kdump_attr_type type);
+			       kdump_attr_type_t type);
 
 #define init_attrs INTERNAL_NAME(init_attrs)
 kdump_status init_attrs(kdump_ctx *ctx);
@@ -851,7 +851,7 @@ attr_isset(const struct attr_data *data)
 	return data->isset;
 }
 
-static inline const union kdump_attr_value *
+static inline const kdump_attr_value_t *
 attr_value(const struct attr_data *attr)
 {
 	return attr->indirect ? attr->pval : &attr->val;
@@ -862,11 +862,11 @@ kdump_status validate_attr(kdump_ctx *ctx, struct attr_data *attr);
 
 #define set_attr INTERNAL_NAME(set_attr)
 kdump_status set_attr(kdump_ctx *ctx, struct attr_data *attr,
-		      union kdump_attr_value val);
+		      kdump_attr_value_t val);
 
 #define set_attr_indirect INTERNAL_NAME(set_attr_indirect)
 kdump_status set_attr_indirect(kdump_ctx *ctx, struct attr_data *attr,
-			       union kdump_attr_value *pval);
+			       kdump_attr_value_t *pval);
 
 #define set_attr_number INTERNAL_NAME(set_attr_number)
 kdump_status set_attr_number(kdump_ctx *ctx, struct attr_data *attr,
@@ -927,7 +927,7 @@ void cleanup_attr(struct kdump_shared *shared);
 	set_ ## name(kdump_ctx *ctx, ctype newval)		\
 	{							\
 		struct attr_data *d = gattr(ctx, GKI_ ## name);	\
-		union kdump_attr_value val;			\
+		kdump_attr_value_t val;				\
 		val.type = newval;				\
 		return set_attr(ctx, d,	val); 			\
 	}

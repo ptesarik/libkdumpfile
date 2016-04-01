@@ -52,7 +52,7 @@ static void *
 get_nokey(void *arg)
 {
 	kdump_ctx *ctx = arg;
-	struct kdump_attr attr;
+	kdump_attr_t attr;
 	kdump_status res;
 	char *err, *ret;
 
@@ -93,7 +93,7 @@ static void *
 get_novalue(void *arg)
 {
 	kdump_ctx *ctx = arg;
-	struct kdump_attr attr;
+	kdump_attr_t attr;
 	kdump_status res;
 	char *err, *ret;
 

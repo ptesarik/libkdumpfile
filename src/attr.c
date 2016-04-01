@@ -61,10 +61,10 @@ static const size_t static_offsets[] = {
  * @param idx     Static index.
  * @returns       Pointer to the static attribute value.
  */
-static inline union kdump_attr_value *
+static inline kdump_attr_value_t *
 static_attr_value(struct kdump_shared *shared, enum global_keyidx idx)
 {
-	return (union kdump_attr_value*)
+	return (kdump_attr_value_t *)
 		((char*)shared + static_offsets[idx - GKI_static_first]);
 }
 
@@ -391,7 +391,7 @@ new_attr(struct kdump_shared *shared, struct attr_data *parent,
  */
 kdump_status
 add_attr_template(kdump_ctx *ctx, const char *path,
-		  enum kdump_attr_type type)
+		  kdump_attr_type_t type)
 {
 	struct attr_template *tmpl;
 	struct attr_data *attr, *parent;
@@ -546,7 +546,7 @@ attr_has_value(struct attr_data *attr, kdump_attr_value_t newval)
  * allocated attributes.
  */
 kdump_status
-set_attr(kdump_ctx *ctx, struct attr_data *attr, union kdump_attr_value val)
+set_attr(kdump_ctx *ctx, struct attr_data *attr, kdump_attr_value_t val)
 {
 	int skiphooks = attr_has_value(attr, val);
 	kdump_status res;
@@ -594,7 +594,7 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr, union kdump_attr_value val)
  */
 kdump_status
 set_attr_indirect(kdump_ctx *ctx, struct attr_data *attr,
-		  union kdump_attr_value *pval)
+		  kdump_attr_value_t *pval)
 {
 	clear_attr(attr);
 	attr->pval = pval;
@@ -611,7 +611,7 @@ set_attr_indirect(kdump_ctx *ctx, struct attr_data *attr,
 kdump_status
 set_attr_number(kdump_ctx *ctx, struct attr_data *attr, kdump_num_t num)
 {
-	union kdump_attr_value val;
+	kdump_attr_value_t val;
 
 	clear_attr(attr);
 	val.number = num;
@@ -627,7 +627,7 @@ set_attr_number(kdump_ctx *ctx, struct attr_data *attr, kdump_num_t num)
 kdump_status
 set_attr_address(kdump_ctx *ctx, struct attr_data *attr, kdump_addr_t addr)
 {
-	union kdump_attr_value val;
+	kdump_attr_value_t val;
 
 	clear_attr(attr);
 	val.address = addr;
@@ -666,7 +666,7 @@ kdump_status
 set_attr_static_string(kdump_ctx *ctx, struct attr_data *attr,
 		       const char *str)
 {
-	union kdump_attr_value val;
+	kdump_attr_value_t val;
 
 	clear_attr(attr);
 	val.string = str;
@@ -719,7 +719,7 @@ add_attr_number(kdump_ctx *ctx, const char *path,
 		const struct attr_template *tmpl, kdump_num_t num)
 {
 	struct attr_data *attr;
-	union kdump_attr_value val;
+	kdump_attr_value_t val;
 	kdump_status res;
 
 	res = add_attr(ctx, path, tmpl, &attr);
@@ -747,7 +747,7 @@ add_attr_string(kdump_ctx *ctx, const char *path,
 {
 	struct attr_data *attr;
 	char *dynstr;
-	union kdump_attr_value val;
+	kdump_attr_value_t val;
 	kdump_status res;
 
 	dynstr = strdup(str);
@@ -782,7 +782,7 @@ kdump_status add_attr_static_string(kdump_ctx *ctx, const char *path,
 				    const char *str)
 {
 	struct attr_data *attr;
-	union kdump_attr_value val;
+	kdump_attr_value_t val;
 	kdump_status res;
 
 	res = add_attr(ctx, path, tmpl, &attr);

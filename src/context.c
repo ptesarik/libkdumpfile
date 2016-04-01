@@ -87,7 +87,7 @@ check_set_attr(kdump_ctx *ctx, struct attr_data *attr,
 
 kdump_status
 kdump_set_attr(kdump_ctx *ctx, const char *key,
-	       const struct kdump_attr *valp)
+	       const kdump_attr_t *valp)
 {
 	struct attr_data *d;
 

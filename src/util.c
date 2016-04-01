@@ -390,7 +390,7 @@ const struct attr_ops uts_machine_ops = {
 
 static kdump_status
 page_size_pre_hook(kdump_ctx *ctx, struct attr_data *attr,
-		   union kdump_attr_value *newval)
+		   kdump_attr_value_t *newval)
 {
 	size_t page_size = newval->number;
 
@@ -608,7 +608,7 @@ uncompress_page_gzip(kdump_ctx *ctx, unsigned char *dst,
 }
 
 static kdump_status
-create_attr_path(kdump_ctx *ctx, char *path, enum kdump_attr_type type)
+create_attr_path(kdump_ctx *ctx, char *path, kdump_attr_type_t type)
 {
 	char *p;
 	kdump_status res;
@@ -633,7 +633,7 @@ add_parsed_row(kdump_ctx *ctx, const char *path,
 	char *p, *q;
 	size_t len;
 	unsigned long long num;
-	enum kdump_attr_type attr_type;
+	kdump_attr_type_t attr_type;
 	struct attr_data *attr;
 	kdump_status res;
 

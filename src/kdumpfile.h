@@ -93,7 +93,7 @@ typedef kdump_addr_t kdump_maddr_t;
  * It is an opaque type, so it can be modified and/or extended without
  * breaking binary compatibility with existing programs.
  */
-typedef struct _tag_kdump_ctx kdump_ctx;
+typedef struct _kdump_ctx kdump_ctx;
 
 /**  Status code.
  *
@@ -101,7 +101,7 @@ typedef struct _tag_kdump_ctx kdump_ctx;
  * provides a very rough description of the error. See @ref kdump_err_str
  * if you want a human-readable error description.
  */
-typedef enum _tag_kdump_status {
+typedef enum _kdump_status {
 	kdump_ok = 0,		/**< Success. */
 	kdump_syserr,		/**< OS error, see @c errno. */
 	kdump_unsupported,	/**< Unsupported file format. */
@@ -122,14 +122,14 @@ typedef enum _tag_kdump_status {
  *
  * @sa kdump_byte_order
  */
-typedef enum _tag_kdump_byte_order {
+typedef enum _kdump_byte_order {
 	kdump_big_endian,
 	kdump_little_endian,
 } kdump_byte_order_t;
 
 /**  Type of a Xen dump.
  */
-typedef enum _tag_kdump_xen_type {
+typedef enum _kdump_xen_type {
 	kdump_xen_none,		/**< Not running under Xen */
 	kdump_xen_system,	/**< Comlete dump of a Xen machine */
 	kdump_xen_domain,	/**< Dump of a single domain */
@@ -137,7 +137,7 @@ typedef enum _tag_kdump_xen_type {
 
 /**  Xen physmap translation type.
  */
-typedef enum _tag_kdump_xen_xlat {
+typedef enum _kdump_xen_xlat {
 	kdump_xen_auto,		/**< Auto-translated physmap */
 	kdump_xen_nonauto	/**< Non-auto-translated physmap */
 } kdump_xen_xlat_t;
@@ -315,7 +315,7 @@ kdump_status kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr,
  * of physical address space than the CPU, e.g. paravirtualized kernels
  * under Xen.
  */
-typedef enum _tag_kdump_addrspace {
+typedef enum _kdump_addrspace {
 	KDUMP_KPHYSADDR,	/**< Kernel physical address. */
 	KDUMP_MACHPHYSADDR,	/**< Machine physical address. */
 	KDUMP_KVADDR,		/**< Kernel virtual address. */
@@ -378,7 +378,7 @@ kdump_status kdump_read_string(kdump_ctx *ctx,
 
 /**  Dump file attribute value type.
  */
-typedef enum kdump_attr_type {
+typedef enum _kdump_attr_type {
 	kdump_nil,		/**< No type; used for deletions. */
 	kdump_directory,	/**< Attribute directory. */
 	kdump_number,		/**< General number. */
@@ -388,7 +388,7 @@ typedef enum kdump_attr_type {
 
 /**  Dump file attribute value.
  */
-typedef union kdump_attr_value {
+typedef union _kdump_attr_value {
 	kdump_num_t number;	/**< Valid if type is @ref kdump_number. */
 	kdump_addr_t address;	/**< Valid if type is @ref kdump_address.  */
 	const char *string;	/**< Valid if type is @ref kdump_string. */
@@ -396,7 +396,7 @@ typedef union kdump_attr_value {
 
 /**  Dump file attribute: type + value.
  */
-typedef struct kdump_attr {
+typedef struct _kdump_attr {
 	kdump_attr_type_t type;	/**< Attribute type. */
 	kdump_attr_value_t val;	/**< Attribute value. */
 } kdump_attr_t;
@@ -409,7 +409,7 @@ typedef struct kdump_attr {
  * without affecting the ABI, so callers must not make any attempts
  * to interpret that data.
  */
-typedef struct kdump_attr_ref {
+typedef struct _kdump_attr_ref {
 	void *_ptr;		/**< Reference (private field). */
 } kdump_attr_ref_t;
 
@@ -423,7 +423,7 @@ typedef struct kdump_attr_ref {
  * while implementing special attribute handling (e.g. calculate
  * the value on the fly).
  */
-typedef struct kdump_attr_iter {
+typedef struct _kdump_attr_iter {
 	/** Attribute key.
 	 * This is the attribute's name relative to parent (no dots),
 	 * or @c NULL if end of iteration has been reached.
