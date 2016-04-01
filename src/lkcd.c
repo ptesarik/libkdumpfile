@@ -320,6 +320,7 @@ struct lkcd_priv {
 	unsigned version;
 	unsigned compression;
 
+	mutex_t pfn_block_mutex;
 	struct pfn_block ***pfn_level1;
 	unsigned l1_size;
 
@@ -660,20 +661,27 @@ static kdump_status
 get_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 	      struct dump_page *dp, off_t *dataoff)
 {
+	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 	struct pfn_block *block;
 	unsigned idx;
-	off_t off;
+	kdump_status status;
+
+	mutex_lock(&lkcdp->pfn_block_mutex);
 
 	block = lookup_pfn_block(ctx, pfn, 0);
 	idx = pfn_idx3(pfn);
-	if (!block || idx_is_gap(block, idx))
-		return search_page_desc(ctx, pfn, dp, dataoff);
+	if (block && !idx_is_gap(block, idx)) {
+		off_t off = block->filepos;
+		if (idx > block->idx3)
+			off += block->offs[idx - block->idx3 - 1];
+		*dataoff = off + sizeof *dp;
+		status = read_page_desc(ctx, dp, off);
+	} else
+		status = search_page_desc(ctx, pfn, dp, dataoff);
 
-	off = block->filepos;
-	if (idx > block->idx3)
-		off += block->offs[idx - block->idx3 - 1];
-	*dataoff = off + sizeof *dp;
-	return read_page_desc(ctx, dp, off);
+	mutex_unlock(&lkcdp->pfn_block_mutex);
+
+	return status;
 }
 
 static kdump_status
@@ -691,8 +699,10 @@ lkcd_max_pfn_validate(kdump_ctx *ctx, struct attr_data *attr)
 		off_t dummy_off;
 		kdump_status res;
 
+		mutex_lock(&lkcdp->pfn_block_mutex);
 		res = search_page_desc(ctx, ~(kdump_pfn_t)0,
 				       &dummy_dp, &dummy_off);
+		mutex_unlock(&lkcdp->pfn_block_mutex);
 		if (res != kdump_ok && res != kdump_nodata)
 			return set_error(ctx, res, "Cannot get max_pfn");
 	}
@@ -895,6 +905,11 @@ open_common(kdump_ctx *ctx, void *hdr)
 	lkcdp->end_offset = 0;
 	lkcdp->max_pfn = 0;
 
+	if (mutex_init(&lkcdp->pfn_block_mutex, NULL)) {
+		free(lkcdp);
+		return set_error(ctx, kdump_syserr,
+				 "Cannot initialize LKCD data mutex");
+	}
 	lkcdp->pfn_level1 = NULL;
 	lkcdp->l1_size = 0;
 
@@ -1009,6 +1024,7 @@ lkcd_cleanup(struct kdump_shared *shared)
 	attr_remove_override(sgattr(shared, GKI_max_pfn),
 			     &lkcdp->max_pfn_override);
 	free_level1(lkcdp->pfn_level1, lkcdp->l1_size);
+	mutex_destroy(&lkcdp->pfn_block_mutex);
 	if (lkcdp->cbuf_slot >= 0)
 		per_ctx_free(shared, lkcdp->cbuf_slot);
 	free(lkcdp);

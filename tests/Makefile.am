@@ -140,8 +140,5 @@ TESTS = $(test_scripts) \
 	subattr \
 	thread-errstr
 
-XFAIL_TESTS = \
-	lkcd-multiread
-
 clean-local:
 	-rm -rf out
