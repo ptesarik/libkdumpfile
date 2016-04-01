@@ -93,6 +93,8 @@
 
 #define __START_KERNEL_map	0xc0000000UL
 
+/** @cond TARGET_ABI */
+
 struct elf_siginfo
 {
 	int32_t si_signo;	/* signal number */
@@ -118,6 +120,8 @@ struct elf_prstatus
 	uint32_t pr_reg[ELF_NGREG];	/* GP registers */
 	/* optional UNUSED fields may follow */
 } __attribute__((packed));
+
+/** @endcond */
 
 static const struct attr_template reg_names[] = {
 #define REG(name)	{ #name, NULL, kdump_number }

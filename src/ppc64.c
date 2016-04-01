@@ -443,6 +443,8 @@ ppc64_cleanup(struct kdump_shared *shared)
 	shared->archdata = NULL;
 }
 
+/** @cond TARGET_ABI */
+
 #define ELF_NGREG 49
 
 struct elf_siginfo
@@ -472,6 +474,7 @@ struct elf_prstatus
 	/* optional UNUSED fields may follow */
 } __attribute__((packed));
 
+/** @endcond */
 
 static kdump_status
 process_ppc64_prstatus(kdump_ctx *ctx, void *data, size_t size)

@@ -229,6 +229,8 @@ static struct layout_def {
 #define XEN_VIRT_SIZE		(1ULL<<30)
 #define MACH2PHYS_VIRT_START	0xffff828000000000ULL
 
+/** @cond TARGET_ABI */
+
 struct elf_siginfo
 {
 	int32_t si_signo;	/* signal number */
@@ -313,6 +315,8 @@ struct xen_vcpu_guest_context {
 	uint64_t gs_base_kernel;
 	uint64_t gs_base_user;
 } __attribute__ ((packed));
+
+/** @endcond */
 
 static const struct attr_template reg_names[] = {
 #define REG(name)	{ #name, NULL, kdump_number }

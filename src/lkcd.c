@@ -36,6 +36,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+/** @cond TARGET_ABI */
+
 #define LKCD_DUMP_V1                  (0x1)  /* DUMP_VERSION_NUMBER */
 #define LKCD_DUMP_V2                  (0x2)  /* DUMP_VERSION_NUMBER */
 #define LKCD_DUMP_V3                  (0x3)  /* DUMP_VERSION_NUMBER */
@@ -272,6 +274,8 @@ struct dump_page {
         /* flags (currently DUMP_COMPRESSED, DUMP_RAW or DUMP_END) */
         uint32_t             dp_flags;
 } __attribute__((packed));
+
+/** @endcond  */
 
 /* Split the 32-bit PFN into 3 indices */
 #define PFN_IDX1_BITS	10

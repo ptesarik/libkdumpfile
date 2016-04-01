@@ -36,6 +36,8 @@
 #include <stdlib.h>
 #include <elf.h>
 
+/** @cond TARGET_ABI */
+
 /* Maximum virtual address bits (architecture limit) */
 #define VIRTADDR_BITS_MAX	64
 #define VIRTADDR_MAX		UINT64_MAX
@@ -114,6 +116,8 @@ struct os_info {
 	struct os_info_entry entry[2];
 	/* possibly more fields up to PAGE_SIZE */
 } __attribute__ ((packed));
+
+/** @endcond */
 
 /**  Private data for the s390x arch-specific methods.
  */

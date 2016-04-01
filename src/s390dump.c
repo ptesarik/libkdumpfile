@@ -36,6 +36,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+/** @cond TARGET_ABI */
+
 #define S390_CPU_MAX	512
 
 struct dump_header1 {
@@ -84,6 +86,8 @@ struct end_marker {
 	char     str[sizeof(END_MARKER)-1];
 	uint64_t tod;
 } __attribute__((packed));
+
+/** @endcond */
 
 struct s390dump_priv {
 	off_t dataoff;		/* offset of data (size of s390 header) */

@@ -45,6 +45,8 @@
 
 #define SIG_LEN	8
 
+/** @cond TARGET_ABI */
+
 /* The header is architecture-dependent, unfortunately */
 struct disk_dump_header_32 {
 	char			signature[SIG_LEN];	/* = "DISKDUMP" */
@@ -137,12 +139,14 @@ struct kdump_sub_header_64 {
 	uint64_t	max_mapnr_64;	   /* header_version 6 and later */
 } __attribute__((packed));
 
-/* descriptor of each page for vmcore */
+/** @endcond */
+
+/** Descriptor of each page in vmcore. */
 struct page_desc {
-	uint64_t	offset;		/* the offset of the page data*/
-	uint32_t	size;		/* the size of this dump page */
-	uint32_t	flags;		/* flags */
-	uint64_t	page_flags;	/* page flags */
+	uint64_t	offset;		/**< File offset of page data. */
+	uint32_t	size;		/**< Size of this dump page. */
+	uint32_t	flags;		/**< Flags. */
+	uint64_t	page_flags;	/**< Page flags. */
 };
 
 struct disk_dump_priv {
