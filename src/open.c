@@ -374,11 +374,18 @@ void
 kdump_free(kdump_ctx *ctx)
 {
 	struct kdump_shared *shared = ctx->shared;
+	int slot;
 	int isempty;
 
 	mutex_lock(&shared->lock);
+
+	for (slot = 0; slot < PER_CTX_SLOTS; ++slot)
+		if (shared->per_ctx_size[slot])
+			free(ctx->data[slot]);
+
 	list_del(&ctx->list);
 	isempty = list_empty(&shared->ctx);
+
 	mutex_unlock(&shared->lock);
 
 	if (isempty) {
