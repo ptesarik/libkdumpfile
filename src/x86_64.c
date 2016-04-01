@@ -212,7 +212,7 @@ static const struct region_def mm_layout_2_6_31[] = {
 	{ KERNEL_VERSION(a, b, c), LAYOUT_NAME(a, b, c),	\
 			ARRAY_SIZE(LAYOUT_NAME(a, b, c)) }
 
-static struct layout_def {
+static const struct layout_def {
 	unsigned ver;
 	const struct region_def *regions;
 	unsigned nregions;
@@ -452,7 +452,7 @@ get_pml4(kdump_ctx *ctx)
 	return kdump_ok;
 }
 
-static struct layout_def*
+static const struct layout_def*
 layout_by_version(unsigned version_code)
 {
 	unsigned i;
@@ -465,7 +465,7 @@ layout_by_version(unsigned version_code)
 	return &mm_layouts[i-1];
 }
 
-static struct layout_def*
+static const struct layout_def*
 layout_by_pgt(kdump_ctx *ctx)
 {
 	kdump_paddr_t paddr;
@@ -517,7 +517,7 @@ remove_ktext_xlat(struct vtop_map *map)
 static kdump_status
 x86_64_vtop_init(kdump_ctx *ctx)
 {
-	struct layout_def *layout = NULL;
+	const struct layout_def *layout = NULL;
 	unsigned i;
 	kdump_status ret;
 
