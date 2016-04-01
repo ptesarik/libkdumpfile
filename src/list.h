@@ -77,9 +77,9 @@ list_empty(struct list_head *head)
 static inline void
 list_add(struct list_head *node, struct list_head *head)
 {
-	node->next = head->prev;
+	node->next = head->next;
 	node->prev = head;
-	head->prev = node->prev->next = node;
+	head->next = node->next->prev = node;
 }
 
 /**  Remove a node from the list.
