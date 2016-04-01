@@ -497,20 +497,10 @@ process_ppc64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 	return kdump_ok;
 }
 
-static const char *
-ppc64_reg_name(unsigned index)
-{
-	return index < ARRAY_SIZE(reg_names)
-		? reg_names[index].key
-		: NULL;
-}
-
-
 const struct arch_ops ppc64_ops = {
 	.init = ppc64_init,
 	.vtop_init = ppc64_vtop_init,
 	.process_prstatus = process_ppc64_prstatus,
-	.reg_name = ppc64_reg_name,
 	.vtop = ppc64_vtop,
 	.cleanup = ppc64_cleanup,
 };

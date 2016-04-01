@@ -87,13 +87,6 @@ typedef kdump_addr_t kdump_vaddr_t;
  */
 typedef kdump_addr_t kdump_maddr_t;
 
-/**  Type of a register.
- *
- * Use this type for register values. Note that it might be larger than
- * the target register size.
- */
-typedef uint_fast64_t kdump_reg_t;
-
 /**  Representation of a dump file.
  *
  * The context contains all information needed to work with a dump file.
@@ -722,27 +715,12 @@ unsigned kdump_version_code (kdump_ctx *ctx);
 
 /**  Get number of CPUs.
  * @param ctx  Dump file object.
- * @returns    Number of CPUs with registers.
+ * @returns    Number of CPUs with known state.
  *
  * The number is not the number of CPUs in the system, but rather the
- * number of CPUs for which register values can be obtained using
- * @ref kdump_read_reg.
+ * number of CPUs with known register values.
  */
 unsigned kdump_num_cpus(kdump_ctx *ctx);
-
-/**  Get register value.
- * @param ctx         Dump file object.
- * @param[in] cpu     CPU index.
- * @param[in] index   Register index.
- * @param[out] value  Register value.
- * @returns           Error status.
- *
- * Get the value of register @p index on CPU @p cpu. Register indexing is
- * architecture-specific, but the numbering of general registers follows
- * whatever order is used in `struct elf_prstatus`.
- */
-kdump_status kdump_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
-			    kdump_reg_t *value);
 
 /**  Get VMCOREINFO raw data.
  * @param ctx  Dump file object.

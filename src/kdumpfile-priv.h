@@ -242,13 +242,6 @@ struct arch_ops {
 	 */
 	kdump_status (*process_prstatus)(kdump_ctx *, void *, size_t);
 
-	/* Get a register name:
-	 *   index  register index (arch-dependent)
-	 *
-	 * Returns the register name or @c NULL if index is out of range.
-	 */
-	const char* (*reg_name)(unsigned index);
-
 	/* Process a LOAD segment
 	 */
 	kdump_status (*process_load)(kdump_ctx *ctx, kdump_vaddr_t vaddr,

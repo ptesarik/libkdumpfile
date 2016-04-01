@@ -377,34 +377,6 @@ kdump_num_cpus(kdump_ctx *ctx)
 	return get_num_cpus(ctx);
 }
 
-kdump_status
-kdump_read_reg(kdump_ctx *ctx, unsigned cpu, unsigned index,
-	       kdump_reg_t *value)
-{
-	char *key;
-	const char *regname;
-	struct attr_data *attr;
-
-	clear_error(ctx);
-
-	if (!ctx->shared->arch_ops || !ctx->shared->arch_ops->reg_name)
-		return set_error(ctx, kdump_nodata, "Registers not available");
-
-	regname = ctx->shared->arch_ops->reg_name(index);
-	if (!regname)
-		return set_error(ctx, kdump_nodata,
-				 "Out-of-bounds register number");
-
-	key = alloca(sizeof("cpu.") + 20 + sizeof(".reg.") + strlen(regname));
-	sprintf(key, "cpu.%u.reg.%s", cpu, regname);
-	attr = lookup_attr(ctx->shared, key);
-	if (!attr || validate_attr(ctx, attr) != kdump_ok)
-		return set_error(ctx, kdump_nodata, "Cannot read '%s'", key);
-
-	*value = attr_value(attr)->number;
-	return kdump_ok;
-}
-
 const char *
 kdump_vmcoreinfo(kdump_ctx *ctx)
 {

@@ -9,6 +9,7 @@
   * Attribute iterators.
   * API and ABI changed:
     - REMOVED callback enumeration.
+    - REMOVED kdump_read_reg (use attributes).
     - CHANGED the canonical architecture name from "i386" to "ia32".
 
 0.2.0

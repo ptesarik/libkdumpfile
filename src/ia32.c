@@ -202,14 +202,6 @@ process_ia32_prstatus(kdump_ctx *ctx, void *data, size_t size)
 	return kdump_ok;
 }
 
-static const char *
-ia32_reg_name(unsigned index)
-{
-	return index < ARRAY_SIZE(reg_names)
-		? reg_names[index].key
-		: NULL;
-}
-
 static kdump_status
 read_pgt(kdump_ctx *ctx)
 {
@@ -410,7 +402,6 @@ const struct arch_ops ia32_ops = {
 	.init = ia32_init,
 	.vtop_init = ia32_vtop_init,
 	.process_prstatus = process_ia32_prstatus,
-	.reg_name = ia32_reg_name,
 	.vtop = ia32_vtop,
 	.cleanup = ia32_cleanup,
 };

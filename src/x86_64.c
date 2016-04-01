@@ -673,14 +673,6 @@ process_x86_64_xen_prstatus(kdump_ctx *ctx, void *data, size_t size)
 	return kdump_ok;
 }
 
-static const char *
-x86_64_reg_name(unsigned index)
-{
-	return index < ARRAY_SIZE(reg_names)
-		? reg_names[index].key
-		: NULL;
-}
-
 static kdump_status
 x86_64_process_load(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t paddr)
 {
@@ -867,7 +859,6 @@ const struct arch_ops x86_64_ops = {
 	.vtop_init = x86_64_vtop_init,
 	.vtop_init_xen = x86_64_vtop_init_xen,
 	.process_prstatus = process_x86_64_prstatus,
-	.reg_name = x86_64_reg_name,
 	.process_load = x86_64_process_load,
 	.process_xen_prstatus = process_x86_64_xen_prstatus,
 	.vtop = x86_64_vtop,
