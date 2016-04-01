@@ -216,18 +216,6 @@ const char *kdump_err_str(kdump_ctx *ctx);
  */
 kdump_status kdump_set_fd(kdump_ctx *ctx, int fd);
 
-/**  Initialize a dump file object and associate it with a file.
- * @param[out] pctx  Pointer to the (uninitialized) dump file object.
- * @param[in] fd     A file descriptor open for reading.
- * @returns          Error status.
- *
- * This is a shortcut for calling @ref kdump_init and then
- * @ref kdump_set_fd on the newly created object. If this function
- * fails, the variable pointed to by @c pctx is left uninitialized,
- * and there is no way to get a detailed error description.
- */
-kdump_status kdump_fdopen(kdump_ctx **pctx, int fd);
-
 /**  Initialize virtual-to-physical translation.
  * @param ctx  Dump file object.
  * @returns    Error status.

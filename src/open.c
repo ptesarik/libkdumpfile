@@ -146,27 +146,6 @@ kdump_init(void)
 	return ctx;
 }
 
-kdump_status
-kdump_fdopen(kdump_ctx **pctx, int fd)
-{
-	kdump_ctx *ctx;
-	kdump_status ret;
-
-	/* Initialize context */
-	ctx = kdump_init();
-	if (!ctx)
-		return kdump_syserr;
-
-	ret = kdump_set_fd(ctx, fd);
-	if (ret != kdump_ok) {
-		kdump_free(ctx);
-		return ret;
-	}
-
-	*pctx = ctx;
-	return kdump_ok;
-}
-
 /**  Set dump file descriptor.
  * @param ctx   Dump file object.
  * @param fd    File descriptor.
