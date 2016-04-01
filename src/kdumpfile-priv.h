@@ -511,7 +511,7 @@ struct kdump_shared {
 	int arch_init_done;
 
 	/** Page cache.
-	 * Locking: FIXME: race during re-allocation!
+	 * Locking: shared->lock
 	 */
 	struct cache *cache;
 

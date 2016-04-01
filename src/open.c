@@ -180,10 +180,12 @@ set_fd(kdump_ctx *ctx, int fd, void *buf)
 			return ret;
 
 		ctx->shared->ops = NULL;
+		rwlock_wrlock(&ctx->shared->lock);
 		if (ctx->shared->cache) {
 			cache_unref(ctx->shared->cache);
 			ctx->shared->cache = NULL;
 		}
+		rwlock_unlock(&ctx->shared->lock);
 		clear_attrs(ctx);
 		d = gattr(ctx, GKI_cache_size);
 		set_attr(ctx, d, *attr_value(d));
