@@ -107,13 +107,13 @@ run_threads(kdump_ctx *ctx, unsigned long nthreads, unsigned long cache_size)
 	}
 
 	for (i = 0; i < nthreads; ++i) {
-		tinfo[i].ctx = kdump_alloc_ctx();
+		tinfo[i].ctx = kdump_alloc();
 		if (!tinfo[i].ctx) {
 			fprintf(stderr, "Cannot allocate clone: %s\n",
 				strerror(res));
 			return TEST_ERR;
 		}
-		res = kdump_init_clone(tinfo[i].ctx, ctx);
+		res = kdump_clone(tinfo[i].ctx, ctx);
 		if (res != kdump_ok) {
 			fprintf(stderr, "Cannot initialize clone: %s\n",
 				kdump_err_str(tinfo[i].ctx));
@@ -154,7 +154,7 @@ run_threads_fd(int fd, unsigned long nthreads, unsigned long cache_size)
 	kdump_status res;
 	int rc;
 
-	ctx = kdump_init();
+	ctx = kdump_new();
 	if (!ctx) {
 		perror("Cannot initialize dump context");
 		return TEST_ERR;

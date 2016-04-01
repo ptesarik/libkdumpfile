@@ -55,13 +55,13 @@ static const struct format_ops *formats[] = {
 };
 
 kdump_ctx *
-kdump_alloc_ctx(void)
+kdump_alloc(void)
 {
 	return calloc(1, sizeof (kdump_ctx));
 }
 
 kdump_status
-kdump_init_ctx(kdump_ctx *ctx)
+kdump_init(kdump_ctx *ctx)
 {
 	struct kdump_shared *shared;
 	kdump_status status;
@@ -99,7 +99,7 @@ kdump_init_ctx(kdump_ctx *ctx)
 }
 
 kdump_status
-kdump_init_clone(kdump_ctx *ctx, const kdump_ctx *orig)
+kdump_clone(kdump_ctx *ctx, const kdump_ctx *orig)
 {
 	int slot;
 
@@ -128,16 +128,16 @@ kdump_init_clone(kdump_ctx *ctx, const kdump_ctx *orig)
 }
 
 kdump_ctx *
-kdump_init(void)
+kdump_new(void)
 {
 	kdump_ctx *ctx;
 	kdump_status status;
 
-	ctx = kdump_alloc_ctx();
+	ctx = kdump_alloc();
 	if (!ctx)
 		return NULL;
 
-	status = kdump_init_ctx(ctx);
+	status = kdump_init(ctx);
 	if (status != kdump_ok) {
 		free(ctx);
 		return NULL;

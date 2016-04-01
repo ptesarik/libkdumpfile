@@ -146,9 +146,10 @@ typedef enum _tag_kdump_xen_xlat {
  * @returns Newly allocated object, or NULL on failure.
  *
  * Use this function to create a new @ref kdump_ctx. When the object
- * is no longer needed, you should free all resources with @ref kdump_free.
+ * is no longer needed, you should free all resources with
+ * @ref kdump_free.
  */
-kdump_ctx *kdump_alloc_ctx(void);
+kdump_ctx *kdump_alloc(void);
 
 /**  Clone a dump file object.
  * @param ctx   Unititialized dump file object.
@@ -169,24 +170,26 @@ kdump_ctx *kdump_alloc_ctx(void);
  *
  * @sa @ref threads
  */
-kdump_status kdump_init_clone(kdump_ctx *ctx, const kdump_ctx *orig);
+kdump_status kdump_clone(kdump_ctx *ctx, const kdump_ctx *orig);
 
 /**  Initialize an already allocated dump file object.
  * @param ctx     Dump file object.
  * @returns       Error status.
  *
  * Use this function to initialize a @ref kdump_ctx allocated using
- * @ref kdump_alloc_ctx.
+ * @ref kdump_alloc.
  */
-kdump_status kdump_init_ctx(kdump_ctx *ctx);
+kdump_status kdump_init(kdump_ctx *ctx);
 
-/**  Initialize a new dump file object.
- * @returns Newly allocated object, or NULL on failure.
+/**  Allocate and initialize a new dump file object.
+ * @returns    New initialized object, or @c NULL on failure.
  *
- * Use this function to create a new @ref kdump_ctx. When the object
- * is no longer needed, you should free all resources with @ref kdump_free.
+ * This is a shortcut for allocating the object with
+ * @ref kdump_alloc and initializing it with @ref kdump_init.
+ * There is no way to find out whether initialization failed
+ * for any other reason than insufficient memory.
  */
-kdump_ctx *kdump_init(void);
+kdump_ctx *kdump_new(void);
 
 /**  Free a dump file object.
  * @param ctx  Object to be freed.

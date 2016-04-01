@@ -11,6 +11,9 @@
     - REMOVED callback enumeration.
     - REMOVED kdump_read_reg (use attributes).
     - REMOVED kdump_fdopen
+    - RENAMED kdump_alloc_ctx to kdump_alloc
+    - RENAMED kdump_init to kdump_new
+    - RENAMED kdump_init_ctx to kdump_init
     - CHANGED the canonical architecture name from "i386" to "ia32".
 
 0.2.0

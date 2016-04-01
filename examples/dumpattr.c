@@ -100,7 +100,7 @@ main(int argc, char **argv)
 	}
 
 	kdump_status res;
-	kdump_ctx *ctx = kdump_init();
+	kdump_ctx *ctx = kdump_new();
 
 	if (!ctx) {
 		perror("Cannot allocate kdump context");

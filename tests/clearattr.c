@@ -42,7 +42,7 @@ main(int argc, char **argv)
 	kdump_attr_t attr;
 	kdump_status status;
 
-	ctx = kdump_init();
+	ctx = kdump_new();
 	if (!ctx) {
 		perror("Cannot initialize dump context");
 		return TEST_ERR;

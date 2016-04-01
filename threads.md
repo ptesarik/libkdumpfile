@@ -23,7 +23,7 @@ context from two different threads **at the same time**.
 So, how do you access the same dump file from different threads?
 
 You can create a *clone* of the original dump file context with
-[kdump_init_clone]. Almost all data is shared by clones, e.g.
+[kdump_clone]. Almost all data is shared by clones, e.g.
 attributes and caches. If it is changed through one context, the
 change is also visible through all other contexts cloned from the
 same base (directly or indirectly). Only the following data bits
@@ -54,7 +54,7 @@ status: [kdump_busy]. Retrying the read may be successful, but
 this error indicates that the cache size should be increased.
 
 [kdump_ctx]: @ref kdump_ctx
-[kdump_init_clone]: @ref kdump_init_clone
+[kdump_clone]: @ref kdump_clone
 [kdump_err_str]: @ref kdump_err_str
 [kdump_get_priv]: @ref kdump_get_priv
 [kdump_set_priv]: @ref kdump_set_priv

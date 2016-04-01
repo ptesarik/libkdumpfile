@@ -216,7 +216,7 @@ check_attrs_fd(FILE *parm, int dumpfd)
 	kdump_status res;
 	int rc;
 
-	ctx = kdump_init();
+	ctx = kdump_new();
 	if (!ctx) {
 		perror("Cannot initialize dump context");
 		return TEST_ERR;
