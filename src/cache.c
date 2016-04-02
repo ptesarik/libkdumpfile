@@ -892,11 +892,9 @@ def_realloc_caches(kdump_ctx *ctx)
 				 "Cannot allocate cache (%u * %zu bytes)",
 				 cache_size, get_page_size(ctx));
 
-	rwlock_wrlock(&ctx->shared->lock);
 	if (ctx->shared->cache)
 		cache_unref(ctx->shared->cache);
 	ctx->shared->cache = cache;
-	rwlock_unlock(&ctx->shared->lock);
 
 	set_attr_indirect(ctx, gattr(ctx, GKI_cache_hits), &cache->hits);
 	set_attr_indirect(ctx, gattr(ctx, GKI_cache_misses), &cache->misses);

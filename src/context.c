@@ -47,19 +47,28 @@ kdump_status
 kdump_get_attr(kdump_ctx *ctx, const char *key, kdump_attr_t *valp)
 {
 	struct attr_data *d;
+	kdump_status ret;
 
 	clear_error(ctx);
+	rwlock_rdlock(&ctx->shared->lock);
 
 	d = lookup_attr(ctx->shared, key);
-	if (!d)
-		return set_error(ctx, kdump_nokey, "No such key");
-	if (validate_attr(ctx, d) != kdump_ok)
-		return set_error(ctx, kdump_nodata, "Key has no value");
+	if (!d) {
+		ret = set_error(ctx, kdump_nokey, "No such key");
+		goto out;
+	}
+	if (validate_attr(ctx, d) != kdump_ok) {
+		ret = set_error(ctx, kdump_nodata, "Key has no value");
+		goto out;
+	}
 
 	valp->type = d->template->type;
 	valp->val = *attr_value(d);
-	return kdump_ok;
+	ret = kdump_ok;
 
+ out:
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 /**  Set an attribute value with type check.
@@ -90,14 +99,22 @@ kdump_set_attr(kdump_ctx *ctx, const char *key,
 	       const kdump_attr_t *valp)
 {
 	struct attr_data *d;
+	kdump_status ret;
 
 	clear_error(ctx);
+	rwlock_wrlock(&ctx->shared->lock);
 
 	d = lookup_attr(ctx->shared, key);
-	if (!d)
-		return set_error(ctx, kdump_nodata, "No such key");
+	if (!d) {
+		ret = set_error(ctx, kdump_nodata, "No such key");
+		goto out;
+	}
 
-	return check_set_attr(ctx, d, valp);
+	ret = check_set_attr(ctx, d, valp);
+
+ out:
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 /**  Convert attribute data to an attribute reference.
