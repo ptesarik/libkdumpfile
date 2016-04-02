@@ -91,7 +91,7 @@ read_kvpage_kphys(kdump_ctx *ctx, struct page_io *pio)
 	kdump_status ret;
 
 	vaddr = pio->pfn << get_page_shift(ctx);
-	ret = kdump_vtop(ctx, vaddr, &paddr);
+	ret = vtop(ctx, vaddr, &paddr);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -121,7 +121,7 @@ read_xenvpage(kdump_ctx *ctx, struct page_io *pio)
 	kdump_status ret;
 
 	vaddr = pio->pfn << get_page_shift(ctx);
-	ret = kdump_vtop_xen(ctx, vaddr, &paddr);
+	ret = vtop_xen(ctx, vaddr, &paddr);
 	if (ret != kdump_ok)
 		return ret;
 

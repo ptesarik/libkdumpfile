@@ -258,7 +258,14 @@ vtop_pgt_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 		return set_error_no_vtop(ctx);
 }
 
-static kdump_status
+/**  Perform virtual -> physical address translation using a given mapping.
+ * @param      ctx    Dump file object.
+ * @param[in]  vaddr  Virtual address.
+ * @param[out] paddr  On success, set to translated physical address.
+ * @param      map    Translation mapping to be used.
+ * @returns           Error status.
+ */
+kdump_status
 map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	 const struct vtop_map *map)
 {
@@ -304,7 +311,7 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	clear_error(ctx);
 	rwlock_rdlock(&ctx->shared->lock);
 
-	ret = map_vtop(ctx, vaddr, paddr, &ctx->shared->vtop_map);
+	ret = vtop(ctx, vaddr, paddr);
 
 	rwlock_unlock(&ctx->shared->lock);
 	return ret;
@@ -319,7 +326,7 @@ kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 	rwlock_rdlock(&ctx->shared->lock);
 
 	if (kphys_is_machphys(ctx))
-		ret = map_vtop(ctx, vaddr, maddr, &ctx->shared->vtop_map);
+		ret = vtop(ctx, vaddr, maddr);
 	else if (ctx->shared->arch_ops && ctx->shared->arch_ops->vtop)
 		ret = ctx->shared->arch_ops->vtop(ctx, vaddr, maddr);
 	else
@@ -343,7 +350,7 @@ kdump_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 		goto out;
 	}
 
-	ret = map_vtop(ctx, vaddr, paddr, &ctx->shared->vtop_map_xen);
+	ret = vtop_xen(ctx, vaddr, paddr);
 
  out:
 	rwlock_unlock(&ctx->shared->lock);

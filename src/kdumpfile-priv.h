@@ -846,6 +846,34 @@ kdump_status vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 kdump_status vtop_pgt_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 			  kdump_paddr_t *paddr);
 
+#define map_vtop INTERNAL_NAME(map_vtop)
+kdump_status map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
+		      kdump_paddr_t *paddr, const struct vtop_map *map);
+
+/** Translate a Linux kernel virtual address to a physical address.
+ * @param      ctx    Dump file object.
+ * @param[in]  vaddr  Linux virtual address.
+ * @param[out] paddr  On success, set to translated physical address.
+ * @returns           Error status.
+ */
+static inline kdump_status
+vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
+{
+	return map_vtop(ctx, vaddr, paddr, &ctx->shared->vtop_map);
+}
+
+/** Translate a Xen hypervisor virtual address to a physical address.
+ * @param      ctx    Dump file object.
+ * @param[in]  vaddr  Xen hypervisor virtual address.
+ * @param[out] paddr  On success, set to translated physical address.
+ * @returns           Error status.
+ */
+static inline kdump_status
+vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
+{
+	return map_vtop(ctx, vaddr, paddr, &ctx->shared->vtop_map_xen);
+}
+
 /* Attribute handling */
 
 #define add_attr_template INTERNAL_NAME(add_attr_template)
