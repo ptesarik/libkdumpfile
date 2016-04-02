@@ -204,10 +204,11 @@ kdump_readp(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	kdump_status ret;
 
 	clear_error(ctx);
+	rwlock_rdlock(&ctx->shared->lock);
 
 	ret = setup_readfn(ctx, as, &readfn);
 	if (ret != kdump_ok)
-		return ret;
+		goto out;
 
 	pio.precious = 0;
 	remain = *plength;
@@ -231,6 +232,9 @@ kdump_readp(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	}
 
 	*plength -= remain;
+
+ out:
+	rwlock_unlock(&ctx->shared->lock);
 	return ret;
 }
 
@@ -259,10 +263,11 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	kdump_status ret;
 
 	clear_error(ctx);
+	rwlock_rdlock(&ctx->shared->lock);
 
 	ret = setup_readfn(ctx, as, &readfn);
 	if (ret != kdump_ok)
-		return ret;
+		goto out;
 
 	pio.precious = 0;
 	do {
@@ -285,9 +290,10 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 			unref_page(ctx, &pio);
 			if (str)
 				free(str);
-			return set_error(ctx, kdump_syserr,
-					 "Cannot enlarge string to %zu bytes",
-					 newlength + 1);
+			ret = set_error(ctx, kdump_syserr,
+					"Cannot enlarge string to %zu bytes",
+					newlength + 1);
+			goto out;
 		}
 		memcpy(newstr + length, pio.ce->data + off, partlen);
 		unref_page(ctx, &pio);
@@ -302,6 +308,8 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		*pstr = str;
 	}
 
+ out:
+	rwlock_unlock(&ctx->shared->lock);
 	return ret;
 }
 
