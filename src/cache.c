@@ -821,10 +821,7 @@ def_read_cache(kdump_ctx *ctx, struct page_io *pio,
 	struct cache_entry *entry;
 	kdump_status ret;
 
-	rwlock_rdlock(&ctx->shared->lock);
 	pio->cache = cache_ref(ctx->shared->cache);
-	rwlock_unlock(&ctx->shared->lock);
-
 	entry = cache_get_entry(pio->cache, idx);
 	if (!entry) {
 		cache_unref(pio->cache);
