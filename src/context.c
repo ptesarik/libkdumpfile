@@ -285,59 +285,100 @@ kdump_attr_iter_end(kdump_ctx *ctx, kdump_attr_iter_t *iter)
 kdump_byte_order_t
 kdump_byte_order(kdump_ctx *ctx)
 {
-	return get_byte_order(ctx);
+	kdump_byte_order_t ret;
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = get_byte_order(ctx);
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 size_t
 kdump_ptr_size(kdump_ctx *ctx)
 {
-	return get_ptr_size(ctx);
+	size_t ret;
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = get_ptr_size(ctx);
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 const char *
 kdump_arch_name(kdump_ctx *ctx)
 {
-	return get_arch_name(ctx);
+	const char *ret;
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = get_arch_name(ctx);
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 kdump_xen_type_t
 kdump_xen_type(kdump_ctx *ctx)
 {
-	return get_xen_type(ctx);
+	kdump_xen_type_t ret;
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = get_xen_type(ctx);
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 size_t
 kdump_pagesize(kdump_ctx *ctx)
 {
-	return get_page_size(ctx);
+	size_t ret;
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = get_page_size(ctx);
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 unsigned
 kdump_pageshift(kdump_ctx *ctx)
 {
-	return get_page_shift(ctx);
+	unsigned ret;
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = get_page_shift(ctx);
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 kdump_paddr_t
 kdump_phys_base(kdump_ctx *ctx)
 {
-	return get_phys_base(ctx);
+	kdump_paddr_t ret;
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = get_phys_base(ctx);
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 static const char *
 get_string_attr(kdump_ctx *ctx, struct attr_data *attr)
 {
-	return (validate_attr(ctx, attr) == kdump_ok &&
-		attr->template->type == kdump_string)
+	const char *ret;
+
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = (validate_attr(ctx, attr) == kdump_ok &&
+	       attr->template->type == kdump_string)
 		? attr_value(attr)->string
 		: NULL;
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 const char *
 kdump_get_string_attr(kdump_ctx *ctx, const char *key)
 {
-	struct attr_data *attr = lookup_attr(ctx->shared, key);
-	return attr ? get_string_attr(ctx, attr) : NULL;
+	struct attr_data *attr;
+	const char *ret = NULL;
+
+	rwlock_rdlock(&ctx->shared->lock);
+	attr = lookup_attr(ctx->shared, key);
+	if (attr && validate_attr(ctx, attr) == kdump_ok &&
+	    attr->template->type == kdump_string)
+		ret = attr_value(attr)->string;
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 const char *
@@ -385,13 +426,21 @@ kdump_domainname(kdump_ctx *ctx)
 unsigned
 kdump_version_code(kdump_ctx *ctx)
 {
-	return get_version_code(ctx);
+	unsigned ret;
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = get_version_code(ctx);
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 unsigned
 kdump_num_cpus(kdump_ctx *ctx)
 {
-	return get_num_cpus(ctx);
+	unsigned ret;
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = get_num_cpus(ctx);
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 const char *
@@ -410,13 +459,17 @@ static const char*
 vmcoreinfo_row(kdump_ctx *ctx, const char *key, const struct attr_data *base)
 {
 	struct attr_data *attr;
+	const char *ret = NULL;
 
 	clear_error(ctx);
+	rwlock_rdlock(&ctx->shared->lock);
 
 	attr = lookup_dir_attr(ctx->shared, base, key, strlen(key));
-	return (attr && validate_attr(ctx, attr) == kdump_ok)
-		? attr_value(attr)->string
-		: NULL;
+	if (attr && validate_attr(ctx, attr) == kdump_ok)
+		ret = attr_value(attr)->string;
+
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 const char *
@@ -438,17 +491,27 @@ vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname, kdump_addr_t *symvalue,
 		  const struct attr_data *base)
 {
 	struct attr_data *attr;
+	kdump_status ret;
 
 	clear_error(ctx);
+	rwlock_rdlock(&ctx->shared->lock);
 
 	attr = lookup_dir_attr(ctx->shared, base, symname, strlen(symname));
-	if (!attr)
-		return set_error(ctx, kdump_nodata, "Symbol not found");
-	if (validate_attr(ctx, attr) != kdump_ok)
-		return set_error(ctx, kdump_nodata, "Symbol has no value");
+	if (!attr) {
+		ret = set_error(ctx, kdump_nodata, "Symbol not found");
+		goto out;
+	}
+	if (validate_attr(ctx, attr) != kdump_ok) {
+		ret = set_error(ctx, kdump_nodata, "Symbol has no value");
+		goto out;
+	}
 
 	*symvalue = attr_value(attr)->address;
-	return kdump_ok;
+	ret = kdump_ok;
+
+ out:
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 kdump_status
