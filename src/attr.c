@@ -384,6 +384,30 @@ new_attr(struct kdump_shared *shared, struct attr_data *parent,
 	return attr;
 }
 
+/**  Allocate an attribute template.
+ * @param key     Key name.
+ * @param keylen  Key length (maybe partial).
+ * @param type    Attribute type.
+ * @returns       Newly allocated attribute template, or @c NULL.
+ */
+struct attr_template *
+alloc_attr_template(const char *key, size_t keylen, kdump_attr_type_t type)
+{
+	struct attr_template *tmpl;
+
+	tmpl = malloc(sizeof *tmpl + keylen + 1);
+	if (tmpl) {
+		char *tmplkey = (char*) (tmpl + 1);
+		memcpy(tmplkey, key, keylen);
+		tmplkey[keylen] = '\0';
+		tmpl->key = tmplkey;
+		tmpl->parent = NULL;
+		tmpl->type = type;
+		tmpl->ops = NULL;
+	}
+	return tmpl;
+}
+
 /**  Add an attribute template.
  * @param ctx   Dump file object.
  * @param path  Full path of the new key.
@@ -395,7 +419,6 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 {
 	struct attr_template *tmpl;
 	struct attr_data *attr, *parent;
-	char *keyname;
 
 	attr = lookup_attr(ctx->shared, path);
 	if (attr) {
@@ -414,17 +437,10 @@ add_attr_template(kdump_ctx *ctx, const char *path,
 		return set_error(ctx, kdump_invalid,
 				 "Path is a leaf attribute");
 
-	tmpl = malloc(sizeof *tmpl + strlen(path) + 1);
+	tmpl = alloc_attr_template(path, strlen(path), type);
 	if (!tmpl)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate attribute template");
-
-	keyname = (char*) (tmpl + 1);
-	strcpy(keyname, path);
-	tmpl->key = keyname;
-	tmpl->parent = parent->template;
-	tmpl->type = type;
-	tmpl->ops = NULL;
 
 	attr = new_attr(ctx->shared, parent, tmpl);
 	if (!attr) {

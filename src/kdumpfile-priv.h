@@ -835,6 +835,10 @@ vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 /* Attribute handling */
 
+#define alloc_attr_template INTERNAL_NAME(alloc_attr_template)
+struct attr_template *alloc_attr_template(const char *key, size_t keylen,
+					  kdump_attr_type_t type);
+
 #define add_attr_template INTERNAL_NAME(add_attr_template)
 kdump_status add_attr_template(kdump_ctx *ctx, const char *path,
 			       kdump_attr_type_t type);
