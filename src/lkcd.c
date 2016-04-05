@@ -332,8 +332,9 @@ struct lkcd_priv {
 	struct attr_override page_size_override;
 	int cbuf_slot;		/**< Compressed data per-context slot. */
 
-	kdump_pfn_t max_pfn;
+	/** Overridden methods for max.pfn attribute. */
 	struct attr_override max_pfn_override;
+	kdump_pfn_t max_pfn;	/**< Maximum PFN seen so far. */
 
 	char format[MAX_FORMAT_NAME];
 };
@@ -692,29 +693,42 @@ static kdump_status
 lkcd_max_pfn_validate(kdump_ctx *ctx, struct attr_data *attr)
 {
 	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
+	attr_validate_fn *parent_validate;
 	const struct attr_ops *parent_ops;
+	kdump_status res;
 
-	parent_ops = lkcdp->max_pfn_override.template.parent->ops;
-	attr_remove_override(gattr(ctx, GKI_max_pfn),
-			     &lkcdp->max_pfn_override);
+	mutex_lock(&lkcdp->pfn_block_mutex);
 
 	if (lkcdp->last_offset != lkcdp->end_offset) {
 		struct dump_page dummy_dp;
 		off_t dummy_off;
-		kdump_status res;
 
-		mutex_lock(&lkcdp->pfn_block_mutex);
 		res = search_page_desc(ctx, ~(kdump_pfn_t)0,
 				       &dummy_dp, &dummy_off);
-		mutex_unlock(&lkcdp->pfn_block_mutex);
-		if (res != kdump_ok && res != kdump_nodata)
-			return set_error(ctx, res, "Cannot get max_pfn");
-	}
-	set_max_pfn(ctx, lkcdp->max_pfn);
+		if (res == kdump_nodata) {
+			clear_error(ctx);
+			res = kdump_ok;
+		}
+		if (res != kdump_ok)
+			res = set_error(ctx, res, "Cannot get max_pfn");
+	} else
+		res = kdump_ok;
 
-	if (parent_ops && parent_ops->validate)
-		return parent_ops->validate(ctx, attr);
-	return kdump_ok;
+	parent_ops = lkcdp->max_pfn_override.template.parent->ops;
+	parent_validate = parent_ops ? parent_ops->validate : NULL;
+	lkcdp->max_pfn_override.ops.validate = parent_validate;
+
+	if (res == kdump_ok) {
+		kdump_attr_value_t val;
+		val.number = lkcdp->max_pfn;
+		res = set_attr(ctx, attr, val);
+	}
+
+	mutex_unlock(&lkcdp->pfn_block_mutex);
+
+	if (res == kdump_ok && parent_validate)
+		res = parent_validate(ctx, attr);
+	return res;
 }
 
 static kdump_status
