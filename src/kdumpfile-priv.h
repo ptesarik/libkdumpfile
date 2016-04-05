@@ -615,6 +615,15 @@ kdump_status raw_read_page(kdump_ctx *ctx, kdump_addrspace_t as,
 kdump_status read_u64(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		      int precious, char *what, uint64_t *result);
 
+/* vmcoreinfo */
+
+#define store_vmcoreinfo INTERNAL_NAME(store_vmcoreinfo)
+kdump_status store_vmcoreinfo(kdump_ctx *ctx, struct attr_data *dir,
+			      void *data, size_t len);
+
+#define process_vmcoreinfo INTERNAL_NAME(process_vmcoreinfo)
+kdump_status process_vmcoreinfo(kdump_ctx *ctx, void *data, size_t size);
+
 /* utils */
 
 #define set_error INTERNAL_NAME(set_error)
@@ -639,9 +648,10 @@ int uncompress_rle(unsigned char *dst, size_t *pdstlen,
 kdump_status uncompress_page_gzip(kdump_ctx *ctx, unsigned char *dst,
 				  unsigned char *src, size_t srclen);
 
-#define store_vmcoreinfo INTERNAL_NAME(store_vmcoreinfo)
-kdump_status store_vmcoreinfo(kdump_ctx *ctx, struct attr_data *dir,
-			      void *data, size_t len);
+#define create_attr_path INTERNAL_NAME(create_attr_path)
+struct attr_data *create_attr_path(struct kdump_shared *shared,
+				   struct attr_data *dir,
+				   char *path, kdump_attr_type_t type);
 
 #define paged_read INTERNAL_NAME(paged_read)
 ssize_t paged_read(int fd, void *buffer, size_t size);
@@ -776,9 +786,6 @@ kdump_status process_noarch_notes(kdump_ctx *ctx, void *data, size_t size);
 
 #define process_arch_notes INTERNAL_NAME(process_arch_notes)
 kdump_status process_arch_notes(kdump_ctx *ctx, void *data, size_t size);
-
-#define process_vmcoreinfo INTERNAL_NAME(process_vmcoreinfo)
-kdump_status process_vmcoreinfo(kdump_ctx *ctx, void *data, size_t size);
 
 /* Virtual address space regions */
 
