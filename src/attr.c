@@ -367,7 +367,7 @@ dealloc_attr(struct attr_data *attr)
  * @param tmpl    Attribute template.
  * @returns       Attribute data, or @c NULL on allocation failure.
  */
-static struct attr_data *
+struct attr_data *
 new_attr(struct kdump_shared *shared, struct attr_data *parent,
 	 const struct attr_template *tmpl)
 {
