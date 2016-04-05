@@ -322,42 +322,6 @@ process_xc_xen_note(kdump_ctx *ctx, uint32_t type,
 	return kdump_ok;
 }
 
-kdump_status
-process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
-{
-	kdump_status ret;
-	const char *val;
-
-	ret = store_vmcoreinfo(ctx, gattr(ctx, GKI_dir_linux_vmcoreinfo),
-			       desc, descsz);
-	if (ret != kdump_ok)
-		return ret;
-
-	val = kdump_vmcoreinfo_row(ctx, "PAGESIZE");
-	if (val) {
-		char *endp;
-		unsigned long page_size = strtoul(val, &endp, 10);
-		if (*endp)
-			return set_error(ctx, kdump_dataerr,
-					 "Invalid PAGESIZE: %s", val);
-
-		ret = set_page_size(ctx, page_size);
-		if (ret != kdump_ok)
-			return ret;
-	}
-
-	val = kdump_vmcoreinfo_row(ctx, "OSRELEASE");
-	if (val) {
-		ret = set_attr_string(ctx, gattr(ctx, GKI_linux_uts_release),
-				      val);
-		if (ret != kdump_ok)
-			return set_error(ctx, ret,
-					 "Cannot set UTS release");
-	}
-
-	return kdump_ok;
-}
-
 static int
 note_equal(const char *name, const char *notename, size_t notenamesz)
 {

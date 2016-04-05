@@ -38,6 +38,7 @@ libkdumpfile_la_SOURCES = \
 	s390dump.c \
 	todo.c \
 	util.c \
+	vmcoreinfo.c \
 	vtop.c \
 	ppc64.c \
 	x86_64.c
