@@ -263,36 +263,50 @@ kdump_attr_iter_start(kdump_ctx *ctx, const char *path,
 		      kdump_attr_iter_t *iter)
 {
 	struct attr_data *d;
+	kdump_status ret;
 
 	clear_error(ctx);
+	rwlock_rdlock(&ctx->shared->lock);
 
 	d = lookup_attr(ctx->shared, path);
-	if (!d)
-		return set_error(ctx, kdump_nokey, "No such path");
+	if (d)
+		ret = attr_iter_start(ctx, d, iter);
+	else
+		ret = set_error(ctx, kdump_nokey, "No such path");
 
-	return attr_iter_start(ctx, d, iter);
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 kdump_status
 kdump_attr_ref_iter_start(kdump_ctx *ctx, const kdump_attr_ref_t *ref,
 			  kdump_attr_iter_t *iter)
 {
+	kdump_status ret;
 	clear_error(ctx);
-	return attr_iter_start(ctx, ref_attr(ref), iter);
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = attr_iter_start(ctx, ref_attr(ref), iter);
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 kdump_status
 kdump_attr_iter_next(kdump_ctx *ctx, kdump_attr_iter_t *iter)
 {
 	struct attr_data *d;
+	kdump_status ret;
 
 	clear_error(ctx);
+	rwlock_rdlock(&ctx->shared->lock);
 
 	d = ref_attr(&iter->pos);
-	if (!d)
-		return set_error(ctx, kdump_invalid, "End of iteration");
+	if (d)
+		ret = set_iter_pos(iter, d->next);
+	else
+		ret = set_error(ctx, kdump_invalid, "End of iteration");
 
-	return set_iter_pos(iter, d->next);
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 void
