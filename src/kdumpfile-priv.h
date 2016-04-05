@@ -928,21 +928,6 @@ kdump_status set_attr_string(kdump_ctx *ctx, struct attr_data *attr,
 kdump_status set_attr_static_string(kdump_ctx *ctx, struct attr_data *attr,
 				    const char *str);
 
-#define add_attr_number INTERNAL_NAME(add_attr_number)
-kdump_status add_attr_number(kdump_ctx *ctx, const char *path,
-			     const struct attr_template *tmpl,
-			     kdump_num_t num);
-
-#define add_attr_string INTERNAL_NAME(add_attr_string)
-kdump_status add_attr_string(kdump_ctx *ctx, const char *path,
-			     const struct attr_template *tmpl,
-			     const char *str);
-
-#define add_attr_static_string INTERNAL_NAME(add_attr_static_string)
-kdump_status add_attr_static_string(kdump_ctx *ctx, const char *path,
-				    const struct attr_template *tmpl,
-				    const char *str);
-
 #define clear_attr INTERNAL_NAME(clear_attr)
 void clear_attr(struct attr_data *attr);
 

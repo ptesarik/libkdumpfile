@@ -605,7 +605,8 @@ static kdump_status
 process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 {
 	struct elf_prstatus *status = data;
-	char cpukey[sizeof("cpu.") + 20 + sizeof(".reg")];
+	char cpukey[sizeof("cpu.") + 20];
+	struct attr_data *dir, *attr;
 	kdump_status res;
 
 	if (size < sizeof(struct elf_prstatus))
@@ -618,10 +619,18 @@ process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 		return res;
 
 	sprintf(cpukey, "cpu.%u", get_num_cpus(ctx));
-	res = add_attr_number(ctx, cpukey, &tmpl_pid,
-			      dump32toh(ctx, status->pr_pid));
+	dir = lookup_attr(ctx->shared, cpukey);
+	if (!dir)
+		return set_error(ctx, kdump_nokey,
+				 "'%s': %s", cpukey, "No such key");
+	attr = new_attr(ctx->shared, dir, &tmpl_pid);
+	if (!attr)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate '%s'", cpukey);
+	res = set_attr_number(ctx, attr, dump32toh(ctx, status->pr_pid));
 	if (res != kdump_ok)
-		return res;
+		return set_error(ctx, res,
+				 "Cannot set '%s'", cpukey);
 
 	set_num_cpus(ctx, get_num_cpus(ctx) + 1);
 	return kdump_ok;
