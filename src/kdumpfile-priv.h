@@ -640,7 +640,7 @@ kdump_status uncompress_page_gzip(kdump_ctx *ctx, unsigned char *dst,
 				  unsigned char *src, size_t srclen);
 
 #define store_vmcoreinfo INTERNAL_NAME(store_vmcoreinfo)
-kdump_status store_vmcoreinfo(kdump_ctx *ctx, const char *path,
+kdump_status store_vmcoreinfo(kdump_ctx *ctx, struct attr_data *dir,
 			      void *data, size_t len);
 
 #define paged_read INTERNAL_NAME(paged_read)

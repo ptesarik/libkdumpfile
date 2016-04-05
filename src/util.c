@@ -608,14 +608,13 @@ uncompress_page_gzip(kdump_ctx *ctx, unsigned char *dst,
 }
 
 static struct attr_data *
-create_attr_path(struct kdump_shared *shared, char *path,
-		 kdump_attr_type_t type)
+create_attr_path(struct kdump_shared *shared, struct attr_data *dir,
+		 char *path, kdump_attr_type_t type)
 {
 	char *p, *endp;
-	struct attr_data *dir, *attr;
+	struct attr_data *attr;
 	struct attr_template *tmpl;
 
-	dir = sgattr(shared, GKI_dir_root);
 	p = endp = path + strlen(path);
 	while (! (attr = lookup_dir_attr(shared, dir, path, endp - path)) )
 		if (! (endp = memrchr(path, '.', endp - path)) ) {
@@ -643,10 +642,10 @@ create_attr_path(struct kdump_shared *shared, char *path,
 }
 
 static kdump_status
-add_parsed_row(kdump_ctx *ctx, const char *path,
+add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 	       const char *key, const char *val)
 {
-	char *attrkey, *suff, *type, *sym;
+	char *attrkey, *type, *sym;
 	char *p, *q;
 	size_t len;
 	unsigned long long num;
@@ -654,23 +653,22 @@ add_parsed_row(kdump_ctx *ctx, const char *path,
 	struct attr_data *attr;
 	kdump_status res;
 
-	attrkey = alloca(strlen(path) + strlen(key) + sizeof(".lines"));
-	suff = stpcpy(attrkey, path);
+	attrkey = alloca(strlen(key) + sizeof("lines."));
 
-	p = stpcpy(suff, ".lines.");
+	p = stpcpy(attrkey, "lines.");
 	stpcpy(p, key);
 
 	/* FIXME: Invent a better way to store lines with dots
 	 * in the key name
 	 */
-	attr = create_attr_path(ctx->shared, attrkey, kdump_string);
+	attr = create_attr_path(ctx->shared, dir, attrkey, kdump_string);
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute '%s'", attrkey);
+				 "Cannot set VMCOREINFO '%s'", key);
 	res = set_attr_string(ctx, attr, val);
 	if (res != kdump_ok)
 		return set_error(ctx, res,
-				 "Cannot set vmcoreinfo '%s'", key);
+				 "Cannot set VMCOREINFO '%s'", key);
 
 	p = strchr(key, '(');
 	if (!p)
@@ -679,8 +677,7 @@ add_parsed_row(kdump_ctx *ctx, const char *path,
 	if (!q || q[1])
 		return kdump_ok;
 
-	type = suff;
-	*type++ = '.';
+	type = attrkey;
 	len = p - key;
 	memcpy(type, key, len);
 	type[len] = '\0';
@@ -709,21 +706,20 @@ add_parsed_row(kdump_ctx *ctx, const char *path,
 		return kdump_ok;
 
 	sym[-1] = '.';
-	attr = create_attr_path(ctx->shared, attrkey, attr_type);
+	attr = create_attr_path(ctx->shared, dir, attrkey, attr_type);
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute '%s'", attrkey);
+				 "Cannot set VMCOREINFO '%s'", attrkey);
 	return set_error(ctx,
 			 (attr_type == kdump_number)
 			 ? set_attr_number(ctx, attr, num)
 			 : set_attr_address(ctx, attr, num),
-			 "Cannot set %s", attrkey);
+			 "Cannot set VMCOREINFO '%s'", attrkey);
 }
 
 kdump_status
-store_vmcoreinfo(kdump_ctx *ctx, const char *path, void *data, size_t len)
+store_vmcoreinfo(kdump_ctx *ctx, struct attr_data *dir, void *data, size_t len)
 {
-	char key[strlen(path) + sizeof(".lines")];
 	char *raw, *p, *endp, *val;
 	struct attr_data *attr;
 	kdump_status res;
@@ -734,20 +730,18 @@ store_vmcoreinfo(kdump_ctx *ctx, const char *path, void *data, size_t len)
 	memcpy(raw, data, len);
 	raw[len] = '\0';
 
-	stpcpy(stpcpy(key, path), ".raw");
-	attr = lookup_attr(ctx->shared, key);
+	attr = lookup_dir_attr(ctx->shared, dir, "raw", 3);
 	if (!attr) {
 		free(raw);
 		return set_error(ctx, kdump_nokey,
-				 "Unknown VMCOREINFO attribute: '%s'", key);
+				 "Cannot set raw VMCOREINFO");
 	}
 	res = set_attr_string(ctx, attr, raw);
 	if (res != kdump_ok) {
 		free(raw);
-		return set_error(ctx, res, "Cannot set '%s'", key);
+		return set_error(ctx, res, "Cannot set raw VMCOREINFO");
 	}
 
-	stpcpy(stpcpy(key, path), ".lines");
 	for (p = raw; *p; p = endp) {
 		endp = strchrnul(p, '\n');
 		if (*endp)
@@ -757,7 +751,7 @@ store_vmcoreinfo(kdump_ctx *ctx, const char *path, void *data, size_t len)
 		if (val)
 			*val++ = '\0';
 
-		res = add_parsed_row(ctx, path, p, val);
+		res = add_parsed_row(ctx, dir, p, val);
 		if (res != kdump_ok)
 			break;
 	}
@@ -838,7 +832,8 @@ set_cpu_regs64(kdump_ctx *ctx, unsigned cpu,
 	kdump_status res;
 
 	sprintf(cpukey, "cpu.%u.reg", cpu);
-	if (!create_attr_path(ctx->shared, cpukey, kdump_directory))
+	if (!create_attr_path(ctx->shared, gattr(ctx, GKI_dir_root),
+			      cpukey, kdump_directory))
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate attribute '%s'", cpukey);
 
@@ -861,7 +856,8 @@ set_cpu_regs32(kdump_ctx *ctx, unsigned cpu,
 	kdump_status res;
 
 	sprintf(cpukey, "cpu.%u.reg", cpu);
-	if (!create_attr_path(ctx->shared, cpukey, kdump_directory))
+	if (!create_attr_path(ctx->shared, gattr(ctx, GKI_dir_root),
+			      cpukey, kdump_directory))
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate attribute '%s'", cpukey);
 
