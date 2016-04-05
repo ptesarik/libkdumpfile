@@ -607,16 +607,17 @@ uncompress_page_gzip(kdump_ctx *ctx, unsigned char *dst,
 #endif
 }
 
-static kdump_status
-create_attr_path(kdump_ctx *ctx, char *path, kdump_attr_type_t type)
+static struct attr_data *
+create_attr_path(struct kdump_shared *shared, char *path,
+		 kdump_attr_type_t type)
 {
 	char *p, *endp;
 	struct attr_data *dir, *attr;
 	struct attr_template *tmpl;
 
-	dir = gattr(ctx, GKI_dir_root);
+	dir = sgattr(shared, GKI_dir_root);
 	p = endp = path + strlen(path);
-	while (! (attr = lookup_dir_attr(ctx->shared, dir, path, endp - path)) )
+	while (! (attr = lookup_dir_attr(shared, dir, path, endp - path)) )
 		if (! (endp = memrchr(path, '.', endp - path)) ) {
 			endp = path - 1;
 			attr = dir;
@@ -630,18 +631,15 @@ create_attr_path(kdump_ctx *ctx, char *path, kdump_attr_type_t type)
 		tmpl = alloc_attr_template(p, endp - p,
 					   *endp ? kdump_directory : type);
 		if (!tmpl)
-			return set_error(ctx, kdump_syserr,
-					 "Cannot allocate attribute template");
-
-		attr = new_attr(ctx->shared, attr, tmpl);
+			return NULL;
+		attr = new_attr(shared, attr, tmpl);
 		if (!attr) {
 			free(tmpl);
-			return set_error(ctx, kdump_syserr,
-					 "Cannot add attribute");
+			return NULL;
 		}
 	}
 
-	return kdump_ok;
+	return attr;
 }
 
 static kdump_status
@@ -665,13 +663,10 @@ add_parsed_row(kdump_ctx *ctx, const char *path,
 	/* FIXME: Invent a better way to store lines with dots
 	 * in the key name
 	 */
-	res = create_attr_path(ctx, attrkey, kdump_string);
-	if (res != kdump_ok)
-		return res;
-	attr = lookup_attr(ctx->shared, attrkey);
+	attr = create_attr_path(ctx->shared, attrkey, kdump_string);
 	if (!attr)
-		return set_error(ctx, kdump_nokey,
-				 "Cannot find attribute '%s'", attrkey);
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate attribute '%s'", attrkey);
 	res = set_attr_string(ctx, attr, val);
 	if (res != kdump_ok)
 		return set_error(ctx, res,
@@ -714,13 +709,10 @@ add_parsed_row(kdump_ctx *ctx, const char *path,
 		return kdump_ok;
 
 	sym[-1] = '.';
-	res = create_attr_path(ctx, attrkey, attr_type);
-	if (res != kdump_ok)
-		return res;
-	attr = lookup_attr(ctx->shared, attrkey);
+	attr = create_attr_path(ctx->shared, attrkey, attr_type);
 	if (!attr)
-		return set_error(ctx, kdump_nokey,
-				 "Cannot find attribute '%s'", attrkey);
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate attribute '%s'", attrkey);
 	return set_error(ctx,
 			 (attr_type == kdump_number)
 			 ? set_attr_number(ctx, attr, num)
@@ -846,9 +838,9 @@ set_cpu_regs64(kdump_ctx *ctx, unsigned cpu,
 	kdump_status res;
 
 	sprintf(cpukey, "cpu.%u.reg", cpu);
-	res = create_attr_path(ctx, cpukey, kdump_directory);
-	if (res != kdump_ok)
-		return res;
+	if (!create_attr_path(ctx->shared, cpukey, kdump_directory))
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate attribute '%s'", cpukey);
 
 	for (i = 0; i < num; ++i) {
 		res = add_attr_number(ctx, cpukey, tmpl + i,
@@ -869,9 +861,9 @@ set_cpu_regs32(kdump_ctx *ctx, unsigned cpu,
 	kdump_status res;
 
 	sprintf(cpukey, "cpu.%u.reg", cpu);
-	res = create_attr_path(ctx, cpukey, kdump_directory);
-	if (res != kdump_ok)
-		return res;
+	if (!create_attr_path(ctx->shared, cpukey, kdump_directory))
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate attribute '%s'", cpukey);
 
 	for (i = 0; i < num; ++i) {
 		res = add_attr_number(ctx, cpukey, tmpl + i,
