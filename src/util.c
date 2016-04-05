@@ -610,19 +610,38 @@ uncompress_page_gzip(kdump_ctx *ctx, unsigned char *dst,
 static kdump_status
 create_attr_path(kdump_ctx *ctx, char *path, kdump_attr_type_t type)
 {
-	char *p;
-	kdump_status res;
+	char *p, *endp;
+	struct attr_data *dir, *attr;
+	struct attr_template *tmpl;
 
-	for (p = path; (p = strchr(p, '.')); ++p) {
-		*p = '\0';
-		res = add_attr_template(ctx, path, kdump_directory);
-		if (res != kdump_ok)
-			return set_error(ctx, res,
-					 "Cannot add attribute '%s'", path);
-		*p = '.';
+	dir = gattr(ctx, GKI_dir_root);
+	p = endp = path + strlen(path);
+	while (! (attr = lookup_dir_attr(ctx->shared, dir, path, endp - path)) )
+		if (! (endp = memrchr(path, '.', endp - path)) ) {
+			endp = path - 1;
+			attr = dir;
+			break;
+		}
+
+	while (endp < p || *endp) {
+		p = endp + 1;
+		endp = strchrnul(p, '.');
+
+		tmpl = alloc_attr_template(p, endp - p,
+					   *endp ? kdump_directory : type);
+		if (!tmpl)
+			return set_error(ctx, kdump_syserr,
+					 "Cannot allocate attribute template");
+
+		attr = new_attr(ctx->shared, attr, tmpl);
+		if (!attr) {
+			free(tmpl);
+			return set_error(ctx, kdump_syserr,
+					 "Cannot add attribute");
+		}
 	}
-	return set_error(ctx, add_attr_template(ctx, path, type),
-			 "Cannot add attribute '%s'", path);
+
+	return kdump_ok;
 }
 
 static kdump_status
