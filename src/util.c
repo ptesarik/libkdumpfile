@@ -719,21 +719,29 @@ kdump_status
 set_cpu_regs64(kdump_ctx *ctx, unsigned cpu,
 	       const struct attr_template *tmpl, uint64_t *regs, unsigned num)
 {
-	char cpukey[sizeof("cpu.") + 20 + sizeof(".reg")];
+	char cpukey[20 + sizeof(".reg")];
+	struct attr_data *dir, *attr;
 	unsigned i;
 	kdump_status res;
 
-	sprintf(cpukey, "cpu.%u.reg", cpu);
-	if (!create_attr_path(ctx->shared, gattr(ctx, GKI_dir_root),
-			      cpukey, kdump_directory))
+	sprintf(cpukey, "%u.reg", cpu);
+	dir = create_attr_path(ctx->shared, gattr(ctx, GKI_dir_cpu),
+			       cpukey, kdump_directory);
+	if (!dir)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute '%s'", cpukey);
+				 "Cannot allocate CPU %u registers", cpu);
 
 	for (i = 0; i < num; ++i) {
-		res = add_attr_number(ctx, cpukey, tmpl + i,
-				      dump64toh(ctx, regs[i]));
+		attr = new_attr(ctx->shared, dir, tmpl + i);
+		if (!attr)
+			return set_error(ctx, kdump_syserr,
+					 "Cannot %s CPU %u register %s",
+					 "allocate", cpu, tmpl[i].key);
+		res = set_attr_number(ctx, attr, dump64toh(ctx, regs[i]));
 		if (res != kdump_ok)
-			return res;
+			return set_error(ctx, res,
+					 "Cannot %s CPU %u register %s",
+					 "set", cpu, tmpl[i].key);
 	}
 
 	return kdump_ok;
@@ -743,21 +751,29 @@ kdump_status
 set_cpu_regs32(kdump_ctx *ctx, unsigned cpu,
 	       const struct attr_template *tmpl, uint32_t *regs, unsigned num)
 {
-	char cpukey[sizeof("cpu.") + 20 + sizeof(".reg")];
+	char cpukey[20 + sizeof(".reg")];
+	struct attr_data *dir, *attr;
 	unsigned i;
 	kdump_status res;
 
-	sprintf(cpukey, "cpu.%u.reg", cpu);
-	if (!create_attr_path(ctx->shared, gattr(ctx, GKI_dir_root),
-			      cpukey, kdump_directory))
+	sprintf(cpukey, "%u.reg", cpu);
+	dir = create_attr_path(ctx->shared, gattr(ctx, GKI_dir_cpu),
+			       cpukey, kdump_directory);
+	if (!dir)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute '%s'", cpukey);
+				 "Cannot allocate CPU %u registers", cpu);
 
 	for (i = 0; i < num; ++i) {
-		res = add_attr_number(ctx, cpukey, tmpl + i,
-				      dump32toh(ctx, regs[i]));
+		attr = new_attr(ctx->shared, dir, tmpl + i);
+		if (!attr)
+			return set_error(ctx, kdump_syserr,
+					 "Cannot %s CPU %u register %s",
+					 "allocate", cpu, tmpl[i].key);
+		res = set_attr_number(ctx, attr, dump32toh(ctx, regs[i]));
 		if (res != kdump_ok)
-			return res;
+			return set_error(ctx, res,
+					 "Cannot %s CPU %u register %s",
+					 "set", cpu, tmpl[i].key);
 	}
 
 	return kdump_ok;
