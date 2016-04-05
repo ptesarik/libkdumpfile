@@ -469,91 +469,50 @@ struct cache;
  * which can be shared by many @ref kdump_ctx objects.
  */
 struct kdump_shared {
-	/** Guard accesses to shared data. */
-	rwlock_t lock;
+	rwlock_t lock;		/**< Guard accesses to shared data. */
 
 	/** List of all refererring @c kdump_ctx structures.
 	 * Each @c kdump_ctx that holds a reference to this shared data
 	 * must be added to this list.
-	 * Locking: shared->lock
 	 */
 	struct list_head ctx;
 
-	/** Dump file descriptor.
-	 * Locking: Read-only after initialization.
-	 */
-	int fd;
+	int fd;			/**< Dump file descriptor. */
 
-	/** File format operations.
-	 * Locking: Read-only after initialization.
-	 */
+	/** File format operations. */
 	const struct format_ops *ops;
-	/** File format private data.
-	 * Locking: Read-only after initialization.
-	 */
-	void *fmtdata;
+	void *fmtdata;		/**< File format private data. */
 
-	/** Arch-specific operations.
-	 * Locking: FIXME: can be changed through attributes!
-	 */
+	/** Arch-specific operations. */
 	const struct arch_ops *arch_ops;
-	/** Arch-specific private data.
-	 * Locking: FIXME: can be changed through attributes!
-	 */
-	void *archdata;
-	/** Internal-only arch index.
-	 * Locking: FIXME: can be changed through attributes!
-	 */
-	enum kdump_arch arch;
-	/** Non-zero if arch init has been called.
-	 * Locking: FIXME: can be changed through attributes!
-	 */
-	int arch_init_done;
+	void *archdata;		/**< Arch-specific private data. */
+	enum kdump_arch arch;	/**< Internal-only arch index. */
+	int arch_init_done;	/**< Non-zero if arch init has been called. */
 
-	/** Page cache.
-	 * Locking: shared->lock
-	 */
-	struct cache *cache;
+	struct cache *cache;	/**< Page cache. */
 
-	/** Linux address translation.
-	 * Locking: FIXME
-	 */
+	/** Linux address translation. */
 	struct vtop_map vtop_map;
-	/** Xen address translation.
-	 * Locking: FIXME
-	 */
+	/** Xen address translation. */
 	struct vtop_map vtop_map_xen;
 
-	/* Attribute hash table.
-	 * Locking: FIXME
-	 */
-	struct attr_hash *attr;
+	struct attr_hash *attr;	/**< Attribute hash table. */
 
-	/** Global attributes.
-	 * Locking: Read-only after initialization.
-	 */
+	/** Global attributes. */
 	struct attr_data *global_attrs[NR_GLOBAL_ATTRS];
 
-	/** Static attributes.
-	 * Locking: None (value is always valid).
-	 */
+	/** Static attributes. */
 #define ATTR(dir, key, field, type, ctype, ...)	\
 	kdump_attr_value_t field;
 #include "static-attr.def"
 #undef ATTR
 
-	/** Xen p2m map.
-	 * Locking: Read-only after initialization.
-	 */
+	/** Xen p2m map. */
 	void *xen_map;
-	/** Xen map size.
-	 * Locking: Read-only after initialization.
-	 */
+	/** Xen map size. */
 	unsigned long xen_map_size;
 
-	/** Size of per-context data. Zero means unallocated.
-	 * Locking: shared->lock
-	 */
+	/** Size of per-context data. Zero means unallocated. */
 	size_t per_ctx_size[PER_CTX_SLOTS];
 };
 
