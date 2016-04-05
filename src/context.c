@@ -144,7 +144,9 @@ kdump_attr_ref(kdump_ctx *ctx, const char *key, kdump_attr_ref_t *ref)
 
 	clear_error(ctx);
 
+	rwlock_rdlock(&ctx->shared->lock);
 	d = lookup_attr(ctx->shared, key);
+	rwlock_unlock(&ctx->shared->lock);
 	if (!d)
 		return set_error(ctx, kdump_nokey, "No such key");
 
@@ -161,7 +163,9 @@ kdump_sub_attr_ref(kdump_ctx *ctx, const kdump_attr_ref_t *base,
 	clear_error(ctx);
 
 	dir = ref_attr(base);
+	rwlock_rdlock(&ctx->shared->lock);
 	attr = lookup_dir_attr(ctx->shared, dir, subkey, strlen(subkey));
+	rwlock_unlock(&ctx->shared->lock);
 	if (!attr)
 		return set_error(ctx, kdump_nokey, "No such key");
 
@@ -186,23 +190,38 @@ kdump_attr_ref_get(kdump_ctx *ctx, const kdump_attr_ref_t *ref,
 		   kdump_attr_t *valp)
 {
 	struct attr_data *d = ref_attr(ref);
+	kdump_status ret;
 
 	clear_error(ctx);
+	rwlock_rdlock(&ctx->shared->lock);
 
-	if (validate_attr(ctx, d) != kdump_ok)
-		return set_error(ctx, kdump_nodata, "Key has no value");
+	if (validate_attr(ctx, d) != kdump_ok) {
+		ret = set_error(ctx, kdump_nodata, "Key has no value");
+		goto out;
+	}
 
 	valp->type = d->template->type;
 	valp->val = *attr_value(d);
-	return kdump_ok;
+	ret = kdump_ok;
+
+ out:
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 kdump_status
 kdump_attr_ref_set(kdump_ctx *ctx, kdump_attr_ref_t *ref,
 		   const kdump_attr_t *valp)
 {
+	kdump_status ret;
+
 	clear_error(ctx);
-	return check_set_attr(ctx, ref_attr(ref), valp);
+	rwlock_wrlock(&ctx->shared->lock);
+
+	ret = check_set_attr(ctx, ref_attr(ref), valp);
+
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 static kdump_status
