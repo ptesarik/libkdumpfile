@@ -242,28 +242,6 @@ lookup_attr(const struct kdump_shared *shared, const char *key)
 		: sgattr(shared, GKI_dir_root);
 }
 
-/**  Look up attribute parent by name.
- * @param shared  Dump file shared data.
- * @param pkey    Pointer to key name. This pointer is updated to the last
- *                path component on return.
- * @returns       Stored attribute or @c NULL if not found.
- *
- * This function does not check whether an attribute is set, or not.
- */
-static struct attr_data *
-lookup_attr_parent(const struct kdump_shared *shared, const char **pkey)
-{
-	const char *key, *p;
-
-	p = strrchr(*pkey, '.');
-	if (!p)
-		return sgattr(shared, GKI_dir_root);
-
-	key = *pkey;
-	*pkey = p + 1;
-	return lookup_attr_part(shared, key, p - key);
-}
-
 /**  Link a new attribute to its parent.
  * @param dir   Parent attribute.
  * @param attr  Complete initialized attribute.
@@ -406,51 +384,6 @@ alloc_attr_template(const char *key, size_t keylen, kdump_attr_type_t type)
 		tmpl->ops = NULL;
 	}
 	return tmpl;
-}
-
-/**  Add an attribute template.
- * @param ctx   Dump file object.
- * @param path  Full path of the new key.
- * @param type  Attribute type.
- */
-kdump_status
-add_attr_template(kdump_ctx *ctx, const char *path,
-		  kdump_attr_type_t type)
-{
-	struct attr_template *tmpl;
-	struct attr_data *attr, *parent;
-
-	attr = lookup_attr(ctx->shared, path);
-	if (attr) {
-		if (attr->template->type == type)
-			return kdump_ok;
-
-		return set_error(ctx, kdump_invalid,
-				 "Type conflict with existing template");
-	}
-
-	parent = lookup_attr_parent(ctx->shared, &path);
-	if (!parent)
-		return set_error(ctx, kdump_nokey, "No such path");
-
-	if (parent->template->type != kdump_directory)
-		return set_error(ctx, kdump_invalid,
-				 "Path is a leaf attribute");
-
-	tmpl = alloc_attr_template(path, strlen(path), type);
-	if (!tmpl)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute template");
-
-	attr = new_attr(ctx->shared, parent, tmpl);
-	if (!attr) {
-		free(tmpl);
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate attribute");
-	}
-	attr->dyntmpl = 1;
-
-	return kdump_ok;
 }
 
 /**  Instantiate a directory path.
