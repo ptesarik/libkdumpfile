@@ -336,7 +336,7 @@ ppc64_vtop_init(kdump_ctx *ctx)
 {
 	kdump_vaddr_t addr, vmal;
 	const char *val;
-	size_t sz = kdump_ptr_size(ctx);
+	size_t sz = get_ptr_size(ctx);
 	kdump_status res;
 
 	res = get_symbol_val(ctx, "_stext", &addr);
