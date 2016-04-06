@@ -355,6 +355,7 @@ new_attr(struct kdump_shared *shared, struct attr_data *parent,
 	if (!attr)
 		return attr;
 
+	memset(attr, 0, sizeof *attr);
 	attr->template = tmpl;
 	if (!parent)
 		parent = attr;
