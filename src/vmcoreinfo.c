@@ -35,6 +35,27 @@
 #include <string.h>
 #include <stdlib.h>
 
+/**  De-allocate parsed VMCOREINFO.
+ * @param dir  Base attribute directory.
+ */
+static void
+dealloc_vmcoreinfo(struct attr_data *dir)
+{
+	struct attr_data *child, *child2;
+
+	if (dir->template->type != kdump_directory)
+		return;
+
+	for (child = dir->dir; child; child = child->next) {
+		if (child->template->type != kdump_directory)
+			continue;
+
+		for (child2 = child->dir; child2; child2 = child2->next)
+			dealloc_attr(child2);
+		child->dir = NULL;
+	}
+}
+
 static kdump_status
 add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 	       char *key, char *val)
@@ -152,6 +173,8 @@ vmcoreinfo_raw_post_hook(kdump_ctx *ctx, struct attr_data *rawattr)
 				 "Cannot allocate VMCOREINFO copy");
 
 	dir = rawattr->parent;
+	dealloc_vmcoreinfo(dir);
+
 	for (p = raw; *p; p = endp) {
 		endp = strchrnul(p, '\n');
 		if (*endp)

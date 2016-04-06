@@ -322,8 +322,9 @@ clear_attr(struct attr_data *attr)
 }
 
 /**  Deallocate attribute (and its children).
+ * @param attr  Attribute data to be deallocated.
  */
-static void
+void
 dealloc_attr(struct attr_data *attr)
 {
 	struct attr_data *child;

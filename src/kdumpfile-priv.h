@@ -842,6 +842,9 @@ struct attr_data *new_attr(struct kdump_shared *shared,
 			   struct attr_data *parent,
 			   const struct attr_template *tmpl);
 
+#define dealloc_attr INTERNAL_NAME(dealloc_attr)
+void dealloc_attr(struct attr_data *attr);
+
 #define init_attrs INTERNAL_NAME(init_attrs)
 kdump_status init_attrs(kdump_ctx *ctx);
 

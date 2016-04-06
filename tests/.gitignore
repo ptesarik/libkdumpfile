@@ -10,6 +10,7 @@ multiread
 privptr
 subattr
 thread-errstr
+vmci-cleanup
 
 # Test results
 *.log
