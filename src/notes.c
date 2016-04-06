@@ -337,9 +337,13 @@ do_noarch_note(kdump_ctx *ctx, Elf32_Word type,
 {
 	if (note_equal("VMCOREINFO", name, namesz))
 		return process_vmcoreinfo(ctx, desc, descsz);
-	else if (note_equal("VMCOREINFO_XEN", name, namesz))
-		return store_vmcoreinfo(ctx, gattr(ctx, GKI_xen_vmcoreinfo_raw),
-					desc, descsz);
+	else if (note_equal("VMCOREINFO_XEN", name, namesz)) {
+		kdump_status res = set_attr_sized_string(
+			ctx, gattr(ctx, GKI_xen_vmcoreinfo_raw), desc, descsz);
+		if (res != kdump_ok)
+			return set_error(ctx, res,
+					 "Cannot set Xen VMCOREINFO");
+	}
 
 	return kdump_ok;
 }

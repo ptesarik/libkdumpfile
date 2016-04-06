@@ -98,23 +98,17 @@ add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 			 "Cannot set VMCOREINFO '%s'", key);
 }
 
-kdump_status
-store_vmcoreinfo(kdump_ctx *ctx, struct attr_data *rawattr,
-		 void *data, size_t len)
+static kdump_status
+vmcoreinfo_raw_post_hook(kdump_ctx *ctx, struct attr_data *rawattr)
 {
 	char *raw, *p, *endp, *val;
 	struct attr_data *dir;
 	kdump_status res;
 
-	res = set_attr_sized_string(ctx, rawattr, data, len);
-	if (res != kdump_ok)
-		return set_error(ctx, res, "Cannot set raw VMCOREINFO");
-
-	raw = ctx_malloc(len + 1, ctx, "VMCOREINFO");
+	raw = strdup(attr_value(rawattr)->string);
 	if (!raw)
-		return kdump_syserr;
-	memcpy(raw, data, len);
-	raw[len] = '\0';
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate VMCOREINFO copy");
 
 	dir = rawattr->parent;
 	for (p = raw; *p; p = endp) {
@@ -135,16 +129,20 @@ store_vmcoreinfo(kdump_ctx *ctx, struct attr_data *rawattr,
 	return res;
 }
 
+const struct attr_ops vmcoreinfo_raw_ops = {
+	.post_set = vmcoreinfo_raw_post_hook,
+};
+
 kdump_status
 process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
 {
 	kdump_status ret;
 	const char *val;
 
-	ret = store_vmcoreinfo(ctx, gattr(ctx, GKI_linux_vmcoreinfo_raw),
-			       desc, descsz);
+	ret = set_attr_sized_string(ctx, gattr(ctx, GKI_linux_vmcoreinfo_raw),
+				    desc, descsz);
 	if (ret != kdump_ok)
-		return ret;
+		return set_error(ctx, ret, "Cannot set VMCOREINFO");
 
 	val = kdump_vmcoreinfo_row(ctx, "PAGESIZE");
 	if (val) {

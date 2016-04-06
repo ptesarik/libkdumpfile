@@ -617,10 +617,6 @@ kdump_status read_u64(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 
 /* vmcoreinfo */
 
-#define store_vmcoreinfo INTERNAL_NAME(store_vmcoreinfo)
-kdump_status store_vmcoreinfo(kdump_ctx *ctx, struct attr_data *dir,
-			      void *data, size_t len);
-
 #define process_vmcoreinfo INTERNAL_NAME(process_vmcoreinfo)
 kdump_status process_vmcoreinfo(kdump_ctx *ctx, void *data, size_t size);
 
@@ -997,6 +993,9 @@ extern const struct attr_ops arch_name_ops;
 
 #define uts_machine_ops INTERNAL_NAME(uts_machine_ops)
 extern const struct attr_ops uts_machine_ops;
+
+#define vmcoreinfo_raw_ops INTERNAL_NAME(vmcoreinfo_raw_ops)
+extern const struct attr_ops vmcoreinfo_raw_ops;
 
 /**  Attribute template override.
  *
