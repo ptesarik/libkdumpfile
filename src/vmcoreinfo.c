@@ -98,6 +98,47 @@ add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 			 "Cannot set VMCOREINFO '%s'", key);
 }
 
+#define str_lines_PAGESIZE	"lines.PAGESIZE"
+#define len_lines_PAGESIZE	(sizeof(str_lines_PAGESIZE) - 1)
+#define str_lines_OSRELEASE	"lines.OSRELEASE"
+#define len_lines_OSRELEASE	(sizeof(str_lines_OSRELEASE) - 1)
+
+/**  Process information from Linux VMCOREINFO.
+ * @param ctx  Dump file object.
+ *
+ * This function should be called after Linux VMCOREINFO has changed
+ * to update any values that may need updating.
+ */
+static kdump_status
+process_linux_vmcoreinfo(kdump_ctx *ctx, const struct attr_data *dir)
+{
+	const struct attr_data *attr;
+	kdump_status res;
+
+	attr = lookup_dir_attr(ctx->shared, dir,
+			       str_lines_PAGESIZE, len_lines_PAGESIZE);
+	if (attr && attr_isset(attr)) {
+		char *endp;
+		unsigned long page_size =
+			strtoul(attr_value(attr)->string, &endp, 10);
+		if (!*endp &&
+		    (res = set_page_size(ctx, page_size)) != kdump_ok)
+			return set_error(ctx, res, "Cannot set page size");
+	}
+
+	attr = lookup_dir_attr(ctx->shared, dir,
+			       str_lines_OSRELEASE, len_lines_OSRELEASE);
+	if (attr && attr_isset(attr)) {
+		res = set_attr_string(ctx, gattr(ctx, GKI_linux_uts_release),
+				      attr_value(attr)->string);
+		if (res != kdump_ok)
+			return set_error(ctx, res,
+					 "Cannot set UTS release");
+	}
+
+	return kdump_ok;
+}
+
 static kdump_status
 vmcoreinfo_raw_post_hook(kdump_ctx *ctx, struct attr_data *rawattr)
 {
@@ -126,48 +167,16 @@ vmcoreinfo_raw_post_hook(kdump_ctx *ctx, struct attr_data *rawattr)
 	}
 
 	free(raw);
+
+	if (dir->parent == gattr(ctx, GKI_dir_linux))
+		res = process_linux_vmcoreinfo(ctx, dir);
+
 	return res;
 }
 
 const struct attr_ops vmcoreinfo_raw_ops = {
 	.post_set = vmcoreinfo_raw_post_hook,
 };
-
-kdump_status
-process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
-{
-	kdump_status ret;
-	const char *val;
-
-	ret = set_attr_sized_string(ctx, gattr(ctx, GKI_linux_vmcoreinfo_raw),
-				    desc, descsz);
-	if (ret != kdump_ok)
-		return set_error(ctx, ret, "Cannot set VMCOREINFO");
-
-	val = kdump_vmcoreinfo_row(ctx, "PAGESIZE");
-	if (val) {
-		char *endp;
-		unsigned long page_size = strtoul(val, &endp, 10);
-		if (*endp)
-			return set_error(ctx, kdump_dataerr,
-					 "Invalid PAGESIZE: %s", val);
-
-		ret = set_page_size(ctx, page_size);
-		if (ret != kdump_ok)
-			return ret;
-	}
-
-	val = kdump_vmcoreinfo_row(ctx, "OSRELEASE");
-	if (val) {
-		ret = set_attr_string(ctx, gattr(ctx, GKI_linux_uts_release),
-				      val);
-		if (ret != kdump_ok)
-			return set_error(ctx, ret,
-					 "Cannot set UTS release");
-	}
-
-	return kdump_ok;
-}
 
 static const char*
 vmcoreinfo_row(kdump_ctx *ctx, const char *key, const struct attr_data *base)

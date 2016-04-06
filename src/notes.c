@@ -335,10 +335,17 @@ static kdump_status
 do_noarch_note(kdump_ctx *ctx, Elf32_Word type,
 	       const char *name, size_t namesz, void *desc, size_t descsz)
 {
-	if (note_equal("VMCOREINFO", name, namesz))
-		return process_vmcoreinfo(ctx, desc, descsz);
-	else if (note_equal("VMCOREINFO_XEN", name, namesz)) {
-		kdump_status res = set_attr_sized_string(
+	kdump_status res;
+
+	if (note_equal("VMCOREINFO", name, namesz)) {
+		res = set_attr_sized_string(
+			ctx, gattr(ctx, GKI_linux_vmcoreinfo_raw),
+			desc, descsz);
+		if (res != kdump_ok)
+			return set_error(ctx, res,
+					 "Cannot set VMCOREINFO");
+	} else if (note_equal("VMCOREINFO_XEN", name, namesz)) {
+		res = set_attr_sized_string(
 			ctx, gattr(ctx, GKI_xen_vmcoreinfo_raw), desc, descsz);
 		if (res != kdump_ok)
 			return set_error(ctx, res,

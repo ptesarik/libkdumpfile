@@ -350,10 +350,14 @@ read_vmcoreinfo(kdump_ctx *ctx, off_t off, size_t size)
 				"Cannot read %zu VMCOREINFO bytes at %llu",
 				size, (unsigned long long) off);
 
-	if (ret == kdump_ok)
-		ret = process_vmcoreinfo(ctx, info, size);
-	free(info);
+	if (ret == kdump_ok) {
+		ret = set_attr_sized_string(
+			ctx, gattr(ctx, GKI_linux_vmcoreinfo_raw), info, size);
+		if (ret != kdump_ok)
+			ret = set_error(ctx, ret, "Cannot set VMCOREINFO");
+	}
 
+	free(info);
 	return ret;
 }
 

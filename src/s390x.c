@@ -419,10 +419,11 @@ read_os_info_from_lowcore(kdump_ctx *ctx)
 				 (unsigned long) csum_expect);
 	}
 
-	ret = process_vmcoreinfo(ctx, vmcoreinfo, sz);
+	ret = set_attr_sized_string(ctx, gattr(ctx, GKI_linux_vmcoreinfo_raw),
+				    vmcoreinfo, sz);
 	free(vmcoreinfo);
 	if (ret != kdump_ok)
-		return set_error(ctx, ret, "Cannot process VMCOREINFO");
+		return set_error(ctx, ret, "Cannot set VMCOREINFO");
 
 	return kdump_ok;
 }
