@@ -338,7 +338,7 @@ do_noarch_note(kdump_ctx *ctx, Elf32_Word type,
 	if (note_equal("VMCOREINFO", name, namesz))
 		return process_vmcoreinfo(ctx, desc, descsz);
 	else if (note_equal("VMCOREINFO_XEN", name, namesz))
-		return store_vmcoreinfo(ctx, gattr(ctx, GKI_dir_xen_vmcoreinfo),
+		return store_vmcoreinfo(ctx, gattr(ctx, GKI_xen_vmcoreinfo_raw),
 					desc, descsz);
 
 	return kdump_ok;

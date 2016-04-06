@@ -99,10 +99,11 @@ add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 }
 
 kdump_status
-store_vmcoreinfo(kdump_ctx *ctx, struct attr_data *dir, void *data, size_t len)
+store_vmcoreinfo(kdump_ctx *ctx, struct attr_data *rawattr,
+		 void *data, size_t len)
 {
 	char *raw, *p, *endp, *val;
-	struct attr_data *attr;
+	struct attr_data *dir;
 	kdump_status res;
 
 	raw = ctx_malloc(len + 1, ctx, "VMCOREINFO");
@@ -111,18 +112,13 @@ store_vmcoreinfo(kdump_ctx *ctx, struct attr_data *dir, void *data, size_t len)
 	memcpy(raw, data, len);
 	raw[len] = '\0';
 
-	attr = lookup_dir_attr(ctx->shared, dir, "raw", 3);
-	if (!attr) {
-		free(raw);
-		return set_error(ctx, kdump_nokey,
-				 "Cannot set raw VMCOREINFO");
-	}
-	res = set_attr_string(ctx, attr, raw);
+	res = set_attr_string(ctx, rawattr, raw);
 	if (res != kdump_ok) {
 		free(raw);
 		return set_error(ctx, res, "Cannot set raw VMCOREINFO");
 	}
 
+	dir = rawattr->parent;
 	for (p = raw; *p; p = endp) {
 		endp = strchrnul(p, '\n');
 		if (*endp)
@@ -147,7 +143,7 @@ process_vmcoreinfo(kdump_ctx *ctx, void *desc, size_t descsz)
 	kdump_status ret;
 	const char *val;
 
-	ret = store_vmcoreinfo(ctx, gattr(ctx, GKI_dir_linux_vmcoreinfo),
+	ret = store_vmcoreinfo(ctx, gattr(ctx, GKI_linux_vmcoreinfo_raw),
 			       desc, descsz);
 	if (ret != kdump_ok)
 		return ret;
