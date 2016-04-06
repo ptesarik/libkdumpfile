@@ -68,6 +68,7 @@ subattr_LDADD = $(top_builddir)/src/libkdumpfile.la
 
 thread_errstr_LDADD = $(top_builddir)/src/libkdumpfile.la
 vmci_cleanup_LDADD = $(top_builddir)/src/libkdumpfile.la
+vmci_post_LDADD = $(top_builddir)/src/libkdumpfile.la
 
 check_PROGRAMS = \
 	attriter \
@@ -81,7 +82,8 @@ check_PROGRAMS = \
 	privptr \
 	subattr \
 	thread-errstr \
-	vmci-cleanup
+	vmci-cleanup \
+	vmci-post
 
 test_scripts = \
 	diskdump-empty-i386 \
@@ -141,7 +143,8 @@ TESTS = $(test_scripts) \
 	privptr \
 	subattr \
 	thread-errstr \
-	vmci-cleanup
+	vmci-cleanup \
+	vmci-post
 
 clean-local:
 	-rm -rf out
