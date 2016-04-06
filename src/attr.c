@@ -605,6 +605,36 @@ set_attr_string(kdump_ctx *ctx, struct attr_data *attr, const char *str)
 	return set_attr(ctx, attr, val);
 }
 
+/**  Set a string attribute's value to a string of a known size.
+ * @param ctx   Dump file object.
+ * @param attr  An attribute string.
+ * @param str   New string value.
+ * @param len   Length of the new value.
+ * @returns     Error status.
+ */
+kdump_status
+set_attr_sized_string(kdump_ctx *ctx, struct attr_data *attr,
+		      const char *str, size_t len)
+{
+	size_t dynlen;
+	char *dynstr;
+	kdump_attr_value_t val;
+
+	dynlen = len;
+	if (!len || str[len-1] != '\0')
+		++dynlen;
+	dynstr = ctx_malloc(dynlen, ctx, "sized string");
+	if (!dynstr)
+		return kdump_syserr;
+	memcpy(dynstr, str, len);
+	dynstr[dynlen-1] = '\0';
+
+	clear_attr(attr);
+	attr->dynstr = 1;
+	val.string = dynstr;
+	return set_attr(ctx, attr, val);
+}
+
 /**  Set a static string attribute of a dump file object.
  * @param ctx  Dump file object.
  * @param attr Attribute data.

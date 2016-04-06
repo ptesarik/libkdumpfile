@@ -106,17 +106,15 @@ store_vmcoreinfo(kdump_ctx *ctx, struct attr_data *rawattr,
 	struct attr_data *dir;
 	kdump_status res;
 
+	res = set_attr_sized_string(ctx, rawattr, data, len);
+	if (res != kdump_ok)
+		return set_error(ctx, res, "Cannot set raw VMCOREINFO");
+
 	raw = ctx_malloc(len + 1, ctx, "VMCOREINFO");
 	if (!raw)
 		return kdump_syserr;
 	memcpy(raw, data, len);
 	raw[len] = '\0';
-
-	res = set_attr_string(ctx, rawattr, raw);
-	if (res != kdump_ok) {
-		free(raw);
-		return set_error(ctx, res, "Cannot set raw VMCOREINFO");
-	}
 
 	dir = rawattr->parent;
 	for (p = raw; *p; p = endp) {

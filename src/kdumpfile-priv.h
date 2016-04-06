@@ -924,6 +924,10 @@ kdump_status set_attr_address(kdump_ctx *ctx, struct attr_data *key,
 kdump_status set_attr_string(kdump_ctx *ctx, struct attr_data *attr,
 			     const char *str);
 
+#define set_attr_sized_string INTERNAL_NAME(set_attr_sized_string)
+kdump_status set_attr_sized_string(kdump_ctx *ctx, struct attr_data *attr,
+				   const char *str, size_t len);
+
 #define set_attr_static_string INTERNAL_NAME(set_attr_static_string)
 kdump_status set_attr_static_string(kdump_ctx *ctx, struct attr_data *attr,
 				    const char *str);
