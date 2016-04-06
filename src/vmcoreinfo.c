@@ -37,25 +37,19 @@
 
 static kdump_status
 add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
-	       const char *key, const char *val)
+	       char *key, char *val)
 {
-	char *attrkey, *type, *sym;
-	char *p, *q;
-	size_t len;
+	char *type, *sym, *p;
 	unsigned long long num;
 	kdump_attr_type_t attr_type;
 	struct attr_data *attr;
 	kdump_status res;
 
-	attrkey = alloca(strlen(key) + sizeof("lines."));
-
-	p = stpcpy(attrkey, "lines.");
-	stpcpy(p, key);
-
-	/* FIXME: Invent a better way to store lines with dots
-	 * in the key name
-	 */
-	attr = create_attr_path(ctx->shared, dir, attrkey, kdump_string);
+	attr = lookup_dir_attr(ctx->shared, dir, "lines", 5);
+	if (!attr)
+		return set_error(ctx, kdump_nokey,
+				 "Cannot set VMCOREINFO '%s'", key);
+	attr = create_attr_path(ctx->shared, attr, key, kdump_string);
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot set VMCOREINFO '%s'", key);
@@ -64,22 +58,15 @@ add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 		return set_error(ctx, res,
 				 "Cannot set VMCOREINFO '%s'", key);
 
-	p = strchr(key, '(');
-	if (!p)
+	type = key;
+	sym = strchr(key, '(');
+	if (!sym)
 		return kdump_ok;
-	q = strchr(p, ')');
-	if (!q || q[1])
+	*sym++ = '\0';
+	p = strchr(sym, ')');
+	if (!p || p[1])
 		return kdump_ok;
-
-	type = attrkey;
-	len = p - key;
-	memcpy(type, key, len);
-	type[len] = '\0';
-
-	sym = type + len + 1;
-	len = q - p - 1;
-	memcpy(sym, p + 1, len);
-	sym[len] = '\0';
+	*p = '\0';
 
 	if (!strcmp(type, "SYMBOL")) {
 		num = strtoull(val, &p, 16);
@@ -100,15 +87,15 @@ add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 		return kdump_ok;
 
 	sym[-1] = '.';
-	attr = create_attr_path(ctx->shared, dir, attrkey, attr_type);
+	attr = create_attr_path(ctx->shared, dir, key, attr_type);
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot set VMCOREINFO '%s'", attrkey);
+				 "Cannot set VMCOREINFO '%s'", key);
 	return set_error(ctx,
 			 (attr_type == kdump_number)
 			 ? set_attr_number(ctx, attr, num)
 			 : set_attr_address(ctx, attr, num),
-			 "Cannot set VMCOREINFO '%s'", attrkey);
+			 "Cannot set VMCOREINFO '%s'", key);
 }
 
 kdump_status
