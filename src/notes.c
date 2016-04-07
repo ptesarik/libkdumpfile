@@ -331,26 +331,35 @@ note_equal(const char *name, const char *notename, size_t notenamesz)
 	return 0;
 }
 
+/** Set linux.vmcoreinfo or xen.vmcoreinfo.
+ * @param ctx   Dump file object.
+ * @param key   Global key idx of the vmcoreinfo.raw attribute.
+ * @param data  VMCOREINFO raw data.
+ * @param sz    Size of VMCOREINFO raw data.
+ * @param what  Description for error messages.
+ */
+static kdump_status
+set_vmcoreinfo(kdump_ctx *ctx, enum global_keyidx key,
+	       void *data, size_t sz, const char *what)
+{
+	kdump_status res;
+
+	res = set_attr_sized_string(ctx, gattr(ctx, key), data, sz);
+	if (res != kdump_ok)
+		return set_error(ctx, res, "Cannot set %s", what);
+	return kdump_ok;
+}
+
 static kdump_status
 do_noarch_note(kdump_ctx *ctx, Elf32_Word type,
 	       const char *name, size_t namesz, void *desc, size_t descsz)
 {
-	kdump_status res;
-
-	if (note_equal("VMCOREINFO", name, namesz)) {
-		res = set_attr_sized_string(
-			ctx, gattr(ctx, GKI_linux_vmcoreinfo_raw),
-			desc, descsz);
-		if (res != kdump_ok)
-			return set_error(ctx, res,
-					 "Cannot set VMCOREINFO");
-	} else if (note_equal("VMCOREINFO_XEN", name, namesz)) {
-		res = set_attr_sized_string(
-			ctx, gattr(ctx, GKI_xen_vmcoreinfo_raw), desc, descsz);
-		if (res != kdump_ok)
-			return set_error(ctx, res,
-					 "Cannot set Xen VMCOREINFO");
-	}
+	if (note_equal("VMCOREINFO", name, namesz))
+		return set_vmcoreinfo(ctx, GKI_linux_vmcoreinfo_raw,
+				      desc, descsz, "VMCOREINFO");
+	else if (note_equal("VMCOREINFO_XEN", name, namesz))
+		return set_vmcoreinfo(ctx, GKI_xen_vmcoreinfo_raw,
+				      desc, descsz, "VMCOREINFO_XEN");
 
 	return kdump_ok;
 }
