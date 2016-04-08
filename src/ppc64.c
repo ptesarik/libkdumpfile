@@ -348,8 +348,8 @@ ppc64_vtop_init(kdump_ctx *ctx)
 
 	res = get_symbol_val(ctx, "_stext", &addr);
 	if (res != kdump_ok)
-		return set_error(ctx, kdump_nodata,
-				 "Cannot resolve _stext");
+		return set_error(ctx, res, "Cannot resolve %s",
+				 "_stext");
 	set_phys_base(ctx, addr);
 
 	flush_vtop_map(&ctx->shared->vtop_map);
@@ -361,8 +361,8 @@ ppc64_vtop_init(kdump_ctx *ctx)
 
 	res = get_symbol_val(ctx, "vmlist", &addr);
 	if (res != kdump_ok)
-		return set_error(ctx, kdump_nodata,
-				 "Cannot resolve vmlist");
+		return set_error(ctx, res, "Cannot resolve %s",
+				 "vmlist");
 
 	val = kdump_vmcoreinfo_row(ctx, "OFFSET(vm_struct.addr)");
 	if (!val)
