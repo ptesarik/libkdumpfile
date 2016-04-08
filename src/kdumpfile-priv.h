@@ -821,6 +821,9 @@ kdump_status vtop_pgt_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 kdump_status map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 		      kdump_paddr_t *paddr, const struct vtop_map *map);
 
+#define mtop INTERNAL_NAME(mtop)
+kdump_status mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr);
+
 /** Translate a Linux kernel virtual address to a physical address.
  * @param      ctx    Dump file object.
  * @param[in]  vaddr  Linux virtual address.

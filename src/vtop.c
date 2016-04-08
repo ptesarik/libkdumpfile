@@ -236,7 +236,7 @@ vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	if (res != kdump_ok)
 		return res;
 
-	return set_error(ctx, kdump_mtop(ctx, maddr, paddr),
+	return set_error(ctx, mtop(ctx, maddr, paddr),
 			 "Cannot translate machine address 0x%llx",
 			 (unsigned long long) maddr);
 }
@@ -388,34 +388,36 @@ kdump_ptom(kdump_ctx *ctx, kdump_paddr_t paddr, kdump_maddr_t *maddr)
 	return ret;
 }
 
+/**  Internal version of @ref kdump_mtop
+ * @param      ctx    Dump file object.
+ * @param[in]  maddr  Machine address.
+ * @param[out] paddr  Physical address.
+ * @returns           Error status.
+ *
+ * Use this function internally if the shared lock is already held
+ * (for reading or writing).
+ */
 kdump_status
-kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
+mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
 {
 	kdump_pfn_t mfn, pfn;
 	kdump_status ret;
 
-	clear_error(ctx);
-	rwlock_rdlock(&ctx->shared->lock);
-
 	switch (get_xen_type(ctx)) {
 	case kdump_xen_system:
 		if (!ctx->shared->arch_ops ||
-		    !ctx->shared->arch_ops->mfn_to_pfn) {
-			ret = set_error(ctx, kdump_unsupported,
-					"Not implemented");
-			goto out;
-		}
+		    !ctx->shared->arch_ops->mfn_to_pfn)
+			return set_error(ctx, kdump_unsupported,
+					 "Not implemented");
 		mfn = maddr >> get_page_shift(ctx);
 		ret = ctx->shared->arch_ops->mfn_to_pfn(ctx, mfn, &pfn);
 		break;
 
 	case kdump_xen_domain:
 		if (get_xen_xlat(ctx) == kdump_xen_nonauto) {
-			if (!ctx->shared->ops->mfn_to_pfn) {
-				ret = set_error(ctx, kdump_unsupported,
-						"Not implemented");
-				goto out;
-			}
+			if (!ctx->shared->ops->mfn_to_pfn)
+				return set_error(ctx, kdump_unsupported,
+						 "Not implemented");
 			mfn = maddr >> get_page_shift(ctx);
 			ret = ctx->shared->ops->mfn_to_pfn(ctx, mfn, &pfn);
 			break;
@@ -424,15 +426,23 @@ kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
 
 	default:
 		*paddr = maddr;
-		ret = kdump_ok;
-		goto out;
+		return kdump_ok;
 	}
 
 	if (ret == kdump_ok)
 		*paddr = (pfn << get_page_shift(ctx)) |
 			(maddr & (get_page_size(ctx) - 1));
+	return ret;
+}
 
- out:
+kdump_status
+kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
+{
+	kdump_status ret;
+
+	clear_error(ctx);
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = mtop(ctx, maddr, paddr);
 	rwlock_unlock(&ctx->shared->lock);
 	return ret;
 }
