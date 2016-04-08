@@ -334,10 +334,17 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 static kdump_status
 ppc64_vtop_init(kdump_ctx *ctx)
 {
+	struct ppc64_data *archdata = ctx->shared->archdata;
 	kdump_vaddr_t addr, vmal;
 	const char *val;
 	size_t sz = get_ptr_size(ctx);
 	kdump_status res;
+
+	res = get_symbol_val(ctx, "swapper_pg_dir", &addr);
+	if (res != kdump_ok)
+		return set_error(ctx, res, "Cannot resolve %s",
+				 "swapper_pg_dir");
+	archdata->pg.pg = addr;
 
 	res = get_symbol_val(ctx, "_stext", &addr);
 	if (res != kdump_ok)
@@ -388,9 +395,7 @@ static kdump_status
 ppc64_init(kdump_ctx *ctx)
 {
 	struct ppc64_data *archdata;
-	kdump_vaddr_t pgtaddr;
 	unsigned shift;
-	kdump_status ret;
 	int pagesize;
 
 	archdata = calloc(1, sizeof(struct ppc64_data));
@@ -425,12 +430,6 @@ ppc64_init(kdump_ctx *ctx)
 	shift += archdata->pgform.pgd_bits;
 	archdata->pg.pgd_shift = shift;
 
-	ret = get_symbol_val(ctx, "swapper_pg_dir", &pgtaddr);
-	if (ret == kdump_ok) {
-		if (ret != kdump_ok)
-			return ret;
-	}
-	archdata->pg.pg = pgtaddr;
 	return kdump_ok;
 }
 
