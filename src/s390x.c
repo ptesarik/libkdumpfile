@@ -310,7 +310,9 @@ s390x_vtop_init(kdump_ctx *ctx)
 	kdump_vaddr_t addr;
 	kdump_status ret;
 
+	rwlock_unlock(&ctx->shared->lock);
 	ret = get_symbol_val(ctx, "swapper_pg_dir", &addr);
+	rwlock_wrlock(&ctx->shared->lock);
 	if (ret == kdump_ok) {
 		archdata->pgdir = addr;
 		ret = determine_pgttype(ctx);
@@ -325,7 +327,9 @@ s390x_vtop_init(kdump_ctx *ctx)
 					 "Cannot set up pagetable mapping");
 	}
 
+	rwlock_unlock(&ctx->shared->lock);
 	ret = get_symbol_val(ctx, "high_memory", &addr);
+	rwlock_wrlock(&ctx->shared->lock);
 	if (ret == kdump_ok) {
 		uint64_t highmem;
 		size_t sz = sizeof(highmem);

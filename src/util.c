@@ -701,6 +701,16 @@ cksum32(void *buffer, size_t size, uint32_t csum)
 	return csum;
 }
 
+/**  Get a symbol value.
+ * @param      ctx   Dump object.
+ * @param      name  Linux symbol name.
+ * @param[out] val   Symbol value, returned on sucess.
+ * @returns          Error status.
+ *
+ * The symbol is resolved using a user-supplied callback. Since the
+ * callback may again use a libkdumpfile call, this function must
+ * be called without holding any locks.
+ */
 kdump_status
 get_symbol_val(kdump_ctx *ctx, const char *name, kdump_addr_t *val)
 {
@@ -708,6 +718,15 @@ get_symbol_val(kdump_ctx *ctx, const char *name, kdump_addr_t *val)
 	return set_error(ctx, ret, "Cannot resolve \"%s\"", name);
 }
 
+/**  Get a Xen symbol value.
+ * @param      ctx   Dump object.
+ * @param      name  Xen symbol name.
+ * @param[out] val   Symbol value, returned on sucess.
+ * @returns          Error status.
+ *
+ * This function must be called without holding any locks, see
+ * @ref get_symbol_val for explanation.
+ */
 kdump_status
 get_symbol_val_xen(kdump_ctx *ctx, const char *name, kdump_addr_t *val)
 {

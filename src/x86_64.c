@@ -427,7 +427,9 @@ get_pml4(kdump_ctx *ctx)
 	kdump_vaddr_t pgtaddr;
 	kdump_status ret;
 
+	rwlock_unlock(&ctx->shared->lock);
 	ret = get_symbol_val(ctx, "init_level4_pgt", &pgtaddr);
+	rwlock_wrlock(&ctx->shared->lock);
 	if (ret == kdump_ok) {
 		if (pgtaddr < __START_KERNEL_map)
 			return set_error(ctx, kdump_dataerr,
@@ -576,7 +578,9 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 	if (res != kdump_ok)
 		return res;
 
+	rwlock_unlock(&ctx->shared->lock);
 	res = get_symbol_val_xen(ctx, "pgd_l4", &pgtaddr);
+	rwlock_wrlock(&ctx->shared->lock);
 	if (res != kdump_ok)
 		return res;
 

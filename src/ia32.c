@@ -220,7 +220,9 @@ read_pgt(kdump_ctx *ctx)
 	kdump_status ret;
 	size_t sz;
 
+	rwlock_unlock(&ctx->shared->lock);
 	ret = get_symbol_val(ctx, "swapper_pg_dir", &pgtaddr);
+	rwlock_wrlock(&ctx->shared->lock);
 	if (ret != kdump_ok)
 		return ret;
 

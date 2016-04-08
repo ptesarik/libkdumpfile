@@ -231,13 +231,21 @@ struct arch_ops {
 	 */
 	kdump_status (*init)(kdump_ctx *);
 
-	/* Initialise virtual-to-physical translation.
+	/** Initialise virtual-to-physical translation.
+	 * @param ctx  Dump file object.
+	 * @returns    Error status.
+	 *
+	 * This method is called with shared data locked for writing.
 	 */
-	kdump_status (*vtop_init)(kdump_ctx *);
+	kdump_status (*vtop_init)(kdump_ctx *ctx);
 
 	/* Initialise Xen virtual-to-physical translation.
+	 * @param ctx  Dump file object.
+	 * @returns    Error status.
+	 *
+	 * This method is called with shared data locked for writing.
 	 */
-	kdump_status (*vtop_init_xen)(kdump_ctx *);
+	kdump_status (*vtop_init_xen)(kdump_ctx *ctx);
 
 	/* Process an NT_PRSTATUS note
 	 */

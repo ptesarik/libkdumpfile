@@ -340,13 +340,17 @@ ppc64_vtop_init(kdump_ctx *ctx)
 	size_t sz = get_ptr_size(ctx);
 	kdump_status res;
 
+	rwlock_unlock(&ctx->shared->lock);
 	res = get_symbol_val(ctx, "swapper_pg_dir", &addr);
+	rwlock_wrlock(&ctx->shared->lock);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot resolve %s",
 				 "swapper_pg_dir");
 	archdata->pg.pg = addr;
 
+	rwlock_unlock(&ctx->shared->lock);
 	res = get_symbol_val(ctx, "_stext", &addr);
+	rwlock_wrlock(&ctx->shared->lock);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot resolve %s",
 				 "_stext");
@@ -359,7 +363,9 @@ ppc64_vtop_init(kdump_ctx *ctx)
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot set up directmap");
 
+	rwlock_unlock(&ctx->shared->lock);
 	res = get_symbol_val(ctx, "vmlist", &addr);
+	rwlock_wrlock(&ctx->shared->lock);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot resolve %s",
 				 "vmlist");
