@@ -375,14 +375,14 @@ ppc64_vtop_init(kdump_ctx *ctx)
 		return set_error(ctx, kdump_nodata,
 				 "No OFFSET(vm_struct.addr) in VMCOREINFO");
 
-	res = kdump_readp(ctx, KDUMP_KVADDR, addr, &addr, &sz);
+	res = readp_locked(ctx, KDUMP_KVADDR, addr, &addr, &sz);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot read vmlist.addr");
 
 	addr = dump64toh(ctx, addr);
 	addr += strtoull(val, NULL, 10);
 
-	res = kdump_readp(ctx, KDUMP_KVADDR, addr, &vmal, &sz);
+	res = readp_locked(ctx, KDUMP_KVADDR, addr, &vmal, &sz);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot read vmlist.addr");
 

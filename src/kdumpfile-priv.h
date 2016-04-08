@@ -615,9 +615,15 @@ struct timeval_64 {
 	int64_t tv_usec;
 };
 
+/* read */
+
 #define raw_read_page INTERNAL_NAME(raw_read_page)
 kdump_status raw_read_page(kdump_ctx *ctx, kdump_addrspace_t as,
 			   struct page_io *pio);
+
+#define readp_locked INTERNAL_NAME(readp_locked)
+kdump_status readp_locked(kdump_ctx *ctx, kdump_addrspace_t as,
+			  kdump_addr_t addr, void *buffer, size_t *plength);
 
 #define read_u64 INTERNAL_NAME(read_u64)
 kdump_status read_u64(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,

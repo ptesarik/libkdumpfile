@@ -194,21 +194,31 @@ raw_read_page(kdump_ctx *ctx, kdump_addrspace_t as, struct page_io *pio)
 	return readfn(ctx, pio);
 }
 
+/**  Internal version of @ref kdump_readp
+ * @param         ctx      Dump file object.
+ * @param[in]     as       Address space of @p addr.
+ * @param[in]     addr     Any type of address.
+ * @param[out]    buffer   Buffer to receive data.
+ * @param[in,out] plength  Length of the buffer.
+ * @returns                Error status.
+ *
+ * Use this function internally if the shared lock is already held
+ * (for reading or writing).
+ *
+ * @sa kdump_readp
+ */
 kdump_status
-kdump_readp(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
-	    void *buffer, size_t *plength)
+readp_locked(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+	     void *buffer, size_t *plength)
 {
 	read_page_fn readfn;
 	struct page_io pio;
 	size_t remain;
 	kdump_status ret;
 
-	clear_error(ctx);
-	rwlock_rdlock(&ctx->shared->lock);
-
 	ret = setup_readfn(ctx, as, &readfn);
 	if (ret != kdump_ok)
-		goto out;
+		return ret;
 
 	pio.precious = 0;
 	remain = *plength;
@@ -232,8 +242,18 @@ kdump_readp(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	}
 
 	*plength -= remain;
+	return ret;
+}
 
- out:
+kdump_status
+kdump_readp(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+	    void *buffer, size_t *plength)
+{
+	kdump_status ret;
+
+	clear_error(ctx);
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = readp_locked(ctx, as, addr, buffer, plength);
 	rwlock_unlock(&ctx->shared->lock);
 	return ret;
 }

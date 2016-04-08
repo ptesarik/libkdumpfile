@@ -334,7 +334,7 @@ s390x_vtop_init(kdump_ctx *ctx)
 		uint64_t highmem;
 		size_t sz = sizeof(highmem);
 		/* In identity mapping virtual == physical */
-		ret = kdump_readp(ctx, KDUMP_KPHYSADDR, addr, &highmem, &sz);
+		ret = readp_locked(ctx, KDUMP_KPHYSADDR, addr, &highmem, &sz);
 		if (ret != kdump_ok)
 			return ret;
 		highmem = dump64toh(ctx, highmem);
@@ -364,7 +364,7 @@ read_os_info_from_lowcore(kdump_ctx *ctx)
 	kdump_status ret;
 
 	sz = sizeof(addr);
-	ret = kdump_readp(ctx, KDUMP_KPHYSADDR, LC_OS_INFO, &addr, &sz);
+	ret = readp_locked(ctx, KDUMP_KPHYSADDR, LC_OS_INFO, &addr, &sz);
 	if (ret != kdump_ok)
 		return set_error(ctx, ret, "Cannot read LC_OS_INFO pointer");
 	addr = dump64toh(ctx, addr);
@@ -377,7 +377,7 @@ read_os_info_from_lowcore(kdump_ctx *ctx)
 				 (unsigned long long) addr);
 
 	sz = PAGE_SIZE;
-	ret = kdump_readp(ctx, KDUMP_KPHYSADDR, addr, os_info_buf, &sz);
+	ret = readp_locked(ctx, KDUMP_KPHYSADDR, addr, os_info_buf, &sz);
 	if (ret != kdump_ok)
 		return set_error(ctx, ret, "Cannot read os_info");
 	os_info = (struct os_info*) os_info_buf;
@@ -407,7 +407,7 @@ read_os_info_from_lowcore(kdump_ctx *ctx)
 	if (!vmcoreinfo)
 		return kdump_syserr;
 
-	ret = kdump_readp(ctx, KDUMP_KPHYSADDR, addr, vmcoreinfo, &sz);
+	ret = readp_locked(ctx, KDUMP_KPHYSADDR, addr, vmcoreinfo, &sz);
 	if (ret != kdump_ok) {
 		free(vmcoreinfo);
 		return set_error(ctx, ret, "Cannot read VMCOREINFO");
@@ -442,7 +442,7 @@ read_vmcoreinfo_from_lowcore(kdump_ctx *ctx)
 	kdump_status ret;
 
 	sz = sizeof(addr);
-	ret = kdump_readp(ctx, KDUMP_KPHYSADDR, LC_VMCORE_INFO, &addr, &sz);
+	ret = readp_locked(ctx, KDUMP_KPHYSADDR, LC_VMCORE_INFO, &addr, &sz);
 	if (ret != kdump_ok)
 		return ret;
 	addr = dump64toh(ctx, addr);
@@ -451,7 +451,7 @@ read_vmcoreinfo_from_lowcore(kdump_ctx *ctx)
 				 "NULL VMCOREINFO pointer");
 
 	sz = sizeof(hdr);
-	ret = kdump_readp(ctx, KDUMP_KPHYSADDR, addr, &hdr, &sz);
+	ret = readp_locked(ctx, KDUMP_KPHYSADDR, addr, &hdr, &sz);
 	if (ret != kdump_ok)
 		return ret;
 	hdr.n_namesz = dump32toh(ctx, hdr.n_namesz);
@@ -465,7 +465,7 @@ read_vmcoreinfo_from_lowcore(kdump_ctx *ctx)
 		return kdump_syserr;
 
 	sz = notesz;
-	ret = kdump_readp(ctx, KDUMP_KPHYSADDR, addr, note, &sz);
+	ret = readp_locked(ctx, KDUMP_KPHYSADDR, addr, note, &sz);
 	if (ret == kdump_ok &&
 	    !memcmp(note + sizeof(Elf64_Nhdr), "VMCOREINFO", hdr.n_namesz))
 		ret = process_notes(ctx, note, notesz);

@@ -801,7 +801,7 @@ read_pfn(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_pfn_t *pval)
 	kdump_status res;
 
 	sz = sizeof val;
-	res = kdump_readp(ctx, KDUMP_MACHPHYSADDR, maddr, &val, &sz);
+	res = readp_locked(ctx, KDUMP_MACHPHYSADDR, maddr, &val, &sz);
 	if (res == kdump_ok)
 		*pval = dump64toh(ctx, val);
 	return res;
@@ -860,7 +860,7 @@ x86_64_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 
 	addr = MACH2PHYS_VIRT_START + sizeof(uint64_t) * mfn;
 	sz = sizeof tmp;
-	ret = kdump_readp(ctx, KDUMP_KVADDR, addr, &tmp, &sz);
+	ret = readp_locked(ctx, KDUMP_KVADDR, addr, &tmp, &sz);
 	if (ret == kdump_ok)
 		*pfn = tmp;
 
