@@ -317,6 +317,26 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	return ret;
 }
 
+/**  Internal version of @ref kdump_vtom
+ * @param ctx         Dump file object.
+ * @param[in] vaddr   Virtual address.
+ * @param[out] maddr  Machine address.
+ * @returns           Error status.
+ *
+ * Use this function internally if the shared lock is already held
+ * (for reading or writing).
+ */
+kdump_status
+vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
+{
+	if (kphys_is_machphys(ctx))
+		return vtop(ctx, vaddr, maddr);
+	else if (ctx->shared->arch_ops && ctx->shared->arch_ops->vtop)
+		return ctx->shared->arch_ops->vtop(ctx, vaddr, maddr);
+
+	return set_error_no_vtop(ctx);
+}
+
 kdump_status
 kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 {
@@ -324,14 +344,7 @@ kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 
 	clear_error(ctx);
 	rwlock_rdlock(&ctx->shared->lock);
-
-	if (kphys_is_machphys(ctx))
-		ret = vtop(ctx, vaddr, maddr);
-	else if (ctx->shared->arch_ops && ctx->shared->arch_ops->vtop)
-		ret = ctx->shared->arch_ops->vtop(ctx, vaddr, maddr);
-	else
-		ret = set_error_no_vtop(ctx);
-
+	ret = vtom(ctx, vaddr, maddr);
 	rwlock_unlock(&ctx->shared->lock);
 	return ret;
 }

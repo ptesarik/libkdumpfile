@@ -75,7 +75,7 @@ read_kvpage_machphys(kdump_ctx *ctx, struct page_io *pio)
 	kdump_status ret;
 
 	vaddr = pio->pfn << get_page_shift(ctx);
-	ret = kdump_vtom(ctx, vaddr, &maddr);
+	ret = vtom(ctx, vaddr, &maddr);
 	if (ret != kdump_ok)
 		return ret;
 
