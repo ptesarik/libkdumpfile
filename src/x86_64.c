@@ -728,7 +728,8 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 				 (unsigned) pgd_index(vaddr),
 				 (unsigned long long) pgd);
 
-	pudp = (pgd & ~PHYSADDR_MASK) + pud_index(vaddr) * sizeof(uint64_t);
+	pudp = (pgd & ~PHYSADDR_MASK & PAGE_MASK) +
+		pud_index(vaddr) * sizeof(uint64_t);
 	ret = read_u64(ctx, KDUMP_MACHPHYSADDR, pudp, 1, "PUD entry", &pud);
 	if (ret != kdump_ok)
 		return ret;
@@ -745,7 +746,8 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 		return kdump_ok;
 	}
 
-	pmdp = (pud & ~PHYSADDR_MASK) + pmd_index(vaddr) * sizeof(uint64_t);
+	pmdp = (pud & ~PHYSADDR_MASK & PAGE_MASK) +
+		pmd_index(vaddr) * sizeof(uint64_t);
 	ret = read_u64(ctx, KDUMP_MACHPHYSADDR, pmdp, 0, "PMD entry", &pmd);
 	if (ret != kdump_ok)
 		return ret;
@@ -761,7 +763,8 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 		return kdump_ok;
 	}
 
-	ptep = (pmd & ~PHYSADDR_MASK) + pte_index(vaddr) * sizeof(uint64_t);
+	ptep = (pmd & ~PHYSADDR_MASK & PAGE_MASK) +
+		pte_index(vaddr) * sizeof(uint64_t);
 	ret = read_u64(ctx, KDUMP_MACHPHYSADDR, ptep, 0, "PTE entry", &pte);
 	if (ret != kdump_ok)
 		return ret;
