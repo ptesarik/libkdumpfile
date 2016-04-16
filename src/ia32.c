@@ -268,11 +268,14 @@ static kdump_status
 ia32_vtop_init(kdump_ctx *ctx)
 {
 	struct ia32_data *archdata = ctx->shared->archdata;
-	const char *cfg;
+	struct attr_data *base, *attr;
 	kdump_status ret;
 
-	cfg = kdump_vmcoreinfo_row(ctx, "CONFIG_X86_PAE");
-	if (cfg && !strcmp(cfg, "y"))
+	base = gattr(ctx, GKI_linux_vmcoreinfo_lines);
+	attr = lookup_dir_attr(ctx->shared, base,
+			       "CONFIG_X86_PAE", sizeof("CONFIG_X86_PAE")-1);
+	if (attr && validate_attr(ctx, attr) == kdump_ok &&
+	    !strcmp(attr_value(attr)->string, "y"))
 		archdata->pae_state = 1;
 
 	ret = read_pgt(ctx);

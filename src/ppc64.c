@@ -336,7 +336,9 @@ ppc64_vtop_init(kdump_ctx *ctx)
 {
 	struct ppc64_data *archdata = ctx->shared->archdata;
 	kdump_vaddr_t addr, vmal;
-	const char *val;
+	struct attr_data *base, *attr;
+	char *endp;
+	unsigned long off_vm_struct_addr;
 	size_t sz = get_ptr_size(ctx);
 	kdump_status res;
 
@@ -370,17 +372,24 @@ ppc64_vtop_init(kdump_ctx *ctx)
 		return set_error(ctx, res, "Cannot resolve %s",
 				 "vmlist");
 
-	val = kdump_vmcoreinfo_row(ctx, "OFFSET(vm_struct.addr)");
-	if (!val)
+	base = gattr(ctx, GKI_linux_vmcoreinfo_lines);
+	attr = lookup_dir_attr(ctx->shared, base,
+			       "OFFSET(vm_struct.addr)",
+			       sizeof("OFFSET(vm_struct.addr)") - 1);
+	if (!attr || validate_attr(ctx, attr) != kdump_ok)
 		return set_error(ctx, kdump_nodata,
 				 "No OFFSET(vm_struct.addr) in VMCOREINFO");
+	off_vm_struct_addr = strtoul(attr_value(attr)->string, &endp, 10);
+	if (*endp)
+		return set_error(ctx, kdump_dataerr,
+				 "Invalid value of OFFSET(vm_struct.addr)");
 
 	res = readp_locked(ctx, KDUMP_KVADDR, addr, &addr, &sz);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot read vmlist.addr");
 
 	addr = dump64toh(ctx, addr);
-	addr += strtoull(val, NULL, 10);
+	addr += off_vm_struct_addr;
 
 	res = readp_locked(ctx, KDUMP_KVADDR, addr, &vmal, &sz);
 	if (res != kdump_ok)
