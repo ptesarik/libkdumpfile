@@ -272,9 +272,21 @@ kdump_read(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	return sz;
 }
 
+/**  Internal version of @ref kdump_read_string.
+ * @param      ctx   Dump file object.
+ * @param[in]  as    Address space of @c addr.
+ * @param[in]  addr  Any type of address.
+ * @param[out] pstr  String to be read.
+ * @returns          Error status.
+ *
+ * Use this function internally if the shared lock is already held
+ * (for reading or writing).
+ *
+ * @sa kdump_read_string
+ */
 kdump_status
-kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
-		  char **pstr)
+read_string_locked(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+		   char **pstr)
 {
 	read_page_fn readfn;
 	struct page_io pio;
@@ -282,12 +294,9 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	size_t length = 0, newlength;
 	kdump_status ret;
 
-	clear_error(ctx);
-	rwlock_rdlock(&ctx->shared->lock);
-
 	ret = setup_readfn(ctx, as, &readfn);
 	if (ret != kdump_ok)
-		goto out;
+		return ret;
 
 	pio.precious = 0;
 	do {
@@ -296,7 +305,7 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		pio.pfn = addr >> get_page_shift(ctx);
 		ret = readfn(ctx, &pio);
 		if (ret != kdump_ok)
-			break;
+			return ret;
 
 		off = addr % get_page_size(ctx);
 		partlen = get_page_size(ctx) - off;
@@ -310,10 +319,9 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 			unref_page(ctx, &pio);
 			if (str)
 				free(str);
-			ret = set_error(ctx, kdump_syserr,
-					"Cannot enlarge string to %zu bytes",
-					newlength + 1);
-			goto out;
+			return set_error(ctx, kdump_syserr,
+					 "Cannot enlarge string to %zu bytes",
+					 newlength + 1);
 		}
 		memcpy(newstr + length, pio.ce->data + off, partlen);
 		unref_page(ctx, &pio);
@@ -323,12 +331,20 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		addr += partlen;
 	} while (!endp);
 
-	if (ret == kdump_ok) {
-		str[length] = 0;
-		*pstr = str;
-	}
+	str[length] = 0;
+	*pstr = str;
+	return kdump_ok;
+}
 
- out:
+kdump_status
+kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+		  char **pstr)
+{
+	kdump_status ret;
+
+	clear_error(ctx);
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = read_string_locked(ctx, as, addr, pstr);
 	rwlock_unlock(&ctx->shared->lock);
 	return ret;
 }

@@ -621,6 +621,10 @@ struct timeval_64 {
 kdump_status raw_read_page(kdump_ctx *ctx, kdump_addrspace_t as,
 			   struct page_io *pio);
 
+#define read_string_locked INTERNAL_NAME(read_string_locked)
+kdump_status read_string_locked(kdump_ctx *ctx, kdump_addrspace_t as,
+				kdump_addr_t addr, char **pstr);
+
 #define readp_locked INTERNAL_NAME(readp_locked)
 kdump_status readp_locked(kdump_ctx *ctx, kdump_addrspace_t as,
 			  kdump_addr_t addr, void *buffer, size_t *plength);

@@ -212,8 +212,8 @@ kdump_open_known(kdump_ctx *ctx)
 	attr = gattr(ctx, GKI_xen_ver_extra_addr);
 	if (attr_isset(attr)) {
 		char *extra;
-		res = kdump_read_string(ctx, KDUMP_MACHPHYSADDR,
-					attr_value(attr)->address, &extra);
+		res = read_string_locked(ctx, KDUMP_MACHPHYSADDR,
+					 attr_value(attr)->address, &extra);
 		if (res == kdump_ok) {
 			set_attr_string(ctx, gattr(ctx, GKI_xen_ver_extra),
 					extra);
