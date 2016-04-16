@@ -180,12 +180,10 @@ set_fd(kdump_ctx *ctx, int fd, void *buf)
 			return ret;
 
 		ctx->shared->ops = NULL;
-		rwlock_wrlock(&ctx->shared->lock);
 		if (ctx->shared->cache) {
 			cache_unref(ctx->shared->cache);
 			ctx->shared->cache = NULL;
 		}
-		rwlock_unlock(&ctx->shared->lock);
 		clear_attrs(ctx);
 		d = gattr(ctx, GKI_cache_size);
 		set_attr(ctx, d, *attr_value(d));
@@ -242,7 +240,9 @@ kdump_set_fd(kdump_ctx *ctx, int fd)
 	if (!buffer)
 		return kdump_syserr;
 
+	rwlock_wrlock(&ctx->shared->lock);
 	ret = set_fd(ctx, fd, buffer);
+	rwlock_unlock(&ctx->shared->lock);
 
 	free(buffer);
 	return ret;
@@ -262,7 +262,9 @@ uts_name_from_init_uts_ns(kdump_ctx *ctx, kdump_vaddr_t *uts_name)
 	size_t rd;
 	kdump_status ret;
 
+	rwlock_unlock(&ctx->shared->lock);
 	ret = get_symbol_val(ctx, "init_uts_ns", &init_uts_ns);
+	rwlock_wrlock(&ctx->shared->lock);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -289,7 +291,9 @@ use_kernel_utsname(kdump_ctx *ctx)
 	size_t rd;
 	kdump_status ret;
 
+	rwlock_unlock(&ctx->shared->lock);
 	ret = get_symbol_val(ctx, "system_utsname", &uts_name);
+	rwlock_wrlock(&ctx->shared->lock);
 	if (ret == kdump_nodata) {
 		clear_error(ctx);
 		ret = uts_name_from_init_uts_ns(ctx, &uts_name);

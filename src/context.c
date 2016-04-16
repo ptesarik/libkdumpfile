@@ -523,16 +523,13 @@ per_ctx_alloc(struct kdump_shared *shared, size_t sz)
 	kdump_ctx *ctx;
 	int slot;
 
-	rwlock_wrlock(&shared->lock);
-
 	/* Allocate a slot. */
 	for (slot = 0; slot < PER_CTX_SLOTS; ++slot)
 		if (!shared->per_ctx_size[slot])
 			break;
 	if (slot >= PER_CTX_SLOTS) {
 		errno = EAGAIN;
-		slot = -1;
-		goto out;
+		return -1;
 	}
 	shared->per_ctx_size[slot] = sz;
 
@@ -545,12 +542,9 @@ per_ctx_alloc(struct kdump_shared *shared, size_t sz)
 				free(ctx->data[slot]);
 			}
 			shared->per_ctx_size[slot] = 0;
-			slot = -1;
-			goto out;
+			return -1;
 		}
 
- out:
-	rwlock_unlock(&shared->lock);
 	return slot;
 }
 
@@ -563,9 +557,7 @@ per_ctx_free(struct kdump_shared *shared, int slot)
 {
 	kdump_ctx *ctx;
 
-	rwlock_wrlock(&shared->lock);
 	list_for_each_entry(ctx, &shared->ctx, list)
 		free(ctx->data[slot]);
 	shared->per_ctx_size[slot] = 0;
-	rwlock_unlock(&shared->lock);
 }
