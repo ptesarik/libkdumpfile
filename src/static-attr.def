@@ -45,6 +45,9 @@ ATTR(arch, "page_shift", page_shift, number, unsigned, .ops = &page_shift_ops)
 /* number of CPUs in the system  */
 ATTR(cpu, "number", num_cpus, number, unsigned)
 
+/* dump file descriptor */
+ATTR(file, "fd", file_fd, number, int, .ops = &file_fd_ops)
+
 /* physical base */
 ATTR(linux, "phys_base", phys_base, address, kdump_addr_t)
 

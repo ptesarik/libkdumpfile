@@ -214,7 +214,7 @@ diskdump_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 	}
 
 	pd_pos = pfn_to_pdpos(ddp, pfn);
-	rd = pread(ctx->shared->fd, &pd, sizeof pd, pd_pos);
+	rd = pread(get_file_fd(ctx), &pd, sizeof pd, pd_pos);
 	if (rd != sizeof pd)
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page descriptor at %llu",
@@ -240,7 +240,7 @@ diskdump_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 	}
 
 	/* read page data */
-	rd = pread(ctx->shared->fd, buf, pd.size, pd.offset);
+	rd = pread(get_file_fd(ctx), buf, pd.size, pd.offset);
 	if (rd != pd.size)
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu",
@@ -344,7 +344,7 @@ read_vmcoreinfo(kdump_ctx *ctx, off_t off, size_t size)
 	if (!info)
 		return kdump_syserr;
 
-	rd = pread(ctx->shared->fd, info, size, off);
+	rd = pread(get_file_fd(ctx), info, size, off);
 	if (rd != size)
 		ret = set_error(ctx, read_error(rd),
 				"Cannot read %zu VMCOREINFO bytes at %llu",
@@ -373,7 +373,7 @@ read_notes(kdump_ctx *ctx, off_t off, size_t size)
 	if (!notes)
 		return kdump_syserr;
 
-	rd = pread(ctx->shared->fd, notes, size, off);
+	rd = pread(get_file_fd(ctx), notes, size, off);
 	if (rd != size) {
 		ret = set_error(ctx, read_error(rd),
 				"Cannot read %zu note bytes at %llu",
@@ -427,7 +427,7 @@ read_bitmap(kdump_ctx *ctx, int32_t sub_hdr_size,
 	if (! (ddp->bitmap = ctx_malloc(bitmapsize, ctx, "page bitmap")) )
 		return kdump_syserr;
 
-	rd = pread(ctx->shared->fd, ddp->bitmap, bitmapsize, off);
+	rd = pread(get_file_fd(ctx), ddp->bitmap, bitmapsize, off);
 	if (rd != bitmapsize)
 		return set_error(ctx, read_error(rd),
 				 "Cannot read %zu bytes of page bitmap"
@@ -485,7 +485,8 @@ read_sub_hdr_32(struct setup_data *sdp, int32_t header_version)
 	if (header_version < 1)
 		return kdump_ok;
 
-	rd = pread(ctx->shared->fd, &subhdr, sizeof subhdr, get_page_size(ctx));
+	rd = pread(get_file_fd(ctx), &subhdr, sizeof subhdr,
+		   get_page_size(ctx));
 	if (rd != sizeof subhdr)
 		return set_error(ctx, read_error(rd),
 				 "Cannot read subheader");
@@ -565,7 +566,8 @@ read_sub_hdr_64(struct setup_data *sdp, int32_t header_version)
 	if (header_version < 1)
 		return kdump_ok;
 
-	rd = pread(ctx->shared->fd, &subhdr, sizeof subhdr, get_page_size(ctx));
+	rd = pread(get_file_fd(ctx), &subhdr, sizeof subhdr,
+		   get_page_size(ctx));
 	if (rd != sizeof subhdr)
 		return set_error(ctx, read_error(rd),
 				 "Cannot read subheader");

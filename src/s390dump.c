@@ -104,7 +104,7 @@ s390_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 	ssize_t rd;
 
 	pos = (off_t)addr + (off_t)sdp->dataoff;
-	rd = pread(ctx->shared->fd, ce->data, get_page_size(ctx), pos);
+	rd = pread(get_file_fd(ctx), ce->data, get_page_size(ctx), pos);
 	if (rd != get_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu",
@@ -141,7 +141,7 @@ s390_probe(kdump_ctx *ctx, void *hdr)
 
 	pos = dump32toh(ctx, dh->h1.hdr_size) +
 		dump64toh(ctx, dh->h1.mem_size);
-	rd = pread(ctx->shared->fd, &marker, sizeof marker, pos);
+	rd = pread(get_file_fd(ctx), &marker, sizeof marker, pos);
 	if (rd != sizeof marker)
 		return set_error(ctx, read_error(rd),
 				 "Cannot read end marker at %llu",

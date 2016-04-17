@@ -25,6 +25,7 @@ ATTR(root, "", dir_root, directory, struct attr_data *)
 ATTR(root, "arch", dir_arch, directory, struct attr_data *)
 ATTR(root, "cache", dir_cache, directory, struct attr_data *)
 ATTR(root, "cpu", dir_cpu, directory, struct attr_data *)
+ATTR(root, "file", dir_file, directory, struct attr_data *)
 ATTR(root, "format", dir_format, directory, struct attr_data *)
 ATTR(root, "linux", dir_linux, directory, struct attr_data *)
 

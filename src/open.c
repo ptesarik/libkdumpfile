@@ -150,23 +150,20 @@ kdump_new(void)
 
 /**  Set dump file descriptor.
  * @param ctx   Dump file object.
- * @param fd    File descriptor.
  * @param buf   Temporary buffer.
  * @returns     Error status.
  *
  * Probe the given file for known file formats and initialize it for use.
  */
 static kdump_status
-set_fd(kdump_ctx *ctx, int fd, void *buf)
+set_fd(kdump_ctx *ctx, void *buf)
 {
 	struct attr_data *d;
 	ssize_t rd;
 	kdump_status ret;
 	int i;
 
-	ctx->shared->fd = fd;
-
-	rd = paged_read(ctx->shared->fd, buf, MAX_PAGE_SIZE);
+	rd = paged_read(get_file_fd(ctx), buf, MAX_PAGE_SIZE);
 	if (rd < 0)
 		return set_error(ctx, kdump_syserr, "Cannot read file header");
 	memset(buf + rd, 0, MAX_PAGE_SIZE - rd);
@@ -228,23 +225,35 @@ kdump_open_known(kdump_ctx *ctx)
 	return kdump_ok;
 }
 
-kdump_status
-kdump_set_fd(kdump_ctx *ctx, int fd)
+static kdump_status
+file_fd_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 {
 	void *buffer;
 	kdump_status ret;
-
-	clear_error(ctx);
 
 	buffer = ctx_malloc(MAX_PAGE_SIZE, ctx, "file header buffer");
 	if (!buffer)
 		return kdump_syserr;
 
-	rwlock_wrlock(&ctx->shared->lock);
-	ret = set_fd(ctx, fd, buffer);
-	rwlock_unlock(&ctx->shared->lock);
+	ret = set_fd(ctx, buffer);
 
 	free(buffer);
+	return ret;
+}
+
+const struct attr_ops file_fd_ops = {
+	.post_set = file_fd_post_hook,
+};
+
+kdump_status
+kdump_set_fd(kdump_ctx *ctx, int fd)
+{
+	kdump_status ret;
+
+	clear_error(ctx);
+	rwlock_wrlock(&ctx->shared->lock);
+	ret = set_file_fd(ctx, fd);
+	rwlock_unlock(&ctx->shared->lock);
 	return ret;
 }
 

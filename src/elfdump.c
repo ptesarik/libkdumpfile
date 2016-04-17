@@ -166,7 +166,7 @@ elf_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 			if (size > pls->phys + pls->filesz - addr)
 				size = pls->phys + pls->filesz - addr;
 
-			rd = pread(ctx->shared->fd, p, size, pos);
+			rd = pread(get_file_fd(ctx), p, size, pos);
 			if (rd != size)
 				return set_error(
 					ctx, read_error(rd),
@@ -256,7 +256,7 @@ xc_read_cache(kdump_ctx *ctx, kdump_pfn_t idx, struct cache_entry *ce)
 	ssize_t rd;
 
 	offset = edp->xen_pages_offset + ((off_t)idx << get_page_shift(ctx));
-	rd = pread(ctx->shared->fd, ce->data, get_page_size(ctx), offset);
+	rd = pread(get_file_fd(ctx), ce->data, get_page_size(ctx), offset);
 	if (rd != get_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu",
@@ -398,7 +398,8 @@ read_elf_sect(kdump_ctx *ctx, struct section *sect)
 	if (!buf)
 		return NULL;
 
-	if (pread(ctx->shared->fd, buf, sect->size, sect->file_offset) == sect->size)
+	if (pread(get_file_fd(ctx), buf, sect->size,
+		  sect->file_offset) == sect->size)
 		return buf;
 
 	free(buf);
@@ -454,7 +455,7 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 		return ret;
 
 	offset = dump32toh(ctx, ehdr->e_phoff);
-	if (lseek(ctx->shared->fd, offset, SEEK_SET) < 0)
+	if (lseek(get_file_fd(ctx), offset, SEEK_SET) < 0)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot seek to program headers at %llu",
 				 (unsigned long long) offset);
@@ -462,7 +463,7 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 		struct load_segment *pls;
 		ssize_t rd;
 
-		rd = read(ctx->shared->fd, &prog, sizeof prog);
+		rd = read(get_file_fd(ctx), &prog, sizeof prog);
 		if (rd != sizeof prog)
 			return set_error(ctx, read_error(rd),
 					 "Cannot read program header #%d", i);
@@ -478,14 +479,14 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 	}
 
 	offset = dump32toh(ctx, ehdr->e_shoff);
-	if (lseek(ctx->shared->fd, offset, SEEK_SET) < 0)
+	if (lseek(get_file_fd(ctx), offset, SEEK_SET) < 0)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot seek to section headers at %llu",
 				 (unsigned long long) offset);
 	for (i = 0; i < dump16toh(ctx, ehdr->e_shnum); ++i) {
 		ssize_t rd;
 
-		rd = read(ctx->shared->fd, &sect, sizeof sect);
+		rd = read(get_file_fd(ctx), &sect, sizeof sect);
 		if (rd != sizeof sect)
 			return set_error(ctx, read_error(rd),
 					 "Cannot read section header #%d", i);
@@ -524,7 +525,7 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 
 
 	offset = dump64toh(ctx, ehdr->e_phoff);
-	if (lseek(ctx->shared->fd, offset, SEEK_SET) < 0)
+	if (lseek(get_file_fd(ctx), offset, SEEK_SET) < 0)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot seek to program headers at %llu",
 				 (unsigned long long) offset);
@@ -532,7 +533,7 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 		struct load_segment *pls;
 		ssize_t rd;
 
-		rd = read(ctx->shared->fd, &prog, sizeof prog);
+		rd = read(get_file_fd(ctx), &prog, sizeof prog);
 		if (rd != sizeof prog)
 			return set_error(ctx, read_error(rd),
 					 "Cannot read program header #%d", i);
@@ -548,14 +549,14 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 	}
 
 	offset = dump32toh(ctx, ehdr->e_shoff);
-	if (lseek(ctx->shared->fd, offset, SEEK_SET) < 0)
+	if (lseek(get_file_fd(ctx), offset, SEEK_SET) < 0)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot seek to section headers at %llu",
 				 (unsigned long long) offset);
 	for (i = 0; i < dump16toh(ctx, ehdr->e_shnum); ++i) {
 		ssize_t rd;
 
-		rd = read(ctx->shared->fd, &sect, sizeof sect);
+		rd = read(get_file_fd(ctx), &sect, sizeof sect);
 		if (rd != sizeof sect)
 			return set_error(ctx, read_error(rd),
 					 "Cannot read section header #%d", i);
@@ -585,7 +586,7 @@ process_elf_notes(kdump_ctx *ctx, void *notes)
 	for (i = 0; i < edp->num_note_segments; ++i) {
 		struct load_segment *seg = edp->note_segments + i;
 
-		rd = pread(ctx->shared->fd, p, seg->filesz, seg->file_offset);
+		rd = pread(get_file_fd(ctx), p, seg->filesz, seg->file_offset);
 		if (rd != seg->filesz)
 			return set_error(ctx, read_error(rd),
 					 "Cannot read ELF notes at %llu",

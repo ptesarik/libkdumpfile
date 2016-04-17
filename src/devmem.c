@@ -109,7 +109,7 @@ devmem_read_page(kdump_ctx *ctx, struct page_io *pio)
 	++ce->refcnt;
 
 	ce->pfn = pio->pfn;
-	rd = pread(ctx->shared->fd, ce->data, get_page_size(ctx), pos);
+	rd = pread(get_file_fd(ctx), ce->data, get_page_size(ctx), pos);
 	if (rd != get_page_size(ctx)) {
 		--ce->refcnt;
 		return set_error(ctx, read_error(rd),
@@ -170,7 +170,7 @@ devmem_probe(kdump_ctx *ctx, void *hdr)
 	struct stat st;
 	kdump_status ret;
 
-	if (fstat(ctx->shared->fd, &st))
+	if (fstat(get_file_fd(ctx), &st))
 		return set_error(ctx, kdump_syserr, "Cannot stat file");
 
 	if (!S_ISCHR(st.st_mode) ||

@@ -485,8 +485,6 @@ struct kdump_shared {
 	 */
 	struct list_head ctx;
 
-	int fd;			/**< Dump file descriptor. */
-
 	/** File format operations. */
 	const struct format_ops *ops;
 	void *fmtdata;		/**< File format private data. */
@@ -1001,6 +999,9 @@ void cleanup_attr(struct kdump_shared *shared);
 #undef ATTR
 
 /* Attribute ops */
+#define file_fd_ops INTERNAL_NAME(file_fd_ops)
+extern const struct attr_ops file_fd_ops;
+
 #define page_size_ops INTERNAL_NAME(page_size_ops)
 extern const struct attr_ops page_size_ops;
 
