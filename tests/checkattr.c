@@ -26,6 +26,8 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#define _GNU_SOURCE
+
 #include <string.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -38,7 +40,7 @@
 #include "testutil.h"
 
 static int
-check_attr(kdump_ctx *ctx, char *key, const kdump_attr_t *expect)
+check_attr(kdump_ctx *ctx, char *key, const kdump_attr_t *expect, int chkval)
 {
 	kdump_attr_t attr;
 
@@ -56,6 +58,9 @@ check_attr(kdump_ctx *ctx, char *key, const kdump_attr_t *expect)
 			key, (unsigned) expect->type, (unsigned) attr.type);
 		return TEST_FAIL;
 	}
+
+	if (!chkval)
+		goto out;
 
 	switch (attr.type) {
 	case kdump_directory:
@@ -101,6 +106,7 @@ check_attr(kdump_ctx *ctx, char *key, const kdump_attr_t *expect)
 		return TEST_FAIL;
 	}
 
+ out:
 	puts("OK");
 	return TEST_OK;
 }
@@ -115,26 +121,16 @@ check_attr_val(kdump_ctx *ctx, char *key, char *val)
 	kdump_attr_t attr;
 	int rc;
 
-	sep = strchr(val, ':');
-	if (!sep) {
-		fprintf(stderr, "Check type is missing\n");
-		return TEST_FAIL;
-	}
+	sep = strchrnul(val, ':');
 
 	p = sep;
 	do {
 		*p-- = '\0';
 	} while (p >= val && isspace(*p));
 
-	p = sep + 1;
-	while (*p && isspace(*p))
-		++p;
-
-	param.key = key;
-
 	if (!strcmp(val, "directory")) {
 		attr.type = kdump_directory;
-		return check_attr(ctx, key, &attr);
+		return check_attr(ctx, key, &attr, 0);
 	} else if (!strcmp(val, "number")) {
 		attr.type = kdump_number;
 		param.type = param_number;
@@ -153,6 +149,15 @@ check_attr_val(kdump_ctx *ctx, char *key, char *val)
 		return TEST_FAIL;
 	}
 
+	if (!*sep)
+		return check_attr(ctx, key, &attr, 0);
+
+	param.key = key;
+
+	p = sep + 1;
+	while (*p && isspace(*p))
+		++p;
+
 	rc = set_param(&param, p);
 	if (rc != TEST_OK)
 		return rc;
@@ -167,7 +172,7 @@ check_attr_val(kdump_ctx *ctx, char *key, char *val)
 		return TEST_FAIL;
 	}
 
-	return check_attr(ctx, key, &attr);
+	return check_attr(ctx, key, &attr, 1);
 }
 
 static int
