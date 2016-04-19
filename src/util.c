@@ -447,7 +447,7 @@ set_uts_string(kdump_ctx *ctx, struct attr_data *attr, const char *src)
 
 	memcpy(str, src, NEW_UTS_LEN);
 	str[NEW_UTS_LEN] = 0;
-	return set_error(ctx, set_attr_string(ctx, attr, str),
+	return set_error(ctx, set_attr_string(ctx, attr, 0, str),
 			 "Cannot set attribute %s", attr->template->key);
 }
 
@@ -756,7 +756,7 @@ set_cpu_regs64(kdump_ctx *ctx, unsigned cpu,
 			return set_error(ctx, kdump_syserr,
 					 "Cannot %s CPU %u register %s",
 					 "allocate", cpu, tmpl[i].key);
-		res = set_attr_number(ctx, attr, dump64toh(ctx, regs[i]));
+		res = set_attr_number(ctx, attr, 0, dump64toh(ctx, regs[i]));
 		if (res != kdump_ok)
 			return set_error(ctx, res,
 					 "Cannot %s CPU %u register %s",
@@ -788,7 +788,7 @@ set_cpu_regs32(kdump_ctx *ctx, unsigned cpu,
 			return set_error(ctx, kdump_syserr,
 					 "Cannot %s CPU %u register %s",
 					 "allocate", cpu, tmpl[i].key);
-		res = set_attr_number(ctx, attr, dump32toh(ctx, regs[i]));
+		res = set_attr_number(ctx, attr, 0, dump32toh(ctx, regs[i]));
 		if (res != kdump_ok)
 			return set_error(ctx, res,
 					 "Cannot %s CPU %u register %s",
@@ -807,5 +807,5 @@ kdump_status
 set_format_longname(kdump_ctx *ctx, const char *name)
 {
 	return set_attr_static_string(ctx, gattr(ctx, GKI_format_longname),
-				      name);
+				      0, name);
 }

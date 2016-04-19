@@ -305,20 +305,32 @@ alloc_attr(struct kdump_shared *shared, struct attr_data *parent,
 
 /**  Clear (unset) an attribute.
  * @param attr  Attribute to be cleared.
+ * @returns     Non-zero if the entry could not be cleared.
+ *
+ * It is not possible to clear a persistent attribute, or a directory
+ * attribute which contains at least one persistent attribute.
  */
-void
+unsigned
 clear_attr(struct attr_data *attr)
 {
 	struct attr_data *child;
+	unsigned persist;
+
+	persist = attr->persist;
 	if (attr->template->type == kdump_directory)
 		for (child = attr->dir; child; child = child->next)
-			clear_attr(child);
+			persist |= clear_attr(child);
+
+	if (persist)
+		return persist;
 
 	attr->isset = 0;
 	if (attr->dynstr) {
 		attr->dynstr = 0;
 		free((void*) attr_value(attr)->string);
 	}
+
+	return 0;
 }
 
 /**  Deallocate attribute (and its children).
@@ -488,16 +500,18 @@ attr_has_value(struct attr_data *attr, kdump_attr_value_t newval)
 }
 
 /**  Set an attribute of a dump file object.
- * @param ctx   Dump file object.
- * @param attr  Attribute data.
- * @param val   New value for the object (ignored for directories).
- * @returns     Error status.
+ * @param ctx      Dump file object.
+ * @param attr     Attribute data.
+ * @param persist  Non-zero if the value should be persistent.
+ * @param val      New value for the object (ignored for directories).
+ * @returns        Error status.
  *
  * This function works both for statically allocated and dynamically
  * allocated attributes.
  */
 kdump_status
-set_attr(kdump_ctx *ctx, struct attr_data *attr, kdump_attr_value_t val)
+set_attr(kdump_ctx *ctx, struct attr_data *attr,
+	 unsigned persist, kdump_attr_value_t val)
 {
 	int skiphooks = attr_has_value(attr, val);
 	kdump_status res;
@@ -521,6 +535,7 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr, kdump_attr_value_t val)
 
 	instantiate_path(attr->parent);
 	attr->isset = 1;
+	attr->persist = persist;
 
 	if (!skiphooks) {
 		const struct attr_ops *ops = attr->template->ops;
@@ -533,10 +548,11 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr, kdump_attr_value_t val)
 }
 
 /**  Set an indirect attribute.
- * @param ctx   Dump file object.
- * @param attr  Attribute data.
- * @param pval  Pointer to the value.
- * @returns     Error status.
+ * @param ctx      Dump file object.
+ * @param attr     Attribute data.
+ * @param persist  Non-zero if the value should be persistent.
+ * @param pval     Pointer to the value.
+ * @returns        Error status.
  *
  * The attribute is set to the value pointed to by @p pval and the same
  * location is used to store the attribute value.
@@ -545,54 +561,60 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr, kdump_attr_value_t val)
  */
 kdump_status
 set_attr_indirect(kdump_ctx *ctx, struct attr_data *attr,
-		  kdump_attr_value_t *pval)
+		  unsigned persist, kdump_attr_value_t *pval)
 {
 	clear_attr(attr);
 	attr->pval = pval;
 	attr->indirect = 1;
-	return set_attr(ctx, attr, *pval);
+	return set_attr(ctx, attr, persist, *pval);
 }
 
 /**  Set a numeric attribute of a dump file object.
- * @param ctx  Dump file object.
- * @param attr Attribute data.
- * @param num  Key value (numeric).
- * @returns    Error status.
+ * @param ctx      Dump file object.
+ * @param attr     Attribute data.
+ * @param persist  Non-zero if the value should be persistent.
+ * @param num      Key value (numeric).
+ * @returns        Error status.
  */
 kdump_status
-set_attr_number(kdump_ctx *ctx, struct attr_data *attr, kdump_num_t num)
+set_attr_number(kdump_ctx *ctx, struct attr_data *attr,
+		unsigned persist, kdump_num_t num)
 {
 	kdump_attr_value_t val;
 
 	clear_attr(attr);
 	val.number = num;
-	return set_attr(ctx, attr, val);
+	return set_attr(ctx, attr, persist, val);
 }
 
 /**  Set an address attribute of a dump file object.
- * @param ctx   Dump file object.
- * @param attr  Attribute data.
- * @param addr  Key value (address).
- * @returns     Error status.
+ * @param ctx      Dump file object.
+ * @param attr     Attribute data.
+ * @param persist  Non-zero if the value should be persistent.
+ * @param addr     Key value (address).
+ * @returns        Error status.
  */
 kdump_status
-set_attr_address(kdump_ctx *ctx, struct attr_data *attr, kdump_addr_t addr)
+set_attr_address(kdump_ctx *ctx, struct attr_data *attr,
+		 unsigned persist, kdump_addr_t addr)
 {
 	kdump_attr_value_t val;
 
 	clear_attr(attr);
 	val.address = addr;
-	return set_attr(ctx, attr, val);
+	return set_attr(ctx, attr, persist, val);
 }
 
 /**  Set a string attribute's value.
- * @param ctx   Dump file object.
- * @param attr  An attribute string.
- * @param str   New string value.
- * @returns     Error status.
+ * @param ctx      Dump file object.
+ * @param attr     An attribute string.
+ * @param persist  Non-zero if the value should be persistent.
+ * @param str      New string value.
+ * @returns        Error status.
  */
 kdump_status
-set_attr_string(kdump_ctx *ctx, struct attr_data *attr, const char *str)
+set_attr_string(kdump_ctx *ctx, struct attr_data *attr,
+		unsigned persist, const char *str)
 {
 	char *dynstr = strdup(str);
 	kdump_attr_value_t val;
@@ -604,19 +626,20 @@ set_attr_string(kdump_ctx *ctx, struct attr_data *attr, const char *str)
 	clear_attr(attr);
 	attr->dynstr = 1;
 	val.string = dynstr;
-	return set_attr(ctx, attr, val);
+	return set_attr(ctx, attr, persist, val);
 }
 
 /**  Set a string attribute's value to a string of a known size.
- * @param ctx   Dump file object.
- * @param attr  An attribute string.
- * @param str   New string value.
- * @param len   Length of the new value.
- * @returns     Error status.
+ * @param ctx      Dump file object.
+ * @param attr     An attribute string.
+ * @param persist  Non-zero if the value should be persistent.
+ * @param str      New string value.
+ * @param len      Length of the new value.
+ * @returns        Error status.
  */
 kdump_status
 set_attr_sized_string(kdump_ctx *ctx, struct attr_data *attr,
-		      const char *str, size_t len)
+		      unsigned persist, const char *str, size_t len)
 {
 	size_t dynlen;
 	char *dynstr;
@@ -634,24 +657,25 @@ set_attr_sized_string(kdump_ctx *ctx, struct attr_data *attr,
 	clear_attr(attr);
 	attr->dynstr = 1;
 	val.string = dynstr;
-	return set_attr(ctx, attr, val);
+	return set_attr(ctx, attr, persist, val);
 }
 
 /**  Set a static string attribute of a dump file object.
- * @param ctx  Dump file object.
- * @param attr Attribute data.
- * @param str  Key value (static string).
- * @returns    Error status.
+ * @param ctx      Dump file object.
+ * @param attr     Attribute data.
+ * @param persist  Non-zero if the value should be persistent.
+ * @param str      Key value (static string).
+ * @returns        Error status.
  */
 kdump_status
 set_attr_static_string(kdump_ctx *ctx, struct attr_data *attr,
-		       const char *str)
+		       unsigned persist, const char *str)
 {
 	kdump_attr_value_t val;
 
 	clear_attr(attr);
 	val.string = str;
-	return set_attr(ctx, attr, val);
+	return set_attr(ctx, attr, persist, val);
 }
 
 /**  Validate attribute data.

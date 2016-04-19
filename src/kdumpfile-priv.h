@@ -395,6 +395,7 @@ struct attr_data {
 	const struct attr_template *template;
 
 	unsigned isset : 1;	/**< Zero if attribute has no value */
+	unsigned persist : 1;	/**< Persistent (never cleared) */
 	unsigned dynstr : 1;	/**< Dynamically allocated string */
 	unsigned indirect : 1;	/**< Actual value is at @c *pval */
 	unsigned dyntmpl : 1;	/**< Dynamically allocated template */
@@ -922,34 +923,35 @@ kdump_status validate_attr(kdump_ctx *ctx, struct attr_data *attr);
 
 #define set_attr INTERNAL_NAME(set_attr)
 kdump_status set_attr(kdump_ctx *ctx, struct attr_data *attr,
-		      kdump_attr_value_t val);
+		      unsigned persist, kdump_attr_value_t val);
 
 #define set_attr_indirect INTERNAL_NAME(set_attr_indirect)
 kdump_status set_attr_indirect(kdump_ctx *ctx, struct attr_data *attr,
-			       kdump_attr_value_t *pval);
+			       unsigned persist, kdump_attr_value_t *pval);
 
 #define set_attr_number INTERNAL_NAME(set_attr_number)
 kdump_status set_attr_number(kdump_ctx *ctx, struct attr_data *attr,
-			     kdump_num_t num);
+			     unsigned persist, kdump_num_t num);
 
 #define set_attr_address INTERNAL_NAME(set_attr_address)
 kdump_status set_attr_address(kdump_ctx *ctx, struct attr_data *key,
-			      kdump_addr_t addr);
+			      unsigned persist, kdump_addr_t addr);
 
 #define set_attr_string INTERNAL_NAME(set_attr_string)
 kdump_status set_attr_string(kdump_ctx *ctx, struct attr_data *attr,
-			     const char *str);
+			     unsigned persist, const char *str);
 
 #define set_attr_sized_string INTERNAL_NAME(set_attr_sized_string)
 kdump_status set_attr_sized_string(kdump_ctx *ctx, struct attr_data *attr,
-				   const char *str, size_t len);
+				   unsigned persist, const char *str,
+				   size_t len);
 
 #define set_attr_static_string INTERNAL_NAME(set_attr_static_string)
 kdump_status set_attr_static_string(kdump_ctx *ctx, struct attr_data *attr,
-				    const char *str);
+				    unsigned persist, const char *str);
 
 #define clear_attr INTERNAL_NAME(clear_attr)
-void clear_attr(struct attr_data *attr);
+unsigned clear_attr(struct attr_data *attr);
 
 /**  Clear (unset) all attributes.
  * @param ctx   Dump file object.
@@ -978,7 +980,7 @@ void cleanup_attr(struct kdump_shared *shared);
 		struct attr_data *d = gattr(ctx, GKI_ ## name);	\
 		kdump_attr_value_t val;				\
 		val.type = newval;				\
-		return set_attr(ctx, d,	val); 			\
+		return set_attr(ctx, d, 0, val);		\
 	}
 #define DEFINE_ISSET_ACCESSOR(name)				\
 	static inline int					\

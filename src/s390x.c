@@ -424,7 +424,7 @@ read_os_info_from_lowcore(kdump_ctx *ctx)
 	}
 
 	ret = set_attr_sized_string(ctx, gattr(ctx, GKI_linux_vmcoreinfo_raw),
-				    vmcoreinfo, sz);
+				    0, vmcoreinfo, sz);
 	free(vmcoreinfo);
 	if (ret != kdump_ok)
 		return set_error(ctx, ret, "Cannot set VMCOREINFO");

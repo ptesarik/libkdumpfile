@@ -81,6 +81,7 @@ check_set_attr(kdump_ctx *ctx, struct attr_data *attr,
 	       const kdump_attr_t *valp)
 {
 	if (valp->type == kdump_nil) {
+		attr->persist = 0;
 		clear_attr(attr);
 		return kdump_ok;
 	}
@@ -89,9 +90,9 @@ check_set_attr(kdump_ctx *ctx, struct attr_data *attr,
 		return set_error(ctx, kdump_invalid, "Type mismatch");
 
 	if (valp->type == kdump_string)
-		return set_attr_string(ctx, attr, valp->val.string);
+		return set_attr_string(ctx, attr, 1, valp->val.string);
 
-	return set_attr(ctx, attr, valp->val);
+	return set_attr(ctx, attr, 1, valp->val);
 }
 
 kdump_status

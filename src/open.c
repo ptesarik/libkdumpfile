@@ -88,7 +88,8 @@ kdump_init(kdump_ctx *ctx)
 		return status;
 	}
 
-	set_attr_number(ctx, gattr(ctx, GKI_cache_size), DEFAULT_CACHE_SIZE);
+	set_attr_number(ctx, gattr(ctx, GKI_cache_size),
+			1, DEFAULT_CACHE_SIZE);
 
 	ctx->cb_get_symbol_val = kdump_vmcoreinfo_symbol;
 	ctx->cb_get_symbol_val_xen = kdump_vmcoreinfo_symbol_xen;
@@ -158,7 +159,6 @@ kdump_new(void)
 static kdump_status
 set_fd(kdump_ctx *ctx, void *buf)
 {
-	struct attr_data *d;
 	ssize_t rd;
 	kdump_status ret;
 	int i;
@@ -182,8 +182,6 @@ set_fd(kdump_ctx *ctx, void *buf)
 			ctx->shared->cache = NULL;
 		}
 		clear_attrs(ctx);
-		d = gattr(ctx, GKI_cache_size);
-		set_attr(ctx, d, *attr_value(d));
 		clear_error(ctx);
 	}
 
@@ -197,7 +195,7 @@ kdump_open_known(kdump_ctx *ctx)
 	kdump_status res;
 
 	set_attr_static_string(ctx, gattr(ctx, GKI_format_name),
-			       ctx->shared->ops->name);
+			       0, ctx->shared->ops->name);
 
 	if (!attr_isset(gattr(ctx, GKI_linux_uts_sysname)))
 		/* If this fails, it is not fatal. */
@@ -211,7 +209,7 @@ kdump_open_known(kdump_ctx *ctx)
 					 attr_value(attr)->address, &extra);
 		if (res == kdump_ok) {
 			set_attr_string(ctx, gattr(ctx, GKI_xen_ver_extra),
-					extra);
+					0, extra);
 			free(extra);
 		}
 	}
@@ -248,11 +246,13 @@ const struct attr_ops file_fd_ops = {
 kdump_status
 kdump_set_fd(kdump_ctx *ctx, int fd)
 {
+	kdump_attr_value_t val;
 	kdump_status ret;
 
 	clear_error(ctx);
 	rwlock_wrlock(&ctx->shared->lock);
-	ret = set_file_fd(ctx, fd);
+	val.number = fd;
+	ret = set_attr(ctx, gattr(ctx, GKI_file_fd), 1, val);
 	rwlock_unlock(&ctx->shared->lock);
 	return ret;
 }
