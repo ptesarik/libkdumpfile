@@ -556,14 +556,15 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr,
 		}
 	}
 
+	instantiate_path(attr->parent);
+
+	clear_attr(attr);
 	if (attr->template->type != kdump_directory) {
 		if (attr->indirect)
 			*attr->pval = val;
 		else
 			attr->val = val;
 	}
-
-	instantiate_path(attr->parent);
 	attr->isset = 1;
 	attr->persist = persist;
 
@@ -593,10 +594,12 @@ kdump_status
 set_attr_indirect(kdump_ctx *ctx, struct attr_data *attr,
 		  unsigned persist, kdump_attr_value_t *pval)
 {
-	clear_attr(attr);
+	kdump_attr_value_t val = *pval;
+
+	*pval = *attr_value(attr);
 	attr->pval = pval;
 	attr->indirect = 1;
-	return set_attr(ctx, attr, persist, *pval);
+	return set_attr(ctx, attr, persist, val);
 }
 
 /**  Set a numeric attribute of a dump file object.
@@ -612,7 +615,6 @@ set_attr_number(kdump_ctx *ctx, struct attr_data *attr,
 {
 	kdump_attr_value_t val;
 
-	clear_attr(attr);
 	val.number = num;
 	return set_attr(ctx, attr, persist, val);
 }
@@ -630,7 +632,6 @@ set_attr_address(kdump_ctx *ctx, struct attr_data *attr,
 {
 	kdump_attr_value_t val;
 
-	clear_attr(attr);
 	val.address = addr;
 	return set_attr(ctx, attr, persist, val);
 }
@@ -648,15 +649,16 @@ set_attr_string(kdump_ctx *ctx, struct attr_data *attr,
 {
 	char *dynstr = strdup(str);
 	kdump_attr_value_t val;
+	kdump_status ret;
 
 	if (!dynstr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate string");
 
-	clear_attr(attr);
-	attr->dynstr = 1;
 	val.string = dynstr;
-	return set_attr(ctx, attr, persist, val);
+	ret = set_attr(ctx, attr, persist, val);
+	attr->dynstr = 1;
+	return ret;
 }
 
 /**  Set a string attribute's value to a string of a known size.
@@ -674,6 +676,7 @@ set_attr_sized_string(kdump_ctx *ctx, struct attr_data *attr,
 	size_t dynlen;
 	char *dynstr;
 	kdump_attr_value_t val;
+	kdump_status ret;
 
 	dynlen = len;
 	if (!len || str[len-1] != '\0')
@@ -684,10 +687,10 @@ set_attr_sized_string(kdump_ctx *ctx, struct attr_data *attr,
 	memcpy(dynstr, str, len);
 	dynstr[dynlen-1] = '\0';
 
-	clear_attr(attr);
-	attr->dynstr = 1;
 	val.string = dynstr;
-	return set_attr(ctx, attr, persist, val);
+	ret = set_attr(ctx, attr, persist, val);
+	attr->dynstr = 1;
+	return ret;
 }
 
 /**  Set a static string attribute of a dump file object.
@@ -703,7 +706,6 @@ set_attr_static_string(kdump_ctx *ctx, struct attr_data *attr,
 {
 	kdump_attr_value_t val;
 
-	clear_attr(attr);
 	val.string = str;
 	return set_attr(ctx, attr, persist, val);
 }
