@@ -305,13 +305,41 @@ alloc_attr(struct kdump_shared *shared, struct attr_data *parent,
 
 /**  Clear (unset) an attribute.
  * @param attr  Attribute to be cleared.
+ */
+static void
+clear_attr(struct attr_data *attr)
+{
+	attr->isset = 0;
+	if (attr->dynstr) {
+		attr->dynstr = 0;
+		free((void*) attr_value(attr)->string);
+	}
+}
+
+/**  Clear (unset) any attribute and its children recursively.
+ * @param attr  Attribute to be cleared.
+ */
+static void
+clear_rec(struct attr_data *attr)
+{
+	struct attr_data *child;
+
+	if (attr->template->type == kdump_directory)
+		for (child = attr->dir; child; child = child->next)
+			clear_rec(child);
+
+	clear_attr(attr);
+}
+
+/**  Clear (unset) a volatile attribute and its children recursively.
+ * @param attr  Attribute to be cleared.
  * @returns     Non-zero if the entry could not be cleared.
  *
  * It is not possible to clear a persistent attribute, or a directory
  * attribute which contains at least one persistent attribute.
  */
 static unsigned
-clear_attr(struct attr_data *attr)
+clear_volatile_rec(struct attr_data *attr)
 {
 	struct attr_data *child;
 	unsigned persist;
@@ -319,18 +347,11 @@ clear_attr(struct attr_data *attr)
 	persist = attr->persist;
 	if (attr->template->type == kdump_directory)
 		for (child = attr->dir; child; child = child->next)
-			persist |= clear_attr(child);
+			persist |= clear_volatile_rec(child);
 
-	if (persist)
-		return persist;
-
-	attr->isset = 0;
-	if (attr->dynstr) {
-		attr->dynstr = 0;
-		free((void*) attr_value(attr)->string);
-	}
-
-	return 0;
+	if (!persist)
+		clear_attr(attr);
+	return persist;
 }
 
 /**  Clear (unset) all volatile attributes.
@@ -339,7 +360,7 @@ clear_attr(struct attr_data *attr)
 void
 clear_volatile_attrs(kdump_ctx *ctx)
 {
-	clear_attr(gattr(ctx, GKI_dir_root));
+	clear_volatile_rec(gattr(ctx, GKI_dir_root));
 }
 
 /**  Deallocate attribute (and its children).
@@ -781,8 +802,7 @@ check_set_attr(kdump_ctx *ctx, struct attr_data *attr,
 	       const kdump_attr_t *valp)
 {
 	if (valp->type == kdump_nil) {
-		attr->persist = 0;
-		clear_attr(attr);
+		clear_rec(attr);
 		return kdump_ok;
 	}
 
