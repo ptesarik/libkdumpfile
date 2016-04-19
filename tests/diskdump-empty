@@ -30,6 +30,11 @@ fi
 echo "Created empty diskdump dump: $dumpfile"
 
 ./checkattr "$dumpfile" <<EOF
+cache = directory:
+cache.size = number
+cache.hits = number:0
+cache.misses = number:0
+
 format = directory:
 format.name = string: diskdump
 

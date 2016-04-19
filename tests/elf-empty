@@ -23,6 +23,11 @@ fi
 echo "Created empty ELF dump: $dumpfile"
 
 ./checkattr "$dumpfile" <<EOF
+cache = directory:
+cache.size = number
+cache.hits = number:0
+cache.misses = number:0
+
 arch = directory:
 arch.name = string: $arch
 arch.byte_order = number: $byte_order
