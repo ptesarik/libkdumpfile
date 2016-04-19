@@ -181,7 +181,7 @@ set_fd(kdump_ctx *ctx, void *buf)
 			cache_unref(ctx->shared->cache);
 			ctx->shared->cache = NULL;
 		}
-		clear_attrs(ctx);
+		clear_volatile_attrs(ctx);
 		clear_error(ctx);
 	}
 

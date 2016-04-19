@@ -950,17 +950,8 @@ kdump_status set_attr_sized_string(kdump_ctx *ctx, struct attr_data *attr,
 kdump_status set_attr_static_string(kdump_ctx *ctx, struct attr_data *attr,
 				    unsigned persist, const char *str);
 
-#define clear_attr INTERNAL_NAME(clear_attr)
-unsigned clear_attr(struct attr_data *attr);
-
-/**  Clear (unset) all attributes.
- * @param ctx   Dump file object.
- */
-static inline void
-clear_attrs(kdump_ctx *ctx)
-{
-	clear_attr(gattr(ctx, GKI_dir_root));
-}
+#define clear_volatile_attrs INTERNAL_NAME(clear_volatile_attrs)
+void clear_volatile_attrs(kdump_ctx *ctx);
 
 #define cleanup_attr INTERNAL_NAME(cleanup_attr)
 void cleanup_attr(struct kdump_shared *shared);

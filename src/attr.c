@@ -310,7 +310,7 @@ alloc_attr(struct kdump_shared *shared, struct attr_data *parent,
  * It is not possible to clear a persistent attribute, or a directory
  * attribute which contains at least one persistent attribute.
  */
-unsigned
+static unsigned
 clear_attr(struct attr_data *attr)
 {
 	struct attr_data *child;
@@ -331,6 +331,15 @@ clear_attr(struct attr_data *attr)
 	}
 
 	return 0;
+}
+
+/**  Clear (unset) all volatile attributes.
+ * @param ctx   Dump file object.
+ */
+void
+clear_volatile_attrs(kdump_ctx *ctx)
+{
+	clear_attr(gattr(ctx, GKI_dir_root));
 }
 
 /**  Deallocate attribute (and its children).
