@@ -309,9 +309,9 @@ alloc_attr(struct kdump_shared *shared, struct attr_data *parent,
 static void
 clear_attr(struct attr_data *attr)
 {
-	attr->isset = 0;
-	if (attr->dynstr) {
-		attr->dynstr = 0;
+	attr->flags.isset = 0;
+	if (attr->flags.dynstr) {
+		attr->flags.dynstr = 0;
 		free((void*) attr_value(attr)->string);
 	}
 }
@@ -344,7 +344,7 @@ clear_volatile_rec(struct attr_data *attr)
 	struct attr_data *child;
 	unsigned persist;
 
-	persist = attr->persist;
+	persist = attr->flags.persist;
 	if (attr->template->type == kdump_directory)
 		for (child = attr->dir; child; child = child->next)
 			persist |= clear_volatile_rec(child);
@@ -374,9 +374,9 @@ dealloc_attr(struct attr_data *attr)
 		for (child = attr->dir; child; child = child->next)
 			dealloc_attr(child);
 
-	if (attr->dynstr)
+	if (attr->flags.dynstr)
 		free((void*) attr_value(attr)->string);
-	if (attr->dyntmpl)
+	if (attr->flags.dyntmpl)
 		free((void*) attr->template);
 	attr->parent = NULL;
 }
@@ -442,7 +442,7 @@ static void
 instantiate_path(struct attr_data *attr)
 {
 	while (!attr_isset(attr)) {
-		attr->isset = 1;
+		attr->flags.isset = 1;
 		if (attr == attr->parent)
 			break;
 		attr = attr->parent;
@@ -488,7 +488,7 @@ init_attrs(kdump_ctx *ctx)
 		ctx->shared->global_attrs[i] = attr;
 
 		if (i >= GKI_static_first && i <= GKI_static_last) {
-			attr->indirect = 1;
+			attr->flags.indirect = 1;
 			attr->pval = static_attr_value(ctx->shared, i);
 		}
 	}
@@ -550,7 +550,7 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr,
 		const struct attr_ops *ops = attr->template->ops;
 		if (ops && ops->pre_set &&
 		    (res = ops->pre_set(ctx, attr, &val)) != kdump_ok) {
-			if (attr->dynstr)
+			if (attr->flags.dynstr)
 				free((void*) val.string);
 			return res;
 		}
@@ -560,13 +560,13 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr,
 
 	clear_attr(attr);
 	if (attr->template->type != kdump_directory) {
-		if (attr->indirect)
+		if (attr->flags.indirect)
 			*attr->pval = val;
 		else
 			attr->val = val;
 	}
-	attr->isset = 1;
-	attr->persist = persist;
+	attr->flags.isset = 1;
+	attr->flags.persist = persist;
 
 	if (!skiphooks) {
 		const struct attr_ops *ops = attr->template->ops;
@@ -598,7 +598,7 @@ set_attr_indirect(kdump_ctx *ctx, struct attr_data *attr,
 
 	*pval = *attr_value(attr);
 	attr->pval = pval;
-	attr->indirect = 1;
+	attr->flags.indirect = 1;
 	return set_attr(ctx, attr, persist, val);
 }
 
@@ -657,7 +657,7 @@ set_attr_string(kdump_ctx *ctx, struct attr_data *attr,
 
 	val.string = dynstr;
 	ret = set_attr(ctx, attr, persist, val);
-	attr->dynstr = 1;
+	attr->flags.dynstr = 1;
 	return ret;
 }
 
@@ -689,7 +689,7 @@ set_attr_sized_string(kdump_ctx *ctx, struct attr_data *attr,
 
 	val.string = dynstr;
 	ret = set_attr(ctx, attr, persist, val);
-	attr->dynstr = 1;
+	attr->flags.dynstr = 1;
 	return ret;
 }
 

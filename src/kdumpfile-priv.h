@@ -385,6 +385,16 @@ struct attr_template {
 	const struct attr_ops *ops;
 };
 
+/**  Attribute value flags.
+ */
+struct attr_flags {
+	unsigned isset : 1;	/**< Zero if attribute has no value */
+	unsigned persist : 1;	/**< Persistent (never cleared) */
+	unsigned dynstr : 1;	/**< Dynamically allocated string */
+	unsigned indirect : 1;	/**< Actual value is at @c *pval */
+	unsigned dyntmpl : 1;	/**< Dynamically allocated template */
+};
+
 /**  Data type for storing attribute value in each instance.
  *
  * Note that this structure does not include type, because it must be
@@ -394,12 +404,7 @@ struct attr_data {
 	struct attr_data *next, *parent;
 	const struct attr_template *template;
 
-	unsigned isset : 1;	/**< Zero if attribute has no value */
-	unsigned persist : 1;	/**< Persistent (never cleared) */
-	unsigned dynstr : 1;	/**< Dynamically allocated string */
-	unsigned indirect : 1;	/**< Actual value is at @c *pval */
-	unsigned dyntmpl : 1;	/**< Dynamically allocated template */
-
+	struct attr_flags flags; /**< Attribute data flags */
 	union {
 		kdump_attr_value_t val;
 		struct attr_data *dir;	  /**< For @c kdump_directory */
@@ -909,13 +914,13 @@ gattr(const kdump_ctx *ctx, enum global_keyidx idx)
 static inline int
 attr_isset(const struct attr_data *data)
 {
-	return data->isset;
+	return data->flags.isset;
 }
 
 static inline const kdump_attr_value_t *
 attr_value(const struct attr_data *attr)
 {
-	return attr->indirect ? attr->pval : &attr->val;
+	return attr->flags.indirect ? attr->pval : &attr->val;
 }
 
 #define validate_attr INTERNAL_NAME(validate_attr)
