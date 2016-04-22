@@ -647,6 +647,7 @@ create_attr_path(struct kdump_shared *shared, struct attr_data *dir,
 			free(tmpl);
 			return NULL;
 		}
+		attr->dyntmpl = 1;
 	}
 
 	return attr;
