@@ -208,29 +208,31 @@ process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 	} else
 		return kdump_ok;
 
-	res = set_attr_number(ctx, gattr(ctx, GKI_xen_ver_major), 0, major);
+	res = set_attr_number(ctx, gattr(ctx, GKI_xen_ver_major),
+			      ATTR_DEFAULT, major);
 	if (res != kdump_ok)
 		return res;
 
-	res = set_attr_number(ctx, gattr(ctx, GKI_xen_ver_minor), 0, minor);
+	res = set_attr_number(ctx, gattr(ctx, GKI_xen_ver_minor),
+			      ATTR_DEFAULT, minor);
 	if (res != kdump_ok)
 		return res;
 
 	res = set_attr_address(ctx, gattr(ctx, GKI_xen_ver_extra_addr),
-			       0, extra);
+			       ATTR_DEFAULT, extra);
 	if (res != kdump_ok)
 		return res;
 
 	if (version >= 1) {
 		res = set_attr_address(ctx, gattr(ctx, GKI_xen_p2m_mfn),
-				       0, p2m_mfn);
+				       ATTR_DEFAULT, p2m_mfn);
 		if (res != kdump_ok)
 			return res;
 	}
 
 	if (version >= 2) {
 		res = set_attr_address(ctx, gattr(ctx, GKI_xen_phys_start),
-				       0, phys_start);
+				       ATTR_DEFAULT, phys_start);
 		if (res != kdump_ok)
 			return res;
 	}
@@ -262,18 +264,20 @@ process_xen_dumpcore_version(kdump_ctx *ctx, void *data, size_t len)
 	} else
 		return kdump_ok;
 
-	res = set_attr_number(ctx, gattr(ctx, GKI_xen_ver_major), 0, major);
+	res = set_attr_number(ctx, gattr(ctx, GKI_xen_ver_major),
+			      ATTR_DEFAULT, major);
 	if (res != kdump_ok)
 		return res;
 
-	res = set_attr_number(ctx, gattr(ctx, GKI_xen_ver_minor), 0, minor);
+	res = set_attr_number(ctx, gattr(ctx, GKI_xen_ver_minor),
+			      ATTR_DEFAULT, minor);
 	if (res != kdump_ok)
 		return res;
 
 	memcpy(extra_str, extra, XEN_EXTRA_VERSION_SZ);
 	extra_str[XEN_EXTRA_VERSION_SZ] = '\0';
 	res = set_attr_string(ctx, gattr(ctx, GKI_xen_ver_extra),
-			      0, extra_str);
+			      ATTR_DEFAULT, extra_str);
 	if (res != kdump_ok)
 		return res;
 
@@ -346,7 +350,8 @@ set_vmcoreinfo(kdump_ctx *ctx, enum global_keyidx key,
 {
 	kdump_status res;
 
-	res = set_attr_sized_string(ctx, gattr(ctx, key), 0, data, sz);
+	res = set_attr_sized_string(ctx, gattr(ctx, key),
+				    ATTR_DEFAULT, data, sz);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot set %s", what);
 	return kdump_ok;

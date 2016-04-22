@@ -395,6 +395,34 @@ struct attr_flags {
 	unsigned dyntmpl : 1;	/**< Dynamically allocated template */
 };
 
+/**  Get the default attribute flags.
+ * @returns Default attribute flags.
+ */
+static inline struct attr_flags
+attr_flags_default(void)
+{
+	const struct attr_flags flags = { };
+	return flags;
+}
+
+/**  Default attribute flags. */
+#define ATTR_DEFAULT	(attr_flags_default())
+
+/**  Get the persistent attribute flags.
+ * @returns Persistent attribute flags.
+ */
+static inline struct attr_flags
+attr_flags_persist(void)
+{
+	const struct attr_flags flags = {
+		.persist = 1,
+	};
+	return flags;
+}
+
+/**  Persistent attribute flags. */
+#define ATTR_PERSIST	(attr_flags_persist())
+
 /**  Data type for storing attribute value in each instance.
  *
  * Note that this structure does not include type, because it must be
@@ -928,32 +956,33 @@ kdump_status validate_attr(kdump_ctx *ctx, struct attr_data *attr);
 
 #define set_attr INTERNAL_NAME(set_attr)
 kdump_status set_attr(kdump_ctx *ctx, struct attr_data *attr,
-		      unsigned persist, kdump_attr_value_t val);
+		      struct attr_flags flags, kdump_attr_value_t val);
 
 #define set_attr_indirect INTERNAL_NAME(set_attr_indirect)
 kdump_status set_attr_indirect(kdump_ctx *ctx, struct attr_data *attr,
-			       unsigned persist, kdump_attr_value_t *pval);
+			       struct attr_flags flags,
+			       kdump_attr_value_t *pval);
 
 #define set_attr_number INTERNAL_NAME(set_attr_number)
 kdump_status set_attr_number(kdump_ctx *ctx, struct attr_data *attr,
-			     unsigned persist, kdump_num_t num);
+			     struct attr_flags flags, kdump_num_t num);
 
 #define set_attr_address INTERNAL_NAME(set_attr_address)
 kdump_status set_attr_address(kdump_ctx *ctx, struct attr_data *key,
-			      unsigned persist, kdump_addr_t addr);
+			      struct attr_flags flags, kdump_addr_t addr);
 
 #define set_attr_string INTERNAL_NAME(set_attr_string)
 kdump_status set_attr_string(kdump_ctx *ctx, struct attr_data *attr,
-			     unsigned persist, const char *str);
+			     struct attr_flags flags, const char *str);
 
 #define set_attr_sized_string INTERNAL_NAME(set_attr_sized_string)
 kdump_status set_attr_sized_string(kdump_ctx *ctx, struct attr_data *attr,
-				   unsigned persist, const char *str,
-				   size_t len);
+				   struct attr_flags flags,
+				   const char *str, size_t len);
 
 #define set_attr_static_string INTERNAL_NAME(set_attr_static_string)
 kdump_status set_attr_static_string(kdump_ctx *ctx, struct attr_data *attr,
-				    unsigned persist, const char *str);
+				    struct attr_flags flags, const char *str);
 
 #define clear_volatile_attrs INTERNAL_NAME(clear_volatile_attrs)
 void clear_volatile_attrs(kdump_ctx *ctx);
@@ -976,7 +1005,7 @@ void cleanup_attr(struct kdump_shared *shared);
 		struct attr_data *d = gattr(ctx, GKI_ ## name);	\
 		kdump_attr_value_t val;				\
 		val.type = newval;				\
-		return set_attr(ctx, d, 0, val);		\
+		return set_attr(ctx, d, ATTR_DEFAULT, val);	\
 	}
 #define DEFINE_ISSET_ACCESSOR(name)				\
 	static inline int					\

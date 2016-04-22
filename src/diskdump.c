@@ -352,8 +352,8 @@ read_vmcoreinfo(kdump_ctx *ctx, off_t off, size_t size)
 
 	if (ret == kdump_ok) {
 		ret = set_attr_sized_string(
-			ctx, gattr(ctx, GKI_linux_vmcoreinfo_raw), 1,
-			info, size);
+			ctx, gattr(ctx, GKI_linux_vmcoreinfo_raw),
+			ATTR_DEFAULT, info, size);
 		if (ret != kdump_ok)
 			ret = set_error(ctx, ret, "Cannot set VMCOREINFO");
 	}

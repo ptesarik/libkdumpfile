@@ -896,8 +896,10 @@ def_realloc_caches(kdump_ctx *ctx)
 		cache_unref(ctx->shared->cache);
 	ctx->shared->cache = cache;
 
-	set_attr_indirect(ctx, gattr(ctx, GKI_cache_hits), 0, &cache->hits);
-	set_attr_indirect(ctx, gattr(ctx, GKI_cache_misses), 0, &cache->misses);
+	set_attr_indirect(ctx, gattr(ctx, GKI_cache_hits),
+			  ATTR_DEFAULT, &cache->hits);
+	set_attr_indirect(ctx, gattr(ctx, GKI_cache_misses),
+			  ATTR_DEFAULT, &cache->misses);
 
 	return kdump_ok;
 }

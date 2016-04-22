@@ -202,7 +202,8 @@ process_ia32_prstatus(kdump_ctx *ctx, void *data, size_t size)
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate '%s'", cpukey);
-	res = set_attr_number(ctx, attr, 1, dump32toh(ctx, status->pr_pid));
+	res = set_attr_number(ctx, attr, ATTR_DEFAULT,
+			      dump32toh(ctx, status->pr_pid));
 	if (res != kdump_ok)
 		return set_error(ctx, res,
 				 "Cannot set '%s'", cpukey);

@@ -89,7 +89,7 @@ kdump_init(kdump_ctx *ctx)
 	}
 
 	set_attr_number(ctx, gattr(ctx, GKI_cache_size),
-			1, DEFAULT_CACHE_SIZE);
+			ATTR_PERSIST, DEFAULT_CACHE_SIZE);
 
 	ctx->cb_get_symbol_val = kdump_vmcoreinfo_symbol;
 	ctx->cb_get_symbol_val_xen = kdump_vmcoreinfo_symbol_xen;
@@ -195,7 +195,7 @@ kdump_open_known(kdump_ctx *ctx)
 	kdump_status res;
 
 	set_attr_static_string(ctx, gattr(ctx, GKI_format_name),
-			       0, ctx->shared->ops->name);
+			       ATTR_DEFAULT, ctx->shared->ops->name);
 
 	if (!attr_isset(gattr(ctx, GKI_linux_uts_sysname)))
 		/* If this fails, it is not fatal. */
@@ -209,7 +209,7 @@ kdump_open_known(kdump_ctx *ctx)
 					 attr_value(attr)->address, &extra);
 		if (res == kdump_ok) {
 			set_attr_string(ctx, gattr(ctx, GKI_xen_ver_extra),
-					0, extra);
+					ATTR_DEFAULT, extra);
 			free(extra);
 		}
 	}
@@ -252,7 +252,7 @@ kdump_set_fd(kdump_ctx *ctx, int fd)
 	clear_error(ctx);
 	rwlock_wrlock(&ctx->shared->lock);
 	val.number = fd;
-	ret = set_attr(ctx, gattr(ctx, GKI_file_fd), 1, val);
+	ret = set_attr(ctx, gattr(ctx, GKI_file_fd), ATTR_PERSIST, val);
 	rwlock_unlock(&ctx->shared->lock);
 	return ret;
 }

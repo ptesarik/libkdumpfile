@@ -74,7 +74,7 @@ add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot set VMCOREINFO '%s'", key);
-	res = set_attr_string(ctx, attr, 0, val);
+	res = set_attr_string(ctx, attr, ATTR_DEFAULT, val);
 	if (res != kdump_ok)
 		return set_error(ctx, res,
 				 "Cannot set VMCOREINFO '%s'", key);
@@ -114,8 +114,8 @@ add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 				 "Cannot set VMCOREINFO '%s'", key);
 	return set_error(ctx,
 			 (attr_type == kdump_number)
-			 ? set_attr_number(ctx, attr, 0, num)
-			 : set_attr_address(ctx, attr, 0, num),
+			 ? set_attr_number(ctx, attr, ATTR_DEFAULT, num)
+			 : set_attr_address(ctx, attr, ATTR_DEFAULT, num),
 			 "Cannot set VMCOREINFO '%s'", key);
 }
 
@@ -151,7 +151,7 @@ process_linux_vmcoreinfo(kdump_ctx *ctx, const struct attr_data *dir)
 			       str_lines_OSRELEASE, len_lines_OSRELEASE);
 	if (attr && attr_isset(attr)) {
 		res = set_attr_string(ctx, gattr(ctx, GKI_linux_uts_release),
-				      0, attr_value(attr)->string);
+				      ATTR_DEFAULT, attr_value(attr)->string);
 		if (res != kdump_ok)
 			return set_error(ctx, res,
 					 "Cannot set UTS release");
