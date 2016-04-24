@@ -721,7 +721,7 @@ lkcd_max_pfn_validate(kdump_ctx *ctx, struct attr_data *attr)
 	if (res == kdump_ok) {
 		kdump_attr_value_t val;
 		val.number = lkcdp->max_pfn;
-		res = set_attr(ctx, attr, ATTR_DEFAULT, val);
+		res = set_attr(ctx, attr, ATTR_DEFAULT, &val);
 	}
 
 	mutex_unlock(&lkcdp->pfn_block_mutex);

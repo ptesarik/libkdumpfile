@@ -252,7 +252,7 @@ kdump_set_fd(kdump_ctx *ctx, int fd)
 	clear_error(ctx);
 	rwlock_wrlock(&ctx->shared->lock);
 	val.number = fd;
-	ret = set_attr(ctx, gattr(ctx, GKI_file_fd), ATTR_PERSIST, val);
+	ret = set_attr(ctx, gattr(ctx, GKI_file_fd), ATTR_PERSIST, &val);
 	rwlock_unlock(&ctx->shared->lock);
 	return ret;
 }

@@ -533,25 +533,32 @@ attr_has_value(struct attr_data *attr, kdump_attr_value_t newval)
  * @param ctx      Dump file object.
  * @param attr     Attribute data.
  * @param flags    New attribute value flags.
- * @param val      New value for the object (ignored for directories).
+ * @param pval     Pointer to new attribute value (ignored for directories).
  * @returns        Error status.
  *
- * This function works both for statically allocated and dynamically
- * allocated attributes.
+ * Note that the @c flags.indirect has a slightly different meaning:
+ *
+ * - If the flag is set, @p pval is set as the value location for @p attr.
+ * - If the flag is clear, the value of @p attr is changed, but the value
+ *   of @c attr->flags.indirect is left unmodified.
+ *
+ * The idea is that you set @c flags.indirect, if @p pval should become
+ * the new indirect value of @p attr. If you want to modify only the value
+ * of @p attr, leave @c flags.indirect clear.
  */
 kdump_status
 set_attr(kdump_ctx *ctx, struct attr_data *attr,
-	 struct attr_flags flags, kdump_attr_value_t val)
+	 struct attr_flags flags, kdump_attr_value_t *pval)
 {
-	int skiphooks = attr_has_value(attr, val);
+	int skiphooks = attr_has_value(attr, *pval);
 	kdump_status res;
 
 	if (!skiphooks) {
 		const struct attr_ops *ops = attr->template->ops;
 		if (ops && ops->pre_set &&
-		    (res = ops->pre_set(ctx, attr, &val)) != kdump_ok) {
-			if (attr->flags.dynstr)
-				free((void*) val.string);
+		    (res = ops->pre_set(ctx, attr, pval)) != kdump_ok) {
+			if (flags.dynstr)
+				free((void*) pval->string);
 			return res;
 		}
 	}
@@ -560,13 +567,16 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr,
 
 	clear_attr(attr);
 	if (attr->template->type != kdump_directory) {
-		if (attr->flags.indirect)
-			*attr->pval = val;
-		else
-			attr->val = val;
+		if (flags.indirect)
+			attr->pval = pval;
+		else if (attr->flags.indirect) {
+			flags.indirect = 1;
+			*attr->pval = *pval;
+		} else
+			attr->val = *pval;
 	}
-	attr->flags.isset = 1;
-	attr->flags.persist = flags.persist;
+	flags.isset = 1;
+	attr->flags = flags;
 
 	if (!skiphooks) {
 		const struct attr_ops *ops = attr->template->ops;
@@ -594,12 +604,8 @@ kdump_status
 set_attr_indirect(kdump_ctx *ctx, struct attr_data *attr,
 		  struct attr_flags flags, kdump_attr_value_t *pval)
 {
-	kdump_attr_value_t val = *pval;
-
-	*pval = *attr_value(attr);
-	attr->pval = pval;
-	attr->flags.indirect = 1;
-	return set_attr(ctx, attr, flags, val);
+	flags.indirect = 1;
+	return set_attr(ctx, attr, flags, pval);
 }
 
 /**  Set a numeric attribute of a dump file object.
@@ -616,7 +622,7 @@ set_attr_number(kdump_ctx *ctx, struct attr_data *attr,
 	kdump_attr_value_t val;
 
 	val.number = num;
-	return set_attr(ctx, attr, flags, val);
+	return set_attr(ctx, attr, flags, &val);
 }
 
 /**  Set an address attribute of a dump file object.
@@ -633,7 +639,7 @@ set_attr_address(kdump_ctx *ctx, struct attr_data *attr,
 	kdump_attr_value_t val;
 
 	val.address = addr;
-	return set_attr(ctx, attr, flags, val);
+	return set_attr(ctx, attr, flags, &val);
 }
 
 /**  Set a string attribute's value.
@@ -649,16 +655,14 @@ set_attr_string(kdump_ctx *ctx, struct attr_data *attr,
 {
 	char *dynstr = strdup(str);
 	kdump_attr_value_t val;
-	kdump_status ret;
 
 	if (!dynstr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate string");
 
 	val.string = dynstr;
-	ret = set_attr(ctx, attr, flags, val);
-	attr->flags.dynstr = 1;
-	return ret;
+	flags.dynstr = 1;
+	return set_attr(ctx, attr, flags, &val);
 }
 
 /**  Set a string attribute's value to a string of a known size.
@@ -676,7 +680,6 @@ set_attr_sized_string(kdump_ctx *ctx, struct attr_data *attr,
 	size_t dynlen;
 	char *dynstr;
 	kdump_attr_value_t val;
-	kdump_status ret;
 
 	dynlen = len;
 	if (!len || str[len-1] != '\0')
@@ -688,9 +691,8 @@ set_attr_sized_string(kdump_ctx *ctx, struct attr_data *attr,
 	dynstr[dynlen-1] = '\0';
 
 	val.string = dynstr;
-	ret = set_attr(ctx, attr, flags, val);
-	attr->flags.dynstr = 1;
-	return ret;
+	flags.dynstr = 1;
+	return set_attr(ctx, attr, flags, &val);
 }
 
 /**  Set a static string attribute of a dump file object.
@@ -707,7 +709,7 @@ set_attr_static_string(kdump_ctx *ctx, struct attr_data *attr,
 	kdump_attr_value_t val;
 
 	val.string = str;
-	return set_attr(ctx, attr, flags, val);
+	return set_attr(ctx, attr, flags, &val);
 }
 
 /**  Validate attribute data.
@@ -803,6 +805,8 @@ static kdump_status
 check_set_attr(kdump_ctx *ctx, struct attr_data *attr,
 	       const kdump_attr_t *valp)
 {
+	kdump_attr_value_t val;
+
 	if (valp->type == kdump_nil) {
 		clear_rec(attr);
 		return kdump_ok;
@@ -815,7 +819,8 @@ check_set_attr(kdump_ctx *ctx, struct attr_data *attr,
 		return set_attr_string(ctx, attr, ATTR_PERSIST,
 				       valp->val.string);
 
-	return set_attr(ctx, attr, ATTR_PERSIST, valp->val);
+	val = valp->val;
+	return set_attr(ctx, attr, ATTR_PERSIST, &val);
 }
 
 kdump_status

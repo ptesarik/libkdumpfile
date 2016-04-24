@@ -966,7 +966,7 @@ kdump_status validate_attr(kdump_ctx *ctx, struct attr_data *attr);
 
 #define set_attr INTERNAL_NAME(set_attr)
 kdump_status set_attr(kdump_ctx *ctx, struct attr_data *attr,
-		      struct attr_flags flags, kdump_attr_value_t val);
+		      struct attr_flags flags, kdump_attr_value_t *pval);
 
 #define set_attr_indirect INTERNAL_NAME(set_attr_indirect)
 kdump_status set_attr_indirect(kdump_ctx *ctx, struct attr_data *attr,
@@ -1015,7 +1015,7 @@ void cleanup_attr(struct kdump_shared *shared);
 		struct attr_data *d = gattr(ctx, GKI_ ## name);	\
 		kdump_attr_value_t val;				\
 		val.type = newval;				\
-		return set_attr(ctx, d, ATTR_DEFAULT, val);	\
+		return set_attr(ctx, d, ATTR_DEFAULT, &val);	\
 	}
 #define DEFINE_ISSET_ACCESSOR(name)				\
 	static inline int					\
