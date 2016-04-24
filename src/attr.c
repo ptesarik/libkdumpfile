@@ -376,7 +376,7 @@ dealloc_attr(struct attr_data *attr)
 
 	if (attr->flags.dynstr)
 		free((void*) attr_value(attr)->string);
-	if (attr->flags.dyntmpl)
+	if (attr->tflags.dyntmpl)
 		free((void*) attr->template);
 	attr->parent = NULL;
 }

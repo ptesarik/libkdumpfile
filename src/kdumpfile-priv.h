@@ -388,11 +388,10 @@ struct attr_template {
 /**  Attribute value flags.
  */
 struct attr_flags {
-	unsigned isset : 1;	/**< Zero if attribute has no value */
-	unsigned persist : 1;	/**< Persistent (never cleared) */
-	unsigned dynstr : 1;	/**< Dynamically allocated string */
-	unsigned indirect : 1;	/**< Actual value is at @c *pval */
-	unsigned dyntmpl : 1;	/**< Dynamically allocated template */
+	uint8_t isset : 1;	/**< Zero if attribute has no value */
+	uint8_t persist : 1;	/**< Persistent (never cleared) */
+	uint8_t dynstr : 1;	/**< Dynamically allocated string */
+	uint8_t indirect : 1;	/**< Actual value is at @c *pval */
 };
 
 /**  Get the default attribute flags.
@@ -423,6 +422,12 @@ attr_flags_persist(void)
 /**  Persistent attribute flags. */
 #define ATTR_PERSIST	(attr_flags_persist())
 
+/**  Attribute template flags.
+ */
+struct attr_template_flags {
+	uint8_t dyntmpl : 1;	/**< Dynamically allocated template */
+};
+
 /**  Data type for storing attribute value in each instance.
  *
  * Note that this structure does not include type, because it must be
@@ -432,7 +437,12 @@ struct attr_data {
 	struct attr_data *next, *parent;
 	const struct attr_template *template;
 
-	struct attr_flags flags; /**< Attribute data flags */
+	/** Attribute value flags */
+	struct attr_flags flags;
+
+	/** Attribute template flags */
+	struct attr_template_flags tflags;
+
 	union {
 		kdump_attr_value_t val;
 		struct attr_data *dir;	  /**< For @c kdump_directory */
