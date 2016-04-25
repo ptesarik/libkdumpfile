@@ -96,6 +96,25 @@ check(kdump_ctx *ctx)
 	}
 	printf("#%d: DIR.SUB=%s\n", cnt, attr.val.string);
 
+	attr.type = kdump_nil;
+	status = kdump_set_attr(ctx, "linux.vmcoreinfo.raw", &attr);
+	if (status != kdump_ok) {
+		fprintf(stderr, "Cannot clear vmcoreinfo: %s\n",
+			kdump_err_str(ctx));
+		return TEST_ERR;
+	}
+
+	status = kdump_get_attr(ctx, "linux.vmcoreinfo.lines.DIR.SUB", &attr);
+	if (status == kdump_ok) {
+		fprintf(stderr, "vmcoreinfo not cleared!\n");
+		return TEST_ERR;
+	} else if (status != kdump_nokey) {
+		fprintf(stderr, "Unexpected failure after unset: %s\n",
+			kdump_err_str(ctx));
+		return TEST_ERR;
+	}
+	printf("DIR.SUB is now clear\n");
+
 	return TEST_OK;
 }
 

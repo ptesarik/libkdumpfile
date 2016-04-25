@@ -197,8 +197,15 @@ vmcoreinfo_raw_post_hook(kdump_ctx *ctx, struct attr_data *rawattr)
 	return res;
 }
 
+static void
+vmcoreinfo_raw_clear_hook(kdump_ctx *ctx, struct attr_data *rawattr)
+{
+	dealloc_vmcoreinfo(rawattr->parent);
+}
+
 const struct attr_ops vmcoreinfo_raw_ops = {
 	.post_set = vmcoreinfo_raw_post_hook,
+	.pre_clear = vmcoreinfo_raw_clear_hook,
 };
 
 static const char*
