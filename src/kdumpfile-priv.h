@@ -351,6 +351,15 @@ typedef kdump_status attr_pre_set_fn(
 typedef kdump_status attr_post_set_fn(
 	kdump_ctx *ctx, struct attr_data *attr);
 
+/**  Type for clear attribute hooks.
+ * @param ctx      Dump file object.
+ * @param attr     Attribute.
+ *
+ * This function is called before clearing an attribute's value.
+ */
+typedef void attr_pre_clear_fn(
+	kdump_ctx *ctx, struct attr_data *attr);
+
 /**  Type for attribute validation hooks.
  * @param ctx      Dump file object.
  * @param attr     Attribute.
@@ -373,6 +382,9 @@ struct attr_ops {
 
 	/** Called after value change. */
 	attr_post_set_fn *post_set;
+
+	/** Called before clearing value. */
+	attr_pre_clear_fn *pre_clear;
 
 	/** Called before validating value. */
 	attr_validate_fn *validate;
