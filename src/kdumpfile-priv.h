@@ -422,6 +422,21 @@ attr_flags_persist(void)
 /**  Persistent attribute flags. */
 #define ATTR_PERSIST	(attr_flags_persist())
 
+/**  Get the default indirect flags.
+ * @returns Indirect attribute flags.
+ */
+static inline struct attr_flags
+attr_flags_indirect(void)
+{
+	const struct attr_flags flags = {
+		.indirect = 1,
+	};
+	return flags;
+}
+
+/**  Indirect attribute flags. */
+#define ATTR_INDIRECT	(attr_flags_indirect())
+
 /**  Attribute template flags.
  */
 struct attr_template_flags {
@@ -967,11 +982,6 @@ kdump_status validate_attr(kdump_ctx *ctx, struct attr_data *attr);
 #define set_attr INTERNAL_NAME(set_attr)
 kdump_status set_attr(kdump_ctx *ctx, struct attr_data *attr,
 		      struct attr_flags flags, kdump_attr_value_t *pval);
-
-#define set_attr_indirect INTERNAL_NAME(set_attr_indirect)
-kdump_status set_attr_indirect(kdump_ctx *ctx, struct attr_data *attr,
-			       struct attr_flags flags,
-			       kdump_attr_value_t *pval);
 
 #define set_attr_number INTERNAL_NAME(set_attr_number)
 kdump_status set_attr_number(kdump_ctx *ctx, struct attr_data *attr,

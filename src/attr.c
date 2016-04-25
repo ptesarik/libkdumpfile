@@ -588,26 +588,6 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr,
 	return kdump_ok;
 }
 
-/**  Set an indirect attribute.
- * @param ctx      Dump file object.
- * @param attr     Attribute data.
- * @param flags    New attribute value flags.
- * @param pval     Pointer to the value.
- * @returns        Error status.
- *
- * The attribute is set to the value pointed to by @p pval and the same
- * location is used to store the attribute value.
- * The @p pval pointer must be valid as long as the attribute can be
- * accessed.
- */
-kdump_status
-set_attr_indirect(kdump_ctx *ctx, struct attr_data *attr,
-		  struct attr_flags flags, kdump_attr_value_t *pval)
-{
-	flags.indirect = 1;
-	return set_attr(ctx, attr, flags, pval);
-}
-
 /**  Set a numeric attribute of a dump file object.
  * @param ctx      Dump file object.
  * @param attr     Attribute data.
