@@ -333,7 +333,7 @@ struct attr_data;
  * This function is not called if the attribute value does not change
  * as a result of calling @ref set_attr.
  */
-typedef kdump_status attr_pre_fn(
+typedef kdump_status attr_pre_set_fn(
 	kdump_ctx *ctx, struct attr_data *attr, kdump_attr_value_t *val);
 
 /**  Type for late attribute hooks.
@@ -348,7 +348,7 @@ typedef kdump_status attr_pre_fn(
  * This function is not called if the attribute value does not change
  * as a result of calling @ref set_attr.
  */
-typedef kdump_status attr_post_fn(
+typedef kdump_status attr_post_set_fn(
 	kdump_ctx *ctx, struct attr_data *attr);
 
 /**  Type for attribute validation hooks.
@@ -368,9 +368,14 @@ typedef kdump_status attr_validate_fn(
 /**  Attribute ops
  */
 struct attr_ops {
-	attr_pre_fn *pre_set;	    /**< Called before value change. */
-	attr_post_fn *post_set;	    /**< Called after value change. */
-	attr_validate_fn *validate; /**< Called before validating value. */
+	/** Called before value change. */
+	attr_pre_set_fn *pre_set;
+
+	/** Called after value change. */
+	attr_post_set_fn *post_set;
+
+	/** Called before validating value. */
+	attr_validate_fn *validate;
 };
 
 /**  Attribute template.
