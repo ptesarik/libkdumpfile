@@ -565,8 +565,10 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr,
 
 	instantiate_path(attr->parent);
 
-	clear_attr(attr);
 	if (attr->template->type != kdump_directory) {
+		if (attr->flags.dynstr)
+			free((void*) attr_value(attr)->string);
+
 		if (flags.indirect)
 			attr->pval = pval;
 		else if (attr->flags.indirect) {
