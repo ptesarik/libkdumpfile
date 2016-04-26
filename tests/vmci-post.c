@@ -80,6 +80,34 @@ check_string(kdump_ctx *ctx, const char *attrpath, const char *expect)
 }
 
 static int
+check_number(kdump_ctx *ctx, const char *attrpath, long long expect)
+{
+	kdump_attr_t attr;
+	kdump_status status;
+
+	status = kdump_get_attr(ctx, attrpath, &attr);
+	if (status != kdump_ok) {
+		fprintf(stderr, "%s: Cannot get value: %s\n",
+			attrpath, kdump_err_str(ctx));
+		return TEST_ERR;
+	}
+	if (attr.type != kdump_number) {
+		fprintf(stderr, "%s: Wrong attribute type: %d\n",
+			attrpath, (int) attr.type);
+		return TEST_FAIL;
+	}
+	if (attr.val.number != expect) {
+		fprintf(stderr, "%s: Invalid attribute value: %lld != %lld\n",
+			attrpath, (long long) attr.val.number, expect);
+		return TEST_FAIL;
+	}
+
+	printf("%s: %lld\n", attrpath, (long long) attr.val.number);
+
+	return TEST_OK;
+}
+
+static int
 check(kdump_ctx *ctx)
 {
 	kdump_attr_t attr;
@@ -124,24 +152,11 @@ check(kdump_ctx *ctx)
 	if (tmprc != TEST_OK)
 		rc = tmprc;
 
-	status = kdump_get_attr(ctx, ATTR_PAGESIZE, &attr);
-	if (status != kdump_ok) {
-		fprintf(stderr, "%s: Cannot get value: %s\n",
-			ATTR_PAGESIZE, kdump_err_str(ctx));
-		return TEST_ERR;
-	}
-	if (attr.type != kdump_number) {
-		fprintf(stderr, "%s: Wrong attribute type: %d\n",
-			ATTR_PAGESIZE, (int) attr.type);
-		rc = TEST_FAIL;
-	} else if (attr.val.number != PAGESIZE) {
-		fprintf(stderr, "%s: Invalid attribute value: %lld != %lld\n",
-			ATTR_PAGESIZE, (long long) attr.val.number,
-			(long long) PAGESIZE);
-		rc = TEST_FAIL;
-	} else
-		printf("%s: %lld\n", ATTR_PAGESIZE,
-		       (long long) attr.val.number);
+	tmprc = check_number(ctx, ATTR_PAGESIZE, PAGESIZE);
+	if (tmprc == TEST_FAIL)
+		return tmprc;
+	if (tmprc != TEST_OK)
+		rc = tmprc;
 
 	status = kdump_vmcoreinfo_symbol(ctx, SYM_NAME, &symval);
 	if (status != kdump_ok) {
