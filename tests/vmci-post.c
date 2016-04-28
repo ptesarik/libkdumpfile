@@ -44,12 +44,32 @@
 #define SYM_NAME	"test_symbol"
 #define SYM_VALUE	0x123456
 
+#define LEN_NAME	"test_length"
+#define LEN_VALUE	16
+#define ATTR_LEN	"linux.vmcoreinfo.LENGTH." LEN_NAME
+
+#define NUM_NAME	"test_number"
+#define NUM_VALUE	64
+#define ATTR_NUM	"linux.vmcoreinfo.NUMBER." NUM_NAME
+
+#define OFF_NAME	"test_struct.test_off"
+#define OFF_VALUE	80
+#define ATTR_OFF	"linux.vmcoreinfo.OFFSET." OFF_NAME
+
+#define SIZE_NAME	"test_size"
+#define SIZE_VALUE	240
+#define ATTR_SIZE	"linux.vmcoreinfo.SIZE." SIZE_NAME
+
 #define ATTR_LINES	"linux.vmcoreinfo.lines"
 
 static const char vmcore[] =
 	"OSRELEASE=" OSRELEASE			"\n"
 	"PAGESIZE=" str(PAGESIZE)		"\n"
 	"SYMBOL(" SYM_NAME ")=" str(SYM_VALUE)	"\n"
+	"LENGTH(" LEN_NAME ")=" str(LEN_VALUE)	"\n"
+	"NUMBER(" NUM_NAME ")=" str(NUM_VALUE)	"\n"
+	"OFFSET(" OFF_NAME ")=" str(OFF_VALUE)	"\n"
+	"SIZE(" SIZE_NAME ")=" str(SIZE_VALUE)	"\n"
 	"";
 
 static int
@@ -146,6 +166,34 @@ check(kdump_ctx *ctx)
 	if (tmprc != TEST_OK)
 		rc = tmprc;
 
+	tmprc = check_string(ctx, ATTR_LINES ".LENGTH(" LEN_NAME ")",
+			     str(LEN_VALUE));
+	if (tmprc == TEST_FAIL)
+		return tmprc;
+	if (tmprc != TEST_OK)
+		rc = tmprc;
+
+	tmprc = check_string(ctx, ATTR_LINES ".NUMBER(" NUM_NAME ")",
+			     str(NUM_VALUE));
+	if (tmprc == TEST_FAIL)
+		return tmprc;
+	if (tmprc != TEST_OK)
+		rc = tmprc;
+
+	tmprc = check_string(ctx, ATTR_LINES ".OFFSET(" OFF_NAME ")",
+			     str(OFF_VALUE));
+	if (tmprc == TEST_FAIL)
+		return tmprc;
+	if (tmprc != TEST_OK)
+		rc = tmprc;
+
+	tmprc = check_string(ctx, ATTR_LINES ".SIZE(" SIZE_NAME ")",
+			     str(SIZE_VALUE));
+	if (tmprc == TEST_FAIL)
+		return tmprc;
+	if (tmprc != TEST_OK)
+		rc = tmprc;
+
 	tmprc = check_string(ctx, ATTR_OSRELEASE, OSRELEASE);
 	if (tmprc == TEST_FAIL)
 		return tmprc;
@@ -170,6 +218,30 @@ check(kdump_ctx *ctx)
 		rc = TEST_FAIL;
 	} else
 		printf("%s = %llx\n", SYM_NAME, (long long) symval);
+
+	tmprc = check_number(ctx, ATTR_LEN, LEN_VALUE);
+	if (tmprc == TEST_FAIL)
+		return tmprc;
+	if (tmprc != TEST_OK)
+		rc = tmprc;
+
+	tmprc = check_number(ctx, ATTR_NUM, NUM_VALUE);
+	if (tmprc == TEST_FAIL)
+		return tmprc;
+	if (tmprc != TEST_OK)
+		rc = tmprc;
+
+	tmprc = check_number(ctx, ATTR_OFF, OFF_VALUE);
+	if (tmprc == TEST_FAIL)
+		return tmprc;
+	if (tmprc != TEST_OK)
+		rc = tmprc;
+
+	tmprc = check_number(ctx, ATTR_SIZE, SIZE_VALUE);
+	if (tmprc == TEST_FAIL)
+		return tmprc;
+	if (tmprc != TEST_OK)
+		rc = tmprc;
 
 	return rc;
 }
