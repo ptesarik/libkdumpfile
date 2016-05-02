@@ -147,13 +147,13 @@ check(kdump_ctx *ctx)
 	rc = TEST_OK;
 
 	tmprc = check_string(ctx, ATTR_LINES ".OSRELEASE", OSRELEASE);
-	if (tmprc == TEST_FAIL)
+	if (tmprc == TEST_ERR)
 		return tmprc;
 	if (tmprc != TEST_OK)
 		rc = tmprc;
 
 	tmprc = check_string(ctx, ATTR_LINES ".PAGESIZE", str(PAGESIZE));
-	if (tmprc == TEST_FAIL)
+	if (tmprc == TEST_ERR)
 		return tmprc;
 	if (tmprc != TEST_OK)
 		rc = tmprc;
@@ -161,47 +161,47 @@ check(kdump_ctx *ctx)
 
 	tmprc = check_string(ctx, ATTR_LINES ".SYMBOL(" SYM_NAME ")",
 			     str(SYM_VALUE));
-	if (tmprc == TEST_FAIL)
+	if (tmprc == TEST_ERR)
 		return tmprc;
 	if (tmprc != TEST_OK)
 		rc = tmprc;
 
 	tmprc = check_string(ctx, ATTR_LINES ".LENGTH(" LEN_NAME ")",
 			     str(LEN_VALUE));
-	if (tmprc == TEST_FAIL)
+	if (tmprc == TEST_ERR)
 		return tmprc;
 	if (tmprc != TEST_OK)
 		rc = tmprc;
 
 	tmprc = check_string(ctx, ATTR_LINES ".NUMBER(" NUM_NAME ")",
 			     str(NUM_VALUE));
-	if (tmprc == TEST_FAIL)
+	if (tmprc == TEST_ERR)
 		return tmprc;
 	if (tmprc != TEST_OK)
 		rc = tmprc;
 
 	tmprc = check_string(ctx, ATTR_LINES ".OFFSET(" OFF_NAME ")",
 			     str(OFF_VALUE));
-	if (tmprc == TEST_FAIL)
+	if (tmprc == TEST_ERR)
 		return tmprc;
 	if (tmprc != TEST_OK)
 		rc = tmprc;
 
 	tmprc = check_string(ctx, ATTR_LINES ".SIZE(" SIZE_NAME ")",
 			     str(SIZE_VALUE));
-	if (tmprc == TEST_FAIL)
+	if (tmprc == TEST_ERR)
 		return tmprc;
 	if (tmprc != TEST_OK)
 		rc = tmprc;
 
 	tmprc = check_string(ctx, ATTR_OSRELEASE, OSRELEASE);
-	if (tmprc == TEST_FAIL)
+	if (tmprc == TEST_ERR)
 		return tmprc;
 	if (tmprc != TEST_OK)
 		rc = tmprc;
 
 	tmprc = check_number(ctx, ATTR_PAGESIZE, PAGESIZE);
-	if (tmprc == TEST_FAIL)
+	if (tmprc == TEST_ERR)
 		return tmprc;
 	if (tmprc != TEST_OK)
 		rc = tmprc;
@@ -220,25 +220,25 @@ check(kdump_ctx *ctx)
 		printf("%s = %llx\n", SYM_NAME, (long long) symval);
 
 	tmprc = check_number(ctx, ATTR_LEN, LEN_VALUE);
-	if (tmprc == TEST_FAIL)
+	if (tmprc == TEST_ERR)
 		return tmprc;
 	if (tmprc != TEST_OK)
 		rc = tmprc;
 
 	tmprc = check_number(ctx, ATTR_NUM, NUM_VALUE);
-	if (tmprc == TEST_FAIL)
+	if (tmprc == TEST_ERR)
 		return tmprc;
 	if (tmprc != TEST_OK)
 		rc = tmprc;
 
 	tmprc = check_number(ctx, ATTR_OFF, OFF_VALUE);
-	if (tmprc == TEST_FAIL)
+	if (tmprc == TEST_ERR)
 		return tmprc;
 	if (tmprc != TEST_OK)
 		rc = tmprc;
 
 	tmprc = check_number(ctx, ATTR_SIZE, SIZE_VALUE);
-	if (tmprc == TEST_FAIL)
+	if (tmprc == TEST_ERR)
 		return tmprc;
 	if (tmprc != TEST_OK)
 		rc = tmprc;
