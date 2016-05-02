@@ -11,6 +11,7 @@ privptr
 subattr
 thread-errstr
 vmci-cleanup
+vmci-lines-post
 vmci-post
 
 # Test results
