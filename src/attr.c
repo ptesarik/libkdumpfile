@@ -458,9 +458,9 @@ alloc_attr_template(const struct attr_template *tmpl,
  */
 struct attr_data *
 create_attr_path(struct kdump_shared *shared, struct attr_data *dir,
-		 char *path, const struct attr_template *atmpl)
+		 const char *path, const struct attr_template *atmpl)
 {
-	char *p, *endp;
+	const char *p, *endp;
 	struct attr_data *attr;
 	struct attr_template *tmpl;
 
