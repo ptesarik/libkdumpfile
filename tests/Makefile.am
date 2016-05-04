@@ -149,7 +149,5 @@ TESTS = $(test_scripts) \
 	vmci-lines-post \
 	vmci-post
 
-XFAIL_TESTS = vmci-lines-post
-
 clean-local:
 	-rm -rf out
