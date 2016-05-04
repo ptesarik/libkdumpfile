@@ -414,27 +414,30 @@ new_attr(struct kdump_shared *shared, struct attr_data *parent,
 }
 
 /**  Allocate an attribute template.
+ * @param tmpl    Attribute type template.
  * @param key     Key name.
  * @param keylen  Key length (maybe partial).
- * @param type    Attribute type.
  * @returns       Newly allocated attribute template, or @c NULL.
+ *
+ * All template fields except the key name are copied from @p tmpl.
  */
 struct attr_template *
-alloc_attr_template(const char *key, size_t keylen, kdump_attr_type_t type)
+alloc_attr_template(const struct attr_template *tmpl,
+		    const char *key, size_t keylen)
 {
-	struct attr_template *tmpl;
+	struct attr_template *ret;
 
-	tmpl = malloc(sizeof *tmpl + keylen + 1);
-	if (tmpl) {
-		char *tmplkey = (char*) (tmpl + 1);
-		memcpy(tmplkey, key, keylen);
-		tmplkey[keylen] = '\0';
-		tmpl->key = tmplkey;
-		tmpl->parent = NULL;
-		tmpl->type = type;
-		tmpl->ops = NULL;
+	ret = malloc(sizeof *ret + keylen + 1);
+	if (ret) {
+		char *retkey;
+
+		*ret = *tmpl;
+		retkey = (char*) (ret + 1);
+		memcpy(retkey, key, keylen);
+		retkey[keylen] = '\0';
+		ret->key = retkey;
 	}
-	return tmpl;
+	return ret;
 }
 
 /**  Instantiate a directory path.

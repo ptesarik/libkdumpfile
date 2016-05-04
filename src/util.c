@@ -607,6 +607,11 @@ uncompress_page_gzip(kdump_ctx *ctx, unsigned char *dst,
 #endif
 }
 
+/** Generic directory attribute template. */
+static const struct attr_template dir_template = {
+	.type = kdump_directory,
+};
+
 /** Create an attribute including full path.
  * @param shared  Dump file shared data.
  * @param dir     Base directory.
@@ -625,6 +630,9 @@ create_attr_path(struct kdump_shared *shared, struct attr_data *dir,
 	char *p, *endp;
 	struct attr_data *attr;
 	struct attr_template *tmpl;
+	struct attr_template atmpl = {
+		.type = type,
+	};
 
 	p = endp = path + strlen(path);
 	while (! (attr = lookup_dir_attr(shared, dir, path, endp - path)) )
@@ -638,8 +646,8 @@ create_attr_path(struct kdump_shared *shared, struct attr_data *dir,
 		p = endp + 1;
 		endp = strchrnul(p, '.');
 
-		tmpl = alloc_attr_template(p, endp - p,
-					   *endp ? kdump_directory : type);
+		tmpl = alloc_attr_template(*endp ? &dir_template : &atmpl,
+					   p, endp - p);
 		if (!tmpl)
 			return NULL;
 		attr = new_attr(shared, attr, tmpl);
