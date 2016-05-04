@@ -1027,7 +1027,8 @@ void cleanup_attr(struct kdump_shared *shared);
 
 #define create_attr_path INTERNAL_NAME(create_attr_path)
 struct attr_data *create_attr_path(struct kdump_shared *shared,
-				   struct attr_data *dir, const char *path,
+				   struct attr_data *dir,
+				   const char *path, size_t pathlen,
 				   const struct attr_template *atmpl);
 
 /* Accessor functions for static attributes */

@@ -694,13 +694,14 @@ set_cpu_regs64(kdump_ctx *ctx, unsigned cpu,
 	       const struct attr_template *tmpl, uint64_t *regs, unsigned num)
 {
 	char cpukey[20 + sizeof(".reg")];
+	size_t keylen;
 	struct attr_data *dir, *attr;
 	unsigned i;
 	kdump_status res;
 
-	sprintf(cpukey, "%u.reg", cpu);
+	keylen = sprintf(cpukey, "%u.reg", cpu);
 	dir = create_attr_path(ctx->shared, gattr(ctx, GKI_dir_cpu),
-			       cpukey, &dir_template);
+			       cpukey, keylen, &dir_template);
 	if (!dir)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate CPU %u registers", cpu);
@@ -727,13 +728,14 @@ set_cpu_regs32(kdump_ctx *ctx, unsigned cpu,
 	       const struct attr_template *tmpl, uint32_t *regs, unsigned num)
 {
 	char cpukey[20 + sizeof(".reg")];
+	size_t keylen;
 	struct attr_data *dir, *attr;
 	unsigned i;
 	kdump_status res;
 
-	sprintf(cpukey, "%u.reg", cpu);
+	keylen = sprintf(cpukey, "%u.reg", cpu);
 	dir = create_attr_path(ctx->shared, gattr(ctx, GKI_dir_cpu),
-			       cpukey, &dir_template);
+			       cpukey, keylen, &dir_template);
 	if (!dir)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate CPU %u registers", cpu);

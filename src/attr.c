@@ -449,6 +449,7 @@ alloc_attr_template(const struct attr_template *tmpl,
  * @param shared  Dump file shared data.
  * @param dir     Base directory.
  * @param path    Path under @p dir.
+ * @param pathlen Length of @p path (maybe partial).
  * @param atmpl   Attribute template.
  * @returns       Attribute data, or @c NULL on allocation failure.
  *
@@ -458,13 +459,14 @@ alloc_attr_template(const struct attr_template *tmpl,
  */
 struct attr_data *
 create_attr_path(struct kdump_shared *shared, struct attr_data *dir,
-		 const char *path, const struct attr_template *atmpl)
+		 const char *path, size_t pathlen,
+		 const struct attr_template *atmpl)
 {
-	const char *p, *endp;
+	const char *p, *endp, *endpath;
 	struct attr_data *attr;
 	struct attr_template *tmpl;
 
-	p = endp = path + strlen(path);
+	p = endp = endpath = path + pathlen;
 	while (! (attr = lookup_dir_attr(shared, dir, path, endp - path)) )
 		if (! (endp = memrchr(path, '.', endp - path)) ) {
 			endp = path - 1;
@@ -472,12 +474,13 @@ create_attr_path(struct kdump_shared *shared, struct attr_data *dir,
 			break;
 		}
 
-	while (endp < p || *endp) {
+	while (endp && endp != endpath) {
 		p = endp + 1;
-		endp = strchrnul(p, '.');
+		endp = memchr(p, '.', endpath - p);
 
-		tmpl = alloc_attr_template(*endp ? &dir_template : atmpl,
-					   p, endp - p);
+		tmpl = endp
+			? alloc_attr_template(&dir_template, p, endp - p)
+			: alloc_attr_template(atmpl, p, endpath - p);
 		if (!tmpl)
 			return NULL;
 		attr = new_attr(shared, attr, tmpl);

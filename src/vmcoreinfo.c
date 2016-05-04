@@ -74,7 +74,8 @@ add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 	if (!attr)
 		return set_error(ctx, kdump_nokey,
 				 "Cannot set VMCOREINFO '%s'", key);
-	attr = create_attr_path(ctx->shared, attr, key, &lines_tmpl);
+	attr = create_attr_path(ctx->shared, attr, key, strlen(key),
+				&lines_tmpl);
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot set VMCOREINFO '%s'", key);
@@ -173,7 +174,7 @@ lines_post_hook(kdump_ctx *ctx, struct attr_data *lineattr)
 		return kdump_ok;
 
 	sym[-1] = '.';
-	attr = create_attr_path(ctx->shared, dir, key, &tmpl);
+	attr = create_attr_path(ctx->shared, dir, key, strlen(key), &tmpl);
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot set VMCOREINFO '%s'", key);
