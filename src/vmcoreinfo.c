@@ -60,7 +60,8 @@ dealloc_vmcoreinfo(struct attr_data *dir)
 
 static kdump_status
 add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
-	       char *key, char *val)
+	       const char *key, size_t keylen,
+	       const char *val, size_t vallen)
 {
 	static const struct attr_template lines_tmpl = {
 		.type = kdump_string,
@@ -73,16 +74,18 @@ add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 	attr = lookup_dir_attr(ctx->shared, dir, "lines", 5);
 	if (!attr)
 		return set_error(ctx, kdump_nokey,
-				 "Cannot set VMCOREINFO '%s'", key);
-	attr = create_attr_path(ctx->shared, attr, key, strlen(key),
-				&lines_tmpl);
+				 "Cannot set VMCOREINFO '%.*s'",
+				 (int) keylen, key);
+	attr = create_attr_path(ctx->shared, attr, key, keylen, &lines_tmpl);
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot set VMCOREINFO '%s'", key);
-	res = set_attr_string(ctx, attr, ATTR_DEFAULT, val);
+				 "Cannot set VMCOREINFO '%.*s'",
+				 (int) keylen, key);
+	res = set_attr_sized_string(ctx, attr, ATTR_DEFAULT, val, vallen);
 	if (res != kdump_ok)
 		return set_error(ctx, res,
-				 "Cannot set VMCOREINFO '%s'", key);
+				 "Cannot set VMCOREINFO '%.*s'",
+				 (int) keylen, key);
 
 	return kdump_ok;
 }
@@ -192,33 +195,32 @@ static const struct attr_ops vmcoreinfo_lines_ops = {
 static kdump_status
 vmcoreinfo_raw_post_hook(kdump_ctx *ctx, struct attr_data *rawattr)
 {
-	char *raw, *p, *endp, *val;
+	const char *p, *endp, *val;
+	size_t len;
 	struct attr_data *dir;
 	kdump_status res;
-
-	raw = strdup(attr_value(rawattr)->string);
-	if (!raw)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate VMCOREINFO copy");
 
 	dir = rawattr->parent;
 	dealloc_vmcoreinfo(dir);
 
-	for (p = raw; *p; p = endp) {
+	for (p = attr_value(rawattr)->string; *p; p = endp) {
 		endp = strchrnul(p, '\n');
-		if (*endp)
-			*endp++ = '\0';
+		val = memchr(p, '=', endp - p);
+		if (val) {
+			len = val - p;
+			++val;
+		} else {
+			val = endp;
+			len = val - p;
+		}
 
-		val = strchr(p, '=');
-		if (val)
-			*val++ = '\0';
-
-		res = add_parsed_row(ctx, dir, p, val);
+		res = add_parsed_row(ctx, dir, p, len, val, endp - val);
 		if (res != kdump_ok)
 			break;
-	}
 
-	free(raw);
+		if (*endp)
+			++endp;
+	}
 
 	return res;
 }
