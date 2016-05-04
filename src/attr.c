@@ -35,6 +35,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+/** Generic directory attribute template. */
+const struct attr_template dir_template = {
+	.type = kdump_directory,
+};
+
 static const struct attr_template global_keys[] = {
 #define ATTR(dir, key, field, type, ctype, ...)				\
 	[GKI_ ## field] = {						\
@@ -438,6 +443,52 @@ alloc_attr_template(const struct attr_template *tmpl,
 		ret->key = retkey;
 	}
 	return ret;
+}
+
+/** Create an attribute including full path.
+ * @param shared  Dump file shared data.
+ * @param dir     Base directory.
+ * @param path    Path under @p dir.
+ * @param atmpl   Attribute template.
+ * @returns       Attribute data, or @c NULL on allocation failure.
+ *
+ * Look up the attribute @p path under @p dir. If the attribute does not
+ * exist yet, create it with type @p type. If @p path contains dots, then
+ * all path elements are also created as necessary.
+ */
+struct attr_data *
+create_attr_path(struct kdump_shared *shared, struct attr_data *dir,
+		 char *path, const struct attr_template *atmpl)
+{
+	char *p, *endp;
+	struct attr_data *attr;
+	struct attr_template *tmpl;
+
+	p = endp = path + strlen(path);
+	while (! (attr = lookup_dir_attr(shared, dir, path, endp - path)) )
+		if (! (endp = memrchr(path, '.', endp - path)) ) {
+			endp = path - 1;
+			attr = dir;
+			break;
+		}
+
+	while (endp < p || *endp) {
+		p = endp + 1;
+		endp = strchrnul(p, '.');
+
+		tmpl = alloc_attr_template(*endp ? &dir_template : atmpl,
+					   p, endp - p);
+		if (!tmpl)
+			return NULL;
+		attr = new_attr(shared, attr, tmpl);
+		if (!attr) {
+			free(tmpl);
+			return NULL;
+		}
+		attr->tflags.dyntmpl = 1;
+	}
+
+	return attr;
 }
 
 /**  Instantiate a directory path.

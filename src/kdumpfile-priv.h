@@ -731,11 +731,6 @@ int uncompress_rle(unsigned char *dst, size_t *pdstlen,
 kdump_status uncompress_page_gzip(kdump_ctx *ctx, unsigned char *dst,
 				  unsigned char *src, size_t srclen);
 
-#define create_attr_path INTERNAL_NAME(create_attr_path)
-struct attr_data *create_attr_path(struct kdump_shared *shared,
-				   struct attr_data *dir, char *path,
-				   const struct attr_template *atmpl);
-
 #define paged_read INTERNAL_NAME(paged_read)
 ssize_t paged_read(int fd, void *buffer, size_t size);
 
@@ -931,6 +926,9 @@ vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 /* Attribute handling */
 
+#define dir_template INTERNAL_NAME(dir_template)
+extern const struct attr_template dir_template;
+
 #define alloc_attr_template INTERNAL_NAME(alloc_attr_template)
 struct attr_template *alloc_attr_template(const struct attr_template *tmpl,
 					  const char *key, size_t keylen);
@@ -1026,6 +1024,11 @@ void clear_volatile_attrs(kdump_ctx *ctx);
 
 #define cleanup_attr INTERNAL_NAME(cleanup_attr)
 void cleanup_attr(struct kdump_shared *shared);
+
+#define create_attr_path INTERNAL_NAME(create_attr_path)
+struct attr_data *create_attr_path(struct kdump_shared *shared,
+				   struct attr_data *dir, char *path,
+				   const struct attr_template *atmpl);
 
 /* Accessor functions for static attributes */
 
