@@ -35,6 +35,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+static const struct attr_ops vmcoreinfo_lines_ops;
+
 /**  De-allocate parsed VMCOREINFO.
  * @param dir  Base attribute directory.
  */
@@ -62,11 +64,9 @@ add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 {
 	static const struct attr_template lines_tmpl = {
 		.type = kdump_string,
+		.ops = &vmcoreinfo_lines_ops,
 	};
 
-	char *type, *sym, *p;
-	unsigned long long num;
-	struct attr_template tmpl;
 	struct attr_data *attr;
 	kdump_status res;
 
@@ -83,6 +83,40 @@ add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 		return set_error(ctx, res,
 				 "Cannot set VMCOREINFO '%s'", key);
 
+	return kdump_ok;
+}
+
+static kdump_status
+lines_post_hook(kdump_ctx *ctx, struct attr_data *lineattr)
+{
+	char *key, *type, *sym, *p;
+	size_t keylen;
+	unsigned long long num;
+	struct attr_template tmpl;
+	struct attr_data *dir, *attr;
+
+	keylen = 0;
+	attr = lineattr;
+	while (attr != gattr(ctx, GKI_linux_vmcoreinfo_lines) &&
+	       attr != gattr(ctx, GKI_xen_vmcoreinfo_lines)) {
+		keylen += strlen(attr->template->key) + 1;
+		attr = attr->parent;
+	}
+
+	key = alloca(keylen);
+	attr = lineattr;
+	p = key + keylen - 1;
+	*p = '\0';
+	while (p > key) {
+		keylen = strlen(attr->template->key);
+		p -= keylen;
+		memcpy(p, attr->template->key, keylen);
+		attr = attr->parent;
+		if (p > key)
+			*--p = '.';
+	}
+	dir = attr->parent;
+
 	type = key;
 	sym = strchr(key, '(');
 	if (!sym)
@@ -96,7 +130,7 @@ add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 	memset(&tmpl, 0, sizeof tmpl);
 
 	if (!strcmp(type, "SYMBOL")) {
-		num = strtoull(val, &p, 16);
+		num = strtoull(attr_value(lineattr)->string, &p, 16);
 		if (*p)
 			/* invalid format -> ignore */
 			return kdump_ok;
@@ -105,7 +139,7 @@ add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 		   !strcmp(type, "NUMBER") ||
 		   !strcmp(type, "OFFSET") ||
 		   !strcmp(type, "SIZE")) {
-		num = strtoull(val, &p, 10);
+		num = strtoull(attr_value(lineattr)->string, &p, 10);
 		if (*p)
 			/* invalid format -> ignore */
 			return kdump_ok;
@@ -124,6 +158,10 @@ add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 			 : set_attr_address(ctx, attr, ATTR_DEFAULT, num),
 			 "Cannot set VMCOREINFO '%s'", key);
 }
+
+static const struct attr_ops vmcoreinfo_lines_ops = {
+	.post_set = lines_post_hook,
+};
 
 #define str_lines_PAGESIZE	"lines.PAGESIZE"
 #define len_lines_PAGESIZE	(sizeof(str_lines_PAGESIZE) - 1)
