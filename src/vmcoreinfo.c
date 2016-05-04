@@ -60,9 +60,13 @@ static kdump_status
 add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 	       char *key, char *val)
 {
+	static const struct attr_template lines_tmpl = {
+		.type = kdump_string,
+	};
+
 	char *type, *sym, *p;
 	unsigned long long num;
-	kdump_attr_type_t attr_type;
+	struct attr_template tmpl;
 	struct attr_data *attr;
 	kdump_status res;
 
@@ -70,7 +74,7 @@ add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 	if (!attr)
 		return set_error(ctx, kdump_nokey,
 				 "Cannot set VMCOREINFO '%s'", key);
-	attr = create_attr_path(ctx->shared, attr, key, kdump_string);
+	attr = create_attr_path(ctx->shared, attr, key, &lines_tmpl);
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot set VMCOREINFO '%s'", key);
@@ -89,12 +93,14 @@ add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 		return kdump_ok;
 	*p = '\0';
 
+	memset(&tmpl, 0, sizeof tmpl);
+
 	if (!strcmp(type, "SYMBOL")) {
 		num = strtoull(val, &p, 16);
 		if (*p)
 			/* invalid format -> ignore */
 			return kdump_ok;
-		attr_type = kdump_address;
+		tmpl.type = kdump_address;
 	} else if (!strcmp(type, "LENGTH") ||
 		   !strcmp(type, "NUMBER") ||
 		   !strcmp(type, "OFFSET") ||
@@ -103,17 +109,17 @@ add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 		if (*p)
 			/* invalid format -> ignore */
 			return kdump_ok;
-		attr_type = kdump_number;
+		tmpl.type = kdump_number;
 	} else
 		return kdump_ok;
 
 	sym[-1] = '.';
-	attr = create_attr_path(ctx->shared, dir, key, attr_type);
+	attr = create_attr_path(ctx->shared, dir, key, &tmpl);
 	if (!attr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot set VMCOREINFO '%s'", key);
 	return set_error(ctx,
-			 (attr_type == kdump_number)
+			 (tmpl.type == kdump_number)
 			 ? set_attr_number(ctx, attr, ATTR_DEFAULT, num)
 			 : set_attr_address(ctx, attr, ATTR_DEFAULT, num),
 			 "Cannot set VMCOREINFO '%s'", key);

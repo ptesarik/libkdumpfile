@@ -733,8 +733,8 @@ kdump_status uncompress_page_gzip(kdump_ctx *ctx, unsigned char *dst,
 
 #define create_attr_path INTERNAL_NAME(create_attr_path)
 struct attr_data *create_attr_path(struct kdump_shared *shared,
-				   struct attr_data *dir,
-				   char *path, kdump_attr_type_t type);
+				   struct attr_data *dir, char *path,
+				   const struct attr_template *atmpl);
 
 #define paged_read INTERNAL_NAME(paged_read)
 ssize_t paged_read(int fd, void *buffer, size_t size);

@@ -616,7 +616,7 @@ static const struct attr_template dir_template = {
  * @param shared  Dump file shared data.
  * @param dir     Base directory.
  * @param path    Path under @p dir.
- * @param type    Attribute type.
+ * @param atmpl   Attribute template.
  * @returns       Attribute data, or @c NULL on allocation failure.
  *
  * Look up the attribute @p path under @p dir. If the attribute does not
@@ -625,14 +625,11 @@ static const struct attr_template dir_template = {
  */
 struct attr_data *
 create_attr_path(struct kdump_shared *shared, struct attr_data *dir,
-		 char *path, kdump_attr_type_t type)
+		 char *path, const struct attr_template *atmpl)
 {
 	char *p, *endp;
 	struct attr_data *attr;
 	struct attr_template *tmpl;
-	struct attr_template atmpl = {
-		.type = type,
-	};
 
 	p = endp = path + strlen(path);
 	while (! (attr = lookup_dir_attr(shared, dir, path, endp - path)) )
@@ -646,7 +643,7 @@ create_attr_path(struct kdump_shared *shared, struct attr_data *dir,
 		p = endp + 1;
 		endp = strchrnul(p, '.');
 
-		tmpl = alloc_attr_template(*endp ? &dir_template : &atmpl,
+		tmpl = alloc_attr_template(*endp ? &dir_template : atmpl,
 					   p, endp - p);
 		if (!tmpl)
 			return NULL;
@@ -754,7 +751,7 @@ set_cpu_regs64(kdump_ctx *ctx, unsigned cpu,
 
 	sprintf(cpukey, "%u.reg", cpu);
 	dir = create_attr_path(ctx->shared, gattr(ctx, GKI_dir_cpu),
-			       cpukey, kdump_directory);
+			       cpukey, &dir_template);
 	if (!dir)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate CPU %u registers", cpu);
@@ -787,7 +784,7 @@ set_cpu_regs32(kdump_ctx *ctx, unsigned cpu,
 
 	sprintf(cpukey, "%u.reg", cpu);
 	dir = create_attr_path(ctx->shared, gattr(ctx, GKI_dir_cpu),
-			       cpukey, kdump_directory);
+			       cpukey, &dir_template);
 	if (!dir)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate CPU %u registers", cpu);
