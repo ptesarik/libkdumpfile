@@ -26,7 +26,6 @@ ATTR(root, "arch", dir_arch, directory, struct attr_data *)
 ATTR(root, "cache", dir_cache, directory, struct attr_data *)
 ATTR(root, "cpu", dir_cpu, directory, struct attr_data *)
 ATTR(root, "file", dir_file, directory, struct attr_data *)
-ATTR(root, "format", dir_format, directory, struct attr_data *)
 ATTR(root, "linux", dir_linux, directory, struct attr_data *)
 
 /* cache */
@@ -35,8 +34,8 @@ ATTR(cache, "hits", cache_hits, number, unsigned long)
 ATTR(cache, "misses", cache_misses, number, unsigned long)
 
 /* format name */
-ATTR(format, "name", format_name, string, const char *)
-ATTR(format, "longname", format_longname, string, const char *)
+ATTR(file, "format", file_format, string, const char *)
+ATTR(file, "description", file_description, string, const char *)
 
 /* utsname */
 ATTR(linux, "uts", dir_linux_uts, directory, struct attr_data *)

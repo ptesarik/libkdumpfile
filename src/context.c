@@ -145,7 +145,7 @@ kdump_get_string_attr(kdump_ctx *ctx, const char *key)
 const char *
 kdump_format(kdump_ctx *ctx)
 {
-	return get_string_attr(ctx, gattr(ctx, GKI_format_name));
+	return get_string_attr(ctx, gattr(ctx, GKI_file_format));
 }
 
 const char *

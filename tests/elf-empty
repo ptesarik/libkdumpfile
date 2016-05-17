@@ -25,6 +25,7 @@ echo "Created empty ELF dump: $dumpfile"
 ./checkattr "$dumpfile" <<EOF
 file = directory:
 file.fd = number
+file.format = string: elf
 
 cache = directory:
 cache.size = number

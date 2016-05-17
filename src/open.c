@@ -194,7 +194,7 @@ kdump_open_known(kdump_ctx *ctx)
 	const struct attr_data *attr;
 	kdump_status res;
 
-	set_attr_static_string(ctx, gattr(ctx, GKI_format_name),
+	set_attr_static_string(ctx, gattr(ctx, GKI_file_format),
 			       ATTR_DEFAULT, ctx->shared->ops->name);
 
 	if (!attr_isset(gattr(ctx, GKI_linux_uts_sysname)))

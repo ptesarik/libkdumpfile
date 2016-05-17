@@ -757,14 +757,14 @@ set_cpu_regs32(kdump_ctx *ctx, unsigned cpu,
 	return kdump_ok;
 }
 
-/**  Set format.longname to a static string.
+/**  Set file.description to a static string.
  * @param ctx   Dump file object.
  * @param name  Descriptive format name.
  * @returns     Error status.
  */
 kdump_status
-set_format_longname(kdump_ctx *ctx, const char *name)
+set_file_description(kdump_ctx *ctx, const char *name)
 {
-	return set_attr_static_string(ctx, gattr(ctx, GKI_format_longname),
+	return set_attr_static_string(ctx, gattr(ctx, GKI_file_description),
 				      ATTR_DEFAULT, name);
 }

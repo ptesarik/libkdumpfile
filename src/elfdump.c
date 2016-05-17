@@ -750,7 +750,7 @@ elf_probe(kdump_ctx *ctx, void *hdr)
 	    (dump16toh(ctx, elf32->e_type) == ET_CORE) &&
 	    (dump32toh(ctx, elf32->e_version) == EV_CURRENT)) {
 		edp->elfclass = ELFCLASS32;
-		set_format_longname(ctx, "ELF32 dump");
+		set_file_description(ctx, "ELF32 dump");
 		ret = init_elf32(ctx, elf32);
 		if (ret == kdump_ok)
 			ret = open_common(ctx);
@@ -758,7 +758,7 @@ elf_probe(kdump_ctx *ctx, void *hdr)
 		   (dump16toh(ctx, elf64->e_type) == ET_CORE) &&
 		   (dump32toh(ctx, elf64->e_version) == EV_CURRENT)) {
 		edp->elfclass = ELFCLASS64;
-		set_format_longname(ctx, "ELF64 dump");
+		set_file_description(ctx, "ELF64 dump");
 		ret = init_elf64(ctx, elf64);
 		if (ret == kdump_ok)
 			ret = open_common(ctx);

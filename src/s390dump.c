@@ -136,7 +136,7 @@ s390_probe(kdump_ctx *ctx, void *hdr)
 		return set_error(ctx, kdump_noprobe,
 				 "Invalid S390DUMP signature");
 
-	set_format_longname(ctx, "S390 Dump");
+	set_file_description(ctx, "S390 Dump");
 	set_byte_order(ctx, kdump_big_endian);
 
 	pos = dump32toh(ctx, dh->h1.hdr_size) +

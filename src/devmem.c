@@ -209,7 +209,7 @@ devmem_probe(kdump_ctx *ctx, void *hdr)
 	if (ret != kdump_ok)
 		return ret;
 
-	set_format_longname(ctx, "Live memory source");
+	set_file_description(ctx, "Live memory source");
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 	set_byte_order(ctx, kdump_little_endian);
 #else

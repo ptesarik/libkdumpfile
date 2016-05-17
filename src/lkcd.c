@@ -916,7 +916,7 @@ open_common(kdump_ctx *ctx, void *hdr)
 	lkcdp->version = base_version(dump32toh(ctx, dh->dh_version));
 	snprintf(lkcdp->format, sizeof(lkcdp->format),
 		 LKCD_FORMAT_PFX "%u", lkcdp->version);
-	set_format_longname(ctx, lkcdp->format);
+	set_file_description(ctx, lkcdp->format);
 
 	lkcdp->data_offset = LKCD_OFFSET_TO_FIRST_PAGE;
 	lkcdp->last_offset = lkcdp->data_offset;

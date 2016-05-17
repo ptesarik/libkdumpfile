@@ -696,9 +696,9 @@ diskdump_probe(kdump_ctx *ctx, void *hdr)
 		{ 'K', 'D', 'U', 'M', 'P', ' ', ' ', ' ' };
 
 	if (!memcmp(hdr, magic_diskdump, sizeof magic_diskdump))
-		set_format_longname(ctx, "Diskdump");
+		set_file_description(ctx, "Diskdump");
 	else if (!memcmp(hdr, magic_kdump, sizeof magic_kdump))
-		set_format_longname(ctx, "Compressed KDUMP");
+		set_file_description(ctx, "Compressed KDUMP");
 	else
 		return set_error(ctx, kdump_noprobe,
 				 "Unrecognized diskdump signature");
