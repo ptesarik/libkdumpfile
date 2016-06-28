@@ -21,6 +21,8 @@ static PyObject *EOFException;
 
 static PyTypeObject attr_dir_object_type;
 static PyTypeObject attr_iterkey_object_type;
+static PyTypeObject attr_itervalue_object_type;
+static PyTypeObject attr_iteritem_object_type;
 
 static PyObject *attr_dir_new(kdumpfile_object *kdumpfile,
 			      const kdump_attr_ref_t *baseref);
@@ -848,11 +850,35 @@ attr_dir_iterkeys(PyObject *_self, PyObject *arg)
 	return attr_iter_new(self, &attr_iterkey_object_type);
 }
 
+PyDoc_STRVAR(itervalues__doc__,
+"D.itervalues() -> an iterator over the values of D");
+
+static PyObject *
+attr_dir_itervalues(PyObject *_self, PyObject *arg)
+{
+	attr_dir_object *self = (attr_dir_object*)_self;
+	return attr_iter_new(self, &attr_itervalue_object_type);
+}
+
+PyDoc_STRVAR(iteritems__doc__,
+"D.iteritems() -> an iterator over the (key, value) items of D");
+
+static PyObject *
+attr_dir_iteritems(PyObject *_self, PyObject *arg)
+{
+	attr_dir_object *self = (attr_dir_object*)_self;
+	return attr_iter_new(self, &attr_iteritem_object_type);
+}
+
 static PyMethodDef attr_dir_methods[] = {
 	{"get",		attr_dir_get,		METH_VARARGS,
 	 get__doc__},
 	{"iterkeys",	attr_dir_iterkeys,	METH_NOARGS,
 	 iterkeys__doc__},
+	{"itervalues",	attr_dir_itervalues,	METH_NOARGS,
+	 itervalues__doc__},
+	{"iteritems",	attr_dir_iteritems,	METH_NOARGS,
+	 iteritems__doc__},
 	{NULL,		NULL}	/* sentinel */
 };
 
@@ -944,19 +970,11 @@ attr_iter_traverse(PyObject *_self, visitproc visit, void *arg)
 }
 
 static PyObject *
-attr_iterkey_next(PyObject *_self)
+attr_iter_advance(attr_iter_object *self, PyObject *ret)
 {
-	attr_iter_object *self = (attr_iter_object*)_self;
-	PyObject *ret;
-	kdump_ctx *ctx;
+	kdump_ctx *ctx = self->kdumpfile->ctx;
 	kdump_status status;
 
-	if (!self->iter.key)
-		return NULL;
-
-	ret = PyString_FromString(self->iter.key);
-
-	ctx = self->kdumpfile->ctx;
 	status = kdump_attr_iter_next(ctx, &self->iter);
 	if (status != kdump_ok) {
 		PyErr_Format(exception_map(status), kdump_err_str(ctx));
@@ -965,6 +983,80 @@ attr_iterkey_next(PyObject *_self)
 	}
 
 	return ret;
+}
+
+static PyObject *
+attr_iterkey_next(PyObject *_self)
+{
+	attr_iter_object *self = (attr_iter_object*)_self;
+
+	if (!self->iter.key)
+		return NULL;
+
+	return attr_iter_advance(self, PyString_FromString(self->iter.key));
+}
+
+static PyObject *
+attr_itervalue_next(PyObject *_self)
+{
+	attr_iter_object *self = (attr_iter_object*)_self;
+	kdump_ctx *ctx;
+	kdump_attr_t attr;
+	kdump_status status;
+	PyObject *value;
+
+	if (!self->iter.key)
+		return NULL;
+
+	ctx = self->kdumpfile->ctx;
+	status = kdump_attr_ref_get(ctx, &self->iter.pos, &attr);
+	if (status != kdump_ok) {
+		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
+		return NULL;
+	}
+
+	value = attr_new(self->kdumpfile, &self->iter.pos, &attr);
+	return attr_iter_advance(self, value);
+}
+
+static PyObject *
+attr_iteritem_next(PyObject *_self)
+{
+	attr_iter_object *self = (attr_iter_object*)_self;
+	kdump_ctx *ctx;
+	kdump_attr_t attr;
+	kdump_status status;
+	PyObject *key, *value, *result;
+
+	if (!self->iter.key)
+		return NULL;
+
+	ctx = self->kdumpfile->ctx;
+	status = kdump_attr_ref_get(ctx, &self->iter.pos, &attr);
+	if (status != kdump_ok) {
+		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
+		return NULL;
+	}
+
+	result = PyTuple_New(2);
+	if (result == NULL)
+		return NULL;
+	key = PyString_FromString(self->iter.key);
+	if (!key)
+		goto err_result;
+	value = attr_new(self->kdumpfile, &self->iter.pos, &attr);
+	if (!value)
+		goto err_key;
+
+	PyTuple_SET_ITEM(result, 0, key);
+	PyTuple_SET_ITEM(result, 1, value);
+	return attr_iter_advance(self, result);
+
+ err_key:
+	Py_DECREF(key);
+ err_result:
+	Py_DECREF(result);
+	return NULL;
 }
 
 static PyTypeObject attr_iterkey_object_type = {
@@ -998,6 +1090,68 @@ static PyTypeObject attr_iterkey_object_type = {
 	attr_iterkey_next,		/* tp_iternext */
 };
 
+static PyTypeObject attr_itervalue_object_type = {
+	PyVarObject_HEAD_INIT(NULL, 0)
+	"_kdumpfile.attribute-valueiterator",
+	sizeof(attr_iter_object),	/* tp_basicsize */
+	0,				/* tp_itemsize */
+	/* methods */
+	attr_iter_dealloc,		/* tp_dealloc */
+	0,				/* tp_print */
+	0,				/* tp_getattr */
+	0,				/* tp_setattr */
+	0,				/* tp_compare */
+	0,				/* tp_repr */
+	0,				/* tp_as_number */
+	0,				/* tp_as_sequence */
+	0,				/* tp_as_mapping */
+	0,				/* tp_hash */
+	0,				/* tp_call */
+	0,				/* tp_str */
+	0,				/* tp_getattro */
+	0,				/* tp_setattro */
+	0,				/* tp_as_buffer */
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC, /* tp_flags */
+	0,				/* tp_doc */
+	attr_iter_traverse,		/* tp_traverse */
+	0,				/* tp_clear */
+	0,				/* tp_richcompare */
+	0,				/* tp_weaklistoffset */
+	PyObject_SelfIter,		/* tp_iter */
+	attr_itervalue_next,		/* tp_iternext */
+};
+
+static PyTypeObject attr_iteritem_object_type = {
+	PyVarObject_HEAD_INIT(NULL, 0)
+	"_kdumpfile.attribute-itemiterator",
+	sizeof(attr_iter_object),	/* tp_basicsize */
+	0,				/* tp_itemsize */
+	/* methods */
+	attr_iter_dealloc,		/* tp_dealloc */
+	0,				/* tp_print */
+	0,				/* tp_getattr */
+	0,				/* tp_setattr */
+	0,				/* tp_compare */
+	0,				/* tp_repr */
+	0,				/* tp_as_number */
+	0,				/* tp_as_sequence */
+	0,				/* tp_as_mapping */
+	0,				/* tp_hash */
+	0,				/* tp_call */
+	0,				/* tp_str */
+	0,				/* tp_getattro */
+	0,				/* tp_setattro */
+	0,				/* tp_as_buffer */
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC, /* tp_flags */
+	0,				/* tp_doc */
+	attr_iter_traverse,		/* tp_traverse */
+	0,				/* tp_clear */
+	0,				/* tp_richcompare */
+	0,				/* tp_weaklistoffset */
+	PyObject_SelfIter,		/* tp_iter */
+	attr_iteritem_next,		/* tp_iternext */
+};
+
 struct constdef {
 	const char *name;
 	int value;
@@ -1023,6 +1177,10 @@ init_kdumpfile (void)
 	if (PyType_Ready(&attr_dir_object_type) < 0)
 		return;
 	if (PyType_Ready(&attr_iterkey_object_type) < 0)
+		return;
+	if (PyType_Ready(&attr_itervalue_object_type) < 0)
+		return;
+	if (PyType_Ready(&attr_iteritem_object_type) < 0)
 		return;
 
 	ret = lookup_exceptions();
