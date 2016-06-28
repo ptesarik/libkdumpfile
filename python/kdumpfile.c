@@ -906,6 +906,42 @@ attr_dir_update(PyObject *_self, PyObject *args, PyObject *kwds)
 	return result;
 }
 
+PyDoc_STRVAR(clear__doc__,
+"D.clear() -> None.  Remove all items from D.");
+
+static PyObject *
+attr_dir_clear(PyObject *_self, PyObject *args)
+{
+	attr_dir_object *self = (attr_dir_object*)_self;
+	kdump_ctx *ctx = self->kdumpfile->ctx;
+	kdump_attr_iter_t iter;
+	kdump_attr_t attr;
+	kdump_status status;
+
+	status = kdump_attr_ref_iter_start(ctx, &self->baseref, &iter);
+	if (status != kdump_ok)
+		goto err_noiter;
+
+	attr.type = kdump_nil;
+	while (iter.key) {
+		status = kdump_attr_ref_set(ctx, &iter.pos, &attr);
+		if (status != kdump_ok)
+			goto err;
+		status = kdump_attr_iter_next(ctx, &iter);
+		if (status != kdump_ok)
+			goto err;
+	}
+
+	kdump_attr_iter_end(ctx, &iter);
+	Py_RETURN_NONE;
+
+ err:
+	kdump_attr_iter_end(ctx, &iter);
+ err_noiter:
+	PyErr_Format(exception_map(status), kdump_err_str(ctx));
+	return NULL;
+}
+
 static PyObject *
 attr_dir_repr(PyObject *_self)
 {
@@ -1166,6 +1202,8 @@ static PyMethodDef attr_dir_methods[] = {
 	 setdefault_doc__},
 	{"update",	(PyCFunction)attr_dir_update, METH_VARARGS | METH_KEYWORDS,
 	 update__doc__},
+	{"clear",	attr_dir_clear,		METH_NOARGS,
+	 clear__doc__},
 	{"iterkeys",	attr_dir_iterkeys,	METH_NOARGS,
 	 iterkeys__doc__},
 	{"itervalues",	attr_dir_itervalues,	METH_NOARGS,
