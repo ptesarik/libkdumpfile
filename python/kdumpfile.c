@@ -726,6 +726,129 @@ attr_dir_get(PyObject *_self, PyObject *args)
 }
 
 static PyObject *
+attr_dir_merge(PyObject *_self, PyObject *map)
+{
+	PyObject *keys, *iter;
+	PyObject *key, *value;
+	int status;
+
+	keys = PyMapping_Keys(map);
+	if (!keys)
+	    return NULL;
+	iter = PyObject_GetIter(keys);
+	Py_DECREF(keys);
+	if (!iter)
+	    return NULL;
+
+	for (key = PyIter_Next(iter); key; key = PyIter_Next(iter)) {
+		value = PyObject_GetItem(map, key);
+		if (!value)
+			goto err;
+
+		status = attr_dir_ass_subscript(_self, key, value);
+		Py_DECREF(value);
+		if (status < 0)
+			goto err;
+		Py_DECREF(key);
+	}
+	Py_DECREF(iter);
+	if (PyErr_Occurred())
+		return NULL;
+
+	return Py_None;
+
+ err:
+	Py_DECREF(iter);
+	Py_DECREF(key);
+	return NULL;
+}
+
+static PyObject *
+attr_dir_merge_seq2(PyObject *_self, PyObject *seq2)
+{
+	PyObject *iter, *elem;
+	Py_ssize_t i;		/* index into seq2 of current element */
+	PyObject *fast;		/* item as a 2-tuple or 2-list */
+
+	iter = PyObject_GetIter(seq2);
+	if (!iter)
+		return NULL;
+
+	i = 0;
+	while ( (elem = PyIter_Next(iter)) ) {
+		PyObject *key, *value;
+		Py_ssize_t n;
+		int status;
+
+		/* Convert item to sequence, and verify length 2. */
+		fast = PySequence_Fast(elem, "");
+		if (!fast) {
+			if (PyErr_ExceptionMatches(PyExc_TypeError))
+				PyErr_Format(PyExc_TypeError,
+					     "cannot convert attribute update"
+					     " sequence element #%zd"
+					     " to a sequence", i);
+			goto err;
+		}
+		n = PySequence_Fast_GET_SIZE(fast);
+		if (n != 2) {
+			PyErr_Format(PyExc_ValueError,
+				     "attribute update sequence element #%zd "
+				     "has length %zd; 2 is required",
+				     i, n);
+			goto err;
+		}
+
+		/* Update/merge with this (key, value) pair. */
+		key = PySequence_Fast_GET_ITEM(fast, 0);
+		value = PySequence_Fast_GET_ITEM(fast, 1);
+		status = attr_dir_ass_subscript(_self, key, value);
+		if (status < 0)
+			goto err;
+		Py_DECREF(fast);
+		Py_DECREF(elem);
+		++i;
+	}
+	Py_DECREF(iter);
+
+	return PyErr_Occurred()
+		? NULL
+		: Py_None;
+
+ err:
+	Py_XDECREF(fast);
+	Py_DECREF(elem);
+	Py_DECREF(iter);
+	return NULL;
+}
+
+PyDoc_STRVAR(update__doc__,
+"D.update([E, ]**F) -> None.  Update D from dict/iterable E and F.\n"
+"If E present and has a .keys() method, does:     for k in E: D[k] = E[k]\n"
+"If E present and lacks .keys() method, does:     for (k, v) in E: D[k] = v\n"
+"In either case, this is followed by: for k in F: D[k] = F[k]");
+
+static PyObject *
+attr_dir_update(PyObject *_self, PyObject *args, PyObject *kwds)
+{
+	PyObject *arg = NULL;
+	PyObject *result;
+
+	if (!PyArg_UnpackTuple(args, "update", 0, 1, &arg))
+		return NULL;
+
+	result = (arg == NULL)
+		? Py_None
+		: (PyObject_HasAttrString(arg, "keys")
+		   ? attr_dir_merge(_self, arg)
+		   : attr_dir_merge_seq2(_self, arg));
+
+	if (result && kwds != NULL)
+		result = attr_dir_merge(_self, kwds);
+	return result;
+}
+
+static PyObject *
 attr_dir_repr(PyObject *_self)
 {
 	attr_dir_object *self = (attr_dir_object*)_self;
@@ -981,6 +1104,8 @@ attr_dir_items(PyObject *_self, PyObject *arg)
 static PyMethodDef attr_dir_methods[] = {
 	{"get",		attr_dir_get,		METH_VARARGS,
 	 get__doc__},
+	{"update",	(PyCFunction)attr_dir_update, METH_VARARGS | METH_KEYWORDS,
+	 update__doc__},
 	{"iterkeys",	attr_dir_iterkeys,	METH_NOARGS,
 	 iterkeys__doc__},
 	{"itervalues",	attr_dir_itervalues,	METH_NOARGS,
