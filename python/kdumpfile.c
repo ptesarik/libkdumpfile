@@ -599,6 +599,95 @@ attr_dir_setattro(PyObject *_self, PyObject *name, PyObject *value)
 	return -1;
 }
 
+static PyObject *
+attr_dir_repr(PyObject *_self)
+{
+	attr_dir_object *self = (attr_dir_object*)_self;
+	kdump_ctx *ctx = self->kdumpfile->ctx;
+	kdump_attr_iter_t iter;
+	kdump_status status;
+	PyObject *s, *temp;
+	PyObject *colon = NULL, *pieces = NULL;
+	PyObject *result = NULL;
+	int res;
+
+	status = kdump_attr_ref_iter_start(ctx, &self->baseref, &iter);
+	if (status != kdump_ok) {
+		PyErr_Format(exception_map(status), kdump_err_str(ctx));
+		return NULL;
+	}
+
+	if (!iter.key) {
+		result = PyString_FromString("{}");
+		goto out;
+	}
+
+	colon = PyString_FromString(": ");
+	if (!colon)
+		goto out;
+
+	pieces = PyList_New(0);
+	if (!pieces)
+		goto out;
+
+	while (iter.key) {
+		s = PyString_FromString(iter.key);
+		if (!s)
+			goto out;
+		temp = attr_dir_subscript(_self, s);
+		if (!temp) {
+			Py_DECREF(s);
+			goto out;
+		}
+		PyString_Concat(&s, colon);
+		PyString_ConcatAndDel(&s, PyObject_Repr(temp));
+		Py_DECREF(temp);
+		if (!s)
+			goto out;
+
+		res = PyList_Append(pieces, s);
+		Py_DECREF(s);
+		if (res <0)
+			goto out;
+
+		status = kdump_attr_iter_next(ctx, &iter);
+		if (status != kdump_ok) {
+			PyErr_Format(exception_map(status), kdump_err_str(ctx));
+			goto out;
+		}
+	}
+
+	s = PyString_FromString("{");
+	if (!s)
+		goto out;
+	temp = PyList_GET_ITEM(pieces, 0);
+	PyString_ConcatAndDel(&s, temp);
+	PyList_SET_ITEM(pieces, 0, s);
+	if (!s)
+		goto out;
+
+	s = PyString_FromString("}");
+	if (!s)
+		goto out;
+	temp = PyList_GET_ITEM(pieces, PyList_GET_SIZE(pieces) - 1);
+	PyString_ConcatAndDel(&temp, s);
+	PyList_SET_ITEM(pieces, PyList_GET_SIZE(pieces) - 1, temp);
+	if (!temp)
+		goto out;
+
+	s = PyString_FromString(", ");
+	if (!s)
+		goto out;
+	result = _PyString_Join(s, pieces);
+	Py_DECREF(s);
+
+ out:
+	kdump_attr_iter_end(ctx, &iter);
+	Py_XDECREF(pieces);
+	Py_XDECREF(colon);
+	return result;
+}
+
 static PyTypeObject attr_dir_object_type =
 {
 	PyVarObject_HEAD_INIT (NULL, 0)
@@ -611,7 +700,7 @@ static PyTypeObject attr_dir_object_type =
 	0,				/* tp_getattr*/
 	0,				/* tp_setattr*/
 	0,				/* tp_compare*/
-	0,				/* tp_repr*/
+	attr_dir_repr,			/* tp_repr */
 	0,				/* tp_as_number*/
 	0,				/* tp_as_sequence*/
 	&attr_dir_as_mapping,		/* tp_as_mapping*/
