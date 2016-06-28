@@ -693,32 +693,34 @@ static PyObject *
 attr_dir_get(PyObject *_self, PyObject *args)
 {
 	attr_dir_object *self = (attr_dir_object*)_self;
-	const char *keystr;
-	PyObject *failobj = Py_None;
+	PyObject *key, *failobj;
 	kdump_ctx *ctx;
 	kdump_attr_ref_t ref;
 	kdump_attr_t attr;
 	kdump_status status;
+	int res;
 
-	if (!PyArg_ParseTuple(args, "s|O:get", &keystr, &failobj))
+	failobj = Py_None;
+	if (!PyArg_UnpackTuple(args, "get", 1, 2, &key, &failobj))
 		return NULL;
 
+	res = lookup_attribute(self, key, &ref);
+	if (res < 0)
+		return NULL;
+	else if (res == 0)
+		goto notfound;
+
 	ctx = self->kdumpfile->ctx;
-	status = kdump_sub_attr_ref(ctx, &self->baseref, keystr, &ref);
-	if (status != kdump_ok)
-		goto fail;
 	status = kdump_attr_ref_get(ctx, &ref, &attr);
-	if (status != kdump_ok)
-		goto fail;
+	if (status == kdump_ok)
+		return attr_new(self->kdumpfile, &ref, &attr);
 
-	return attr_new(self->kdumpfile, &ref, &attr);
-
- fail:
-	if (status != kdump_nokey && status != kdump_nodata) {
+	if (status != kdump_nodata) {
 		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
 		return NULL;
 	}
 
+ notfound:
 	Py_INCREF(failobj);
 	return failobj;
 }
