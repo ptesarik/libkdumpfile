@@ -153,6 +153,9 @@ kdumpfile_dealloc(PyObject *_self)
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
+PyDoc_STRVAR(read__doc__,
+"read (addrtype, address) -> buffer.");
+
 static PyObject *kdumpfile_read (PyObject *_self, PyObject *args, PyObject *kw)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
@@ -210,6 +213,9 @@ attr_new(kdumpfile_object *kdumpfile, kdump_attr_ref_t *ref, kdump_attr_t *attr)
 	}
 }
 
+PyDoc_STRVAR(vtop_init__doc__,
+"Initialize virtual memory mapping");
+
 static PyObject *kdumpfile_vtop_init(PyObject *_self, PyObject *args)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
@@ -221,10 +227,10 @@ static PyObject *kdumpfile_vtop_init(PyObject *_self, PyObject *args)
 
 static PyMethodDef kdumpfile_object_methods[] = {
 	{"read",      (PyCFunction) kdumpfile_read, METH_VARARGS | METH_KEYWORDS,
-		"read (addrtype, address) -> buffer.\n" },
+		read__doc__},
 	{"vtop_init", (PyCFunction) kdumpfile_vtop_init, METH_NOARGS,
-		"Initialize virtual memory mapping\n"},
-	{NULL}  
+		vtop_init__doc__},
+	{NULL}
 };
 
 static PyObject *
