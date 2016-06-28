@@ -688,6 +688,75 @@ attr_dir_repr(PyObject *_self)
 	return result;
 }
 
+static int
+attr_dir_print(PyObject *_self, FILE *fp, int flags)
+{
+	attr_dir_object *self = (attr_dir_object*)_self;
+	kdump_ctx *ctx = self->kdumpfile->ctx;
+	kdump_attr_iter_t iter;
+	kdump_status status;
+	PyObject *s, *temp;
+	int res;
+
+	status = kdump_attr_ref_iter_start(ctx, &self->baseref, &iter);
+	if (status != kdump_ok) {
+		PyErr_Format(exception_map(status), kdump_err_str(ctx));
+		return -1;
+	}
+
+	Py_BEGIN_ALLOW_THREADS
+	putc('{', fp);
+	Py_END_ALLOW_THREADS
+
+	while (iter.key) {
+		s = PyString_FromString(iter.key);
+		if (!s)
+			goto err;
+		res = PyObject_Print(s, fp, 0);
+		if (res != 0) {
+			Py_DECREF(s);
+			goto err;
+		}
+
+		Py_BEGIN_ALLOW_THREADS
+		fputs(": ", fp);
+		Py_END_ALLOW_THREADS
+
+		temp = attr_dir_subscript(_self, s);
+		Py_DECREF(s);
+		if (!temp)
+			goto err;
+		res = PyObject_Print(temp, fp, 0);
+		Py_DECREF(temp);
+		if (res != 0)
+			goto err;
+
+		status = kdump_attr_iter_next(ctx, &iter);
+		if (status != kdump_ok) {
+			PyErr_Format(exception_map(status), kdump_err_str(ctx));
+			goto err;
+		}
+
+		if (iter.key) {
+			Py_BEGIN_ALLOW_THREADS
+			fputs(", ", fp);
+			Py_END_ALLOW_THREADS
+		}
+	}
+
+	kdump_attr_iter_end(ctx, &iter);
+
+	Py_BEGIN_ALLOW_THREADS
+	putc('}', fp);
+	Py_END_ALLOW_THREADS
+
+	return 0;
+
+ err:
+	kdump_attr_iter_end(ctx, &iter);
+	return -1;
+}
+
 static PyTypeObject attr_dir_object_type =
 {
 	PyVarObject_HEAD_INIT (NULL, 0)
@@ -696,7 +765,7 @@ static PyTypeObject attr_dir_object_type =
 	sizeof(char),			/* tp_itemsize*/
 	/* methods */
 	attr_dir_dealloc,		/* tp_dealloc*/
-	0,				/* tp_print*/
+	attr_dir_print,			/* tp_print*/
 	0,				/* tp_getattr*/
 	0,				/* tp_setattr*/
 	0,				/* tp_compare*/
