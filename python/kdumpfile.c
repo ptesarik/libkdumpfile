@@ -521,28 +521,18 @@ attr_dir_subscript(PyObject *_self, PyObject *key)
 	return NULL;
 }
 
-static int
-attr_dir_ass_subscript(PyObject *_self, PyObject *key, PyObject *value)
+static PyObject *
+object2attr(PyObject *value, kdump_attr_ref_t *ref, kdump_attr_t *attr)
 {
-	attr_dir_object *self = (attr_dir_object*)_self;
 	unsigned PY_LONG_LONG num;
 	PyObject *conv;
-	kdump_ctx *ctx;
-	kdump_attr_t attr;
-	kdump_attr_ref_t ref;
-	kdump_status status;
-	int ret = -1;
 
-	if (get_attribute(self, key, &ref) <= 0)
-		return ret;
-
-	attr.type = value
-		? kdump_attr_ref_type(&ref)
+	attr->type = value
+		? kdump_attr_ref_type(ref)
 		: kdump_nil;
-	ctx = self->kdumpfile->ctx;
 
 	conv = value;
-	switch (attr.type) {
+	switch (attr->type) {
 	case kdump_nil:		/* used for deletions */
 		break;
 
@@ -557,50 +547,79 @@ attr_dir_ass_subscript(PyObject *_self, PyObject *key, PyObject *value)
 		if (PyLong_Check(value)) {
 			num = PyLong_AsUnsignedLongLong(value);
 			if (PyErr_Occurred())
-				goto out;
+				return NULL;
 		} else if (PyInt_Check(value)) {
 			num = PyInt_AsLong(value);
 			if (PyErr_Occurred())
-				goto out;
+				return NULL;
 		} else {
 			PyErr_Format(PyExc_TypeError,
 				     "need an integer, not %.200s",
 				     Py_TYPE(value)->tp_name);
-			goto out;
+			return NULL;
 		}
 
-		if (attr.type == kdump_number)
-			attr.val.number = num;
+		if (attr->type == kdump_number)
+			attr->val.number = num;
 		else
-			attr.val.address = num;
+			attr->val.address = num;
 		break;
 
 	case kdump_string:
 		if (!PyString_Check(value)) {
 			conv = PyObject_Str(value);
 			if (!conv)
-				goto out;
+				return NULL;
 		}
-		if (! (attr.val.string = PyString_AsString(conv)) )
-			goto out;
+		if (! (attr->val.string = PyString_AsString(conv)) )
+			return NULL;
 		break;
 
 	default:
 		PyErr_SetString(PyExc_TypeError,
 				"assignment to an unknown type");
-		goto out;
+		return NULL;
 	}
 
-	status = kdump_attr_ref_set(ctx, &ref, &attr);
-	if (status != kdump_ok)
-		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
-	else
-		ret = 0;
+	return conv;
+}
 
- out:
-	kdump_attr_unref(ctx, &ref);
+static int
+set_attribute(attr_dir_object *self, kdump_attr_ref_t *ref, PyObject *value)
+{
+	PyObject *conv;
+	kdump_ctx *ctx;
+	kdump_attr_t attr;
+	kdump_status status;
+
+	conv = object2attr(value, ref, &attr);
+	if (value && !conv)
+		return -1;
+
+	ctx = self->kdumpfile->ctx;
+	status = kdump_attr_ref_set(ctx, ref, &attr);
 	if (conv != value)
-		Py_DECREF(conv);
+		Py_XDECREF(conv);
+	if (status != kdump_ok) {
+		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
+		return -1;
+	}
+
+	return 0;
+}
+
+static int
+attr_dir_ass_subscript(PyObject *_self, PyObject *key, PyObject *value)
+{
+	attr_dir_object *self = (attr_dir_object*)_self;
+	kdump_attr_ref_t ref;
+	int ret = -1;
+
+	if (get_attribute(self, key, &ref) <= 0)
+		return ret;
+
+	ret = set_attribute(self, &ref, value);
+	kdump_attr_unref(self->kdumpfile->ctx, &ref);
 	return ret;
 }
 
