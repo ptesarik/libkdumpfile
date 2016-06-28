@@ -408,6 +408,36 @@ lookup_attribute(attr_dir_object *self, PyObject *key, kdump_attr_ref_t *ref)
 	return ret;
 }
 
+static Py_ssize_t
+attr_dir_length(PyObject *_self)
+{
+	attr_dir_object *self = (attr_dir_object*)_self;
+	kdump_ctx *ctx = self->kdumpfile->ctx;
+	kdump_attr_iter_t iter;
+	kdump_status status;
+	Py_ssize_t len = 0;
+
+	status = kdump_attr_ref_iter_start(ctx, &self->baseref, &iter);
+	if (status != kdump_ok)
+		goto err;
+
+	while (iter.key) {
+		++len;
+		status = kdump_attr_iter_next(ctx, &iter);
+		if (status != kdump_ok)
+			break;
+	}
+	kdump_attr_iter_end(ctx, &iter);
+	if (status != kdump_ok)
+		goto err;
+
+	return len;
+
+ err:
+	PyErr_Format(exception_map(status), kdump_err_str(ctx));
+	return -1;
+}
+
 static PyObject *
 attr_dir_subscript(PyObject *_self, PyObject *key)
 {
@@ -518,7 +548,7 @@ attr_dir_ass_subscript(PyObject *_self, PyObject *key, PyObject *value)
 }
 
 static PyMappingMethods attr_dir_as_mapping = {
-	NULL,			/* mp_length */
+	attr_dir_length,	/* mp_length */
 	attr_dir_subscript,	/* mp_subscript */
 	attr_dir_ass_subscript,	/* mp_ass_subscript */
 };
