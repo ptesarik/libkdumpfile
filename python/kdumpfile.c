@@ -20,7 +20,7 @@ static PyObject *NoKeyException;
 static PyObject *EOFException;
 
 static PyTypeObject attr_dir_object_type;
-static PyTypeObject attr_iter_object_type;
+static PyTypeObject attr_iterkey_object_type;
 
 static PyObject *attr_dir_new(kdumpfile_object *kdumpfile,
 			      const kdump_attr_ref_t *baseref);
@@ -375,7 +375,8 @@ typedef struct {
 	kdump_attr_ref_t baseref;
 } attr_dir_object;
 
-static PyObject *attr_iter_new(attr_dir_object *attr_dir);
+static PyObject *attr_iter_new(attr_dir_object *attr_dir,
+			       PyTypeObject *itertype);
 
 static int
 lookup_attribute(attr_dir_object *self, PyObject *key, kdump_attr_ref_t *ref)
@@ -830,9 +831,28 @@ attr_dir_print(PyObject *_self, FILE *fp, int flags)
 	return -1;
 }
 
+static PyObject *
+attr_iterkey_new(PyObject *_self)
+{
+	attr_dir_object *self = (attr_dir_object*)_self;
+	return attr_iter_new(self, &attr_iterkey_object_type);
+}
+
+PyDoc_STRVAR(iterkeys__doc__,
+"D.iterkeys() -> an iterator over the keys of D");
+
+static PyObject *
+attr_dir_iterkeys(PyObject *_self, PyObject *arg)
+{
+	attr_dir_object *self = (attr_dir_object*)_self;
+	return attr_iter_new(self, &attr_iterkey_object_type);
+}
+
 static PyMethodDef attr_dir_methods[] = {
 	{"get",		attr_dir_get,		METH_VARARGS,
 	 get__doc__},
+	{"iterkeys",	attr_dir_iterkeys,	METH_NOARGS,
+	 iterkeys__doc__},
 	{NULL,		NULL}	/* sentinel */
 };
 
@@ -864,7 +884,7 @@ static PyTypeObject attr_dir_object_type =
 	0,				/* tp_clear */
 	0,				/* tp_richcompare */
 	0,				/* tp_weaklistoffset */
-	(getiterfunc)attr_iter_new,	/* tp_iter */
+	attr_iterkey_new,		/* tp_iter */
 	0,				/* tp_iternext */
 	attr_dir_methods,		/* tp_methods */
 };
@@ -878,13 +898,13 @@ typedef struct {
 } attr_iter_object;
 
 static PyObject *
-attr_iter_new(attr_dir_object *attr_dir)
+attr_iter_new(attr_dir_object *attr_dir, PyTypeObject *itertype)
 {
 	attr_iter_object *self;
 	kdump_ctx *ctx = attr_dir->kdumpfile->ctx;
 	kdump_status status;
 
-	self = PyObject_GC_New(attr_iter_object, &attr_iter_object_type);
+	self = PyObject_GC_New(attr_iter_object, itertype);
 	if (self == NULL)
 		return NULL;
 
@@ -924,7 +944,7 @@ attr_iter_traverse(PyObject *_self, visitproc visit, void *arg)
 }
 
 static PyObject *
-attr_iter_next(PyObject *_self)
+attr_iterkey_next(PyObject *_self)
 {
 	attr_iter_object *self = (attr_iter_object*)_self;
 	PyObject *ret;
@@ -947,9 +967,9 @@ attr_iter_next(PyObject *_self)
 	return ret;
 }
 
-static PyTypeObject attr_iter_object_type = {
+static PyTypeObject attr_iterkey_object_type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	"_kdumpfile.attribute-iterator",
+	"_kdumpfile.attribute-keyiterator",
 	sizeof(attr_iter_object),	/* tp_basicsize */
 	0,				/* tp_itemsize */
 	/* methods */
@@ -975,7 +995,7 @@ static PyTypeObject attr_iter_object_type = {
 	0,				/* tp_richcompare */
 	0,				/* tp_weaklistoffset */
 	PyObject_SelfIter,		/* tp_iter */
-	attr_iter_next,			/* tp_iternext */
+	attr_iterkey_next,		/* tp_iternext */
 };
 
 struct constdef {
@@ -1002,7 +1022,7 @@ init_kdumpfile (void)
 		return;
 	if (PyType_Ready(&attr_dir_object_type) < 0)
 		return;
-	if (PyType_Ready(&attr_iter_object_type) < 0)
+	if (PyType_Ready(&attr_iterkey_object_type) < 0)
 		return;
 
 	ret = lookup_exceptions();
