@@ -403,9 +403,9 @@ lookup_attribute(attr_dir_object *self, PyObject *key, kdump_attr_ref_t *ref)
 
 		status = kdump_sub_attr_ref(ctx, &self->baseref, keystr, ref);
 		if (status == kdump_ok)
-			ret = 0;
+			ret = 1;
 		else if (status == kdump_nokey)
-			PyErr_SetObject(PyExc_KeyError, key);
+			ret = 0;
 		else
 			PyErr_SetString(exception_map(status),
 					kdump_err_str(ctx));
@@ -416,6 +416,54 @@ lookup_attribute(attr_dir_object *self, PyObject *key, kdump_attr_ref_t *ref)
 
 	return ret;
 }
+
+static int
+get_attribute(attr_dir_object *self, PyObject *key, kdump_attr_ref_t *ref)
+{
+	int ret = lookup_attribute(self, key, ref);
+	if (ret == 0)
+		PyErr_SetObject(PyExc_KeyError, key);
+	return ret;
+}
+
+static int
+attr_dir_contains(PyObject *_self, PyObject *key)
+{
+	attr_dir_object *self = (attr_dir_object*)_self;
+	kdump_attr_ref_t ref;
+	int ret;
+
+	ret = lookup_attribute(self, key, &ref);
+	if (ret > 0) {
+		kdump_ctx *ctx = self->kdumpfile->ctx;
+		kdump_attr_t attr;
+		kdump_status status;
+
+		status = kdump_attr_ref_get(ctx, &ref, &attr);
+		kdump_attr_unref(ctx, &ref);
+		if (status == kdump_nodata)
+			ret = 0;
+		else if (status != kdump_ok) {
+			PyErr_SetString(exception_map(status),
+					kdump_err_str(ctx));
+			ret = -1;
+		}
+	}
+	return ret;
+}
+
+static PySequenceMethods attr_dir_as_sequence = {
+	0,			/* sq_length */
+	0,			/* sq_concat */
+	0,			/* sq_repeat */
+	0,			/* sq_item */
+	0,			/* sq_slice */
+	0,			/* sq_ass_item */
+	0,			/* sq_ass_slice */
+	attr_dir_contains,	/* sq_contains */
+	0,			/* sq_inplace_concat */
+	0,			/* sq_inplace_repeat */
+};
 
 static Py_ssize_t
 attr_dir_length(PyObject *_self)
@@ -456,7 +504,7 @@ attr_dir_subscript(PyObject *_self, PyObject *key)
 	kdump_attr_ref_t ref;
 	kdump_status status;
 
-	if (lookup_attribute(self, key, &ref))
+	if (get_attribute(self, key, &ref) <= 0)
 		return NULL;
 
 	ctx = self->kdumpfile->ctx;
@@ -485,7 +533,7 @@ attr_dir_ass_subscript(PyObject *_self, PyObject *key, PyObject *value)
 	kdump_status status;
 	int ret = -1;
 
-	if (lookup_attribute(self, key, &ref))
+	if (get_attribute(self, key, &ref) <= 0)
 		return ret;
 
 	attr.type = value
@@ -960,7 +1008,7 @@ static PyTypeObject attr_dir_object_type =
 	0,				/* tp_compare*/
 	attr_dir_repr,			/* tp_repr */
 	0,				/* tp_as_number*/
-	0,				/* tp_as_sequence*/
+	&attr_dir_as_sequence,		/* tp_as_sequence*/
 	&attr_dir_as_mapping,		/* tp_as_mapping*/
 	0,				/* tp_hash */
 	0,				/* tp_call*/
