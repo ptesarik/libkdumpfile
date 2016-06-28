@@ -1201,20 +1201,24 @@ PyDoc_STRVAR(dict__doc__,
 static PyObject *
 attr_dir_dict(PyObject *_self, PyObject *args)
 {
-	PyObject *iter;
-	PyObject *dict = PyDict_New();
+	PyObject *dict, *iter;
 	int status;
 
+	dict = PyDict_New();
+	if (!dict)
+		return NULL;
 	iter = attr_dir_iteritems(_self, args);
 	if (!iter)
-		return NULL;
+		goto err;
 	status = PyDict_MergeFromSeq2(dict, iter, 1);
 	Py_DECREF(iter);
-	if (status) {
-		Py_DECREF(dict);
-		return NULL;
-	}
+	if (status)
+		goto err;
 	return dict;
+
+ err:
+	Py_DECREF(dict);
+	return NULL;
 }
 
 static PyMethodDef attr_dir_methods[] = {
