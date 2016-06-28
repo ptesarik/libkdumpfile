@@ -744,6 +744,45 @@ attr_dir_get(PyObject *_self, PyObject *args)
 	return failobj;
 }
 
+PyDoc_STRVAR(setdefault_doc__,
+"D.setdefault(k[,d]) -> D.get(k,d), also set D[k]=d if k not in D");
+
+static PyObject *
+dict_setdefault(PyObject *_self, PyObject *args)
+{
+	attr_dir_object *self = (attr_dir_object*)_self;
+	PyObject *key, *failobj;
+	PyObject *val = NULL;
+	kdump_ctx *ctx;
+	kdump_attr_ref_t ref;
+	kdump_attr_t attr;
+	kdump_status status;
+
+	failobj = Py_None;
+	if (!PyArg_UnpackTuple(args, "setdefault", 1, 2, &key, &failobj))
+		return NULL;
+
+	if (get_attribute(self, key, &ref) <= 0)
+		return NULL;
+
+	ctx = self->kdumpfile->ctx;
+	status = kdump_attr_ref_get(ctx, &ref, &attr);
+	if (status == kdump_ok)
+		val = attr_new(self->kdumpfile, &ref, &attr);
+	else if (status == kdump_nodata)
+		val = (set_attribute(self, &ref, failobj) == 0)
+			? failobj
+			: NULL;
+	else {
+		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
+		val = NULL;
+	}
+	kdump_attr_unref(ctx, &ref);
+
+	Py_XINCREF(val);
+	return val;
+}
+
 static PyObject *
 attr_dir_merge(PyObject *_self, PyObject *map)
 {
@@ -1123,6 +1162,8 @@ attr_dir_items(PyObject *_self, PyObject *arg)
 static PyMethodDef attr_dir_methods[] = {
 	{"get",		attr_dir_get,		METH_VARARGS,
 	 get__doc__},
+	{"setdefault",	dict_setdefault,	METH_VARARGS,
+	 setdefault_doc__},
 	{"update",	(PyCFunction)attr_dir_update, METH_VARARGS | METH_KEYWORDS,
 	 update__doc__},
 	{"iterkeys",	attr_dir_iterkeys,	METH_NOARGS,
