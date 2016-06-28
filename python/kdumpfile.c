@@ -870,6 +870,64 @@ attr_dir_iteritems(PyObject *_self, PyObject *arg)
 	return attr_iter_new(self, &attr_iteritem_object_type);
 }
 
+static PyObject *
+attr_dir_make_list(PyObject *iter)
+{
+	PyObject *list, *object;
+	iternextfunc iternext;
+
+	if (!iter)
+		return NULL;
+
+	list = PyList_New(0);
+	if (!list)
+		goto err_iter;
+
+	iternext = Py_TYPE(iter)->tp_iternext;
+	while ( (object = iternext(iter)) )
+		if (PyList_Append(list, object))
+			goto err_list;
+
+	if (PyErr_Occurred())
+		goto err_list;
+
+	Py_DECREF(iter);
+	return list;
+
+ err_list:
+	Py_DECREF(list);
+ err_iter:
+	Py_DECREF(iter);
+	return NULL;
+}
+
+PyDoc_STRVAR(keys__doc__,
+"D.keys() -> list of D's keys");
+
+static PyObject *
+attr_dir_keys(PyObject *_self, PyObject *arg)
+{
+	return attr_dir_make_list(attr_dir_iterkeys(_self, arg));
+}
+
+PyDoc_STRVAR(values__doc__,
+"D.values() -> list of D's values");
+
+static PyObject *
+attr_dir_values(PyObject *_self, PyObject *arg)
+{
+	return attr_dir_make_list(attr_dir_itervalues(_self, arg));
+}
+
+PyDoc_STRVAR(items__doc__,
+"D.items() -> list of D's (key, value) pairs, as 2-tuples");
+
+static PyObject *
+attr_dir_items(PyObject *_self, PyObject *arg)
+{
+	return attr_dir_make_list(attr_dir_iteritems(_self, arg));
+}
+
 static PyMethodDef attr_dir_methods[] = {
 	{"get",		attr_dir_get,		METH_VARARGS,
 	 get__doc__},
@@ -879,6 +937,12 @@ static PyMethodDef attr_dir_methods[] = {
 	 itervalues__doc__},
 	{"iteritems",	attr_dir_iteritems,	METH_NOARGS,
 	 iteritems__doc__},
+	{"keys",	attr_dir_keys,		METH_NOARGS,
+	 keys__doc__},
+	{"values",	attr_dir_values,	METH_NOARGS,
+	 values__doc__},
+	{"items",	attr_dir_items,		METH_NOARGS,
+	 items__doc__},
 	{NULL,		NULL}	/* sentinel */
 };
 
