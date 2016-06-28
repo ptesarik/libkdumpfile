@@ -599,6 +599,43 @@ attr_dir_setattro(PyObject *_self, PyObject *name, PyObject *value)
 	return -1;
 }
 
+PyDoc_STRVAR(get__doc__,
+"D.get(k[,d]) -> D[k] if k in D, else d.  d defaults to None.");
+
+static PyObject *
+attr_dir_get(PyObject *_self, PyObject *args)
+{
+	attr_dir_object *self = (attr_dir_object*)_self;
+	const char *keystr;
+	PyObject *failobj = Py_None;
+	kdump_ctx *ctx;
+	kdump_attr_ref_t ref;
+	kdump_attr_t attr;
+	kdump_status status;
+
+	if (!PyArg_ParseTuple(args, "s|O:get", &keystr, &failobj))
+		return NULL;
+
+	ctx = self->kdumpfile->ctx;
+	status = kdump_sub_attr_ref(ctx, &self->baseref, keystr, &ref);
+	if (status != kdump_ok)
+		goto fail;
+	status = kdump_attr_ref_get(ctx, &ref, &attr);
+	if (status != kdump_ok)
+		goto fail;
+
+	return attr_new(self->kdumpfile, &ref, &attr);
+
+ fail:
+	if (status != kdump_nokey && status != kdump_nodata) {
+		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
+		return NULL;
+	}
+
+	Py_INCREF(failobj);
+	return failobj;
+}
+
 static PyObject *
 attr_dir_repr(PyObject *_self)
 {
@@ -757,6 +794,12 @@ attr_dir_print(PyObject *_self, FILE *fp, int flags)
 	return -1;
 }
 
+static PyMethodDef attr_dir_methods[] = {
+	{"get",		attr_dir_get,		METH_VARARGS,
+	 get__doc__},
+	{NULL,		NULL}	/* sentinel */
+};
+
 static PyTypeObject attr_dir_object_type =
 {
 	PyVarObject_HEAD_INIT (NULL, 0)
@@ -787,6 +830,7 @@ static PyTypeObject attr_dir_object_type =
 	0,				/* tp_weaklistoffset */
 	(getiterfunc)attr_iter_new,	/* tp_iter */
 	0,				/* tp_iternext */
+	attr_dir_methods,		/* tp_methods */
 };
 
 /* Attribute iterator type */
