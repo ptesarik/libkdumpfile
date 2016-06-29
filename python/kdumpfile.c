@@ -1196,29 +1196,19 @@ attr_dir_items(PyObject *_self, PyObject *arg)
 }
 
 PyDoc_STRVAR(dict__doc__,
-"D.dict() -> dictionary of D's items.");
+"D.dict() -> dictionary of D's items (shallow copy).");
 
 static PyObject *
 attr_dir_dict(PyObject *_self, PyObject *args)
 {
-	PyObject *dict, *iter;
-	int status;
-
-	dict = PyDict_New();
+	PyObject *dict = PyDict_New();
 	if (!dict)
 		return NULL;
-	iter = attr_dir_iteritems(_self, args);
-	if (!iter)
-		goto err;
-	status = PyDict_MergeFromSeq2(dict, iter, 1);
-	Py_DECREF(iter);
-	if (status)
-		goto err;
+	if (PyDict_Merge(dict, _self, 1) != 0) {
+		Py_DECREF(dict);
+		return NULL;
+	}
 	return dict;
-
- err:
-	Py_DECREF(dict);
-	return NULL;
 }
 
 static PyMethodDef attr_dir_methods[] = {
