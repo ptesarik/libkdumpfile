@@ -1019,6 +1019,9 @@ kdump_status set_attr_sized_string(kdump_ctx *ctx, struct attr_data *attr,
 kdump_status set_attr_static_string(kdump_ctx *ctx, struct attr_data *attr,
 				    struct attr_flags flags, const char *str);
 
+#define clear_attr INTERNAL_NAME(clear_attr)
+void clear_attr(kdump_ctx *ctx, struct attr_data *attr);
+
 #define clear_volatile_attrs INTERNAL_NAME(clear_volatile_attrs)
 void clear_volatile_attrs(kdump_ctx *ctx);
 

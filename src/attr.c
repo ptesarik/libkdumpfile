@@ -308,12 +308,15 @@ alloc_attr(struct kdump_shared *shared, struct attr_data *parent,
 	return &tbl->table[hash];
 }
 
-/**  Clear (unset) an attribute.
+/**  Clear (unset) a single attribute.
  * @param ctx   Dump file object.
  * @param attr  Attribute to be cleared.
+ *
+ * This function should be used only for attributes without any
+ * children.
  */
 static void
-clear_attr(kdump_ctx *ctx, struct attr_data *attr)
+clear_single_attr(kdump_ctx *ctx, struct attr_data *attr)
 {
 	const struct attr_ops *ops = attr->template->ops;
 	if (ops && ops->pre_clear)
@@ -330,16 +333,16 @@ clear_attr(kdump_ctx *ctx, struct attr_data *attr)
  * @param ctx   Dump file object.
  * @param attr  Attribute to be cleared.
  */
-static void
-clear_rec(kdump_ctx *ctx, struct attr_data *attr)
+void
+clear_attr(kdump_ctx *ctx, struct attr_data *attr)
 {
 	struct attr_data *child;
 
 	if (attr->template->type == kdump_directory)
 		for (child = attr->dir; child; child = child->next)
-			clear_rec(ctx, child);
+			clear_attr(ctx, child);
 
-	clear_attr(ctx, attr);
+	clear_single_attr(ctx, attr);
 }
 
 /**  Clear (unset) a volatile attribute and its children recursively.
@@ -351,7 +354,7 @@ clear_rec(kdump_ctx *ctx, struct attr_data *attr)
  * attribute which contains at least one persistent attribute.
  */
 static unsigned
-clear_volatile_rec(kdump_ctx *ctx, struct attr_data *attr)
+clear_volatile(kdump_ctx *ctx, struct attr_data *attr)
 {
 	struct attr_data *child;
 	unsigned persist;
@@ -359,10 +362,10 @@ clear_volatile_rec(kdump_ctx *ctx, struct attr_data *attr)
 	persist = attr->flags.persist;
 	if (attr->template->type == kdump_directory)
 		for (child = attr->dir; child; child = child->next)
-			persist |= clear_volatile_rec(ctx, child);
+			persist |= clear_volatile(ctx, child);
 
 	if (!persist)
-		clear_attr(ctx, attr);
+		clear_single_attr(ctx, attr);
 	return persist;
 }
 
@@ -372,7 +375,7 @@ clear_volatile_rec(kdump_ctx *ctx, struct attr_data *attr)
 void
 clear_volatile_attrs(kdump_ctx *ctx)
 {
-	clear_volatile_rec(ctx, gattr(ctx, GKI_dir_root));
+	clear_volatile(ctx, gattr(ctx, GKI_dir_root));
 }
 
 /**  Deallocate attribute (and its children).
@@ -854,7 +857,7 @@ check_set_attr(kdump_ctx *ctx, struct attr_data *attr,
 	kdump_attr_value_t val;
 
 	if (valp->type == kdump_nil) {
-		clear_rec(ctx, attr);
+		clear_attr(ctx, attr);
 		return kdump_ok;
 	}
 
