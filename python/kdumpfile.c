@@ -1613,14 +1613,6 @@ init_kdumpfile (void)
 	if (PyType_Ready(&attr_iteritem_object_type) < 0)
 		return;
 
-	ret = lookup_exceptions();
-	if (ret)
-		return;
-
-	ret = lookup_views();
-	if (ret)
-		return;
-
 	mod = Py_InitModule3("_kdumpfile", NULL,
 			"kdumpfile - interface to libkdumpfile");
 	if (!mod)
@@ -1641,6 +1633,14 @@ init_kdumpfile (void)
 	for (cdef = kdumpfile_constants; cdef->name; ++cdef)
 		if (PyModule_AddIntConstant(mod, cdef->name, cdef->value))
 			goto fail;
+
+	ret = lookup_exceptions();
+	if (ret)
+		goto fail;
+
+	ret = lookup_views();
+	if (ret)
+		goto fail;
 
 	return;
 fail:
