@@ -960,6 +960,12 @@ kdump_attr_ref_type(kdump_attr_ref_t *ref)
 	return ref_attr(ref)->template->type;
 }
 
+int
+kdump_attr_ref_isset(kdump_attr_ref_t *ref)
+{
+	return attr_isset(ref_attr(ref));
+}
+
 kdump_status
 kdump_attr_ref_get(kdump_ctx *ctx, const kdump_attr_ref_t *ref,
 		   kdump_attr_t *valp)

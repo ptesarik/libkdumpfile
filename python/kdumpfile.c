@@ -435,19 +435,8 @@ attr_dir_contains(PyObject *_self, PyObject *key)
 
 	ret = lookup_attribute(self, key, &ref);
 	if (ret > 0) {
-		kdump_ctx *ctx = self->kdumpfile->ctx;
-		kdump_attr_t attr;
-		kdump_status status;
-
-		status = kdump_attr_ref_get(ctx, &ref, &attr);
-		kdump_attr_unref(ctx, &ref);
-		if (status == kdump_nodata)
-			ret = 0;
-		else if (status != kdump_ok) {
-			PyErr_SetString(exception_map(status),
-					kdump_err_str(ctx));
-			ret = -1;
-		}
+		ret = kdump_attr_ref_isset(&ref);
+		kdump_attr_unref(self->kdumpfile->ctx, &ref);
 	}
 	return ret;
 }

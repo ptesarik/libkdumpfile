@@ -499,6 +499,12 @@ void kdump_attr_unref(kdump_ctx *ctx, kdump_attr_ref_t *ref);
  */
 kdump_attr_type_t kdump_attr_ref_type(kdump_attr_ref_t *ref);
 
+/**  Check whether an attribute is set.
+ * @param ref  Attrbute reference.
+ * @returns    Non-zero if the attribute has a value, zero otherwise.
+ */
+int kdump_attr_ref_isset(kdump_attr_ref_t *ref);
+
 /**  Get attribute data by reference.
  * @param      ctx   Dump file object.
  * @param[in]  ref   Attribute reference.
