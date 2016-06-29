@@ -21,4 +21,7 @@
 
 pykdumpfiledir = $(pythondir)/kdumpfile
 
-dist_pykdumpfile_DATA = __init__.py exceptions.py
+dist_pykdumpfile_DATA = \
+	 __init__.py \
+	exceptions.py \
+	views.py
