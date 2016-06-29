@@ -1292,6 +1292,33 @@ attr_dir_copy(PyObject *_self, PyObject *args)
 	return dict;
 }
 
+PyDoc_STRVAR(dict__doc__,
+"D.dict() -> a dict with a deep copy of D's attributes");
+
+static PyObject *
+attr_dir_dict(PyObject *_self, PyObject *args)
+{
+	PyObject *view;
+	PyObject *dict;
+
+	view = attr_dir_viewdict(_self, NULL);
+	if (!view)
+		return NULL;
+	dict = PyDict_New();
+	if (!dict)
+		goto err;
+	if (PyDict_Merge(dict, view, 1) != 0)
+		goto err_dict;
+	Py_DECREF(view);
+	return dict;
+
+ err_dict:
+	Py_DECREF(dict);
+ err:
+	Py_DECREF(view);
+	return NULL;
+}
+
 static PyMethodDef attr_dir_methods[] = {
 	{"get",		attr_dir_get,		METH_VARARGS,
 	 get__doc__},
@@ -1323,6 +1350,8 @@ static PyMethodDef attr_dir_methods[] = {
 	 viewdict__doc__},
 	{"copy",	attr_dir_copy,		METH_NOARGS,
 	 copy__doc__},
+	{"dict",	attr_dir_dict,		METH_NOARGS,
+	 dict__doc__},
 	{NULL,		NULL}	/* sentinel */
 };
 
