@@ -1184,11 +1184,11 @@ attr_dir_items(PyObject *_self, PyObject *arg)
 	return attr_dir_make_list(attr_dir_iteritems(_self, arg));
 }
 
-PyDoc_STRVAR(dict__doc__,
-"D.dict() -> dictionary of D's items (shallow copy).");
+PyDoc_STRVAR(copy__doc__,
+"D.copy() -> a shallow dict copy of D");
 
 static PyObject *
-attr_dir_dict(PyObject *_self, PyObject *args)
+attr_dir_copy(PyObject *_self, PyObject *args)
 {
 	PyObject *dict = PyDict_New();
 	if (!dict)
@@ -1221,8 +1221,8 @@ static PyMethodDef attr_dir_methods[] = {
 	 values__doc__},
 	{"items",	attr_dir_items,		METH_NOARGS,
 	 items__doc__},
-	{"dict",	attr_dir_dict,		METH_NOARGS,
-	 dict__doc__},
+	{"copy",	attr_dir_copy,		METH_NOARGS,
+	 copy__doc__},
 	{NULL,		NULL}	/* sentinel */
 };
 
