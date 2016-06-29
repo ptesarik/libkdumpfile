@@ -40,6 +40,27 @@
 #include "testutil.h"
 
 static int
+check_noattr(kdump_ctx *ctx, char *key)
+{
+	kdump_attr_t attr;
+	kdump_status res;
+
+	printf("Checking no %s... ", key);
+	res = kdump_get_attr(ctx, key, &attr);
+	if (res == kdump_ok) {
+		puts("FAILED");
+		return TEST_FAIL;
+	} else if (res != kdump_nodata) {
+		fprintf(stderr, "Cannot get attribute %s: %s\n",
+			key, kdump_err_str(ctx));
+		return TEST_ERR;
+	}
+
+	puts("OK");
+	return TEST_OK;
+}
+
+static int
 check_attr(kdump_ctx *ctx, char *key, const kdump_attr_t *expect, int chkval)
 {
 	kdump_attr_t attr;
@@ -144,6 +165,8 @@ check_attr_val(kdump_ctx *ctx, char *key, char *val)
 		param.type = param_string;
 		param.string = &string;
 		string = NULL;
+	} else if (!strcmp(val, "nil")) {
+		return check_noattr(ctx, key);
 	} else {
 		fprintf(stderr, "Invalid type: %s\n", val);
 		return TEST_FAIL;
