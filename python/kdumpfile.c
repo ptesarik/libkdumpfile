@@ -27,6 +27,7 @@ static PyTypeObject attr_iteritem_object_type;
 static PyObject *attr_viewkeys_type;
 static PyObject *attr_viewvalues_type;
 static PyObject *attr_viewitems_type;
+static PyObject *attr_viewdict_type;
 
 static PyObject *attr_dir_new(kdumpfile_object *kdumpfile,
 			      const kdump_attr_ref_t *baseref);
@@ -326,6 +327,7 @@ cleanup_views(void)
 	Py_XDECREF(attr_viewkeys_type);
 	Py_XDECREF(attr_viewvalues_type);
 	Py_XDECREF(attr_viewitems_type);
+	Py_XDECREF(attr_viewdict_type);
 }
 
 static int
@@ -345,6 +347,7 @@ lookup_views(void)
 	lookup_view(attr_viewkeys);
 	lookup_view(attr_viewvalues);
 	lookup_view(attr_viewitems);
+	lookup_view(attr_viewdict);
 #undef lookup_view
 
 	Py_DECREF(mod);
@@ -1264,6 +1267,15 @@ attr_dir_viewitems(PyObject *_self, PyObject *args)
 	return attr_dir_view(_self, attr_viewitems_type);
 }
 
+PyDoc_STRVAR(viewdict__doc__,
+"D.viewdict() -> a dict-like object providing a view on D");
+
+static PyObject *
+attr_dir_viewdict(PyObject *_self, PyObject *args)
+{
+	return attr_dir_view(_self, attr_viewdict_type);
+}
+
 PyDoc_STRVAR(copy__doc__,
 "D.copy() -> a shallow dict copy of D");
 
@@ -1307,6 +1319,8 @@ static PyMethodDef attr_dir_methods[] = {
 	 viewvalues__doc__},
 	{"viewitems",	attr_dir_viewitems,	METH_NOARGS,
 	 viewitems__doc__},
+	{"viewdict",	attr_dir_viewdict,	METH_NOARGS,
+	 viewdict__doc__},
 	{"copy",	attr_dir_copy,		METH_NOARGS,
 	 copy__doc__},
 	{NULL,		NULL}	/* sentinel */

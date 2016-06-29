@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # vim:sw=4 ts=4 et
 
+from _kdumpfile import attr_dir
+
 def issub(sub, other):
     for x in sub:
         if x not in other:
@@ -66,3 +68,22 @@ class attr_viewitems(attr_setview):
 
     def __iter__(self):
         return self.dir.iteritems()
+
+class attr_viewdict(attr_viewkeys):
+    """
+Provide a dict-like view on an attribute directory. Nested attribute
+directories are shown as dictionaries, so the view provides a deep copy
+the attribute (sub-)hierarchy.
+    """
+    def __repr__(self):
+        return "%s(%s)" % (type(self).__name__, dict(self).__repr__())
+
+    def keys(self):
+        return list(self)
+
+    def __getitem__(self, key):
+        val = self.dir[key]
+        if isinstance(val, attr_dir):
+            return val.copy()
+        else:
+            return val
