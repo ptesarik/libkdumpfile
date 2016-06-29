@@ -12,6 +12,7 @@ ptr_size=8
 page_shift=12
 page_size=4096
 phys_base=0x3C0000
+pteval_spec="number: 8"
 
 node=test-node
 sysname=Linux

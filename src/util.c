@@ -352,6 +352,8 @@ arch_name_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 		return kdump_ok;
 
 	set_ptr_size(ctx, arch_ptr_size(ctx->shared->arch));
+	set_attr_number(ctx, gattr(ctx, GKI_pteval_size), ATTR_DEFAULT,
+			get_ptr_size(ctx));
 
 	if (!isset_page_size(ctx)) {
 		int page_shift = default_page_shift(ctx->shared->arch);

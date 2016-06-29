@@ -12,6 +12,7 @@ ptr_size=4
 page_shift=12
 page_size=4096
 page_offset=0xC0000000
+pteval_spec=nil
 
 panic="Test panic string"
 node=test-node

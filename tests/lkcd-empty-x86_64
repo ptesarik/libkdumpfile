@@ -12,6 +12,7 @@ ptr_size=8
 page_shift=12
 page_size=4096
 page_offset=0x0000010000000000
+pteval_spec="number: 8"
 
 panic="Test panic string"
 node=test-node

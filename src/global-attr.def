@@ -28,6 +28,9 @@ ATTR(root, "cpu", dir_cpu, directory, struct attr_data *)
 ATTR(root, "file", dir_file, directory, struct attr_data *)
 ATTR(root, "linux", dir_linux, directory, struct attr_data *)
 
+/* arch */
+ATTR(arch, "pteval_size", pteval_size, number, size_t)
+
 /* cache */
 ATTR(cache, "size", cache_size, number, unsigned, .ops = &cache_size_ops)
 ATTR(cache, "hits", cache_hits, number, unsigned long)

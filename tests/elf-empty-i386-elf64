@@ -11,6 +11,7 @@ byte_order=1
 ptr_size=4
 page_shift=12
 page_size=4096
+pteval_spec=nil
 
 ei_class=2
 ei_data=1

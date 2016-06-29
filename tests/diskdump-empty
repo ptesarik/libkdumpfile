@@ -45,6 +45,7 @@ arch.byte_order = number: $byte_order
 arch.ptr_size = number: $ptr_size
 arch.page_shift = number: $page_shift
 arch.page_size = number: $page_size
+arch.pteval_size = $pteval_spec
 
 linux = directory:
 linux.version_code = number: 0x030405

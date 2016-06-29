@@ -161,6 +161,8 @@ ia32_init(kdump_ctx *ctx)
 {
 	kdump_status ret;
 
+	clear_attr(ctx, gattr(ctx, GKI_pteval_size));
+
 	ctx->shared->archdata = calloc(1, sizeof(struct ia32_data));
 	if (!ctx->shared->archdata)
 		return set_error(ctx, kdump_syserr,
@@ -282,6 +284,9 @@ ia32_vtop_init(kdump_ctx *ctx)
 	ret = read_pgt(ctx);
 	if (ret != kdump_ok)
 		return ret;
+
+	set_attr_number(ctx, gattr(ctx, GKI_pteval_size), ATTR_DEFAULT,
+			archdata->pae_state > 0 ? 8 : 4);
 
 	flush_vtop_map(&ctx->shared->vtop_map);
 	ret = set_vtop_xlat(&ctx->shared->vtop_map,
