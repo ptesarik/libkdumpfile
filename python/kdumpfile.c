@@ -989,7 +989,8 @@ attr_dir_repr(PyObject *_self)
 	}
 
 	if (!iter.key) {
-		result = PyString_FromString("{}");
+		result = PyString_FromFormat("%s({})",
+					     Py_TYPE(_self)->tp_name);
 		goto out;
 	}
 
@@ -1028,7 +1029,7 @@ attr_dir_repr(PyObject *_self)
 		}
 	}
 
-	s = PyString_FromString("{");
+	s = PyString_FromFormat("%s({", Py_TYPE(_self)->tp_name);
 	if (!s)
 		goto out;
 	temp = PyList_GET_ITEM(pieces, 0);
@@ -1037,7 +1038,7 @@ attr_dir_repr(PyObject *_self)
 	if (!s)
 		goto out;
 
-	s = PyString_FromString("}");
+	s = PyString_FromString("})");
 	if (!s)
 		goto out;
 	temp = PyList_GET_ITEM(pieces, PyList_GET_SIZE(pieces) - 1);
@@ -1076,7 +1077,7 @@ attr_dir_print(PyObject *_self, FILE *fp, int flags)
 	}
 
 	Py_BEGIN_ALLOW_THREADS
-	putc('{', fp);
+	fprintf(fp, "%s({", Py_TYPE(_self)->tp_name);
 	Py_END_ALLOW_THREADS
 
 	while (iter.key) {
@@ -1118,7 +1119,7 @@ attr_dir_print(PyObject *_self, FILE *fp, int flags)
 	kdump_attr_iter_end(ctx, &iter);
 
 	Py_BEGIN_ALLOW_THREADS
-	putc('}', fp);
+	fputs("})", fp);
 	Py_END_ALLOW_THREADS
 
 	return 0;
@@ -1314,7 +1315,7 @@ static PyMethodDef attr_dir_methods[] = {
 static PyTypeObject attr_dir_object_type =
 {
 	PyVarObject_HEAD_INIT (NULL, 0)
-	"_kdumpfile.attribute-directory",
+	"_kdumpfile.attr_dir",
 	sizeof(attr_dir_object),	/* tp_basicsize*/
 	sizeof(char),			/* tp_itemsize*/
 	/* methods */
@@ -1490,7 +1491,7 @@ attr_iteritem_next(PyObject *_self)
 
 static PyTypeObject attr_iterkey_object_type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	"_kdumpfile.attribute-keyiterator",
+	"_kdumpfile.attr_dir-keyiterator",
 	sizeof(attr_iter_object),	/* tp_basicsize */
 	0,				/* tp_itemsize */
 	/* methods */
@@ -1521,7 +1522,7 @@ static PyTypeObject attr_iterkey_object_type = {
 
 static PyTypeObject attr_itervalue_object_type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	"_kdumpfile.attribute-valueiterator",
+	"_kdumpfile.attr_dir-valueiterator",
 	sizeof(attr_iter_object),	/* tp_basicsize */
 	0,				/* tp_itemsize */
 	/* methods */
@@ -1552,7 +1553,7 @@ static PyTypeObject attr_itervalue_object_type = {
 
 static PyTypeObject attr_iteritem_object_type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	"_kdumpfile.attribute-itemiterator",
+	"_kdumpfile.attr_dir-itemiterator",
 	sizeof(attr_iter_object),	/* tp_basicsize */
 	0,				/* tp_itemsize */
 	/* methods */
@@ -1628,6 +1629,12 @@ init_kdumpfile (void)
 	Py_INCREF((PyObject *)&kdumpfile_object_type);
 	ret = PyModule_AddObject(mod, "kdumpfile",
 				 (PyObject*)&kdumpfile_object_type);
+	if (ret)
+		goto fail;
+
+	Py_INCREF((PyObject *)&attr_dir_object_type);
+	ret = PyModule_AddObject(mod, "attr_dir",
+				 (PyObject*)&attr_dir_object_type);
 	if (ret)
 		goto fail;
 
