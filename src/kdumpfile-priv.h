@@ -620,6 +620,9 @@ struct _kdump_ctx {
 	kdump_get_symbol_val_fn *cb_get_symbol_val;
 	kdump_get_symbol_val_fn *cb_get_symbol_val_xen;
 
+	/** Virtual-to-physical translation callback. */
+	kdump_vtop_hook_fn *cb_vtop_hook_fn;
+
 	/** Per-context data. */
 	void *data[PER_CTX_SLOTS];
 
@@ -928,6 +931,17 @@ static inline kdump_status
 vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	return map_vtop(ctx, vaddr, paddr, &ctx->shared->vtop_map_xen);
+}
+
+/** Call a VTOP hook if defined.
+ * The parameters exactly match those of @ref kdump_vtop_hook_fn.
+ */
+static inline void
+vtop_hook(kdump_ctx *ctx, unsigned short tbl,
+	    kdump_addrspace_t as, kdump_addr_t addr, unsigned idx)
+{
+	if (ctx->cb_vtop_hook_fn)
+		ctx->cb_vtop_hook_fn(ctx, tbl, as, addr, idx);
 }
 
 /* Attribute handling */

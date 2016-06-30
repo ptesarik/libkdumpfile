@@ -168,6 +168,7 @@ xlat(kdump_ctx *ctx, struct vtop_control *ctl)
 				 "Page table index %u not within %u and %u",
 				 idx, ctl->off, ctl->len);
 
+	vtop_hook(ctx, ctl->tbltype + 1, KDUMP_KPHYSADDR, ctl->paddr, idx);
 	res = read_pte(ctx, ctl, idx, &entry);
 	if (res != kdump_ok)
 		return res;
@@ -244,6 +245,7 @@ s390x_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 		}
 	}
 
+	vtop_hook(ctx, 0, KDUMP_KPHYSADDR, ctl.paddr, pte_index(ctl.vaddr));
 	ret = read_pte(ctx, &ctl, pte_index(ctl.vaddr), &entry);
 	if (ret != kdump_ok)
 		return ret;

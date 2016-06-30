@@ -292,6 +292,8 @@ ia32_vtop_nonpae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	kdump_paddr_t base;
 	kdump_status ret;
 
+	vtop_hook(ctx, 1, KDUMP_KPHYSADDR, archdata->pgt,
+		  pgd_index_nonpae(vaddr));
 	pgdp = archdata->pgt + pgd_index_nonpae(vaddr) * sizeof(uint32_t);
 	ret = read_u32(ctx, KDUMP_KPHYSADDR, pgdp, 1, "PGD entry", &pgd);
 	if (ret != kdump_ok)
@@ -309,6 +311,7 @@ ia32_vtop_nonpae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	}
 
 	base = pgd & PAGE_MASK;
+	vtop_hook(ctx, 0, KDUMP_MACHPHYSADDR, base, pte_index_nonpae(vaddr));
 	ptep = base + pte_index_nonpae(vaddr) * sizeof(uint32_t);
 	ret = read_u32(ctx, KDUMP_MACHPHYSADDR, ptep, 0, "PTE entry", &pte);
 	if (ret != kdump_ok)
@@ -334,6 +337,8 @@ ia32_vtop_pae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	kdump_paddr_t base;
 	kdump_status ret;
 
+	vtop_hook(ctx, 2, KDUMP_KPHYSADDR, archdata->pgt,
+		  pgd_index_pae(vaddr));
 	pgdp = archdata->pgt + pgd_index_pae(vaddr) * sizeof(uint64_t);
 	ret = read_u64(ctx, KDUMP_KPHYSADDR, pgdp, 1, "PGD entry", &pgd);
 	if (ret != kdump_ok)
@@ -347,6 +352,7 @@ ia32_vtop_pae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 				 (unsigned long long) pgd);
 
 	base = pgd & ~PHYSADDR_MASK_PAE & PAGE_MASK;
+	vtop_hook(ctx, 1, KDUMP_MACHPHYSADDR, base, pmd_index_pae(vaddr));
 	pmdp = base + pmd_index_pae(vaddr) * sizeof(uint64_t);
 	ret = read_u64(ctx, KDUMP_MACHPHYSADDR, pmdp, 0, "PMD entry", &pmd);
 	if (ret != kdump_ok)
@@ -364,6 +370,7 @@ ia32_vtop_pae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	}
 
 	base = pmd & ~PHYSADDR_MASK_PAE & PAGE_MASK;
+	vtop_hook(ctx, 0, KDUMP_MACHPHYSADDR, base, pte_index_pae(vaddr));
 	ptep = base + pte_index_pae(vaddr) * sizeof(uint64_t);
 	ret = read_u64(ctx, KDUMP_MACHPHYSADDR, ptep, 0, "PTE entry", &pte);
 	if (ret != kdump_ok)
