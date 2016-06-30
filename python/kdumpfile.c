@@ -226,8 +226,14 @@ PyDoc_STRVAR(vtop_init__doc__,
 static PyObject *kdumpfile_vtop_init(PyObject *_self, PyObject *args)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
+	kdump_status status;
 
-	kdump_vtop_init(self->ctx);
+	status = kdump_vtop_init(self->ctx);
+	if (status != kdump_ok) {
+		PyErr_SetString(exception_map(status),
+				kdump_err_str(self->ctx));
+		return NULL;
+	}
 
 	Py_RETURN_NONE;
 }
