@@ -70,6 +70,7 @@ thread_errstr_LDADD = $(top_builddir)/src/libkdumpfile.la
 vmci_cleanup_LDADD = $(top_builddir)/src/libkdumpfile.la
 vmci_lines_post_LDADD = $(top_builddir)/src/libkdumpfile.la
 vmci_post_LDADD = $(top_builddir)/src/libkdumpfile.la
+vtop_LDADD = $(top_builddir)/src/libkdumpfile.la
 
 check_PROGRAMS = \
 	attriter \
@@ -85,7 +86,8 @@ check_PROGRAMS = \
 	thread-errstr \
 	vmci-cleanup \
 	vmci-lines-post \
-	vmci-post
+	vmci-post \
+	vtop
 
 test_scripts = \
 	diskdump-empty-i386 \

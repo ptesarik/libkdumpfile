@@ -13,6 +13,7 @@ thread-errstr
 vmci-cleanup
 vmci-lines-post
 vmci-post
+vtop
 
 # Test results
 *.log
