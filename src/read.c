@@ -184,6 +184,7 @@ setup_readfn(kdump_ctx *ctx, kdump_addrspace_t as, read_page_fn *pfn)
 kdump_status
 raw_read_page(kdump_ctx *ctx, kdump_addrspace_t as, struct page_io *pio)
 {
+	kdump_vtop_hook_fn *saved_vtop_hook;
 	read_page_fn readfn;
 	kdump_status ret;
 
@@ -191,7 +192,13 @@ raw_read_page(kdump_ctx *ctx, kdump_addrspace_t as, struct page_io *pio)
 	if (ret != kdump_ok)
 		return ret;
 
-	return readfn(ctx, pio);
+	saved_vtop_hook = ctx->cb_vtop_hook_fn;
+	ctx->cb_vtop_hook_fn = NULL;
+
+	ret = readfn(ctx, pio);
+
+	ctx->cb_vtop_hook_fn = saved_vtop_hook;
+	return ret;
 }
 
 /**  Internal version of @ref kdump_readp
@@ -211,6 +218,7 @@ kdump_status
 readp_locked(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	     void *buffer, size_t *plength)
 {
+	kdump_vtop_hook_fn *saved_vtop_hook;
 	read_page_fn readfn;
 	struct page_io pio;
 	size_t remain;
@@ -219,6 +227,9 @@ readp_locked(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	ret = setup_readfn(ctx, as, &readfn);
 	if (ret != kdump_ok)
 		return ret;
+
+	saved_vtop_hook = ctx->cb_vtop_hook_fn;
+	ctx->cb_vtop_hook_fn = NULL;
 
 	pio.precious = 0;
 	remain = *plength;
@@ -242,6 +253,7 @@ readp_locked(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	}
 
 	*plength -= remain;
+	ctx->cb_vtop_hook_fn = saved_vtop_hook;
 	return ret;
 }
 
@@ -288,6 +300,7 @@ kdump_status
 read_string_locked(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		   char **pstr)
 {
+	kdump_vtop_hook_fn *saved_vtop_hook;
 	read_page_fn readfn;
 	struct page_io pio;
 	char *str = NULL, *newstr, *endp;
@@ -297,6 +310,9 @@ read_string_locked(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	ret = setup_readfn(ctx, as, &readfn);
 	if (ret != kdump_ok)
 		return ret;
+
+	saved_vtop_hook = ctx->cb_vtop_hook_fn;
+	ctx->cb_vtop_hook_fn = NULL;
 
 	pio.precious = 0;
 	do {
@@ -333,6 +349,7 @@ read_string_locked(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 
 	str[length] = 0;
 	*pstr = str;
+	ctx->cb_vtop_hook_fn = saved_vtop_hook;
 	return kdump_ok;
 }
 

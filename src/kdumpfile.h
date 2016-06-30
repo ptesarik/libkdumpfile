@@ -858,6 +858,11 @@ typedef void kdump_vtop_hook_fn(
  * @param ctx  Dump file object.
  * @param cb   New callback function.
  * @return     Previous callback function.
+ *
+ * The vtop_hook callback is called during explicit address translation
+ * (e.g. when @ref kdump_vtop is called). It is not called when addres
+ * translation is needed internally (e.g. when reading from a virtual
+ * address).
  */
 kdump_vtop_hook_fn *
 kdump_cb_vtop_hook(kdump_ctx *ctx, kdump_vtop_hook_fn *cb);
