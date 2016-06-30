@@ -705,6 +705,10 @@ kdump_status read_string_locked(kdump_ctx *ctx, kdump_addrspace_t as,
 kdump_status readp_locked(kdump_ctx *ctx, kdump_addrspace_t as,
 			  kdump_addr_t addr, void *buffer, size_t *plength);
 
+#define read_u32 INTERNAL_NAME(read_u32)
+kdump_status read_u32(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+		      int precious, char *what, uint32_t *result);
+
 #define read_u64 INTERNAL_NAME(read_u64)
 kdump_status read_u64(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		      int precious, char *what, uint64_t *result);

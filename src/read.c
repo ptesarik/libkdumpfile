@@ -349,6 +349,38 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	return ret;
 }
 
+/**  Get an aligned uint32_t value in host-byte order.
+ * @param ctx       Dump file object.
+ * @param as        Address space.
+ * @param addr      Value address.
+ * @param precious  Non-zero if this read should be regarded as precious.
+ * @param what      Human-readable description of the read.
+ * @param result    Pointer to resulting variable.
+ *
+ * This function fails if data crosses a page boundary.
+ */
+kdump_status
+read_u32(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+	 int precious, char *what, uint32_t *result)
+{
+	struct page_io pio;
+	uint32_t *p;
+	kdump_status ret;
+
+	pio.pfn = addr >> get_page_shift(ctx);
+	pio.precious = precious;
+	ret = raw_read_page(ctx, as, &pio);
+	if (ret != kdump_ok)
+		return set_error(ctx, ret,
+				 "Reading %s failed at %llx",
+				 what, (unsigned long long) addr);
+
+	p = pio.ce->data + (addr & (get_page_size(ctx) - 1));
+	*result = dump32toh(ctx, *p);
+	unref_page(ctx, &pio);
+	return kdump_ok;
+}
+
 /**  Get an aligned uint64_t value in host-byte order.
  * @param ctx       Dump file object.
  * @param as        Address space.
