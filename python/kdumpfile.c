@@ -279,6 +279,35 @@ int kdumpfile_set_symbol_func(PyObject *_self, PyObject *_set, void *_data)
 	return 0;
 }
 
+PyDoc_STRVAR(get_force_vtop_pgt__doc__,
+"force address translation by looking up page tables");
+
+static PyObject *
+kdumpfile_get_force_vtop_pgt(PyObject *_self, void *_data)
+{
+	kdumpfile_object *self = (kdumpfile_object*)_self;
+	unsigned long flags = kdump_ctx_get_flags(self->ctx);
+	PyObject *result = (flags & KDUMP_CF_FORCE_VTOP_PGT)
+		? Py_True
+		: Py_False;
+	Py_INCREF(result);
+	return result;
+}
+
+static int
+kdumpfile_set_force_vtop_pgt(PyObject *_self, PyObject *obj, void *_data)
+{
+	kdumpfile_object *self = (kdumpfile_object*)_self;
+	int status = PyObject_IsTrue(obj);
+	if (status < 0)
+		return status;
+	if (status)
+		kdump_ctx_set_flags(self->ctx, KDUMP_CF_FORCE_VTOP_PGT);
+	else
+		kdump_ctx_clear_flags(self->ctx, KDUMP_CF_FORCE_VTOP_PGT);
+	return 0;
+}
+
 static void
 cleanup_exceptions(void)
 {
@@ -366,6 +395,9 @@ static PyGetSetDef kdumpfile_object_getset[] = {
 	{ "symbol_func", kdumpfile_get_symbol_func, kdumpfile_set_symbol_func,
 	  "Callback function called by libkdumpfile for symbol resolving",
 	  NULL },
+	{ "force_vtop_pgt",
+	  kdumpfile_get_force_vtop_pgt, kdumpfile_set_force_vtop_pgt,
+	  get_force_vtop_pgt__doc__, NULL },
 	{ NULL }
 };
 
