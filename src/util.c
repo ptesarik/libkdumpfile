@@ -69,12 +69,14 @@ set_error(kdump_ctx *ctx, kdump_status ret, const char *msgfmt, ...)
 		msg = msgbuf;
 		if (msglen >= sizeof(msgbuf))
 			msglen = sizeof(msgbuf) - 1;
-		if (ret == kdump_syserr && !ctx->err_str &&
-		    msglen + 3 < sizeof(msgbuf)) {
+		if ((ret == kdump_syserr || ret == kdump_eof) &&
+		    !ctx->err_str && msglen + 3 < sizeof(msgbuf)) {
 			memcpy(msgbuf + msglen, delim, sizeof(delim));
 			msglen += sizeof(delim);
 			remain = sizeof(msgbuf) - msglen;
-			err = strerror_r(errno, msgbuf + msglen, remain);
+			err = (ret == kdump_syserr)
+				? strerror_r(errno, msgbuf + msglen, remain)
+				: "Unexpected EOF";
 			remain = sizeof(msgbuf) - msglen - 1;
 			strncpy(msgbuf + msglen, err, remain);
 			msgbuf[msglen + remain] = '\0';
