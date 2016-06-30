@@ -50,30 +50,29 @@ exception_map(kdump_status status)
 	};
 }
 
-static kdump_status cb_get_symbol(kdump_ctx *ctx, const char *name, kdump_addr_t *addr)
+static kdump_status
+cb_get_symbol(kdump_ctx *ctx, const char *name, kdump_addr_t *addr)
 {
-	kdumpfile_object *self;
+	kdumpfile_object *self = (kdumpfile_object*)kdump_get_priv(ctx);
 	PyObject *ret;
+	kdump_status status;
 
 	self = (kdumpfile_object*)kdump_get_priv(ctx);
-
-	if (! self->cb_get_symbol) {
-		PyErr_SetString(PyExc_RuntimeError, "Callback symbol-resolving function not set");
-		return kdump_nodata;
-	}
-
 	ret = PyObject_CallFunction(self->cb_get_symbol, "s", name);
-
-	if (! PyLong_Check(ret)) {
-		PyErr_SetString(PyExc_RuntimeError, "Callback of symbol-resolving function returned no long");
+	if (!ret)
 		return kdump_nodata;
-	}
 
-	*addr = PyLong_AsUnsignedLongLong(ret);;
+	status = kdump_ok;
+	if (!PyLong_Check(ret)) {
+		PyErr_Format(PyExc_TypeError,
+			     "get_symbol: cannot convert '%.200s' to address",
+			     Py_TYPE(ret)->tp_name);
+		status = kdump_invalid;
+	} else
+		*addr = PyLong_AsUnsignedLongLong(ret);
 
 	Py_XDECREF(ret);
-
-	return kdump_ok;
+	return status;
 }
 
 static void
@@ -129,10 +128,8 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 	self->file = fo;
 	Py_INCREF(fo);
 
-	self->cb_get_symbol = NULL;
-	kdump_cb_get_symbol_val(self->ctx, cb_get_symbol);
 	kdump_set_priv(self->ctx, self);
-
+	self->cb_get_symbol = NULL;
 	self->cb_vtop_hook = NULL;
 
 	status = kdump_attr_ref(self->ctx, NULL, &rootref);
@@ -299,27 +296,36 @@ kdumpfile_getattr(PyObject *_self, void *_data)
 static PyObject *kdumpfile_get_symbol_func (PyObject *_self, void *_data)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
+	PyObject *result = self->cb_get_symbol;
 
-	if (! self->cb_get_symbol)
-		Py_RETURN_NONE;
-	Py_INCREF(self->cb_get_symbol);
+	if (!result)
+		result = Py_None;
 
-	return self->cb_get_symbol;
+	Py_INCREF(result);
+	return result;
 }
 
-int kdumpfile_set_symbol_func(PyObject *_self, PyObject *_set, void *_data)
+int kdumpfile_set_symbol_func(PyObject *_self, PyObject *value, void *_data)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
+	PyObject *oldval;
 
-	if (! PyCallable_Check(_set)) {
-		PyErr_SetString(PyExc_RuntimeError, "Argument must be callable");
-		return 1;
+	if (!value || value == Py_None) {
+		kdump_cb_get_symbol_val(self->ctx, NULL);
+	} else if (!PyCallable_Check(value)) {
+		PyErr_Format(PyExc_TypeError,
+			     "'%.200s' object is not callable",
+			     Py_TYPE(value)->tp_name);
+		return -1;
+	} else {
+		kdump_cb_get_symbol_val(self->ctx, cb_get_symbol);
 	}
 
-	if (self->cb_get_symbol)
-		Py_XDECREF(self->cb_get_symbol);
-	self->cb_get_symbol = _set;
-	Py_INCREF(self->cb_get_symbol);
+	oldval = self->cb_get_symbol;
+	Py_XINCREF(value);
+	self->cb_get_symbol = value;
+	Py_XDECREF(oldval);
+
 	return 0;
 }
 
