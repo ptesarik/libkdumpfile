@@ -612,6 +612,8 @@ struct _kdump_ctx {
 	/** Node of the @c ctx list in @c struct @ref kdump_shared. */
 	struct list_head list;
 
+	unsigned long flags;	/**< Context-specific flags. */
+
 	void *priv;		/**< User private data. */
 
 	/* callbacks */

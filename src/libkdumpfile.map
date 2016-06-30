@@ -6,6 +6,8 @@ LIBKDUMPFILE_0 {
     kdump_new;
     kdump_free;
     kdump_err_str;
+    kdump_ctx_set_flags;
+    kdump_ctx_clear_flags;
     kdump_set_fd;
     kdump_vtop_init;
     kdump_vtop_init_xen;

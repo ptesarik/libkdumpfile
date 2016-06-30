@@ -212,6 +212,33 @@ void kdump_free(kdump_ctx *ctx);
  */
 const char *kdump_err_str(kdump_ctx *ctx);
 
+/**  Set kdump context flags.
+ *
+ * @param ctx    Dump file object.
+ * @param flags  Flags to be set.
+ * @returns      New flags value.
+ */
+unsigned long kdump_ctx_set_flags(kdump_ctx *ctx, unsigned long flags);
+
+/**  Clear kdump context flags.
+ *
+ * @param ctx    Dump file object.
+ * @param flags  Flags to be cleared.
+ * @returns      New flags value.
+ */
+unsigned long kdump_ctx_clear_flags(kdump_ctx *ctx, unsigned long flags);
+
+/**  Get the current kdump context flags.
+ *
+ * @param ctx    Dump file object.
+ * @returns      Current flags value.
+ */
+static inline unsigned long
+kdump_ctx_get_flags(kdump_ctx *ctx)
+{
+	return kdump_ctx_set_flags(ctx, 0UL);
+}
+
 /**  Associate a dump file object with a file descriptor.
  * @param ctx     Dump file object.
  * @param[in] fd  Open file descriptor.
