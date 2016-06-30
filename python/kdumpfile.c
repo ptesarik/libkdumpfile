@@ -238,11 +238,37 @@ static PyObject *kdumpfile_vtop_init(PyObject *_self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+PyDoc_STRVAR(vtop__doc__,
+"K.vtop(vaddr) -> corresponding physical address");
+
+static PyObject *
+kdumpfile_vtop(PyObject *_self, PyObject *args)
+{
+	kdumpfile_object *self = (kdumpfile_object*)_self;
+	unsigned PY_LONG_LONG vaddr;
+	kdump_paddr_t paddr;
+	kdump_status status;
+
+	if (!PyArg_ParseTuple(args, "K:vtop", &vaddr))
+		return NULL;
+
+	status = kdump_vtop(self->ctx, vaddr, &paddr);
+	if (status != kdump_ok) {
+		PyErr_SetString(exception_map(status),
+				kdump_err_str(self->ctx));
+		return NULL;
+	}
+
+	return PyLong_FromUnsignedLongLong(paddr);
+}
+
 static PyMethodDef kdumpfile_object_methods[] = {
 	{"read",      (PyCFunction) kdumpfile_read, METH_VARARGS | METH_KEYWORDS,
 		read__doc__},
 	{"vtop_init", (PyCFunction) kdumpfile_vtop_init, METH_NOARGS,
 		vtop_init__doc__},
+	{"vtop",	kdumpfile_vtop,			METH_VARARGS,
+	 vtop__doc__},
 	{NULL}
 };
 
