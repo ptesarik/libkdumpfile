@@ -31,6 +31,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <kdumpfile.h>
 
 #include "testutil.h"
@@ -61,7 +62,7 @@ vtop(kdump_ctx *ctx, unsigned long long vaddr)
 }
 
 static int
-vtop_fd(int fd, unsigned long long vaddr)
+vtop_fd(int fd, unsigned long long vaddr, unsigned long flags)
 {
 	kdump_ctx *ctx;
 	kdump_status res;
@@ -72,6 +73,8 @@ vtop_fd(int fd, unsigned long long vaddr)
 		perror("Cannot initialize dump context");
 		return TEST_ERR;
 	}
+
+	kdump_ctx_set_flags(ctx, flags);
 
 	res = kdump_set_fd(ctx, fd);
 	if (res != kdump_ok) {
@@ -84,32 +87,68 @@ vtop_fd(int fd, unsigned long long vaddr)
 	return rc;
 }
 
+static void
+usage(FILE *f, const char *prog)
+{
+	fprintf(f,
+		"Usage: %s <dump> <vaddr>\n\n"
+		"Options:\n"
+		"  --help  Print this help and exit\n"
+		"  --pgt   Force pagetable translation\n",
+		prog);
+}
+
+static const struct option opts[] = {
+	{ "help", no_argument, NULL, 'h' },
+	{ "pgt", no_argument, NULL, 'p' },
+	{ NULL, 0, NULL, 0 }
+};
+
 int
 main(int argc, char **argv)
 {
+	unsigned long flags = 0UL;
 	unsigned long long addr;
+	FILE *fhelp;
 	char *endp;
 	int fd;
 	int rc;
+	int c;
 
-	if (argc != 3) {
-		fprintf(stderr, "Usage: %s <dump> <vaddr>\n", argv[0]);
+	fhelp = stdout;
+	while ( (c = getopt_long(argc, argv, "ph", opts, NULL)) != -1)
+		switch (c) {
+		case 'p':
+			flags = KDUMP_CF_FORCE_VTOP_PGT;
+			break;
+
+		case '?':
+			fhelp = stderr;
+		case 'h':
+			usage(fhelp, argv[0]);
+			if (fhelp == stderr)
+				return TEST_ERR;
+			return TEST_OK;
+		}
+
+	if (argc -optind != 2) {
+		usage(stderr, argv[0]);
 		return TEST_ERR;
 	}
 
-	addr = strtoull(argv[2], &endp, 0);
+	addr = strtoull(argv[optind+1], &endp, 0);
 	if (*endp) {
 		fprintf(stderr, "Invalid address: %s", argv[2]);
 		return TEST_ERR;
 	}
 
-	fd = open(argv[1], O_RDONLY);
+	fd = open(argv[optind], O_RDONLY);
 	if (fd < 0) {
 		perror("open dump");
 		return TEST_ERR;
 	}
 
-	rc = vtop_fd(fd, addr);
+	rc = vtop_fd(fd, addr, flags);
 
 	if (close(fd) < 0) {
 		perror("close dump");

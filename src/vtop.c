@@ -272,6 +272,9 @@ map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	const struct kdump_xlat *xlat;
 	struct attr_data *attr;
 
+	if (ctx->flags & KDUMP_CF_FORCE_VTOP_PGT)
+		return map->vtop_pgt_fn(ctx, vaddr, paddr);
+
 	xlat = get_vtop_xlat(map, vaddr);
 	switch (xlat->method) {
 	case KDUMP_XLAT_NONE:

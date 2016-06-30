@@ -212,6 +212,16 @@ void kdump_free(kdump_ctx *ctx);
  */
 const char *kdump_err_str(kdump_ctx *ctx);
 
+/** @name Context flags
+ * @{
+
+ * These flags apply to a specific kdump context, i.e. they are not shared
+ * by multiple contexts of the same dump file.
+ */
+/** Force VTOP translation using pagetables. */
+#define KDUMP_CF_FORCE_VTOP_PGT		1UL
+/* @} */
+
 /**  Set kdump context flags.
  *
  * @param ctx    Dump file object.
