@@ -148,11 +148,7 @@ static const struct attr_template tmpl_pid =
 	{ "pid", NULL, kdump_number };
 
 struct ia32_data {
-	union {
-		void *pgt;
-		uint32_t *pgt_nonpae;
-		uint64_t *pgt_pae;
-	};
+	kdump_addr_t pgt;	   /**< Linux kernel pgt address */
 	int pae_state;		/* <0 .. no, >0 .. yes, 0 .. undetermined */
 };
 
@@ -218,27 +214,24 @@ static kdump_status
 read_pgt(kdump_ctx *ctx)
 {
 	struct ia32_data *archdata = ctx->shared->archdata;
-	kdump_vaddr_t pgtaddr;
-	void *pgt;
 	kdump_status ret;
-	size_t sz;
 
 	rwlock_unlock(&ctx->shared->lock);
-	ret = get_symbol_val(ctx, "swapper_pg_dir", &pgtaddr);
+	ret = get_symbol_val(ctx, "swapper_pg_dir", &archdata->pgt);
 	rwlock_wrlock(&ctx->shared->lock);
 	if (ret != kdump_ok)
 		return ret;
 
-	if (pgtaddr < __START_KERNEL_map)
+	if (archdata->pgt < __START_KERNEL_map)
 		return set_error(ctx, kdump_dataerr,
 				 "Wrong page directory address: 0x%llx",
-				 (unsigned long long) pgtaddr);
+				 (unsigned long long) archdata->pgt);
+	archdata->pgt -= __START_KERNEL_map;
 
 	if (!archdata->pae_state) {
-		kdump_vaddr_t addr = pgtaddr + 3 * sizeof(uint64_t);
+		kdump_vaddr_t addr = archdata->pgt + 3 * sizeof(uint64_t);
 		uint64_t entry;
-
-		sz = sizeof addr;
+		size_t sz = sizeof entry;
 		ret = readp_locked(
 			ctx, KDUMP_KPHYSADDR, addr - __START_KERNEL_map,
 			&entry, &sz);
@@ -247,23 +240,6 @@ read_pgt(kdump_ctx *ctx)
 		archdata->pae_state = entry ? 1 : -1;
 	}
 
-	sz = archdata->pae_state > 0
-		? PTRS_PER_PGD_PAE * sizeof(uint64_t)
-		: PAGE_SIZE;
-
-	pgt = ctx_malloc(sz, ctx, "page table");
-	if (!pgt)
-		return kdump_syserr;
-
-	ret = readp_locked(
-		ctx, KDUMP_KPHYSADDR, pgtaddr - __START_KERNEL_map,
-		pgt, &sz);
-	if (ret != kdump_ok) {
-		free(pgt);
-		return set_error(ctx, ret, "Cannot read page table");
-	}
-
-	archdata->pgt = pgt;
 	return kdump_ok;
 }
 
@@ -303,9 +279,6 @@ ia32_cleanup(struct kdump_shared *shared)
 {
 	struct ia32_data *archdata = shared->archdata;
 
-	if (archdata->pgt)
-		free(archdata->pgt);
-
 	free(archdata);
 	shared->archdata = NULL;
 }
@@ -314,13 +287,16 @@ static kdump_status
 ia32_vtop_nonpae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	struct ia32_data *archdata = ctx->shared->archdata;
-	uint32_t tbl[PTRS_PER_PAGE_NONPAE];
+	kdump_addr_t pgdp, ptep;
 	uint32_t pgd, pte;
 	kdump_paddr_t base;
-	size_t sz;
 	kdump_status ret;
 
-	pgd = archdata->pgt_nonpae[pgd_index_nonpae(vaddr)];
+	pgdp = archdata->pgt + pgd_index_nonpae(vaddr) * sizeof(uint32_t);
+	ret = read_u32(ctx, KDUMP_KPHYSADDR, pgdp, 1, "PGD entry", &pgd);
+	if (ret != kdump_ok)
+		return ret;
+
 	if (!(pgd & _PAGE_PRESENT))
 		return set_error(ctx, kdump_nodata,
 				 "Page table not present: pgd[%u] = 0x%llx",
@@ -331,14 +307,13 @@ ia32_vtop_nonpae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 		*paddr = base + (vaddr & ~PGD_PSE_MASK_NONPAE);
 		return kdump_ok;
 	}
-	base = pgd & PAGE_MASK;
 
-	sz = PAGE_SIZE;
-	ret = readp_locked(ctx, KDUMP_KPHYSADDR, base, tbl, &sz);
+	base = pgd & PAGE_MASK;
+	ptep = base + pte_index_nonpae(vaddr) * sizeof(uint32_t);
+	ret = read_u32(ctx, KDUMP_MACHPHYSADDR, ptep, 0, "PTE entry", &pte);
 	if (ret != kdump_ok)
 		return ret;
 
-	pte = tbl[pte_index_nonpae(vaddr)];
 	if (!(pte & _PAGE_PRESENT))
 		return set_error(ctx, kdump_nodata,
 				 "Page not present: pte[%u] = 0x%llx",
@@ -354,27 +329,29 @@ static kdump_status
 ia32_vtop_pae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	struct ia32_data *archdata = ctx->shared->archdata;
-	uint64_t tbl[PTRS_PER_PAGE_PAE];
+	kdump_addr_t pgdp, pmdp, ptep;
 	uint64_t pgd, pmd, pte;
 	kdump_paddr_t base;
-	size_t sz;
 	kdump_status ret;
 
-	pgd = archdata->pgt_pae[pgd_index_pae(vaddr)];
+	pgdp = archdata->pgt + pgd_index_pae(vaddr) * sizeof(uint64_t);
+	ret = read_u64(ctx, KDUMP_KPHYSADDR, pgdp, 1, "PGD entry", &pgd);
+	if (ret != kdump_ok)
+		return ret;
+
 	if (!(pgd & _PAGE_PRESENT))
 		return set_error(ctx, kdump_nodata,
 				 "Page directory not present:"
 				 " pgd[%u] = 0x%llx",
 				 (unsigned) pgd_index_pae(vaddr),
 				 (unsigned long long) pgd);
-	base = pgd & ~PHYSADDR_MASK_PAE & PAGE_MASK;
 
-	sz = PAGE_SIZE;
-	ret = readp_locked(ctx, KDUMP_KPHYSADDR, base, tbl, &sz);
+	base = pgd & ~PHYSADDR_MASK_PAE & PAGE_MASK;
+	pmdp = base + pmd_index_pae(vaddr) * sizeof(uint64_t);
+	ret = read_u64(ctx, KDUMP_MACHPHYSADDR, pmdp, 0, "PMD entry", &pmd);
 	if (ret != kdump_ok)
 		return ret;
 
-	pmd = tbl[pmd_index_pae(vaddr)];
 	if (!(pmd & _PAGE_PRESENT))
 		return set_error(ctx, kdump_nodata,
 				 "Page table not present: pmd[%u] = 0x%llx",
@@ -385,14 +362,13 @@ ia32_vtop_pae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 		*paddr = base + (vaddr & ~PMD_PSE_MASK_PAE);
 		return kdump_ok;
 	}
-	base = pmd & ~PHYSADDR_MASK_PAE & PAGE_MASK;
 
-	sz = PAGE_SIZE;
-	ret = readp_locked(ctx, KDUMP_KPHYSADDR, base, tbl, &sz);
+	base = pmd & ~PHYSADDR_MASK_PAE & PAGE_MASK;
+	ptep = base + pte_index_pae(vaddr) * sizeof(uint64_t);
+	ret = read_u64(ctx, KDUMP_MACHPHYSADDR, ptep, 0, "PTE entry", &pte);
 	if (ret != kdump_ok)
 		return ret;
 
-	pte = tbl[pte_index_pae(vaddr)];
 	if (!(pte & _PAGE_PRESENT))
 		return set_error(ctx, kdump_nodata,
 				 "Page not present: pte[%u] = 0x%llx",
