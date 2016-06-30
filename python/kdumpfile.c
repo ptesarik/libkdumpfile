@@ -8,6 +8,7 @@ typedef struct {
 	kdump_ctx *ctx;
 	PyObject *file;
 	PyObject *cb_get_symbol;
+	PyObject *cb_vtop_hook;
 	PyObject *attr;
 } kdumpfile_object;
 
@@ -75,6 +76,15 @@ static kdump_status cb_get_symbol(kdump_ctx *ctx, const char *name, kdump_addr_t
 	return kdump_ok;
 }
 
+static void
+cb_vtop_hook(kdump_ctx *ctx, unsigned short tbl,
+	     kdump_addrspace_t as, kdump_addr_t addr, unsigned idx)
+{
+	kdumpfile_object *self = (kdumpfile_object*)kdump_get_priv(ctx);
+	PyObject_CallFunction(self->cb_vtop_hook, "HIKk", tbl,
+			      (unsigned)as, (unsigned long long)addr, idx);
+}
+
 static PyObject *
 kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 {
@@ -122,6 +132,8 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 	self->cb_get_symbol = NULL;
 	kdump_cb_get_symbol_val(self->ctx, cb_get_symbol);
 	kdump_set_priv(self->ctx, self);
+
+	self->cb_vtop_hook = NULL;
 
 	status = kdump_attr_ref(self->ctx, NULL, &rootref);
 	if (status != kdump_ok) {
@@ -340,6 +352,47 @@ kdumpfile_set_force_vtop_pgt(PyObject *_self, PyObject *obj, void *_data)
 	return 0;
 }
 
+PyDoc_STRVAR(vtop_hook__doc__,
+"vtop translation hook");
+
+static PyObject *
+kdumpfile_get_vtop_hook(PyObject *_self, void *_data)
+{
+	kdumpfile_object *self = (kdumpfile_object*)_self;
+	PyObject *result = self->cb_vtop_hook;
+
+	if (!result)
+		result = Py_None;
+
+	Py_INCREF(result);
+	return result;
+}
+
+static int
+kdumpfile_set_vtop_hook(PyObject *_self, PyObject *value, void *_data)
+{
+	kdumpfile_object *self = (kdumpfile_object*)_self;
+	PyObject *oldval;
+
+	if (!value || value == Py_None) {
+		kdump_cb_vtop_hook(self->ctx, NULL);
+	} else if (!PyCallable_Check(value)) {
+		PyErr_Format(PyExc_TypeError,
+			     "'%.200s' object is not callable",
+			     Py_TYPE(value)->tp_name);
+		return -1;
+	} else {
+		kdump_cb_vtop_hook(self->ctx, cb_vtop_hook);
+	}
+
+	oldval = self->cb_vtop_hook;
+	Py_XINCREF(value);
+	self->cb_vtop_hook = value;
+	Py_XDECREF(oldval);
+
+	return 0;
+}
+
 static void
 cleanup_exceptions(void)
 {
@@ -430,6 +483,8 @@ static PyGetSetDef kdumpfile_object_getset[] = {
 	{ "force_vtop_pgt",
 	  kdumpfile_get_force_vtop_pgt, kdumpfile_set_force_vtop_pgt,
 	  get_force_vtop_pgt__doc__, NULL },
+	{ "vtop_hook", kdumpfile_get_vtop_hook, kdumpfile_set_vtop_hook,
+	  vtop_hook__doc__, NULL },
 	{ NULL }
 };
 
