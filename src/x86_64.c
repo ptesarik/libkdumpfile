@@ -438,7 +438,7 @@ get_pml4(kdump_ctx *ctx)
 
 		archdata->pml4_as = KDUMP_KPHYSADDR;
 		archdata->pml4 =
-			pgtaddr - __START_KERNEL_map - get_phys_base(ctx);
+			pgtaddr - __START_KERNEL_map + get_phys_base(ctx);
 	} else if (ret == kdump_nodata) {
 		struct attr_data *attr;
 		clear_error(ctx);
