@@ -10,6 +10,8 @@ LIBADDRXLAT_0 {
     addrxlat_vtop_start;
     addrxlat_vtop_next;
     addrxlat_vtop_pgt;
+    addrxlat_cb_read32;
+    addrxlat_cb_read64;
 
   local:
     *;

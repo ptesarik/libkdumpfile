@@ -63,6 +63,12 @@ struct _addrxlat_ctx {
 	/** Base address of the highest-level page table. */
 	addrxlat_fulladdr_t pgt_root;
 
+	/** Callback for reading 32-bit integers. */
+	addrxlat_read32_fn *cb_read32;
+
+	/** Callback for reading 64-bit integers. */
+	addrxlat_read64_fn *cb_read64;
+
 	char err_buf[ERRBUF];	/**< Error string. */
 };
 

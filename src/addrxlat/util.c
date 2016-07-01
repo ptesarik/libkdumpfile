@@ -58,3 +58,19 @@ addrxlat_err_str(addrxlat_ctx *ctx)
 {
 	return ctx->err_buf;
 }
+
+addrxlat_read32_fn *
+addrxlat_cb_read32(addrxlat_ctx *ctx, addrxlat_read32_fn *cb)
+{
+	addrxlat_read32_fn *oldval = ctx->cb_read32;
+	ctx->cb_read32 = cb;
+	return oldval;
+}
+
+addrxlat_read64_fn *
+addrxlat_cb_read64(addrxlat_ctx *ctx, addrxlat_read64_fn *cb)
+{
+	addrxlat_read64_fn *oldval = ctx->cb_read64;
+	ctx->cb_read64 = cb;
+	return oldval;
+}

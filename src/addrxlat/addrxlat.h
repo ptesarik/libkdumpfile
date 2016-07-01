@@ -215,6 +215,44 @@ addrxlat_status addrxlat_vtop_next(
 addrxlat_status addrxlat_vtop_pgt(
 	addrxlat_ctx *ctx, addrxlat_addr_t vaddr, addrxlat_addr_t *paddr);
 
+/** Type of the read callback for 32-bit integers.
+ * @param ctx       Address translation object.
+ * @param[in] addr  Address of the 32-bit integer.
+ * @param[out] val  Value in host byte order.
+ * @param data      Arbitrary user-supplied data.
+ * @returns         Error status.
+ */
+typedef addrxlat_status addrxlat_read32_fn(
+	addrxlat_ctx *ctx, addrxlat_fulladdr_t addr, uint32_t *val,
+	void *data);
+
+/** Set the read callback for 32-bit integers.
+ * @param ctx  Address translation object.
+ * @param cb   New callback function.
+ * @returns    Previous callback function.
+ */
+addrxlat_read32_fn *addrxlat_cb_read32(
+	addrxlat_ctx *ctx, addrxlat_read32_fn *cb);
+
+/** Type of the read callback for 64-bit integers.
+ * @param ctx       Address translation object.
+ * @param[in] addr  Address of the 64-bit integer.
+ * @param[out] val  Value in host byte order.
+ * @param data      Arbitrary user-supplied data.
+ * @returns         Error status.
+ */
+typedef addrxlat_status addrxlat_read64_fn(
+	addrxlat_ctx *ctx, addrxlat_fulladdr_t addr, uint64_t *val,
+	void *data);
+
+/** Set the read callback for 64-bit integers.
+ * @param ctx  Address translation object.
+ * @param cb   New callback function.
+ * @returns    Previous callback function.
+ */
+addrxlat_read64_fn *addrxlat_cb_read64(
+	addrxlat_ctx *ctx, addrxlat_read64_fn *cb);
+
 #ifdef  __cplusplus
 }
 #endif
