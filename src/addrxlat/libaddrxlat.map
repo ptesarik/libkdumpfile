@@ -1,0 +1,12 @@
+LIBADDRXLAT_0 {
+  global:
+    addrxlat_new;
+    addrxlat_free;
+    addrxlat_set_arch;
+    addrxlat_set_paging_form;
+    addrxlat_get_paging_form;
+    addrxlat_vtop_pgt;
+
+  local:
+    *;
+};

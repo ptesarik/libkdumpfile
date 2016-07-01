@@ -1,9 +1,9 @@
 ## Process this file with automake to create Makefile.in
-## Configure input file for libkdumpfile.
+## Automake input file for libaddrxlat.
 ##
-## Copyright (C) 2015 Petr Tesarik <ptesarik@suse.com>
+## Copyright (C) 2016 Petr Tesarik <ptesarik@suse.com>
 ##
-## This file is part of libkdumpfile.
+## This file is part of libaddrxlat.
 ##
 ## This file is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -19,46 +19,23 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-SUBDIRS = addrxlat
-
 AM_CFLAGS = -fvisibility=hidden
 
-lib_LTLIBRARIES = libkdumpfile.la
-libkdumpfile_la_SOURCES = \
-	attr.c \
-	cache.c \
-	context.c \
-	devmem.c \
-	diskdump.c \
-	elfdump.c \
-	ia32.c \
-	lkcd.c \
-	notes.c \
-	open.c \
-	read.c \
-	s390x.c \
-	s390dump.c \
-	todo.c \
-	util.c \
-	vmcoreinfo.c \
-	vtop.c \
-	ppc64.c \
-	x86_64.c
+lib_LTLIBRARIES = libaddrxlat.la
+libaddrxlat_la_SOURCES = \
+	setup.c \
+	vtop.c
 
-EXTRA_libkdumpfile_la_DEPENDENCIES = libkdumpfile.map
+EXTRA_libaddrxlat_la_DEPENDENCIES = libaddrxlat.map
 
-libkdumpfile_la_LDFLAGS = -version-info 6:0:0
-libkdumpfile_la_LDFLAGS += -Wl,--version-script=$(srcdir)/libkdumpfile.map
+libaddrxlat_la_LDFLAGS = -version-info 6:0:0
+libaddrxlat_la_LDFLAGS += -Wl,--version-script=$(srcdir)/libaddrxlat.map
 
 include_HEADERS = \
-	kdumpfile.h
+	addrxlat.h
 
 noinst_HEADERS = \
-	kdumpfile-priv.h \
-	list.h \
-	threads.h \
-	global-attr.def \
-	static-attr.def
+	addrxlat-priv.h
 
 dist_noinst_DATA = \
-	libkdumpfile.map
+	libaddrxlat.map

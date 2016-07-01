@@ -97,6 +97,7 @@ AC_CONFIG_FILES([
 	Makefile
 	examples/Makefile
 	src/Makefile
+	src/addrxlat/Makefile
 	python/Makefile
 	python/kdumpfile/Makefile
 	tests/Makefile

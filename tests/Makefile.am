@@ -18,7 +18,7 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-AM_CPPFLAGS = -I$(top_srcdir)/src
+AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_srcdir)/src/addrxlat
 LDADD = libtestutil.a
 
 libtestutil_a_SOURCES = \
@@ -34,6 +34,8 @@ check_HEADERS = \
 	diskdump.h \
 	lkcd.h \
 	testutil.h
+
+addrxlat_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
 
 attriter_SOURCES = attriter.c
 attriter_LDADD = \
@@ -73,6 +75,7 @@ vmci_post_LDADD = $(top_builddir)/src/libkdumpfile.la
 vtop_LDADD = $(top_builddir)/src/libkdumpfile.la
 
 check_PROGRAMS = \
+	addrxlat \
 	attriter \
 	checkattr \
 	clearattr \
