@@ -1,0 +1,37 @@
+#! /bin/sh
+
+#
+# Check simple VTOP translation.
+#
+
+ptes="-e 0x0000:0x1000 -e 0x0004:0x2000 -e 0x1000:0xa000 -e 0x1004:0xb000 -e 0x2000:0xc000"
+
+# More or less Intel IA-32 non-PAE paging with 4K pages
+pf="-p 4:12,10,10"
+
+list="0x123:0xa123 0x1234:0xb234 0x400567:0xc567"
+
+totalrc=0
+for tst in $list; do
+    input="${tst%:*}"
+    expect="${tst#*:}"
+    echo -n "Checking $input... "
+    output=$( ./addrxlat $pf $ptes $input )
+    rc=$?
+    if [ $rc -gt 1 ]; then
+        echo ERROR
+        echo "Cannot translate $input" >&2
+        exit $rc
+    elif [ $rc -ne 0 ]; then
+        echo FAILED
+        totalrc=$rc
+    elif [ "$output" != "$expect" ]; then
+        echo FAILED
+        echo "Result does not match for $input" >&2
+        totalrc=1
+    else
+        echo OK
+    fi
+done
+
+exit $totalrc

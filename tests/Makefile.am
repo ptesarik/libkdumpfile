@@ -94,6 +94,7 @@ check_PROGRAMS = \
 
 test_scripts = \
 	addrxlat-identity \
+	addrxlat-simple \
 	diskdump-empty-i386 \
 	diskdump-empty-ppc64 \
 	diskdump-empty-s390x \

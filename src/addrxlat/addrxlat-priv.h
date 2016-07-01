@@ -72,6 +72,15 @@ struct _addrxlat_ctx {
 	char err_buf[ERRBUF];	/**< Error string. */
 };
 
+/* vtop */
+
+/** Simple vtop handler
+ * This is the most basic handler, which assumes that all paging levels
+ * are used and all page tables are aligned to a page boundary.
+ */
+#define vtop_simple INTERNAL_NAME(vtop_simple)
+addrxlat_vtop_step_fn vtop_simple;
+
 /* utils */
 
 /** Set the error message.

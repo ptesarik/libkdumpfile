@@ -73,9 +73,6 @@ addrxlat_vtop_next(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 		return addrxlat_ok;
 	}
 
-	if (!ctx->vtop_step)
-		return set_error(ctx, addrxlat_notimplemented,
-				 "No vtop translation method");
 	return ctx->vtop_step(ctx, state);
 }
 
@@ -95,4 +92,38 @@ addrxlat_vtop_pgt(addrxlat_ctx *ctx,
 		*paddr = state.base.addr;
 
 	return status;
+}
+
+addrxlat_status
+vtop_simple(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
+{
+	addrxlat_fulladdr_t ptep;
+	uint32_t pte32;
+	uint64_t pte64;
+	addrxlat_status status;
+
+	ptep = state->base;
+	ptep.addr += state->idx[state->level] * ctx->pf->pteval_size;
+	switch (ctx->pf->pteval_size) {
+	case 4:
+		status = ctx->cb_read32(ctx, ptep, &pte32, NULL);
+		pte64 = pte32;
+		break;
+
+	case 8:
+		status = ctx->cb_read64(ctx, ptep, &pte64, NULL);
+		break;
+
+	default:
+		return set_error(ctx, addrxlat_notimplemented,
+				 "Unsupported PTE size: %zd",
+				 ctx->pf->pteval_size);
+	}
+	if (status != addrxlat_ok)
+		return status;
+
+	state->base.as = ADDRXLAT_MACHPHYSADDR;
+	state->base.addr = pte64 & ctx->page_mask;
+
+	return addrxlat_continue;
 }

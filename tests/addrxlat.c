@@ -38,6 +38,77 @@ static addrxlat_paging_form_t paging_form;
 
 static addrxlat_fulladdr_t pgt_root;
 
+struct entry {
+	struct entry *next;
+	addrxlat_addr_t addr;
+	unsigned long long val;
+};
+
+struct entry *entry_list;
+
+struct entry*
+find_entry(addrxlat_addr_t addr)
+{
+	struct entry *ent;
+	for (ent = entry_list; ent; ent = ent->next)
+		if (ent->addr == addr)
+			return ent;
+	return NULL;
+}
+
+static addrxlat_status
+read32(addrxlat_ctx *ctx, addrxlat_fulladdr_t addr, uint32_t *val, void *data)
+{
+	struct entry *ent = find_entry(addr.addr);
+	if (!ent)
+		return (addrxlat_status)addrxlat_notpresent;
+	*val = ent->val;
+	return addrxlat_ok;
+}
+
+static addrxlat_status
+read64(addrxlat_ctx *ctx, addrxlat_fulladdr_t addr, uint64_t *val, void *data)
+{
+	struct entry *ent = find_entry(addr.addr);
+	if (!ent)
+		return (addrxlat_status)-1;
+	*val = ent->val;
+	return addrxlat_ok;
+}
+
+static int
+add_entry(const char *spec)
+{
+	unsigned long long addr, val;
+	struct entry *ent;
+	char *endp;
+
+	addr = strtoull(spec, &endp, 0);
+	if (*endp != ':') {
+		fprintf(stderr, "Invalid entry spec: %s\n", spec);
+		return TEST_ERR;
+	}
+
+	val = strtoull(endp + 1, &endp, 0);
+	if (*endp) {
+		fprintf(stderr, "Invalid entry spec: %s\n", spec);
+		return TEST_ERR;
+	}
+
+	ent = malloc(sizeof(*ent));
+	if (!ent) {
+		perror("Cannot allocate entry");
+		return TEST_ERR;
+	}
+
+	ent->next = entry_list;
+	ent->addr = addr;
+	ent->val = val;
+	entry_list = ent;
+
+	return TEST_OK;
+}
+
 static int
 set_paging_form(const char *spec)
 {
@@ -118,6 +189,7 @@ do_xlat(addrxlat_ctx *ctx, addrxlat_addr_t vaddr)
 
 static const struct option opts[] = {
 	{ "help", no_argument, NULL, 'h' },
+	{ "entry", required_argument, NULL, 'e' },
 	{ "paging", required_argument, NULL, 'p' },
 	{ "root", required_argument, NULL, 'r' },
 	{ NULL, 0, NULL, 0 }
@@ -131,7 +203,8 @@ usage(const char *name)
 		"\n"
 		"Options:\n"
 		"  -p|--paging sz:bits  Set paging form\n"
-		"  -r|--root as:addr    Set the root page table address\n",
+		"  -r|--root as:addr    Set the root page table address\n"
+		"  -e|--entry addr:val  Set page table entry value\n",
 		name);
 }
 
@@ -144,7 +217,7 @@ main(int argc, char **argv)
 	int opt;
 	int rc;
 
-	while ((opt = getopt_long(argc, argv, "hp:r:", opts, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "he:p:r:", opts, NULL)) != -1) {
 		switch (opt) {
 		case 'p':
 			rc = set_paging_form(optarg);
@@ -154,6 +227,12 @@ main(int argc, char **argv)
 
 		case 'r':
 			rc = set_root(optarg);
+			if (rc != TEST_OK)
+				return rc;
+			break;
+
+		case 'e':
+			rc = add_entry(optarg);
 			if (rc != TEST_OK)
 				return rc;
 			break;
@@ -184,6 +263,9 @@ main(int argc, char **argv)
 
 	addrxlat_set_paging_form(ctx, &paging_form);
 	addrxlat_set_pgt_root(ctx, pgt_root);
+	addrxlat_cb_read32(ctx, read32);
+	addrxlat_cb_read64(ctx, read64);
+
 	rc = do_xlat(ctx, vaddr);
 
 	addrxlat_free(ctx);

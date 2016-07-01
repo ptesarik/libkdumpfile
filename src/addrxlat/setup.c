@@ -38,8 +38,10 @@ addrxlat_ctx *
 addrxlat_new(void)
 {
 	addrxlat_ctx *ctx = calloc(1, sizeof(addrxlat_ctx));
-	if (ctx)
+	if (ctx) {
 		ctx->pf = &null_paging;
+		ctx->vtop_step = vtop_simple;
+	}
 	return ctx;
 }
 
