@@ -40,7 +40,8 @@ do_xlat(addrxlat_ctx *ctx, addrxlat_addr_t vaddr)
 
 	status = addrxlat_vtop_pgt(ctx, vaddr, &paddr);
 	if (status != addrxlat_ok) {
-		fprintf(stderr, "Address translation failed\n");
+		fprintf(stderr, "Address translation failed: %s\n",
+			addrxlat_err_str(ctx));
 		return TEST_FAIL;
 	}
 

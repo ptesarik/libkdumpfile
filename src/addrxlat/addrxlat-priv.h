@@ -35,6 +35,16 @@
 #include "addrxlat.h"
 #pragma GCC visibility pop
 
+/* Minimize chance of name clashes (in a static link) */
+#ifndef PIC
+#define INTERNAL_NAME(x)	_libaddrxlat_priv_ ## x
+#else
+#define INTERNAL_NAME(x)	x
+#endif
+
+/** Maximum length of the error message. */
+#define ERRBUF	64
+
 /**  Representation of address translation.
  *
  * This structure contains all internal state needed to perform address
@@ -43,6 +53,21 @@
 struct _addrxlat_ctx {
 	/** Paging form description. */
 	const addrxlat_paging_form_t *pf;
+
+	char err_buf[ERRBUF];	/**< Error string. */
 };
+
+/* utils */
+
+/** Set the error message.
+ * @param ctx     Address tranlsation object.
+ * @param status  Error status
+ * @param msgfmt  Message format string (@c printf style).
+ */
+#define set_error INTERNAL_NAME(set_error)
+addrxlat_status set_error(
+	addrxlat_ctx *ctx, addrxlat_status status,
+	const char *msgfmt, ...)
+	__attribute__ ((format (printf, 3, 4)));
 
 #endif	/* addrxlat-priv.h */

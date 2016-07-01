@@ -104,6 +104,16 @@ addrxlat_ctx *addrxlat_new(void);
  */
 void addrxlat_free(addrxlat_ctx *ctx);
 
+/**  Get a detailed error string.
+ * @param ctx  Address translation object.
+ * @returns    Last error string.
+ *
+ * If an error status is returned, this function can be used to get
+ * a human-readable description of the error. The error string is
+ * never reset, so you should check the return status first.
+ */
+const char *addrxlat_err_str(addrxlat_ctx *ctx);
+
 /** Initialize address translation for a given architecture.
  *
  * @param ctx   Address translation object.

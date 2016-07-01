@@ -24,6 +24,7 @@ AM_CFLAGS = -fvisibility=hidden
 lib_LTLIBRARIES = libaddrxlat.la
 libaddrxlat_la_SOURCES = \
 	setup.c \
+	util.c \
 	vtop.c
 
 EXTRA_libaddrxlat_la_DEPENDENCIES = libaddrxlat.map

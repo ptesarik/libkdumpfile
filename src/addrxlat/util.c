@@ -1,5 +1,5 @@
-/** @internal @file src/addrxlat/vtop.c
- * @brief Virtual to physical address translation.
+/** @internal @file src/addrxlat/util.c
+ * @brief Utility functions.
  */
 /* Copyright (C) 2016 Petr Tesarik <ptesarik@suse.com>
 
@@ -28,12 +28,33 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <stdio.h>
+#include <string.h>
+#include <stdarg.h>
+
 #include "addrxlat-priv.h"
 
 addrxlat_status
-addrxlat_vtop_pgt(addrxlat_ctx *ctx,
-		  addrxlat_addr_t vaddr, addrxlat_addr_t *paddr)
+set_error(addrxlat_ctx *ctx, addrxlat_status status, const char *msgfmt, ...)
 {
-	return set_error(ctx, addrxlat_notimplemented,
-			 "VTOP not yet implemented");
+	va_list ap;
+	int msglen;
+
+	if (status == addrxlat_ok)
+		return status;
+
+	va_start(ap, msgfmt);
+	msglen = vsnprintf(ctx->err_buf, sizeof(ctx->err_buf), msgfmt, ap);
+	va_end(ap);
+
+	if (msglen < 0)
+		strcpy(ctx->err_buf, "(set_error failed)");
+
+	return status;
+}
+
+const char *
+addrxlat_err_str(addrxlat_ctx *ctx)
+{
+	return ctx->err_buf;
 }
