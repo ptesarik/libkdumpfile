@@ -30,10 +30,69 @@
 
 #include "addrxlat-priv.h"
 
+void
+addrxlat_set_pgt_root(addrxlat_ctx *ctx, addrxlat_fulladdr_t addr)
+{
+	ctx->pgt_root = addr;
+}
+
+addrxlat_fulladdr_t
+addrxlat_get_pgt_root(addrxlat_ctx *ctx)
+{
+	return ctx->pgt_root;
+}
+
+void
+addrxlat_vtop_start(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state,
+		    addrxlat_addr_t vaddr)
+{
+	unsigned short i;
+
+	state->level = ctx->pf->levels;
+	state->base = ctx->pgt_root;
+	for (i = 0; i < ctx->pf->levels; ++i) {
+		unsigned short bits = ctx->pf->bits[i];
+		addrxlat_addr_t mask = bits < sizeof(addrxlat_addr_t) * 8
+			? ((addrxlat_addr_t)1 << bits) - 1
+			: ~(addrxlat_addr_t)0;
+		state->idx[i] = vaddr & mask;
+		vaddr >>= bits;
+	}
+}
+
+addrxlat_status
+addrxlat_vtop_next(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
+{
+	if (!state->level)
+		return addrxlat_ok;
+
+	--state->level;
+	if (!state->level) {
+		state->base.as = ADDRXLAT_KPHYSADDR;
+		state->base.addr += state->idx[0];
+		return addrxlat_ok;
+	}
+
+	if (!ctx->vtop_step)
+		return set_error(ctx, addrxlat_notimplemented,
+				 "No vtop translation method");
+	return ctx->vtop_step(ctx, state);
+}
+
 addrxlat_status
 addrxlat_vtop_pgt(addrxlat_ctx *ctx,
 		  addrxlat_addr_t vaddr, addrxlat_addr_t *paddr)
 {
-	return set_error(ctx, addrxlat_notimplemented,
-			 "VTOP not yet implemented");
+	addrxlat_vtop_state_t state;
+	addrxlat_status status;
+
+	addrxlat_vtop_start(ctx, &state, vaddr);
+	do {
+		status = addrxlat_vtop_next(ctx, &state);
+	} while (status == addrxlat_continue);
+
+	if (status == addrxlat_ok)
+		*paddr = state.base.addr;
+
+	return status;
 }

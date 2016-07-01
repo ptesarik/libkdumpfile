@@ -59,6 +59,7 @@ void
 addrxlat_set_paging_form(addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf)
 {
 	ctx->pf = pf;
+	ctx->page_mask = ~(((addrxlat_addr_t)1 << ctx->pf->bits[0]) - 1);
 }
 
 const addrxlat_paging_form_t *

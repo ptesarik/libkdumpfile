@@ -93,6 +93,7 @@ check_PROGRAMS = \
 	vtop
 
 test_scripts = \
+	addrxlat-identity \
 	diskdump-empty-i386 \
 	diskdump-empty-ppc64 \
 	diskdump-empty-s390x \

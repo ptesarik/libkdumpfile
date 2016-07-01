@@ -53,6 +53,7 @@ extern "C" {
 typedef enum _addrxlat_status {
 	addrxlat_ok = 0,		/**< Success. */
 	addrxlat_notimplemented,	/**< Unimplemented feature. */
+	addrxlat_continue,		/**< Repeat the last step. */
 } addrxlat_status;
 
 /**  Type of a physical or virtual address.
@@ -79,10 +80,24 @@ typedef enum _addrxlat_addrspace {
 	ADDRXLAT_XENVADDR,	/**< Xen virtual address.  */
 } addrxlat_addrspace_t;
 
+/** Full address (including address space specification).
+ */
+typedef struct _addrxlat_fulladdr {
+	addrxlat_addr_t addr;	 /**< Raw address. */
+	addrxlat_addrspace_t as; /**< Address space for @c addr. */
+} addrxlat_fulladdr_t;
+
+/** Maximum address translation levels.
+ * This is a theoretical limit, with enough reserve for future enhancements.
+ * Currently, IBM z/Architecture has up to 5 levels, but only 4 are used
+ * by the Linux kernel. All other architectures have less paging levels.
+ */
+#define ADDRXLAT_MAXLEVELS	8
+
 typedef struct _addrxlat_paging_form {
 	size_t pteval_size;
 	unsigned short levels;
-	unsigned short bits[];
+	unsigned short bits[ADDRXLAT_MAXLEVELS];
 } addrxlat_paging_form_t;
 
 typedef struct _addrxlat_ctx addrxlat_ctx;
@@ -138,6 +153,58 @@ void addrxlat_set_paging_form(
  * @returns     Paging form description.
  */
 const addrxlat_paging_form_t *addrxlat_get_paging_form(addrxlat_ctx *ctx);
+
+/** Set page table root address.
+ * @param ctx   Address translation object.
+ * @param addr  Base address of the highest-level page table.
+ */
+void addrxlat_set_pgt_root(addrxlat_ctx *ctx, addrxlat_fulladdr_t addr);
+
+/** Get page table root address.
+ * @param ctx  Address translation object.
+ * @returns    Base address of the highest-level page table.
+ */
+addrxlat_fulladdr_t addrxlat_get_pgt_root(addrxlat_ctx *ctx);
+
+/** Data type for one-by-one VTOP translation. */
+typedef struct _addrxlat_vtop_state {
+	/** Page table level. */
+	unsigned short level;
+
+	/** On input, base address of the page table.
+	 * On output base address of the lower-level page table or
+	 * the target physical address.
+	 */
+	addrxlat_fulladdr_t base;
+
+	/** Table indices at individual levels. */
+	addrxlat_addr_t idx[ADDRXLAT_MAXLEVELS];
+} addrxlat_vtop_state_t;
+
+/** Type of the callback to make one step in vtop translation.
+ * @param ctx    Address translation object.
+ * @param state  Translation state.
+ * @returns      Error status.
+ */
+typedef addrxlat_status addrxlat_vtop_step_fn(
+	addrxlat_ctx *ctx, addrxlat_vtop_state_t *state);
+
+/** Start gradual virtual-to-physical address translation.
+ * @param ctx            Address translation object.
+ * @param[out] state     Translation state.
+ * @param vaddr          Virtual address.
+ */
+void addrxlat_vtop_start(
+	addrxlat_ctx *ctx, addrxlat_vtop_state_t *state,
+	addrxlat_addr_t vaddr);
+
+/** Perform one step in virtual-to-physical address translation.
+ * @param ctx            Address translation object.
+ * @param[in,out] state  Translation state.
+ * @returns              Error status.
+ */
+addrxlat_status addrxlat_vtop_next(
+	addrxlat_ctx *ctx, addrxlat_vtop_state_t *state);
 
 /** Perform virtual-to-phyiscal address translation using page tables.
  * @param ctx         Address translation object.
