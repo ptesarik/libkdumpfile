@@ -114,9 +114,26 @@ set_paging_form(const char *spec)
 {
 	char *endp;
 
-	paging_form.pteval_size = strtoul(spec, &endp, 0);
-	if (*endp != ':') {
+	endp = strchr(spec, ':');
+	if (!endp) {
 		fprintf(stderr, "Invalid paging form: %s\n", spec);
+		return TEST_ERR;
+	}
+
+	if (!strncasecmp(spec, "none:", endp - spec))
+		paging_form.pte_format = addrxlat_pte_none;
+	else if (!strncasecmp(spec, "ia32:", endp - spec))
+		paging_form.pte_format = addrxlat_pte_ia32;
+	else if (!strncasecmp(spec, "ia32_pae:", endp - spec))
+		paging_form.pte_format = addrxlat_pte_ia32_pae;
+	else if (!strncasecmp(spec, "x86_64:", endp - spec))
+		paging_form.pte_format = addrxlat_pte_x86_64;
+	else if (!strncasecmp(spec, "s390x:", endp - spec))
+		paging_form.pte_format = addrxlat_pte_s390x;
+	else if (!strncasecmp(spec, "ppc64:", endp - spec))
+		paging_form.pte_format = addrxlat_pte_ppc64;
+	else {
+		fprintf(stderr, "Unknown PTE format: %s\n", spec);
 		return TEST_ERR;
 	}
 
@@ -202,9 +219,9 @@ usage(const char *name)
 		"Usage: %s [<options>] <addr>\n"
 		"\n"
 		"Options:\n"
-		"  -p|--paging sz:bits  Set paging form\n"
-		"  -r|--root as:addr    Set the root page table address\n"
-		"  -e|--entry addr:val  Set page table entry value\n",
+		"  -p|--paging fmt:bits  Set paging form\n"
+		"  -r|--root as:addr     Set the root page table address\n"
+		"  -e|--entry addr:val   Set page table entry value\n",
 		name);
 }
 
@@ -215,6 +232,7 @@ main(int argc, char **argv)
 	char *endp;
 	addrxlat_ctx *ctx;
 	int opt;
+	addrxlat_status status;
 	int rc;
 
 	while ((opt = getopt_long(argc, argv, "he:p:r:", opts, NULL)) != -1) {
@@ -261,13 +279,21 @@ main(int argc, char **argv)
 		return TEST_ERR;
 	}
 
-	addrxlat_set_paging_form(ctx, &paging_form);
+	status = addrxlat_set_paging_form(ctx, &paging_form);
+	if (status != addrxlat_ok) {
+		fprintf(stderr, "Cannot set paging form: %s\n",
+			addrxlat_err_str(ctx));
+		rc = TEST_ERR;
+		goto err;
+	}
+
 	addrxlat_set_pgt_root(ctx, pgt_root);
 	addrxlat_cb_read32(ctx, read32);
 	addrxlat_cb_read64(ctx, read64);
 
 	rc = do_xlat(ctx, vaddr);
 
+ err:
 	addrxlat_free(ctx);
 	return rc;
 }

@@ -74,12 +74,23 @@ struct _addrxlat_ctx {
 
 /* vtop */
 
-/** Simple vtop handler
- * This is the most basic handler, which assumes that all paging levels
- * are used and all page tables are aligned to a page boundary.
- */
-#define vtop_simple INTERNAL_NAME(vtop_simple)
-addrxlat_vtop_step_fn vtop_simple;
+#define vtop_none INTERNAL_NAME(vtop_none)
+addrxlat_vtop_step_fn vtop_none;
+
+#define vtop_ia32 INTERNAL_NAME(vtop_ia32)
+addrxlat_vtop_step_fn vtop_ia32;
+
+#define vtop_ia32_pae INTERNAL_NAME(vtop_ia32_pae)
+addrxlat_vtop_step_fn vtop_ia32_pae;
+
+#define vtop_x86_64 INTERNAL_NAME(vtop_x86_64)
+addrxlat_vtop_step_fn vtop_x86_64;
+
+#define vtop_s390x INTERNAL_NAME(vtop_s390x)
+addrxlat_vtop_step_fn vtop_s390x;
+
+#define vtop_ppc64 INTERNAL_NAME(vtop_ppc64)
+addrxlat_vtop_step_fn vtop_ppc64;
 
 /* utils */
 

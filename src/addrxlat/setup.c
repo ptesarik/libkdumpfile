@@ -40,7 +40,7 @@ addrxlat_new(void)
 	addrxlat_ctx *ctx = calloc(1, sizeof(addrxlat_ctx));
 	if (ctx) {
 		ctx->pf = &null_paging;
-		ctx->vtop_step = vtop_simple;
+		ctx->vtop_step = vtop_none;
 	}
 	return ctx;
 }
@@ -57,11 +57,27 @@ addrxlat_set_arch(addrxlat_ctx *ctx, const char *name)
 	return addrxlat_notimplemented;
 }
 
-void
+addrxlat_status
 addrxlat_set_paging_form(addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf)
 {
+	addrxlat_vtop_step_fn *fn;
+
+	switch (pf->pte_format) {
+	case addrxlat_pte_none:		fn = vtop_none;	break;
+	case addrxlat_pte_ia32:		fn = vtop_ia32; break;
+	case addrxlat_pte_ia32_pae:	fn = vtop_ia32_pae; break;
+	case addrxlat_pte_x86_64:	fn = vtop_x86_64; break;
+	case addrxlat_pte_s390x:	fn = vtop_s390x; break;
+	case addrxlat_pte_ppc64:	fn = vtop_ppc64; break;
+	default:
+		return set_error(ctx, addrxlat_notimplemented,
+				 "Unknown PTE format");
+	}
+
+	ctx->vtop_step = fn;
 	ctx->pf = pf;
 	ctx->page_mask = ~(((addrxlat_addr_t)1 << ctx->pf->bits[0]) - 1);
+	return addrxlat_ok;
 }
 
 const addrxlat_paging_form_t *

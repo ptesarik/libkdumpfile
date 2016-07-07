@@ -88,6 +88,17 @@ typedef struct _addrxlat_fulladdr {
 	addrxlat_addrspace_t as; /**< Address space for @c addr. */
 } addrxlat_fulladdr_t;
 
+/** Page table entry format.
+ */
+typedef enum _addrxlat_pte_format {
+	addrxlat_pte_none,	/**< Undefined */
+	addrxlat_pte_ia32,	/**< Original 32-bit Intel */
+	addrxlat_pte_ia32_pae,	/**< Intel IA32 with PAE */
+	addrxlat_pte_x86_64,	/**< AMD64 (Intel 64)  */
+	addrxlat_pte_s390x,	/**< IBM z/Architecture (64-bit) */
+	addrxlat_pte_ppc64,	/**< IBM POWER (64-bit) */
+} addrxlat_pte_format_t;
+
 /** Maximum address translation levels.
  * This is a theoretical limit, with enough reserve for future enhancements.
  * Currently, IBM z/Architecture has up to 5 levels, but only 4 are used
@@ -96,7 +107,7 @@ typedef struct _addrxlat_fulladdr {
 #define ADDRXLAT_MAXLEVELS	8
 
 typedef struct _addrxlat_paging_form {
-	size_t pteval_size;
+	addrxlat_pte_format_t pte_format;
 	unsigned short levels;
 	unsigned short bits[ADDRXLAT_MAXLEVELS];
 } addrxlat_paging_form_t;
@@ -140,13 +151,14 @@ addrxlat_status	addrxlat_set_arch(addrxlat_ctx *ctx, const char *name);
 /** Set paging form description.
  * @param ctx   Address translation object.
  * @param pf    Paging form description.
+ * @returns     Error status.
  *
  * This function can be used to set the paging form explicitly. Note that
  * the library does not make a copy of the description. In other words,
  * you must ensure that the pointer passed to this function is valid until
  * it is changed again, or the address translation object is destroyed.
  */
-void addrxlat_set_paging_form(
+addrxlat_status addrxlat_set_paging_form(
 	addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf);
 
 /** Get paging form description.

@@ -15,7 +15,7 @@ for tst in $list; do
     input="${tst%:*}"
     expect="${tst#*:}"
     echo -n "Checking $input... "
-    output=$( ./addrxlat -p 0:64 $input )
+    output=$( ./addrxlat -p none:64 $input )
     rc=$?
     if [ $rc -gt 1 ]; then
         echo ERROR
