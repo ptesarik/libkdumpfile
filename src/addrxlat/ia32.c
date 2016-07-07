@@ -42,6 +42,15 @@
 #define pgd_pse_high(pgd)	\
 	((((pgd) >> PGD_PSE_HIGH_SHIFT) & PGD_PSE_HIGH_MASK) << 32)
 
+/* Maximum physical address bits (architectural limit) */
+#define PHYSADDR_BITS_MAX_PAE	52
+#define PHYSADDR_SIZE_PAE	((uint64_t)1 << PHYSADDR_BITS_MAX_PAE)
+#define PHYSADDR_MASK_PAE	(~(PHYSADDR_SIZE_PAE-1))
+
+#define PMD_SHIFT_PAE		21
+#define PMD_PSE_SIZE_PAE	((uint64_t)1 << PMD_SHIFT_PAE)
+#define PMD_PSE_MASK_PAE	(~(PMD_PSE_SIZE_PAE-1))
+
 #define _PAGE_BIT_PRESENT	0
 #define _PAGE_BIT_PSE		7
 
@@ -103,6 +112,43 @@ vtop_ia32(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 addrxlat_status
 vtop_ia32_pae(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 {
-	return set_error(ctx, addrxlat_notimplemented,
-			 "IA-32 PAE not yet implemented");
+	static const char pgt_full_name[][16] = {
+		"Page",
+		"Page table",
+		"Page directory",
+	};
+	static const char pte_name[][4] = {
+		"pte",
+		"pmd",
+		"pgd",
+	};
+
+	addrxlat_fulladdr_t ptep;
+	uint64_t pte;
+	addrxlat_status status;
+
+	ptep = state->base;
+	ptep.addr += state->idx[state->level] * sizeof(uint64_t);
+	status = ctx->cb_read64(ctx, ptep, &pte, NULL);
+	if (status != addrxlat_ok)
+		return status;
+
+	if (!(pte & _PAGE_PRESENT))
+		return set_error(ctx, addrxlat_notpresent,
+				 "%s not present: %s[%u] = 0x%" PRIx64,
+				 pgt_full_name[state->level - 1],
+				 pte_name[state->level - 1],
+				 (unsigned) state->idx[state->level],
+				 pte);
+
+	state->base.as = ADDRXLAT_MACHPHYSADDR;
+	state->base.addr = pte & ~PHYSADDR_MASK_PAE;
+	if (state->level == 2 && (pte & _PAGE_PSE)) {
+		state->base.addr &= PMD_PSE_MASK_PAE;
+		--state->level;
+		state->idx[0] |= state->idx[1] << ctx->pf->bits[0];
+	} else
+		state->base.addr &= ctx->page_mask;
+
+	return addrxlat_continue;
 }

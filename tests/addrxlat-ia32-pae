@@ -1,0 +1,49 @@
+#! /bin/sh
+
+#
+# Check VTOP translation for IA32 with PAE.
+#
+
+pf="-p ia32_pae:12,9,9,2"
+
+ptes="-e 0x0000:0x1067"		# PGD[0] -> 0x1000
+ptes="$ptes -e 0x0008:0x4067"	# PGD[1] -> 0x4000
+ptes="$ptes -e 0x1000:0x2067"	# PGD[0] -> PMD[0] -> 0x2000
+ptes="$ptes -e 0x1008:0x3067"	# PGD[0] -> PMD[1] -> 0x3000
+ptes="$ptes -e 0x1010:0xe000e7"	# PGD[0] -> PMD[2] -> 0xe00000 (2M)
+ptes="$ptes -e 0x2000:0xa067"	# PGD[0] -> PMD[0] -> PTE[0] -> 0xa000
+ptes="$ptes -e 0x2008:0xb067"	# PGD[0] -> PMD[0] -> PTE[1] -> 0xb000
+ptes="$ptes -e 0x3800:0xc067"	# PGD[0] -> PMD[1] -> PTE[256] -> 0xc000
+ptes="$ptes -e 0x4010:0x5067"	# PGD[1] -> PMD[2] -> 0x5000
+ptes="$ptes -e 0x5018:0xd067"	# PGD[1] -> PMD[2] -> PTE[3] -> 0xd000
+
+list="0x123:0xa123"		# PGD[0] -> PMD[0] -> PTE[0]
+list="$list 0x1234:0xb234"	# PGD[0] -> PMD[0] -> PTE[1]
+list="$list 0x300567:0xc567"	# PGD[0] -> PMD[1] -> PTE[256]
+list="$list 0x4040389a:0xd89a"	# PGD[1] -> PMD[2] -> PTE[3]
+list="$list 0x523456:0xf23456"	# PGD[0] -> PMD[2] (2M)
+
+totalrc=0
+for tst in $list; do
+    input="${tst%:*}"
+    expect="${tst#*:}"
+    echo -n "Checking $input... "
+    output=$( ./addrxlat $pf $ptes $input )
+    rc=$?
+    if [ $rc -gt 1 ]; then
+        echo ERROR
+        echo "Cannot translate $input" >&2
+        exit $rc
+    elif [ $rc -ne 0 ]; then
+        echo FAILED
+        totalrc=$rc
+    elif [ "$output" != "$expect" ]; then
+        echo FAILED
+        echo "Result does not match for $input" >&2
+        totalrc=1
+    else
+        echo OK
+    fi
+done
+
+exit $totalrc
