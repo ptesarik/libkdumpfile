@@ -54,14 +54,14 @@ struct _addrxlat_ctx {
 	/** Paging form description. */
 	const addrxlat_paging_form_t *pf;
 
-	/** Page mask, pre-computed from paging form. */
-	addrxlat_addr_t page_mask;
-
 	/** Function to make one step in vtop translation. */
 	addrxlat_vtop_step_fn *vtop_step;
 
 	/** Base address of the highest-level page table. */
 	addrxlat_fulladdr_t pgt_root;
+
+	/** Paging masks, pre-computed from paging form. */
+	addrxlat_addr_t pgt_mask[ADDRXLAT_MAXLEVELS];
 
 	/** Callback for reading 32-bit integers. */
 	addrxlat_read32_fn *cb_read32;

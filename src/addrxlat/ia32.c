@@ -32,10 +32,6 @@
 
 #include "addrxlat-priv.h"
 
-#define PGDIR_SHIFT_NONPAE	22
-#define PGD_PSE_SIZE_NONPAE	((uint64_t)1 << PGDIR_SHIFT_NONPAE)
-#define PGD_PSE_MASK_NONPAE	(~(PGD_PSE_SIZE_NONPAE-1))
-
 #define PGD_PSE_HIGH_SHIFT	13
 #define PGD_PSE_HIGH_BITS	8
 #define PGD_PSE_HIGH_MASK	(((uint64_t)1 << PGD_PSE_HIGH_BITS)-1)
@@ -46,10 +42,6 @@
 #define PHYSADDR_BITS_MAX_PAE	52
 #define PHYSADDR_SIZE_PAE	((uint64_t)1 << PHYSADDR_BITS_MAX_PAE)
 #define PHYSADDR_MASK_PAE	(~(PHYSADDR_SIZE_PAE-1))
-
-#define PMD_SHIFT_PAE		21
-#define PMD_PSE_SIZE_PAE	((uint64_t)1 << PMD_SHIFT_PAE)
-#define PMD_PSE_MASK_PAE	(~(PMD_PSE_SIZE_PAE-1))
 
 #define _PAGE_BIT_PRESENT	0
 #define _PAGE_BIT_PSE		7
@@ -94,12 +86,12 @@ vtop_ia32(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 
 	state->base.as = ADDRXLAT_MACHPHYSADDR;
 	if (state->level == 2 && (pte & _PAGE_PSE)) {
-		state->base.addr =
-			((pte & PGD_PSE_MASK_NONPAE) | pgd_pse_high(pte));
 		--state->level;
+		state->base.addr = (pte & ctx->pgt_mask[1]) |
+			pgd_pse_high(pte);
 		state->idx[0] |= state->idx[1] << ctx->pf->bits[0];
 	} else
-		state->base.addr = pte & ctx->page_mask;
+		state->base.addr = pte & ctx->pgt_mask[0];
 
 	return addrxlat_continue;
 }
@@ -144,11 +136,11 @@ vtop_ia32_pae(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	state->base.as = ADDRXLAT_MACHPHYSADDR;
 	state->base.addr = pte & ~PHYSADDR_MASK_PAE;
 	if (state->level == 2 && (pte & _PAGE_PSE)) {
-		state->base.addr &= PMD_PSE_MASK_PAE;
 		--state->level;
+		state->base.addr &= ctx->pgt_mask[1];
 		state->idx[0] |= state->idx[1] << ctx->pf->bits[0];
 	} else
-		state->base.addr &= ctx->page_mask;
+		state->base.addr &= ctx->pgt_mask[0];
 
 	return addrxlat_continue;
 }

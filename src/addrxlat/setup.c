@@ -61,6 +61,8 @@ addrxlat_status
 addrxlat_set_paging_form(addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf)
 {
 	addrxlat_vtop_step_fn *fn;
+	addrxlat_addr_t mask;
+	unsigned short i;
 
 	switch (pf->pte_format) {
 	case addrxlat_pte_none:		fn = vtop_none;	break;
@@ -76,7 +78,13 @@ addrxlat_set_paging_form(addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf)
 
 	ctx->vtop_step = fn;
 	ctx->pf = pf;
-	ctx->page_mask = ~(((addrxlat_addr_t)1 << ctx->pf->bits[0]) - 1);
+
+	mask = 1;
+	for (i = 0; i < pf->levels; ++i) {
+		mask <<= pf->bits[i];
+		ctx->pgt_mask[i] = ~(mask - 1);
+	}
+
 	return addrxlat_ok;
 }
 
