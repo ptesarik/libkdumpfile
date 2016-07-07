@@ -34,9 +34,17 @@
 
 #include "testutil.h"
 
+enum read_status {
+	read_ok = addrxlat_ok,
+	read_notfound,
+};
+
 static addrxlat_paging_form_t paging_form;
 
 static addrxlat_fulladdr_t pgt_root;
+
+#define MAXERR	64
+static char read_err_str[MAXERR];
 
 struct entry {
 	struct entry *next;
@@ -60,8 +68,12 @@ static addrxlat_status
 read32(addrxlat_ctx *ctx, addrxlat_fulladdr_t addr, uint32_t *val, void *data)
 {
 	struct entry *ent = find_entry(addr.addr);
-	if (!ent)
-		return (addrxlat_status)addrxlat_notpresent;
+	if (!ent) {
+		snprintf(read_err_str, sizeof read_err_str,
+			 "No entry for address 0x%llx",
+			 (unsigned long long) addr.addr);
+		return -read_notfound;
+	}
 	*val = ent->val;
 	return addrxlat_ok;
 }
@@ -70,8 +82,12 @@ static addrxlat_status
 read64(addrxlat_ctx *ctx, addrxlat_fulladdr_t addr, uint64_t *val, void *data)
 {
 	struct entry *ent = find_entry(addr.addr);
-	if (!ent)
-		return (addrxlat_status)-1;
+	if (!ent) {
+		snprintf(read_err_str, sizeof read_err_str,
+			 "No entry for address 0x%llx",
+			 (unsigned long long) addr.addr);
+		return -read_notfound;
+	}
 	*val = ent->val;
 	return addrxlat_ok;
 }
@@ -195,7 +211,9 @@ do_xlat(addrxlat_ctx *ctx, addrxlat_addr_t vaddr)
 	status = addrxlat_vtop_pgt(ctx, vaddr, &paddr);
 	if (status != addrxlat_ok) {
 		fprintf(stderr, "Address translation failed: %s\n",
-			addrxlat_err_str(ctx));
+			((int) status > 0
+			 ? addrxlat_err_str(ctx)
+			 : read_err_str));
 		return TEST_FAIL;
 	}
 
