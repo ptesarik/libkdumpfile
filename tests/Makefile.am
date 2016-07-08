@@ -145,6 +145,7 @@ dist_check_DATA = \
 
 dist_check_SCRIPTS = \
 	addrxlat-common \
+	addrxlat-invalid \
 	diskdump-empty \
 	elf-empty \
 	lkcd-empty \
