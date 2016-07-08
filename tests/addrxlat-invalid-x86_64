@@ -1,0 +1,31 @@
+#! /bin/sh
+
+#
+# Check invalid x86_64 VTOP translation.
+#
+
+pf="-p x86_64:12,9,9,9,9"
+ptes="-e 0x0:0x1067 -e 0x7f8:0x2067 -e 0x800:0x1067 -e 0x1000:0xe7 -e 0x2ff8:0xe7"
+list="0x800000000000 0x8000000000000000 0xffff7fffffffffff"
+
+totalrc=0
+for tst in $list; do
+    input="${tst%:*}"
+    expect="${tst#*:}"
+    echo -n "Checking $input... "
+    output=$( ./addrxlat $pf $ptes $input )
+    rc=$?
+    if [ $rc -gt 1 ]; then
+        echo ERROR
+        echo "Cannot translate $input" >&2
+        exit $rc
+    elif [ $rc -ne 1 ]; then
+        echo FAILED
+	echo "Expected error, got $output"
+        totalrc=1
+    else
+        echo OK
+    fi
+done
+
+exit $totalrc

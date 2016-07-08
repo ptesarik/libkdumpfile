@@ -41,6 +41,29 @@
 #define _PAGE_PRESENT	(1UL << _PAGE_BIT_PRESENT)
 #define _PAGE_PSE	(1UL << _PAGE_BIT_PSE)
 
+/** Check whether an address is canonical.
+ * @param ctx    Address translation object.
+ * @param state  Translation state.
+ * @returns      Zero if @c state corresponds to a canonical address,
+ *               non-zero otherwise.
+ *
+ * All bits above the virtual address space size must be copies of the
+ * highest bit.
+ */
+static int
+is_noncanonical(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
+{
+	unsigned short lvl = ctx->pf->levels;
+	struct {
+		int bit : 1;
+	} s;
+	addrxlat_addr_t signext;
+
+	s.bit = state->idx[lvl - 1] >> (ctx->pf->bits[lvl - 1] - 1);
+	signext = s.bit & (ctx->pgt_mask[lvl - 1] >> ctx->vaddr_bits);
+	return state->idx[lvl] != signext;
+}
+
 /** AMD64 (Intel 64) vtop function.
  * @param ctx    Address translation object.
  * @param state  Translation state.
@@ -63,7 +86,10 @@ vtop_x86_64(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	};
 
 	if (!state->level)
-		return addrxlat_continue;
+		return is_noncanonical(ctx, state)
+			? set_error(ctx, addrxlat_invalid,
+				    "Non-canonical address")
+			: addrxlat_continue;
 
 	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(ctx, addrxlat_notpresent,
