@@ -64,6 +64,9 @@ vtop_ia32(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 		"pgd",
 	};
 
+	if (!state->level)
+		return addrxlat_continue;
+
 	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(ctx, addrxlat_notpresent,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
@@ -102,6 +105,9 @@ vtop_ia32_pae(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 		"pmd",
 		"pgd",
 	};
+
+	if (!state->level)
+		return addrxlat_continue;
 
 	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(ctx, addrxlat_notpresent,

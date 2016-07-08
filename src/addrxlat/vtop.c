@@ -84,13 +84,13 @@ read_pte(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	return status;
 }
 
-void
+addrxlat_status
 addrxlat_vtop_start(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state,
 		    addrxlat_addr_t vaddr)
 {
 	unsigned short i;
+	addrxlat_status status;
 
-	state->level = ctx->pf->levels;
 	state->base = ctx->pgt_root;
 	for (i = 0; i < ctx->pf->levels; ++i) {
 		unsigned short bits = ctx->pf->bits[i];
@@ -100,6 +100,12 @@ addrxlat_vtop_start(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state,
 		state->idx[i] = vaddr & mask;
 		vaddr >>= bits;
 	}
+
+	state->level = 0;
+	status = ctx->vtop_step(ctx, state);
+	if (status == addrxlat_continue)
+		state->level = ctx->pf->levels;
+	return status;
 }
 
 addrxlat_status
@@ -131,10 +137,9 @@ addrxlat_vtop_pgt(addrxlat_ctx *ctx,
 	addrxlat_vtop_state_t state;
 	addrxlat_status status;
 
-	addrxlat_vtop_start(ctx, &state, vaddr);
-	do {
+	status = addrxlat_vtop_start(ctx, &state, vaddr);
+	while (status == addrxlat_continue)
 		status = addrxlat_vtop_next(ctx, &state);
-	} while (status == addrxlat_continue);
 
 	if (status == addrxlat_ok)
 		*paddr = state.base.addr;
@@ -142,10 +147,9 @@ addrxlat_vtop_pgt(addrxlat_ctx *ctx,
 	return status;
 }
 
-/** Null vtop function. It always fails. */
+/** Null vtop function. It does not modify anything and always succeeds. */
 addrxlat_status
 vtop_none(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 {
-	return set_error(ctx, addrxlat_notimpl,
-			 "Undefined PTE format");
+	return addrxlat_continue;
 }

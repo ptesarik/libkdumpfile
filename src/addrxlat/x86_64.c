@@ -62,6 +62,9 @@ vtop_x86_64(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 		"pgd",
 	};
 
+	if (!state->level)
+		return addrxlat_continue;
+
 	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(ctx, addrxlat_notpresent,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,

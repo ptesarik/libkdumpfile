@@ -234,6 +234,31 @@ typedef struct _addrxlat_vtop_state {
  * @param ctx    Address translation object.
  * @param state  Translation state.
  * @returns      Error status.
+ *
+ * The function is first called by @ref addrxlat_vtop_start to allow
+ * arch-specific initialization (or direct translation). For this initial
+ * call:
+ *   - @c state->level is set to zero
+ *   - @c state->base is set to @c pgt_root
+ *   - virtual address is broken down to table indices in @c state->idx
+ *   - @c state->raw_pte is left uninitialized
+ *
+ * The function is then called repeatedly with a non-zero @c state->level
+ * and @c state->raw_pte already filled from the page table. On each of
+ * these subsequent calls, the callback should interpret the PTE value
+ * and update @state.
+ *
+ * The function returns:
+ *   - @c addrxlat_continue if another step is necessary,
+ *   - @c addrxlat_ok if @state->base contains the address, or
+ *   - an appropriate error code.
+ *
+ * Note that page offset is automatically added by the caller if the
+ * callback returns @c addrxlat_continue and @c state->level is 1.
+ *
+ * The callback function is explicitly allowed to modify @c state->level
+ * and/or the indices in @c state->idx[]. This is needed if some levels
+ * of paging are skipped (huge pages).
  */
 typedef addrxlat_status addrxlat_vtop_step_fn(
 	addrxlat_ctx *ctx, addrxlat_vtop_state_t *state);
@@ -242,8 +267,9 @@ typedef addrxlat_status addrxlat_vtop_step_fn(
  * @param ctx            Address translation object.
  * @param[out] state     Translation state.
  * @param vaddr          Virtual address.
+ * @returns              Error status.
  */
-void addrxlat_vtop_start(
+addrxlat_status addrxlat_vtop_start(
 	addrxlat_ctx *ctx, addrxlat_vtop_state_t *state,
 	addrxlat_addr_t vaddr);
 
