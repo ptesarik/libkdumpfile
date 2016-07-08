@@ -65,7 +65,10 @@ vtop_ia32(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	};
 
 	if (!state->level)
-		return addrxlat_continue;
+		return state->idx[ctx->pf->levels]
+			? set_error(ctx, addrxlat_invalid,
+				    "Virtual address too big")
+			: addrxlat_continue;
 
 	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(ctx, addrxlat_notpresent,
@@ -107,7 +110,10 @@ vtop_ia32_pae(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	};
 
 	if (!state->level)
-		return addrxlat_continue;
+		return state->idx[ctx->pf->levels]
+			? set_error(ctx, addrxlat_invalid,
+				    "Virtual address too big")
+			: addrxlat_continue;
 
 	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(ctx, addrxlat_notpresent,

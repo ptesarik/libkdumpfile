@@ -56,6 +56,7 @@ typedef enum _addrxlat_status {
 	addrxlat_notimpl,		/**< Unimplemented feature. */
 	addrxlat_continue,		/**< Repeat the last step. */
 	addrxlat_notpresent,		/**< Page not present. */
+	addrxlat_invalid,		/**< Invalid address. */
 } addrxlat_status;
 
 /**  Type of a physical or virtual address.

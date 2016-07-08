@@ -97,6 +97,8 @@ test_scripts = \
 	addrxlat-ia32 \
 	addrxlat-ia32-pae \
 	addrxlat-x86_64 \
+	addrxlat-invalid-ia32 \
+	addrxlat-invalid-ia32-pae \
 	diskdump-empty-i386 \
 	diskdump-empty-ppc64 \
 	diskdump-empty-s390x \
