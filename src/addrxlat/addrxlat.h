@@ -226,8 +226,12 @@ typedef struct _addrxlat_vtop_state {
 	 */
 	addrxlat_pte_t raw_pte;
 
-	/** Table indices at individual levels. */
-	addrxlat_addr_t idx[ADDRXLAT_MAXLEVELS];
+	/** Table indices at individual levels.
+	 *
+	 * There is one extra index, which contains the remaining part
+	 * of the virtual address after all page table bits were used.
+	 */
+	addrxlat_addr_t idx[ADDRXLAT_MAXLEVELS + 1];
 } addrxlat_vtop_state_t;
 
 /** Type of the callback to make one step in vtop translation.

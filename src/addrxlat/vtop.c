@@ -100,6 +100,7 @@ addrxlat_vtop_start(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state,
 		state->idx[i] = vaddr & mask;
 		vaddr >>= bits;
 	}
+	state->idx[i] = vaddr;
 
 	state->level = 0;
 	status = ctx->vtop_step(ctx, state);
