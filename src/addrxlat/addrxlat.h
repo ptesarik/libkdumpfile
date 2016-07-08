@@ -33,6 +33,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <inttypes.h>
 
 /** Major version (1st number in the release tag). */
 #define LIBADDRXLAT_VER_MAJOR	0
@@ -64,6 +65,21 @@ typedef enum _addrxlat_status {
  * be larger than the actual address in the target.
  */
 typedef uint_fast64_t addrxlat_addr_t;
+
+/** @name fprintf() macros for addrxlat types
+ * @{
+ *
+ * These macros are similar to POSIX @c PRI_xxx macros. Each of these
+ * macros expands to a character string literal containing a conversion
+ * specifier, possibly modified by a length modifier, suitable for use
+ * within the format argument of a formatted input/output function when
+ * converting the corresponding integer type.
+ */
+#define ADDRXLAT_PRIoADDR	PRIoFAST64 /**< Octal address */
+#define ADDRXLAT_PRIuADDR	PRIuFAST64 /**< Decimal address */
+#define ADDRXLAT_PRIxADDR	PRIxFAST64 /**< Lowercase hex address */
+#define ADDRXLAT_PRIXADDR	PRIXFAST64 /**< Uppercase hex address */
+/* @} */
 
 /**  Address spaces
  *
