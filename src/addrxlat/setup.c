@@ -32,6 +32,10 @@
 
 #include "addrxlat-priv.h"
 
+struct pte_def {
+	addrxlat_vtop_step_fn *fn;
+};
+
 static const addrxlat_paging_form_t null_paging;
 
 addrxlat_ctx *
@@ -60,23 +64,27 @@ addrxlat_set_arch(addrxlat_ctx *ctx, const char *name)
 addrxlat_status
 addrxlat_set_paging_form(addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf)
 {
-	addrxlat_vtop_step_fn *fn;
+	static const struct pte_def formats[] = {
+		[addrxlat_pte_none] = { vtop_none },
+		[addrxlat_pte_ia32] = { vtop_ia32 },
+		[addrxlat_pte_ia32_pae] = { vtop_ia32_pae },
+		[addrxlat_pte_x86_64] = { vtop_x86_64 },
+		[addrxlat_pte_s390x] = { vtop_s390x },
+		[addrxlat_pte_ppc64] = { vtop_ppc64 },
+	};
+
+	const struct pte_def *fmt;
 	addrxlat_addr_t mask;
 	unsigned short i;
 
-	switch (pf->pte_format) {
-	case addrxlat_pte_none:		fn = vtop_none;	break;
-	case addrxlat_pte_ia32:		fn = vtop_ia32; break;
-	case addrxlat_pte_ia32_pae:	fn = vtop_ia32_pae; break;
-	case addrxlat_pte_x86_64:	fn = vtop_x86_64; break;
-	case addrxlat_pte_s390x:	fn = vtop_s390x; break;
-	case addrxlat_pte_ppc64:	fn = vtop_ppc64; break;
-	default:
+	fmt = pf->pte_format < ARRAY_SIZE(formats)
+		? &formats[pf->pte_format]
+		: NULL;
+	if (!fmt || !fmt->fn)
 		return set_error(ctx, addrxlat_notimplemented,
 				 "Unknown PTE format");
-	}
 
-	ctx->vtop_step = fn;
+	ctx->vtop_step = fmt->fn;
 	ctx->pf = pf;
 
 	mask = 1;

@@ -42,6 +42,11 @@
 #define INTERNAL_NAME(x)	x
 #endif
 
+/* General macros */
+
+/** Number of elements in an array variable. */
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+
 /** Maximum length of the error message. */
 #define ERRBUF	64
 
