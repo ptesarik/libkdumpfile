@@ -85,6 +85,10 @@ struct _addrxlat_ctx {
 
 /* vtop */
 
+#define vtop_huge_page INTERNAL_NAME(vtop_huge_page)
+addrxlat_status vtop_huge_page(addrxlat_ctx *ctx,
+			       addrxlat_vtop_state_t *state);
+
 #define vtop_none INTERNAL_NAME(vtop_none)
 addrxlat_vtop_step_fn vtop_none;
 

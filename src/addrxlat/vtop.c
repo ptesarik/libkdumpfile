@@ -148,6 +148,29 @@ addrxlat_vtop_pgt(addrxlat_ctx *ctx,
 	return status;
 }
 
+/** Update VTOP state for huge page.
+ * @param ctx    Address translation object.
+ * @param state  VTOP translation state.
+ * @returns      Always @c addrxlat_continue.
+ *
+ * This function skips all lower paging levels and updates the state
+ * so that the next VTOP step adds the correct page offset and terminates.
+ */
+addrxlat_status
+vtop_huge_page(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
+{
+	addrxlat_addr_t off = 0;
+
+	state->base.addr &= ctx->pgt_mask[state->level - 1];
+	while (state->level > 1) {
+		--state->level;
+		off |= state->idx[state->level];
+		off <<= ctx->pf->bits[state->level - 1];
+	}
+	state->idx[0] |= off;
+	return addrxlat_continue;
+}
+
 /** Null vtop function. It does not modify anything and always succeeds. */
 addrxlat_status
 vtop_none(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
