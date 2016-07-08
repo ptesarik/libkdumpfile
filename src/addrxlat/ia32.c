@@ -28,8 +28,6 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <inttypes.h>
-
 #include "addrxlat-priv.h"
 
 #define PGD_PSE_HIGH_SHIFT	13
@@ -66,32 +64,22 @@ vtop_ia32(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 		"pgd",
 	};
 
-	addrxlat_fulladdr_t ptep;
-	uint32_t pte;
-	addrxlat_status status;
-
-	ptep = state->base;
-	ptep.addr += state->idx[state->level] * sizeof(uint32_t);
-	status = ctx->cb_read32(ctx, ptep, &pte, NULL);
-	if (status != addrxlat_ok)
-		return status;
-
-	if (!(pte & _PAGE_PRESENT))
+	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(ctx, addrxlat_notpresent,
-				 "%s not present: %s[%u] = 0x%" PRIx32,
+				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
 				 pgt_full_name[state->level - 1],
 				 pte_name[state->level - 1],
 				 (unsigned) state->idx[state->level],
-				 pte);
+				 state->raw_pte);
 
 	state->base.as = ADDRXLAT_MACHPHYSADDR;
-	if (state->level == 2 && (pte & _PAGE_PSE)) {
+	if (state->level == 2 && (state->raw_pte & _PAGE_PSE)) {
 		--state->level;
-		state->base.addr = (pte & ctx->pgt_mask[1]) |
-			pgd_pse_high(pte);
+		state->base.addr = (state->raw_pte & ctx->pgt_mask[1]) |
+			pgd_pse_high(state->raw_pte);
 		state->idx[0] |= state->idx[1] << ctx->pf->bits[0];
 	} else
-		state->base.addr = pte & ctx->pgt_mask[0];
+		state->base.addr = state->raw_pte & ctx->pgt_mask[0];
 
 	return addrxlat_continue;
 }
@@ -115,27 +103,17 @@ vtop_ia32_pae(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 		"pgd",
 	};
 
-	addrxlat_fulladdr_t ptep;
-	uint64_t pte;
-	addrxlat_status status;
-
-	ptep = state->base;
-	ptep.addr += state->idx[state->level] * sizeof(uint64_t);
-	status = ctx->cb_read64(ctx, ptep, &pte, NULL);
-	if (status != addrxlat_ok)
-		return status;
-
-	if (!(pte & _PAGE_PRESENT))
+	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(ctx, addrxlat_notpresent,
-				 "%s not present: %s[%u] = 0x%" PRIx64,
+				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
 				 pgt_full_name[state->level - 1],
 				 pte_name[state->level - 1],
 				 (unsigned) state->idx[state->level],
-				 pte);
+				 state->raw_pte);
 
 	state->base.as = ADDRXLAT_MACHPHYSADDR;
-	state->base.addr = pte & ~PHYSADDR_MASK_PAE;
-	if (state->level == 2 && (pte & _PAGE_PSE)) {
+	state->base.addr = state->raw_pte & ~PHYSADDR_MASK_PAE;
+	if (state->level == 2 && (state->raw_pte & _PAGE_PSE)) {
 		--state->level;
 		state->base.addr &= ctx->pgt_mask[1];
 		state->idx[0] |= state->idx[1] << ctx->pf->bits[0];

@@ -28,8 +28,6 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <inttypes.h>
-
 #include "addrxlat-priv.h"
 
 /* Maximum physical address bits (architectural limit) */
@@ -64,27 +62,18 @@ vtop_x86_64(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 		"pgd",
 	};
 
-	addrxlat_fulladdr_t ptep;
-	uint64_t pte;
-	addrxlat_status status;
-
-	ptep = state->base;
-	ptep.addr += state->idx[state->level] * sizeof(uint64_t);
-	status = ctx->cb_read64(ctx, ptep, &pte, NULL);
-	if (status != addrxlat_ok)
-		return status;
-
-	if (!(pte & _PAGE_PRESENT))
+	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(ctx, addrxlat_notpresent,
-				 "%s not present: %s[%u] = 0x%" PRIx64,
+				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
 				 pgt_full_name[state->level - 1],
 				 pte_name[state->level - 1],
 				 (unsigned) state->idx[state->level],
-				 pte);
+				 state->raw_pte);
 
 	state->base.as = ADDRXLAT_MACHPHYSADDR;
-	state->base.addr = pte & ~PHYSADDR_MASK;
-	if (state->level >= 2 && state->level <= 3 && (pte & _PAGE_PSE)) {
+	state->base.addr = state->raw_pte & ~PHYSADDR_MASK;
+	if (state->level >= 2 && state->level <= 3 &&
+	    (state->raw_pte & _PAGE_PSE)) {
 		addrxlat_addr_t off;
 
 		state->base.addr &= ctx->pgt_mask[state->level - 1];

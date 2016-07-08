@@ -66,6 +66,15 @@ typedef enum _addrxlat_status {
  */
 typedef uint_fast64_t addrxlat_addr_t;
 
+/**  Type for a PTE value.
+ *
+ * Use this type to work with PTE values. Note that this type may be
+ * bigger than the actual PTE on a given architecture and always uses
+ * host byte order, so variables of this type are not suitable for use
+ * as a buffer.
+ */
+typedef uint_fast64_t addrxlat_pte_t;
+
 /** @name fprintf() macros for addrxlat types
  * @{
  *
@@ -79,6 +88,11 @@ typedef uint_fast64_t addrxlat_addr_t;
 #define ADDRXLAT_PRIuADDR	PRIuFAST64 /**< Decimal address */
 #define ADDRXLAT_PRIxADDR	PRIxFAST64 /**< Lowercase hex address */
 #define ADDRXLAT_PRIXADDR	PRIXFAST64 /**< Uppercase hex address */
+
+#define ADDRXLAT_PRIoPTE	PRIoFAST64 /**< Octal PTE */
+#define ADDRXLAT_PRIuPTE	PRIuFAST64 /**< Decimal PTE */
+#define ADDRXLAT_PRIxPTE	PRIxFAST64 /**< Lowercase hex PTE */
+#define ADDRXLAT_PRIXPTE	PRIXFAST64 /**< Uppercase hex PTE */
 /* @} */
 
 /**  Address spaces
@@ -205,6 +219,12 @@ typedef struct _addrxlat_vtop_state {
 	 * the target physical address.
 	 */
 	addrxlat_fulladdr_t base;
+
+	/** Raw PTE value.
+	 * This value is stored on output, but it may be also used
+	 * as input for the next step.
+	 */
+	addrxlat_pte_t raw_pte;
 
 	/** Table indices at individual levels. */
 	addrxlat_addr_t idx[ADDRXLAT_MAXLEVELS];

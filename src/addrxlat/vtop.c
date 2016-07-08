@@ -42,6 +42,48 @@ addrxlat_get_pgt_root(addrxlat_ctx *ctx)
 	return ctx->pgt_root;
 }
 
+/** Read the raw PTE value.
+ * @param ctx    Address translation object.
+ * @param state  VTOP translation state.
+ * @returns      Error status.
+ *
+ * On successful return, @c state->raw_pte contains the raw
+ * PTE value for the current translation step.
+ */
+static addrxlat_status
+read_pte(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
+{
+	addrxlat_fulladdr_t ptep;
+	uint64_t pte64;
+	uint32_t pte32;
+	addrxlat_pte_t pte;
+	addrxlat_status status;
+
+	ptep = state->base;
+	ptep.addr += state->idx[state->level] << ctx->pte_shift;
+
+	switch(ctx->pte_shift) {
+	case 2:
+		status = ctx->cb_read32(ctx, ptep, &pte32, NULL);
+		pte = pte32;
+		break;
+
+	case 3:
+		status = ctx->cb_read64(ctx, ptep, &pte64, NULL);
+		pte = pte64;
+		break;
+
+	default:
+		return set_error(ctx, addrxlat_notimplemented,
+				 "Unsupported PTE size: %u",
+				 1 << ctx->pte_shift);
+	}
+
+	if (status == addrxlat_ok)
+		state->raw_pte = pte;
+	return status;
+}
+
 void
 addrxlat_vtop_start(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state,
 		    addrxlat_addr_t vaddr)
@@ -63,6 +105,8 @@ addrxlat_vtop_start(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state,
 addrxlat_status
 addrxlat_vtop_next(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 {
+	addrxlat_status status;
+
 	if (!state->level)
 		return addrxlat_ok;
 
@@ -72,6 +116,10 @@ addrxlat_vtop_next(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 		state->base.addr += state->idx[0];
 		return addrxlat_ok;
 	}
+
+	status = read_pte(ctx, state);
+	if (status != addrxlat_ok)
+		return status;
 
 	return ctx->vtop_step(ctx, state);
 }
