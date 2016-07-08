@@ -38,6 +38,6 @@
 addrxlat_status
 vtop_ppc64(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 {
-	return set_error(ctx, addrxlat_notimplemented,
+	return set_error(ctx, addrxlat_notimpl,
 			 "IBM POWER not yet implemented");
 }

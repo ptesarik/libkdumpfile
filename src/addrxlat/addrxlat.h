@@ -53,7 +53,7 @@ extern "C" {
  */
 typedef enum _addrxlat_status {
 	addrxlat_ok = 0,		/**< Success. */
-	addrxlat_notimplemented,	/**< Unimplemented feature. */
+	addrxlat_notimpl,		/**< Unimplemented feature. */
 	addrxlat_continue,		/**< Repeat the last step. */
 	addrxlat_notpresent,		/**< Page not present. */
 } addrxlat_status;

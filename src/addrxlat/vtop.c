@@ -74,7 +74,7 @@ read_pte(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 		break;
 
 	default:
-		return set_error(ctx, addrxlat_notimplemented,
+		return set_error(ctx, addrxlat_notimpl,
 				 "Unsupported PTE size: %u",
 				 1 << ctx->pte_shift);
 	}
@@ -146,6 +146,6 @@ addrxlat_vtop_pgt(addrxlat_ctx *ctx,
 addrxlat_status
 vtop_none(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 {
-	return set_error(ctx, addrxlat_notimplemented,
+	return set_error(ctx, addrxlat_notimpl,
 			 "Undefined PTE format");
 }

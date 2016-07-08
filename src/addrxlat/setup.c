@@ -59,7 +59,7 @@ addrxlat_free(addrxlat_ctx *ctx)
 addrxlat_status
 addrxlat_set_arch(addrxlat_ctx *ctx, const char *name)
 {
-	return addrxlat_notimplemented;
+	return addrxlat_notimpl;
 }
 
 addrxlat_status
@@ -82,7 +82,7 @@ addrxlat_set_paging_form(addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf)
 		? &formats[pf->pte_format]
 		: NULL;
 	if (!fmt || !fmt->fn)
-		return set_error(ctx, addrxlat_notimplemented,
+		return set_error(ctx, addrxlat_notimpl,
 				 "Unknown PTE format");
 
 	ctx->vtop_step = fmt->fn;

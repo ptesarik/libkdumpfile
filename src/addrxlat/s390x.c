@@ -38,6 +38,6 @@
 addrxlat_status
 vtop_s390x(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 {
-	return set_error(ctx, addrxlat_notimplemented,
+	return set_error(ctx, addrxlat_notimpl,
 			 "IBM z/Architecture not yet implemented");
 }
