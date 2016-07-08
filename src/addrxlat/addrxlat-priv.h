@@ -77,6 +77,9 @@ struct _addrxlat_ctx {
 	/** PTE size as a log2 value. */
 	unsigned short pte_shift;
 
+	/** Size of virtual address space covered by page tables. */
+	unsigned short vaddr_bits;
+
 	char err_buf[ERRBUF];	/**< Error string. */
 };
 

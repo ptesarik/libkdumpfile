@@ -89,8 +89,10 @@ addrxlat_set_paging_form(addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf)
 	ctx->pte_shift = fmt->shift;
 	ctx->pf = pf;
 
+	ctx->vaddr_bits = 0;
 	mask = 1;
 	for (i = 0; i < pf->levels; ++i) {
+		ctx->vaddr_bits += pf->bits[i];
 		mask <<= pf->bits[i];
 		ctx->pgt_mask[i] = ~(mask - 1);
 	}
