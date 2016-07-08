@@ -43,7 +43,7 @@ for tst in $list; do
         totalrc=$rc
     elif [ "$output" != "$expect" ]; then
         echo FAILED
-        echo "Result does not match for $input" >&2
+        echo "Result does not match for $input: $output" >&2
         totalrc=1
     else
         echo OK
