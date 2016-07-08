@@ -34,6 +34,7 @@
 
 struct pte_def {
 	addrxlat_vtop_step_fn *fn;
+	unsigned short shift;
 };
 
 static const addrxlat_paging_form_t null_paging;
@@ -65,12 +66,12 @@ addrxlat_status
 addrxlat_set_paging_form(addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf)
 {
 	static const struct pte_def formats[] = {
-		[addrxlat_pte_none] = { vtop_none },
-		[addrxlat_pte_ia32] = { vtop_ia32 },
-		[addrxlat_pte_ia32_pae] = { vtop_ia32_pae },
-		[addrxlat_pte_x86_64] = { vtop_x86_64 },
-		[addrxlat_pte_s390x] = { vtop_s390x },
-		[addrxlat_pte_ppc64] = { vtop_ppc64 },
+		[addrxlat_pte_none] = { vtop_none, 0 },
+		[addrxlat_pte_ia32] = { vtop_ia32, 2 },
+		[addrxlat_pte_ia32_pae] = { vtop_ia32_pae, 3 },
+		[addrxlat_pte_x86_64] = { vtop_x86_64, 3 },
+		[addrxlat_pte_s390x] = { vtop_s390x, 3 },
+		[addrxlat_pte_ppc64] = { vtop_ppc64, 3 },
 	};
 
 	const struct pte_def *fmt;
@@ -85,6 +86,7 @@ addrxlat_set_paging_form(addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf)
 				 "Unknown PTE format");
 
 	ctx->vtop_step = fmt->fn;
+	ctx->pte_shift = fmt->shift;
 	ctx->pf = pf;
 
 	mask = 1;

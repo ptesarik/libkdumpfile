@@ -74,6 +74,9 @@ struct _addrxlat_ctx {
 	/** Callback for reading 64-bit integers. */
 	addrxlat_read64_fn *cb_read64;
 
+	/** PTE size as a log2 value. */
+	unsigned short pte_shift;
+
 	char err_buf[ERRBUF];	/**< Error string. */
 };
 
