@@ -1,0 +1,29 @@
+#! /bin/sh
+
+#
+# Check VTOP translation for s390x with 5-level paging.
+#
+
+pf="-p s390x:12,8,11,11,11,11"
+
+ptes="-e 0x0000:0x100f"		# RFX0 -> 1000
+ptes="$ptes -e 0x0008:0x500f"	# RFX1 -> 5000
+ptes="$ptes -e 0x1000:0x200b"	# RFX0 -> RSX0 -> 2000
+ptes="$ptes -e 0x2000:0x3007"	# RFX0 -> RSX0 -> RTX0 -> 3000
+ptes="$ptes -e 0x2008:0x1f00000404" # RFX0 -> RSX0 -> RTX1 -> 1f00000000 (2G)
+ptes="$ptes -e 0x3000:0x4000"	# RFX0 -> RSX0 -> RTX0 -> SX0 -> 4000
+ptes="$ptes -e 0x3010:0xe00400"	# RFX0 -> RSX0 -> RTX0 -> SX2 -> e00000 (1M)
+ptes="$ptes -e 0x4000:0xa000"	# RFX0 -> RSX0 -> RTX0 -> SX0 -> PX0 -> a000
+ptes="$ptes -e 0x4008:0xb000"	# RFX0 -> RSX0 -> RTX0 -> SX0 -> PX1 -> b000
+ptes="$ptes -e 0x5010:0x600b"	# RFX1 -> RSX2 -> 6000
+ptes="$ptes -e 0x6018:0x7007"	# RFX1 -> RSX2 -> RTX3 -> 7000
+ptes="$ptes -e 0x7020:0x8000"	# RFX1 -> RSX2 -> RTX3 -> SX4 -> 8000
+ptes="$ptes -e 0x8028:0xc000"	# RFX1 -> RSX2 -> RTX3 -> SX4 -> PX5 -> c000
+
+list="0x123:0xa123"		# RFX0 -> RSX0 -> RTX0 -> SX0 -> PX0
+list="$list 0x1234:0xb234"	# RFX0 -> RSX0 -> RTX0 -> SX0 -> PX1
+list="$list 0x20080180405567:0xc567" # RFX1 -> RSX2 -> RTX3 -> SX4 -> PX5
+list="$list 0x234567:0xe34567"	# RFX0 -> RSX0 -> RTX0 -> SX2 (1M)
+list="$list 0x92345678:0x1f12345678" # RFX0 -> RSX0 -> RTX1 (2G)
+
+. "$srcdir"/addrxlat-common

@@ -1,0 +1,21 @@
+#! /bin/sh
+
+#
+# Check VTOP translation for s390x with 3-level paging.
+#
+
+pf="-p s390x:12,8,11"
+
+ptes="-e 0x0000:0x1000"		# SX0 -> 1000
+ptes="$ptes -e 0x0008:0x1800"	# SX1 -> 1800
+ptes="$ptes -e 0x0010:0xd00400"	# SX2 -> d00000 (1M)
+ptes="$ptes -e 0x1000:0xa000"	# SX0 -> PX0 -> a000
+ptes="$ptes -e 0x1008:0xb000"	# SX0 -> PX1 -> b000
+ptes="$ptes -e 0x1810:0xc000"	# SX1 -> PX2 -> c000
+
+list="0x123:0xa123"		# SX0 -> PX0
+list="$list 0x1234:0xb234"	# SX0 -> PX1
+list="$list 0x102345:0xc345"	# SX1 -> PX2
+list="$list 0x212345:0xd12345"	# SX1 (1M)
+
+. "$srcdir"/addrxlat-common

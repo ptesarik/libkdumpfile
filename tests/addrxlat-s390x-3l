@@ -1,0 +1,26 @@
+#! /bin/sh
+
+#
+# Check VTOP translation for s390x with 3-level paging.
+#
+
+pf="-p s390x:12,8,11,11"
+
+ptes="-e 0x0000:0x1007"		# RTX0 -> 1000
+ptes="$ptes -e 0x0008:0x3007"	# RTX1 -> 3000
+ptes="$ptes -e 0x1000:0x2000"	# RTX0 -> SX0 -> 2000
+ptes="$ptes -e 0x1008:0x2800"	# RTX0 -> SX1 -> 2800
+ptes="$ptes -e 0x1010:0xe00400"	# RTX0 -> SX2 -> e00000 (1M)
+ptes="$ptes -e 0x2000:0xa000"	# RTX0 -> SX0 -> PX0 -> a000
+ptes="$ptes -e 0x2008:0xb000"	# RTX0 -> SX0 -> PX1 -> b000
+ptes="$ptes -e 0x2c00:0xc000"	# RTX0 -> SX1 -> PX128 -> c000
+ptes="$ptes -e 0x3010:0x4000"	# RTX1 -> SX2 -> 4000
+ptes="$ptes -e 0x4018:0xd000"	# RTX1 -> SX2 -> PX3 -> d000
+
+list="0x123:0xa123"		# RTX0 -> SX0 -> PX0
+list="$list 0x1234:0xb234"	# RTX0 -> SX0 -> PX1
+list="$list 0x180567:0xc567"	# RTX0 -> SX1 -> PX256
+list="$list 0x8020389a:0xd89a"	# RTX1 -> SX2 -> PX3
+list="$list 0x234567:0xe34567"	# RTX0 -> SX2 (1M)
+
+. "$srcdir"/addrxlat-common

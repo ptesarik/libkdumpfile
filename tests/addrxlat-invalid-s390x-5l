@@ -1,0 +1,42 @@
+#! /bin/sh
+
+#
+# Check invalid VTOP translation for s390x with 5-level paging.
+#
+
+pf="-p s390x:12,8,11,11,11,11"
+
+ptes="-e 0x0000:0x100f"		# RFX0 -> 1000
+ptes="$ptes -e 0x0008:0x002f"	# RFX1 (invalid)
+ptes="$ptes -e 0x0010:0x0007"	# RFX2 (wrong TT = 1)
+ptes="$ptes -e 0x0018:0x004e"	# RFX3 (TF = 1, TL = 2)
+ptes="$ptes -e 0x1000:0x200b"	# RFX0 -> RSX0 -> 2000
+ptes="$ptes -e 0x1008:0x202b"	# RFX0 -> RSX1 (invalid)
+ptes="$ptes -e 0x1010:0x200f"	# RFX0 -> RSX2 (wrong TT = 3)
+ptes="$ptes -e 0x1018:0x204b"	# RFX0 -> RSX3 (TF = 1, TL = 2)
+ptes="$ptes -e 0x2000:0x3007"	# RFX0 -> RSX0 -> RTX0 -> 3000
+ptes="$ptes -e 0x2008:0x3027"	# RFX0 -> RSX0 -> RTX0 (invalid)
+ptes="$ptes -e 0x2010:0x300b"	# RFX0 -> RSX0 -> RTX0 (wrong TT = 2)
+ptes="$ptes -e 0x2018:0x3046"	# RFX0 -> RSX0 -> RTX0 (TF = 1, TL = 2)
+ptes="$ptes -e 0x3000:0x4000"	# RFX0 -> RSX0 -> RTX0 -> SX0 -> 4000
+ptes="$ptes -e 0x3008:0x4020"	# RFX0 -> RSX0 -> RTX0 -> SX0 (invalid)
+ptes="$ptes -e 0x3010:0x4004"	# RFX0 -> RSX0 -> RTX0 -> SX0 (wrong TT = 1)
+ptes="$ptes -e 0x4008:0x5020"	# RFX0 -> RSX0 -> RTX0 -> SX0 -> PX0 (invalid)
+
+list="0x20000000000000"		# RFX1
+list="$list 0x40000000000000"	# RFX2
+list="$list 0x60000000000000" 	# RFX3 -> RSX0
+list="$list 0x600c0000000000" 	# RFX3 -> RSX3
+list="$list 0x40000000000"	# RFX0 -> RSX1
+list="$list 0x80000000000"	# RFX0 -> RSX2
+list="$list 0xc0000000000"	# RFX0 -> RSX3 -> RTX0
+list="$list 0xc0180000000"	# RFX0 -> RSX3 -> RTX3
+list="$list 0x080000000"	# RFX0 -> RSX0 -> RTX1
+list="$list 0x100000000"	# RFX0 -> RSX0 -> RTX2
+list="$list 0x180000000"	# RFX0 -> RSX0 -> RTX3 -> SX0
+list="$list 0x180300000"	# RFX0 -> RSX0 -> RTX3 -> SX3
+list="$list 0x100000"		# RFX0 -> RSX0 -> RTX0 -> SX1
+list="$list 0x200000"		# RFX0 -> RSX0 -> RTX0 -> SX2
+list="$list 0x1000"		# RFX0 -> RSX0 -> RTX0 -> SX0 -> PX1
+
+. "$srcdir"/addrxlat-invalid

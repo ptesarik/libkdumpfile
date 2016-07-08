@@ -30,6 +30,19 @@
 
 #include "addrxlat-priv.h"
 
+/* Use IBM's official bit numbering to match spec... */
+#define PTE_MASK(bits)		(((uint64_t)1<<bits) - 1)
+#define PTE_VAL(x, shift, bits)	(((x) >> (64-(shift)-(bits))) & PTE_MASK(bits))
+
+#define PTE_FC(x)	PTE_VAL(x, 53, 1)
+#define PTE_I(x)	PTE_VAL(x, 58, 1)
+#define PTE_TF(x)	PTE_VAL(x, 56, 2)
+#define PTE_TT(x)	PTE_VAL(x, 60, 2)
+#define PTE_TL(x)	PTE_VAL(x, 62, 2)
+
+/* Page-Table Origin has 2K granularity in hardware */
+#define PTO_MASK	(~(((uint64_t)1 << 11) - 1))
+
 /** IBM z/Architecture vtop function.
  * @param ctx    Address translation object.
  * @param state  Translation state.
@@ -38,6 +51,66 @@
 addrxlat_status
 vtop_s390x(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 {
-	return set_error(ctx, addrxlat_notimpl,
-			 "IBM z/Architecture not yet implemented");
+	static const char pgt_full_name[][16] = {
+		"Page",
+		"Page table",
+		"Segment table",
+		"Region 3 table",
+		"Region 2 table",
+		"Region 1 table"
+	};
+	static const char pte_name[][4] = {
+		"pte",
+		"pmd",
+		"pud",
+		"pgd",
+		"rg1",		/* Invented; does not exist in the wild. */
+	};
+
+	/* TODO: The top-level table extents should be initialised from
+	 * kernel_asce and checked here, but for now simply assume that
+	 * the top-level table is always maximum size.
+	 */
+	if (!state->level)
+		return state->idx[ctx->pf->levels]
+			? set_error(ctx, addrxlat_invalid,
+				    "Virtual address too big")
+			: addrxlat_continue;
+
+	if (PTE_I(state->raw_pte))
+		return set_error(ctx, addrxlat_notpresent,
+				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
+				 pgt_full_name[state->level - 1],
+				 pte_name[state->level - 1],
+				 (unsigned) state->idx[state->level],
+				 state->raw_pte);
+
+	if (state->level >= 2 && PTE_TT(state->raw_pte) != state->level - 2)
+		return set_error(ctx, addrxlat_invalid,
+				 "Table type field %u in %s",
+				 (unsigned) PTE_TT(state->raw_pte),
+				 pgt_full_name[state->level]);
+
+	state->base.as = ADDRXLAT_MACHPHYSADDR;
+	state->base.addr = state->raw_pte;
+
+	if (state->level >= 2 && state->level <= 3 &&
+	    PTE_FC(state->raw_pte))
+		return vtop_huge_page(ctx, state);
+
+	if (state->level >= 3) {
+		unsigned pgidx = state->idx[state->level - 1] >>
+			(ctx->pf->bits[state->level - 1] - ctx->pf->bits[0]);
+		if (pgidx < PTE_TF(state->raw_pte) ||
+		    pgidx > PTE_TL(state->raw_pte))
+			return set_error(ctx, addrxlat_notpresent,
+					 "%s index %u not within %u and %u",
+					 pgt_full_name[state->level-1],
+					 (unsigned) state->idx[state->level-1],
+					 (unsigned) PTE_TF(state->raw_pte),
+					 (unsigned) PTE_TL(state->raw_pte));
+	}
+
+	state->base.addr &= (state->level == 2 ? PTO_MASK : ctx->pgt_mask[0]);
+	return addrxlat_continue;
 }
