@@ -144,6 +144,7 @@ dist_check_DATA = \
 	partial.expect
 
 dist_check_SCRIPTS = \
+	addrxlat-common \
 	diskdump-empty \
 	elf-empty \
 	lkcd-empty \

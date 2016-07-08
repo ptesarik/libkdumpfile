@@ -10,27 +10,4 @@ pf="-p ia32:12,10,10"
 
 list="0x123:0xa123 0x1234:0xb234 0x400567:0xc567 0x923456:0x523456"
 
-totalrc=0
-for tst in $list; do
-    input="${tst%:*}"
-    expect="${tst#*:}"
-    echo -n "Checking $input... "
-    output=$( ./addrxlat $pf $ptes $input )
-    rc=$?
-    if [ $rc -gt 1 ]; then
-        echo ERROR
-        echo "Cannot translate $input" >&2
-        exit $rc
-    elif [ $rc -ne 0 ]; then
-        echo FAILED
-        totalrc=$rc
-    elif [ "$output" != "$expect" ]; then
-        echo FAILED
-        echo "Result does not match for $input: $output" >&2
-        totalrc=1
-    else
-        echo OK
-    fi
-done
-
-exit $totalrc
+. "$srcdir"/addrxlat-common

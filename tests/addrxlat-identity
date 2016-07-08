@@ -4,33 +4,12 @@
 # Check null-mapping VTOP translation.
 #
 
+pf="-p none:64"
+ptes=
 input="0x0 0x2 0x30 0x400 0x5000 0x123456789abcdef"
 list=
 for addr in $input; do
     list="$list $addr:$addr"
 done
 
-totalrc=0
-for tst in $list; do
-    input="${tst%:*}"
-    expect="${tst#*:}"
-    echo -n "Checking $input... "
-    output=$( ./addrxlat -p none:64 $input )
-    rc=$?
-    if [ $rc -gt 1 ]; then
-        echo ERROR
-        echo "Cannot translate $input" >&2
-        exit $rc
-    elif [ $rc -ne 0 ]; then
-        echo FAILED
-        totalrc=$rc
-    elif [ "$output" != "$expect" ]; then
-        echo FAILED
-        echo "Result does not match for $input" >&2
-        totalrc=1
-    else
-        echo OK
-    fi
-done
-
-exit $totalrc
+. "$srcdir"/addrxlat-common

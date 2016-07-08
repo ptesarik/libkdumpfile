@@ -23,27 +23,4 @@ list="$list 0x300567:0xc567"	# PGD[0] -> PMD[1] -> PTE[256]
 list="$list 0x4040389a:0xd89a"	# PGD[1] -> PMD[2] -> PTE[3]
 list="$list 0x523456:0xf23456"	# PGD[0] -> PMD[2] (2M)
 
-totalrc=0
-for tst in $list; do
-    input="${tst%:*}"
-    expect="${tst#*:}"
-    echo -n "Checking $input... "
-    output=$( ./addrxlat $pf $ptes $input )
-    rc=$?
-    if [ $rc -gt 1 ]; then
-        echo ERROR
-        echo "Cannot translate $input" >&2
-        exit $rc
-    elif [ $rc -ne 0 ]; then
-        echo FAILED
-        totalrc=$rc
-    elif [ "$output" != "$expect" ]; then
-        echo FAILED
-        echo "Result does not match for $input: $output" >&2
-        totalrc=1
-    else
-        echo OK
-    fi
-done
-
-exit $totalrc
+. "$srcdir"/addrxlat-common
