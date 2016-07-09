@@ -85,8 +85,9 @@ read_pte(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 }
 
 addrxlat_status
-addrxlat_vtop_start(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state,
-		    addrxlat_vaddr_scope_t scope, addrxlat_addr_t vaddr)
+addrxlat_vtop_start(addrxlat_ctx *ctx,
+		    addrxlat_vaddr_scope_t scope, addrxlat_addr_t vaddr,
+		    addrxlat_vtop_state_t *state)
 {
 	unsigned short i;
 	addrxlat_status status;
@@ -153,7 +154,7 @@ addrxlat_vtop_pgt(addrxlat_ctx *ctx,
 	addrxlat_vtop_state_t state;
 	addrxlat_status status;
 
-	status = addrxlat_vtop_start(ctx, &state, scope, vaddr);
+	status = addrxlat_vtop_start(ctx, scope, vaddr, &state);
 	while (status == addrxlat_continue)
 		status = addrxlat_vtop_next(ctx, &state);
 

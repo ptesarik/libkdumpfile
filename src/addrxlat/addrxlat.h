@@ -300,14 +300,15 @@ typedef addrxlat_status addrxlat_vtop_step_fn(
 
 /** Start gradual virtual-to-physical address translation.
  * @param ctx            Address translation object.
- * @param[out] state     Translation state.
  * @param[in] scope      Scope (kernel-space or user-space).
  * @param[in] vaddr      Virtual address.
+ * @param[out] state     Translation state.
  * @returns              Error status.
  */
 addrxlat_status addrxlat_vtop_start(
-	addrxlat_ctx *ctx, addrxlat_vtop_state_t *state,
-	addrxlat_vaddr_scope_t scope, addrxlat_addr_t vaddr);
+	addrxlat_ctx *ctx,
+	addrxlat_vaddr_scope_t scope, addrxlat_addr_t vaddr,
+	addrxlat_vtop_state_t *state);
 
 /** Perform one step in virtual-to-physical address translation.
  * @param ctx            Address translation object.
