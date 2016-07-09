@@ -31,15 +31,15 @@
 #include "addrxlat-priv.h"
 
 void
-addrxlat_set_pgt_root(addrxlat_ctx *ctx, addrxlat_fulladdr_t addr)
+addrxlat_set_pgt_root(addrxlat_ctx *ctx, const addrxlat_pgt_root_t *root)
 {
-	ctx->pgt_root = addr;
+	ctx->pgt_root = *root;
 }
 
-addrxlat_fulladdr_t
+const addrxlat_pgt_root_t *
 addrxlat_get_pgt_root(addrxlat_ctx *ctx)
 {
-	return ctx->pgt_root;
+	return &ctx->pgt_root;
 }
 
 /** Read the raw PTE value.
@@ -91,7 +91,7 @@ addrxlat_vtop_start(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state,
 	unsigned short i;
 	addrxlat_status status;
 
-	state->base = ctx->pgt_root;
+	state->base = ctx->pgt_root.kernel;
 	for (i = 0; i < ctx->pf->levels; ++i) {
 		unsigned short bits = ctx->pf->bits[i];
 		addrxlat_addr_t mask = bits < sizeof(addrxlat_addr_t) * 8

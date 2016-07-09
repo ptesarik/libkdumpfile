@@ -62,8 +62,8 @@ struct _addrxlat_ctx {
 	/** Function to make one step in vtop translation. */
 	addrxlat_vtop_step_fn *vtop_step;
 
-	/** Base address of the highest-level page table. */
-	addrxlat_fulladdr_t pgt_root;
+	/** Pointers to root page tables. */
+	addrxlat_pgt_root_t pgt_root;
 
 	/** Paging masks, pre-computed from paging form. */
 	addrxlat_addr_t pgt_mask[ADDRXLAT_MAXLEVELS];

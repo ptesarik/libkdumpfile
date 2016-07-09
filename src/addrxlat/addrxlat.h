@@ -119,6 +119,14 @@ typedef struct _addrxlat_fulladdr {
 	addrxlat_addrspace_t as; /**< Address space for @c addr. */
 } addrxlat_fulladdr_t;
 
+/** Root page table specification.
+ * This is the base address of the highest-level page table.
+ */
+typedef struct _addrxlat_pgt_root {
+	addrxlat_fulladdr_t kernel; /**< Kernel-space root page table. */
+	addrxlat_fulladdr_t user;   /**< User-space root page table. */
+} addrxlat_pgt_root_t;
+
 /** Page table entry format.
  */
 typedef enum _addrxlat_pte_format {
@@ -200,15 +208,24 @@ const addrxlat_paging_form_t *addrxlat_get_paging_form(addrxlat_ctx *ctx);
 
 /** Set page table root address.
  * @param ctx   Address translation object.
- * @param addr  Base address of the highest-level page table.
+ * @param root  Root page table definition.
+ *
+ * The @c root pointer need not stay valid after this function returns;
+ * the library makes an internal copy of the root page table definition.
  */
-void addrxlat_set_pgt_root(addrxlat_ctx *ctx, addrxlat_fulladdr_t addr);
+void addrxlat_set_pgt_root(addrxlat_ctx *ctx, const addrxlat_pgt_root_t *root);
 
 /** Get page table root address.
  * @param ctx  Address translation object.
- * @returns    Base address of the highest-level page table.
+ * @returns    Pointer to the object's root page table definition.
+ *
+ * This function does not make a copy of the definition. It returns
+ * a pointer to the internal structure, so:
+ *   - The returned pointer is valid only as long as @c ctx is valid.
+ *   - The referenced structure is subject to change (e.g. if you call
+ *     @ref addrxlat_set_pgt_root).
  */
-addrxlat_fulladdr_t addrxlat_get_pgt_root(addrxlat_ctx *ctx);
+const addrxlat_pgt_root_t *addrxlat_get_pgt_root(addrxlat_ctx *ctx);
 
 /** Data type for one-by-one VTOP translation. */
 typedef struct _addrxlat_vtop_state {
