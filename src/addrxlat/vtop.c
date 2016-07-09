@@ -86,12 +86,25 @@ read_pte(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 
 addrxlat_status
 addrxlat_vtop_start(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state,
-		    addrxlat_addr_t vaddr)
+		    addrxlat_vaddr_scope_t scope, addrxlat_addr_t vaddr)
 {
 	unsigned short i;
 	addrxlat_status status;
 
-	state->base = ctx->pgt_root.kernel;
+	switch (scope) {
+	case ADDRXLAT_SCOPE_KERNEL:
+		state->base = ctx->pgt_root.kernel;
+		break;
+
+	case ADDRXLAT_SCOPE_USER:
+		state->base = ctx->pgt_root.user;
+		break;
+
+	default:
+		return set_error(ctx, addrxlat_notimpl,
+				 "Unknown virtual address scope");
+	}
+
 	for (i = 0; i < ctx->pf->levels; ++i) {
 		unsigned short bits = ctx->pf->bits[i];
 		addrxlat_addr_t mask = bits < sizeof(addrxlat_addr_t) * 8
@@ -103,6 +116,7 @@ addrxlat_vtop_start(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state,
 	state->idx[i] = vaddr;
 
 	state->level = 0;
+	state->scope = scope;
 	status = ctx->vtop_step(ctx, state);
 	if (status == addrxlat_continue)
 		state->level = ctx->pf->levels;
@@ -133,12 +147,13 @@ addrxlat_vtop_next(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 
 addrxlat_status
 addrxlat_vtop_pgt(addrxlat_ctx *ctx,
-		  addrxlat_addr_t vaddr, addrxlat_addr_t *paddr)
+		  addrxlat_vaddr_scope_t scope, addrxlat_addr_t vaddr,
+		  addrxlat_addr_t *paddr)
 {
 	addrxlat_vtop_state_t state;
 	addrxlat_status status;
 
-	status = addrxlat_vtop_start(ctx, &state, vaddr);
+	status = addrxlat_vtop_start(ctx, &state, scope, vaddr);
 	while (status == addrxlat_continue)
 		status = addrxlat_vtop_next(ctx, &state);
 

@@ -210,7 +210,7 @@ do_xlat(addrxlat_ctx *ctx, addrxlat_addr_t vaddr)
 	addrxlat_addr_t paddr;
 	addrxlat_status status;
 
-	status = addrxlat_vtop_pgt(ctx, vaddr, &paddr);
+	status = addrxlat_vtop_pgt(ctx, ADDRXLAT_SCOPE_KERNEL, vaddr, &paddr);
 	if (status != addrxlat_ok) {
 		fprintf(stderr, "Address translation failed: %s\n",
 			((int) status > 0

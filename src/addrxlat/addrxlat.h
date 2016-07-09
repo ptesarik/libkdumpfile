@@ -112,6 +112,15 @@ typedef enum _addrxlat_addrspace {
 	ADDRXLAT_XENVADDR,	/**< Xen virtual address.  */
 } addrxlat_addrspace_t;
 
+/** Scope of a virtual address.
+ * This defines whether the address is valid for kernel objects,
+ * or user-space objects.
+ */
+typedef enum _addrxlat_vaddr_scope {
+	ADDRXLAT_SCOPE_KERNEL,	/**< Kernel-space virtual address. */
+	ADDRXLAT_SCOPE_USER,	/**< User-space virtual address. */
+} addrxlat_vaddr_scope_t;
+
 /** Full address (including address space specification).
  */
 typedef struct _addrxlat_fulladdr {
@@ -232,6 +241,9 @@ typedef struct _addrxlat_vtop_state {
 	/** Page table level. */
 	unsigned short level;
 
+	/** Virtual address scope (user or kernel). */
+	addrxlat_vaddr_scope_t scope;
+
 	/** On input, base address of the page table.
 	 * On output base address of the lower-level page table or
 	 * the target physical address.
@@ -261,6 +273,7 @@ typedef struct _addrxlat_vtop_state {
  * arch-specific initialization (or direct translation). For this initial
  * call:
  *   - @c state->level is set to zero
+ *   - @c state->scope is set to the virtual address scope
  *   - @c state->base is set to @c pgt_root
  *   - virtual address is broken down to table indices in @c state->idx
  *   - @c state->raw_pte is left uninitialized
@@ -288,12 +301,13 @@ typedef addrxlat_status addrxlat_vtop_step_fn(
 /** Start gradual virtual-to-physical address translation.
  * @param ctx            Address translation object.
  * @param[out] state     Translation state.
- * @param vaddr          Virtual address.
+ * @param[in] scope      Scope (kernel-space or user-space).
+ * @param[in] vaddr      Virtual address.
  * @returns              Error status.
  */
 addrxlat_status addrxlat_vtop_start(
 	addrxlat_ctx *ctx, addrxlat_vtop_state_t *state,
-	addrxlat_addr_t vaddr);
+	addrxlat_vaddr_scope_t scope, addrxlat_addr_t vaddr);
 
 /** Perform one step in virtual-to-physical address translation.
  * @param ctx            Address translation object.
@@ -305,12 +319,15 @@ addrxlat_status addrxlat_vtop_next(
 
 /** Perform virtual-to-phyiscal address translation using page tables.
  * @param ctx         Address translation object.
+ * @param[in] scope   Scope (kernel-space or user-space).
  * @param[in] vaddr   Virtual address.
  * @param[out] paddr  Physical address (on succesful return).
  * @returns           Error status.
  */
 addrxlat_status addrxlat_vtop_pgt(
-	addrxlat_ctx *ctx, addrxlat_addr_t vaddr, addrxlat_addr_t *paddr);
+	addrxlat_ctx *ctx,
+	addrxlat_vaddr_scope_t scope, addrxlat_addr_t vaddr,
+	addrxlat_addr_t *paddr);
 
 /** Type of the read callback for 32-bit integers.
  * @param ctx       Address translation object.
