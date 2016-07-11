@@ -162,6 +162,9 @@ set_paging_form(const char *spec)
 			strtoul(endp + 1, &endp, 0);
 	} while (*endp == ',');
 
+	if (*endp == ':')
+		paging_form.rpn_shift = strtoul(endp + 1, &endp, 0);
+
 	if (*endp) {
 		fprintf(stderr, "Invalid paging form: %s\n", spec);
 		return TEST_ERR;

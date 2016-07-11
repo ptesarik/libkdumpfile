@@ -156,6 +156,13 @@ typedef enum _addrxlat_pte_format {
 
 typedef struct _addrxlat_paging_form {
 	addrxlat_pte_format_t pte_format;
+
+	/** Real PFN shift.
+	 * This is only used on powerpc and specifies the bit position
+	 * of the PFN inside the PTE (or huge PTE).
+	 */
+	unsigned short rpn_shift;
+
 	unsigned short levels;
 	unsigned short bits[ADDRXLAT_MAXLEVELS];
 } addrxlat_paging_form_t;
