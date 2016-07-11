@@ -95,8 +95,10 @@ vtop_s390x(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	state->base.addr = state->raw_pte;
 
 	if (state->level >= 2 && state->level <= 3 &&
-	    PTE_FC(state->raw_pte))
+	    PTE_FC(state->raw_pte)) {
+		state->base.addr &= ctx->pgt_mask[state->level - 1];
 		return vtop_huge_page(ctx, state);
+	}
 
 	if (state->level >= 3) {
 		unsigned pgidx = state->idx[state->level - 1] >>

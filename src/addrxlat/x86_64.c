@@ -102,8 +102,10 @@ vtop_x86_64(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	state->base.as = ADDRXLAT_MACHPHYSADDR;
 	state->base.addr = state->raw_pte & ~PHYSADDR_MASK;
 	if (state->level >= 2 && state->level <= 3 &&
-	    (state->raw_pte & _PAGE_PSE))
+	    (state->raw_pte & _PAGE_PSE)) {
+		state->base.addr &= ctx->pgt_mask[state->level - 1];
 		return vtop_huge_page(ctx, state);
+	}
 
 	state->base.addr &= ctx->pgt_mask[0];
 	return addrxlat_continue;

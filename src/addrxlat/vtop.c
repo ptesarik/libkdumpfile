@@ -177,7 +177,6 @@ vtop_huge_page(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 {
 	addrxlat_addr_t off = 0;
 
-	state->base.addr &= ctx->pgt_mask[state->level - 1];
 	while (state->level > 1) {
 		--state->level;
 		off |= state->idx[state->level];
