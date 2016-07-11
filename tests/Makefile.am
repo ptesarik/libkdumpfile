@@ -96,6 +96,7 @@ test_scripts = \
 	addrxlat-identity \
 	addrxlat-ia32 \
 	addrxlat-ia32-pae \
+	addrxlat-ppc64-64k \
 	addrxlat-s390x-2l \
 	addrxlat-s390x-3l \
 	addrxlat-s390x-4l \

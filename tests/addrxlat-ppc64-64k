@@ -1,0 +1,31 @@
+#! /bin/sh
+
+#
+# Check VTOP translation for IBM POWER with 64k pages.
+#
+
+pf="-p ppc64:16,12,12,4:30"
+
+# PGD[0] -> 8000
+ptes="-e 0x0000:0xc000000000008000"
+# PGD[1] -> 20000
+ptes="$ptes -e 0x0008:0xc000000000020000"
+# PGD[2] -> c0000000000  (1T)
+ptes="$ptes -e 0x0010:0x0300000000000003"
+# PGD[0] -> PMD[0] -> 10000
+ptes="$ptes -e 0xc000000000008000:0xc000000000010000"
+# PGD[0] -> PMD[1] -> d0000000 (256M)
+ptes="$ptes -e 0xc000000000008008:0x340000000003"
+# PGD[0] -> PMD[0] -> PTE[0] -> a0000
+ptes="$ptes -e 0xc000000000010000:0x280000391"
+# PGD[1] -> PMD[2] -> 30000
+ptes="$ptes -e 0xc000000000020010:0xc000000000030000"
+# PGD[1] -> PMD[2] -> PTE[3] -> b0000
+ptes="$ptes -e 0xc000000000030018:0x2c0000391"
+
+list="0xd000000000001234:0xa1234"	      # PGD[0] -> PMD[0] -> PTE[0]
+list="$list 0xd000010020034567:0xb4567"	      # PGD[1] -> PMD[2] -> PTE[3]
+list="$list 0xd000023456789abc:0xc3456789abc" # PGD[2]
+list="$list 0xd000000012345678:0xd2345678"    # PGD[0] -> PMD[1]
+
+. "$srcdir"/addrxlat-common
