@@ -39,9 +39,55 @@
 #define VMALLOC_REGION_ID       0xd /* FIXME: only true for Book3S! */
 #define VMEMMAP_REGION_ID       0xf
 
+/**  Page entry flag for a huge page directory.
+ * The corresponding entry is huge if the most significant bit is zero.
+ */
+#define PD_HUGE           ((addrxlat_pte_t)1 << 63)
+
+/**  Page shift of a huge page directory.
+ * If PD_HUGE is zero, the huge page shift is stored in the least
+ * significant bits of the entry.
+ */
+#define HUGEPD_SHIFT_MASK 0x3f
+
 /**  A page table entry is huge if the bottom two bits != 00.
  */
 #define HUGE_PTE_MASK     ((addrxlat_pte_t)0x03)
+
+#define MMU_PAGE_4K	0
+#define MMU_PAGE_16K	1
+#define MMU_PAGE_64K	2
+#define MMU_PAGE_64K_AP 3	/* "Admixed pages" (hash64 only) */
+#define MMU_PAGE_256K	4
+#define MMU_PAGE_1M	5
+#define MMU_PAGE_4M	6
+#define MMU_PAGE_8M	7
+#define MMU_PAGE_16M	8
+#define MMU_PAGE_64M	9
+#define MMU_PAGE_256M	10
+#define MMU_PAGE_1G	11
+#define MMU_PAGE_16G	12
+#define MMU_PAGE_64G	13
+
+#define MMU_PAGE_COUNT	14
+
+/** Map from MMU page size to page shift. */
+static unsigned mmu_pshift[MMU_PAGE_COUNT] = {
+	[MMU_PAGE_4K] = 12,
+	[MMU_PAGE_16K] = 14,
+	[MMU_PAGE_64K] = 16,
+	[MMU_PAGE_64K_AP] = 16,
+	[MMU_PAGE_256K] = 18,
+	[MMU_PAGE_1M] = 20,
+	[MMU_PAGE_4M] = 22,
+	[MMU_PAGE_8M] = 23,
+	[MMU_PAGE_16M] = 24,
+	[MMU_PAGE_64M] = 26,
+	[MMU_PAGE_256M] = 28,
+	[MMU_PAGE_1G] = 30,
+	[MMU_PAGE_16G] = 34,
+	[MMU_PAGE_64G] = 36,
+};
 
 static addrxlat_status
 check_vtop_state(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
@@ -60,6 +106,68 @@ check_vtop_state(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 		return set_error(ctx, addrxlat_invalid,
 				 "Virtual address too big");
 
+	return addrxlat_continue;
+}
+
+/**  Check whether a page directory is huge.
+ * @param pte  Page table entry (value).
+ * @returns    Non-zero if this is a huge page directory entry.
+ */
+static inline int
+is_hugepd(addrxlat_pte_t pte)
+{
+	return !(pte & PD_HUGE);
+}
+
+/**  Get the huge page directory shift.
+ * @param hpde  Huge page directory entry.
+ * @returns     Huge page bit shift.
+ */
+static inline unsigned
+hugepd_shift(addrxlat_pte_t hpde)
+{
+	unsigned mmu_psize = (hpde & HUGEPD_SHIFT_MASK) >> 2;
+	return mmu_psize < MMU_PAGE_COUNT
+		? mmu_pshift[mmu_psize]
+		: 0U;
+}
+
+/**  Translate a huge page using its directory entry.
+ * @param ctx    Address translation object.
+ * @param state  VTOP translation state.
+ * @returns      Always @c addrxlat_continue.
+ */
+addrxlat_status
+huge_pd(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
+{
+	addrxlat_addr_t off;
+	unsigned pdshift;
+	unsigned short i;
+
+	pdshift = hugepd_shift(state->raw_pte);
+	if (!pdshift)
+		return set_error(ctx, addrxlat_invalid,
+				 "Invalid hugepd shift");
+
+	state->base.as = ADDRXLAT_KVADDR;
+	state->base.addr = (state->raw_pte & ~HUGEPD_SHIFT_MASK) | PD_HUGE;
+
+	/* Calculate the total byte offset below current table. */
+	off = 0;
+	i = state->level;
+	while (--i) {
+		off |= state->idx[i];
+		off <<= ctx->pf->bits[i - 1];
+	}
+
+	/* Calculate the index in the huge page table. */
+	state->idx[1] = off >> pdshift;
+
+	/* Update the page byte offset. */
+	off &= ((addrxlat_addr_t)1 << pdshift) - 1;
+	state->idx[0] |= off;
+
+	state->level = 2;
 	return addrxlat_continue;
 }
 
@@ -119,6 +227,9 @@ vtop_ppc64(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 
 		if (is_hugepte(state->raw_pte))
 			return huge_page(ctx, state);
+
+		if (is_hugepd(state->raw_pte))
+			return huge_pd(ctx, state);
 
 		table_size = ((addrxlat_addr_t)1 << ctx->pte_shift <<
 			      ctx->pf->bits[state->level - 1]);
