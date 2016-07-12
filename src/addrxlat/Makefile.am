@@ -33,7 +33,7 @@ libaddrxlat_la_SOURCES = \
 
 EXTRA_libaddrxlat_la_DEPENDENCIES = libaddrxlat.map
 
-libaddrxlat_la_LDFLAGS = -version-info 6:0:0
+libaddrxlat_la_LDFLAGS = -version-info 0:0:0
 libaddrxlat_la_LDFLAGS += -Wl,--version-script=$(srcdir)/libaddrxlat.map
 
 include_HEADERS = \
