@@ -92,7 +92,7 @@ static unsigned mmu_pshift[MMU_PAGE_COUNT] = {
 static addrxlat_status
 check_vtop_state(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 {
-	unsigned short lvl = ctx->pf->levels;
+	unsigned short lvl = ctx->pf.levels;
 	unsigned region;
 	addrxlat_addr_t mask;
 
@@ -157,7 +157,7 @@ huge_pd(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	i = state->level;
 	while (--i) {
 		off |= state->idx[i];
-		off <<= ctx->pf->bits[i - 1];
+		off <<= ctx->pf.bits[i - 1];
 	}
 
 	/* Calculate the index in the huge page table. */
@@ -194,7 +194,7 @@ huge_page(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 {
 	state->base.as = ADDRXLAT_MACHPHYSADDR;
 	state->base.addr = (state->raw_pte >>
-			    ctx->pf->rpn_shift) << ctx->pf->bits[0];
+			    ctx->pf.rpn_shift) << ctx->pf.bits[0];
 	return vtop_huge_page(ctx, state);
 }
 
@@ -232,13 +232,13 @@ vtop_ppc64(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 			return huge_pd(ctx, state);
 
 		table_size = ((addrxlat_addr_t)1 << ctx->pte_shift <<
-			      ctx->pf->bits[state->level - 1]);
+			      ctx->pf.bits[state->level - 1]);
 		state->base.as = ADDRXLAT_KVADDR;
 		state->base.addr = state->raw_pte & ~(table_size - 1);
 	} else {
 		state->base.as = ADDRXLAT_MACHPHYSADDR;
 		state->base.addr = (state->raw_pte >>
-				    ctx->pf->rpn_shift) << ctx->pf->bits[0];
+				    ctx->pf.rpn_shift) << ctx->pf.bits[0];
 	}
 
 	return addrxlat_continue;

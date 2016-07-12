@@ -37,15 +37,12 @@ struct pte_def {
 	unsigned short shift;
 };
 
-static const addrxlat_paging_form_t null_paging;
-
 addrxlat_ctx *
 addrxlat_new(void)
 {
 	addrxlat_ctx *ctx = calloc(1, sizeof(addrxlat_ctx));
 	if (ctx) {
 		ctx->refcnt = 1;
-		ctx->pf = &null_paging;
 		ctx->vtop_step = vtop_none;
 	}
 	return ctx;
@@ -97,7 +94,7 @@ addrxlat_set_paging_form(addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf)
 
 	ctx->vtop_step = fmt->fn;
 	ctx->pte_shift = fmt->shift;
-	ctx->pf = pf;
+	ctx->pf = *pf;
 
 	ctx->vaddr_bits = 0;
 	mask = 1;
@@ -113,5 +110,5 @@ addrxlat_set_paging_form(addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf)
 const addrxlat_paging_form_t *
 addrxlat_get_paging_form(addrxlat_ctx *ctx)
 {
-	return ctx->pf;
+	return &ctx->pf;
 }

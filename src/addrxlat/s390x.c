@@ -72,7 +72,7 @@ vtop_s390x(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	 * the top-level table is always maximum size.
 	 */
 	if (!state->level)
-		return state->idx[ctx->pf->levels]
+		return state->idx[ctx->pf.levels]
 			? set_error(ctx, addrxlat_invalid,
 				    "Virtual address too big")
 			: addrxlat_continue;
@@ -102,7 +102,7 @@ vtop_s390x(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 
 	if (state->level >= 3) {
 		unsigned pgidx = state->idx[state->level - 1] >>
-			(ctx->pf->bits[state->level - 1] - ctx->pf->bits[0]);
+			(ctx->pf.bits[state->level - 1] - ctx->pf.bits[0]);
 		if (pgidx < PTE_TF(state->raw_pte) ||
 		    pgidx > PTE_TL(state->raw_pte))
 			return set_error(ctx, addrxlat_notpresent,

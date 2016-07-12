@@ -106,8 +106,8 @@ addrxlat_vtop_start(addrxlat_ctx *ctx,
 				 "Unknown virtual address scope");
 	}
 
-	for (i = 0; i < ctx->pf->levels; ++i) {
-		unsigned short bits = ctx->pf->bits[i];
+	for (i = 0; i < ctx->pf.levels; ++i) {
+		unsigned short bits = ctx->pf.bits[i];
 		addrxlat_addr_t mask = bits < sizeof(addrxlat_addr_t) * 8
 			? ((addrxlat_addr_t)1 << bits) - 1
 			: ~(addrxlat_addr_t)0;
@@ -120,7 +120,7 @@ addrxlat_vtop_start(addrxlat_ctx *ctx,
 	state->scope = scope;
 	status = ctx->vtop_step(ctx, state);
 	if (status == addrxlat_continue)
-		state->level = ctx->pf->levels;
+		state->level = ctx->pf.levels;
 	return status;
 }
 
@@ -180,7 +180,7 @@ vtop_huge_page(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	while (state->level > 1) {
 		--state->level;
 		off |= state->idx[state->level];
-		off <<= ctx->pf->bits[state->level - 1];
+		off <<= ctx->pf.bits[state->level - 1];
 	}
 	state->idx[0] |= off;
 	return addrxlat_continue;

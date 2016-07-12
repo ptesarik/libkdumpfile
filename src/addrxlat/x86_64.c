@@ -53,13 +53,13 @@
 static int
 is_noncanonical(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 {
-	unsigned short lvl = ctx->pf->levels;
+	unsigned short lvl = ctx->pf.levels;
 	struct {
 		int bit : 1;
 	} s;
 	addrxlat_addr_t signext;
 
-	s.bit = state->idx[lvl - 1] >> (ctx->pf->bits[lvl - 1] - 1);
+	s.bit = state->idx[lvl - 1] >> (ctx->pf.bits[lvl - 1] - 1);
 	signext = s.bit & (ctx->pgt_mask[lvl - 1] >> ctx->vaddr_bits);
 	return state->idx[lvl] != signext;
 }

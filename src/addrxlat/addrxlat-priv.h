@@ -60,16 +60,16 @@ struct _addrxlat_ctx {
 	unsigned long refcnt;
 
 	/** Paging form description. */
-	const addrxlat_paging_form_t *pf;
-
-	/** Function to make one step in vtop translation. */
-	addrxlat_vtop_step_fn *vtop_step;
+	addrxlat_paging_form_t pf;
 
 	/** Pointers to root page tables. */
 	addrxlat_pgt_root_t pgt_root;
 
 	/** Paging masks, pre-computed from paging form. */
 	addrxlat_addr_t pgt_mask[ADDRXLAT_MAXLEVELS];
+
+	/** Function to make one step in vtop translation. */
+	addrxlat_vtop_step_fn *vtop_step;
 
 	/** Callback for reading 32-bit integers. */
 	addrxlat_read32_fn *cb_read32;

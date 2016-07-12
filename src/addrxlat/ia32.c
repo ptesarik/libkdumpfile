@@ -65,7 +65,7 @@ vtop_ia32(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	};
 
 	if (!state->level)
-		return state->idx[ctx->pf->levels]
+		return state->idx[ctx->pf.levels]
 			? set_error(ctx, addrxlat_invalid,
 				    "Virtual address too big")
 			: addrxlat_continue;
@@ -83,7 +83,7 @@ vtop_ia32(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 		--state->level;
 		state->base.addr = (state->raw_pte & ctx->pgt_mask[1]) |
 			pgd_pse_high(state->raw_pte);
-		state->idx[0] |= state->idx[1] << ctx->pf->bits[0];
+		state->idx[0] |= state->idx[1] << ctx->pf.bits[0];
 	} else
 		state->base.addr = state->raw_pte & ctx->pgt_mask[0];
 
@@ -110,7 +110,7 @@ vtop_ia32_pae(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	};
 
 	if (!state->level)
-		return state->idx[ctx->pf->levels]
+		return state->idx[ctx->pf.levels]
 			? set_error(ctx, addrxlat_invalid,
 				    "Virtual address too big")
 			: addrxlat_continue;
@@ -128,7 +128,7 @@ vtop_ia32_pae(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	if (state->level == 2 && (state->raw_pte & _PAGE_PSE)) {
 		--state->level;
 		state->base.addr &= ctx->pgt_mask[1];
-		state->idx[0] |= state->idx[1] << ctx->pf->bits[0];
+		state->idx[0] |= state->idx[1] << ctx->pf.bits[0];
 	} else
 		state->base.addr &= ctx->pgt_mask[0];
 
