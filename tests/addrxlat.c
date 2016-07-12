@@ -256,6 +256,7 @@ main(int argc, char **argv)
 	addrxlat_ctx *ctx;
 	int opt;
 	addrxlat_status status;
+	unsigned long refcnt;
 	int rc;
 
 	while ((opt = getopt_long(argc, argv, "he:p:r:", opts, NULL)) != -1) {
@@ -317,6 +318,10 @@ main(int argc, char **argv)
 	rc = do_xlat(ctx, vaddr);
 
  err:
-	addrxlat_free(ctx);
+	refcnt = addrxlat_decref(ctx);
+	if (refcnt)
+		fprintf(stderr, "WARNING: Leaked %lu addrxlat references\n",
+			refcnt);
+
 	return rc;
 }

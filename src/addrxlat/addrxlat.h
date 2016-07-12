@@ -173,18 +173,24 @@ typedef struct _addrxlat_ctx addrxlat_ctx;
  * @returns    New initialized object, or @c NULL on failure.
  *
  * This call can fail if and only if memory allocation fails.
+ * The reference count of the newly created object is one.
  */
 addrxlat_ctx *addrxlat_new(void);
 
-/** Free an address translation object.
- * @param ctx  Object to be freed.
- *
- * Free all resources associated with the address translation object.
- * Do not just call @c free(ctx), because that may leak some resources.
- *
- * The object must not be used after calling this function.
+/** Increment the reference counter.
+ * @param ctx  Address translation object.
+ * @returns    New reference count.
  */
-void addrxlat_free(addrxlat_ctx *ctx);
+unsigned long addrxlat_incref(addrxlat_ctx *ctx);
+
+/** Decrement the reference counter.
+ * @param ctx  Address translation object.
+ * @returns    New reference count.
+ *
+ * If the new reference count is zero, the underlying object is freed
+ * and its address must not be used afterwards.
+ */
+unsigned long addrxlat_decref(addrxlat_ctx *ctx);
 
 /**  Get a detailed error string.
  * @param ctx  Address translation object.

@@ -1,7 +1,8 @@
 LIBADDRXLAT_0 {
   global:
     addrxlat_new;
-    addrxlat_free;
+    addrxlat_incref;
+    addrxlat_decref;
     addrxlat_err_str;
     addrxlat_set_arch;
     addrxlat_set_paging_form;

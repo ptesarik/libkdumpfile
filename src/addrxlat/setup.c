@@ -44,16 +44,26 @@ addrxlat_new(void)
 {
 	addrxlat_ctx *ctx = calloc(1, sizeof(addrxlat_ctx));
 	if (ctx) {
+		ctx->refcnt = 1;
 		ctx->pf = &null_paging;
 		ctx->vtop_step = vtop_none;
 	}
 	return ctx;
 }
 
-void
-addrxlat_free(addrxlat_ctx *ctx)
+unsigned long
+addrxlat_incref(addrxlat_ctx *ctx)
 {
-	free(ctx);
+	return ++ctx->refcnt;
+}
+
+unsigned long
+addrxlat_decref(addrxlat_ctx *ctx)
+{
+	unsigned long refcnt = --ctx->refcnt;
+	if (!refcnt)
+		free(ctx);
+	return refcnt;
 }
 
 addrxlat_status

@@ -56,6 +56,9 @@
  * translation.
  */
 struct _addrxlat_ctx {
+	/** Refernce counter. */
+	unsigned long refcnt;
+
 	/** Paging form description. */
 	const addrxlat_paging_form_t *pf;
 
