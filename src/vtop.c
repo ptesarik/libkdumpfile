@@ -266,10 +266,6 @@ map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	xlat = get_vtop_xlat(map, vaddr);
 	switch (xlat->method) {
 	case KDUMP_XLAT_NONE:
-		return set_error(ctx, kdump_nodata,
-				 "Unhandled virtual address");
-
-	case KDUMP_XLAT_INVALID:
 		return set_error(ctx, kdump_invalid,
 				 "Invalid virtual address");
 

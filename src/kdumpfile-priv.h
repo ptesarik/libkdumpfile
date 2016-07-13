@@ -504,9 +504,6 @@ typedef enum _kdump_xlat_method {
 	/* No mapping set */
 	KDUMP_XLAT_NONE,
 
-	/* Invalid virtual addresses */
-	KDUMP_XLAT_INVALID,
-
 	/* Arbitrary: use vtop to map between virtual and physical */
 	KDUMP_XLAT_VTOP,
 
