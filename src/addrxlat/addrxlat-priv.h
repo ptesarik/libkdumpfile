@@ -42,17 +42,18 @@
 #define INTERNAL_NAME(x)	x
 #endif
 
-/** Define an alias for a symbol. */
 #ifndef PIC
-#define ALIAS_NAME(x)		addrxlat_ ## x
-#define DEFINE_ALIAS(x)
+#define INTERNAL_ALIAS(x)		addrxlat_ ## x
+#define _DEFINE_INTERNAL(s, a)
 #else
-#define ALIAS_NAME(x)		x
-#define _DEFINE_ALIAS(s, a)		\
+#define INTERNAL_ALIAS(x)		x
+#define _DEFINE_INTERNAL(s, a)		\
 	extern typeof(s) (a)		\
 	__attribute__((alias(#s)));
-#define DEFINE_ALIAS(x) _DEFINE_ALIAS(addrxlat_ ## x, x)
 #endif
+
+/** Define an internal alias for a symbol. */
+#define DEFINE_INTERNAL(x) _DEFINE_INTERNAL(addrxlat_ ## x, internal_ ## x)
 
 /* General macros */
 

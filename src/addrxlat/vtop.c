@@ -118,11 +118,11 @@ addrxlat_pgt_next(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 	return ctx->pgt_step(ctx, state);
 }
 
-#define pgt_start ALIAS_NAME(pgt_start)
-DEFINE_ALIAS(pgt_start)
+#define internal_pgt_start INTERNAL_NAME(pgt_start)
+DEFINE_INTERNAL(pgt_start)
 
-#define pgt_next ALIAS_NAME(pgt_next)
-DEFINE_ALIAS(pgt_next)
+#define internal_pgt_next INTERNAL_NAME(pgt_next)
+DEFINE_INTERNAL(pgt_next)
 
 addrxlat_status
 addrxlat_pgt(addrxlat_ctx *ctx, addrxlat_addr_t addr,
@@ -132,9 +132,9 @@ addrxlat_pgt(addrxlat_ctx *ctx, addrxlat_addr_t addr,
 	addrxlat_status status;
 
 	state.base = *pgt;
-	status = pgt_start(ctx, addr, &state);
+	status = internal_pgt_start(ctx, addr, &state);
 	while (status == addrxlat_continue)
-		status = pgt_next(ctx, &state);
+		status = internal_pgt_next(ctx, &state);
 
 	if (status == addrxlat_ok)
 		*paddr = state.base.addr;
