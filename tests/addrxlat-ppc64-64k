@@ -4,7 +4,7 @@
 # Check VTOP translation for IBM POWER with 64k pages.
 #
 
-pf="-p ppc64:16,12,12,4:30"
+pf="ppc64:16,12,12,4:30"
 
 # PGD[0] -> 8000
 ptes="-e 0x0000:0xc000000000008000"

@@ -107,6 +107,7 @@ test_scripts = \
 	addrxlat-invalid-s390x-2l \
 	addrxlat-invalid-s390x-5l \
 	addrxlat-invalid-x86_64 \
+	addrxlat-linear \
 	diskdump-empty-i386 \
 	diskdump-empty-ppc64 \
 	diskdump-empty-s390x \

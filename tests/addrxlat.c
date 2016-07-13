@@ -41,7 +41,7 @@ enum read_status {
 
 static addrxlat_paging_form_t paging_form;
 
-static addrxlat_fulladdr_t pgt_root;
+static addrxlat_def_t xlatdef;
 
 #define MAXERR	64
 static char read_err_str[MAXERR];
@@ -185,23 +185,38 @@ set_root(const char *spec)
 	}
 
 	if (!strncasecmp(spec, "KPHYSADDR:", endp - spec))
-		pgt_root.as = ADDRXLAT_KPHYSADDR;
+		xlatdef.pgt.as = ADDRXLAT_KPHYSADDR;
 	else if (!strncasecmp(spec, "MACHPHYSADDR:", endp - spec))
-		pgt_root.as = ADDRXLAT_MACHPHYSADDR;
+		xlatdef.pgt.as = ADDRXLAT_MACHPHYSADDR;
 	else if (!strncasecmp(spec, "KVADDR:", endp - spec))
-		pgt_root.as = ADDRXLAT_KVADDR;
+		xlatdef.pgt.as = ADDRXLAT_KVADDR;
 	else if (!strncasecmp(spec, "XENVADDR:", endp - spec))
-		pgt_root.as = ADDRXLAT_XENVADDR;
+		xlatdef.pgt.as = ADDRXLAT_XENVADDR;
 	else {
 		fprintf(stderr, "Invalid address spec: %s\n", spec);
 		return TEST_ERR;
 	}
 
-	pgt_root.addr = strtoull(endp + 1, &endp, 0);
+	xlatdef.pgt.addr = strtoull(endp + 1, &endp, 0);
 	if (*endp) {
 		fprintf(stderr, "Invalid address spec: %s\n", spec);
 		return TEST_ERR;
 	}
+	return TEST_OK;
+}
+
+static int
+set_linear(const char *spec)
+{
+	char *endp;
+
+	xlatdef.method = ADDRXLAT_LINEAR;
+	xlatdef.off = strtoll(spec, &endp, 0);
+	if (*endp) {
+		fprintf(stderr, "Invalid offset: %s\n", spec);
+		return TEST_ERR;
+	}
+
 	return TEST_OK;
 }
 
@@ -211,7 +226,7 @@ do_xlat(addrxlat_ctx *ctx, addrxlat_addr_t vaddr)
 	addrxlat_addr_t paddr;
 	addrxlat_status status;
 
-	status = addrxlat_pgt(ctx, vaddr, &pgt_root, &paddr);
+	status = addrxlat_by_def(ctx, vaddr, &xlatdef, &paddr);
 	if (status != addrxlat_ok) {
 		fprintf(stderr, "Address translation failed: %s\n",
 			((int) status > 0
@@ -228,8 +243,10 @@ do_xlat(addrxlat_ctx *ctx, addrxlat_addr_t vaddr)
 static const struct option opts[] = {
 	{ "help", no_argument, NULL, 'h' },
 	{ "entry", required_argument, NULL, 'e' },
-	{ "paging", required_argument, NULL, 'p' },
+	{ "form", required_argument, NULL, 'f' },
 	{ "root", required_argument, NULL, 'r' },
+	{ "linear", required_argument, NULL, 'l' },
+	{ "pgt", no_argument, NULL, 'p' },
 	{ NULL, 0, NULL, 0 }
 };
 
@@ -240,7 +257,9 @@ usage(const char *name)
 		"Usage: %s [<options>] <addr>\n"
 		"\n"
 		"Options:\n"
-		"  -p|--paging fmt:bits  Set paging form\n"
+		"  -l|--linear off       Use linear transation\n"
+		"  -p|--pgt              Use page table translation\n"
+		"  -f|--form fmt:bits    Set paging form\n"
 		"  -r|--root as:addr     Set the root page table address\n"
 		"  -e|--entry addr:val   Set page table entry value\n",
 		name);
@@ -257,9 +276,10 @@ main(int argc, char **argv)
 	unsigned long refcnt;
 	int rc;
 
-	while ((opt = getopt_long(argc, argv, "he:p:r:", opts, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "he:f:l:pr:",
+				  opts, NULL)) != -1) {
 		switch (opt) {
-		case 'p':
+		case 'f':
 			rc = set_paging_form(optarg);
 			if (rc != TEST_OK)
 				return rc;
@@ -275,6 +295,16 @@ main(int argc, char **argv)
 			rc = add_entry(optarg);
 			if (rc != TEST_OK)
 				return rc;
+			break;
+
+		case 'l':
+			rc = set_linear(optarg);
+			if (rc != TEST_OK)
+				return rc;
+			break;
+
+		case 'p':
+			xlatdef.method = ADDRXLAT_PGT;
 			break;
 
 		case 'h':

@@ -171,3 +171,29 @@ pgt_none(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
 	return addrxlat_continue;
 }
+
+#define internal_pgt INTERNAL_NAME(pgt)
+DEFINE_INTERNAL(pgt)
+
+addrxlat_status
+addrxlat_by_def(addrxlat_ctx *ctx, addrxlat_addr_t addr,
+		const addrxlat_def_t *def, addrxlat_addr_t *paddr)
+{
+	switch (def->method) {
+	case ADDRXLAT_NONE:
+		return set_error(ctx, addrxlat_invalid,
+				 "No translation defined");
+
+	case ADDRXLAT_LINEAR:
+		*paddr = addr + def->off;
+		return addrxlat_ok;
+
+	case ADDRXLAT_PGT:
+		return internal_pgt(ctx, addr, &def->pgt, paddr);
+
+	default:
+		return set_error(ctx, addrxlat_invalid,
+				 "Unknown translation method: %u\n",
+				 (unsigned) def->method);
+	}
+}

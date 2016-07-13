@@ -67,6 +67,13 @@ typedef enum _addrxlat_status {
  */
 typedef uint_fast64_t addrxlat_addr_t;
 
+/**  Type of an address offset.
+ *
+ * This type is as large as @ref addrxlat_addr_t, but it is signed,
+ * so suitable for offsets, both positive and negative.
+ */
+typedef int_fast64_t addrxlat_off_t;
+
 /**  Type for a PTE value.
  *
  * Use this type to work with PTE values. Note that this type may be
@@ -301,6 +308,47 @@ addrxlat_status addrxlat_pgt_next(
 addrxlat_status addrxlat_pgt(
 	addrxlat_ctx *ctx, addrxlat_addr_t addr,
 	const addrxlat_fulladdr_t *pgt, addrxlat_addr_t *paddr);
+
+/** Address translation method.
+ */
+typedef enum _addrxlat_method {
+	/** No mapping set. */
+	ADDRXLAT_NONE,
+
+	/** Linear mapping: dest = src + off. */
+	ADDRXLAT_LINEAR,
+
+	/** Page tables. */
+	ADDRXLAT_PGT,
+} addrxlat_method_t;
+
+/** Address translation definition.
+ * This structure holds all information required to translate an address
+ * using one of the available methods.
+ */
+typedef struct _addrxlat_def {
+	/** Address translation method. */
+	addrxlat_method_t method;
+
+	union {
+		/** Offset used by @ref ADDRXLAT_LINEAR. */
+		addrxlat_off_t off;
+
+		/** Page table origin used by @ref ADDRXLAT_PGT. */
+		addrxlat_fulladdr_t pgt;
+	};
+} addrxlat_def_t;
+
+/** Translate an address using a translation definition.
+ * @param ctx         Address translation object.
+ * @param[in] addr    Address to be translated.
+ * @param[in] def     Translation definition.
+ * @param[out] paddr  Resulting address (on succesful return).
+ * @returns           Error status.
+ */
+addrxlat_status addrxlat_by_def(
+	addrxlat_ctx *ctx, addrxlat_addr_t addr,
+	const addrxlat_def_t *def, addrxlat_addr_t *paddr);
 
 /** Type of the read callback for 32-bit integers.
  * @param ctx       Address translation object.

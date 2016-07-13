@@ -4,7 +4,7 @@
 # Check invalid VTOP translation for s390x with 2-level paging.
 #
 
-pf="-p s390x:12,8,11"
+pf="s390x:12,8,11"
 
 ptes="-e 0x0000:0x1000"		# SX0
 

@@ -4,7 +4,7 @@
 # Check VTOP translation for s390x with 3-level paging.
 #
 
-pf="-p s390x:12,8,11"
+pf="s390x:12,8,11"
 
 ptes="-e 0x0000:0x1000"		# SX0 -> 1000
 ptes="$ptes -e 0x0008:0x1800"	# SX1 -> 1800

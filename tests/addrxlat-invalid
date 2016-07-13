@@ -7,7 +7,7 @@ for tst in $list; do
     input="${tst%:*}"
     expect="${tst#*:}"
     echo -n "Checking $input... "
-    output=$( ./addrxlat $pf $ptes $input )
+    output=$( ./addrxlat -p -f $pf $ptes $input )
     rc=$?
     if [ $rc -gt 1 ]; then
         echo ERROR

@@ -1,13 +1,22 @@
+#! /bin/sh
+
 #
-# Common code for checking VTOP translation
+# Check linear VTOP translation.
 #
+
+list="0x0:0x1234:0x1234"	      # Identity mapping
+list="$list 0x100000:0x4567:0x104567" # Linear shift 0x100000
+list="$list 0x1234:0x89ab:0x9bdf"     # True addition
+list="$list -0x1000:0x2345:0x1345"    # Negative offset
 
 totalrc=0
 for tst in $list; do
     input="${tst%:*}"
-    expect="${tst#*:}"
+    off="${input%:*}"
+    input="${input#*:}"
+    expect="${tst##*:}"
     echo -n "Checking $input... "
-    output=$( ./addrxlat -p -f $pf $ptes $input )
+    output=$( ./addrxlat -l $off $input )
     rc=$?
     if [ $rc -gt 1 ]; then
         echo ERROR

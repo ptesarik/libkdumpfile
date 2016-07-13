@@ -4,7 +4,7 @@
 # Check invalid VTOP translation for s390x with 5-level paging.
 #
 
-pf="-p s390x:12,8,11,11,11,11"
+pf="s390x:12,8,11,11,11,11"
 
 ptes="-e 0x0000:0x100f"		# RFX0 -> 1000
 ptes="$ptes -e 0x0008:0x002f"	# RFX1 (invalid)

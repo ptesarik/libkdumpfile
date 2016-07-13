@@ -4,7 +4,7 @@
 # Check null-mapping VTOP translation.
 #
 
-pf="-p none:64"
+pf="none:64"
 ptes=
 input="0x0 0x2 0x30 0x400 0x5000 0x123456789abcdef"
 list=

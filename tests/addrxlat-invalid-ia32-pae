@@ -4,7 +4,7 @@
 # Check invalid IA32 PAE VTOP translation.
 #
 
-pf="-p ia32_pae:12,9,9,2"
+pf="ia32_pae:12,9,9,2"
 ptes="-e 0x0:0x1067 -e 0x18d0:0x2000e7"
 list="0x123456789"
 

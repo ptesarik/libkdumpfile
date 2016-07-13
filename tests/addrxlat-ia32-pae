@@ -4,7 +4,7 @@
 # Check VTOP translation for IA32 with PAE.
 #
 
-pf="-p ia32_pae:12,9,9,2"
+pf="ia32_pae:12,9,9,2"
 
 ptes="-e 0x0000:0x1067"		# PGD[0] -> 0x1000
 ptes="$ptes -e 0x0008:0x4067"	# PGD[1] -> 0x4000
