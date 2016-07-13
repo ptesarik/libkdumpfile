@@ -137,6 +137,12 @@ DECLARE_INTERNAL(pgt_next)
 #define internal_pgt INTERNAL_ALIAS(pgt)
 DECLARE_INTERNAL(pgt)
 
+#define internal_by_def INTERNAL_ALIAS(by_def)
+DECLARE_INTERNAL(by_def)
+
+#define internal_map_search INTERNAL_ALIAS(map_search)
+DECLARE_INTERNAL(map_search)
+
 /* utils */
 
 /** Set the error message.

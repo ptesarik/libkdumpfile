@@ -394,6 +394,17 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 const addrxlat_def_t *addrxlat_map_search(
 	const addrxlat_map_t *map, addrxlat_addr_t addr);
 
+/** Translate an address using a translation map.
+ * @param ctx         Address translation object.
+ * @param[in] addr    Address to be translated.
+ * @param[in] map     Translation map.
+ * @param[out] paddr  Resulting address (on succesful return).
+ * @returns           Error status.
+ */
+addrxlat_status addrxlat_by_map(
+	addrxlat_ctx *ctx, addrxlat_addr_t addr,
+	const addrxlat_map_t *map, addrxlat_addr_t *paddr);
+
 /** Type of the read callback for 32-bit integers.
  * @param ctx       Address translation object.
  * @param[in] addr  Address of the 32-bit integer.

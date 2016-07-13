@@ -102,6 +102,8 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 	return map;
 }
 
+DEFINE_INTERNAL(map_search)
+
 const addrxlat_def_t *
 addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 {
@@ -120,4 +122,15 @@ addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 		raddr += r->endoff + 1;
 	}
 	return &def_none;
+}
+
+addrxlat_status
+addrxlat_by_map(addrxlat_ctx *ctx, addrxlat_addr_t addr,
+		const addrxlat_map_t *map, addrxlat_addr_t *paddr)
+{
+	const addrxlat_def_t *def = internal_map_search(map, addr);
+	return def
+		? internal_by_def(ctx, addr, def, paddr)
+		: set_error(ctx, addrxlat_invalid,
+			    "No translation defined");
 }
