@@ -30,28 +30,16 @@
 
 #include "addrxlat-priv.h"
 
-void
-addrxlat_set_pgt_root(addrxlat_ctx *ctx, const addrxlat_pgt_root_t *root)
-{
-	ctx->pgt_root = *root;
-}
-
-const addrxlat_pgt_root_t *
-addrxlat_get_pgt_root(addrxlat_ctx *ctx)
-{
-	return &ctx->pgt_root;
-}
-
 /** Read the raw PTE value.
  * @param ctx    Address translation object.
- * @param state  VTOP translation state.
+ * @param state  Page table translation state.
  * @returns      Error status.
  *
  * On successful return, @c state->raw_pte contains the raw
  * PTE value for the current translation step.
  */
 static addrxlat_status
-read_pte(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
+read_pte(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
 	addrxlat_fulladdr_t ptep;
 	uint64_t pte64;
@@ -84,48 +72,32 @@ read_pte(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	return status;
 }
 
-addrxlat_status
-addrxlat_vtop_start(addrxlat_ctx *ctx,
-		    addrxlat_vaddr_scope_t scope, addrxlat_addr_t vaddr,
-		    addrxlat_vtop_state_t *state)
+addrxlat_status addrxlat_pgt_start(
+	addrxlat_ctx *ctx, addrxlat_addr_t addr,
+	addrxlat_pgt_state_t *state)
 {
 	unsigned short i;
 	addrxlat_status status;
-
-	switch (scope) {
-	case ADDRXLAT_SCOPE_KERNEL:
-		state->base = ctx->pgt_root.kernel;
-		break;
-
-	case ADDRXLAT_SCOPE_USER:
-		state->base = ctx->pgt_root.user;
-		break;
-
-	default:
-		return set_error(ctx, addrxlat_notimpl,
-				 "Unknown virtual address scope");
-	}
 
 	for (i = 0; i < ctx->pf.levels; ++i) {
 		unsigned short bits = ctx->pf.bits[i];
 		addrxlat_addr_t mask = bits < sizeof(addrxlat_addr_t) * 8
 			? ((addrxlat_addr_t)1 << bits) - 1
 			: ~(addrxlat_addr_t)0;
-		state->idx[i] = vaddr & mask;
-		vaddr >>= bits;
+		state->idx[i] = addr & mask;
+		addr >>= bits;
 	}
-	state->idx[i] = vaddr;
+	state->idx[i] = addr;
 
 	state->level = 0;
-	state->scope = scope;
-	status = ctx->vtop_step(ctx, state);
+	status = ctx->pgt_step(ctx, state);
 	if (status == addrxlat_continue)
 		state->level = ctx->pf.levels;
 	return status;
 }
 
 addrxlat_status
-addrxlat_vtop_next(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
+addrxlat_pgt_next(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
 	addrxlat_status status;
 
@@ -143,26 +115,26 @@ addrxlat_vtop_next(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	if (status != addrxlat_ok)
 		return status;
 
-	return ctx->vtop_step(ctx, state);
+	return ctx->pgt_step(ctx, state);
 }
 
-#define vtop_start ALIAS_NAME(vtop_start)
-DEFINE_ALIAS(vtop_start)
+#define pgt_start ALIAS_NAME(pgt_start)
+DEFINE_ALIAS(pgt_start)
 
-#define vtop_next ALIAS_NAME(vtop_next)
-DEFINE_ALIAS(vtop_next)
+#define pgt_next ALIAS_NAME(pgt_next)
+DEFINE_ALIAS(pgt_next)
 
 addrxlat_status
-addrxlat_vtop_pgt(addrxlat_ctx *ctx,
-		  addrxlat_vaddr_scope_t scope, addrxlat_addr_t vaddr,
-		  addrxlat_addr_t *paddr)
+addrxlat_pgt(addrxlat_ctx *ctx, addrxlat_addr_t addr,
+	     const addrxlat_fulladdr_t *pgt, addrxlat_addr_t *paddr)
 {
-	addrxlat_vtop_state_t state;
+	addrxlat_pgt_state_t state;
 	addrxlat_status status;
 
-	status = vtop_start(ctx, scope, vaddr, &state);
+	state.base = *pgt;
+	status = pgt_start(ctx, addr, &state);
 	while (status == addrxlat_continue)
-		status = vtop_next(ctx, &state);
+		status = pgt_next(ctx, &state);
 
 	if (status == addrxlat_ok)
 		*paddr = state.base.addr;
@@ -170,16 +142,17 @@ addrxlat_vtop_pgt(addrxlat_ctx *ctx,
 	return status;
 }
 
-/** Update VTOP state for huge page.
+/** Update page table state for huge page.
  * @param ctx    Address translation object.
- * @param state  VTOP translation state.
+ * @param state  Page table translation state.
  * @returns      Always @c addrxlat_continue.
  *
  * This function skips all lower paging levels and updates the state
- * so that the next VTOP step adds the correct page offset and terminates.
+ * so that the next page table step adds the correct page offset and
+ * terminates.
  */
 addrxlat_status
-vtop_huge_page(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
+pgt_huge_page(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
 	addrxlat_addr_t off = 0;
 
@@ -192,9 +165,9 @@ vtop_huge_page(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	return addrxlat_continue;
 }
 
-/** Null vtop function. It does not modify anything and always succeeds. */
+/** Null pgt function. It does not modify anything and always succeeds. */
 addrxlat_status
-vtop_none(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
+pgt_none(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
 	return addrxlat_continue;
 }

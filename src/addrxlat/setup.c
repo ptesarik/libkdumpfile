@@ -33,7 +33,7 @@
 #include "addrxlat-priv.h"
 
 struct pte_def {
-	addrxlat_vtop_step_fn *fn;
+	addrxlat_pgt_step_fn *fn;
 	unsigned short shift;
 };
 
@@ -43,7 +43,7 @@ addrxlat_new(void)
 	addrxlat_ctx *ctx = calloc(1, sizeof(addrxlat_ctx));
 	if (ctx) {
 		ctx->refcnt = 1;
-		ctx->vtop_step = vtop_none;
+		ctx->pgt_step = pgt_none;
 	}
 	return ctx;
 }
@@ -73,12 +73,12 @@ addrxlat_status
 addrxlat_set_paging_form(addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf)
 {
 	static const struct pte_def formats[] = {
-		[addrxlat_pte_none] = { vtop_none, 0 },
-		[addrxlat_pte_ia32] = { vtop_ia32, 2 },
-		[addrxlat_pte_ia32_pae] = { vtop_ia32_pae, 3 },
-		[addrxlat_pte_x86_64] = { vtop_x86_64, 3 },
-		[addrxlat_pte_s390x] = { vtop_s390x, 3 },
-		[addrxlat_pte_ppc64] = { vtop_ppc64, 3 },
+		[addrxlat_pte_none] = { pgt_none, 0 },
+		[addrxlat_pte_ia32] = { pgt_ia32, 2 },
+		[addrxlat_pte_ia32_pae] = { pgt_ia32_pae, 3 },
+		[addrxlat_pte_x86_64] = { pgt_x86_64, 3 },
+		[addrxlat_pte_s390x] = { pgt_s390x, 3 },
+		[addrxlat_pte_ppc64] = { pgt_ppc64, 3 },
 	};
 
 	const struct pte_def *fmt;
@@ -92,7 +92,7 @@ addrxlat_set_paging_form(addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf)
 		return set_error(ctx, addrxlat_notimpl,
 				 "Unknown PTE format");
 
-	ctx->vtop_step = fmt->fn;
+	ctx->pgt_step = fmt->fn;
 	ctx->pte_shift = fmt->shift;
 	ctx->pf = *pf;
 

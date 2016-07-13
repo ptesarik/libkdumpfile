@@ -43,13 +43,13 @@
 /* Page-Table Origin has 2K granularity in hardware */
 #define PTO_MASK	(~(((uint64_t)1 << 11) - 1))
 
-/** IBM z/Architecture vtop function.
+/** IBM z/Architecture page table step function.
  * @param ctx    Address translation object.
  * @param state  Translation state.
  * @returns      Error status.
  */
 addrxlat_status
-vtop_s390x(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
+pgt_s390x(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
 	static const char pgt_full_name[][16] = {
 		"Page",
@@ -97,7 +97,7 @@ vtop_s390x(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	if (state->level >= 2 && state->level <= 3 &&
 	    PTE_FC(state->raw_pte)) {
 		state->base.addr &= ctx->pgt_mask[state->level - 1];
-		return vtop_huge_page(ctx, state);
+		return pgt_huge_page(ctx, state);
 	}
 
 	if (state->level >= 3) {

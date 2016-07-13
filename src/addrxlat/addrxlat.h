@@ -112,29 +112,12 @@ typedef enum _addrxlat_addrspace {
 	ADDRXLAT_XENVADDR,	/**< Xen virtual address.  */
 } addrxlat_addrspace_t;
 
-/** Scope of a virtual address.
- * This defines whether the address is valid for kernel objects,
- * or user-space objects.
- */
-typedef enum _addrxlat_vaddr_scope {
-	ADDRXLAT_SCOPE_KERNEL,	/**< Kernel-space virtual address. */
-	ADDRXLAT_SCOPE_USER,	/**< User-space virtual address. */
-} addrxlat_vaddr_scope_t;
-
 /** Full address (including address space specification).
  */
 typedef struct _addrxlat_fulladdr {
 	addrxlat_addr_t addr;	 /**< Raw address. */
 	addrxlat_addrspace_t as; /**< Address space for @c addr. */
 } addrxlat_fulladdr_t;
-
-/** Root page table specification.
- * This is the base address of the highest-level page table.
- */
-typedef struct _addrxlat_pgt_root {
-	addrxlat_fulladdr_t kernel; /**< Kernel-space root page table. */
-	addrxlat_fulladdr_t user;   /**< User-space root page table. */
-} addrxlat_pgt_root_t;
 
 /** Page table entry format.
  */
@@ -228,34 +211,10 @@ addrxlat_status addrxlat_set_paging_form(
  */
 const addrxlat_paging_form_t *addrxlat_get_paging_form(addrxlat_ctx *ctx);
 
-/** Set page table root address.
- * @param ctx   Address translation object.
- * @param root  Root page table definition.
- *
- * The @c root pointer need not stay valid after this function returns;
- * the library makes an internal copy of the root page table definition.
- */
-void addrxlat_set_pgt_root(addrxlat_ctx *ctx, const addrxlat_pgt_root_t *root);
-
-/** Get page table root address.
- * @param ctx  Address translation object.
- * @returns    Pointer to the object's root page table definition.
- *
- * This function does not make a copy of the definition. It returns
- * a pointer to the internal structure, so:
- *   - The returned pointer is valid only as long as @c ctx is valid.
- *   - The referenced structure is subject to change (e.g. if you call
- *     @ref addrxlat_set_pgt_root).
- */
-const addrxlat_pgt_root_t *addrxlat_get_pgt_root(addrxlat_ctx *ctx);
-
-/** Data type for one-by-one VTOP translation. */
-typedef struct _addrxlat_vtop_state {
+/** Data type for page table translation. */
+typedef struct _addrxlat_pgt_state {
 	/** Page table level. */
 	unsigned short level;
-
-	/** Virtual address scope (user or kernel). */
-	addrxlat_vaddr_scope_t scope;
 
 	/** On input, base address of the page table.
 	 * On output base address of the lower-level page table or
@@ -275,19 +234,18 @@ typedef struct _addrxlat_vtop_state {
 	 * of the virtual address after all page table bits were used.
 	 */
 	addrxlat_addr_t idx[ADDRXLAT_MAXLEVELS + 1];
-} addrxlat_vtop_state_t;
+} addrxlat_pgt_state_t;
 
-/** Type of the callback to make one step in vtop translation.
+/** Type of the function which moves to the next-level page table.
  * @param ctx    Address translation object.
  * @param state  Translation state.
  * @returns      Error status.
  *
- * The function is first called by @ref addrxlat_vtop_start to allow
+ * The function is first called by @ref addrxlat_pgt_start to allow
  * arch-specific initialization (or direct translation). For this initial
  * call:
  *   - @c state->level is set to zero
- *   - @c state->scope is set to the virtual address scope
- *   - @c state->base is set to @c pgt_root
+ *   - @c state->base is set to the highest-level page table origin
  *   - virtual address is broken down to table indices in @c state->idx
  *   - @c state->raw_pte is left uninitialized
  *
@@ -308,40 +266,41 @@ typedef struct _addrxlat_vtop_state {
  * and/or the indices in @c state->idx[]. This is needed if some levels
  * of paging are skipped (huge pages).
  */
-typedef addrxlat_status addrxlat_vtop_step_fn(
-	addrxlat_ctx *ctx, addrxlat_vtop_state_t *state);
+typedef addrxlat_status addrxlat_pgt_step_fn(
+	addrxlat_ctx *ctx, addrxlat_pgt_state_t *state);
 
-/** Start gradual virtual-to-physical address translation.
+/** Start page-table address translation.
  * @param ctx            Address translation object.
- * @param[in] scope      Scope (kernel-space or user-space).
- * @param[in] vaddr      Virtual address.
- * @param[out] state     Translation state.
+ * @param[in] addr       Address to be translated.
+ * @param[in,out] state  Translation state.
  * @returns              Error status.
+ *
+ * Most of the state gets initialized by this function, but the
+ * page table root origin (@c state->base) should be set by the
+ * caller prior to calling this function.
  */
-addrxlat_status addrxlat_vtop_start(
-	addrxlat_ctx *ctx,
-	addrxlat_vaddr_scope_t scope, addrxlat_addr_t vaddr,
-	addrxlat_vtop_state_t *state);
+addrxlat_status addrxlat_pgt_start(
+	addrxlat_ctx *ctx, addrxlat_addr_t addr,
+	addrxlat_pgt_state_t *state);
 
-/** Perform one step in virtual-to-physical address translation.
+/** Descend one level in page table translation.
  * @param ctx            Address translation object.
  * @param[in,out] state  Translation state.
  * @returns              Error status.
  */
-addrxlat_status addrxlat_vtop_next(
-	addrxlat_ctx *ctx, addrxlat_vtop_state_t *state);
+addrxlat_status addrxlat_pgt_next(
+	addrxlat_ctx *ctx, addrxlat_pgt_state_t *state);
 
-/** Perform virtual-to-phyiscal address translation using page tables.
+/** Translate an address using page tables.
  * @param ctx         Address translation object.
- * @param[in] scope   Scope (kernel-space or user-space).
- * @param[in] vaddr   Virtual address.
- * @param[out] paddr  Physical address (on succesful return).
+ * @param[in] addr    Address to be translated.
+ * @param[in] pgt     Root page table origin.
+ * @param[out] paddr  Resulting address (on succesful return).
  * @returns           Error status.
  */
-addrxlat_status addrxlat_vtop_pgt(
-	addrxlat_ctx *ctx,
-	addrxlat_vaddr_scope_t scope, addrxlat_addr_t vaddr,
-	addrxlat_addr_t *paddr);
+addrxlat_status addrxlat_pgt(
+	addrxlat_ctx *ctx, addrxlat_addr_t addr,
+	const addrxlat_fulladdr_t *pgt, addrxlat_addr_t *paddr);
 
 /** Type of the read callback for 32-bit integers.
  * @param ctx       Address translation object.

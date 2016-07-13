@@ -7,10 +7,9 @@ LIBADDRXLAT_0 {
     addrxlat_set_arch;
     addrxlat_set_paging_form;
     addrxlat_get_paging_form;
-    addrxlat_set_pgt_root;
-    addrxlat_vtop_start;
-    addrxlat_vtop_next;
-    addrxlat_vtop_pgt;
+    addrxlat_pgt_start;
+    addrxlat_pgt_next;
+    addrxlat_pgt;
     addrxlat_cb_read32;
     addrxlat_cb_read64;
 

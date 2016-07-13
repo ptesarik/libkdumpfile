@@ -90,7 +90,7 @@ static unsigned mmu_pshift[MMU_PAGE_COUNT] = {
 };
 
 static addrxlat_status
-check_vtop_state(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
+check_pgt_state(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
 	unsigned short lvl = ctx->pf.levels;
 	unsigned region;
@@ -134,11 +134,11 @@ hugepd_shift(addrxlat_pte_t hpde)
 
 /**  Translate a huge page using its directory entry.
  * @param ctx    Address translation object.
- * @param state  VTOP translation state.
+ * @param state  Page table translation state.
  * @returns      Always @c addrxlat_continue.
  */
 addrxlat_status
-huge_pd(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
+huge_pd(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
 	addrxlat_addr_t off;
 	unsigned pdshift;
@@ -181,30 +181,31 @@ is_hugepte(addrxlat_pte_t pte)
 	return (pte & HUGE_PTE_MASK) != 0x0;
 }
 
-/** Update VTOP state for huge page.
+/** Update page table translation state for huge page.
  * @param ctx    Address translation object.
- * @param state  VTOP translation state.
+ * @param state  Page table translation state.
  * @returns      Always @c addrxlat_continue.
  *
  * This function skips all lower paging levels and updates the state
- * so that the next VTOP step adds the correct page offset and terminates.
+ * so that the next page table translation step adds the correct page
+ * offset and terminates.
  */
 addrxlat_status
-huge_page(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
+huge_page(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
 	state->base.as = ADDRXLAT_MACHPHYSADDR;
 	state->base.addr = (state->raw_pte >>
 			    ctx->pf.rpn_shift) << ctx->pf.bits[0];
-	return vtop_huge_page(ctx, state);
+	return pgt_huge_page(ctx, state);
 }
 
-/** IBM POWER vtop function.
+/** IBM POWER page table step function.
  * @param ctx    Address translation object.
  * @param state  Translation state.
  * @returns      Error status.
  */
 addrxlat_status
-vtop_ppc64(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
+pgt_ppc64(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
 	static const char pte_name[][4] = {
 		"pte",
@@ -214,7 +215,7 @@ vtop_ppc64(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	};
 
 	if (!state->level)
-		return check_vtop_state(ctx, state);
+		return check_pgt_state(ctx, state);
 
 	if (!state->raw_pte)
 		return set_error(ctx, addrxlat_notpresent,

@@ -74,14 +74,11 @@ struct _addrxlat_ctx {
 	/** Paging form description. */
 	addrxlat_paging_form_t pf;
 
-	/** Pointers to root page tables. */
-	addrxlat_pgt_root_t pgt_root;
-
 	/** Paging masks, pre-computed from paging form. */
 	addrxlat_addr_t pgt_mask[ADDRXLAT_MAXLEVELS];
 
-	/** Function to make one step in vtop translation. */
-	addrxlat_vtop_step_fn *vtop_step;
+	/** Function to make one step in page table translation. */
+	addrxlat_pgt_step_fn *pgt_step;
 
 	/** Callback for reading 32-bit integers. */
 	addrxlat_read32_fn *cb_read32;
@@ -100,27 +97,27 @@ struct _addrxlat_ctx {
 
 /* vtop */
 
-#define vtop_huge_page INTERNAL_NAME(vtop_huge_page)
-addrxlat_status vtop_huge_page(addrxlat_ctx *ctx,
-			       addrxlat_vtop_state_t *state);
+#define pgt_huge_page INTERNAL_NAME(pgt_huge_page)
+addrxlat_status pgt_huge_page(addrxlat_ctx *ctx,
+			      addrxlat_pgt_state_t *state);
 
-#define vtop_none INTERNAL_NAME(vtop_none)
-addrxlat_vtop_step_fn vtop_none;
+#define pgt_none INTERNAL_NAME(pgt_none)
+addrxlat_pgt_step_fn pgt_none;
 
-#define vtop_ia32 INTERNAL_NAME(vtop_ia32)
-addrxlat_vtop_step_fn vtop_ia32;
+#define pgt_ia32 INTERNAL_NAME(pgt_ia32)
+addrxlat_pgt_step_fn pgt_ia32;
 
-#define vtop_ia32_pae INTERNAL_NAME(vtop_ia32_pae)
-addrxlat_vtop_step_fn vtop_ia32_pae;
+#define pgt_ia32_pae INTERNAL_NAME(pgt_ia32_pae)
+addrxlat_pgt_step_fn pgt_ia32_pae;
 
-#define vtop_x86_64 INTERNAL_NAME(vtop_x86_64)
-addrxlat_vtop_step_fn vtop_x86_64;
+#define pgt_x86_64 INTERNAL_NAME(pgt_x86_64)
+addrxlat_pgt_step_fn pgt_x86_64;
 
-#define vtop_s390x INTERNAL_NAME(vtop_s390x)
-addrxlat_vtop_step_fn vtop_s390x;
+#define pgt_s390x INTERNAL_NAME(pgt_s390x)
+addrxlat_pgt_step_fn pgt_s390x;
 
-#define vtop_ppc64 INTERNAL_NAME(vtop_ppc64)
-addrxlat_vtop_step_fn vtop_ppc64;
+#define pgt_ppc64 INTERNAL_NAME(pgt_ppc64)
+addrxlat_pgt_step_fn pgt_ppc64;
 
 /* utils */
 

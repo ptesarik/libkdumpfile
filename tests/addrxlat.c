@@ -41,7 +41,7 @@ enum read_status {
 
 static addrxlat_paging_form_t paging_form;
 
-static addrxlat_pgt_root_t pgt_root;
+static addrxlat_fulladdr_t pgt_root;
 
 #define MAXERR	64
 static char read_err_str[MAXERR];
@@ -177,7 +177,6 @@ static int
 set_root(const char *spec)
 {
 	char *endp;
-	addrxlat_fulladdr_t *addrspec;
 
 	endp = strchr(spec, ':');
 	if (!endp) {
@@ -185,21 +184,20 @@ set_root(const char *spec)
 		return TEST_ERR;
 	}
 
-	addrspec = &pgt_root.kernel;
 	if (!strncasecmp(spec, "KPHYSADDR:", endp - spec))
-		addrspec->as = ADDRXLAT_KPHYSADDR;
+		pgt_root.as = ADDRXLAT_KPHYSADDR;
 	else if (!strncasecmp(spec, "MACHPHYSADDR:", endp - spec))
-		addrspec->as = ADDRXLAT_MACHPHYSADDR;
+		pgt_root.as = ADDRXLAT_MACHPHYSADDR;
 	else if (!strncasecmp(spec, "KVADDR:", endp - spec))
-		addrspec->as = ADDRXLAT_KVADDR;
+		pgt_root.as = ADDRXLAT_KVADDR;
 	else if (!strncasecmp(spec, "XENVADDR:", endp - spec))
-		addrspec->as = ADDRXLAT_XENVADDR;
+		pgt_root.as = ADDRXLAT_XENVADDR;
 	else {
 		fprintf(stderr, "Invalid address spec: %s\n", spec);
 		return TEST_ERR;
 	}
 
-	addrspec->addr = strtoull(endp + 1, &endp, 0);
+	pgt_root.addr = strtoull(endp + 1, &endp, 0);
 	if (*endp) {
 		fprintf(stderr, "Invalid address spec: %s\n", spec);
 		return TEST_ERR;
@@ -213,7 +211,7 @@ do_xlat(addrxlat_ctx *ctx, addrxlat_addr_t vaddr)
 	addrxlat_addr_t paddr;
 	addrxlat_status status;
 
-	status = addrxlat_vtop_pgt(ctx, ADDRXLAT_SCOPE_KERNEL, vaddr, &paddr);
+	status = addrxlat_pgt(ctx, vaddr, &pgt_root, &paddr);
 	if (status != addrxlat_ok) {
 		fprintf(stderr, "Address translation failed: %s\n",
 			((int) status > 0
@@ -311,7 +309,6 @@ main(int argc, char **argv)
 		goto err;
 	}
 
-	addrxlat_set_pgt_root(ctx, &pgt_root);
 	addrxlat_cb_read32(ctx, read32);
 	addrxlat_cb_read64(ctx, read64);
 

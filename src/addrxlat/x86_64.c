@@ -51,7 +51,7 @@
  * highest bit.
  */
 static int
-is_noncanonical(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
+is_noncanonical(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
 	unsigned short lvl = ctx->pf.levels;
 	struct {
@@ -64,13 +64,13 @@ is_noncanonical(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	return state->idx[lvl] != signext;
 }
 
-/** AMD64 (Intel 64) vtop function.
+/** AMD64 (Intel 64) page table step function.
  * @param ctx    Address translation object.
  * @param state  Translation state.
  * @returns      Error status.
  */
 addrxlat_status
-vtop_x86_64(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
+pgt_x86_64(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
 	static const char pgt_full_name[][16] = {
 		"Page",
@@ -104,7 +104,7 @@ vtop_x86_64(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	if (state->level >= 2 && state->level <= 3 &&
 	    (state->raw_pte & _PAGE_PSE)) {
 		state->base.addr &= ctx->pgt_mask[state->level - 1];
-		return vtop_huge_page(ctx, state);
+		return pgt_huge_page(ctx, state);
 	}
 
 	state->base.addr &= ctx->pgt_mask[0];

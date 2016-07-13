@@ -47,13 +47,13 @@
 #define _PAGE_PRESENT	(1UL << _PAGE_BIT_PRESENT)
 #define _PAGE_PSE	(1UL << _PAGE_BIT_PSE)
 
-/** IA32 vtop function.
+/** IA32 page table step function.
  * @param ctx    Address translation object.
  * @param state  Translation state.
  * @returns      Error status.
  */
 addrxlat_status
-vtop_ia32(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
+pgt_ia32(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
 	static const char pgt_full_name[][16] = {
 		"Page",
@@ -90,13 +90,13 @@ vtop_ia32(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	return addrxlat_continue;
 }
 
-/** IA32 PAE vtop function.
+/** IA32 PAE page table step function.
  * @param ctx    Address translation object.
  * @param state  Translation state.
  * @returns      Error status.
  */
 addrxlat_status
-vtop_ia32_pae(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
+pgt_ia32_pae(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
 	static const char pgt_full_name[][16] = {
 		"Page",
