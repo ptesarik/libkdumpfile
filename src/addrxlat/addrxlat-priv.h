@@ -44,13 +44,19 @@
 
 #ifndef PIC
 #define INTERNAL_ALIAS(x)		addrxlat_ ## x
+#define _DECLARE_INTERNAL(s, a)
 #define _DEFINE_INTERNAL(s, a)
 #else
-#define INTERNAL_ALIAS(x)		x
+#define INTERNAL_ALIAS(x)		internal_ ## x
+#define _DECLARE_INTERNAL(s, a)		\
+	extern typeof(s) (a);
 #define _DEFINE_INTERNAL(s, a)		\
 	extern typeof(s) (a)		\
 	__attribute__((alias(#s)));
 #endif
+
+/** Internal alias declaration. */
+#define DECLARE_INTERNAL(x) _DECLARE_INTERNAL(addrxlat_ ## x, internal_ ## x)
 
 /** Define an internal alias for a symbol. */
 #define DEFINE_INTERNAL(x) _DEFINE_INTERNAL(addrxlat_ ## x, internal_ ## x)
@@ -119,6 +125,17 @@ addrxlat_pgt_step_fn pgt_s390x;
 
 #define pgt_ppc64 INTERNAL_NAME(pgt_ppc64)
 addrxlat_pgt_step_fn pgt_ppc64;
+
+/* internal aliases */
+
+#define internal_pgt_start INTERNAL_ALIAS(pgt_start)
+DECLARE_INTERNAL(pgt_start)
+
+#define internal_pgt_next INTERNAL_ALIAS(pgt_next)
+DECLARE_INTERNAL(pgt_next)
+
+#define internal_pgt INTERNAL_ALIAS(pgt)
+DECLARE_INTERNAL(pgt)
 
 /* utils */
 

@@ -72,6 +72,8 @@ read_pte(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 	return status;
 }
 
+DEFINE_INTERNAL(pgt_start)
+
 addrxlat_status addrxlat_pgt_start(
 	addrxlat_ctx *ctx, addrxlat_addr_t addr,
 	addrxlat_pgt_state_t *state)
@@ -96,6 +98,8 @@ addrxlat_status addrxlat_pgt_start(
 	return status;
 }
 
+DEFINE_INTERNAL(pgt_next)
+
 addrxlat_status
 addrxlat_pgt_next(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
@@ -118,11 +122,7 @@ addrxlat_pgt_next(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 	return ctx->pgt_step(ctx, state);
 }
 
-#define internal_pgt_start INTERNAL_NAME(pgt_start)
-DEFINE_INTERNAL(pgt_start)
-
-#define internal_pgt_next INTERNAL_NAME(pgt_next)
-DEFINE_INTERNAL(pgt_next)
+DEFINE_INTERNAL(pgt)
 
 addrxlat_status
 addrxlat_pgt(addrxlat_ctx *ctx, addrxlat_addr_t addr,
@@ -172,8 +172,7 @@ pgt_none(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 	return addrxlat_continue;
 }
 
-#define internal_pgt INTERNAL_NAME(pgt)
-DEFINE_INTERNAL(pgt)
+DEFINE_INTERNAL(by_def)
 
 addrxlat_status
 addrxlat_by_def(addrxlat_ctx *ctx, addrxlat_addr_t addr,
