@@ -1,0 +1,9 @@
+#! /bin/sh
+
+#
+# Check replacing an entry in the middle of a translation map
+#
+
+input="0x800000000000-0xffff7fffffffffff:1 0x800000000000-0xffff7fffffffffff:2"
+
+. "$srcdir"/addrmap-common

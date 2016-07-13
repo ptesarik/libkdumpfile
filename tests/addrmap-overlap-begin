@@ -1,0 +1,9 @@
+#! /bin/sh
+
+#
+# Check overlapping the beginning of an entry
+#
+
+input="0x800000000000-0xffff7fffffffffff:1 0x900000000000-0xffff8fffffffffff:2"
+
+. "$srcdir"/addrmap-common

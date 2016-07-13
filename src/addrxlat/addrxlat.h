@@ -67,6 +67,10 @@ typedef enum _addrxlat_status {
  */
 typedef uint_fast64_t addrxlat_addr_t;
 
+/**  Maximum value that can be represented by addrxlat_addr_t.
+ */
+#define ADDRXLAT_ADDR_MAX	(~(addrxlat_addr_t)0)
+
 /**  Type of an address offset.
  *
  * This type is as large as @ref addrxlat_addr_t, but it is signed,
@@ -339,7 +343,7 @@ typedef struct _addrxlat_def {
 	};
 } addrxlat_def_t;
 
-/** Translate an address using a translation definition.
+/** Translate an address using a single translation definition.
  * @param ctx         Address translation object.
  * @param[in] addr    Address to be translated.
  * @param[in] def     Translation definition.
@@ -349,6 +353,46 @@ typedef struct _addrxlat_def {
 addrxlat_status addrxlat_by_def(
 	addrxlat_ctx *ctx, addrxlat_addr_t addr,
 	const addrxlat_def_t *def, addrxlat_addr_t *paddr);
+
+/** Definition of an address range.
+ */
+typedef struct _addrxlat_range {
+	/** Max address offset inside the range. */
+	addrxlat_addr_t endoff;
+
+	/** Translation definition */
+	addrxlat_def_t xlat;
+} addrxlat_range_t;
+
+/**  Address translation map.
+ */
+typedef struct _addrxlat_map {
+	/** Number of elements in @c ranges. */
+	size_t n;
+
+	/** Actual range definitions. */
+	addrxlat_range_t ranges[];
+} addrxlat_map_t;
+
+/** Set map translation for an address range.
+ * @param map    Address translation map.
+ * @param addr   Range start address.
+ * @param range  Translation range definition.
+ * @returns      Updated map, or @c NULL on allocation error.
+ *
+ * If this function fails, the original @c map is left untouched.
+ */
+addrxlat_map_t *
+addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
+		 const addrxlat_range_t *range);
+
+/** Find an address translation definition in a translation map.
+ * @param map   Address translation map.
+ * @param addr  Address to be translated.
+ * @returns     Translation definition.
+ */
+const addrxlat_def_t *addrxlat_map_search(
+	const addrxlat_map_t *map, addrxlat_addr_t addr);
 
 /** Type of the read callback for 32-bit integers.
  * @param ctx       Address translation object.

@@ -35,6 +35,7 @@ check_HEADERS = \
 	lkcd.h \
 	testutil.h
 
+addrmap_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
 addrxlat_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
 
 attriter_SOURCES = attriter.c
@@ -76,6 +77,7 @@ vtop_LDADD = $(top_builddir)/src/libkdumpfile.la
 
 check_PROGRAMS = \
 	addrxlat \
+	addrmap \
 	attriter \
 	checkattr \
 	clearattr \
@@ -93,6 +95,13 @@ check_PROGRAMS = \
 	vtop
 
 test_scripts = \
+	addrmap-single-begin \
+	addrmap-single-middle \
+	addrmap-single-end \
+	addrmap-replace \
+	addrmap-overlap-begin \
+	addrmap-overlap-end \
+	addrmap-reduce \
 	addrxlat-identity \
 	addrxlat-ia32 \
 	addrxlat-ia32-pae \
@@ -147,11 +156,19 @@ test_scripts = \
 	lkcd-duplicate-middle
 
 dist_check_DATA = \
+	addrmap-single-begin.expect \
+	addrmap-single-middle.expect \
+	addrmap-single-end.expect \
+	addrmap-replace.expect \
+	addrmap-overlap-begin.expect \
+	addrmap-overlap-end.expect \
+	addrmap-reduce.expect \
 	elf-empty.data \
 	basic.expect \
 	partial.expect
 
 dist_check_SCRIPTS = \
+	addrmap-common \
 	addrxlat-common \
 	addrxlat-invalid \
 	diskdump-empty \

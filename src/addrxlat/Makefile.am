@@ -29,6 +29,7 @@ libaddrxlat_la_SOURCES = \
 	setup.c \
 	util.c \
 	vtop.c \
+	map.c \
 	x86_64.c
 
 EXTRA_libaddrxlat_la_DEPENDENCIES = libaddrxlat.map

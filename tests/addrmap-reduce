@@ -1,0 +1,10 @@
+#! /bin/sh
+
+#
+# Check reducing the size of the map
+#
+
+input="0x2000-0x8fff:1 0x3000-0x3fff:0 0x5000-0x5fff:0 0x7000-0x7fff:0"
+input="$input 0x2800-0xffff:2"
+
+. "$srcdir"/addrmap-common

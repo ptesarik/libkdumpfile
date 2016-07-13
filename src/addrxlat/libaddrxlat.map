@@ -11,6 +11,8 @@ LIBADDRXLAT_0 {
     addrxlat_pgt_next;
     addrxlat_pgt;
     addrxlat_by_def;
+    addrxlat_map_set;
+    addrxlat_map_search;
     addrxlat_cb_read32;
     addrxlat_cb_read64;
 
