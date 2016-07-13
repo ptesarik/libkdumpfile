@@ -42,6 +42,18 @@
 #define INTERNAL_NAME(x)	x
 #endif
 
+/** Define an alias for a symbol. */
+#ifndef PIC
+#define ALIAS_NAME(x)		addrxlat_ ## x
+#define DEFINE_ALIAS(x)
+#else
+#define ALIAS_NAME(x)		x
+#define _DEFINE_ALIAS(s, a)		\
+	extern typeof(s) (a)		\
+	__attribute__((alias(#s)));
+#define DEFINE_ALIAS(x) _DEFINE_ALIAS(addrxlat_ ## x, x)
+#endif
+
 /* General macros */
 
 /** Number of elements in an array variable. */

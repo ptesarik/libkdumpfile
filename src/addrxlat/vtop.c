@@ -146,6 +146,12 @@ addrxlat_vtop_next(addrxlat_ctx *ctx, addrxlat_vtop_state_t *state)
 	return ctx->vtop_step(ctx, state);
 }
 
+#define vtop_start ALIAS_NAME(vtop_start)
+DEFINE_ALIAS(vtop_start)
+
+#define vtop_next ALIAS_NAME(vtop_next)
+DEFINE_ALIAS(vtop_next)
+
 addrxlat_status
 addrxlat_vtop_pgt(addrxlat_ctx *ctx,
 		  addrxlat_vaddr_scope_t scope, addrxlat_addr_t vaddr,
@@ -154,9 +160,9 @@ addrxlat_vtop_pgt(addrxlat_ctx *ctx,
 	addrxlat_vtop_state_t state;
 	addrxlat_status status;
 
-	status = addrxlat_vtop_start(ctx, scope, vaddr, &state);
+	status = vtop_start(ctx, scope, vaddr, &state);
 	while (status == addrxlat_continue)
-		status = addrxlat_vtop_next(ctx, &state);
+		status = vtop_next(ctx, &state);
 
 	if (status == addrxlat_ok)
 		*paddr = state.base.addr;
