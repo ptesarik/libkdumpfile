@@ -381,14 +381,25 @@ static kdump_status x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 				kdump_paddr_t *paddr);
 
 static kdump_status
-add_noncanonical_region(kdump_ctx *ctx, struct vtop_map *map)
+add_canonical_regions(kdump_ctx *ctx, struct vtop_map *map)
 {
 	kdump_status res;
 
 	res = set_vtop_xlat(map,
-			    NONCANONICAL_START, NONCANONICAL_END,
-			    KDUMP_XLAT_INVALID, 0);
-	return set_error(ctx, res, "Cannot set up noncanonical mapping");
+			    0, NONCANONICAL_START - 1,
+			    KDUMP_XLAT_VTOP, 0);
+	if (res != kdump_ok)
+		return set_error(ctx, res,
+				 "Cannot set up default  mapping");
+
+	res = set_vtop_xlat(map,
+			    NONCANONICAL_END + 1, VIRTADDR_MAX,
+			    KDUMP_XLAT_VTOP, 0);
+	if (res != kdump_ok)
+		return set_error(ctx, res,
+				 "Cannot set up default  mapping");
+
+	return res;
 }
 
 static kdump_status
@@ -405,10 +416,6 @@ x86_64_init(kdump_ctx *ctx)
 
 	archdata->pml4 = ~(kdump_addr_t)0;
 	archdata->xen_pml4 = ~(kdump_addr_t)0;
-
-	ret = add_noncanonical_region(ctx, &ctx->shared->vtop_map);
-	if (ret != kdump_ok)
-		return ret;
 
 	ret = set_vtop_xlat(&ctx->shared->vtop_map,
 			    __START_KERNEL_map, VIRTADDR_MAX,
@@ -536,7 +543,7 @@ x86_64_vtop_init(kdump_ctx *ctx)
 				 "Cannot determine virtual memory layout");
 
 	flush_vtop_map(&ctx->shared->vtop_map);
-	ret = add_noncanonical_region(ctx, &ctx->shared->vtop_map);
+	ret = add_canonical_regions(ctx, &ctx->shared->vtop_map);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -574,7 +581,7 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 	kdump_addr_t pgtaddr;
 	kdump_status res;
 
-	res = add_noncanonical_region(ctx, &ctx->shared->vtop_map_xen);
+	res = add_canonical_regions(ctx, &ctx->shared->vtop_map_xen);
 	if (res != kdump_ok)
 		return res;
 

@@ -144,17 +144,6 @@ get_vtop_xlat(const struct vtop_map *map, kdump_vaddr_t vaddr)
 	return &rgn->xlat;
 }
 
-/**  Set default translation to VTOP (page table) translation
- */
-static void
-default_to_vtop(struct vtop_map *map)
-{
-	struct kdump_vaddr_region *rgn;
-	for (rgn = map->region; rgn < &map->region[map->num_regions]; ++rgn)
-		if (rgn->xlat.method == KDUMP_XLAT_NONE)
-			rgn->xlat.method = KDUMP_XLAT_VTOP;
-}
-
 static kdump_status
 vtop_init(kdump_ctx *ctx, struct vtop_map *map, size_t init_ops_off)
 {
@@ -182,7 +171,6 @@ vtop_init(kdump_ctx *ctx, struct vtop_map *map, size_t init_ops_off)
 	if (ret != kdump_ok)
 		goto out;
 
-	default_to_vtop(map);
 	ret = kdump_ok;
 
  out:
