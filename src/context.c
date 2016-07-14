@@ -43,18 +43,6 @@ kdump_err_str(kdump_ctx *ctx)
 	return ctx->err_str;
 }
 
-unsigned long
-kdump_ctx_set_flags(kdump_ctx *ctx, unsigned long flags)
-{
-	return ctx->flags |= flags;
-}
-
-unsigned long
-kdump_ctx_clear_flags(kdump_ctx *ctx, unsigned long flags)
-{
-	return ctx->flags &= ~flags;
-}
-
 kdump_byte_order_t
 kdump_byte_order(kdump_ctx *ctx)
 {

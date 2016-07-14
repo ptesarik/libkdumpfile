@@ -62,7 +62,7 @@ vtop(kdump_ctx *ctx, unsigned long long vaddr)
 }
 
 static int
-vtop_fd(int fd, unsigned long long vaddr, unsigned long flags)
+vtop_fd(int fd, unsigned long long vaddr)
 {
 	kdump_ctx *ctx;
 	kdump_status res;
@@ -73,8 +73,6 @@ vtop_fd(int fd, unsigned long long vaddr, unsigned long flags)
 		perror("Cannot initialize dump context");
 		return TEST_ERR;
 	}
-
-	kdump_ctx_set_flags(ctx, flags);
 
 	res = kdump_set_fd(ctx, fd);
 	if (res != kdump_ok) {
@@ -100,14 +98,12 @@ usage(FILE *f, const char *prog)
 
 static const struct option opts[] = {
 	{ "help", no_argument, NULL, 'h' },
-	{ "pgt", no_argument, NULL, 'p' },
 	{ NULL, 0, NULL, 0 }
 };
 
 int
 main(int argc, char **argv)
 {
-	unsigned long flags = 0UL;
 	unsigned long long addr;
 	FILE *fhelp;
 	char *endp;
@@ -116,12 +112,8 @@ main(int argc, char **argv)
 	int c;
 
 	fhelp = stdout;
-	while ( (c = getopt_long(argc, argv, "ph", opts, NULL)) != -1)
+	while ( (c = getopt_long(argc, argv, "h", opts, NULL)) != -1)
 		switch (c) {
-		case 'p':
-			flags = KDUMP_CF_FORCE_VTOP_PGT;
-			break;
-
 		case '?':
 			fhelp = stderr;
 		case 'h':
@@ -148,7 +140,7 @@ main(int argc, char **argv)
 		return TEST_ERR;
 	}
 
-	rc = vtop_fd(fd, addr, flags);
+	rc = vtop_fd(fd, addr);
 
 	if (close(fd) < 0) {
 		perror("close dump");
