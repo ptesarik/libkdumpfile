@@ -104,6 +104,18 @@
  */
 #define MAX_PHYSICAL_START	0x0000000008000000ULL
 
+/**  Private data for the x86_64 arch-specific methods.
+ */
+struct x86_64_data {
+	/** Overridden methods for linux.phys_base attribute. */
+	struct attr_override phys_base_override;
+
+	/** Total physical offset of kernel text mapping. */
+	kdump_addr_t ktext_off;
+};
+
+#define ARCH_ANCHOR	((struct x86_64_data*)0)
+
 struct region_def {
 	kdump_vaddr_t first, last;
 	struct kdump_xlat xlat;
@@ -116,7 +128,8 @@ struct region_def {
 	{ .method = KDUMP_XLAT_DIRECT, .phys_off = (off) }
 
 #define KTEXT	\
-	{ .method = KDUMP_XLAT_KTEXT, .phys_off = __START_KERNEL_map }
+	{ .method = KDUMP_XLAT_DIRECT_PTR, \
+	  .poff = &(ARCH_ANCHOR->ktext_off) }
 
 /* Original layout (before 2.6.11) */
 static const struct region_def mm_layout_2_6_0[] = {
@@ -376,11 +389,6 @@ static const struct attr_template reg_names[] = {
 static const struct attr_template tmpl_pid =
 	{ "pid", NULL, kdump_number };
 
-/**  Private data for the x86_64 arch-specific methods.
- */
-struct x86_64_data {
-};
-
 static kdump_status x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 				kdump_paddr_t *paddr);
 
@@ -402,23 +410,67 @@ add_canonical_regions(kdump_ctx *ctx, struct vtop_map *map)
 	return res;
 }
 
+/** Set the kernel text virtual to physical offset.
+ * @param archdata   x86-64 arch-specific data.
+ * @param phys_base  Kernel physical base address.
+ */
+static void
+set_ktext_off(struct x86_64_data *archdata, kdump_addr_t phys_base)
+{
+	archdata->ktext_off = __START_KERNEL_map - phys_base;
+}
+
+/** Update the physical base offfset.
+ * @param ctx   Dump file object.
+ * @param attr  "linux.phys_base" attribute.
+ * @returns     Error status.
+ *
+ * This function is used as a post-set handler for @c linux.phys_base
+ * to update the total kernel text offset.
+ */
+static kdump_status
+update_phys_base(kdump_ctx *ctx, struct attr_data *attr)
+{
+	struct x86_64_data *archdata = ctx->shared->archdata;
+	const struct attr_ops *parent_ops;
+
+	set_ktext_off(archdata, attr_value(attr)->address);
+
+	parent_ops = archdata->phys_base_override.template.parent->ops;
+	return (parent_ops && parent_ops->post_set)
+		? parent_ops->post_set(ctx, attr)
+		: kdump_ok;
+}
+
 static kdump_status
 x86_64_init(kdump_ctx *ctx)
 {
-	static const struct kdump_xlat xlat = {
-		.method = KDUMP_XLAT_KTEXT,
-		.phys_off = __START_KERNEL_map,
-	};
+	struct x86_64_data *archdata;
+	struct kdump_xlat xlat;
 	kdump_status ret;
+
+	archdata = calloc(1, sizeof(struct x86_64_data));
+	if (!archdata)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate x86_64 private data");
+	ctx->shared->archdata = archdata;
+
+	set_ktext_off(archdata, get_phys_base(ctx));
 
 	ctx->shared->vtop_map.pgt_root = KDUMP_ADDR_MAX;
 	ctx->shared->vtop_map_xen.pgt_root = KDUMP_ADDR_MAX;
 
+	xlat.method = KDUMP_XLAT_DIRECT_PTR,
+	xlat.poff = &archdata->ktext_off;
 	ret = set_vtop_xlat(&ctx->shared->vtop_map,
 			    __START_KERNEL_map, VIRTADDR_MAX, &xlat);
 	if (ret != kdump_ok)
 		return set_error(ctx, ret,
 				 "Cannot set up initial kernel mapping");
+
+	attr_add_override(gattr(ctx, GKI_phys_base),
+			  &archdata->phys_base_override);
+	archdata->phys_base_override.ops.post_set = update_phys_base;
 
 	return kdump_ok;
 }
@@ -440,7 +492,7 @@ get_pml4(kdump_ctx *ctx)
 
 		ctx->shared->vtop_map.pgt_as = KDUMP_KPHYSADDR;
 		ctx->shared->vtop_map.pgt_root =
-			pgtaddr - __START_KERNEL_map + get_phys_base(ctx);
+			pgtaddr - __START_KERNEL_map - get_phys_base(ctx);
 	} else if (ret == kdump_nodata) {
 		struct attr_data *attr;
 		clear_error(ctx);
@@ -507,12 +559,14 @@ layout_by_pgt(kdump_ctx *ctx)
 }
 
 static void
-remove_ktext_xlat(struct vtop_map *map)
+remove_ktext_xlat(kdump_ctx *ctx, struct vtop_map *map)
 {
+	struct x86_64_data *archdata = ctx->shared->archdata;
 	struct kdump_vaddr_region *rgn;
 	for (rgn = map->region;
 	     rgn < &map->region[map->num_regions]; ++rgn)
-		if (rgn->xlat.method == KDUMP_XLAT_KTEXT) {
+		if (rgn->xlat.method == KDUMP_XLAT_DIRECT_PTR &&
+		    rgn->xlat.poff == &archdata->ktext_off) {
 			rgn->xlat.phys_off = 0UL;
 			rgn->xlat.method = KDUMP_XLAT_VTOP;
 		}
@@ -544,9 +598,17 @@ x86_64_vtop_init(kdump_ctx *ctx)
 
 	for (i = 0; i < layout->nregions; ++i) {
 		const struct region_def *def = &layout->regions[i];
-		ret = set_vtop_xlat(&ctx->shared->vtop_map,
-				    def->first, def->last,
-				    &def->xlat);
+		if (def->xlat.method == KDUMP_XLAT_DIRECT_PTR) {
+			struct kdump_xlat xlat = def->xlat;
+			xlat.poff = ctx->shared->archdata +
+				((void*)def->xlat.poff - (void*)ARCH_ANCHOR);
+			ret = set_vtop_xlat(&ctx->shared->vtop_map,
+					    def->first, def->last,
+					    &xlat);
+		} else
+			ret = set_vtop_xlat(&ctx->shared->vtop_map,
+					    def->first, def->last,
+					    &def->xlat);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret,
 					 "Cannot set up mapping #%d", i);
@@ -558,7 +620,7 @@ x86_64_vtop_init(kdump_ctx *ctx)
 			       &phys_base);
 		if (ret == kdump_nodata) {
 			clear_error(ctx);
-			remove_ktext_xlat(&ctx->shared->vtop_map);
+			remove_ktext_xlat(ctx, &ctx->shared->vtop_map);
 		} else if (ret == kdump_ok)
 			set_phys_base(ctx, phys_base - KERNEL_map_skip);
 		else
@@ -698,6 +760,20 @@ x86_64_process_load(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t paddr)
 	    vaddr < __START_KERNEL_map + MAX_PHYSICAL_START)
 		set_phys_base(ctx, paddr - (vaddr - __START_KERNEL_map));
 	return kdump_ok;
+}
+
+static void
+x86_64_cleanup(struct kdump_shared *shared)
+{
+	struct x86_64_data *archdata = shared->archdata;
+
+	if (!archdata)
+		return;
+
+	attr_remove_override(sgattr(shared, GKI_phys_base),
+			     &archdata->phys_base_override);
+	free(archdata);
+	shared->archdata = NULL;
 }
 
 static kdump_status
@@ -874,4 +950,5 @@ const struct arch_ops x86_64_ops = {
 	.vtop_xen = x86_64_vtop_xen,
 	.pfn_to_mfn = x86_64_pfn_to_mfn,
 	.mfn_to_pfn = x86_64_mfn_to_pfn,
+	.cleanup = x86_64_cleanup,
 };
