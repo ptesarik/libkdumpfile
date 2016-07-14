@@ -187,6 +187,10 @@ addrxlat_by_def(addrxlat_ctx *ctx, addrxlat_addr_t addr,
 		*paddr = addr + def->off;
 		return addrxlat_ok;
 
+	case ADDRXLAT_LINEAR_IND:
+		*paddr = addr + *def->poff;
+		return addrxlat_ok;
+
 	case ADDRXLAT_PGT:
 		return internal_pgt(ctx, addr, &def->pgt, paddr);
 
