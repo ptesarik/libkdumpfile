@@ -885,7 +885,16 @@ void init_vtop_maps(kdump_ctx *ctx);
 #define set_vtop_xlat INTERNAL_NAME(set_vtop_xlat)
 kdump_status set_vtop_xlat(struct vtop_map *map,
 			   kdump_vaddr_t first, kdump_vaddr_t last,
-			   kdump_xlat_method_t method, kdump_vaddr_t phys_off);
+			   const struct kdump_xlat *xlat);
+
+#define set_vtop_linear INTERNAL_NAME(set_vtop_linear)
+kdump_status set_vtop_xlat_linear(
+	struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
+	kdump_vaddr_t phys_off);
+
+#define set_vtop_pgt INTERNAL_NAME(set_vtop_pgt)
+kdump_status set_vtop_xlat_pgt(
+	struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last);
 
 #define flush_vtop_map INTERNAL_NAME(flush_vtop_map)
 void flush_vtop_map(struct vtop_map *map);

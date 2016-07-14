@@ -106,104 +106,112 @@
 
 struct region_def {
 	kdump_vaddr_t first, last;
-	kdump_xlat_method_t method;
-	kdump_vaddr_t phys_off;
+	struct kdump_xlat xlat;
 };
+
+#define PGT	\
+	{ .method = KDUMP_XLAT_VTOP }
+
+#define LINEAR(off)	\
+	{ .method = KDUMP_XLAT_DIRECT, .phys_off = (off) }
+
+#define KTEXT	\
+	{ .method = KDUMP_XLAT_KTEXT, .phys_off = __START_KERNEL_map }
 
 /* Original layout (before 2.6.11) */
 static const struct region_def mm_layout_2_6_0[] = {
 	{  0x0000000000000000,  0x0000007fffffffff, /* user space       */
-	   KDUMP_XLAT_VTOP,     0 },
+	   PGT },
 	/* 0x0000008000000000 - 0x000000ffffffffff     guard hole       */
 	{  0x0000010000000000,  0x000001ffffffffff, /* direct mapping   */
-	   KDUMP_XLAT_DIRECT,   0x0000010000000000 },
+	   LINEAR(0x0000010000000000) },
 	/* 0x0000020000000000 - 0x00007fffffffffff     unused hole      */
 	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
 	/* 0xffff800000000000 - 0xfffffeffffffffff     unused hole      */
 	{  0xffffff0000000000,  0xffffff7fffffffff, /* vmalloc/ioremap  */
-	   KDUMP_XLAT_VTOP,     0 },
+	   PGT },
 	/* 0xffffff8000000000 - 0xffffffff7fffffff     unused hole      */
 	{  0xffffffff80000000,  0xffffffff827fffff, /* kernel text      */
-	   KDUMP_XLAT_KTEXT,    0xffffffff80000000 },
+	   KTEXT },
 	/* 0xffffffff82800000 - 0xffffffff9fffffff     unused hole      */
 	{  0xffffffffa0000000,  0xffffffffafffffff, /* modules          */
-	   KDUMP_XLAT_VTOP,     0 },
+	   PGT },
 	/* 0xffffffffb0000000 - 0xffffffffff5exxxx     unused hole      */
 	{  0xffffffffff5ed000,  0xffffffffffdfffff, /* fixmap/vsyscalls */
-	   KDUMP_XLAT_VTOP,     0 },
+	   PGT },
 	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
 };
 
 /* New layout introduced in 2.6.11 */
 static const struct region_def mm_layout_2_6_11[] = {
 	{  0x0000000000000000,  0x00007fffffffffff, /* user space       */
-	   KDUMP_XLAT_VTOP,     0 },
+	   PGT },
 	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
 	/* 0xffff800000000000 - 0xffff80ffffffffff     guard hole       */
 	{  0xffff810000000000,  0xffffc0ffffffffff, /* direct mapping   */
-	   KDUMP_XLAT_DIRECT,   0xffff810000000000 },
+	   LINEAR(0xffff810000000000) },
 	/* 0xffffc10000000000 - 0xffffc1ffffffffff     guard hole       */
 	{  0xffffc20000000000,  0xffffe1ffffffffff, /* vmalloc/ioremap  */
-	   KDUMP_XLAT_VTOP,     0 },
+	   PGT },
 	{  0xffffe20000000000,  0xffffe2ffffffffff, /* VMEMMAP          */
-	   KDUMP_XLAT_VTOP,     0 },		    /*   (2.6.24+ only) */
+	   PGT },				    /*   (2.6.24+ only) */
 	/* 0xffffe30000000000 - 0xffffffff7fffffff     unused hole      */
 	{  0xffffffff80000000,  0xffffffff827fffff, /* kernel text      */
-	   KDUMP_XLAT_KTEXT,    0xffffffff80000000 },
+	   KTEXT },
 	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
 	{  0xffffffff88000000,  0xffffffffffdfffff, /* modules and      */
-	   KDUMP_XLAT_VTOP,     0 },		    /*  fixmap/vsyscall */
+	   PGT },				    /*  fixmap/vsyscall */
 	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
 };
 
 static const struct region_def mm_layout_2_6_27[] = {
 	{  0x0000000000000000,  0x00007fffffffffff, /* user space       */
-	   KDUMP_XLAT_VTOP,     0 },
+	   PGT },
 	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
 	/* 0xffff800000000000 - 0xffff80ffffffffff     guard hole       */
 	/* 0xffff810000000000 - 0xffff87ffffffffff     hypervisor area  */
 	{  0xffff880000000000,  0xffffc0ffffffffff, /* direct mapping   */
-	   KDUMP_XLAT_DIRECT,   0xffff880000000000 },
+	   LINEAR(0xffff880000000000) },
 	/* 0xffffc10000000000 - 0xffffc1ffffffffff     guard hole       */
 	{  0xffffc20000000000,  0xffffe1ffffffffff, /* vmalloc/ioremap  */
-	   KDUMP_XLAT_VTOP,     0 },
+	   PGT },
 	{  0xffffe20000000000,  0xffffe2ffffffffff, /* VMEMMAP          */
-	   KDUMP_XLAT_VTOP,     0 },
+	   PGT },
 	/* 0xffffe30000000000 - 0xffffffff7fffffff     unused hole      */
 	{  0xffffffff80000000,  0xffffffff827fffff, /* kernel text      */
-	   KDUMP_XLAT_KTEXT,    0xffffffff80000000 },
+	   KTEXT },
 	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
 	{  0xffffffff88000000,  0xffffffffffdfffff, /* modules and      */
-	   KDUMP_XLAT_VTOP,     0 },		    /*  fixmap/vsyscall */
+	   PGT },				    /*  fixmap/vsyscall */
 	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
 };
 
 static const struct region_def mm_layout_2_6_31[] = {
 	{  0x0000000000000000,  0x00007fffffffffff, /* user space       */
-	   KDUMP_XLAT_VTOP,     0 },
+	   PGT },
 	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
 	/* 0xffff800000000000 - 0xffff80ffffffffff     guard hole       */
 	/* 0xffff810000000000 - 0xffff87ffffffffff     hypervisor area  */
 	{  0xffff880000000000,  0xffffc7ffffffffff, /* direct mapping   */
-	   KDUMP_XLAT_DIRECT,   0xffff880000000000 },
+	   LINEAR(0xffff880000000000) },
 	/* 0xffffc80000000000 - 0xffffc8ffffffffff     guard hole       */
 	{  0xffffc90000000000,  0xffffe8ffffffffff, /* vmalloc/ioremap  */
-	   KDUMP_XLAT_VTOP,     0 },
+	   PGT },
 	/* 0xffffe90000000000 - 0xffffe9ffffffffff     guard hole       */
 	{  0xffffea0000000000,  0xffffeaffffffffff, /* VMEMMAP          */
-	   KDUMP_XLAT_VTOP,     0 },
+	   PGT },
 	/* 0xffffeb0000000000 - 0xffffffeeffffffff     unused hole      */
 	{  0xffffff0000000000,  0xffffff7fffffffff, /* %esp fixup stack */
-	   KDUMP_XLAT_VTOP,     0 },
+	   PGT },
 	/* 0xffffff8000000000 - 0xffffffeeffffffff     unused hole      */
 	{  0xffffffef00000000,  0xfffffffeffffffff, /* EFI runtime      */
-	   KDUMP_XLAT_VTOP,     0 },		    /*     (3.14+ only) */
+	   PGT },				    /*     (3.14+ only) */
 	/* 0xffffffff00000000 - 0xffffffff7fffffff     guard hole       */
 	{  0xffffffff80000000,  0xffffffff827fffff, /* kernel text      */
-	   KDUMP_XLAT_KTEXT,    0xffffffff80000000 },
+	   KTEXT },
 	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
 	{  0xffffffff88000000,  0xffffffffffdfffff, /* modules and      */
-	   KDUMP_XLAT_VTOP,     0 },		    /*  fixmap/vsyscall */
+	   PGT },				    /*  fixmap/vsyscall */
 	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
 };
 
@@ -381,16 +389,12 @@ add_canonical_regions(kdump_ctx *ctx, struct vtop_map *map)
 {
 	kdump_status res;
 
-	res = set_vtop_xlat(map,
-			    0, NONCANONICAL_START - 1,
-			    KDUMP_XLAT_VTOP, 0);
+	res = set_vtop_xlat_pgt(map, 0, NONCANONICAL_START - 1);
 	if (res != kdump_ok)
 		return set_error(ctx, res,
 				 "Cannot set up default  mapping");
 
-	res = set_vtop_xlat(map,
-			    NONCANONICAL_END + 1, VIRTADDR_MAX,
-			    KDUMP_XLAT_VTOP, 0);
+	res = set_vtop_xlat_pgt(map, NONCANONICAL_END + 1, VIRTADDR_MAX);
 	if (res != kdump_ok)
 		return set_error(ctx, res,
 				 "Cannot set up default  mapping");
@@ -401,14 +405,17 @@ add_canonical_regions(kdump_ctx *ctx, struct vtop_map *map)
 static kdump_status
 x86_64_init(kdump_ctx *ctx)
 {
+	static const struct kdump_xlat xlat = {
+		.method = KDUMP_XLAT_KTEXT,
+		.phys_off = __START_KERNEL_map,
+	};
 	kdump_status ret;
 
 	ctx->shared->vtop_map.pgt_root = KDUMP_ADDR_MAX;
 	ctx->shared->vtop_map_xen.pgt_root = KDUMP_ADDR_MAX;
 
 	ret = set_vtop_xlat(&ctx->shared->vtop_map,
-			    __START_KERNEL_map, VIRTADDR_MAX,
-			    KDUMP_XLAT_KTEXT, __START_KERNEL_map);
+			    __START_KERNEL_map, VIRTADDR_MAX, &xlat);
 	if (ret != kdump_ok)
 		return set_error(ctx, ret,
 				 "Cannot set up initial kernel mapping");
@@ -539,7 +546,7 @@ x86_64_vtop_init(kdump_ctx *ctx)
 		const struct region_def *def = &layout->regions[i];
 		ret = set_vtop_xlat(&ctx->shared->vtop_map,
 				    def->first, def->last,
-				    def->method, def->phys_off);
+				    &def->xlat);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret,
 					 "Cannot set up mapping #%d", i);
@@ -580,16 +587,17 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 
 	if (pgtaddr >= XEN_DIRECTMAP_START) {
 		/* Xen versions before 3.2.0 */
-		res = set_vtop_xlat(&ctx->shared->vtop_map_xen,
-				    XEN_DIRECTMAP_START, XEN_DIRECTMAP_END_OLD,
-				    KDUMP_XLAT_DIRECT, XEN_DIRECTMAP_START);
+		res = set_vtop_xlat_linear(
+			&ctx->shared->vtop_map_xen,
+			XEN_DIRECTMAP_START, XEN_DIRECTMAP_END_OLD,
+			XEN_DIRECTMAP_START);
 	} else {
 		kdump_vaddr_t xen_virt_start;
 		xen_virt_start = pgtaddr & ~((1ULL<<30) - 1);
-		res = set_vtop_xlat(&ctx->shared->vtop_map_xen,
-				    xen_virt_start,
-				    xen_virt_start + XEN_VIRT_SIZE - 1,
-				    KDUMP_XLAT_KTEXT, xen_virt_start);
+		res = set_vtop_xlat_linear(
+			&ctx->shared->vtop_map_xen,
+			xen_virt_start,	xen_virt_start + XEN_VIRT_SIZE - 1,
+			xen_virt_start);
 	}
 	if (res != kdump_ok)
 		return set_error(ctx, res,

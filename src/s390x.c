@@ -319,9 +319,8 @@ s390x_vtop_init(kdump_ctx *ctx)
 		if (ret != kdump_ok)
 			return set_error(ctx, ret,
 					 "Cannot determine paging type");
-		ret = set_vtop_xlat(&ctx->shared->vtop_map,
-				    0, VIRTADDR_MAX,
-				    KDUMP_XLAT_VTOP, 0);
+		ret = set_vtop_xlat_pgt(&ctx->shared->vtop_map,
+					0, VIRTADDR_MAX);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret,
 					 "Cannot set up pagetable mapping");
@@ -339,9 +338,8 @@ s390x_vtop_init(kdump_ctx *ctx)
 			return ret;
 		highmem = dump64toh(ctx, highmem);
 
-		ret = set_vtop_xlat(&ctx->shared->vtop_map,
-				    0, highmem,
-				    KDUMP_XLAT_DIRECT, 0);
+		ret = set_vtop_xlat_linear(&ctx->shared->vtop_map,
+					   0, highmem, 0);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret, "Cannot set up directmap");
 	} else if (ctx->shared->vtop_map.pgt_root == KDUMP_ADDR_MAX)
@@ -504,9 +502,8 @@ s390x_init(kdump_ctx *ctx)
 	process_lowcore_info(ctx);
 	clear_error(ctx);
 
-	ret = set_vtop_xlat(&ctx->shared->vtop_map,
-			    0, VIRTADDR_MAX,
-			    KDUMP_XLAT_DIRECT, 0);
+	ret = set_vtop_xlat_linear(&ctx->shared->vtop_map,
+				   0, VIRTADDR_MAX, 0);
 	if (ret != kdump_ok)
 		return set_error(ctx, ret, "Cannot set up initial directmap");
 

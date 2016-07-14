@@ -356,9 +356,8 @@ ppc64_vtop_init(kdump_ctx *ctx)
 	set_phys_base(ctx, addr);
 
 	flush_vtop_map(&ctx->shared->vtop_map);
-	res = set_vtop_xlat(&ctx->shared->vtop_map,
-			    addr, addr + 0x1000000000000000,
-			    KDUMP_XLAT_DIRECT, addr);
+	res = set_vtop_xlat_linear(&ctx->shared->vtop_map,
+				   addr, addr + 0x1000000000000000, addr);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot set up directmap");
 
@@ -394,9 +393,7 @@ ppc64_vtop_init(kdump_ctx *ctx)
 
 	vmal = dump64toh(ctx, vmal);
 
-	res = set_vtop_xlat(&ctx->shared->vtop_map,
-			    vmal, VIRTADDR_MAX,
-			    KDUMP_XLAT_VTOP, addr);
+	res = set_vtop_xlat_pgt(&ctx->shared->vtop_map, vmal, VIRTADDR_MAX);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot set up pagetable mapping");
 

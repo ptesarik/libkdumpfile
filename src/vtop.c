@@ -39,7 +39,7 @@
 
 kdump_status
 set_vtop_xlat(struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
-	      kdump_xlat_method_t method, kdump_vaddr_t phys_off)
+	      const struct kdump_xlat *xlat)
 {
 	struct kdump_vaddr_region *rgn, *prevrgn;
 	kdump_vaddr_t rfirst, rlast;
@@ -109,9 +109,30 @@ set_vtop_xlat(struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
 	}
 
 	prevrgn->max_off = last - first;
-	prevrgn->xlat.phys_off = phys_off;
-	prevrgn->xlat.method = method;
+	prevrgn->xlat = *xlat;
 	return kdump_ok;
+}
+
+kdump_status
+set_vtop_xlat_linear(struct vtop_map *map,
+		     kdump_vaddr_t first, kdump_vaddr_t last,
+		     kdump_vaddr_t phys_off)
+{
+	const struct kdump_xlat xlat = {
+		.phys_off = phys_off,
+		.method = KDUMP_XLAT_DIRECT,
+	};
+	return set_vtop_xlat(map, first, last, &xlat);
+}
+
+kdump_status
+set_vtop_xlat_pgt(struct vtop_map *map,
+		  kdump_vaddr_t first, kdump_vaddr_t last)
+{
+	const struct kdump_xlat xlat = {
+		.method = KDUMP_XLAT_VTOP,
+	};
+	return set_vtop_xlat(map, first, last, &xlat);
 }
 
 void
