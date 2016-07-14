@@ -510,12 +510,21 @@ typedef enum _kdump_xlat_method {
 	/* Direct mapping: virtual = physical + phys_off */
 	KDUMP_XLAT_DIRECT,
 
+	/* Direct mapping with a pointer: virtual = physical + *poff */
+	KDUMP_XLAT_DIRECT_PTR,
+
 	/* Kernel text: virtual = physical + phys_off - ctx->phys_base */
 	KDUMP_XLAT_KTEXT,
 } kdump_xlat_method_t;
 
 struct kdump_xlat {
-	kdump_addr_t phys_off;	    /**< offset from physical addresses */
+	union {
+		/** offset from physical addresses */
+		kdump_addr_t phys_off;
+
+		/** pointer to the physical offset */
+		kdump_addr_t *poff;
+	};
 	kdump_xlat_method_t method; /**< vaddr->paddr translation method */
 };
 

@@ -273,6 +273,10 @@ map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 		*paddr = vaddr - xlat->phys_off;
 		return kdump_ok;
 
+	case KDUMP_XLAT_DIRECT_PTR:
+		*paddr = vaddr - *xlat->poff;
+		return kdump_ok;
+
 	case KDUMP_XLAT_KTEXT:
 		attr = gattr(ctx, map->phys_base);
 		if (validate_attr(ctx, attr) != kdump_ok)
