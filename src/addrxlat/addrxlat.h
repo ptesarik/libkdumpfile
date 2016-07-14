@@ -419,7 +419,7 @@ addrxlat_status addrxlat_by_map(
  * @returns         Error status.
  */
 typedef addrxlat_status addrxlat_read32_fn(
-	addrxlat_ctx *ctx, addrxlat_fulladdr_t addr, uint32_t *val,
+	addrxlat_ctx *ctx, const addrxlat_fulladdr_t *addr, uint32_t *val,
 	void *data);
 
 /** Set the read callback for 32-bit integers.
@@ -438,7 +438,7 @@ addrxlat_read32_fn *addrxlat_cb_read32(
  * @returns         Error status.
  */
 typedef addrxlat_status addrxlat_read64_fn(
-	addrxlat_ctx *ctx, addrxlat_fulladdr_t addr, uint64_t *val,
+	addrxlat_ctx *ctx, const addrxlat_fulladdr_t *addr, uint64_t *val,
 	void *data);
 
 /** Set the read callback for 64-bit integers.

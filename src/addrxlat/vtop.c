@@ -41,23 +41,21 @@
 static addrxlat_status
 read_pte(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
-	addrxlat_fulladdr_t ptep;
 	uint64_t pte64;
 	uint32_t pte32;
 	addrxlat_pte_t pte;
 	addrxlat_status status;
 
-	ptep = state->base;
-	ptep.addr += state->idx[state->level] << ctx->pte_shift;
+	state->base.addr += state->idx[state->level] << ctx->pte_shift;
 
 	switch(ctx->pte_shift) {
 	case 2:
-		status = ctx->cb_read32(ctx, ptep, &pte32, NULL);
+		status = ctx->cb_read32(ctx, &state->base, &pte32, NULL);
 		pte = pte32;
 		break;
 
 	case 3:
-		status = ctx->cb_read64(ctx, ptep, &pte64, NULL);
+		status = ctx->cb_read64(ctx, &state->base, &pte64, NULL);
 		pte = pte64;
 		break;
 

@@ -65,13 +65,14 @@ find_entry(addrxlat_addr_t addr)
 }
 
 static addrxlat_status
-read32(addrxlat_ctx *ctx, addrxlat_fulladdr_t addr, uint32_t *val, void *data)
+read32(addrxlat_ctx *ctx, const addrxlat_fulladdr_t *addr, uint32_t *val,
+       void *data)
 {
-	struct entry *ent = find_entry(addr.addr);
+	struct entry *ent = find_entry(addr->addr);
 	if (!ent) {
 		snprintf(read_err_str, sizeof read_err_str,
-			 "No entry for address 0x%llx",
-			 (unsigned long long) addr.addr);
+			 "No entry for address 0x%"ADDRXLAT_PRIxADDR,
+			 addr->addr);
 		return -read_notfound;
 	}
 	*val = ent->val;
@@ -79,13 +80,14 @@ read32(addrxlat_ctx *ctx, addrxlat_fulladdr_t addr, uint32_t *val, void *data)
 }
 
 static addrxlat_status
-read64(addrxlat_ctx *ctx, addrxlat_fulladdr_t addr, uint64_t *val, void *data)
+read64(addrxlat_ctx *ctx, const addrxlat_fulladdr_t *addr, uint64_t *val,
+       void *data)
 {
-	struct entry *ent = find_entry(addr.addr);
+	struct entry *ent = find_entry(addr->addr);
 	if (!ent) {
 		snprintf(read_err_str, sizeof read_err_str,
-			 "No entry for address 0x%llx",
-			 (unsigned long long) addr.addr);
+			 "No entry for address 0x%"ADDRXLAT_PRIxADDR,
+			 addr->addr);
 		return -read_notfound;
 	}
 	*val = ent->val;
