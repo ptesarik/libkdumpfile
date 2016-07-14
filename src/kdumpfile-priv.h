@@ -512,9 +512,6 @@ typedef enum _kdump_xlat_method {
 
 	/* Direct mapping with a pointer: virtual = physical + *poff */
 	KDUMP_XLAT_DIRECT_PTR,
-
-	/* Kernel text: virtual = physical + phys_off - ctx->phys_base */
-	KDUMP_XLAT_KTEXT,
 } kdump_xlat_method_t;
 
 struct kdump_xlat {
@@ -540,7 +537,6 @@ typedef kdump_status vtop_pgt_fn(
  */
 struct vtop_map {
 	vtop_pgt_fn *vtop_pgt_fn;     /**< function to walk page tables */
-	enum global_keyidx phys_base; /**< kernel physical base  */
 
 	kdump_addrspace_t pgt_as;     /**< root page table address space */
 	kdump_addr_t pgt_root;	      /**< root page table origin */
