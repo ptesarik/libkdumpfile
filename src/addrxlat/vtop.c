@@ -50,12 +50,14 @@ read_pte(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 
 	switch(ctx->pte_shift) {
 	case 2:
-		status = ctx->cb_read32(ctx, &state->base, &pte32, NULL);
+		status = ctx->cb_read32(ctx, &state->base, &pte32,
+					state->data);
 		pte = pte32;
 		break;
 
 	case 3:
-		status = ctx->cb_read64(ctx, &state->base, &pte64, NULL);
+		status = ctx->cb_read64(ctx, &state->base, &pte64,
+					state->data);
 		pte = pte64;
 		break;
 
@@ -72,9 +74,9 @@ read_pte(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 
 DEFINE_INTERNAL(pgt_start)
 
-addrxlat_status addrxlat_pgt_start(
-	addrxlat_ctx *ctx, addrxlat_addr_t addr,
-	addrxlat_pgt_state_t *state)
+addrxlat_status
+addrxlat_pgt_start(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state,
+		   addrxlat_addr_t addr)
 {
 	unsigned short i;
 	addrxlat_status status;
@@ -123,19 +125,14 @@ addrxlat_pgt_next(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 DEFINE_INTERNAL(pgt)
 
 addrxlat_status
-addrxlat_pgt(addrxlat_ctx *ctx, addrxlat_addr_t addr,
-	     const addrxlat_fulladdr_t *pgt, addrxlat_addr_t *paddr)
+addrxlat_pgt(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state,
+	     addrxlat_addr_t addr)
 {
-	addrxlat_pgt_state_t state;
 	addrxlat_status status;
 
-	state.base = *pgt;
-	status = internal_pgt_start(ctx, addr, &state);
+	status = internal_pgt_start(ctx, state, addr);
 	while (status == addrxlat_continue)
-		status = internal_pgt_next(ctx, &state);
-
-	if (status == addrxlat_ok)
-		*paddr = state.base.addr;
+		status = internal_pgt_next(ctx, state);
 
 	return status;
 }
@@ -172,9 +169,24 @@ pgt_none(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 
 DEFINE_INTERNAL(by_def)
 
+static addrxlat_status
+pgt_xlat_by_def(addrxlat_ctx *ctx, addrxlat_ctl_t *ctl,
+		const addrxlat_def_t *def)
+{
+	addrxlat_pgt_state_t state;
+	addrxlat_status status;
+
+	state.base = def->pgt;
+	state.data = ctl->data;
+	status = internal_pgt(ctx, &state, ctl->addr);
+	if (status == addrxlat_ok)
+		ctl->addr = state.base.addr;
+	return status;
+}
+
 addrxlat_status
-addrxlat_by_def(addrxlat_ctx *ctx, addrxlat_addr_t addr,
-		const addrxlat_def_t *def, addrxlat_addr_t *paddr)
+addrxlat_by_def(addrxlat_ctx *ctx, addrxlat_ctl_t *ctl,
+		const addrxlat_def_t *def)
 {
 	switch (def->method) {
 	case ADDRXLAT_NONE:
@@ -182,15 +194,15 @@ addrxlat_by_def(addrxlat_ctx *ctx, addrxlat_addr_t addr,
 				 "No translation defined");
 
 	case ADDRXLAT_LINEAR:
-		*paddr = addr + def->off;
+		ctl->addr += def->off;
 		return addrxlat_ok;
 
 	case ADDRXLAT_LINEAR_IND:
-		*paddr = addr + *def->poff;
+		ctl->addr += *def->poff;
 		return addrxlat_ok;
 
 	case ADDRXLAT_PGT:
-		return internal_pgt(ctx, addr, &def->pgt, paddr);
+		return pgt_xlat_by_def(ctx, ctl, def);
 
 	default:
 		return set_error(ctx, addrxlat_invalid,

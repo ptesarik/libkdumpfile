@@ -225,10 +225,11 @@ set_linear(const char *spec)
 static int
 do_xlat(addrxlat_ctx *ctx, addrxlat_addr_t vaddr)
 {
-	addrxlat_addr_t paddr;
+	addrxlat_ctl_t control;
 	addrxlat_status status;
 
-	status = addrxlat_by_def(ctx, vaddr, &xlatdef, &paddr);
+	control.addr = vaddr;
+	status = addrxlat_by_def(ctx, &control, &xlatdef);
 	if (status != addrxlat_ok) {
 		fprintf(stderr, "Address translation failed: %s\n",
 			((int) status > 0
@@ -237,7 +238,7 @@ do_xlat(addrxlat_ctx *ctx, addrxlat_addr_t vaddr)
 		return TEST_FAIL;
 	}
 
-	printf("0x%llx\n", (unsigned long long)paddr);
+	printf("0x%"ADDRXLAT_PRIxADDR "\n", control.addr);
 
 	return TEST_OK;
 }

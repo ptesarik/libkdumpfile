@@ -125,12 +125,12 @@ addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 }
 
 addrxlat_status
-addrxlat_by_map(addrxlat_ctx *ctx, addrxlat_addr_t addr,
-		const addrxlat_map_t *map, addrxlat_addr_t *paddr)
+addrxlat_by_map(addrxlat_ctx *ctx, addrxlat_ctl_t *ctl,
+		const addrxlat_map_t *map)
 {
-	const addrxlat_def_t *def = internal_map_search(map, addr);
+	const addrxlat_def_t *def = internal_map_search(map, ctl->addr);
 	return def
-		? internal_by_def(ctx, addr, def, paddr)
+		? internal_by_def(ctx, ctl, def)
 		: set_error(ctx, addrxlat_invalid,
 			    "No translation defined");
 }
