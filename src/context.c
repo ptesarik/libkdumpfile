@@ -236,14 +236,6 @@ kdump_cb_get_symbol_val(kdump_ctx *ctx, kdump_get_symbol_val_fn *cb)
 	return ret;
 }
 
-kdump_vtop_hook_fn *
-kdump_cb_vtop_hook(kdump_ctx *ctx, kdump_vtop_hook_fn *cb)
-{
-	kdump_vtop_hook_fn *ret = ctx->cb_vtop_hook_fn;
-	ctx->cb_vtop_hook_fn = cb;
-	return ret;
-}
-
 void
 kdump_set_priv(kdump_ctx *ctx, void *data)
 {

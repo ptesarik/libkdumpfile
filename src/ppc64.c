@@ -258,7 +258,6 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	vaddr_split(&archdata->pgform, vaddr, &split);
 
-	vtop_hook(ctx, 3, KDUMP_KVADDR, archdata->pg.pg, split.pgd);
 	pgdp = archdata->pg.pg + split.pgd * sizeof(uint64_t);
 	res = read_u64(ctx, KDUMP_KVADDR, pgdp, 1, "PGD entry", &pgd);
 	if (res != kdump_ok)
@@ -278,7 +277,6 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	base = (pgd & (~archdata->pg.pgd_mask));
 	if (archdata->pgform.pud_bits != 0) {
-		vtop_hook(ctx, 2, KDUMP_KVADDR, base, split.pud);
 		pudp = base + split.pud * sizeof(uint64_t);
 		res = read_u64(ctx, KDUMP_KVADDR, pudp, 1, "PUD entry", &pud);
 		if (res != kdump_ok)
@@ -300,7 +298,6 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 		base = pud & (~archdata->pg.pud_mask);
 	}
 
-	vtop_hook(ctx, 1, KDUMP_KVADDR, base, split.pmd);
 	pmdp = base + split.pmd * sizeof(uint64_t);
 	res = read_u64(ctx, KDUMP_KVADDR, pmdp, 0, "PMD entry", &pmd);
 	if (res != kdump_ok)
@@ -319,7 +316,6 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 					 pmd, archdata->pg.pmd_shift);
 
 	base = pmd & (~archdata->pg.pmd_mask);
-	vtop_hook(ctx, 0, KDUMP_KVADDR, base, split.pte);
 	ptep = base + split.pte * sizeof(uint64_t);
 	res = read_u64(ctx, KDUMP_KVADDR, ptep, 0, "PTE entry", &pte);
 	if (res != kdump_ok)

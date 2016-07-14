@@ -57,7 +57,6 @@ LIBKDUMPFILE_0 {
     kdump_vmcoreinfo_symbol_xen;
     kdump_cb_get_symbol_val;
     kdump_cb_get_symbol_val_xen;
-    kdump_cb_vtop_hook;
     kdump_set_priv;
     kdump_get_priv;
 

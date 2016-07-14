@@ -36,16 +36,6 @@
 
 #include "testutil.h"
 
-static int verbose;
-
-static void
-vtop_hook(kdump_ctx *ctx, unsigned short tbl,
-	    kdump_addrspace_t as, kdump_addr_t addr, unsigned idx)
-{
-	printf("Level %u: addrspace %u %llx[%u]\n",
-	       tbl, (unsigned)as, (unsigned long long)addr, idx);
-}
-
 static int
 vtop(kdump_ctx *ctx, unsigned long long vaddr)
 {
@@ -58,9 +48,6 @@ vtop(kdump_ctx *ctx, unsigned long long vaddr)
 			kdump_err_str(ctx));
 		return TEST_FAIL;
 	}
-
-	if (verbose)
-		kdump_cb_vtop_hook(ctx, vtop_hook);
 
 	res = kdump_vtop(ctx, vaddr, &paddr);
 	if (res != kdump_ok) {
@@ -107,15 +94,13 @@ usage(FILE *f, const char *prog)
 		"Usage: %s <dump> <vaddr>\n\n"
 		"Options:\n"
 		"  --help     Print this help and exit\n"
-		"  --pgt      Force pagetable translation\n"
-		"  --verbose  Verbose translation progress\n",
+		"  --pgt      Force pagetable translation\n",
 		prog);
 }
 
 static const struct option opts[] = {
 	{ "help", no_argument, NULL, 'h' },
 	{ "pgt", no_argument, NULL, 'p' },
-	{ "verbose", no_argument, NULL, 'v' },
 	{ NULL, 0, NULL, 0 }
 };
 
@@ -131,14 +116,10 @@ main(int argc, char **argv)
 	int c;
 
 	fhelp = stdout;
-	while ( (c = getopt_long(argc, argv, "pvh", opts, NULL)) != -1)
+	while ( (c = getopt_long(argc, argv, "ph", opts, NULL)) != -1)
 		switch (c) {
 		case 'p':
 			flags = KDUMP_CF_FORCE_VTOP_PGT;
-			break;
-
-		case 'v':
-			verbose = 1;
 			break;
 
 		case '?':

@@ -724,7 +724,6 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 		return set_error(ctx, kdump_invalid,
 				 "VTOP translation not initialized");
 
-	vtop_hook(ctx, 3, pml4_as, pml4, pgd_index(vaddr));
 	pgdp = pml4 + pgd_index(vaddr) * sizeof(uint64_t);
 	ret = read_u64(ctx, pml4_as, pgdp, 1, "PGD entry", &pgd);
 	if (ret != kdump_ok)
@@ -738,7 +737,6 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 				 (unsigned long long) pgd);
 
 	base = pgd & ~PHYSADDR_MASK & PAGE_MASK;
-	vtop_hook(ctx, 2, KDUMP_MACHPHYSADDR, base, pud_index(vaddr));
 	pudp = base + pud_index(vaddr) * sizeof(uint64_t);
 	ret = read_u64(ctx, KDUMP_MACHPHYSADDR, pudp, 1, "PUD entry", &pud);
 	if (ret != kdump_ok)
@@ -757,7 +755,6 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	}
 
 	base = pud & ~PHYSADDR_MASK & PAGE_MASK;
-	vtop_hook(ctx, 1, KDUMP_MACHPHYSADDR, base, pmd_index(vaddr));
 	pmdp = base + pmd_index(vaddr) * sizeof(uint64_t);
 	ret = read_u64(ctx, KDUMP_MACHPHYSADDR, pmdp, 0, "PMD entry", &pmd);
 	if (ret != kdump_ok)
@@ -775,7 +772,6 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	}
 
 	base = pmd & ~PHYSADDR_MASK & PAGE_MASK;
-	vtop_hook(ctx, 0, KDUMP_MACHPHYSADDR, base, pte_index(vaddr));
 	ptep = base + pte_index(vaddr) * sizeof(uint64_t);
 	ret = read_u64(ctx, KDUMP_MACHPHYSADDR, ptep, 0, "PTE entry", &pte);
 	if (ret != kdump_ok)

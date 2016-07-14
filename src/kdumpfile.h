@@ -841,32 +841,6 @@ kdump_cb_get_symbol_val(kdump_ctx *ctx, kdump_get_symbol_val_fn *cb);
 kdump_get_symbol_val_fn *
 kdump_cb_get_symbol_val_xen(kdump_ctx *ctx, kdump_get_symbol_val_fn *cb);
 
-/**  Type for the vtop_hook callback function.
- * @param ctx   Dump file object of the caller.
- * @param tbl   Table index (lowest-level table is 0).
- * @param as    Page table address space.
- * @param addr  Page table address.
- * @param idx   Index inside table.
- *
- * This type is used for @ref kdump_cb_vtop_hook.
- */
-typedef void kdump_vtop_hook_fn(
-	kdump_ctx *ctx, unsigned short tbl,
-	kdump_addrspace_t as, kdump_addr_t addr, unsigned idx);
-
-/**  Set the vtop_hook callback
- * @param ctx  Dump file object.
- * @param cb   New callback function.
- * @return     Previous callback function.
- *
- * The vtop_hook callback is called during explicit address translation
- * (e.g. when @ref kdump_vtop is called). It is not called when addres
- * translation is needed internally (e.g. when reading from a virtual
- * address).
- */
-kdump_vtop_hook_fn *
-kdump_cb_vtop_hook(kdump_ctx *ctx, kdump_vtop_hook_fn *cb);
-
 /**  Set pointer to user private data.
  * @param ctx  Dump file object.
  * @param data Generic data pointer.
