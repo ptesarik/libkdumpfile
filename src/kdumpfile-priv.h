@@ -533,6 +533,8 @@ struct vtop_map {
 	vtop_pgt_fn *vtop_pgt_fn;     /**< function to walk page tables */
 	enum global_keyidx phys_base; /**< kernel physical base  */
 
+	kdump_addrspace_t pgt_as;     /**< root page table address space */
+	kdump_addr_t pgt_root;	      /**< root page table origin */
 	unsigned num_regions;	      /**< number of elements in @c region */
 	struct kdump_vaddr_region *region;
 };

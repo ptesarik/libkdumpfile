@@ -63,8 +63,6 @@ struct ppc64_data {
 		unsigned pgd_shift;
 
 		int rpn_shift;	/**< Real Page Number shift. */
-
-		kdump_vaddr_t pg;
 	} pg;
 };
 
@@ -258,7 +256,7 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	vaddr_split(&archdata->pgform, vaddr, &split);
 
-	pgdp = archdata->pg.pg + split.pgd * sizeof(uint64_t);
+	pgdp = ctx->shared->vtop_map.pgt_root + split.pgd * sizeof(uint64_t);
 	res = read_u64(ctx, KDUMP_KVADDR, pgdp, 1, "PGD entry", &pgd);
 	if (res != kdump_ok)
 		return res;
@@ -333,7 +331,6 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 static kdump_status
 ppc64_vtop_init(kdump_ctx *ctx)
 {
-	struct ppc64_data *archdata = ctx->shared->archdata;
 	kdump_vaddr_t addr, vmal;
 	struct attr_data *base, *attr;
 	char *endp;
@@ -347,7 +344,8 @@ ppc64_vtop_init(kdump_ctx *ctx)
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot resolve %s",
 				 "swapper_pg_dir");
-	archdata->pg.pg = addr;
+	ctx->shared->vtop_map.pgt_as = KDUMP_KVADDR;
+	ctx->shared->vtop_map.pgt_root = addr;
 
 	rwlock_unlock(&ctx->shared->lock);
 	res = get_symbol_val(ctx, "_stext", &addr);

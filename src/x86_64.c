@@ -371,10 +371,6 @@ static const struct attr_template tmpl_pid =
 /**  Private data for the x86_64 arch-specific methods.
  */
 struct x86_64_data {
-	kdump_addrspace_t pml4_as; /**< Linux kernel PML4 address space */
-	kdump_addr_t pml4;	   /**< Linux kernel PML4 address */
-
-	kdump_addr_t xen_pml4;	   /**< Xen hypervisor PML4 address */
 };
 
 static kdump_status x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
@@ -405,17 +401,10 @@ add_canonical_regions(kdump_ctx *ctx, struct vtop_map *map)
 static kdump_status
 x86_64_init(kdump_ctx *ctx)
 {
-	struct x86_64_data *archdata;
 	kdump_status ret;
 
-	archdata = calloc(1, sizeof(struct x86_64_data));
-	if (!archdata)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate x86_64 private data");
-	ctx->shared->archdata = archdata;
-
-	archdata->pml4 = ~(kdump_addr_t)0;
-	archdata->xen_pml4 = ~(kdump_addr_t)0;
+	ctx->shared->vtop_map.pgt_root = KDUMP_ADDR_MAX;
+	ctx->shared->vtop_map_xen.pgt_root = KDUMP_ADDR_MAX;
 
 	ret = set_vtop_xlat(&ctx->shared->vtop_map,
 			    __START_KERNEL_map, VIRTADDR_MAX,
@@ -430,7 +419,6 @@ x86_64_init(kdump_ctx *ctx)
 static kdump_status
 get_pml4(kdump_ctx *ctx)
 {
-	struct x86_64_data *archdata = ctx->shared->archdata;
 	kdump_vaddr_t pgtaddr;
 	kdump_status ret;
 
@@ -443,8 +431,8 @@ get_pml4(kdump_ctx *ctx)
 					 "Wrong page directory address: 0x%llx",
 					 (unsigned long long) pgtaddr);
 
-		archdata->pml4_as = KDUMP_KPHYSADDR;
-		archdata->pml4 =
+		ctx->shared->vtop_map.pgt_as = KDUMP_KPHYSADDR;
+		ctx->shared->vtop_map.pgt_root =
 			pgtaddr - __START_KERNEL_map + get_phys_base(ctx);
 	} else if (ret == kdump_nodata) {
 		struct attr_data *attr;
@@ -453,8 +441,8 @@ get_pml4(kdump_ctx *ctx)
 		if (!attr || validate_attr(ctx, attr) != kdump_ok)
 			return set_error(ctx, kdump_nodata,
 					 "Cannot find top-level page table");
-		archdata->pml4_as = KDUMP_MACHPHYSADDR;
-		archdata->pml4 = attr_value(attr)->number;
+		ctx->shared->vtop_map.pgt_as = KDUMP_MACHPHYSADDR;
+		ctx->shared->vtop_map.pgt_root = attr_value(attr)->number;
 	} else
 		return ret;
 
@@ -577,7 +565,6 @@ x86_64_vtop_init(kdump_ctx *ctx)
 static kdump_status
 x86_64_vtop_init_xen(kdump_ctx *ctx)
 {
-	struct x86_64_data *archdata = ctx->shared->archdata;
 	kdump_addr_t pgtaddr;
 	kdump_status res;
 
@@ -608,7 +595,8 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 		return set_error(ctx, res,
 				 "Cannot set up initial kernel mapping");
 
-	archdata->xen_pml4 = pgtaddr;
+	ctx->shared->vtop_map_xen.pgt_as = KDUMP_XENVADDR;
+	ctx->shared->vtop_map_xen.pgt_root = pgtaddr;
 	return kdump_ok;
 }
 
@@ -704,28 +692,21 @@ x86_64_process_load(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t paddr)
 	return kdump_ok;
 }
 
-static void
-x86_64_cleanup(struct kdump_shared *shared)
-{
-	free(shared->archdata);
-	shared->archdata = NULL;
-}
-
 static kdump_status
 x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
-	       kdump_addrspace_t pml4_as, kdump_addr_t pml4)
+	       const struct vtop_map *map)
 {
 	kdump_addr_t pgdp, pudp, pmdp, ptep;
 	uint64_t pgd, pud, pmd, pte;
 	kdump_paddr_t base;
 	kdump_status ret;
 
-	if (pml4 == ~(kdump_addr_t)0)
+	if (map->pgt_root == KDUMP_ADDR_MAX)
 		return set_error(ctx, kdump_invalid,
 				 "VTOP translation not initialized");
 
-	pgdp = pml4 + pgd_index(vaddr) * sizeof(uint64_t);
-	ret = read_u64(ctx, pml4_as, pgdp, 1, "PGD entry", &pgd);
+	pgdp = map->pgt_root + pgd_index(vaddr) * sizeof(uint64_t);
+	ret = read_u64(ctx, map->pgt_as, pgdp, 1, "PGD entry", &pgd);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -791,17 +772,13 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 static kdump_status
 x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	struct x86_64_data *archdata = ctx->shared->archdata;
-	return x86_64_pt_walk(ctx, vaddr, paddr,
-			      archdata->pml4_as, archdata->pml4);
+	return x86_64_pt_walk(ctx, vaddr, paddr, &ctx->shared->vtop_map);
 }
 
 static kdump_status
 x86_64_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	struct x86_64_data *archdata = ctx->shared->archdata;
-	return x86_64_pt_walk(ctx, vaddr, paddr,
-			      KDUMP_XENVADDR, archdata->xen_pml4);
+	return x86_64_pt_walk(ctx, vaddr, paddr, &ctx->shared->vtop_map_xen);
 }
 
 static kdump_status
@@ -889,5 +866,4 @@ const struct arch_ops x86_64_ops = {
 	.vtop_xen = x86_64_vtop_xen,
 	.pfn_to_mfn = x86_64_pfn_to_mfn,
 	.mfn_to_pfn = x86_64_mfn_to_pfn,
-	.cleanup = x86_64_cleanup,
 };

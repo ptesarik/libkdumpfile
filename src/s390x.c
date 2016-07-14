@@ -122,7 +122,6 @@ struct os_info {
 /**  Private data for the s390x arch-specific methods.
  */
 struct s390x_data {
-	kdump_paddr_t pgdir;	/**< Top-level page directory address */
 	int pgttype;
 };
 
@@ -214,14 +213,14 @@ s390x_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	uint64_t entry;
 	kdump_status ret;
 
-	if (archdata->pgdir == ~(kdump_addr_t)0)
+	if (ctx->shared->vtop_map.pgt_root == KDUMP_ADDR_MAX)
 		return set_error(ctx, kdump_invalid,
 				 "VTOP translation not initialized");
 
 	/* TODO: This should be initialised from kernel_asce, but for
 	 * now, just assume that the top-level table is always maximum size.
 	 */
-	ctl.paddr = archdata->pgdir;
+	ctl.paddr = ctx->shared->vtop_map.pgt_root;
 	ctl.tbltype = archdata->pgttype;
 	ctl.len = (3 + 1) * PTRS_PER_PAGE;
 	ctl.off = 0 * PTRS_PER_PAGE;
@@ -278,7 +277,8 @@ determine_pgttype(kdump_ctx *ctx)
 			if (p)
 				unref_page(ctx, &pio);
 
-			addr = archdata->pgdir + i * sizeof(uint64_t);
+			addr = ctx->shared->vtop_map.pgt_root +
+				i * sizeof(uint64_t);
 			pio.pfn = addr >> PAGE_SHIFT;
 			pio.precious = 0;
 			res = raw_read_page(ctx, KDUMP_KPHYSADDR, &pio);
@@ -306,7 +306,6 @@ determine_pgttype(kdump_ctx *ctx)
 static kdump_status
 s390x_vtop_init(kdump_ctx *ctx)
 {
-	struct s390x_data *archdata = ctx->shared->archdata;
 	kdump_vaddr_t addr;
 	kdump_status ret;
 
@@ -314,7 +313,8 @@ s390x_vtop_init(kdump_ctx *ctx)
 	ret = get_symbol_val(ctx, "swapper_pg_dir", &addr);
 	rwlock_wrlock(&ctx->shared->lock);
 	if (ret == kdump_ok) {
-		archdata->pgdir = addr;
+		ctx->shared->vtop_map.pgt_as = KDUMP_KPHYSADDR;
+		ctx->shared->vtop_map.pgt_root = addr;
 		ret = determine_pgttype(ctx);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret,
@@ -344,7 +344,7 @@ s390x_vtop_init(kdump_ctx *ctx)
 				    KDUMP_XLAT_DIRECT, 0);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret, "Cannot set up directmap");
-	} else if (archdata->pgdir == ~(kdump_addr_t)0)
+	} else if (ctx->shared->vtop_map.pgt_root == KDUMP_ADDR_MAX)
 		return set_error(ctx, kdump_nodata,
 				 "Cannot determine size of direct mapping");
 
@@ -499,7 +499,7 @@ s390x_init(kdump_ctx *ctx)
 				 "Cannot allocate s390x private data");
 	ctx->shared->archdata = archdata;
 
-	archdata->pgdir = ~(kdump_addr_t)0;
+	ctx->shared->vtop_map.pgt_root = KDUMP_ADDR_MAX;
 
 	process_lowcore_info(ctx);
 	clear_error(ctx);
