@@ -473,7 +473,7 @@ get_pml4(kdump_ctx *ctx)
 
 		ctx->shared->vtop_map.pgt.as = ADDRXLAT_KPHYSADDR;
 		ctx->shared->vtop_map.pgt.addr =
-			pgtaddr - __START_KERNEL_map - get_phys_base(ctx);
+			pgtaddr - __START_KERNEL_map + get_phys_base(ctx);
 	} else if (ret == kdump_nodata) {
 		struct attr_data *attr;
 		clear_error(ctx);
