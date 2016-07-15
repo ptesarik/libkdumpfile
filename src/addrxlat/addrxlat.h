@@ -57,6 +57,13 @@ typedef enum _addrxlat_status {
 	addrxlat_continue,		/**< Repeat the last step. */
 	addrxlat_notpresent,		/**< Page not present. */
 	addrxlat_invalid,		/**< Invalid address. */
+
+	/** Base for custom status codes.
+	 * More importantly, this enumerator forces the whole enum
+	 * type to be signed, so you can compare it against 0 without
+	 * an explicit typecast to a signed integer.
+	 */
+	addrxlat_custom_status_base = -1
 } addrxlat_status;
 
 /**  Type of a physical or virtual address.
