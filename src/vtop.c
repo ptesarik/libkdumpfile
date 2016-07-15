@@ -460,9 +460,18 @@ kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
 	return ret;
 }
 
-void
+kdump_status
 init_vtop_maps(kdump_ctx *ctx)
 {
-	ctx->shared->vtop_map.vtop_pgt_fn = vtop_pgt;
-	ctx->shared->vtop_map_xen.vtop_pgt_fn = vtop_pgt_xen;
+	struct kdump_shared *shared = ctx->shared;
+
+	shared->addrxlat = addrxlat_new();
+	if (!shared->addrxlat)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot initialize address translation");
+
+	shared->vtop_map.vtop_pgt_fn = vtop_pgt;
+	shared->vtop_map_xen.vtop_pgt_fn = vtop_pgt_xen;
+
+	return kdump_ok;
 }

@@ -82,11 +82,8 @@ kdump_init(kdump_ctx *ctx)
 	list_add(&ctx->list, &shared->ctx);
 
 	status = init_attrs(ctx);
-	if (status != kdump_ok) {
-		rwlock_destroy(&ctx->shared->lock);
-		free(ctx->shared);
-		return status;
-	}
+	if (status != kdump_ok)
+		goto err_lock;
 
 	set_attr_number(ctx, gattr(ctx, GKI_cache_size),
 			ATTR_PERSIST, DEFAULT_CACHE_SIZE);
@@ -94,9 +91,19 @@ kdump_init(kdump_ctx *ctx)
 	ctx->cb_get_symbol_val = kdump_vmcoreinfo_symbol;
 	ctx->cb_get_symbol_val_xen = kdump_vmcoreinfo_symbol_xen;
 
-	init_vtop_maps(ctx);
+	status = init_vtop_maps(ctx);
+	if (status != kdump_ok)
+		goto err_attr;
 
 	return kdump_ok;
+
+ err_attr:
+	cleanup_attr(ctx->shared);
+
+ err_lock:
+	rwlock_destroy(&ctx->shared->lock);
+	free(ctx->shared);
+	return status;
 }
 
 kdump_status
@@ -397,6 +404,7 @@ kdump_free(kdump_ctx *ctx)
 			free(shared->xen_map);
 		flush_vtop_map(&shared->vtop_map);
 		flush_vtop_map(&shared->vtop_map_xen);
+		addrxlat_decref(shared->addrxlat);
 		cleanup_attr(shared);
 		rwlock_destroy(&shared->lock);
 		free(shared);
