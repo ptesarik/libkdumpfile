@@ -122,7 +122,7 @@ struct region_def {
 };
 
 #define PGT	\
-	{ .method = ADDRXLAT_PGT }
+	{ .method = ADDRXLAT_PGT_IND }
 
 #define LINEAR(off)	\
 	{ .method = ADDRXLAT_LINEAR, .phys_off = (off) }
@@ -568,7 +568,7 @@ remove_ktext_xlat(kdump_ctx *ctx, struct vtop_map *map)
 		if (rgn->xlat.method == ADDRXLAT_LINEAR_IND &&
 		    rgn->xlat.poff == &archdata->ktext_off) {
 			rgn->xlat.phys_off = 0UL;
-			rgn->xlat.method = ADDRXLAT_PGT;
+			rgn->xlat.method = ADDRXLAT_PGT_IND;
 		}
 }
 

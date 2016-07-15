@@ -169,6 +169,11 @@ pgt_none(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 
 DEFINE_INTERNAL(by_def)
 
+/** Translate an address using direct page table origin.
+ * @param ctx  Address translation object.
+ * @param ctl  Translation control.
+ * @param def  Translation definition.
+ */
 static addrxlat_status
 pgt_xlat_by_def(addrxlat_ctx *ctx, addrxlat_ctl_t *ctl,
 		const addrxlat_def_t *def)
@@ -176,7 +181,9 @@ pgt_xlat_by_def(addrxlat_ctx *ctx, addrxlat_ctl_t *ctl,
 	addrxlat_pgt_state_t state;
 	addrxlat_status status;
 
-	state.base = def->pgt;
+	state.base = (def->method == ADDRXLAT_PGT
+		      ? def->pgt
+		      : *def->ppgt);
 	state.data = ctl->data;
 	status = internal_pgt(ctx, &state, ctl->addr);
 	if (status == addrxlat_ok)
@@ -202,6 +209,7 @@ addrxlat_by_def(addrxlat_ctx *ctx, addrxlat_ctl_t *ctl,
 		return addrxlat_ok;
 
 	case ADDRXLAT_PGT:
+	case ADDRXLAT_PGT_IND:
 		return pgt_xlat_by_def(ctx, ctl, def);
 
 	default:

@@ -337,6 +337,9 @@ typedef enum _addrxlat_method {
 
 	/** Page tables. */
 	ADDRXLAT_PGT,
+
+	/** Page tables with indirect origin (*ppgt). */
+	ADDRXLAT_PGT_IND,
 } addrxlat_method_t;
 
 /** Address translation definition.
@@ -356,6 +359,10 @@ typedef struct _addrxlat_def {
 
 		/** Page table origin used by @ref ADDRXLAT_PGT. */
 		addrxlat_fulladdr_t pgt;
+
+		/** Pointer to page table origin used by
+		 * @ref ADDRXLAT_PGT_IND. */
+		addrxlat_fulladdr_t *ppgt;
 	};
 } addrxlat_def_t;
 

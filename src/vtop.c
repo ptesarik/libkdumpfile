@@ -130,7 +130,7 @@ set_vtop_xlat_pgt(struct vtop_map *map,
 		  kdump_vaddr_t first, kdump_vaddr_t last)
 {
 	const struct kdump_xlat xlat = {
-		.method = ADDRXLAT_PGT,
+		.method = ADDRXLAT_PGT_IND,
 	};
 	return set_vtop_xlat(map, first, last, &xlat);
 }
@@ -287,6 +287,7 @@ map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 				 "Invalid virtual address");
 
 	case ADDRXLAT_PGT:
+	case ADDRXLAT_PGT_IND:
 		return map->vtop_pgt_fn(ctx, vaddr, paddr);
 
 	case ADDRXLAT_LINEAR:
