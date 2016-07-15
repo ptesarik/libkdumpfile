@@ -122,13 +122,13 @@ struct region_def {
 };
 
 #define PGT	\
-	{ .method = KDUMP_XLAT_VTOP }
+	{ .method = ADDRXLAT_PGT }
 
 #define LINEAR(off)	\
-	{ .method = KDUMP_XLAT_DIRECT, .phys_off = (off) }
+	{ .method = ADDRXLAT_LINEAR, .phys_off = (off) }
 
 #define KTEXT	\
-	{ .method = KDUMP_XLAT_DIRECT_PTR, \
+	{ .method = ADDRXLAT_LINEAR_IND, \
 	  .poff = &(ARCH_ANCHOR->ktext_off) }
 
 /* Original layout (before 2.6.11) */
@@ -460,7 +460,7 @@ x86_64_init(kdump_ctx *ctx)
 	ctx->shared->vtop_map.pgt_root = KDUMP_ADDR_MAX;
 	ctx->shared->vtop_map_xen.pgt_root = KDUMP_ADDR_MAX;
 
-	xlat.method = KDUMP_XLAT_DIRECT_PTR,
+	xlat.method = ADDRXLAT_LINEAR_IND,
 	xlat.poff = &archdata->ktext_off;
 	ret = set_vtop_xlat(&ctx->shared->vtop_map,
 			    __START_KERNEL_map, VIRTADDR_MAX, &xlat);
@@ -565,10 +565,10 @@ remove_ktext_xlat(kdump_ctx *ctx, struct vtop_map *map)
 	struct kdump_vaddr_region *rgn;
 	for (rgn = map->region;
 	     rgn < &map->region[map->num_regions]; ++rgn)
-		if (rgn->xlat.method == KDUMP_XLAT_DIRECT_PTR &&
+		if (rgn->xlat.method == ADDRXLAT_LINEAR_IND &&
 		    rgn->xlat.poff == &archdata->ktext_off) {
 			rgn->xlat.phys_off = 0UL;
-			rgn->xlat.method = KDUMP_XLAT_VTOP;
+			rgn->xlat.method = ADDRXLAT_PGT;
 		}
 }
 
@@ -598,7 +598,7 @@ x86_64_vtop_init(kdump_ctx *ctx)
 
 	for (i = 0; i < layout->nregions; ++i) {
 		const struct region_def *def = &layout->regions[i];
-		if (def->xlat.method == KDUMP_XLAT_DIRECT_PTR) {
+		if (def->xlat.method == ADDRXLAT_LINEAR_IND) {
 			struct kdump_xlat xlat = def->xlat;
 			xlat.poff = ctx->shared->archdata +
 				((void*)def->xlat.poff - (void*)ARCH_ANCHOR);

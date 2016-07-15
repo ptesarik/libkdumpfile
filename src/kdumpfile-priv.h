@@ -502,20 +502,6 @@ struct attr_hash {
 	struct attr_data table[ATTR_HASH_SIZE];
 };
 
-typedef enum _kdump_xlat_method {
-	/* No mapping set */
-	KDUMP_XLAT_NONE,
-
-	/* Arbitrary: use vtop to map between virtual and physical */
-	KDUMP_XLAT_VTOP,
-
-	/* Direct mapping: virtual = physical + phys_off */
-	KDUMP_XLAT_DIRECT,
-
-	/* Direct mapping with a pointer: virtual = physical + *poff */
-	KDUMP_XLAT_DIRECT_PTR,
-} kdump_xlat_method_t;
-
 struct kdump_xlat {
 	union {
 		/** offset from physical addresses */
@@ -524,7 +510,7 @@ struct kdump_xlat {
 		/** pointer to the physical offset */
 		kdump_addr_t *poff;
 	};
-	kdump_xlat_method_t method; /**< vaddr->paddr translation method */
+	addrxlat_method_t method; /**< vaddr->paddr translation method */
 };
 
 struct kdump_vaddr_region {

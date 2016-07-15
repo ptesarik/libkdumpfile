@@ -85,7 +85,7 @@ set_vtop_xlat(struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
 			if (!rgn) {
 				rgn = prevrgn = newrgn;
 				rgn->max_off = KDUMP_ADDR_MAX;
-				rgn->xlat.method = KDUMP_XLAT_NONE;
+				rgn->xlat.method = ADDRXLAT_NONE;
 				++map->num_regions;
 				++left;
 				--numinc;
@@ -120,7 +120,7 @@ set_vtop_xlat_linear(struct vtop_map *map,
 {
 	const struct kdump_xlat xlat = {
 		.phys_off = phys_off,
-		.method = KDUMP_XLAT_DIRECT,
+		.method = ADDRXLAT_LINEAR,
 	};
 	return set_vtop_xlat(map, first, last, &xlat);
 }
@@ -130,7 +130,7 @@ set_vtop_xlat_pgt(struct vtop_map *map,
 		  kdump_vaddr_t first, kdump_vaddr_t last)
 {
 	const struct kdump_xlat xlat = {
-		.method = KDUMP_XLAT_VTOP,
+		.method = ADDRXLAT_PGT,
 	};
 	return set_vtop_xlat(map, first, last, &xlat);
 }
@@ -148,7 +148,7 @@ const struct kdump_xlat *
 get_vtop_xlat(const struct vtop_map *map, kdump_vaddr_t vaddr)
 {
 	static const struct kdump_xlat xlat_none = {
-		.method = KDUMP_XLAT_NONE,
+		.method = ADDRXLAT_NONE,
 	};
 
 	struct kdump_vaddr_region *rgn;
@@ -282,18 +282,18 @@ map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 
 	xlat = get_vtop_xlat(map, vaddr);
 	switch (xlat->method) {
-	case KDUMP_XLAT_NONE:
+	case ADDRXLAT_NONE:
 		return set_error(ctx, kdump_invalid,
 				 "Invalid virtual address");
 
-	case KDUMP_XLAT_VTOP:
+	case ADDRXLAT_PGT:
 		return map->vtop_pgt_fn(ctx, vaddr, paddr);
 
-	case KDUMP_XLAT_DIRECT:
+	case ADDRXLAT_LINEAR:
 		*paddr = vaddr - xlat->phys_off;
 		return kdump_ok;
 
-	case KDUMP_XLAT_DIRECT_PTR:
+	case ADDRXLAT_LINEAR_IND:
 		*paddr = vaddr - *xlat->poff;
 		return kdump_ok;
 	};
