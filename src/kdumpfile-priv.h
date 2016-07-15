@@ -526,8 +526,7 @@ typedef kdump_status vtop_pgt_fn(
 struct vtop_map {
 	vtop_pgt_fn *vtop_pgt_fn;     /**< function to walk page tables */
 
-	kdump_addrspace_t pgt_as;     /**< root page table address space */
-	kdump_addr_t pgt_root;	      /**< root page table origin */
+	addrxlat_fulladdr_t pgt;      /**< root page table origin */
 	unsigned num_regions;	      /**< number of elements in @c region */
 	struct kdump_vaddr_region *region;
 };

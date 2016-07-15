@@ -256,7 +256,7 @@ ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	vaddr_split(&archdata->pgform, vaddr, &split);
 
-	pgdp = ctx->shared->vtop_map.pgt_root + split.pgd * sizeof(uint64_t);
+	pgdp = ctx->shared->vtop_map.pgt.addr + split.pgd * sizeof(uint64_t);
 	res = read_u64(ctx, KDUMP_KVADDR, pgdp, 1, "PGD entry", &pgd);
 	if (res != kdump_ok)
 		return res;
@@ -344,8 +344,8 @@ ppc64_vtop_init(kdump_ctx *ctx)
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot resolve %s",
 				 "swapper_pg_dir");
-	ctx->shared->vtop_map.pgt_as = KDUMP_KVADDR;
-	ctx->shared->vtop_map.pgt_root = addr;
+	ctx->shared->vtop_map.pgt.as = ADDRXLAT_KVADDR;
+	ctx->shared->vtop_map.pgt.addr = addr;
 
 	rwlock_unlock(&ctx->shared->lock);
 	res = get_symbol_val(ctx, "_stext", &addr);

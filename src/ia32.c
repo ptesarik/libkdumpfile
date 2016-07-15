@@ -163,7 +163,7 @@ ia32_init(kdump_ctx *ctx)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate ia32 private data");
 
-	ctx->shared->vtop_map.pgt_root = KDUMP_ADDR_MAX;
+	ctx->shared->vtop_map.pgt.addr = ADDRXLAT_ADDR_MAX;
 	ret = set_vtop_xlat_linear(&ctx->shared->vtop_map,
 				   __START_KERNEL_map, VIRTADDR_MAX,
 				   __START_KERNEL_map);
@@ -218,20 +218,20 @@ read_pgt(kdump_ctx *ctx)
 
 	rwlock_unlock(&ctx->shared->lock);
 	ret = get_symbol_val(ctx, "swapper_pg_dir",
-			     &ctx->shared->vtop_map.pgt_root);
+			     &ctx->shared->vtop_map.pgt.addr);
 	rwlock_wrlock(&ctx->shared->lock);
 	if (ret != kdump_ok)
 		return ret;
 
-	if (ctx->shared->vtop_map.pgt_root < __START_KERNEL_map)
+	if (ctx->shared->vtop_map.pgt.addr < __START_KERNEL_map)
 		return set_error(ctx, kdump_dataerr,
 				 "Wrong page directory address: 0x%llx",
-				 (unsigned long long) ctx->shared->vtop_map.pgt_root);
-	ctx->shared->vtop_map.pgt_root -= __START_KERNEL_map;
-	ctx->shared->vtop_map.pgt_as = KDUMP_KPHYSADDR;
+				 (unsigned long long) ctx->shared->vtop_map.pgt.addr);
+	ctx->shared->vtop_map.pgt.addr -= __START_KERNEL_map;
+	ctx->shared->vtop_map.pgt.as = ADDRXLAT_KPHYSADDR;
 
 	if (!archdata->pae_state) {
-		kdump_vaddr_t addr = ctx->shared->vtop_map.pgt_root +
+		kdump_vaddr_t addr = ctx->shared->vtop_map.pgt.addr +
 			3 * sizeof(uint64_t);
 		uint64_t entry;
 		size_t sz = sizeof entry;
@@ -291,7 +291,7 @@ ia32_vtop_nonpae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	kdump_paddr_t base;
 	kdump_status ret;
 
-	pgdp = ctx->shared->vtop_map.pgt_root +
+	pgdp = ctx->shared->vtop_map.pgt.addr +
 		pgd_index_nonpae(vaddr) * sizeof(uint32_t);
 	ret = read_u32(ctx, KDUMP_KPHYSADDR, pgdp, 1, "PGD entry", &pgd);
 	if (ret != kdump_ok)
@@ -333,7 +333,7 @@ ia32_vtop_pae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	kdump_paddr_t base;
 	kdump_status ret;
 
-	pgdp = ctx->shared->vtop_map.pgt_root +
+	pgdp = ctx->shared->vtop_map.pgt.addr +
 		pgd_index_pae(vaddr) * sizeof(uint64_t);
 	ret = read_u64(ctx, KDUMP_KPHYSADDR, pgdp, 1, "PGD entry", &pgd);
 	if (ret != kdump_ok)
@@ -385,7 +385,7 @@ ia32_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	struct ia32_data *archdata = ctx->shared->archdata;
 
-	if (ctx->shared->vtop_map.pgt_root == KDUMP_ADDR_MAX)
+	if (ctx->shared->vtop_map.pgt.addr == ADDRXLAT_ADDR_MAX)
 		return set_error(ctx, kdump_invalid,
 				 "VTOP translation not initialized");
 

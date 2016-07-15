@@ -457,8 +457,8 @@ x86_64_init(kdump_ctx *ctx)
 
 	set_ktext_off(archdata, get_phys_base(ctx));
 
-	ctx->shared->vtop_map.pgt_root = KDUMP_ADDR_MAX;
-	ctx->shared->vtop_map_xen.pgt_root = KDUMP_ADDR_MAX;
+	ctx->shared->vtop_map.pgt.addr = ADDRXLAT_ADDR_MAX;
+	ctx->shared->vtop_map_xen.pgt.addr = ADDRXLAT_ADDR_MAX;
 
 	xlat.method = ADDRXLAT_LINEAR_IND,
 	xlat.poff = &archdata->ktext_off;
@@ -490,8 +490,8 @@ get_pml4(kdump_ctx *ctx)
 					 "Wrong page directory address: 0x%llx",
 					 (unsigned long long) pgtaddr);
 
-		ctx->shared->vtop_map.pgt_as = KDUMP_KPHYSADDR;
-		ctx->shared->vtop_map.pgt_root =
+		ctx->shared->vtop_map.pgt.as = ADDRXLAT_KPHYSADDR;
+		ctx->shared->vtop_map.pgt.addr =
 			pgtaddr - __START_KERNEL_map - get_phys_base(ctx);
 	} else if (ret == kdump_nodata) {
 		struct attr_data *attr;
@@ -500,8 +500,8 @@ get_pml4(kdump_ctx *ctx)
 		if (!attr || validate_attr(ctx, attr) != kdump_ok)
 			return set_error(ctx, kdump_nodata,
 					 "Cannot find top-level page table");
-		ctx->shared->vtop_map.pgt_as = KDUMP_MACHPHYSADDR;
-		ctx->shared->vtop_map.pgt_root = attr_value(attr)->number;
+		ctx->shared->vtop_map.pgt.as = ADDRXLAT_MACHPHYSADDR;
+		ctx->shared->vtop_map.pgt.addr = attr_value(attr)->number;
 	} else
 		return ret;
 
@@ -665,8 +665,8 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 		return set_error(ctx, res,
 				 "Cannot set up initial kernel mapping");
 
-	ctx->shared->vtop_map_xen.pgt_as = KDUMP_XENVADDR;
-	ctx->shared->vtop_map_xen.pgt_root = pgtaddr;
+	ctx->shared->vtop_map_xen.pgt.as = ADDRXLAT_XENVADDR;
+	ctx->shared->vtop_map_xen.pgt.addr = pgtaddr;
 	return kdump_ok;
 }
 
@@ -785,12 +785,12 @@ x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	kdump_paddr_t base;
 	kdump_status ret;
 
-	if (map->pgt_root == KDUMP_ADDR_MAX)
+	if (map->pgt.addr == ADDRXLAT_ADDR_MAX)
 		return set_error(ctx, kdump_invalid,
 				 "VTOP translation not initialized");
 
-	pgdp = map->pgt_root + pgd_index(vaddr) * sizeof(uint64_t);
-	ret = read_u64(ctx, map->pgt_as, pgdp, 1, "PGD entry", &pgd);
+	pgdp = map->pgt.addr + pgd_index(vaddr) * sizeof(uint64_t);
+	ret = read_u64(ctx, map->pgt.as, pgdp, 1, "PGD entry", &pgd);
 	if (ret != kdump_ok)
 		return ret;
 
