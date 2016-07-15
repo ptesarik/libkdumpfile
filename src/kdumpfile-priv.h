@@ -42,6 +42,8 @@
 
 #include <endian.h>
 
+#include "addrxlat/addrxlat.h"
+
 /* Minimize chance of name clashes (in a static link) */
 #ifndef PIC
 #define INTERNAL_NAME(x)	_libkdump_priv_ ## x
@@ -721,6 +723,9 @@ kdump_status read_u64(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 kdump_status set_error(kdump_ctx *ctx, kdump_status ret,
 		       const char *msgfmt, ...)
 	__attribute__ ((format (printf, 3, 4)));
+
+#define set_error_addrxlat INTERNAL_NAME(set_error_addrxlat)
+kdump_status set_error_addrxlat(kdump_ctx *ctx, addrxlat_status status);
 
 #define ctx_malloc INTERNAL_NAME(ctx_malloc)
 void *ctx_malloc(size_t size, kdump_ctx *ctx, const char *desc);

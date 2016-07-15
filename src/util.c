@@ -109,6 +109,27 @@ set_error(kdump_ctx *ctx, kdump_status ret, const char *msgfmt, ...)
 	return ret;
 }
 
+/** Translate an addrxlat error status to a @c kdump_status.
+ * @param ctx     Dump file object.
+ * @param status  Address translation status.
+ * @returns       Error status (libkdumpfile).
+ */
+kdump_status
+set_error_addrxlat(kdump_ctx *ctx, addrxlat_status status)
+{
+	kdump_status ret;
+
+	if (status == addrxlat_ok)
+		return kdump_ok;
+	else if (status < 0)
+		return -status;
+	else
+		ret = kdump_addrxlat;
+
+	return set_error(ctx, ret, "%s",
+			 addrxlat_err_str(ctx->shared->addrxlat));
+}
+
 void *
 ctx_malloc(size_t size, kdump_ctx *ctx, const char *desc)
 {

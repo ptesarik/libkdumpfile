@@ -111,6 +111,7 @@ typedef enum _kdump_status {
 	kdump_nokey,		/**< No such attribute key. */
 	kdump_eof,		/**< Unexpected EOF. */
 	kdump_busy,		/**< Too many pending requests. */
+	kdump_addrxlat,		/**< Address translation error. */
 } kdump_status;
 
 /**  Target dump byte order.

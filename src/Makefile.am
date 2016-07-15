@@ -45,6 +45,7 @@ libkdumpfile_la_SOURCES = \
 	ppc64.c \
 	x86_64.c
 
+libkdumpfile_la_LIBADD = addrxlat/libaddrxlat.la
 EXTRA_libkdumpfile_la_DEPENDENCIES = libkdumpfile.map
 
 libkdumpfile_la_LDFLAGS = -version-info 6:0:0
