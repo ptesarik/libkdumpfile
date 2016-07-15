@@ -291,8 +291,21 @@ determine_pgttype(kdump_ctx *ctx)
 		}
 		entry = dump64toh(ctx, *p++);
 		if (!PTE_I(entry)) {
+			addrxlat_paging_form_t pf = {
+				.pte_format = addrxlat_pte_s390x,
+				.bits = { 12, 8, 11, 11, 11, 11 }
+			};
+			addrxlat_status axres;
+
 			unref_page(ctx, &pio);
 			archdata->pgttype = PTE_TT(entry);
+
+			pf.levels = archdata->pgttype + 3;
+			axres = addrxlat_set_paging_form(
+				ctx->shared->addrxlat, &pf);
+			if (axres != addrxlat_ok)
+				return set_error_addrxlat(ctx, axres);
+
 			return kdump_ok;
 		}
 	}

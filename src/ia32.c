@@ -93,6 +93,18 @@
 
 #define __START_KERNEL_map	0xc0000000UL
 
+static const addrxlat_paging_form_t ia32_pf = {
+	.pte_format = addrxlat_pte_ia32,
+	.levels = 3,
+	.bits = { 12, 10, 10 }
+};
+
+static const addrxlat_paging_form_t ia32_pf_pae = {
+	.pte_format = addrxlat_pte_ia32_pae,
+	.levels = 4,
+	.bits = { 12, 9, 9, 4 }
+};
+
 /** @cond TARGET_ABI */
 
 struct elf_siginfo
@@ -214,6 +226,8 @@ static kdump_status
 read_pgt(kdump_ctx *ctx)
 {
 	struct ia32_data *archdata = ctx->shared->archdata;
+	const addrxlat_paging_form_t *pf;
+	addrxlat_status axres;
 	kdump_status ret;
 
 	rwlock_unlock(&ctx->shared->lock);
@@ -240,6 +254,11 @@ read_pgt(kdump_ctx *ctx)
 			return ret;
 		archdata->pae_state = entry ? 1 : -1;
 	}
+
+	pf = (archdata->pae_state > 0 ? &ia32_pf_pae : &ia32_pf);
+	axres = addrxlat_set_paging_form(ctx->shared->addrxlat, pf);
+	if (axres != addrxlat_ok)
+		return set_error_addrxlat(ctx, axres);
 
 	return kdump_ok;
 }

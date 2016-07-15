@@ -400,12 +400,20 @@ ppc64_vtop_init(kdump_ctx *ctx)
 	return kdump_ok;
 }
 
+static const addrxlat_paging_form_t ppc64_pf_64k = {
+	.pte_format = addrxlat_pte_ppc64,
+	.rpn_shift = 30,
+	.levels = 4,
+	.bits = { 16, 12, 12, 4 }
+};
+
 static kdump_status
 ppc64_init(kdump_ctx *ctx)
 {
 	struct ppc64_data *archdata;
 	unsigned shift;
 	int pagesize;
+	addrxlat_status axres;
 
 	archdata = calloc(1, sizeof(struct ppc64_data));
 	if (!archdata)
@@ -417,6 +425,11 @@ ppc64_init(kdump_ctx *ctx)
 	pagesize = get_page_size(ctx);
 
 	if (pagesize == _64K) {
+		axres = addrxlat_set_paging_form(
+			ctx->shared->addrxlat, &ppc64_pf_64k);
+		if (axres != addrxlat_ok)
+			return set_error_addrxlat(ctx, axres);
+
 		archdata->pgform.page_bits = 16;
 		archdata->pgform.pte_bits = 12;
 		archdata->pgform.pmd_bits = 12;

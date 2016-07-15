@@ -442,12 +442,23 @@ update_phys_base(kdump_ctx *ctx, struct attr_data *attr)
 		: kdump_ok;
 }
 
+static const addrxlat_paging_form_t x86_64_pf = {
+	.pte_format = addrxlat_pte_x86_64,
+	.levels = 5,
+	.bits = { 12, 9, 9, 9, 9 }
+};
+
 static kdump_status
 x86_64_init(kdump_ctx *ctx)
 {
 	struct x86_64_data *archdata;
 	addrxlat_def_t xlat;
+	addrxlat_status axres;
 	kdump_status ret;
+
+	axres = addrxlat_set_paging_form(ctx->shared->addrxlat, &x86_64_pf);
+	if (axres != addrxlat_ok)
+		return set_error_addrxlat(ctx, axres);
 
 	archdata = calloc(1, sizeof(struct x86_64_data));
 	if (!archdata)
