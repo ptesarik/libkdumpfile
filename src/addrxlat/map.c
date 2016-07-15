@@ -111,15 +111,15 @@ addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 		.method = ADDRXLAT_NONE,
 	};
 
-	const addrxlat_range_t *r;
-	addrxlat_addr_t raddr;
-	size_t left;
+	const addrxlat_range_t *r = map->ranges;
+	addrxlat_addr_t raddr = 0;
+	size_t left = map ? map->n : 0;
 
-	raddr = 0;
-	for (r = map->ranges, left = map->n; left > 0; ++r, --left) {
+	while (left-- > 0) {
 		if (addr <= raddr + r->endoff)
 			return &r->xlat;
 		raddr += r->endoff + 1;
+		++r;
 	}
 	return &def_none;
 }

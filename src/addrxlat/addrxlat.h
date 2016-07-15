@@ -409,6 +409,9 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
  * @param map   Address translation map.
  * @param addr  Address to be translated.
  * @returns     Translation definition.
+ *
+ * It is allowed to pass @c NULL as the translation map. The function
+ * always returns a pointer to a static variable for @ref ADDRXLAT_NONE.
  */
 const addrxlat_def_t *addrxlat_map_search(
 	const addrxlat_map_t *map, addrxlat_addr_t addr);
