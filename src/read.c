@@ -106,7 +106,7 @@ read_kvpage_choose(kdump_ctx *ctx, struct page_io *pio)
 	const addrxlat_def_t *xlat;
 
 	vaddr = pio->pfn << get_page_shift(ctx);
-	xlat = get_vtop_xlat(&ctx->shared->vtop_map, vaddr);
+	xlat = addrxlat_map_search(ctx->shared->vtop_map.map, vaddr);
 	if (xlat->method != ADDRXLAT_PGT && xlat->method != ADDRXLAT_PGT_IND)
 		return read_kvpage_kphys(ctx, pio);
 	else

@@ -502,17 +502,11 @@ struct attr_hash {
 	struct attr_data table[ATTR_HASH_SIZE];
 };
 
-typedef kdump_status vtop_pgt_fn(
-	kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr);
-
 /**  Map for virtual-to-physical translation
  */
 struct vtop_map {
-	vtop_pgt_fn *vtop_pgt_fn;     /**< function to walk page tables */
-
 	addrxlat_fulladdr_t pgt;      /**< root page table origin */
-	unsigned num_regions;	      /**< number of elements in @c region */
-	addrxlat_range_t *region;
+	addrxlat_map_t *map;	      /**< address translation map */
 };
 
 struct cache;
@@ -871,10 +865,6 @@ kdump_status set_vtop_xlat_pgt(
 
 #define flush_vtop_map INTERNAL_NAME(flush_vtop_map)
 void flush_vtop_map(struct vtop_map *map);
-
-#define get_vtop_xlat INTERNAL_NAME(get_vtop_xlat)
-const addrxlat_def_t *get_vtop_xlat(const struct vtop_map *map,
-				    kdump_vaddr_t vaddr);
 
 #define vtop_pgt INTERNAL_NAME(vtop_pgt)
 kdump_status vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr,

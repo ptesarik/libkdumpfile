@@ -574,8 +574,8 @@ remove_ktext_xlat(kdump_ctx *ctx, struct vtop_map *map)
 {
 	struct x86_64_data *archdata = ctx->shared->archdata;
 	addrxlat_range_t *rng;
-	for (rng = map->region;
-	     rng < &map->region[map->num_regions]; ++rng)
+	for (rng = map->map->ranges;
+	     rng < &map->map->ranges[map->map->n]; ++rng)
 		if (rng->xlat.method == ADDRXLAT_LINEAR_IND &&
 		    rng->xlat.poff == &archdata->ktext_off) {
 			rng->xlat.method = ADDRXLAT_PGT_IND;

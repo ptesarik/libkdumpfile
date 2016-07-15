@@ -41,75 +41,17 @@ kdump_status
 set_vtop_xlat(struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
 	      const addrxlat_def_t *xlat)
 {
-	addrxlat_range_t *rgn, *prevrgn;
-	kdump_vaddr_t rfirst, rlast;
-	unsigned left;
-	int numinc;
+	const addrxlat_range_t range = {
+		.endoff = last - first,
+		.xlat = *xlat,
+	};
+	addrxlat_map_t *newmap;
 
-	rgn = map->region;
-	rfirst = 0;
-	for (left = map->num_regions; left > 0; --left) {
-		if (first <= rfirst + rgn->endoff)
-			break;
-		rfirst += rgn->endoff + 1;
-		++rgn;
-	}
-	rlast = rfirst - 1;
+	newmap = addrxlat_map_set(map->map, first, &range);
+	if (!newmap)
+		return kdump_syserr;
 
-	prevrgn = rgn;
-	numinc = 3;
-	if (first == rfirst)
-		--numinc;
-	if (rgn) {
-		for ( ; left > 0; --left) {
-			--numinc;
-			rlast += rgn->endoff + 1;
-			if (rlast > last)
-				break;
-			++rgn;
-		}
-	} else if (last == rlast)
-		--numinc;
-
-	if (numinc) {
-		int idx = (map->num_regions - 1) % RGN_ALLOC_INC;
-		if (idx + numinc >= RGN_ALLOC_INC) {
-			addrxlat_range_t *newrgn;
-			unsigned newalloc = map->num_regions - idx +
-				2 * RGN_ALLOC_INC;
-			newrgn = realloc(map->region,
-					 newalloc * sizeof(*newrgn));
-			if (!newrgn)
-				return kdump_syserr;
-
-			if (!rgn) {
-				rgn = prevrgn = newrgn;
-				rgn->endoff = KDUMP_ADDR_MAX;
-				rgn->xlat.method = ADDRXLAT_NONE;
-				++map->num_regions;
-				++left;
-				--numinc;
-			} else {
-				rgn = newrgn + (rgn - map->region);
-				prevrgn = newrgn + (prevrgn - map->region);
-			}
-			map->region = newrgn;
-		}
-		map->num_regions += numinc;
-
-		memmove(rgn + numinc, rgn,
-			left * sizeof(addrxlat_range_t));
-	}
-
-	if (last != rlast)
-		rgn[numinc].endoff = rlast - last - 1;
-	if (first != rfirst) {
-		prevrgn->endoff = first - rfirst - 1;
-		++prevrgn;
-	}
-
-	prevrgn->endoff = last - first;
-	prevrgn->xlat = *xlat;
+	map->map = newmap;
 	return kdump_ok;
 }
 
@@ -139,34 +81,11 @@ set_vtop_xlat_pgt(struct vtop_map *map,
 void
 flush_vtop_map(struct vtop_map *map)
 {
-	if (map->region)
-		free(map->region);
-	map->region = NULL;
-	map->num_regions = 0;
+	free(map->map);
+	map->map = NULL;
 }
 
-const addrxlat_def_t *
-get_vtop_xlat(const struct vtop_map *map, kdump_vaddr_t vaddr)
-{
-	static const addrxlat_def_t xlat_none = {
-		.method = ADDRXLAT_NONE,
-	};
-
-	addrxlat_range_t *rgn;
-	kdump_vaddr_t rfirst;
-
-	rgn = map->region;
-	if (!rgn)
-		return &xlat_none;
-	rfirst = 0;
-	while (vaddr > rfirst + rgn->endoff) {
-		rfirst += rgn->endoff + 1;
-		++rgn;
-	}
-	return &rgn->xlat;
-}
-
-static kdump_status
+kdump_status
 vtop_init(kdump_ctx *ctx, struct vtop_map *map, size_t init_ops_off)
 {
 	kdump_status (*arch_init)(kdump_ctx *);
@@ -210,7 +129,7 @@ kdump_vtop_init(kdump_ctx *ctx)
 kdump_status
 kdump_vtop_init_xen(kdump_ctx *ctx)
 {
-	return vtop_init(ctx, &ctx->shared->vtop_map_xen,
+	return vtop_init(ctx, &ctx->shared->vtop_map,
 			 offsetof(struct arch_ops, vtop_init_xen));
 }
 
@@ -233,22 +152,18 @@ set_error_no_vtop(kdump_ctx *ctx)
 kdump_status
 vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	kdump_addr_t maddr;
-	kdump_status res;
+	addrxlat_pgt_state_t state;
+	addrxlat_status res;
 
-	if (!ctx->shared->arch_ops || !ctx->shared->arch_ops->vtop)
-		return set_error_no_vtop(ctx);
+	state.base = ctx->shared->vtop_map.pgt;
+	state.data = ctx;
+	res = addrxlat_pgt(ctx->shared->addrxlat, &state, vaddr);
+	if (res == addrxlat_ok)
+		return set_error(ctx, mtop(ctx, state.base.addr, paddr),
+				 "Cannot translate machine address 0x%llx",
+				 (unsigned long long) state.base.addr);
 
-	if (kphys_is_machphys(ctx))
-		return ctx->shared->arch_ops->vtop(ctx, vaddr, paddr);
-
-	res = ctx->shared->arch_ops->vtop(ctx, vaddr, &maddr);
-	if (res != kdump_ok)
-		return res;
-
-	return set_error(ctx, mtop(ctx, maddr, paddr),
-			 "Cannot translate machine address 0x%llx",
-			 (unsigned long long) maddr);
+	return set_error_addrxlat(ctx, res);
 }
 
 /**  Xen Virtual-to-physical translation using pagetables.
@@ -262,10 +177,18 @@ vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 kdump_status
 vtop_pgt_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	if (ctx->shared->arch_ops && ctx->shared->arch_ops->vtop_xen)
-		return ctx->shared->arch_ops->vtop_xen(ctx, vaddr, paddr);
-	else
-		return set_error_no_vtop(ctx);
+	addrxlat_pgt_state_t state;
+	addrxlat_status res;
+
+	state.base = ctx->shared->vtop_map_xen.pgt;
+	state.data = ctx;
+	res = addrxlat_pgt(ctx->shared->addrxlat, &state, vaddr);
+	if (res == addrxlat_ok) {
+		*paddr = state.base.addr;
+		return kdump_ok;
+	}
+
+	return set_error_addrxlat(ctx, res);
 }
 
 /**  Perform virtual -> physical address translation using a given mapping.
@@ -279,30 +202,15 @@ kdump_status
 map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	 const struct vtop_map *map)
 {
-	const addrxlat_def_t *xlat;
+	addrxlat_ctl_t ctl;
+	addrxlat_status status;
 
-	xlat = get_vtop_xlat(map, vaddr);
-	switch (xlat->method) {
-	case ADDRXLAT_NONE:
-		return set_error(ctx, kdump_invalid,
-				 "Invalid virtual address");
-
-	case ADDRXLAT_PGT:
-	case ADDRXLAT_PGT_IND:
-		return map->vtop_pgt_fn(ctx, vaddr, paddr);
-
-	case ADDRXLAT_LINEAR:
-		*paddr = vaddr - xlat->off;
-		return kdump_ok;
-
-	case ADDRXLAT_LINEAR_IND:
-		*paddr = vaddr - *xlat->poff;
-		return kdump_ok;
-	};
-
-	/* unknown translation method */
-	return set_error(ctx, kdump_dataerr,
-			 "Invalid translation method: %d", (int)xlat->method);
+	ctl.addr = vaddr;
+	ctl.data = ctx;
+	status = addrxlat_by_map(ctx->shared->addrxlat, &ctl, map->map);
+	if (status == addrxlat_ok)
+		*paddr = ctl.addr;
+	return set_error_addrxlat(ctx, status);
 }
 
 kdump_status
@@ -331,12 +239,21 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 kdump_status
 vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 {
+	addrxlat_pgt_state_t state;
+	addrxlat_status res;
+
 	if (kphys_is_machphys(ctx))
 		return vtop(ctx, vaddr, maddr);
-	else if (ctx->shared->arch_ops && ctx->shared->arch_ops->vtop)
-		return ctx->shared->arch_ops->vtop(ctx, vaddr, maddr);
 
-	return set_error_no_vtop(ctx);
+	state.base = ctx->shared->vtop_map.pgt;
+	state.data = ctx;
+	res = addrxlat_pgt(ctx->shared->addrxlat, &state, vaddr);
+	if (res == addrxlat_ok) {
+		*maddr = state.base.addr;
+		return kdump_ok;
+	}
+
+	return set_error_addrxlat(ctx, res);
 }
 
 kdump_status
@@ -462,6 +379,24 @@ kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
 	return ret;
 }
 
+static addrxlat_status
+addrxlat_read32(addrxlat_ctx *addrxlat, const addrxlat_fulladdr_t *addr,
+		uint32_t *val, void *data)
+{
+	kdump_ctx *ctx = (kdump_ctx*) data;
+	return -read_u32(ctx, addr->as, addr->addr, 0,
+			 "page table entry", val);
+}
+
+static addrxlat_status
+addrxlat_read64(addrxlat_ctx *addrxlat, const addrxlat_fulladdr_t *addr,
+		uint64_t *val, void *data)
+{
+	kdump_ctx *ctx = (kdump_ctx*) data;
+	return -read_u64(ctx, addr->as, addr->addr, 0,
+			 "page table entry", val);
+}
+
 kdump_status
 init_vtop_maps(kdump_ctx *ctx)
 {
@@ -472,8 +407,11 @@ init_vtop_maps(kdump_ctx *ctx)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot initialize address translation");
 
-	shared->vtop_map.vtop_pgt_fn = vtop_pgt;
-	shared->vtop_map_xen.vtop_pgt_fn = vtop_pgt_xen;
+	addrxlat_cb_read32(shared->addrxlat, addrxlat_read32);
+	addrxlat_cb_read64(shared->addrxlat, addrxlat_read64);
+
+	shared->vtop_map.pgt.addr = KDUMP_ADDR_MAX;
+	shared->vtop_map_xen.pgt.addr = KDUMP_ADDR_MAX;
 
 	return kdump_ok;
 }
