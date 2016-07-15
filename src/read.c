@@ -103,7 +103,7 @@ static kdump_status
 read_kvpage_choose(kdump_ctx *ctx, struct page_io *pio)
 {
 	kdump_vaddr_t vaddr;
-	const struct kdump_xlat *xlat;
+	const addrxlat_def_t *xlat;
 
 	vaddr = pio->pfn << get_page_shift(ctx);
 	xlat = get_vtop_xlat(&ctx->shared->vtop_map, vaddr);

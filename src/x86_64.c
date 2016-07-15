@@ -111,21 +111,21 @@ struct x86_64_data {
 	struct attr_override phys_base_override;
 
 	/** Total physical offset of kernel text mapping. */
-	kdump_addr_t ktext_off;
+	addrxlat_off_t ktext_off;
 };
 
 #define ARCH_ANCHOR	((struct x86_64_data*)0)
 
 struct region_def {
 	kdump_vaddr_t first, last;
-	struct kdump_xlat xlat;
+	addrxlat_def_t xlat;
 };
 
 #define PGT	\
 	{ .method = ADDRXLAT_PGT_IND }
 
-#define LINEAR(off)	\
-	{ .method = ADDRXLAT_LINEAR, .phys_off = (off) }
+#define LINEAR(_off)	\
+	{ .method = ADDRXLAT_LINEAR, .off = (_off) }
 
 #define KTEXT	\
 	{ .method = ADDRXLAT_LINEAR_IND, \
@@ -446,7 +446,7 @@ static kdump_status
 x86_64_init(kdump_ctx *ctx)
 {
 	struct x86_64_data *archdata;
-	struct kdump_xlat xlat;
+	addrxlat_def_t xlat;
 	kdump_status ret;
 
 	archdata = calloc(1, sizeof(struct x86_64_data));
@@ -562,13 +562,13 @@ static void
 remove_ktext_xlat(kdump_ctx *ctx, struct vtop_map *map)
 {
 	struct x86_64_data *archdata = ctx->shared->archdata;
-	struct kdump_vaddr_region *rgn;
-	for (rgn = map->region;
-	     rgn < &map->region[map->num_regions]; ++rgn)
-		if (rgn->xlat.method == ADDRXLAT_LINEAR_IND &&
-		    rgn->xlat.poff == &archdata->ktext_off) {
-			rgn->xlat.phys_off = 0UL;
-			rgn->xlat.method = ADDRXLAT_PGT_IND;
+	addrxlat_range_t *rng;
+	for (rng = map->region;
+	     rng < &map->region[map->num_regions]; ++rng)
+		if (rng->xlat.method == ADDRXLAT_LINEAR_IND &&
+		    rng->xlat.poff == &archdata->ktext_off) {
+			rng->xlat.method = ADDRXLAT_PGT_IND;
+			rng->xlat.ppgt = &map->pgt;
 		}
 }
 
@@ -598,17 +598,21 @@ x86_64_vtop_init(kdump_ctx *ctx)
 
 	for (i = 0; i < layout->nregions; ++i) {
 		const struct region_def *def = &layout->regions[i];
+		const addrxlat_def_t *pxlat = &def->xlat;
+		addrxlat_def_t xlat;
+
 		if (def->xlat.method == ADDRXLAT_LINEAR_IND) {
-			struct kdump_xlat xlat = def->xlat;
+			xlat = *pxlat;
+			pxlat = &xlat;
 			xlat.poff = ctx->shared->archdata +
 				((void*)def->xlat.poff - (void*)ARCH_ANCHOR);
-			ret = set_vtop_xlat(&ctx->shared->vtop_map,
-					    def->first, def->last,
-					    &xlat);
-		} else
-			ret = set_vtop_xlat(&ctx->shared->vtop_map,
-					    def->first, def->last,
-					    &def->xlat);
+		} else if (def->xlat.method == ADDRXLAT_PGT_IND) {
+			xlat = *pxlat;
+			pxlat = &xlat;
+			xlat.ppgt = &ctx->shared->vtop_map.pgt;
+		}
+		ret = set_vtop_xlat(&ctx->shared->vtop_map,
+				    def->first, def->last, pxlat);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret,
 					 "Cannot set up mapping #%d", i);

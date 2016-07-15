@@ -39,9 +39,9 @@
 
 kdump_status
 set_vtop_xlat(struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
-	      const struct kdump_xlat *xlat)
+	      const addrxlat_def_t *xlat)
 {
-	struct kdump_vaddr_region *rgn, *prevrgn;
+	addrxlat_range_t *rgn, *prevrgn;
 	kdump_vaddr_t rfirst, rlast;
 	unsigned left;
 	int numinc;
@@ -49,9 +49,9 @@ set_vtop_xlat(struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
 	rgn = map->region;
 	rfirst = 0;
 	for (left = map->num_regions; left > 0; --left) {
-		if (first <= rfirst + rgn->max_off)
+		if (first <= rfirst + rgn->endoff)
 			break;
-		rfirst += rgn->max_off + 1;
+		rfirst += rgn->endoff + 1;
 		++rgn;
 	}
 	rlast = rfirst - 1;
@@ -63,7 +63,7 @@ set_vtop_xlat(struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
 	if (rgn) {
 		for ( ; left > 0; --left) {
 			--numinc;
-			rlast += rgn->max_off + 1;
+			rlast += rgn->endoff + 1;
 			if (rlast > last)
 				break;
 			++rgn;
@@ -74,7 +74,7 @@ set_vtop_xlat(struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
 	if (numinc) {
 		int idx = (map->num_regions - 1) % RGN_ALLOC_INC;
 		if (idx + numinc >= RGN_ALLOC_INC) {
-			struct kdump_vaddr_region *newrgn;
+			addrxlat_range_t *newrgn;
 			unsigned newalloc = map->num_regions - idx +
 				2 * RGN_ALLOC_INC;
 			newrgn = realloc(map->region,
@@ -84,7 +84,7 @@ set_vtop_xlat(struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
 
 			if (!rgn) {
 				rgn = prevrgn = newrgn;
-				rgn->max_off = KDUMP_ADDR_MAX;
+				rgn->endoff = KDUMP_ADDR_MAX;
 				rgn->xlat.method = ADDRXLAT_NONE;
 				++map->num_regions;
 				++left;
@@ -98,17 +98,17 @@ set_vtop_xlat(struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
 		map->num_regions += numinc;
 
 		memmove(rgn + numinc, rgn,
-			left * sizeof(struct kdump_vaddr_region));
+			left * sizeof(addrxlat_range_t));
 	}
 
 	if (last != rlast)
-		rgn[numinc].max_off = rlast - last - 1;
+		rgn[numinc].endoff = rlast - last - 1;
 	if (first != rfirst) {
-		prevrgn->max_off = first - rfirst - 1;
+		prevrgn->endoff = first - rfirst - 1;
 		++prevrgn;
 	}
 
-	prevrgn->max_off = last - first;
+	prevrgn->endoff = last - first;
 	prevrgn->xlat = *xlat;
 	return kdump_ok;
 }
@@ -118,9 +118,9 @@ set_vtop_xlat_linear(struct vtop_map *map,
 		     kdump_vaddr_t first, kdump_vaddr_t last,
 		     kdump_vaddr_t phys_off)
 {
-	const struct kdump_xlat xlat = {
-		.phys_off = phys_off,
+	const addrxlat_def_t xlat = {
 		.method = ADDRXLAT_LINEAR,
+		.off = phys_off,
 	};
 	return set_vtop_xlat(map, first, last, &xlat);
 }
@@ -129,8 +129,9 @@ kdump_status
 set_vtop_xlat_pgt(struct vtop_map *map,
 		  kdump_vaddr_t first, kdump_vaddr_t last)
 {
-	const struct kdump_xlat xlat = {
+	const addrxlat_def_t xlat = {
 		.method = ADDRXLAT_PGT_IND,
+		.ppgt = &map->pgt
 	};
 	return set_vtop_xlat(map, first, last, &xlat);
 }
@@ -144,22 +145,22 @@ flush_vtop_map(struct vtop_map *map)
 	map->num_regions = 0;
 }
 
-const struct kdump_xlat *
+const addrxlat_def_t *
 get_vtop_xlat(const struct vtop_map *map, kdump_vaddr_t vaddr)
 {
-	static const struct kdump_xlat xlat_none = {
+	static const addrxlat_def_t xlat_none = {
 		.method = ADDRXLAT_NONE,
 	};
 
-	struct kdump_vaddr_region *rgn;
+	addrxlat_range_t *rgn;
 	kdump_vaddr_t rfirst;
 
 	rgn = map->region;
 	if (!rgn)
 		return &xlat_none;
 	rfirst = 0;
-	while (vaddr > rfirst + rgn->max_off) {
-		rfirst += rgn->max_off + 1;
+	while (vaddr > rfirst + rgn->endoff) {
+		rfirst += rgn->endoff + 1;
 		++rgn;
 	}
 	return &rgn->xlat;
@@ -278,7 +279,7 @@ kdump_status
 map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	 const struct vtop_map *map)
 {
-	const struct kdump_xlat *xlat;
+	const addrxlat_def_t *xlat;
 
 	xlat = get_vtop_xlat(map, vaddr);
 	switch (xlat->method) {
@@ -291,7 +292,7 @@ map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 		return map->vtop_pgt_fn(ctx, vaddr, paddr);
 
 	case ADDRXLAT_LINEAR:
-		*paddr = vaddr - xlat->phys_off;
+		*paddr = vaddr - xlat->off;
 		return kdump_ok;
 
 	case ADDRXLAT_LINEAR_IND:

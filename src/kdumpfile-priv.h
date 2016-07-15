@@ -502,22 +502,6 @@ struct attr_hash {
 	struct attr_data table[ATTR_HASH_SIZE];
 };
 
-struct kdump_xlat {
-	union {
-		/** offset from physical addresses */
-		kdump_addr_t phys_off;
-
-		/** pointer to the physical offset */
-		kdump_addr_t *poff;
-	};
-	addrxlat_method_t method; /**< vaddr->paddr translation method */
-};
-
-struct kdump_vaddr_region {
-	kdump_vaddr_t max_off;	/**< max offset inside the range */
-	struct kdump_xlat xlat; /**< translation definition */
-};
-
 typedef kdump_status vtop_pgt_fn(
 	kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr);
 
@@ -528,7 +512,7 @@ struct vtop_map {
 
 	addrxlat_fulladdr_t pgt;      /**< root page table origin */
 	unsigned num_regions;	      /**< number of elements in @c region */
-	struct kdump_vaddr_region *region;
+	addrxlat_range_t *region;
 };
 
 struct cache;
@@ -874,7 +858,7 @@ kdump_status init_vtop_maps(kdump_ctx *ctx);
 #define set_vtop_xlat INTERNAL_NAME(set_vtop_xlat)
 kdump_status set_vtop_xlat(struct vtop_map *map,
 			   kdump_vaddr_t first, kdump_vaddr_t last,
-			   const struct kdump_xlat *xlat);
+			   const addrxlat_def_t *xlat);
 
 #define set_vtop_linear INTERNAL_NAME(set_vtop_linear)
 kdump_status set_vtop_xlat_linear(
@@ -889,8 +873,8 @@ kdump_status set_vtop_xlat_pgt(
 void flush_vtop_map(struct vtop_map *map);
 
 #define get_vtop_xlat INTERNAL_NAME(get_vtop_xlat)
-const struct kdump_xlat *get_vtop_xlat(const struct vtop_map *map,
-				       kdump_vaddr_t vaddr);
+const addrxlat_def_t *get_vtop_xlat(const struct vtop_map *map,
+				    kdump_vaddr_t vaddr);
 
 #define vtop_pgt INTERNAL_NAME(vtop_pgt)
 kdump_status vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr,
