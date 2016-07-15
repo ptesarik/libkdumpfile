@@ -194,11 +194,11 @@ addrxlat_by_def(addrxlat_ctx *ctx, addrxlat_ctl_t *ctl,
 				 "No translation defined");
 
 	case ADDRXLAT_LINEAR:
-		ctl->addr += def->off;
+		ctl->addr -= def->off;
 		return addrxlat_ok;
 
 	case ADDRXLAT_LINEAR_IND:
-		ctl->addr += *def->poff;
+		ctl->addr -= *def->poff;
 		return addrxlat_ok;
 
 	case ADDRXLAT_PGT:
