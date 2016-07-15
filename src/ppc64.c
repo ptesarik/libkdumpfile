@@ -37,34 +37,7 @@
 #include <stdlib.h>
 #include <elf.h>
 
-#define VIRTADDR_BITS_MAX	64
 #define VIRTADDR_MAX		UINT64_MAX
-
-/** Definition of a paging form.
- */
-struct paging_form {
-	unsigned page_bits;
-	unsigned pte_bits;
-	unsigned pmd_bits;
-	unsigned pud_bits;
-	unsigned pgd_bits;
-};
-
-struct ppc64_data {
-	struct paging_form pgform;
-	struct {
-		kdump_vaddr_t pmd_mask;
-		kdump_vaddr_t pud_mask;
-		kdump_vaddr_t pgd_mask;
-
-		unsigned pte_shift;
-		unsigned pmd_shift;
-		unsigned pud_shift;
-		unsigned pgd_shift;
-
-		int rpn_shift;	/**< Real Page Number shift. */
-	} pg;
-};
 
 static const struct attr_template reg_names[] = {
 #define REG(name)	{ #name, NULL, kdump_number }
@@ -122,211 +95,6 @@ static const struct attr_template reg_names[] = {
 };
 
 #define _64K (1<<16)
-
-/**  A page table entry is huge if the bottom two bits != 00.
- */
-#define HUGE_PTE_MASK     0x03
-
-/**  Page entry flag for a huge page directory.
- * The corresponding entry is huge if the most significant bit is zero.
- */
-#define PD_HUGE           ((uint64_t)1 << 63)
-
-/**  Page shift of a huge page directory.
- * If PD_HUGE is zero, the huge page shift is stored in the least
- * significant bits of the entry.
- */
-#define HUGEPD_SHIFT_MASK 0x3f
-
-/**  Individual parts of a virtual address.
- */
-struct vaddr_parts {
-	unsigned off;		/**< Offset inside page */
-	unsigned pte;		/**< PTE index */
-	unsigned pmd;		/**< PMD index */
-	unsigned pud;		/**< PUD index */
-	unsigned pgd;		/**< PGD index */
-};
-
-/**  Split a virtual addres into individual parts.
- * @param[in]  pgform  Paging form definition.
- * @param[in]  addr    Virtual address to be split.
- * @param[out] parts   Parts of the address.
- */
-static void
-vaddr_split(const struct paging_form *pgform, kdump_vaddr_t addr,
-	    struct vaddr_parts *parts)
-{
-	parts->off = addr & (((kdump_vaddr_t)1 << pgform->page_bits) - 1);
-	addr >>= pgform->page_bits;
-	parts->pte = addr & (((kdump_vaddr_t)1 << pgform->pte_bits) - 1);
-	addr >>= pgform->pte_bits;
-	parts->pmd = addr & (((kdump_vaddr_t)1 << pgform->pmd_bits) - 1);
-	addr >>= pgform->pmd_bits;
-	parts->pud = addr & (((kdump_vaddr_t)1 << pgform->pud_bits) - 1);
-	addr >>= pgform->pud_bits;
-	parts->pgd = addr & (((kdump_vaddr_t)1 << pgform->pgd_bits) - 1);
-}
-
-/**  Get the translated address using its PTE and page shift.
- * @param vaddr       Virtual address to be translated.
- * @param pte         Last-level page table entry.
- * @param rpn_shift   Real Page Number shift.
- * @param page_shift  Page shift.
- *
- * On PowerPC, the PFN in the page table entry is shifted left by
- * @ref rpn_shift bits (allowing to store more flags in the lower bits).
- */
-static inline kdump_addr_t
-vtop_final(kdump_vaddr_t vaddr, uint64_t pte,
-	   unsigned rpn_shift, unsigned page_shift)
-{
-	kdump_addr_t mask = ((kdump_addr_t)1 << page_shift) - 1;
-	return ((pte >> rpn_shift) << page_shift) + (vaddr & mask);
-}
-
-/**  Check whether a page table entry is huge.
- * @param pte  Page table entry (value).
- * @returns    Non-zero if this is a huge page entry.
- */
-static inline int
-is_hugepte(uint64_t pte)
-{
-	return (pte & HUGE_PTE_MASK) != 0x0;
-}
-
-/**  Check whether a page directory is huge.
- * @param pte  Page table entry (value).
- * @returns    Non-zero if this is a huge page directory entry.
- */
-static inline int
-is_hugepd(uint64_t pte)
-{
-	return !(pte & PD_HUGE);
-}
-
-/**  Get the huge page directory shift.
- * @param entry  Huge page directory entry.
- * @returns      Huge page bit shift.
- */
-static inline unsigned
-hugepd_shift(uint64_t hpde)
-{
-	return hpde & HUGEPD_SHIFT_MASK;
-}
-
-/**  Translate a huge page using its directory entry.
- */
-static kdump_status
-ppc64_vtop_hugepd(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
-		  uint64_t hpde, unsigned pdshift)
-{
-	struct ppc64_data *archdata = ctx->shared->archdata;
-	kdump_vaddr_t mask, ptep;
-	unsigned long idx;
-	uint64_t pte;
-	kdump_status res;
-
-	mask = ((kdump_vaddr_t)1 << pdshift) - 1;
-	idx = (vaddr & mask) >> hugepd_shift(hpde);
-	ptep = ((hpde & ~HUGEPD_SHIFT_MASK) | PD_HUGE) +
-		idx * sizeof(uint64_t);
-
-	res = read_u64(ctx, KDUMP_KVADDR, ptep, 0, "huge PTE", &pte);
-	if (res != kdump_ok)
-		return res;
-	if (!pte)
-		return set_error(ctx, kdump_nodata, "huge_pte[%lu] is none",
-				 idx);
-
-	*paddr = vtop_final(vaddr, pte, archdata->pg.rpn_shift,
-			    hugepd_shift(hpde));
-	return kdump_ok;
-}
-
-static kdump_status
-ppc64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
-{
-	struct ppc64_data *archdata = ctx->shared->archdata;
-	struct vaddr_parts split;
-	kdump_vaddr_t pgdp, pudp, pmdp, ptep;
-	uint64_t pgd, pud, pmd, pte;
-	kdump_paddr_t base;
-	kdump_status res;
-
-	vaddr_split(&archdata->pgform, vaddr, &split);
-
-	pgdp = ctx->shared->vtop_map.pgt.addr + split.pgd * sizeof(uint64_t);
-	res = read_u64(ctx, KDUMP_KVADDR, pgdp, 1, "PGD entry", &pgd);
-	if (res != kdump_ok)
-		return res;
-	if (!pgd)
-		return set_error(ctx, kdump_nodata, "pgd[%u] is none",
-				 split.pgd);
-
-	if (is_hugepte(pgd)) {
-		*paddr = vtop_final(vaddr, pgd, archdata->pg.rpn_shift,
-				    archdata->pg.pgd_shift);
-		return kdump_ok;
-	}
-	if (is_hugepd(pgd))
-		return ppc64_vtop_hugepd(ctx, vaddr, paddr,
-					 pgd, archdata->pg.pgd_shift);
-
-	base = (pgd & (~archdata->pg.pgd_mask));
-	if (archdata->pgform.pud_bits != 0) {
-		pudp = base + split.pud * sizeof(uint64_t);
-		res = read_u64(ctx, KDUMP_KVADDR, pudp, 1, "PUD entry", &pud);
-		if (res != kdump_ok)
-			return res;
-
-		if (!pud)
-			return set_error(ctx, kdump_nodata, "pud[%u] is none",
-					 split.pud);
-
-		if (is_hugepte(pud)) {
-			*paddr = vtop_final(vaddr, pud, archdata->pg.rpn_shift,
-					    archdata->pg.pud_shift);
-			return kdump_ok;
-		}
-		if (is_hugepd(pud))
-			return ppc64_vtop_hugepd(ctx, vaddr, paddr,
-						 pud, archdata->pg.pud_shift);
-
-		base = pud & (~archdata->pg.pud_mask);
-	}
-
-	pmdp = base + split.pmd * sizeof(uint64_t);
-	res = read_u64(ctx, KDUMP_KVADDR, pmdp, 0, "PMD entry", &pmd);
-	if (res != kdump_ok)
-		return res;
-	if (!pmd)
-		return set_error(ctx, kdump_nodata, "pmd[%u] is none",
-				 split.pmd);
-
-	if (is_hugepte(pmd)) {
-		*paddr = vtop_final(vaddr, pmd, archdata->pg.rpn_shift,
-				    archdata->pg.pmd_shift);
-		return kdump_ok;
-	}
-	if (is_hugepd(pmd))
-		return ppc64_vtop_hugepd(ctx, vaddr, paddr,
-					 pmd, archdata->pg.pmd_shift);
-
-	base = pmd & (~archdata->pg.pmd_mask);
-	ptep = base + split.pte * sizeof(uint64_t);
-	res = read_u64(ctx, KDUMP_KVADDR, ptep, 0, "PTE entry", &pte);
-	if (res != kdump_ok)
-		return res;
-	if (!pte)
-		return set_error(ctx, kdump_nodata, "pte[%u] is none",
-				 split.pte);
-
-	*paddr = vtop_final(vaddr, pte, archdata->pg.rpn_shift,
-			    archdata->pg.pte_shift);
-	return kdump_ok;
-}
-
 
 static kdump_status
 ppc64_vtop_init(kdump_ctx *ctx)
@@ -410,17 +178,8 @@ static const addrxlat_paging_form_t ppc64_pf_64k = {
 static kdump_status
 ppc64_init(kdump_ctx *ctx)
 {
-	struct ppc64_data *archdata;
-	unsigned shift;
 	int pagesize;
 	addrxlat_status axres;
-
-	archdata = calloc(1, sizeof(struct ppc64_data));
-	if (!archdata)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate ppc64 private data");
-
-	ctx->shared->archdata = archdata;
 
 	pagesize = get_page_size(ctx);
 
@@ -429,39 +188,10 @@ ppc64_init(kdump_ctx *ctx)
 			ctx->shared->addrxlat, &ppc64_pf_64k);
 		if (axres != addrxlat_ok)
 			return set_error_addrxlat(ctx, axres);
-
-		archdata->pgform.page_bits = 16;
-		archdata->pgform.pte_bits = 12;
-		archdata->pgform.pmd_bits = 12;
-		archdata->pgform.pud_bits = 0;
-		archdata->pgform.pgd_bits = 4;
-		archdata->pg.pmd_mask = 0x1ff;
-		archdata->pg.pud_mask = 0x1ff;
-		archdata->pg.pgd_mask = 0x1ff;
-		archdata->pg.rpn_shift = 30;
-
 	} else
 		return set_error(ctx, kdump_nodata, "PAGESIZE == %d", pagesize);
 
-	shift = get_page_shift(ctx);
-	archdata->pg.pte_shift = shift;
-	shift += archdata->pgform.pte_bits;
-	archdata->pg.pmd_shift = shift;
-	shift += archdata->pgform.pmd_bits;
-	archdata->pg.pud_shift = shift;
-	shift += archdata->pgform.pgd_bits;
-	archdata->pg.pgd_shift = shift;
-
 	return kdump_ok;
-}
-
-static void
-ppc64_cleanup(struct kdump_shared *shared)
-{
-	struct ppc64_data *archdata = shared->archdata;
-
-	free(archdata);
-	shared->archdata = NULL;
 }
 
 /** @cond TARGET_ABI */
@@ -522,6 +252,4 @@ const struct arch_ops ppc64_ops = {
 	.init = ppc64_init,
 	.vtop_init = ppc64_vtop_init,
 	.process_prstatus = process_ppc64_prstatus,
-	.vtop = ppc64_vtop,
-	.cleanup = ppc64_cleanup,
 };

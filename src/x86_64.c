@@ -47,37 +47,10 @@
 #define NONCANONICAL_END	(~NONCANONICAL_START)
 #define VIRTADDR_MAX		UINT64_MAX
 
-/* Maximum physical addrss bits (architectural limit) */
-#define PHYSADDR_BITS_MAX	52
-#define PHYSADDR_SIZE		((uint64_t)1 << PHYSADDR_BITS_MAX)
-#define PHYSADDR_MASK		(~(PHYSADDR_SIZE-1))
-
-#define PGDIR_SHIFT	39
-
-#define PUD_SHIFT	30
-#define PUD_PSE_SIZE	((uint64_t)1 << PUD_SHIFT)
-#define PUD_PSE_MASK	(~(PUD_PSE_SIZE-1))
-
-#define PMD_SHIFT	21
-#define PMD_PSE_SIZE	((uint64_t)1 << PMD_SHIFT)
-#define PMD_PSE_MASK	(~(PMD_PSE_SIZE-1))
-
 #define PAGE_SHIFT	12
 #define PAGE_SIZE	((uint64_t)1 << PAGE_SHIFT)
-#define PAGE_MASK	(~(PAGE_SIZE-1))
 
 #define PTRS_PER_PAGE	(PAGE_SIZE/sizeof(uint64_t))
-
-#define pgd_index(addr)	(((addr) >> PGDIR_SHIFT) & (PTRS_PER_PAGE - 1))
-#define pud_index(addr)	(((addr) >> PUD_SHIFT) & (PTRS_PER_PAGE - 1))
-#define pmd_index(addr)	(((addr) >> PMD_SHIFT) & (PTRS_PER_PAGE - 1))
-#define pte_index(addr)	(((addr) >> PAGE_SHIFT) & (PTRS_PER_PAGE - 1))
-
-#define _PAGE_BIT_PRESENT	0
-#define _PAGE_BIT_PSE		7
-
-#define _PAGE_PRESENT	(1UL << _PAGE_BIT_PRESENT)
-#define _PAGE_PSE	(1UL << _PAGE_BIT_PSE)
 
 #define __START_KERNEL_map	0xffffffff80000000ULL
 
@@ -388,9 +361,6 @@ static const struct attr_template reg_names[] = {
 
 static const struct attr_template tmpl_pid =
 	{ "pid", NULL, kdump_number };
-
-static kdump_status x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
-				kdump_paddr_t *paddr);
 
 static kdump_status
 add_canonical_regions(kdump_ctx *ctx, struct vtop_map *map)
@@ -792,95 +762,6 @@ x86_64_cleanup(struct kdump_shared *shared)
 }
 
 static kdump_status
-x86_64_pt_walk(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
-	       const struct vtop_map *map)
-{
-	kdump_addr_t pgdp, pudp, pmdp, ptep;
-	uint64_t pgd, pud, pmd, pte;
-	kdump_paddr_t base;
-	kdump_status ret;
-
-	if (map->pgt.addr == ADDRXLAT_ADDR_MAX)
-		return set_error(ctx, kdump_invalid,
-				 "VTOP translation not initialized");
-
-	pgdp = map->pgt.addr + pgd_index(vaddr) * sizeof(uint64_t);
-	ret = read_u64(ctx, map->pgt.as, pgdp, 1, "PGD entry", &pgd);
-	if (ret != kdump_ok)
-		return ret;
-
-	if (!(pgd & _PAGE_PRESENT))
-		return set_error(ctx, kdump_nodata,
-				 "Page directory pointer not present:"
-				 " pgd[%u] = 0x%llx",
-				 (unsigned) pgd_index(vaddr),
-				 (unsigned long long) pgd);
-
-	base = pgd & ~PHYSADDR_MASK & PAGE_MASK;
-	pudp = base + pud_index(vaddr) * sizeof(uint64_t);
-	ret = read_u64(ctx, KDUMP_MACHPHYSADDR, pudp, 1, "PUD entry", &pud);
-	if (ret != kdump_ok)
-		return ret;
-
-	if (!(pud & _PAGE_PRESENT))
-		return set_error(ctx, kdump_nodata,
-				 "Page directory not present:"
-				 " pud[%u] = 0x%llx",
-				 (unsigned) pud_index(vaddr),
-				 (unsigned long long) pud);
-	if (pud & _PAGE_PSE) {
-		base = pud & ~PHYSADDR_MASK & PUD_PSE_MASK;
-		*paddr = base + (vaddr & ~PUD_PSE_MASK);
-		return kdump_ok;
-	}
-
-	base = pud & ~PHYSADDR_MASK & PAGE_MASK;
-	pmdp = base + pmd_index(vaddr) * sizeof(uint64_t);
-	ret = read_u64(ctx, KDUMP_MACHPHYSADDR, pmdp, 0, "PMD entry", &pmd);
-	if (ret != kdump_ok)
-		return ret;
-
-	if (!(pmd & _PAGE_PRESENT))
-		return set_error(ctx, kdump_nodata,
-				 "Page table not present: pmd[%u] = 0x%llx",
-				 (unsigned) pmd_index(vaddr),
-				 (unsigned long long) pmd);
-	if (pmd & _PAGE_PSE) {
-		base = pmd & ~PHYSADDR_MASK & PMD_PSE_MASK;
-		*paddr = base + (vaddr & ~PMD_PSE_MASK);
-		return kdump_ok;
-	}
-
-	base = pmd & ~PHYSADDR_MASK & PAGE_MASK;
-	ptep = base + pte_index(vaddr) * sizeof(uint64_t);
-	ret = read_u64(ctx, KDUMP_MACHPHYSADDR, ptep, 0, "PTE entry", &pte);
-	if (ret != kdump_ok)
-		return ret;
-
-	if (!(pte & _PAGE_PRESENT))
-		return set_error(ctx, kdump_nodata,
-				 "Page not present: pte[%u] = 0x%llx",
-				 (unsigned) pte_index(vaddr),
-				 (unsigned long long) pte);
-	base = pte & ~PHYSADDR_MASK & PAGE_MASK;
-	*paddr = base + (vaddr & ~PAGE_MASK);
-
-	return kdump_ok;
-}
-
-static kdump_status
-x86_64_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
-{
-	return x86_64_pt_walk(ctx, vaddr, paddr, &ctx->shared->vtop_map);
-}
-
-static kdump_status
-x86_64_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
-{
-	return x86_64_pt_walk(ctx, vaddr, paddr, &ctx->shared->vtop_map_xen);
-}
-
-static kdump_status
 read_pfn(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_pfn_t *pval)
 {
 	uint64_t val;
@@ -961,8 +842,6 @@ const struct arch_ops x86_64_ops = {
 	.process_prstatus = process_x86_64_prstatus,
 	.process_load = x86_64_process_load,
 	.process_xen_prstatus = process_x86_64_xen_prstatus,
-	.vtop = x86_64_vtop,
-	.vtop_xen = x86_64_vtop_xen,
 	.pfn_to_mfn = x86_64_pfn_to_mfn,
 	.mfn_to_pfn = x86_64_mfn_to_pfn,
 	.cleanup = x86_64_cleanup,

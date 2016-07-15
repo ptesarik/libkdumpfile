@@ -262,19 +262,6 @@ struct arch_ops {
 	 */
 	kdump_status (*process_xen_prstatus)(kdump_ctx *, void *, size_t);
 
-	/* Translate a virtual address to a physical address
-	 *
-	 * In case of Xen, this should be the address as used by the CPU,
-	 * i.e. a Xen machine address for a non-auto-translated domain.
-	 */
-	kdump_status (*vtop)(kdump_ctx *ctx, kdump_vaddr_t vaddr,
-			     kdump_paddr_t *paddr);
-
-	/* Translate a Xen virtual address to a physical address
-	 */
-	kdump_status (*vtop_xen)(kdump_ctx *ctx, kdump_vaddr_t vaddr,
-				 kdump_paddr_t *paddr);
-
 	/* Translate a physical frame number to a machine frame number */
 	kdump_status (*pfn_to_mfn)(kdump_ctx *, kdump_pfn_t, kdump_pfn_t *);
 

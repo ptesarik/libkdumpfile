@@ -40,56 +40,8 @@
 
 #define ELF_NGREG 17
 
-/* Maximum virtual address bits (architecture limit) */
-#define VIRTADDR_BITS_MAX	32
+/* Maximum virtual address (architecture limit) */
 #define VIRTADDR_MAX		UINT32_MAX
-
-/* Maximum physical address bits (architectural limit) */
-#define PHYSADDR_BITS_MAX_PAE	52
-#define PHYSADDR_SIZE_PAE	((uint64_t)1 << PHYSADDR_BITS_MAX_PAE)
-#define PHYSADDR_MASK_PAE	(~(PHYSADDR_SIZE_PAE-1))
-
-#define PGDIR_SHIFT_NONPAE	22
-#define PGD_PSE_SIZE_NONPAE	((uint64_t)1 << PGDIR_SHIFT_NONPAE)
-#define PGD_PSE_MASK_NONPAE	(~(PGD_PSE_SIZE_NONPAE-1))
-
-#define PGD_PSE_HIGH_SHIFT	13
-#define PGD_PSE_HIGH_BITS	8
-#define PGD_PSE_HIGH_MASK	(((uint64_t)1 << PGD_PSE_HIGH_BITS)-1)
-#define pgd_pse_high(pgd)	\
-	((((pgd) >> PGD_PSE_HIGH_SHIFT) & PGD_PSE_HIGH_MASK) << 32)
-
-#define PGDIR_SHIFT_PAE		30
-#define PTRS_PER_PGD_PAE	4
-
-#define PMD_SHIFT_PAE		21
-#define PMD_PSE_SIZE_PAE	((uint64_t)1 << PMD_SHIFT_PAE)
-#define PMD_PSE_MASK_PAE	(~(PMD_PSE_SIZE_PAE-1))
-
-#define PAGE_SHIFT		12
-#define PAGE_SIZE		((uint64_t)1 << PAGE_SHIFT)
-#define PAGE_MASK		(~(PAGE_SIZE-1))
-
-#define PTRS_PER_PAGE_NONPAE	(PAGE_SIZE/sizeof(uint32_t))
-#define PTRS_PER_PAGE_PAE	(PAGE_SIZE/sizeof(uint64_t))
-
-#define pgd_index_nonpae(addr)	\
-	(((addr) >> PGDIR_SHIFT_NONPAE) & (PTRS_PER_PAGE_NONPAE - 1))
-#define pte_index_nonpae(addr)	\
-	(((addr) >> PAGE_SHIFT) & (PTRS_PER_PAGE_NONPAE - 1))
-
-#define pgd_index_pae(addr)	\
-	(((addr) >> PGDIR_SHIFT_PAE) & (PTRS_PER_PGD_PAE - 1))
-#define pmd_index_pae(addr)	\
-	(((addr) >> PMD_SHIFT_PAE) & (PTRS_PER_PAGE_PAE - 1))
-#define pte_index_pae(addr)	\
-	(((addr) >> PAGE_SHIFT) & (PTRS_PER_PAGE_PAE - 1))
-
-#define _PAGE_BIT_PRESENT	0
-#define _PAGE_BIT_PSE		7
-
-#define _PAGE_PRESENT	(1UL << _PAGE_BIT_PRESENT)
-#define _PAGE_PSE	(1UL << _PAGE_BIT_PSE)
 
 #define __START_KERNEL_map	0xc0000000UL
 
@@ -302,122 +254,10 @@ ia32_cleanup(struct kdump_shared *shared)
 	shared->archdata = NULL;
 }
 
-static kdump_status
-ia32_vtop_nonpae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
-{
-	kdump_addr_t pgdp, ptep;
-	uint32_t pgd, pte;
-	kdump_paddr_t base;
-	kdump_status ret;
-
-	pgdp = ctx->shared->vtop_map.pgt.addr +
-		pgd_index_nonpae(vaddr) * sizeof(uint32_t);
-	ret = read_u32(ctx, KDUMP_KPHYSADDR, pgdp, 1, "PGD entry", &pgd);
-	if (ret != kdump_ok)
-		return ret;
-
-	if (!(pgd & _PAGE_PRESENT))
-		return set_error(ctx, kdump_nodata,
-				 "Page table not present: pgd[%u] = 0x%llx",
-				 (unsigned) pgd_index_nonpae(vaddr),
-				 (unsigned long long) pgd);
-	if (pgd & _PAGE_PSE) {
-		base = (pgd & PGD_PSE_MASK_NONPAE) | pgd_pse_high(pgd);
-		*paddr = base + (vaddr & ~PGD_PSE_MASK_NONPAE);
-		return kdump_ok;
-	}
-
-	base = pgd & PAGE_MASK;
-	ptep = base + pte_index_nonpae(vaddr) * sizeof(uint32_t);
-	ret = read_u32(ctx, KDUMP_MACHPHYSADDR, ptep, 0, "PTE entry", &pte);
-	if (ret != kdump_ok)
-		return ret;
-
-	if (!(pte & _PAGE_PRESENT))
-		return set_error(ctx, kdump_nodata,
-				 "Page not present: pte[%u] = 0x%llx",
-				 (unsigned) pte_index_nonpae(vaddr),
-				 (unsigned long long) pte);
-	base = pte & PAGE_MASK;
-	*paddr = base + (vaddr & ~PAGE_MASK);
-
-	return kdump_ok;
-}
-
-static kdump_status
-ia32_vtop_pae(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
-{
-	kdump_addr_t pgdp, pmdp, ptep;
-	uint64_t pgd, pmd, pte;
-	kdump_paddr_t base;
-	kdump_status ret;
-
-	pgdp = ctx->shared->vtop_map.pgt.addr +
-		pgd_index_pae(vaddr) * sizeof(uint64_t);
-	ret = read_u64(ctx, KDUMP_KPHYSADDR, pgdp, 1, "PGD entry", &pgd);
-	if (ret != kdump_ok)
-		return ret;
-
-	if (!(pgd & _PAGE_PRESENT))
-		return set_error(ctx, kdump_nodata,
-				 "Page directory not present:"
-				 " pgd[%u] = 0x%llx",
-				 (unsigned) pgd_index_pae(vaddr),
-				 (unsigned long long) pgd);
-
-	base = pgd & ~PHYSADDR_MASK_PAE & PAGE_MASK;
-	pmdp = base + pmd_index_pae(vaddr) * sizeof(uint64_t);
-	ret = read_u64(ctx, KDUMP_MACHPHYSADDR, pmdp, 0, "PMD entry", &pmd);
-	if (ret != kdump_ok)
-		return ret;
-
-	if (!(pmd & _PAGE_PRESENT))
-		return set_error(ctx, kdump_nodata,
-				 "Page table not present: pmd[%u] = 0x%llx",
-				 (unsigned) pmd_index_pae(vaddr),
-				 (unsigned long long) pmd);
-	if (pmd & _PAGE_PSE) {
-		base = pmd & ~PHYSADDR_MASK_PAE & PMD_PSE_MASK_PAE;
-		*paddr = base + (vaddr & ~PMD_PSE_MASK_PAE);
-		return kdump_ok;
-	}
-
-	base = pmd & ~PHYSADDR_MASK_PAE & PAGE_MASK;
-	ptep = base + pte_index_pae(vaddr) * sizeof(uint64_t);
-	ret = read_u64(ctx, KDUMP_MACHPHYSADDR, ptep, 0, "PTE entry", &pte);
-	if (ret != kdump_ok)
-		return ret;
-
-	if (!(pte & _PAGE_PRESENT))
-		return set_error(ctx, kdump_nodata,
-				 "Page not present: pte[%u] = 0x%llx",
-				 (unsigned) pte_index_pae(vaddr),
-				 (unsigned long long) pte);
-	base = pte & ~PHYSADDR_MASK_PAE & PAGE_MASK;
-	*paddr = base + (vaddr & ~PAGE_MASK);
-
-	return kdump_ok;
-}
-
-static kdump_status
-ia32_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
-{
-	struct ia32_data *archdata = ctx->shared->archdata;
-
-	if (ctx->shared->vtop_map.pgt.addr == ADDRXLAT_ADDR_MAX)
-		return set_error(ctx, kdump_invalid,
-				 "VTOP translation not initialized");
-
-	return archdata->pae_state > 0
-		? ia32_vtop_pae(ctx, vaddr, paddr)
-		: ia32_vtop_nonpae(ctx, vaddr, paddr);
-}
-
 const struct arch_ops ia32_ops = {
 	.init = ia32_init,
 	.vtop_init = ia32_vtop_init,
 	.process_prstatus = process_ia32_prstatus,
-	.vtop = ia32_vtop,
 	.cleanup = ia32_cleanup,
 };
 
