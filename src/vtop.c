@@ -157,7 +157,7 @@ vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	state.base = ctx->shared->vtop_map.pgt;
 	state.data = ctx;
-	res = addrxlat_pgt(ctx->shared->addrxlat, &state, vaddr);
+	res = addrxlat_pgt(ctx->addrxlat, &state, vaddr);
 	if (res == addrxlat_ok)
 		return set_error(ctx, mtop(ctx, state.base.addr, paddr),
 				 "Cannot translate machine address 0x%llx",
@@ -182,7 +182,7 @@ vtop_pgt_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 
 	state.base = ctx->shared->vtop_map_xen.pgt;
 	state.data = ctx;
-	res = addrxlat_pgt(ctx->shared->addrxlat, &state, vaddr);
+	res = addrxlat_pgt(ctx->addrxlat, &state, vaddr);
 	if (res == addrxlat_ok) {
 		*paddr = state.base.addr;
 		return kdump_ok;
@@ -207,7 +207,7 @@ map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 
 	ctl.addr = vaddr;
 	ctl.data = ctx;
-	status = addrxlat_by_map(ctx->shared->addrxlat, &ctl, map->map);
+	status = addrxlat_by_map(ctx->addrxlat, &ctl, map->map);
 	if (status == addrxlat_ok)
 		*paddr = ctl.addr;
 	return set_error_addrxlat(ctx, status);
@@ -247,7 +247,7 @@ vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 
 	state.base = ctx->shared->vtop_map.pgt;
 	state.data = ctx;
-	res = addrxlat_pgt(ctx->shared->addrxlat, &state, vaddr);
+	res = addrxlat_pgt(ctx->addrxlat, &state, vaddr);
 	if (res == addrxlat_ok) {
 		*maddr = state.base.addr;
 		return kdump_ok;
@@ -402,16 +402,30 @@ init_vtop_maps(kdump_ctx *ctx)
 {
 	struct kdump_shared *shared = ctx->shared;
 
-	shared->addrxlat = addrxlat_new();
-	if (!shared->addrxlat)
+	shared->pgtxlat = addrxlat_pgt_new();
+	if (!shared->pgtxlat)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot initialize address translation");
+				 "Cannot initialize page table translation");
 
-	addrxlat_cb_read32(shared->addrxlat, addrxlat_read32);
-	addrxlat_cb_read64(shared->addrxlat, addrxlat_read64);
+	addrxlat_set_pgt(ctx->addrxlat, shared->pgtxlat);
 
 	shared->vtop_map.pgt.addr = KDUMP_ADDR_MAX;
 	shared->vtop_map_xen.pgt.addr = KDUMP_ADDR_MAX;
 
 	return kdump_ok;
+}
+
+addrxlat_ctx *
+init_addrxlat(kdump_ctx *ctx)
+{
+	addrxlat_ctx *addrxlat;
+
+	addrxlat = addrxlat_new();
+	if (!addrxlat)
+		return addrxlat;
+
+	addrxlat_cb_read32(addrxlat, addrxlat_read32);
+	addrxlat_cb_read64(addrxlat, addrxlat_read64);
+
+	return addrxlat;
 }

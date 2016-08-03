@@ -208,7 +208,7 @@ read_pgt(kdump_ctx *ctx)
 	}
 
 	pf = (archdata->pae_state > 0 ? &ia32_pf_pae : &ia32_pf);
-	axres = addrxlat_set_paging_form(ctx->shared->addrxlat, pf);
+	axres = addrxlat_pgt_set_form(ctx->shared->pgtxlat, pf);
 	if (axres != addrxlat_ok)
 		return set_error_addrxlat(ctx, axres);
 

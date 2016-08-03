@@ -57,7 +57,19 @@ static const struct format_ops *formats[] = {
 kdump_ctx *
 kdump_alloc(void)
 {
-	return calloc(1, sizeof (kdump_ctx));
+	kdump_ctx *ctx;
+
+	ctx = calloc(1, sizeof (kdump_ctx));
+	if (!ctx)
+		return ctx;
+
+	ctx->addrxlat = init_addrxlat(ctx);
+	if (!ctx->addrxlat) {
+		free(ctx);
+		ctx = NULL;
+	}
+
+	return ctx;
 }
 
 kdump_status
@@ -124,6 +136,7 @@ kdump_clone(kdump_ctx *ctx, const kdump_ctx *orig)
 					 "Cannot allocate per-ctx data");
 		}
 	}
+	addrxlat_set_pgt(ctx->addrxlat, orig->shared->pgtxlat);
 	rwlock_unlock(&orig->shared->lock);
 
 	rwlock_wrlock(&orig->shared->lock);
@@ -388,6 +401,8 @@ kdump_free(kdump_ctx *ctx)
 		if (shared->per_ctx_size[slot])
 			free(ctx->data[slot]);
 
+	addrxlat_decref(ctx->addrxlat);
+
 	list_del(&ctx->list);
 	isempty = list_empty(&shared->ctx);
 
@@ -404,7 +419,6 @@ kdump_free(kdump_ctx *ctx)
 			free(shared->xen_map);
 		flush_vtop_map(&shared->vtop_map);
 		flush_vtop_map(&shared->vtop_map_xen);
-		addrxlat_decref(shared->addrxlat);
 		cleanup_attr(shared);
 		rwlock_destroy(&shared->lock);
 		free(shared);

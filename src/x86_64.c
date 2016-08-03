@@ -426,7 +426,7 @@ x86_64_init(kdump_ctx *ctx)
 	addrxlat_status axres;
 	kdump_status ret;
 
-	axres = addrxlat_set_paging_form(ctx->shared->addrxlat, &x86_64_pf);
+	axres = addrxlat_pgt_set_form(ctx->shared->pgtxlat, &x86_64_pf);
 	if (axres != addrxlat_ok)
 		return set_error_addrxlat(ctx, axres);
 

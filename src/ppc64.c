@@ -184,8 +184,8 @@ ppc64_init(kdump_ctx *ctx)
 	pagesize = get_page_size(ctx);
 
 	if (pagesize == _64K) {
-		axres = addrxlat_set_paging_form(
-			ctx->shared->addrxlat, &ppc64_pf_64k);
+		axres = addrxlat_pgt_set_form(
+			ctx->shared->pgtxlat, &ppc64_pf_64k);
 		if (axres != addrxlat_ok)
 			return set_error_addrxlat(ctx, axres);
 	} else

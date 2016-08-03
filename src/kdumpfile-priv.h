@@ -529,8 +529,8 @@ struct kdump_shared {
 
 	struct cache *cache;	/**< Page cache. */
 
-	/** Address translation context. */
-	addrxlat_ctx *addrxlat;
+	/** Page table translation shared object. */
+	addrxlat_pgt_t *pgtxlat;
 
 	/** Linux address translation. */
 	struct vtop_map vtop_map;
@@ -572,6 +572,9 @@ struct _kdump_ctx {
 	struct list_head list;
 
 	void *priv;		/**< User private data. */
+
+	/** Address translation context. */
+	addrxlat_ctx *addrxlat;
 
 	/* callbacks */
 	kdump_get_symbol_val_fn *cb_get_symbol_val;
@@ -835,6 +838,9 @@ kdump_status process_arch_notes(kdump_ctx *ctx, void *data, size_t size);
 
 #define init_vtop_maps INTERNAL_NAME(init_vtop_maps)
 kdump_status init_vtop_maps(kdump_ctx *ctx);
+
+#define init_addrxlat INTERNAL_NAME(init_addrxlat)
+addrxlat_ctx *init_addrxlat(kdump_ctx *ctx);
 
 #define set_vtop_xlat INTERNAL_NAME(set_vtop_xlat)
 kdump_status set_vtop_xlat(struct vtop_map *map,
