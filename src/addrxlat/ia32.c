@@ -63,9 +63,10 @@ pgt_ia32(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 		"pte",
 		"pgd",
 	};
+	const addrxlat_pgt_t *pgt = ctx->pgt;
 
 	if (!state->level)
-		return state->idx[ctx->pf.levels]
+		return state->idx[pgt->pf.levels]
 			? set_error(ctx, addrxlat_invalid,
 				    "Virtual address too big")
 			: addrxlat_continue;
@@ -81,11 +82,11 @@ pgt_ia32(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 	state->base.as = ADDRXLAT_MACHPHYSADDR;
 	if (state->level == 2 && (state->raw_pte & _PAGE_PSE)) {
 		--state->level;
-		state->base.addr = (state->raw_pte & ctx->pgt_mask[1]) |
+		state->base.addr = (state->raw_pte & pgt->pgt_mask[1]) |
 			pgd_pse_high(state->raw_pte);
-		state->idx[0] |= state->idx[1] << ctx->pf.bits[0];
+		state->idx[0] |= state->idx[1] << pgt->pf.bits[0];
 	} else
-		state->base.addr = state->raw_pte & ctx->pgt_mask[0];
+		state->base.addr = state->raw_pte & pgt->pgt_mask[0];
 
 	return addrxlat_continue;
 }
@@ -108,9 +109,10 @@ pgt_ia32_pae(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 		"pmd",
 		"pgd",
 	};
+	const addrxlat_pgt_t *pgt = ctx->pgt;
 
 	if (!state->level)
-		return state->idx[ctx->pf.levels]
+		return state->idx[pgt->pf.levels]
 			? set_error(ctx, addrxlat_invalid,
 				    "Virtual address too big")
 			: addrxlat_continue;
@@ -127,10 +129,10 @@ pgt_ia32_pae(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 	state->base.addr = state->raw_pte & ~PHYSADDR_MASK_PAE;
 	if (state->level == 2 && (state->raw_pte & _PAGE_PSE)) {
 		--state->level;
-		state->base.addr &= ctx->pgt_mask[1];
-		state->idx[0] |= state->idx[1] << ctx->pf.bits[0];
+		state->base.addr &= pgt->pgt_mask[1];
+		state->idx[0] |= state->idx[1] << pgt->pf.bits[0];
 	} else
-		state->base.addr &= ctx->pgt_mask[0];
+		state->base.addr &= pgt->pgt_mask[0];
 
 	return addrxlat_continue;
 }

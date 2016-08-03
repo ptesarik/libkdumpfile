@@ -57,6 +57,7 @@ typedef enum _addrxlat_status {
 	addrxlat_continue,		/**< Repeat the last step. */
 	addrxlat_notpresent,		/**< Page not present. */
 	addrxlat_invalid,		/**< Invalid address. */
+	addrxlat_nomem,			/**< Memory allocation failure. */
 
 	/** Base for custom status codes.
 	 * More importantly, this enumerator forces the whole enum
@@ -210,24 +211,76 @@ const char *addrxlat_err_str(addrxlat_ctx *ctx);
  */
 addrxlat_status	addrxlat_set_arch(addrxlat_ctx *ctx, const char *name);
 
-/** Set paging form description.
- * @param ctx   Address translation object.
- * @param pf    Paging form description.
- * @returns     Error status.
+/** Address translation using page tables. */
+typedef struct _addrxlat_pgt addrxlat_pgt_t;
+
+/** Allocate a new page table translation object.
+ * @returns    New initialized object, or @c NULL on failure.
  *
- * This function can be used to set the paging form explicitly. Note that
- * the library does not make a copy of the description. In other words,
- * you must ensure that the pointer passed to this function is valid until
- * it is changed again, or the address translation object is destroyed.
+ * This call can fail if and only if memory allocation fails.
+ * The reference count of the newly created object is one.
+ */
+addrxlat_pgt_t *addrxlat_pgt_new(void);
+
+/** Increment page table translation reference counter.
+ * @param pgt  Page table translation object.
+ * @returns    New reference count.
+ */
+unsigned long addrxlat_pgt_incref(addrxlat_pgt_t *pgt);
+
+/** Decrement page table translation reference counter.
+ * @param pgt  Page table translation object.
+ * @returns    New reference count.
+ *
+ * If the new reference count is zero, the underlying object is freed
+ * and its address must not be used afterwards.
+ */
+unsigned long addrxlat_pgt_decref(addrxlat_pgt_t *pgt);
+
+/** Set paging form description.
+ * @param pgt  Page table translation object.
+ * @param pf   Paging form description.
+ * @returns    Error status.
+ *
+ * This function sets the paging form and initializes pre-computed
+ * internal state of te page table translation object. It also stores
+ * a copy of the paging form description inside the translation object.
+ */
+addrxlat_status addrxlat_pgt_set_form(
+	addrxlat_pgt_t *pgt, const addrxlat_paging_form_t *pf);
+
+/** Get paging form description.
+ * @param pgt  Page table translation object.
+ * @returns    Paging form description.
+ */
+const addrxlat_paging_form_t *addrxlat_pgt_get_form(addrxlat_pgt_t *pgt);
+
+/** Set page table translation.
+ * @param ctx   Address translation object.
+ * @param pgt   Page table translation object (or @c NULL).
+ */
+void addrxlat_set_pgt(addrxlat_ctx *ctx, addrxlat_pgt_t *pgt);
+
+/** Get the page table translation object associated with a context.
+ * @param ctx   Address translation object.
+ * @returns     Associated page table translation object (new reference).
+ *
+ * Note that the return value may be @c NULL if page table translation
+ * is not available for the given context.
+ */
+addrxlat_pgt_t *addrxlat_get_pgt(addrxlat_ctx *ctx);
+
+/** Create a new page table translation and assign it to a context.
+ * @param ctx  Address translation object.
+ * @param pf   Paging form description.
+ * @returns    Error status.
+ *
+ * This is a shorthand for creating a new page table translation object,
+ * initializing it from the given paging form and assigning it to the
+ * address translation context.
  */
 addrxlat_status addrxlat_set_paging_form(
 	addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf);
-
-/** Get paging form description.
- * @param ctx   Address translation object.
- * @returns     Paging form description.
- */
-const addrxlat_paging_form_t *addrxlat_get_paging_form(addrxlat_ctx *ctx);
 
 /** Data type for page table translation. */
 typedef struct _addrxlat_pgt_state {

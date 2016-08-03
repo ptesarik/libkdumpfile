@@ -30,6 +30,48 @@
 
 #include "addrxlat-priv.h"
 
+void
+addrxlat_set_pgt(addrxlat_ctx *ctx, addrxlat_pgt_t *pgt)
+{
+	if (ctx->pgt)
+		internal_pgt_decref(ctx->pgt);
+	internal_pgt_incref(pgt);
+	ctx->pgt = pgt;
+}
+
+addrxlat_pgt_t *
+addrxlat_get_pgt(addrxlat_ctx *ctx)
+{
+	if (ctx->pgt)
+		internal_pgt_incref(ctx->pgt);
+	return ctx->pgt;
+}
+
+addrxlat_status
+addrxlat_set_paging_form(addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf)
+{
+	addrxlat_pgt_t *pgt;
+	addrxlat_status status;
+
+	pgt = internal_pgt_new();
+	if (!pgt)
+		return set_error(ctx, addrxlat_nomem,
+				 "Cannot allocate pgt");
+
+	status = internal_pgt_set_form(pgt, pf);
+	if (status != addrxlat_ok) {
+		internal_pgt_decref(pgt);
+		return set_error(ctx, status,
+				 "Cannot set paging form");
+	}
+
+	if (ctx->pgt)
+		internal_pgt_decref(ctx->pgt);
+	ctx->pgt = pgt;
+
+	return addrxlat_ok;
+}
+
 /** Read the raw PTE value.
  * @param ctx    Address translation object.
  * @param state  Page table translation state.
@@ -41,14 +83,15 @@
 static addrxlat_status
 read_pte(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
+	const addrxlat_pgt_t *pgt = ctx->pgt;
 	uint64_t pte64;
 	uint32_t pte32;
 	addrxlat_pte_t pte;
 	addrxlat_status status;
 
-	state->base.addr += state->idx[state->level] << ctx->pte_shift;
+	state->base.addr += state->idx[state->level] << pgt->pte_shift;
 
-	switch(ctx->pte_shift) {
+	switch(pgt->pte_shift) {
 	case 2:
 		status = ctx->cb_read32(ctx, &state->base, &pte32,
 					state->data);
@@ -64,7 +107,7 @@ read_pte(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 	default:
 		return set_error(ctx, addrxlat_notimpl,
 				 "Unsupported PTE size: %u",
-				 1 << ctx->pte_shift);
+				 1 << pgt->pte_shift);
 	}
 
 	if (status == addrxlat_ok)
@@ -78,11 +121,12 @@ addrxlat_status
 addrxlat_pgt_start(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state,
 		   addrxlat_addr_t addr)
 {
+	const addrxlat_pgt_t *pgt = ctx->pgt;
 	unsigned short i;
 	addrxlat_status status;
 
-	for (i = 0; i < ctx->pf.levels; ++i) {
-		unsigned short bits = ctx->pf.bits[i];
+	for (i = 0; i < pgt->pf.levels; ++i) {
+		unsigned short bits = pgt->pf.bits[i];
 		addrxlat_addr_t mask = bits < sizeof(addrxlat_addr_t) * 8
 			? ((addrxlat_addr_t)1 << bits) - 1
 			: ~(addrxlat_addr_t)0;
@@ -92,9 +136,9 @@ addrxlat_pgt_start(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state,
 	state->idx[i] = addr;
 
 	state->level = 0;
-	status = ctx->pgt_step(ctx, state);
+	status = pgt->pgt_step(ctx, state);
 	if (status == addrxlat_continue)
-		state->level = ctx->pf.levels;
+		state->level = pgt->pf.levels;
 	return status;
 }
 
@@ -103,6 +147,7 @@ DEFINE_INTERNAL(pgt_next)
 addrxlat_status
 addrxlat_pgt_next(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
+	const addrxlat_pgt_t *pgt = ctx->pgt;
 	addrxlat_status status;
 
 	if (!state->level)
@@ -119,7 +164,7 @@ addrxlat_pgt_next(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 	if (status != addrxlat_ok)
 		return status;
 
-	return ctx->pgt_step(ctx, state);
+	return pgt->pgt_step(ctx, state);
 }
 
 DEFINE_INTERNAL(pgt)
@@ -149,12 +194,13 @@ addrxlat_pgt(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state,
 addrxlat_status
 pgt_huge_page(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
+	const addrxlat_pgt_t *pgt = ctx->pgt;
 	addrxlat_addr_t off = 0;
 
 	while (state->level > 1) {
 		--state->level;
 		off |= state->idx[state->level];
-		off <<= ctx->pf.bits[state->level - 1];
+		off <<= pgt->pf.bits[state->level - 1];
 	}
 	state->idx[0] |= off;
 	return addrxlat_continue;

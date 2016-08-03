@@ -92,16 +92,17 @@ static unsigned mmu_pshift[MMU_PAGE_COUNT] = {
 static addrxlat_status
 check_pgt_state(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
-	unsigned short lvl = ctx->pf.levels;
+	const addrxlat_pgt_t *pgt = ctx->pgt;
+	unsigned short lvl = pgt->pf.levels;
 	unsigned region;
 	addrxlat_addr_t mask;
 
-	region = state->idx[lvl] >> (REGION_SHIFT - ctx->vaddr_bits);
+	region = state->idx[lvl] >> (REGION_SHIFT - pgt->vaddr_bits);
 	if (region != VMALLOC_REGION_ID && region != USER_REGION_ID)
 		return set_error(ctx, addrxlat_invalid,
 				 "Region 0x%x has no page tables", region);
 
-	mask = (1ULL << (REGION_SHIFT - ctx->vaddr_bits)) - 1;
+	mask = (1ULL << (REGION_SHIFT - pgt->vaddr_bits)) - 1;
 	if (state->idx[lvl] & mask)
 		return set_error(ctx, addrxlat_invalid,
 				 "Virtual address too big");
@@ -140,6 +141,7 @@ hugepd_shift(addrxlat_pte_t hpde)
 addrxlat_status
 huge_pd(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
+	const addrxlat_pgt_t *pgt = ctx->pgt;
 	addrxlat_addr_t off;
 	unsigned pdshift;
 	unsigned short i;
@@ -157,7 +159,7 @@ huge_pd(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 	i = state->level;
 	while (--i) {
 		off |= state->idx[i];
-		off <<= ctx->pf.bits[i - 1];
+		off <<= pgt->pf.bits[i - 1];
 	}
 
 	/* Calculate the index in the huge page table. */
@@ -193,9 +195,11 @@ is_hugepte(addrxlat_pte_t pte)
 addrxlat_status
 huge_page(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
+	const addrxlat_pgt_t *pgt = ctx->pgt;
+
 	state->base.as = ADDRXLAT_MACHPHYSADDR;
 	state->base.addr = (state->raw_pte >>
-			    ctx->pf.rpn_shift) << ctx->pf.bits[0];
+			    pgt->pf.rpn_shift) << pgt->pf.bits[0];
 	return pgt_huge_page(ctx, state);
 }
 
@@ -213,6 +217,7 @@ pgt_ppc64(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 		"pud",
 		"pgd",
 	};
+	const addrxlat_pgt_t *pgt = ctx->pgt;
 
 	if (!state->level)
 		return check_pgt_state(ctx, state);
@@ -232,14 +237,14 @@ pgt_ppc64(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 		if (is_hugepd(state->raw_pte))
 			return huge_pd(ctx, state);
 
-		table_size = ((addrxlat_addr_t)1 << ctx->pte_shift <<
-			      ctx->pf.bits[state->level - 1]);
+		table_size = ((addrxlat_addr_t)1 << pgt->pte_shift <<
+			      pgt->pf.bits[state->level - 1]);
 		state->base.as = ADDRXLAT_KVADDR;
 		state->base.addr = state->raw_pte & ~(table_size - 1);
 	} else {
 		state->base.as = ADDRXLAT_MACHPHYSADDR;
 		state->base.addr = (state->raw_pte >>
-				    ctx->pf.rpn_shift) << ctx->pf.bits[0];
+				    pgt->pf.rpn_shift) << pgt->pf.bits[0];
 	}
 
 	return addrxlat_continue;

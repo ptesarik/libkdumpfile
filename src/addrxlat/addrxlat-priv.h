@@ -69,23 +69,38 @@
 /** Maximum length of the error message. */
 #define ERRBUF	64
 
-/**  Representation of address translation.
- *
- * This structure contains all internal state needed to perform address
- * translation.
+/** Internal state for address translation using page tables.
+ * Page table translation uses some pre-computed values, which are
+ * stored in this structure on initialization.
  */
-struct _addrxlat_ctx {
-	/** Refernce counter. */
+struct _addrxlat_pgt {
+	/** Reference counter. */
 	unsigned long refcnt;
+
+	/** Function to make one step in page table translation. */
+	addrxlat_pgt_step_fn *pgt_step;
+
+	/** PTE size as a log2 value. */
+	unsigned short pte_shift;
+
+	/** Size of virtual address space covered by page tables. */
+	unsigned short vaddr_bits;
 
 	/** Paging form description. */
 	addrxlat_paging_form_t pf;
 
 	/** Paging masks, pre-computed from paging form. */
 	addrxlat_addr_t pgt_mask[ADDRXLAT_MAXLEVELS];
+};
 
-	/** Function to make one step in page table translation. */
-	addrxlat_pgt_step_fn *pgt_step;
+/**  Representation of address translation.
+ *
+ * This structure contains all internal state needed to perform address
+ * translation.
+ */
+struct _addrxlat_ctx {
+	/** Reference counter. */
+	unsigned long refcnt;
 
 	/** Callback for reading 32-bit integers. */
 	addrxlat_read32_fn *cb_read32;
@@ -93,11 +108,8 @@ struct _addrxlat_ctx {
 	/** Callback for reading 64-bit integers. */
 	addrxlat_read64_fn *cb_read64;
 
-	/** PTE size as a log2 value. */
-	unsigned short pte_shift;
-
-	/** Size of virtual address space covered by page tables. */
-	unsigned short vaddr_bits;
+	/** Page table translation object. */
+	addrxlat_pgt_t *pgt;
 
 	char err_buf[ERRBUF];	/**< Error string. */
 };
@@ -127,6 +139,18 @@ addrxlat_pgt_step_fn pgt_s390x;
 addrxlat_pgt_step_fn pgt_ppc64;
 
 /* internal aliases */
+
+#define internal_pgt_new INTERNAL_ALIAS(pgt_new)
+DECLARE_INTERNAL(pgt_new)
+
+#define internal_pgt_incref INTERNAL_ALIAS(pgt_incref)
+DECLARE_INTERNAL(pgt_incref)
+
+#define internal_pgt_decref INTERNAL_ALIAS(pgt_decref)
+DECLARE_INTERNAL(pgt_decref)
+
+#define internal_pgt_set_form INTERNAL_ALIAS(pgt_set_form)
+DECLARE_INTERNAL(pgt_set_form)
 
 #define internal_pgt_start INTERNAL_ALIAS(pgt_start)
 DECLARE_INTERNAL(pgt_start)

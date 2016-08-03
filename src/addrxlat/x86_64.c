@@ -53,14 +53,15 @@
 static int
 is_noncanonical(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 {
-	unsigned short lvl = ctx->pf.levels;
+	const addrxlat_pgt_t *pgt = ctx->pgt;
+	unsigned short lvl = pgt->pf.levels;
 	struct {
 		int bit : 1;
 	} s;
 	addrxlat_addr_t signext;
 
-	s.bit = state->idx[lvl - 1] >> (ctx->pf.bits[lvl - 1] - 1);
-	signext = s.bit & (ctx->pgt_mask[lvl - 1] >> ctx->vaddr_bits);
+	s.bit = state->idx[lvl - 1] >> (pgt->pf.bits[lvl - 1] - 1);
+	signext = s.bit & (pgt->pgt_mask[lvl - 1] >> pgt->vaddr_bits);
 	return state->idx[lvl] != signext;
 }
 
@@ -84,6 +85,7 @@ pgt_x86_64(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 		"pud",
 		"pgd",
 	};
+	const addrxlat_pgt_t *pgt = ctx->pgt;
 
 	if (!state->level)
 		return is_noncanonical(ctx, state)
@@ -103,10 +105,10 @@ pgt_x86_64(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 	state->base.addr = state->raw_pte & ~PHYSADDR_MASK;
 	if (state->level >= 2 && state->level <= 3 &&
 	    (state->raw_pte & _PAGE_PSE)) {
-		state->base.addr &= ctx->pgt_mask[state->level - 1];
+		state->base.addr &= pgt->pgt_mask[state->level - 1];
 		return pgt_huge_page(ctx, state);
 	}
 
-	state->base.addr &= ctx->pgt_mask[0];
+	state->base.addr &= pgt->pgt_mask[0];
 	return addrxlat_continue;
 }

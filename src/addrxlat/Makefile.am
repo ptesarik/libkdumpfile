@@ -28,6 +28,7 @@ libaddrxlat_la_SOURCES = \
 	s390x.c \
 	setup.c \
 	util.c \
+	pgt.c \
 	vtop.c \
 	map.c \
 	x86_64.c
