@@ -299,9 +299,6 @@ typedef struct _addrxlat_pgt_state {
 	 */
 	addrxlat_pte_t raw_pte;
 
-	/** Arbitrary user-supplied data (passed to read callbacks). */
-	void *data;
-
 	/** Table indices at individual levels.
 	 *
 	 * There is one extra index, which contains the remaining part
@@ -419,26 +416,14 @@ typedef struct _addrxlat_def {
 	};
 } addrxlat_def_t;
 
-/** Address translation control.
- * This structure controls address translation, providing all required
- * parameters, including the address. It is updated on successful return.
- */
-typedef struct _addrxlat_ctl {
-	/**< Source address on input, resulting address on return. */
-	addrxlat_addr_t addr;
-
-	/**< Arbitrary user-supplied data (passed to read callbacks). */
-	void *data;
-} addrxlat_ctl_t;
-
 /** Translate an address using a single translation definition.
- * @param ctx          Address translation object.
- * @param[in,out] ctl  Translation control.
- * @param[in] def      Translation definition.
- * @returns            Error status.
+ * @param ctx           Address translation object.
+ * @param[in,out] addr  Address.
+ * @param[in] def       Translation definition.
+ * @returns             Error status.
  */
 addrxlat_status addrxlat_by_def(
-	addrxlat_ctx *ctx, addrxlat_ctl_t *ctl, const addrxlat_def_t *def);
+	addrxlat_ctx *ctx, addrxlat_addr_t *addr, const addrxlat_def_t *def);
 
 /** Definition of an address range.
  */
@@ -484,13 +469,13 @@ const addrxlat_def_t *addrxlat_map_search(
 	const addrxlat_map_t *map, addrxlat_addr_t addr);
 
 /** Translate an address using a translation map.
- * @param ctx          Address translation object.
- * @param[in,out] ctl  Translation control.
- * @param[in] map      Translation map.
- * @returns            Error status.
+ * @param ctx            Address translation object.
+ * @param[in,out] paddr  Address.
+ * @param[in] map        Translation map.
+ * @returns              Error status.
  */
 addrxlat_status addrxlat_by_map(
-	addrxlat_ctx *ctx, addrxlat_ctl_t *ctl, const addrxlat_map_t *map);
+	addrxlat_ctx *ctx, addrxlat_addr_t *paddr, const addrxlat_map_t *map);
 
 /** Type of the read callback for 32-bit integers.
  * @param ctx       Address translation object.

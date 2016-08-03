@@ -94,13 +94,13 @@ read_pte(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 	switch(pgt->pte_shift) {
 	case 2:
 		status = ctx->cb_read32(ctx, &state->base, &pte32,
-					state->data);
+					ctx->priv);
 		pte = pte32;
 		break;
 
 	case 3:
 		status = ctx->cb_read64(ctx, &state->base, &pte64,
-					state->data);
+					ctx->priv);
 		pte = pte64;
 		break;
 
@@ -216,12 +216,12 @@ pgt_none(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 DEFINE_INTERNAL(by_def)
 
 /** Translate an address using direct page table origin.
- * @param ctx  Address translation object.
- * @param ctl  Translation control.
- * @param def  Translation definition.
+ * @param ctx    Address translation object.
+ * @param paddr  Address.
+ * @param def    Translation definition.
  */
 static addrxlat_status
-pgt_xlat_by_def(addrxlat_ctx *ctx, addrxlat_ctl_t *ctl,
+pgt_xlat_by_def(addrxlat_ctx *ctx, addrxlat_addr_t *paddr,
 		const addrxlat_def_t *def)
 {
 	addrxlat_pgt_state_t state;
@@ -230,15 +230,14 @@ pgt_xlat_by_def(addrxlat_ctx *ctx, addrxlat_ctl_t *ctl,
 	state.base = (def->method == ADDRXLAT_PGT
 		      ? def->pgt
 		      : *def->ppgt);
-	state.data = ctl->data;
-	status = internal_pgt(ctx, &state, ctl->addr);
+	status = internal_pgt(ctx, &state, *paddr);
 	if (status == addrxlat_ok)
-		ctl->addr = state.base.addr;
+		*paddr = state.base.addr;
 	return status;
 }
 
 addrxlat_status
-addrxlat_by_def(addrxlat_ctx *ctx, addrxlat_ctl_t *ctl,
+addrxlat_by_def(addrxlat_ctx *ctx, addrxlat_addr_t *paddr,
 		const addrxlat_def_t *def)
 {
 	switch (def->method) {
@@ -247,16 +246,16 @@ addrxlat_by_def(addrxlat_ctx *ctx, addrxlat_ctl_t *ctl,
 				 "No translation defined");
 
 	case ADDRXLAT_LINEAR:
-		ctl->addr -= def->off;
+		*paddr -= def->off;
 		return addrxlat_ok;
 
 	case ADDRXLAT_LINEAR_IND:
-		ctl->addr -= *def->poff;
+		*paddr -= *def->poff;
 		return addrxlat_ok;
 
 	case ADDRXLAT_PGT:
 	case ADDRXLAT_PGT_IND:
-		return pgt_xlat_by_def(ctx, ctl, def);
+		return pgt_xlat_by_def(ctx, paddr, def);
 
 	default:
 		return set_error(ctx, addrxlat_invalid,

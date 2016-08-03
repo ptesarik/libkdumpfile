@@ -156,7 +156,6 @@ vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	addrxlat_status res;
 
 	state.base = ctx->shared->vtop_map.pgt;
-	state.data = ctx;
 	res = addrxlat_pgt(ctx->addrxlat, &state, vaddr);
 	if (res == addrxlat_ok)
 		return set_error(ctx, mtop(ctx, state.base.addr, paddr),
@@ -181,7 +180,6 @@ vtop_pgt_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	addrxlat_status res;
 
 	state.base = ctx->shared->vtop_map_xen.pgt;
-	state.data = ctx;
 	res = addrxlat_pgt(ctx->addrxlat, &state, vaddr);
 	if (res == addrxlat_ok) {
 		*paddr = state.base.addr;
@@ -202,14 +200,11 @@ kdump_status
 map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	 const struct vtop_map *map)
 {
-	addrxlat_ctl_t ctl;
 	addrxlat_status status;
 
-	ctl.addr = vaddr;
-	ctl.data = ctx;
-	status = addrxlat_by_map(ctx->addrxlat, &ctl, map->map);
+	status = addrxlat_by_map(ctx->addrxlat, &vaddr, map->map);
 	if (status == addrxlat_ok)
-		*paddr = ctl.addr;
+		*paddr = vaddr;
 	return set_error_addrxlat(ctx, status);
 }
 
@@ -246,7 +241,6 @@ vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 		return vtop(ctx, vaddr, maddr);
 
 	state.base = ctx->shared->vtop_map.pgt;
-	state.data = ctx;
 	res = addrxlat_pgt(ctx->addrxlat, &state, vaddr);
 	if (res == addrxlat_ok) {
 		*maddr = state.base.addr;
