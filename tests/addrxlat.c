@@ -65,8 +65,7 @@ find_entry(addrxlat_addr_t addr)
 }
 
 static addrxlat_status
-read32(addrxlat_ctx *ctx, const addrxlat_fulladdr_t *addr, uint32_t *val,
-       void *data)
+read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 {
 	struct entry *ent = find_entry(addr->addr);
 	if (!ent) {
@@ -80,8 +79,7 @@ read32(addrxlat_ctx *ctx, const addrxlat_fulladdr_t *addr, uint32_t *val,
 }
 
 static addrxlat_status
-read64(addrxlat_ctx *ctx, const addrxlat_fulladdr_t *addr, uint64_t *val,
-       void *data)
+read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 {
 	struct entry *ent = find_entry(addr->addr);
 	if (!ent) {

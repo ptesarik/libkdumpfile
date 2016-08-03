@@ -478,15 +478,13 @@ addrxlat_status addrxlat_by_map(
 	addrxlat_ctx *ctx, addrxlat_addr_t *paddr, const addrxlat_map_t *map);
 
 /** Type of the read callback for 32-bit integers.
- * @param ctx       Address translation object.
+ * @param data      Arbitrary user-supplied data.
  * @param[in] addr  Address of the 32-bit integer.
  * @param[out] val  Value in host byte order.
- * @param data      Arbitrary user-supplied data.
  * @returns         Error status.
  */
 typedef addrxlat_status addrxlat_read32_fn(
-	addrxlat_ctx *ctx, const addrxlat_fulladdr_t *addr, uint32_t *val,
-	void *data);
+	void *data, const addrxlat_fulladdr_t *addr, uint32_t *val);
 
 /** Set the read callback for 32-bit integers.
  * @param ctx  Address translation object.
@@ -497,15 +495,13 @@ addrxlat_read32_fn *addrxlat_cb_read32(
 	addrxlat_ctx *ctx, addrxlat_read32_fn *cb);
 
 /** Type of the read callback for 64-bit integers.
- * @param ctx       Address translation object.
+ * @param data      Arbitrary user-supplied data.
  * @param[in] addr  Address of the 64-bit integer.
  * @param[out] val  Value in host byte order.
- * @param data      Arbitrary user-supplied data.
  * @returns         Error status.
  */
 typedef addrxlat_status addrxlat_read64_fn(
-	addrxlat_ctx *ctx, const addrxlat_fulladdr_t *addr, uint64_t *val,
-	void *data);
+	void *data, const addrxlat_fulladdr_t *addr, uint64_t *val);
 
 /** Set the read callback for 64-bit integers.
  * @param ctx  Address translation object.

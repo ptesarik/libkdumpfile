@@ -374,8 +374,7 @@ kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
 }
 
 static addrxlat_status
-addrxlat_read32(addrxlat_ctx *addrxlat, const addrxlat_fulladdr_t *addr,
-		uint32_t *val, void *data)
+addrxlat_read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 {
 	kdump_ctx *ctx = (kdump_ctx*) data;
 	return -read_u32(ctx, addr->as, addr->addr, 0,
@@ -383,8 +382,7 @@ addrxlat_read32(addrxlat_ctx *addrxlat, const addrxlat_fulladdr_t *addr,
 }
 
 static addrxlat_status
-addrxlat_read64(addrxlat_ctx *addrxlat, const addrxlat_fulladdr_t *addr,
-		uint64_t *val, void *data)
+addrxlat_read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 {
 	kdump_ctx *ctx = (kdump_ctx*) data;
 	return -read_u64(ctx, addr->as, addr->addr, 0,
