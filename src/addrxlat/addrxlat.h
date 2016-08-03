@@ -530,6 +530,23 @@ typedef addrxlat_status addrxlat_read64_fn(
 addrxlat_read64_fn *addrxlat_cb_read64(
 	addrxlat_ctx *ctx, addrxlat_read64_fn *cb);
 
+/**  Set pointer to user private data.
+ * @param ctx  Address translation object.
+ * @param data Generic data pointer.
+ *
+ * A private pointer can be used to associate the address translation
+ * object with arbitrary data. The addrxlat library does not use the
+ * pointer in any way, but it can be retrieved later from a @ref addrxlat_ctx
+ * pointer with @ref addrxlat_get_priv.
+ */
+void addrxlat_set_priv(addrxlat_ctx *ctx, void *data);
+
+/**  Get pointer to user private data.
+ * @param ctx  Address translation object.
+ * @returns    The data pointer stored previously with @ref addrxlat_set_priv.
+ */
+void *addrxlat_get_priv(addrxlat_ctx *ctx);
+
 #ifdef  __cplusplus
 }
 #endif

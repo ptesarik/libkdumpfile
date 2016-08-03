@@ -22,6 +22,8 @@ LIBADDRXLAT_0 {
     addrxlat_map_search;
     addrxlat_cb_read32;
     addrxlat_cb_read64;
+    addrxlat_set_priv;
+    addrxlat_get_priv;
 
   local:
     *;

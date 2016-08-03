@@ -424,6 +424,7 @@ init_addrxlat(kdump_ctx *ctx)
 	if (!addrxlat)
 		return addrxlat;
 
+	addrxlat_set_priv(addrxlat, ctx);
 	addrxlat_cb_read32(addrxlat, addrxlat_read32);
 	addrxlat_cb_read64(addrxlat, addrxlat_read64);
 

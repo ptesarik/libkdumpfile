@@ -102,6 +102,9 @@ struct _addrxlat_ctx {
 	/** Reference counter. */
 	unsigned long refcnt;
 
+	/** Callback private data. */
+	void *priv;
+
 	/** Callback for reading 32-bit integers. */
 	addrxlat_read32_fn *cb_read32;
 

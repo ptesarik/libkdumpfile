@@ -65,3 +65,15 @@ addrxlat_set_arch(addrxlat_ctx *ctx, const char *name)
 {
 	return addrxlat_notimpl;
 }
+
+void
+addrxlat_set_priv(addrxlat_ctx *ctx, void *data)
+{
+	ctx->priv = data;
+}
+
+void *
+addrxlat_get_priv(addrxlat_ctx *ctx)
+{
+	return ctx->priv;
+}
