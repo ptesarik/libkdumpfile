@@ -75,6 +75,11 @@ vmci_lines_post_LDADD = $(top_builddir)/src/libkdumpfile.la
 vmci_post_LDADD = $(top_builddir)/src/libkdumpfile.la
 vtop_LDADD = $(top_builddir)/src/libkdumpfile.la
 
+xlat_os_SOURCES = xlat-os.c
+xlat_os_LDADD = \
+	$(LDADD) \
+	$(top_builddir)/src/libkdumpfile.la
+
 check_PROGRAMS = \
 	addrxlat \
 	addrmap \
@@ -92,7 +97,8 @@ check_PROGRAMS = \
 	vmci-cleanup \
 	vmci-lines-post \
 	vmci-post \
-	vtop
+	vtop \
+	xlat-os
 
 test_scripts = \
 	addrmap-single-begin \
@@ -176,6 +182,7 @@ dist_check_SCRIPTS = \
 	lkcd-empty \
 	lkcd-basic \
 	lkcd-wrong-page-size \
+	xlat-os-common \
 	$(test_scripts)
 
 TESTS = $(test_scripts) \

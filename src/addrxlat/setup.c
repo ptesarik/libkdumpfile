@@ -61,9 +61,11 @@ addrxlat_decref(addrxlat_ctx *ctx)
 }
 
 addrxlat_status
-addrxlat_set_arch(addrxlat_ctx *ctx, const char *name)
+addrxlat_init_os(addrxlat_ctx *ctx, const addrxlat_osdesc_t *osdesc,
+		 addrxlat_pgt_t **ppgt, addrxlat_map_t **pmap)
 {
-	return addrxlat_notimpl;
+	return set_error(ctx, addrxlat_notimpl,
+			 "OS init not implemented");
 }
 
 void

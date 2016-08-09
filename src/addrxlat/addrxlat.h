@@ -204,13 +204,6 @@ unsigned long addrxlat_decref(addrxlat_ctx *ctx);
  */
 const char *addrxlat_err_str(addrxlat_ctx *ctx);
 
-/** Initialize address translation for a given architecture.
- *
- * @param ctx   Address translation object.
- * @param name  Cannonical architecture name.
- */
-addrxlat_status	addrxlat_set_arch(addrxlat_ctx *ctx, const char *name);
-
 /** Address translation using page tables. */
 typedef struct _addrxlat_pgt addrxlat_pgt_t;
 
@@ -476,6 +469,45 @@ const addrxlat_def_t *addrxlat_map_search(
  */
 addrxlat_status addrxlat_by_map(
 	addrxlat_ctx *ctx, addrxlat_addr_t *paddr, const addrxlat_map_t *map);
+
+/** Operating system type. */
+typedef enum _addrxlat_ostype {
+	addrxlat_os_unknown,	/**< Unknown OS. */
+	addrxlat_os_linux,	/**< Linux kernel. */
+	addrxlat_os_xen,	/**< Xen hypervisor. */
+} addrxlat_ostype_t;
+
+/** Description of an operating system.
+ * This structure is used to pass some details about the operating system
+ * to set up a translation map.
+ */
+typedef struct _addrxlat_osdesc {
+	/** Operating system type. */
+	addrxlat_ostype_t type;
+
+	/** Operating system version. */
+	unsigned long ver;
+
+	/** Architecture name. */
+	const char *arch;
+
+	/** Root page table base. */
+	const addrxlat_fulladdr_t *pgtaddr;
+} addrxlat_osdesc_t;
+
+/** Set up translation for a given operating system.
+ * @param ctx         Address translation object.
+ * @param[in] osdesc  Description of the operating system.
+ * @param[out] ppgt   Page table translation on successful return.
+ * @param[out] pmap   Translation map on successful return.
+ * @returns           Error status.
+ *
+ * This function uses OS-specific data and built-in heuristics to
+ * determine the translation map for an operating system.
+ */
+addrxlat_status addrxlat_init_os(addrxlat_ctx *ctx,
+				 const addrxlat_osdesc_t *osdesc,
+				 addrxlat_pgt_t **ppgt, addrxlat_map_t **pmap);
 
 /** Type of the read callback for 32-bit integers.
  * @param data      Arbitrary user-supplied data.

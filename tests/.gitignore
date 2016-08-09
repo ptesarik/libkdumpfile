@@ -16,6 +16,7 @@ vmci-cleanup
 vmci-lines-post
 vmci-post
 vtop
+xlat-os
 
 # Test results
 *.log

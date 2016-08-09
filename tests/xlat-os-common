@@ -1,0 +1,41 @@
+#
+# Common code for checking map init by OS description
+#
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+resultfile="out/${name}.result"
+expectfile="$srcdir/$name.expect"
+datafile="$srcdir/$name.data"
+
+pgtspec=
+test -n "$pgt" && pgtspec="rootpgt=$pgt"
+dataspec=
+test -f "$datafile" && dataspec="DATA=$datafile"
+
+echo -n "Checking... "
+./xlat-os >"$resultfile" <<EOF
+ostype=$ostype
+osver=$osver
+arch=$arch
+$pgtspec
+$dataspec
+EOF
+rc=$?
+if [ $rc -gt 1 ]; then
+    echo ERROR
+    echo "Cannot set $input" >&2
+    exit $rc
+elif [ $rc -ne 0 ]; then
+    echo FAILED
+    exit $rc
+elif ! diff "$expectfile" "$resultfile"; then
+    echo FAILED
+    echo "Result does not match" >&2
+    exit 1
+else
+    echo OK
+fi
+
+exit 0
