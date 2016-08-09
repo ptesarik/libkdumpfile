@@ -412,7 +412,7 @@ typedef struct _addrxlat_def {
 
 		/** Pointer to page table origin used by
 		 * @ref ADDRXLAT_PGT_IND. */
-		addrxlat_fulladdr_t *ppgt;
+		const addrxlat_fulladdr_t *ppgt;
 	};
 } addrxlat_def_t;
 
