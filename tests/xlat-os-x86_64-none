@@ -1,0 +1,11 @@
+#! /bin/sh
+
+#
+# Check X86_64 translation with no OS
+#
+
+arch=x86_64
+ostype=0
+osver=0
+
+. "$srcdir"/xlat-os-common

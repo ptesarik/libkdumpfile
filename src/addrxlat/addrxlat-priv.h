@@ -141,6 +141,13 @@ addrxlat_pgt_step_fn pgt_s390x;
 #define pgt_ppc64 INTERNAL_NAME(pgt_ppc64)
 addrxlat_pgt_step_fn pgt_ppc64;
 
+/* map by OS */
+
+#define map_os_x86_64 INTERNAL_NAME(map_os_x86_64)
+addrxlat_status map_os_x86_64(
+	addrxlat_ctx *ctx, const addrxlat_osdesc_t *osdesc,
+	addrxlat_pgt_t *pgt, addrxlat_map_t **pmap);
+
 /* internal aliases */
 
 #define internal_pgt_new INTERNAL_ALIAS(pgt_new)
@@ -166,6 +173,9 @@ DECLARE_INTERNAL(pgt)
 
 #define internal_by_def INTERNAL_ALIAS(by_def)
 DECLARE_INTERNAL(by_def)
+
+#define internal_map_set INTERNAL_ALIAS(map_set)
+DECLARE_INTERNAL(map_set)
 
 #define internal_map_search INTERNAL_ALIAS(map_search)
 DECLARE_INTERNAL(map_search)

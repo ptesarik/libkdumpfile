@@ -159,7 +159,8 @@ test_scripts = \
 	lkcd-unordered \
 	lkcd-unordered-faroff \
 	lkcd-duplicate \
-	lkcd-duplicate-middle
+	lkcd-duplicate-middle \
+	xlat-os-x86_64-none
 
 dist_check_DATA = \
 	addrmap-single-begin.expect \
@@ -171,7 +172,8 @@ dist_check_DATA = \
 	addrmap-reduce.expect \
 	elf-empty.data \
 	basic.expect \
-	partial.expect
+	partial.expect \
+	xlat-os-x86_64-none.expect
 
 dist_check_SCRIPTS = \
 	addrmap-common \

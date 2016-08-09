@@ -28,6 +28,8 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <stdlib.h>
+
 #include "addrxlat-priv.h"
 
 /* Maximum physical address bits (architectural limit) */
@@ -40,6 +42,13 @@
 
 #define _PAGE_PRESENT	(1UL << _PAGE_BIT_PRESENT)
 #define _PAGE_PSE	(1UL << _PAGE_BIT_PSE)
+
+/* Maximum virtual address bits (architecture limit) */
+#define VIRTADDR_BITS_MAX	48
+
+#define NONCANONICAL_START	((uint64_t)1<<(VIRTADDR_BITS_MAX-1))
+#define NONCANONICAL_END	(~NONCANONICAL_START)
+#define VIRTADDR_MAX		UINT64_MAX
 
 /** Check whether an address is canonical.
  * @param ctx    Address translation object.
@@ -111,4 +120,64 @@ pgt_x86_64(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 
 	state->base.addr &= pgt->pgt_mask[0];
 	return addrxlat_continue;
+}
+
+/** Create a page table address map for x86_64 canonical regions.
+ * @param ctx         Address translation object.
+ * @param[in] osdesc  Description of the operating system.
+ * @returns           New translation map, or @c NULL on error.
+ */
+static addrxlat_map_t *
+canonical_pgt_map(addrxlat_ctx *ctx, const addrxlat_osdesc_t *osdesc)
+{
+	addrxlat_range_t range;
+	addrxlat_map_t *map, *newmap;
+
+	range.xlat.method = ADDRXLAT_PGT_IND;
+	range.xlat.ppgt = osdesc->pgtaddr;
+
+	range.endoff = NONCANONICAL_START - 1;
+	map = internal_map_set(NULL, 0, &range);
+	if (!map)
+		goto err;
+
+	range.endoff = VIRTADDR_MAX - NONCANONICAL_END - 1;
+	newmap = internal_map_set(map, NONCANONICAL_END + 1, &range);
+	if (!newmap)
+		goto err_free;
+
+	return newmap;
+
+ err_free:
+	free(map);
+ err:
+	set_error(ctx, addrxlat_nomem, "Cannot set up default mapping");
+	return NULL;
+}
+
+/** Initialize a translation map for an x86_64 OS.
+ * @param ctx         Address translation object.
+ * @param[in] osdesc  Description of the operating system.
+ * @param pgt         Page table translation, updated on successful return.
+ * @param[out] pmap   Translation map on successful return.
+ * @returns           Error status.
+ */
+addrxlat_status
+map_os_x86_64(addrxlat_ctx *ctx, const addrxlat_osdesc_t *osdesc,
+	      addrxlat_pgt_t *pgt, addrxlat_map_t **pmap)
+{
+	static const addrxlat_paging_form_t x86_64_pf = {
+		.pte_format = addrxlat_pte_x86_64,
+		.levels = 5,
+		.bits = { 12, 9, 9, 9, 9 }
+	};
+	addrxlat_map_t *map;
+
+	internal_pgt_set_form(pgt, &x86_64_pf);
+	map = canonical_pgt_map(ctx, osdesc);
+	if (!map)
+		return addrxlat_nomem;
+
+	*pmap = map;
+	return addrxlat_ok;
 }

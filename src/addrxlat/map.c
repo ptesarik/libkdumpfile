@@ -33,6 +33,8 @@
 
 #include "addrxlat-priv.h"
 
+DEFINE_INTERNAL(map_set)
+
 addrxlat_map_t *
 addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 		 const addrxlat_range_t *range)
