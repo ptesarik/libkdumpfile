@@ -1,7 +1,7 @@
 /**  @file kdumpfile.h
  * Public interface for `libkdumpfile` (kernel coredump file access).
 */
-/* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
+/* Copyright (C) 2014-2016 Petr Tesarik <ptesarik@suse.com>
 
    This file is free software; you can redistribute it and/or modify
    it under the terms of either
@@ -36,11 +36,20 @@
 #include <unistd.h>
 
 /** Major version (1st number in the release tag). */
-#define KDUMPFILE_VER_MAJOR	0
+#define KDUMPFILE_VER_MAJOR	@KDUMPFILE_VER_MAJOR@
 /** Minor version (2nd number in the release tag). */
-#define KDUMPFILE_VER_MINOR	2
+#define KDUMPFILE_VER_MINOR	@KDUMPFILE_VER_MINOR@
 /** Micro version (3rd number in the release tag). */
-#define KDUMPFILE_VER_MICRO	0
+#define KDUMPFILE_VER_MICRO	@KDUMPFILE_VER_MICRO@
+
+/** Version as a single number */
+#define KDUMPFILE_VERSION	\
+	((KDUMPFILE_VER_MAJOR << 16) |		\
+	 (KDUMPFILE_VER_MINOR << 8) |		\
+	 (KDUMPFILE_VER_MICRO))
+
+/** Version as a string constant */
+#define KDUMPFILE_VERSION_STRING "@KDUMPFILE_VERSION@"
 
 #ifdef  __cplusplus
 extern "C" {

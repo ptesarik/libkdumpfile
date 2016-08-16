@@ -18,13 +18,30 @@ dnl
 dnl  You should have received a copy of the GNU General Public License
 dnl  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-AC_INIT([libkdumpfile],[0.2.0],[ptesarik@suse.com])
+dnl Package release versioning
+m4_define([pkg_major_version], [0])
+m4_define([pkg_minor_version], [2])
+m4_define([pkg_micro_version], [0])
+m4_define([pkg_version],
+          [pkg_major_version.pkg_minor_version.pkg_micro_version])
+
+AC_INIT([libkdumpfile],[pkg_version],[ptesarik@suse.com])
 
 AC_CONFIG_SRCDIR([src/diskdump.c])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADER([config.h])
 
 AM_INIT_AUTOMAKE([foreign dist-bzip2 -Wall])
+
+KDUMPFILE_VER_MAJOR=pkg_major_version
+KDUMPFILE_VER_MINOR=pkg_minor_version
+KDUMPFILE_VER_MICRO=pkg_micro_version
+KDUMPFILE_VERSION=pkg_version
+
+AC_SUBST(KDUMPFILE_VER_MAJOR)
+AC_SUBST(KDUMPFILE_VER_MINOR)
+AC_SUBST(KDUMPFILE_VER_MICRO)
+AC_SUBST(KDUMPFILE_VERSION)
 
 AC_PROG_CC
 AM_PROG_AR
@@ -102,6 +119,7 @@ AC_CONFIG_FILES([
 	python/kdumpfile/Makefile
 	tests/Makefile
 	libkdumpfile.pc
+	src/kdumpfile.h
 ])
 
 AC_OUTPUT
