@@ -529,9 +529,6 @@ struct kdump_shared {
 
 	struct cache *cache;	/**< Page cache. */
 
-	/** Page table translation shared object. */
-	addrxlat_pgt_t *pgtxlat;
-
 	/** Linux address translation. */
 	struct vtop_map vtop_map;
 	/** Xen address translation. */

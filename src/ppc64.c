@@ -186,7 +186,7 @@ ppc64_init(kdump_ctx *ctx)
 
 	if (pagesize == _64K) {
 		axres = addrxlat_pgt_set_form(
-			ctx->shared->pgtxlat, &ppc64_pf_64k);
+			ctx->shared->vtop_map.pgt, &ppc64_pf_64k);
 		if (axres != addrxlat_ok)
 			return set_error_addrxlat(ctx, axres);
 	} else

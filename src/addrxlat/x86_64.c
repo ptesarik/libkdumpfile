@@ -61,7 +61,7 @@
 static int
 is_noncanonical(addrxlat_pgt_walk_t *state)
 {
-	const addrxlat_pgt_t *pgt = state->ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->pgt;
 	unsigned short lvl = pgt->pf.levels;
 	struct {
 		int bit : 1;
@@ -92,7 +92,7 @@ pgt_x86_64(addrxlat_pgt_walk_t *state)
 		"pud",
 		"pgd",
 	};
-	const addrxlat_pgt_t *pgt = state->ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->pgt;
 
 	if (!state->level)
 		return is_noncanonical(state)

@@ -207,7 +207,7 @@ read_pgt(kdump_ctx *ctx)
 	}
 
 	pf = (archdata->pae_state > 0 ? &ia32_pf_pae : &ia32_pf);
-	axres = addrxlat_pgt_set_form(ctx->shared->pgtxlat, pf);
+	axres = addrxlat_pgt_set_form(ctx->shared->vtop_map.pgt, pf);
 	if (axres != addrxlat_ok)
 		return set_error_addrxlat(ctx, axres);
 

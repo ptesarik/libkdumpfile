@@ -65,7 +65,7 @@ pgt_s390x(addrxlat_pgt_walk_t *state)
 		"pgd",
 		"rg1",		/* Invented; does not exist in the wild. */
 	};
-	const addrxlat_pgt_t *pgt = state->ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->pgt;
 
 	/* TODO: The top-level table extents should be initialised from
 	 * kernel_asce and checked here, but for now simply assume that

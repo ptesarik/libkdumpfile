@@ -62,7 +62,7 @@ pgt_ia32(addrxlat_pgt_walk_t *state)
 		"pte",
 		"pgd",
 	};
-	const addrxlat_pgt_t *pgt = state->ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->pgt;
 
 	if (!state->level)
 		return state->idx[pgt->pf.levels]
@@ -107,7 +107,7 @@ pgt_ia32_pae(addrxlat_pgt_walk_t *state)
 		"pmd",
 		"pgd",
 	};
-	const addrxlat_pgt_t *pgt = state->ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->pgt;
 
 	if (!state->level)
 		return state->idx[pgt->pf.levels]

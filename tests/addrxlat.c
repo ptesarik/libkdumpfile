@@ -347,10 +347,9 @@ main(int argc, char **argv)
 		goto out;
 	}
 
-	status = addrxlat_set_paging_form(ctx, &paging_form);
+	status = addrxlat_pgt_set_form(pgt, &paging_form);
 	if (status != addrxlat_ok) {
-		fprintf(stderr, "Cannot set paging form: %s\n",
-			addrxlat_err_str(ctx));
+		fprintf(stderr, "Cannot set paging form\n");
 		rc = TEST_ERR;
 		goto out;
 	}

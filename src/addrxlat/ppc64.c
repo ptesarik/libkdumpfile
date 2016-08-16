@@ -92,20 +92,19 @@ static unsigned mmu_pshift[MMU_PAGE_COUNT] = {
 static addrxlat_status
 check_pgt_state(addrxlat_pgt_walk_t *state)
 {
-	addrxlat_ctx *ctx = state->ctx;
-	const addrxlat_pgt_t *pgt = ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->pgt;
 	unsigned short lvl = pgt->pf.levels;
 	unsigned region;
 	addrxlat_addr_t mask;
 
 	region = state->idx[lvl] >> (REGION_SHIFT - pgt->vaddr_bits);
 	if (region != VMALLOC_REGION_ID && region != USER_REGION_ID)
-		return set_error(ctx, addrxlat_invalid,
+		return set_error(state->ctx, addrxlat_invalid,
 				 "Region 0x%x has no page tables", region);
 
 	mask = (1ULL << (REGION_SHIFT - pgt->vaddr_bits)) - 1;
 	if (state->idx[lvl] & mask)
-		return set_error(ctx, addrxlat_invalid,
+		return set_error(state->ctx, addrxlat_invalid,
 				 "Virtual address too big");
 
 	return addrxlat_continue;
@@ -141,7 +140,7 @@ hugepd_shift(addrxlat_pte_t hpde)
 addrxlat_status
 huge_pd(addrxlat_pgt_walk_t *state)
 {
-	const addrxlat_pgt_t *pgt = state->ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->pgt;
 	addrxlat_addr_t off;
 	unsigned pdshift;
 	unsigned short i;
@@ -194,7 +193,7 @@ is_hugepte(addrxlat_pte_t pte)
 addrxlat_status
 huge_page(addrxlat_pgt_walk_t *state)
 {
-	const addrxlat_pgt_t *pgt = state->ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->pgt;
 
 	state->base.as = ADDRXLAT_MACHPHYSADDR;
 	state->base.addr = (state->raw_pte >>
@@ -215,7 +214,7 @@ pgt_ppc64(addrxlat_pgt_walk_t *state)
 		"pud",
 		"pgd",
 	};
-	const addrxlat_pgt_t *pgt = state->ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->pgt;
 
 	if (!state->level)
 		return check_pgt_state(state);

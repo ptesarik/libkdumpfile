@@ -114,9 +114,6 @@ struct _addrxlat_ctx {
 	/** Callback for reading 64-bit integers. */
 	addrxlat_read64_fn *cb_read64;
 
-	/** Page table translation object. */
-	addrxlat_pgt_t *pgt;
-
 	char err_buf[ERRBUF];	/**< Error string. */
 };
 

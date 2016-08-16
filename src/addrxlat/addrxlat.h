@@ -273,37 +273,13 @@ void addrxlat_pgt_set_root(
  */
 const addrxlat_fulladdr_t *addrxlat_pgt_get_root(const addrxlat_pgt_t *pgt);
 
-/** Set page table translation.
- * @param ctx   Address translation object.
- * @param pgt   Page table translation object (or @c NULL).
- */
-void addrxlat_set_pgt(addrxlat_ctx *ctx, addrxlat_pgt_t *pgt);
-
-/** Get the page table translation object associated with a context.
- * @param ctx   Address translation object.
- * @returns     Associated page table translation object (new reference).
- *
- * Note that the return value may be @c NULL if page table translation
- * is not available for the given context.
- */
-addrxlat_pgt_t *addrxlat_get_pgt(addrxlat_ctx *ctx);
-
-/** Create a new page table translation and assign it to a context.
- * @param ctx  Address translation object.
- * @param pf   Paging form description.
- * @returns    Error status.
- *
- * This is a shorthand for creating a new page table translation object,
- * initializing it from the given paging form and assigning it to the
- * address translation context.
- */
-addrxlat_status addrxlat_set_paging_form(
-	addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf);
-
 /** Data type for a single page table walk. */
 typedef struct _addrxlat_pgt_walk {
 	/** Address translation context. */
 	addrxlat_ctx *ctx;
+
+	/** Page table translation object. */
+	const addrxlat_pgt_t *pgt;
 
 	/** Page table level. */
 	unsigned short level;
@@ -367,7 +343,7 @@ typedef addrxlat_status addrxlat_pgt_step_fn(addrxlat_pgt_walk_t *state);
  * Most of the state gets initialized by this function. The following
  * fields should be set by the caller prior to calling this function:
  *   - @c ctx:  set to the context used for the translation
- *   - @c base: set to the root page table origin
+ *   - @c pgt:  set to the page table translation definition
  */
 addrxlat_status addrxlat_pgt_start(addrxlat_pgt_walk_t *state,
 				   addrxlat_addr_t addr);
@@ -383,7 +359,7 @@ addrxlat_status addrxlat_pgt_next(addrxlat_pgt_walk_t *state);
  * @param[in] addr       Address to be translated.
  * @returns              Error status.
  *
- * On input, fill in @c state->ctx and @c state->base
+ * On input, fill in @c state->ctx and @c state->pgt
  * (see @ref addrxlat_pgt_start for details).
  * On successful return, the resulting address is found in @c state->base.
  */

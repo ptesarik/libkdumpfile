@@ -140,7 +140,7 @@ determine_pgttype(kdump_ctx *ctx, kdump_vaddr_t pgtroot)
 
 			pf.levels = archdata->pgttype + 3;
 			axres = addrxlat_pgt_set_form(
-				ctx->shared->pgtxlat, &pf);
+				ctx->shared->vtop_map.pgt, &pf);
 			if (axres != addrxlat_ok)
 				return set_error_addrxlat(ctx, axres);
 

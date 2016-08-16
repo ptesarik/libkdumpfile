@@ -53,11 +53,8 @@ unsigned long
 addrxlat_decref(addrxlat_ctx *ctx)
 {
 	unsigned long refcnt = --ctx->refcnt;
-	if (!refcnt) {
-		if (ctx->pgt)
-			internal_pgt_decref(ctx->pgt);
+	if (!refcnt)
 		free(ctx);
-	}
 	return refcnt;
 }
 

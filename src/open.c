@@ -136,7 +136,6 @@ kdump_clone(kdump_ctx *ctx, const kdump_ctx *orig)
 					 "Cannot allocate per-ctx data");
 		}
 	}
-	addrxlat_set_pgt(ctx->addrxlat, orig->shared->pgtxlat);
 	rwlock_unlock(&orig->shared->lock);
 
 	rwlock_wrlock(&orig->shared->lock);

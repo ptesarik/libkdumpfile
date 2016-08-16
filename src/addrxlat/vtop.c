@@ -30,48 +30,6 @@
 
 #include "addrxlat-priv.h"
 
-void
-addrxlat_set_pgt(addrxlat_ctx *ctx, addrxlat_pgt_t *pgt)
-{
-	if (ctx->pgt)
-		internal_pgt_decref(ctx->pgt);
-	internal_pgt_incref(pgt);
-	ctx->pgt = pgt;
-}
-
-addrxlat_pgt_t *
-addrxlat_get_pgt(addrxlat_ctx *ctx)
-{
-	if (ctx->pgt)
-		internal_pgt_incref(ctx->pgt);
-	return ctx->pgt;
-}
-
-addrxlat_status
-addrxlat_set_paging_form(addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf)
-{
-	addrxlat_pgt_t *pgt;
-	addrxlat_status status;
-
-	pgt = internal_pgt_new();
-	if (!pgt)
-		return set_error(ctx, addrxlat_nomem,
-				 "Cannot allocate pgt");
-
-	status = internal_pgt_set_form(pgt, pf);
-	if (status != addrxlat_ok) {
-		internal_pgt_decref(pgt);
-		return set_error(ctx, status,
-				 "Cannot set paging form");
-	}
-
-	if (ctx->pgt)
-		internal_pgt_decref(ctx->pgt);
-	ctx->pgt = pgt;
-
-	return addrxlat_ok;
-}
-
 /** Read the raw PTE value.
  * @param state  Page table walk state.
  * @returns      Error status.
@@ -83,7 +41,7 @@ static addrxlat_status
 read_pte(addrxlat_pgt_walk_t *state)
 {
 	addrxlat_ctx *ctx = state->ctx;
-	const addrxlat_pgt_t *pgt = ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->pgt;
 	uint64_t pte64;
 	uint32_t pte32;
 	addrxlat_pte_t pte;
@@ -118,7 +76,7 @@ DEFINE_INTERNAL(pgt_start)
 addrxlat_status
 addrxlat_pgt_start(addrxlat_pgt_walk_t *state, addrxlat_addr_t addr)
 {
-	const addrxlat_pgt_t *pgt = state->ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->pgt;
 	unsigned short i;
 	addrxlat_status status;
 
@@ -133,6 +91,7 @@ addrxlat_pgt_start(addrxlat_pgt_walk_t *state, addrxlat_addr_t addr)
 	state->idx[i] = addr;
 
 	state->level = 0;
+	state->base = pgt->root;
 	status = pgt->pgt_step(state);
 	if (status == addrxlat_continue)
 		state->level = pgt->pf.levels;
@@ -144,7 +103,7 @@ DEFINE_INTERNAL(pgt_next)
 addrxlat_status
 addrxlat_pgt_next(addrxlat_pgt_walk_t *state)
 {
-	const addrxlat_pgt_t *pgt = state->ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->pgt;
 	addrxlat_status status;
 
 	if (!state->level)
@@ -189,7 +148,7 @@ addrxlat_pgt(addrxlat_pgt_walk_t *state, addrxlat_addr_t addr)
 addrxlat_status
 pgt_huge_page(addrxlat_pgt_walk_t *state)
 {
-	const addrxlat_pgt_t *pgt = state->ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->pgt;
 	addrxlat_addr_t off = 0;
 
 	while (state->level > 1) {
@@ -223,7 +182,7 @@ pgt_xlat_by_def(addrxlat_ctx *ctx, addrxlat_addr_t *paddr,
 	addrxlat_status status;
 
 	state.ctx = ctx;
-	state.base = def->pgt->root;
+	state.pgt = def->pgt;
 	status = internal_pgt(&state, *paddr);
 	if (status == addrxlat_ok)
 		*paddr = state.base.addr;

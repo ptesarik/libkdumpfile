@@ -426,7 +426,7 @@ x86_64_init(kdump_ctx *ctx)
 	addrxlat_status axres;
 	kdump_status ret;
 
-	axres = addrxlat_pgt_set_form(ctx->shared->pgtxlat, &x86_64_pf);
+	axres = addrxlat_pgt_set_form(ctx->shared->vtop_map.pgt, &x86_64_pf);
 	if (axres != addrxlat_ok)
 		return set_error_addrxlat(ctx, axres);
 
@@ -618,7 +618,13 @@ static kdump_status
 x86_64_vtop_init_xen(kdump_ctx *ctx)
 {
 	addrxlat_fulladdr_t pgtroot;
+	addrxlat_status axres;
 	kdump_status res;
+
+	axres = addrxlat_pgt_set_form(
+		ctx->shared->vtop_map_xen.pgt, &x86_64_pf);
+	if (axres != addrxlat_ok)
+		return set_error_addrxlat(ctx, axres);
 
 	res = add_canonical_regions(ctx, &ctx->shared->vtop_map_xen);
 	if (res != kdump_ok)
