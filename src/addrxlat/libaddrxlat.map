@@ -4,6 +4,17 @@ LIBADDRXLAT_0 {
     addrxlat_incref;
     addrxlat_decref;
     addrxlat_err_str;
+    addrxlat_cb_read32;
+    addrxlat_cb_read64;
+    addrxlat_set_priv;
+    addrxlat_get_priv;
+
+    addrxlat_walk;
+    addrxlat_by_def;
+    addrxlat_by_map;
+    addrxlat_map_set;
+    addrxlat_map_search;
+
     addrxlat_pgt_new;
     addrxlat_pgt_incref;
     addrxlat_pgt_decref;
@@ -11,17 +22,9 @@ LIBADDRXLAT_0 {
     addrxlat_pgt_get_form;
     addrxlat_pgt_set_root;
     addrxlat_pgt_get_root;
+
     addrxlat_walk_init;
     addrxlat_walk_next;
-    addrxlat_walk;
-    addrxlat_by_def;
-    addrxlat_by_map;
-    addrxlat_map_set;
-    addrxlat_map_search;
-    addrxlat_cb_read32;
-    addrxlat_cb_read64;
-    addrxlat_set_priv;
-    addrxlat_get_priv;
 
     addrxlat_osmap_new;
     addrxlat_osmap_incref;
