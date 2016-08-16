@@ -18,11 +18,19 @@ LIBADDRXLAT_0 {
     addrxlat_by_map;
     addrxlat_map_set;
     addrxlat_map_search;
-    addrxlat_init_os;
     addrxlat_cb_read32;
     addrxlat_cb_read64;
     addrxlat_set_priv;
     addrxlat_get_priv;
+
+    addrxlat_osmap_new;
+    addrxlat_osmap_incref;
+    addrxlat_osmap_decref;
+    addrxlat_osmap_init;
+    addrxlat_osmap_set_map;
+    addrxlat_osmap_get_map;
+    addrxlat_osmap_set_pgt;
+    addrxlat_osmap_get_pgt;
 
   local:
     *;

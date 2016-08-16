@@ -197,7 +197,7 @@ print_xlat(const addrxlat_def_t *def)
 }
 
 static void
-print_pgt(addrxlat_pgt_t *pgt)
+print_pgt(const addrxlat_pgt_t *pgt)
 {
 	static const char *pte_formats[] = {
 		[addrxlat_pte_none] = "none",
@@ -246,8 +246,8 @@ os_map(void)
 {
 	addrxlat_ctx *ctx;
 	addrxlat_osdesc_t desc;
-	addrxlat_pgt_t *pgt;
-	addrxlat_map_t *map;
+	addrxlat_osmap_t *osmap;
+	const addrxlat_pgt_t *pgt;
 	addrxlat_status status;
 
 	desc.type = ostype;
@@ -262,21 +262,31 @@ os_map(void)
 	addrxlat_cb_read32(ctx, read32);
 	addrxlat_cb_read64(ctx, read64);
 
-	status = addrxlat_init_os(ctx, &desc, &pgt, &map);
+	osmap = addrxlat_osmap_new();
+	if (!osmap) {
+		perror("Cannot allocate osmap");
+		addrxlat_decref(ctx);
+		return TEST_ERR;
+	}
+
+	status = addrxlat_osmap_init(osmap, ctx, &desc);
 	if (status != addrxlat_ok) {
 		fprintf(stderr, "OS map failed: %s\n",
 			(status > 0
 			 ? addrxlat_err_str(ctx)
 			 : read_err_str));
+		addrxlat_osmap_decref(osmap);
 		addrxlat_decref(ctx);
 		return TEST_ERR;
 	}
 
+	pgt = addrxlat_osmap_get_pgt(osmap);
 	add_symbol(pgt, "rootpgt");
-
 	print_pgt(pgt);
-	print_map(map);
 
+	print_map(addrxlat_osmap_get_map(osmap));
+
+	addrxlat_osmap_decref(osmap);
 	addrxlat_decref(ctx);
 	return TEST_OK;
 }

@@ -485,19 +485,71 @@ typedef struct _addrxlat_osdesc {
 	const char *arch;
 } addrxlat_osdesc_t;
 
+/** Address translation map for a specific OS.
+ * In addition to a @ref addrxlat_map_t, this structure also contains
+ * any OS-specific data.
+ */
+typedef struct _addrxlat_osmap addrxlat_osmap_t;
+
+/** Allocate a new OS translation map.
+ * @returns  A new OS translation map, or @c NULL.
+ *
+ * This call can fail if and only if memory allocation fails.
+ */
+addrxlat_osmap_t *addrxlat_osmap_new(void);
+
+/** Increment OS map reference counter.
+ * @param osmap  OS map object.
+ * @returns      New reference count.
+ */
+unsigned long addrxlat_osmap_incref(addrxlat_osmap_t *osmap);
+
+/** Decrement OS map reference counter.
+ * @param osmap  OS map object.
+ * @returns      New reference count.
+ *
+ * If the new reference count is zero, the underlying object is freed
+ * and its address must not be used afterwards.
+ */
+unsigned long addrxlat_osmap_decref(addrxlat_osmap_t *osmap);
+
 /** Set up translation for a given operating system.
- * @param ctx         Address translation object.
- * @param[in] osdesc  Description of the operating system.
- * @param[out] ppgt   Page table translation on successful return.
- * @param[out] pmap   Translation map on successful return.
- * @returns           Error status.
+ * @param osmap   OS map object.
+ * @param ctx     Address translation object.
+ * @param osdesc  Description of the operating system.
+ * @returns       Error status.
  *
  * This function uses OS-specific data and built-in heuristics to
- * determine the translation map for an operating system.
+ * determine the translation map and page-table translation for an
+ * operating system.
  */
-addrxlat_status addrxlat_init_os(addrxlat_ctx *ctx,
-				 const addrxlat_osdesc_t *osdesc,
-				 addrxlat_pgt_t **ppgt, addrxlat_map_t **pmap);
+addrxlat_status addrxlat_osmap_init(
+	addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	const addrxlat_osdesc_t *osdesc);
+
+/** Explicitly set the translation map of an OS map object.
+ * @param osmap   OS map object.
+ * @param map     Translation map.
+ */
+void addrxlat_osmap_set_map(addrxlat_osmap_t *osmap, addrxlat_map_t *map);
+
+/** Get the translation map of an OS map object.
+ * @param osmap   OS map object.
+ * @returns       Associated translation map.
+ */
+const addrxlat_map_t *addrxlat_osmap_get_map(const addrxlat_osmap_t *osmap);
+
+/** Explicitly set the page table translation of an OS map object.
+ * @param osmap   OS map object.
+ * @param pgt     Page table translation object.
+ */
+void addrxlat_osmap_set_pgt(addrxlat_osmap_t *osmap, addrxlat_pgt_t *pgt);
+
+/** Get the page table translation of an OS map object.
+ * @param osmap   OS map object.
+ * @returns       Associated page table translation.
+ */
+addrxlat_pgt_t *addrxlat_osmap_get_pgt(addrxlat_osmap_t *osmap);
 
 /** Type of the read callback for 32-bit integers.
  * @param data      Arbitrary user-supplied data.

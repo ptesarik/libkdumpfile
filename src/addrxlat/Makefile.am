@@ -26,12 +26,13 @@ libaddrxlat_la_SOURCES = \
 	ppc64.c \
 	ia32.c \
 	s390x.c \
+	x86_64.c \
 	setup.c \
 	util.c \
 	pgt.c \
 	vtop.c \
 	map.c \
-	x86_64.c
+	osmap.c
 
 EXTRA_libaddrxlat_la_DEPENDENCIES = libaddrxlat.map
 

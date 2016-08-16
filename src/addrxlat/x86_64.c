@@ -121,63 +121,61 @@ pgt_x86_64(addrxlat_walk_t *state)
 }
 
 /** Create a page table address map for x86_64 canonical regions.
- * @param ctx         Address translation object.
- * @param[in] osdesc  Description of the operating system.
- * @param[in] pgt     Page table translation.
+ * @param osmap   OS map object.
+ * @param ctx     Address translation object.
+ * @param osdesc  Description of the operating system.
  * @returns           New translation map, or @c NULL on error.
  */
-static addrxlat_map_t *
-canonical_pgt_map(addrxlat_ctx *ctx, const addrxlat_osdesc_t *osdesc,
-		  const addrxlat_pgt_t *pgt)
+static addrxlat_status
+canonical_pgt_map(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+		  const addrxlat_osdesc_t *osdesc)
 {
 	addrxlat_range_t range;
-	addrxlat_map_t *map, *newmap;
+	addrxlat_map_t *newmap;
 
 	range.xlat.method = ADDRXLAT_PGT;
-	range.xlat.pgt = pgt;
+	range.xlat.pgt = osmap->pgt;
 
 	range.endoff = NONCANONICAL_START - 1;
-	map = internal_map_set(NULL, 0, &range);
-	if (!map)
+	newmap = internal_map_set(osmap->map, 0, &range);
+	if (!newmap)
 		goto err;
+	osmap->map = newmap;
 
 	range.endoff = VIRTADDR_MAX - NONCANONICAL_END - 1;
-	newmap = internal_map_set(map, NONCANONICAL_END + 1, &range);
+	newmap = internal_map_set(osmap->map, NONCANONICAL_END + 1, &range);
 	if (!newmap)
-		goto err_free;
+		goto err;
+	osmap->map = newmap;
 
-	return newmap;
+	return addrxlat_ok;
 
- err_free:
-	free(map);
  err:
-	set_error(ctx, addrxlat_nomem, "Cannot set up default mapping");
-	return NULL;
+	return set_error(ctx, addrxlat_nomem,
+			 "Cannot set up default mapping");
 }
 
 /** Initialize a translation map for an x86_64 OS.
- * @param ctx         Address translation object.
- * @param[in] osdesc  Description of the operating system.
- * @param pgt         Page table translation, updated on successful return.
- * @param[out] pmap   Translation map on successful return.
- * @returns           Error status.
+ * @param osmap   OS map object.
+ * @param ctx     Address translation object.
+ * @param osdesc  Description of the operating system.
+ * @returns       Error status.
  */
 addrxlat_status
-map_os_x86_64(addrxlat_ctx *ctx, const addrxlat_osdesc_t *osdesc,
-	      addrxlat_pgt_t *pgt, addrxlat_map_t **pmap)
+osmap_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	     const addrxlat_osdesc_t *osdesc)
 {
 	static const addrxlat_paging_form_t x86_64_pf = {
 		.pte_format = addrxlat_pte_x86_64,
 		.levels = 5,
 		.bits = { 12, 9, 9, 9, 9 }
 	};
-	addrxlat_map_t *map;
+	addrxlat_status status;
 
-	internal_pgt_set_form(pgt, &x86_64_pf);
-	map = canonical_pgt_map(ctx, osdesc, pgt);
-	if (!map)
-		return addrxlat_nomem;
+	internal_pgt_set_form(osmap->pgt, &x86_64_pf);
+	status = canonical_pgt_map(osmap, ctx, osdesc);
+	if (status != addrxlat_ok)
+		return status;
 
-	*pmap = map;
 	return addrxlat_ok;
 }

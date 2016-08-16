@@ -117,6 +117,19 @@ struct _addrxlat_ctx {
 	char err_buf[ERRBUF];	/**< Error string. */
 };
 
+/** Translation map with OS-specific pieces.
+ */
+struct _addrxlat_osmap {
+	/** Reference counter. */
+	unsigned long refcnt;
+
+	/** Translation map. */
+	addrxlat_map_t *map;
+
+	/** Default page table translation object. */
+	addrxlat_pgt_t *pgt;
+};
+
 /* vtop */
 
 #define pgt_huge_page INTERNAL_NAME(pgt_huge_page)
@@ -142,10 +155,10 @@ addrxlat_pgt_step_fn pgt_ppc64;
 
 /* map by OS */
 
-#define map_os_x86_64 INTERNAL_NAME(map_os_x86_64)
-addrxlat_status map_os_x86_64(
-	addrxlat_ctx *ctx, const addrxlat_osdesc_t *osdesc,
-	addrxlat_pgt_t *pgt, addrxlat_map_t **pmap);
+#define osmap_x86_64 INTERNAL_NAME(osmap_x86_64)
+addrxlat_status osmap_x86_64(
+	addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	const addrxlat_osdesc_t *osdesc);
 
 /* internal aliases */
 

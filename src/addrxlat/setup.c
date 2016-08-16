@@ -58,32 +58,6 @@ addrxlat_decref(addrxlat_ctx *ctx)
 	return refcnt;
 }
 
-addrxlat_status
-addrxlat_init_os(addrxlat_ctx *ctx, const addrxlat_osdesc_t *osdesc,
-		 addrxlat_pgt_t **ppgt, addrxlat_map_t **pmap)
-{
-	addrxlat_pgt_t *pgt;
-	addrxlat_status ret;
-
-	pgt = internal_pgt_new();
-	if (!pgt)
-		return set_error(ctx, addrxlat_nomem,
-				 "Cannot allocate pgt");
-
-	if (!strcmp(osdesc->arch, "x86_64"))
-		ret = map_os_x86_64(ctx, osdesc, pgt, pmap);
-	else
-		ret = set_error(ctx, addrxlat_notimpl,
-				"Unsupported architecture");
-
-	if (ret != addrxlat_ok)
-		internal_pgt_decref(pgt);
-	else
-		*ppgt = pgt;
-
-	return ret;
-}
-
 void
 addrxlat_set_priv(addrxlat_ctx *ctx, void *data)
 {
