@@ -110,7 +110,7 @@ addrxlat_pgt_set_form(addrxlat_pgt_t *pgt, const addrxlat_paging_form_t *pf)
 }
 
 const addrxlat_paging_form_t *
-addrxlat_pgt_get_form(addrxlat_pgt_t *pgt)
+addrxlat_pgt_get_form(const addrxlat_pgt_t *pgt)
 {
 	return &pgt->pf;
 }

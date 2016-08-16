@@ -252,7 +252,7 @@ addrxlat_status addrxlat_pgt_set_form(
  * the translation object. It does not change by subsequent calls to
  * @ref addrxlat_pgt_set_form (but the referenced value does).
  */
-const addrxlat_paging_form_t *addrxlat_pgt_get_form(addrxlat_pgt_t *pgt);
+const addrxlat_paging_form_t *addrxlat_pgt_get_form(const addrxlat_pgt_t *pgt);
 
 /** Set root page table base address.
  * @param pgt   Page table translation object.
