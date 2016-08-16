@@ -482,9 +482,6 @@ typedef struct _addrxlat_osdesc {
 
 	/** Architecture name. */
 	const char *arch;
-
-	/** Root page table base. */
-	const addrxlat_fulladdr_t *pgtaddr;
 } addrxlat_osdesc_t;
 
 /** Set up translation for a given operating system.

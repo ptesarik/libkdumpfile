@@ -140,8 +140,6 @@ static const struct params params = {
 	param_array
 };
 
-static addrxlat_fulladdr_t rootpgtaddr;
-
 #define MAX_SYMBOLS	16
 
 static struct {
@@ -255,7 +253,6 @@ os_map(void)
 	desc.type = ostype;
 	desc.ver = osver;
 	desc.arch = arch;
-	desc.pgtaddr = &rootpgtaddr;
 
 	ctx = addrxlat_new();
 	if (!ctx) {
