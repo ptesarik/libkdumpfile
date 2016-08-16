@@ -40,6 +40,7 @@ addrxlat_pgt_new(void)
 	addrxlat_pgt_t *pgt = calloc(1, sizeof(addrxlat_pgt_t));
 	if (pgt) {
 		pgt->refcnt = 1;
+		pgt->root.as = ADDRXLAT_NOADDR;
 		pgt->pgt_step = pgt_none;
 	}
 	return pgt;
@@ -112,4 +113,16 @@ const addrxlat_paging_form_t *
 addrxlat_pgt_get_form(addrxlat_pgt_t *pgt)
 {
 	return &pgt->pf;
+}
+
+void
+addrxlat_pgt_set_root(addrxlat_pgt_t *pgt, const addrxlat_fulladdr_t *root)
+{
+	pgt->root = *root;
+}
+
+const addrxlat_fulladdr_t *
+addrxlat_pgt_get_root(const addrxlat_pgt_t *pgt)
+{
+	return &pgt->root;
 }

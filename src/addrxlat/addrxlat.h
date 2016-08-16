@@ -246,9 +246,32 @@ addrxlat_status addrxlat_pgt_set_form(
 
 /** Get paging form description.
  * @param pgt  Page table translation object.
- * @returns    Paging form description.
+ * @returns    Pointer to the internal paging form description.
+ *
+ * The returned pointer is valid as long as you hold a reference to
+ * the translation object. It does not change by subsequent calls to
+ * @ref addrxlat_pgt_set_form (but the referenced value does).
  */
 const addrxlat_paging_form_t *addrxlat_pgt_get_form(addrxlat_pgt_t *pgt);
+
+/** Set root page table base address.
+ * @param pgt   Page table translation object.
+ * @param root  Address of the root page table.
+ *
+ * This function stores a copy of the root page table base address in
+ */
+void addrxlat_pgt_set_root(
+	addrxlat_pgt_t *pgt, const addrxlat_fulladdr_t *root);
+
+/** Get root page table base address.
+ * @param  pgt  Page table translation object.
+ * @returns     Pointer to the internal root page table.
+ *
+ * The returned pointer is valid as long as you hold a reference to
+ * the translation object. It does not change by subsequent calls to
+ * @ref addrxlat_pgt_set_root (but the referenced value does).
+ */
+const addrxlat_fulladdr_t *addrxlat_pgt_get_root(const addrxlat_pgt_t *pgt);
 
 /** Set page table translation.
  * @param ctx   Address translation object.

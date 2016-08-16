@@ -9,6 +9,8 @@ LIBADDRXLAT_0 {
     addrxlat_pgt_decref;
     addrxlat_pgt_set_form;
     addrxlat_pgt_get_form;
+    addrxlat_pgt_set_root;
+    addrxlat_pgt_get_root;
     addrxlat_set_pgt;
     addrxlat_get_pgt;
     addrxlat_set_paging_form;

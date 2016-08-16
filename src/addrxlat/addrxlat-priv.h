@@ -77,6 +77,9 @@ struct _addrxlat_pgt {
 	/** Reference counter. */
 	unsigned long refcnt;
 
+	/** Base address of the root page table. */
+	addrxlat_fulladdr_t root;
+
 	/** Function to make one step in page table translation. */
 	addrxlat_pgt_step_fn *pgt_step;
 
