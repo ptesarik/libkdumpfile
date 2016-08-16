@@ -52,7 +52,7 @@
  * @returns      Error status.
  */
 addrxlat_status
-pgt_ia32(addrxlat_pgt_walk_t *state)
+pgt_ia32(addrxlat_walk_t *state)
 {
 	static const char pgt_full_name[][16] = {
 		"Page",
@@ -95,7 +95,7 @@ pgt_ia32(addrxlat_pgt_walk_t *state)
  * @returns      Error status.
  */
 addrxlat_status
-pgt_ia32_pae(addrxlat_pgt_walk_t *state)
+pgt_ia32_pae(addrxlat_walk_t *state)
 {
 	static const char pgt_full_name[][16] = {
 		"Page",

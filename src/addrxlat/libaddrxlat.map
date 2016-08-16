@@ -11,9 +11,9 @@ LIBADDRXLAT_0 {
     addrxlat_pgt_get_form;
     addrxlat_pgt_set_root;
     addrxlat_pgt_get_root;
-    addrxlat_pgt_start;
-    addrxlat_pgt_next;
-    addrxlat_pgt;
+    addrxlat_walk_init;
+    addrxlat_walk_next;
+    addrxlat_walk;
     addrxlat_by_def;
     addrxlat_by_map;
     addrxlat_map_set;

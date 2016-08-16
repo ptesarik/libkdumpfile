@@ -48,7 +48,7 @@
  * @returns      Error status.
  */
 addrxlat_status
-pgt_s390x(addrxlat_pgt_walk_t *state)
+pgt_s390x(addrxlat_walk_t *state)
 {
 	static const char pgt_full_name[][16] = {
 		"Page",

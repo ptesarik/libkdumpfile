@@ -120,7 +120,7 @@ struct _addrxlat_ctx {
 /* vtop */
 
 #define pgt_huge_page INTERNAL_NAME(pgt_huge_page)
-addrxlat_status pgt_huge_page(addrxlat_pgt_walk_t *state);
+addrxlat_status pgt_huge_page(addrxlat_walk_t *state);
 
 #define pgt_none INTERNAL_NAME(pgt_none)
 addrxlat_pgt_step_fn pgt_none;
@@ -161,14 +161,14 @@ DECLARE_INTERNAL(pgt_decref)
 #define internal_pgt_set_form INTERNAL_ALIAS(pgt_set_form)
 DECLARE_INTERNAL(pgt_set_form)
 
-#define internal_pgt_start INTERNAL_ALIAS(pgt_start)
-DECLARE_INTERNAL(pgt_start)
+#define internal_walk_init INTERNAL_ALIAS(walk_init)
+DECLARE_INTERNAL(walk_init)
 
-#define internal_pgt_next INTERNAL_ALIAS(pgt_next)
-DECLARE_INTERNAL(pgt_next)
+#define internal_walk_next INTERNAL_ALIAS(walk_next)
+DECLARE_INTERNAL(walk_next)
 
-#define internal_pgt INTERNAL_ALIAS(pgt)
-DECLARE_INTERNAL(pgt)
+#define internal_walk INTERNAL_ALIAS(walk)
+DECLARE_INTERNAL(walk)
 
 #define internal_by_def INTERNAL_ALIAS(by_def)
 DECLARE_INTERNAL(by_def)

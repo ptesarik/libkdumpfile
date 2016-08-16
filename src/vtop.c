@@ -152,18 +152,22 @@ set_error_no_vtop(kdump_ctx *ctx)
 kdump_status
 vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	addrxlat_pgt_walk_t state;
-	addrxlat_status res;
+	addrxlat_addr_t addr = vaddr;
+	addrxlat_status axres;
+	kdump_status res;
 
-	state.ctx = ctx->addrxlat;
-	state.pgt = ctx->shared->vtop_map.pgt;
-	res = addrxlat_pgt(&state, vaddr);
-	if (res == addrxlat_ok)
-		return set_error(ctx, mtop(ctx, state.base.addr, paddr),
-				 "Cannot translate machine address 0x%llx",
-				 (unsigned long long) state.base.addr);
+	axres = addrxlat_walk(ctx->addrxlat, ctx->shared->vtop_map.pgt,
+			      &addr);
+	if (axres != addrxlat_ok)
+		return set_error_addrxlat(ctx, axres);
 
-	return set_error_addrxlat(ctx, res);
+	res = mtop(ctx, addr, paddr);
+	if (res != kdump_ok)
+		return set_error(ctx, res,
+				 "Cannot translate machine address"
+				 " 0x%"ADDRXLAT_PRIxADDR, addr);
+
+	return kdump_ok;
 }
 
 /**  Xen Virtual-to-physical translation using pagetables.
@@ -177,18 +181,16 @@ vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 kdump_status
 vtop_pgt_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	addrxlat_pgt_walk_t state;
-	addrxlat_status res;
+	addrxlat_addr_t addr = vaddr;
+	addrxlat_status axres;
 
-	state.ctx = ctx->addrxlat;
-	state.pgt = ctx->shared->vtop_map_xen.pgt;
-	res = addrxlat_pgt(&state, vaddr);
-	if (res == addrxlat_ok) {
-		*paddr = state.base.addr;
-		return kdump_ok;
-	}
+	axres = addrxlat_walk(ctx->addrxlat, ctx->shared->vtop_map_xen.pgt,
+			      &addr);
+	if (axres != addrxlat_ok)
+		return set_error_addrxlat(ctx, axres);
 
-	return set_error_addrxlat(ctx, res);
+	*paddr = addr;
+	return kdump_ok;
 }
 
 /**  Perform virtual -> physical address translation using a given mapping.
@@ -236,21 +238,20 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 kdump_status
 vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 {
-	addrxlat_pgt_walk_t state;
-	addrxlat_status res;
+	addrxlat_addr_t addr;
+	addrxlat_status axres;
 
 	if (kphys_is_machphys(ctx))
 		return vtop(ctx, vaddr, maddr);
 
-	state.ctx = ctx->addrxlat;
-	state.pgt = ctx->shared->vtop_map.pgt;
-	res = addrxlat_pgt(&state, vaddr);
-	if (res == addrxlat_ok) {
-		*maddr = state.base.addr;
-		return kdump_ok;
-	}
+	addr = vaddr;
+	axres = addrxlat_walk(ctx->addrxlat, ctx->shared->vtop_map.pgt,
+			      &addr);
+	if (axres != addrxlat_ok)
+		return set_error_addrxlat(ctx, axres);
 
-	return set_error_addrxlat(ctx, res);
+	*maddr = addr;
+	return kdump_ok;
 }
 
 kdump_status

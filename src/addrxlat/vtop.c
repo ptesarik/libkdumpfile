@@ -38,7 +38,7 @@
  * PTE value for the current translation step.
  */
 static addrxlat_status
-read_pte(addrxlat_pgt_walk_t *state)
+read_pte(addrxlat_walk_t *state)
 {
 	addrxlat_ctx *ctx = state->ctx;
 	const addrxlat_pgt_t *pgt = state->pgt;
@@ -71,14 +71,18 @@ read_pte(addrxlat_pgt_walk_t *state)
 	return status;
 }
 
-DEFINE_INTERNAL(pgt_start)
+DEFINE_INTERNAL(walk_init)
 
 addrxlat_status
-addrxlat_pgt_start(addrxlat_pgt_walk_t *state, addrxlat_addr_t addr)
+addrxlat_walk_init(addrxlat_walk_t *state, addrxlat_ctx *ctx,
+		   const addrxlat_pgt_t *pgt, addrxlat_addr_t addr)
 {
-	const addrxlat_pgt_t *pgt = state->pgt;
 	unsigned short i;
 	addrxlat_status status;
+
+	state->ctx = ctx;
+	state->pgt = pgt;
+	state->base = pgt->root;
 
 	for (i = 0; i < pgt->pf.levels; ++i) {
 		unsigned short bits = pgt->pf.bits[i];
@@ -91,17 +95,16 @@ addrxlat_pgt_start(addrxlat_pgt_walk_t *state, addrxlat_addr_t addr)
 	state->idx[i] = addr;
 
 	state->level = 0;
-	state->base = pgt->root;
 	status = pgt->pgt_step(state);
 	if (status == addrxlat_continue)
 		state->level = pgt->pf.levels;
 	return status;
 }
 
-DEFINE_INTERNAL(pgt_next)
+DEFINE_INTERNAL(walk_next)
 
 addrxlat_status
-addrxlat_pgt_next(addrxlat_pgt_walk_t *state)
+addrxlat_walk_next(addrxlat_walk_t *state)
 {
 	const addrxlat_pgt_t *pgt = state->pgt;
 	addrxlat_status status;
@@ -123,17 +126,21 @@ addrxlat_pgt_next(addrxlat_pgt_walk_t *state)
 	return pgt->pgt_step(state);
 }
 
-DEFINE_INTERNAL(pgt)
+DEFINE_INTERNAL(walk)
 
 addrxlat_status
-addrxlat_pgt(addrxlat_pgt_walk_t *state, addrxlat_addr_t addr)
+addrxlat_walk(addrxlat_ctx *ctx, const addrxlat_pgt_t *pgt,
+	      addrxlat_addr_t *paddr)
 {
+	addrxlat_walk_t walk;
 	addrxlat_status status;
 
-	status = internal_pgt_start(state, addr);
+	status = internal_walk_init(&walk, ctx, pgt, *paddr);
 	while (status == addrxlat_continue)
-		status = internal_pgt_next(state);
+		status = internal_walk_next(&walk);
 
+	if (status == addrxlat_ok)
+		*paddr = walk.base.addr;
 	return status;
 }
 
@@ -146,7 +153,7 @@ addrxlat_pgt(addrxlat_pgt_walk_t *state, addrxlat_addr_t addr)
  * terminates.
  */
 addrxlat_status
-pgt_huge_page(addrxlat_pgt_walk_t *state)
+pgt_huge_page(addrxlat_walk_t *state)
 {
 	const addrxlat_pgt_t *pgt = state->pgt;
 	addrxlat_addr_t off = 0;
@@ -162,32 +169,12 @@ pgt_huge_page(addrxlat_pgt_walk_t *state)
 
 /** Null pgt function. It does not modify anything and always succeeds. */
 addrxlat_status
-pgt_none(addrxlat_pgt_walk_t *state)
+pgt_none(addrxlat_walk_t *state)
 {
 	return addrxlat_continue;
 }
 
 DEFINE_INTERNAL(by_def)
-
-/** Translate an address using direct page table origin.
- * @param ctx    Address translation object.
- * @param paddr  Address.
- * @param def    Translation definition.
- */
-static addrxlat_status
-pgt_xlat_by_def(addrxlat_ctx *ctx, addrxlat_addr_t *paddr,
-		const addrxlat_def_t *def)
-{
-	addrxlat_pgt_walk_t state;
-	addrxlat_status status;
-
-	state.ctx = ctx;
-	state.pgt = def->pgt;
-	status = internal_pgt(&state, *paddr);
-	if (status == addrxlat_ok)
-		*paddr = state.base.addr;
-	return status;
-}
 
 addrxlat_status
 addrxlat_by_def(addrxlat_ctx *ctx, addrxlat_addr_t *paddr,
@@ -207,7 +194,7 @@ addrxlat_by_def(addrxlat_ctx *ctx, addrxlat_addr_t *paddr,
 		return addrxlat_ok;
 
 	case ADDRXLAT_PGT:
-		return pgt_xlat_by_def(ctx, paddr, def);
+		return internal_walk(ctx, def->pgt, paddr);
 
 	default:
 		return set_error(ctx, addrxlat_invalid,

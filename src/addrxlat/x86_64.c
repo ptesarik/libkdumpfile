@@ -59,7 +59,7 @@
  * highest bit.
  */
 static int
-is_noncanonical(addrxlat_pgt_walk_t *state)
+is_noncanonical(addrxlat_walk_t *state)
 {
 	const addrxlat_pgt_t *pgt = state->pgt;
 	unsigned short lvl = pgt->pf.levels;
@@ -78,7 +78,7 @@ is_noncanonical(addrxlat_pgt_walk_t *state)
  * @returns      Error status.
  */
 addrxlat_status
-pgt_x86_64(addrxlat_pgt_walk_t *state)
+pgt_x86_64(addrxlat_walk_t *state)
 {
 	static const char pgt_full_name[][16] = {
 		"Page",
