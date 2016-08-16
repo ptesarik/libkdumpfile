@@ -120,8 +120,7 @@ struct _addrxlat_ctx {
 /* vtop */
 
 #define pgt_huge_page INTERNAL_NAME(pgt_huge_page)
-addrxlat_status pgt_huge_page(addrxlat_ctx *ctx,
-			      addrxlat_pgt_walk_t *state);
+addrxlat_status pgt_huge_page(addrxlat_pgt_walk_t *state);
 
 #define pgt_none INTERNAL_NAME(pgt_none)
 addrxlat_pgt_step_fn pgt_none;

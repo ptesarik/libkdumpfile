@@ -90,8 +90,9 @@ static unsigned mmu_pshift[MMU_PAGE_COUNT] = {
 };
 
 static addrxlat_status
-check_pgt_state(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
+check_pgt_state(addrxlat_pgt_walk_t *state)
 {
+	addrxlat_ctx *ctx = state->ctx;
 	const addrxlat_pgt_t *pgt = ctx->pgt;
 	unsigned short lvl = pgt->pf.levels;
 	unsigned region;
@@ -134,21 +135,20 @@ hugepd_shift(addrxlat_pte_t hpde)
 }
 
 /**  Translate a huge page using its directory entry.
- * @param ctx    Address translation object.
  * @param state  Page table walk state.
  * @returns      Always @c addrxlat_continue.
  */
 addrxlat_status
-huge_pd(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
+huge_pd(addrxlat_pgt_walk_t *state)
 {
-	const addrxlat_pgt_t *pgt = ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->ctx->pgt;
 	addrxlat_addr_t off;
 	unsigned pdshift;
 	unsigned short i;
 
 	pdshift = hugepd_shift(state->raw_pte);
 	if (!pdshift)
-		return set_error(ctx, addrxlat_invalid,
+		return set_error(state->ctx, addrxlat_invalid,
 				 "Invalid hugepd shift");
 
 	state->base.as = ADDRXLAT_KVADDR;
@@ -184,7 +184,6 @@ is_hugepte(addrxlat_pte_t pte)
 }
 
 /** Update page table walk state for huge page.
- * @param ctx    Address translation object.
  * @param state  Page table walk state.
  * @returns      Always @c addrxlat_continue.
  *
@@ -193,23 +192,22 @@ is_hugepte(addrxlat_pte_t pte)
  * offset and terminates.
  */
 addrxlat_status
-huge_page(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
+huge_page(addrxlat_pgt_walk_t *state)
 {
-	const addrxlat_pgt_t *pgt = ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->ctx->pgt;
 
 	state->base.as = ADDRXLAT_MACHPHYSADDR;
 	state->base.addr = (state->raw_pte >>
 			    pgt->pf.rpn_shift) << pgt->pf.bits[0];
-	return pgt_huge_page(ctx, state);
+	return pgt_huge_page(state);
 }
 
 /** IBM POWER page table step function.
- * @param ctx    Address translation object.
  * @param state  Page table walk state.
  * @returns      Error status.
  */
 addrxlat_status
-pgt_ppc64(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
+pgt_ppc64(addrxlat_pgt_walk_t *state)
 {
 	static const char pte_name[][4] = {
 		"pte",
@@ -217,13 +215,13 @@ pgt_ppc64(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 		"pud",
 		"pgd",
 	};
-	const addrxlat_pgt_t *pgt = ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->ctx->pgt;
 
 	if (!state->level)
-		return check_pgt_state(ctx, state);
+		return check_pgt_state(state);
 
 	if (!state->raw_pte)
-		return set_error(ctx, addrxlat_notpresent,
+		return set_error(state->ctx, addrxlat_notpresent,
 				 "%s[%u] is none",
 				 pte_name[state->level - 1],
 				 (unsigned) state->idx[state->level]);
@@ -232,10 +230,10 @@ pgt_ppc64(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 		addrxlat_addr_t table_size;
 
 		if (is_hugepte(state->raw_pte))
-			return huge_page(ctx, state);
+			return huge_page(state);
 
 		if (is_hugepd(state->raw_pte))
-			return huge_pd(ctx, state);
+			return huge_pd(state);
 
 		table_size = ((addrxlat_addr_t)1 << pgt->pte_shift <<
 			      pgt->pf.bits[state->level - 1]);

@@ -51,7 +51,6 @@
 #define VIRTADDR_MAX		UINT64_MAX
 
 /** Check whether an address is canonical.
- * @param ctx    Address translation object.
  * @param state  Page table walk state.
  * @returns      Zero if @c state corresponds to a canonical address,
  *               non-zero otherwise.
@@ -60,9 +59,9 @@
  * highest bit.
  */
 static int
-is_noncanonical(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
+is_noncanonical(addrxlat_pgt_walk_t *state)
 {
-	const addrxlat_pgt_t *pgt = ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->ctx->pgt;
 	unsigned short lvl = pgt->pf.levels;
 	struct {
 		int bit : 1;
@@ -75,12 +74,11 @@ is_noncanonical(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 }
 
 /** AMD64 (Intel 64) page table step function.
- * @param ctx    Address translation object.
  * @param state  Translation state.
  * @returns      Error status.
  */
 addrxlat_status
-pgt_x86_64(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
+pgt_x86_64(addrxlat_pgt_walk_t *state)
 {
 	static const char pgt_full_name[][16] = {
 		"Page",
@@ -94,16 +92,16 @@ pgt_x86_64(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 		"pud",
 		"pgd",
 	};
-	const addrxlat_pgt_t *pgt = ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->ctx->pgt;
 
 	if (!state->level)
-		return is_noncanonical(ctx, state)
-			? set_error(ctx, addrxlat_invalid,
+		return is_noncanonical(state)
+			? set_error(state->ctx, addrxlat_invalid,
 				    "Non-canonical address")
 			: addrxlat_continue;
 
 	if (!(state->raw_pte & _PAGE_PRESENT))
-		return set_error(ctx, addrxlat_notpresent,
+		return set_error(state->ctx, addrxlat_notpresent,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
 				 pgt_full_name[state->level - 1],
 				 pte_name[state->level - 1],
@@ -115,7 +113,7 @@ pgt_x86_64(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 	if (state->level >= 2 && state->level <= 3 &&
 	    (state->raw_pte & _PAGE_PSE)) {
 		state->base.addr &= pgt->pgt_mask[state->level - 1];
-		return pgt_huge_page(ctx, state);
+		return pgt_huge_page(state);
 	}
 
 	state->base.addr &= pgt->pgt_mask[0];

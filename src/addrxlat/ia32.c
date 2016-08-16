@@ -48,12 +48,11 @@
 #define _PAGE_PSE	(1UL << _PAGE_BIT_PSE)
 
 /** IA32 page table step function.
- * @param ctx    Address translation object.
  * @param state  Page table walk state.
  * @returns      Error status.
  */
 addrxlat_status
-pgt_ia32(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
+pgt_ia32(addrxlat_pgt_walk_t *state)
 {
 	static const char pgt_full_name[][16] = {
 		"Page",
@@ -63,16 +62,16 @@ pgt_ia32(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 		"pte",
 		"pgd",
 	};
-	const addrxlat_pgt_t *pgt = ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->ctx->pgt;
 
 	if (!state->level)
 		return state->idx[pgt->pf.levels]
-			? set_error(ctx, addrxlat_invalid,
+			? set_error(state->ctx, addrxlat_invalid,
 				    "Virtual address too big")
 			: addrxlat_continue;
 
 	if (!(state->raw_pte & _PAGE_PRESENT))
-		return set_error(ctx, addrxlat_notpresent,
+		return set_error(state->ctx, addrxlat_notpresent,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
 				 pgt_full_name[state->level - 1],
 				 pte_name[state->level - 1],
@@ -92,12 +91,11 @@ pgt_ia32(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 }
 
 /** IA32 PAE page table step function.
- * @param ctx    Address translation object.
  * @param state  Page table walk state.
  * @returns      Error status.
  */
 addrxlat_status
-pgt_ia32_pae(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
+pgt_ia32_pae(addrxlat_pgt_walk_t *state)
 {
 	static const char pgt_full_name[][16] = {
 		"Page",
@@ -109,16 +107,16 @@ pgt_ia32_pae(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 		"pmd",
 		"pgd",
 	};
-	const addrxlat_pgt_t *pgt = ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->ctx->pgt;
 
 	if (!state->level)
 		return state->idx[pgt->pf.levels]
-			? set_error(ctx, addrxlat_invalid,
+			? set_error(state->ctx, addrxlat_invalid,
 				    "Virtual address too big")
 			: addrxlat_continue;
 
 	if (!(state->raw_pte & _PAGE_PRESENT))
-		return set_error(ctx, addrxlat_notpresent,
+		return set_error(state->ctx, addrxlat_notpresent,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
 				 pgt_full_name[state->level - 1],
 				 pte_name[state->level - 1],

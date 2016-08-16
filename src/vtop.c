@@ -155,8 +155,9 @@ vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	addrxlat_pgt_walk_t state;
 	addrxlat_status res;
 
+	state.ctx = ctx->addrxlat;
 	state.base = ctx->shared->vtop_map.pgt;
-	res = addrxlat_pgt(ctx->addrxlat, &state, vaddr);
+	res = addrxlat_pgt(&state, vaddr);
 	if (res == addrxlat_ok)
 		return set_error(ctx, mtop(ctx, state.base.addr, paddr),
 				 "Cannot translate machine address 0x%llx",
@@ -179,8 +180,9 @@ vtop_pgt_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	addrxlat_pgt_walk_t state;
 	addrxlat_status res;
 
+	state.ctx = ctx->addrxlat;
 	state.base = ctx->shared->vtop_map_xen.pgt;
-	res = addrxlat_pgt(ctx->addrxlat, &state, vaddr);
+	res = addrxlat_pgt(&state, vaddr);
 	if (res == addrxlat_ok) {
 		*paddr = state.base.addr;
 		return kdump_ok;
@@ -240,8 +242,9 @@ vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 	if (kphys_is_machphys(ctx))
 		return vtop(ctx, vaddr, maddr);
 
+	state.ctx = ctx->addrxlat;
 	state.base = ctx->shared->vtop_map.pgt;
-	res = addrxlat_pgt(ctx->addrxlat, &state, vaddr);
+	res = addrxlat_pgt(&state, vaddr);
 	if (res == addrxlat_ok) {
 		*maddr = state.base.addr;
 		return kdump_ok;

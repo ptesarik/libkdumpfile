@@ -73,7 +73,6 @@ addrxlat_set_paging_form(addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf)
 }
 
 /** Read the raw PTE value.
- * @param ctx    Address translation object.
  * @param state  Page table walk state.
  * @returns      Error status.
  *
@@ -81,8 +80,9 @@ addrxlat_set_paging_form(addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf)
  * PTE value for the current translation step.
  */
 static addrxlat_status
-read_pte(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
+read_pte(addrxlat_pgt_walk_t *state)
 {
+	addrxlat_ctx *ctx = state->ctx;
 	const addrxlat_pgt_t *pgt = ctx->pgt;
 	uint64_t pte64;
 	uint32_t pte32;
@@ -116,10 +116,9 @@ read_pte(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 DEFINE_INTERNAL(pgt_start)
 
 addrxlat_status
-addrxlat_pgt_start(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state,
-		   addrxlat_addr_t addr)
+addrxlat_pgt_start(addrxlat_pgt_walk_t *state, addrxlat_addr_t addr)
 {
-	const addrxlat_pgt_t *pgt = ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->ctx->pgt;
 	unsigned short i;
 	addrxlat_status status;
 
@@ -134,7 +133,7 @@ addrxlat_pgt_start(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state,
 	state->idx[i] = addr;
 
 	state->level = 0;
-	status = pgt->pgt_step(ctx, state);
+	status = pgt->pgt_step(state);
 	if (status == addrxlat_continue)
 		state->level = pgt->pf.levels;
 	return status;
@@ -143,9 +142,9 @@ addrxlat_pgt_start(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state,
 DEFINE_INTERNAL(pgt_next)
 
 addrxlat_status
-addrxlat_pgt_next(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
+addrxlat_pgt_next(addrxlat_pgt_walk_t *state)
 {
-	const addrxlat_pgt_t *pgt = ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->ctx->pgt;
 	addrxlat_status status;
 
 	if (!state->level)
@@ -158,30 +157,28 @@ addrxlat_pgt_next(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 		return addrxlat_ok;
 	}
 
-	status = read_pte(ctx, state);
+	status = read_pte(state);
 	if (status != addrxlat_ok)
 		return status;
 
-	return pgt->pgt_step(ctx, state);
+	return pgt->pgt_step(state);
 }
 
 DEFINE_INTERNAL(pgt)
 
 addrxlat_status
-addrxlat_pgt(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state,
-	     addrxlat_addr_t addr)
+addrxlat_pgt(addrxlat_pgt_walk_t *state, addrxlat_addr_t addr)
 {
 	addrxlat_status status;
 
-	status = internal_pgt_start(ctx, state, addr);
+	status = internal_pgt_start(state, addr);
 	while (status == addrxlat_continue)
-		status = internal_pgt_next(ctx, state);
+		status = internal_pgt_next(state);
 
 	return status;
 }
 
 /** Update page table walk state for huge page.
- * @param ctx    Address translation object.
  * @param state  Page table walk state.
  * @returns      Always @c addrxlat_continue.
  *
@@ -190,9 +187,9 @@ addrxlat_pgt(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state,
  * terminates.
  */
 addrxlat_status
-pgt_huge_page(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
+pgt_huge_page(addrxlat_pgt_walk_t *state)
 {
-	const addrxlat_pgt_t *pgt = ctx->pgt;
+	const addrxlat_pgt_t *pgt = state->ctx->pgt;
 	addrxlat_addr_t off = 0;
 
 	while (state->level > 1) {
@@ -206,7 +203,7 @@ pgt_huge_page(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 
 /** Null pgt function. It does not modify anything and always succeeds. */
 addrxlat_status
-pgt_none(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
+pgt_none(addrxlat_pgt_walk_t *state)
 {
 	return addrxlat_continue;
 }
@@ -225,10 +222,11 @@ pgt_xlat_by_def(addrxlat_ctx *ctx, addrxlat_addr_t *paddr,
 	addrxlat_pgt_walk_t state;
 	addrxlat_status status;
 
+	state.ctx = ctx;
 	state.base = (def->method == ADDRXLAT_PGT
 		      ? def->pgt
 		      : *def->ppgt);
-	status = internal_pgt(ctx, &state, *paddr);
+	status = internal_pgt(&state, *paddr);
 	if (status == addrxlat_ok)
 		*paddr = state.base.addr;
 	return status;
