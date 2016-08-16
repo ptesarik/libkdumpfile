@@ -100,7 +100,7 @@ struct vtop_control {
  *       address is variable and not exported through VMCOREINFO...
  */
 static int
-determine_pgttype(kdump_ctx *ctx)
+determine_pgttype(kdump_ctx *ctx, kdump_vaddr_t pgtroot)
 {
 	struct s390x_data *archdata = ctx->shared->archdata;
 	struct page_io pio;
@@ -116,8 +116,7 @@ determine_pgttype(kdump_ctx *ctx)
 			if (p)
 				unref_page(ctx, &pio);
 
-			addr = ctx->shared->vtop_map.pgt.addr +
-				i * sizeof(uint64_t);
+			addr = pgtroot + i * sizeof(uint64_t);
 			pio.pfn = addr >> PAGE_SHIFT;
 			pio.precious = 0;
 			res = raw_read_page(ctx, KDUMP_KPHYSADDR, &pio);
@@ -158,16 +157,17 @@ determine_pgttype(kdump_ctx *ctx)
 static kdump_status
 s390x_vtop_init(kdump_ctx *ctx)
 {
+	addrxlat_fulladdr_t pgtroot;
 	kdump_vaddr_t addr;
 	kdump_status ret;
 
 	rwlock_unlock(&ctx->shared->lock);
-	ret = get_symbol_val(ctx, "swapper_pg_dir", &addr);
+	ret = get_symbol_val(ctx, "swapper_pg_dir", &pgtroot.addr);
 	rwlock_wrlock(&ctx->shared->lock);
 	if (ret == kdump_ok) {
-		ctx->shared->vtop_map.pgt.as = ADDRXLAT_KPHYSADDR;
-		ctx->shared->vtop_map.pgt.addr = addr;
-		ret = determine_pgttype(ctx);
+		pgtroot.as = ADDRXLAT_KPHYSADDR;
+		addrxlat_pgt_set_root(ctx->shared->vtop_map.pgt, &pgtroot);
+		ret = determine_pgttype(ctx, pgtroot.addr);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret,
 					 "Cannot determine paging type");
@@ -176,7 +176,8 @@ s390x_vtop_init(kdump_ctx *ctx)
 		if (ret != kdump_ok)
 			return set_error(ctx, ret,
 					 "Cannot set up pagetable mapping");
-	}
+	} else
+		pgtroot.as = ADDRXLAT_NOADDR;
 
 	rwlock_unlock(&ctx->shared->lock);
 	ret = get_symbol_val(ctx, "high_memory", &addr);
@@ -194,7 +195,7 @@ s390x_vtop_init(kdump_ctx *ctx)
 					   0, highmem, 0);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret, "Cannot set up directmap");
-	} else if (ctx->shared->vtop_map.pgt.addr == ADDRXLAT_ADDR_MAX)
+	} else if (pgtroot.as == ADDRXLAT_NOADDR)
 		return set_error(ctx, kdump_nodata,
 				 "Cannot determine size of direct mapping");
 
@@ -348,8 +349,6 @@ s390x_init(kdump_ctx *ctx)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate s390x private data");
 	ctx->shared->archdata = archdata;
-
-	ctx->shared->vtop_map.pgt.addr = ADDRXLAT_ADDR_MAX;
 
 	process_lowcore_info(ctx);
 	clear_error(ctx);

@@ -95,7 +95,7 @@ struct region_def {
 };
 
 #define PGT	\
-	{ .method = ADDRXLAT_PGT_IND }
+	{ .method = ADDRXLAT_PGT }
 
 #define LINEAR(_off)	\
 	{ .method = ADDRXLAT_LINEAR, .off = (_off) }
@@ -438,9 +438,6 @@ x86_64_init(kdump_ctx *ctx)
 
 	set_ktext_off(archdata, get_phys_base(ctx));
 
-	ctx->shared->vtop_map.pgt.addr = ADDRXLAT_ADDR_MAX;
-	ctx->shared->vtop_map_xen.pgt.addr = ADDRXLAT_ADDR_MAX;
-
 	xlat.method = ADDRXLAT_LINEAR_IND,
 	xlat.poff = &archdata->ktext_off;
 	ret = set_vtop_xlat(&ctx->shared->vtop_map,
@@ -459,21 +456,21 @@ x86_64_init(kdump_ctx *ctx)
 static kdump_status
 get_pml4(kdump_ctx *ctx)
 {
-	kdump_vaddr_t pgtaddr;
+	addrxlat_fulladdr_t pgtroot;
 	kdump_status ret;
 
 	rwlock_unlock(&ctx->shared->lock);
-	ret = get_symbol_val(ctx, "init_level4_pgt", &pgtaddr);
+	ret = get_symbol_val(ctx, "init_level4_pgt", &pgtroot.addr);
 	rwlock_wrlock(&ctx->shared->lock);
 	if (ret == kdump_ok) {
-		if (pgtaddr < __START_KERNEL_map)
+		if (pgtroot.addr < __START_KERNEL_map)
 			return set_error(ctx, kdump_dataerr,
-					 "Wrong page directory address: 0x%llx",
-					 (unsigned long long) pgtaddr);
+					 "Wrong page directory address:"
+					 " 0x%"ADDRXLAT_PRIXADDR,
+					 pgtroot.addr);
 
-		ctx->shared->vtop_map.pgt.as = ADDRXLAT_KPHYSADDR;
-		ctx->shared->vtop_map.pgt.addr =
-			pgtaddr - __START_KERNEL_map + get_phys_base(ctx);
+		pgtroot.as = ADDRXLAT_KPHYSADDR;
+		pgtroot.addr -= __START_KERNEL_map - get_phys_base(ctx);
 	} else if (ret == kdump_nodata) {
 		struct attr_data *attr;
 		clear_error(ctx);
@@ -481,11 +478,12 @@ get_pml4(kdump_ctx *ctx)
 		if (!attr || validate_attr(ctx, attr) != kdump_ok)
 			return set_error(ctx, kdump_nodata,
 					 "Cannot find top-level page table");
-		ctx->shared->vtop_map.pgt.as = ADDRXLAT_MACHPHYSADDR;
-		ctx->shared->vtop_map.pgt.addr = attr_value(attr)->number;
+		pgtroot.as = ADDRXLAT_MACHPHYSADDR;
+		pgtroot.addr = attr_value(attr)->number;
 	} else
 		return ret;
 
+	addrxlat_pgt_set_root(ctx->shared->vtop_map.pgt, &pgtroot);
 	return kdump_ok;
 }
 
@@ -548,8 +546,8 @@ remove_ktext_xlat(kdump_ctx *ctx, struct vtop_map *map)
 	     rng < &map->map->ranges[map->map->n]; ++rng)
 		if (rng->xlat.method == ADDRXLAT_LINEAR_IND &&
 		    rng->xlat.poff == &archdata->ktext_off) {
-			rng->xlat.method = ADDRXLAT_PGT_IND;
-			rng->xlat.ppgt = &map->pgt;
+			rng->xlat.method = ADDRXLAT_PGT;
+			rng->xlat.pgt = map->pgt;
 		}
 }
 
@@ -587,10 +585,10 @@ x86_64_vtop_init(kdump_ctx *ctx)
 			pxlat = &xlat;
 			xlat.poff = ctx->shared->archdata +
 				((void*)def->xlat.poff - (void*)ARCH_ANCHOR);
-		} else if (def->xlat.method == ADDRXLAT_PGT_IND) {
+		} else if (def->xlat.method == ADDRXLAT_PGT) {
 			xlat = *pxlat;
 			pxlat = &xlat;
-			xlat.ppgt = &ctx->shared->vtop_map.pgt;
+			xlat.pgt = ctx->shared->vtop_map.pgt;
 		}
 		ret = set_vtop_xlat(&ctx->shared->vtop_map,
 				    def->first, def->last, pxlat);
@@ -619,7 +617,7 @@ x86_64_vtop_init(kdump_ctx *ctx)
 static kdump_status
 x86_64_vtop_init_xen(kdump_ctx *ctx)
 {
-	kdump_addr_t pgtaddr;
+	addrxlat_fulladdr_t pgtroot;
 	kdump_status res;
 
 	res = add_canonical_regions(ctx, &ctx->shared->vtop_map_xen);
@@ -627,12 +625,12 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 		return res;
 
 	rwlock_unlock(&ctx->shared->lock);
-	res = get_symbol_val_xen(ctx, "pgd_l4", &pgtaddr);
+	res = get_symbol_val_xen(ctx, "pgd_l4", &pgtroot.addr);
 	rwlock_wrlock(&ctx->shared->lock);
 	if (res != kdump_ok)
 		return res;
 
-	if (pgtaddr >= XEN_DIRECTMAP_START) {
+	if (pgtroot.addr >= XEN_DIRECTMAP_START) {
 		/* Xen versions before 3.2.0 */
 		res = set_vtop_xlat_linear(
 			&ctx->shared->vtop_map_xen,
@@ -640,7 +638,7 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 			XEN_DIRECTMAP_START);
 	} else {
 		kdump_vaddr_t xen_virt_start;
-		xen_virt_start = pgtaddr & ~((1ULL<<30) - 1);
+		xen_virt_start = pgtroot.addr & ~((1ULL<<30) - 1);
 		res = set_vtop_xlat_linear(
 			&ctx->shared->vtop_map_xen,
 			xen_virt_start,	xen_virt_start + XEN_VIRT_SIZE - 1,
@@ -650,8 +648,8 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 		return set_error(ctx, res,
 				 "Cannot set up initial kernel mapping");
 
-	ctx->shared->vtop_map_xen.pgt.as = ADDRXLAT_XENVADDR;
-	ctx->shared->vtop_map_xen.pgt.addr = pgtaddr;
+	pgtroot.as = ADDRXLAT_XENVADDR;
+	addrxlat_pgt_set_root(ctx->shared->vtop_map_xen.pgt, &pgtroot);
 	return kdump_ok;
 }
 

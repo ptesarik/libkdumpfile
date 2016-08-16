@@ -223,9 +223,7 @@ pgt_xlat_by_def(addrxlat_ctx *ctx, addrxlat_addr_t *paddr,
 	addrxlat_status status;
 
 	state.ctx = ctx;
-	state.base = (def->method == ADDRXLAT_PGT
-		      ? def->pgt
-		      : *def->ppgt);
+	state.base = def->pgt->root;
 	status = internal_pgt(&state, *paddr);
 	if (status == addrxlat_ok)
 		*paddr = state.base.addr;
@@ -250,7 +248,6 @@ addrxlat_by_def(addrxlat_ctx *ctx, addrxlat_addr_t *paddr,
 		return addrxlat_ok;
 
 	case ADDRXLAT_PGT:
-	case ADDRXLAT_PGT_IND:
 		return pgt_xlat_by_def(ctx, paddr, def);
 
 	default:

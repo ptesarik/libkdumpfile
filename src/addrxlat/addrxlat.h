@@ -401,11 +401,8 @@ typedef enum _addrxlat_method {
 	/** Linear mapping with indirect offset: dest = src + *poff. */
 	ADDRXLAT_LINEAR_IND,
 
-	/** Page tables. */
+	/** Page table walk. */
 	ADDRXLAT_PGT,
-
-	/** Page tables with indirect origin (*ppgt). */
-	ADDRXLAT_PGT_IND,
 } addrxlat_method_t;
 
 /** Address translation definition.
@@ -423,12 +420,8 @@ typedef struct _addrxlat_def {
 		/** Pointer to offset used by @ref ADDRXLAT_LINEAR_IND. */
 		const addrxlat_off_t *poff;
 
-		/** Page table origin used by @ref ADDRXLAT_PGT. */
-		addrxlat_fulladdr_t pgt;
-
-		/** Pointer to page table origin used by
-		 * @ref ADDRXLAT_PGT_IND. */
-		const addrxlat_fulladdr_t *ppgt;
+		/** Page table translation used by @ref ADDRXLAT_PGT. */
+		const addrxlat_pgt_t *pgt;
 	};
 } addrxlat_def_t;
 

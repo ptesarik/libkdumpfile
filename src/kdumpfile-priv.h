@@ -492,8 +492,8 @@ struct attr_hash {
 /**  Map for virtual-to-physical translation
  */
 struct vtop_map {
-	addrxlat_fulladdr_t pgt;      /**< root page table origin */
-	addrxlat_map_t *map;	      /**< address translation map */
+	addrxlat_pgt_t *pgt;	/**< page table translation */
+	addrxlat_map_t *map;	/**< address translation map */
 };
 
 struct cache;

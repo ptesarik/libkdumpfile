@@ -123,16 +123,18 @@ pgt_x86_64(addrxlat_pgt_walk_t *state)
 /** Create a page table address map for x86_64 canonical regions.
  * @param ctx         Address translation object.
  * @param[in] osdesc  Description of the operating system.
+ * @param[in] pgt     Page table translation.
  * @returns           New translation map, or @c NULL on error.
  */
 static addrxlat_map_t *
-canonical_pgt_map(addrxlat_ctx *ctx, const addrxlat_osdesc_t *osdesc)
+canonical_pgt_map(addrxlat_ctx *ctx, const addrxlat_osdesc_t *osdesc,
+		  const addrxlat_pgt_t *pgt)
 {
 	addrxlat_range_t range;
 	addrxlat_map_t *map, *newmap;
 
-	range.xlat.method = ADDRXLAT_PGT_IND;
-	range.xlat.ppgt = osdesc->pgtaddr;
+	range.xlat.method = ADDRXLAT_PGT;
+	range.xlat.pgt = pgt;
 
 	range.endoff = NONCANONICAL_START - 1;
 	map = internal_map_set(NULL, 0, &range);
@@ -172,7 +174,7 @@ map_os_x86_64(addrxlat_ctx *ctx, const addrxlat_osdesc_t *osdesc,
 	addrxlat_map_t *map;
 
 	internal_pgt_set_form(pgt, &x86_64_pf);
-	map = canonical_pgt_map(ctx, osdesc);
+	map = canonical_pgt_map(ctx, osdesc, pgt);
 	if (!map)
 		return addrxlat_nomem;
 

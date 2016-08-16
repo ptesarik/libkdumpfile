@@ -142,13 +142,35 @@ static const struct params params = {
 
 static addrxlat_fulladdr_t rootpgtaddr;
 
+#define MAX_SYMBOLS	16
+
+static struct {
+	const void *p;
+	const char *name;
+} symbols[MAX_SYMBOLS];
+static unsigned num_symbols;
+
+static void
+add_symbol(const void *ptr, const char *name)
+{
+	symbols[num_symbols].p = ptr;
+	symbols[num_symbols].name = name;
+	++num_symbols;
+}
+
 static void
 print_ind(const char *desc, const void *ptr)
 {
-	if (ptr == &rootpgtaddr)
-		printf("%s @rootpgt", desc);
-	else
-		printf("%s @%p", desc, ptr);
+	unsigned i;
+
+	for (i = 0; i < num_symbols; ++i) {
+		if (symbols[i].p == ptr) {
+			printf("%s @%s", desc, symbols[i].name);
+			return;
+		}
+	};
+
+	printf("%s @%p", desc, ptr);
 }
 
 static void
@@ -170,11 +192,7 @@ print_xlat(const addrxlat_def_t *def)
 		break;
 
 	case ADDRXLAT_PGT:
-		printf("PGT %"ADDRXLAT_PRIxADDR, def->pgt.addr);
-		break;
-
-	case ADDRXLAT_PGT_IND:
-		print_ind("PGT", def->ppgt);
+		print_ind("PGT", def->pgt);
 		break;
 
 	}
@@ -256,6 +274,8 @@ os_map(void)
 		addrxlat_decref(ctx);
 		return TEST_ERR;
 	}
+
+	add_symbol(pgt, "rootpgt");
 
 	print_pgt(pgt);
 	print_map(map);

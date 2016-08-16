@@ -72,8 +72,8 @@ set_vtop_xlat_pgt(struct vtop_map *map,
 		  kdump_vaddr_t first, kdump_vaddr_t last)
 {
 	const addrxlat_def_t xlat = {
-		.method = ADDRXLAT_PGT_IND,
-		.ppgt = &map->pgt
+		.method = ADDRXLAT_PGT,
+		.pgt = map->pgt
 	};
 	return set_vtop_xlat(map, first, last, &xlat);
 }
@@ -156,7 +156,7 @@ vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	addrxlat_status res;
 
 	state.ctx = ctx->addrxlat;
-	state.base = ctx->shared->vtop_map.pgt;
+	state.base = *addrxlat_pgt_get_root(ctx->shared->vtop_map.pgt);
 	res = addrxlat_pgt(&state, vaddr);
 	if (res == addrxlat_ok)
 		return set_error(ctx, mtop(ctx, state.base.addr, paddr),
@@ -181,7 +181,7 @@ vtop_pgt_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 	addrxlat_status res;
 
 	state.ctx = ctx->addrxlat;
-	state.base = ctx->shared->vtop_map_xen.pgt;
+	state.base = *addrxlat_pgt_get_root(ctx->shared->vtop_map_xen.pgt);
 	res = addrxlat_pgt(&state, vaddr);
 	if (res == addrxlat_ok) {
 		*paddr = state.base.addr;
@@ -243,7 +243,7 @@ vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 		return vtop(ctx, vaddr, maddr);
 
 	state.ctx = ctx->addrxlat;
-	state.base = ctx->shared->vtop_map.pgt;
+	state.base = *addrxlat_pgt_get_root(ctx->shared->vtop_map.pgt);
 	res = addrxlat_pgt(&state, vaddr);
 	if (res == addrxlat_ok) {
 		*maddr = state.base.addr;
@@ -404,8 +404,17 @@ init_vtop_maps(kdump_ctx *ctx)
 
 	addrxlat_set_pgt(ctx->addrxlat, shared->pgtxlat);
 
-	shared->vtop_map.pgt.addr = KDUMP_ADDR_MAX;
-	shared->vtop_map_xen.pgt.addr = KDUMP_ADDR_MAX;
+	shared->vtop_map.pgt = addrxlat_pgt_new();
+	if (!shared->vtop_map.pgt)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot initialize %s page table translation",
+				 "Linux");
+
+	shared->vtop_map_xen.pgt = addrxlat_pgt_new();
+	if (!shared->vtop_map_xen.pgt)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot initialize %s page table translation",
+				 "Xen");
 
 	return kdump_ok;
 }

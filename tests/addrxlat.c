@@ -174,8 +174,9 @@ set_paging_form(const char *spec)
 }
 
 static int
-set_root(const char *spec)
+set_root(const char *spec, addrxlat_pgt_t *pgt)
 {
+	addrxlat_fulladdr_t root;
 	char *endp;
 
 	endp = strchr(spec, ':');
@@ -185,23 +186,25 @@ set_root(const char *spec)
 	}
 
 	if (!strncasecmp(spec, "KPHYSADDR:", endp - spec))
-		xlatdef.pgt.as = ADDRXLAT_KPHYSADDR;
+		root.as = ADDRXLAT_KPHYSADDR;
 	else if (!strncasecmp(spec, "MACHPHYSADDR:", endp - spec))
-		xlatdef.pgt.as = ADDRXLAT_MACHPHYSADDR;
+		root.as = ADDRXLAT_MACHPHYSADDR;
 	else if (!strncasecmp(spec, "KVADDR:", endp - spec))
-		xlatdef.pgt.as = ADDRXLAT_KVADDR;
+		root.as = ADDRXLAT_KVADDR;
 	else if (!strncasecmp(spec, "XENVADDR:", endp - spec))
-		xlatdef.pgt.as = ADDRXLAT_XENVADDR;
+		root.as = ADDRXLAT_XENVADDR;
 	else {
 		fprintf(stderr, "Invalid address spec: %s\n", spec);
 		return TEST_ERR;
 	}
 
-	xlatdef.pgt.addr = strtoull(endp + 1, &endp, 0);
+	root.addr = strtoull(endp + 1, &endp, 0);
 	if (*endp) {
 		fprintf(stderr, "Invalid address spec: %s\n", spec);
 		return TEST_ERR;
 	}
+
+	addrxlat_pgt_set_root(pgt, &root);
 	return TEST_OK;
 }
 
@@ -270,10 +273,21 @@ main(int argc, char **argv)
 	unsigned long long vaddr;
 	char *endp;
 	addrxlat_ctx *ctx;
+	addrxlat_pgt_t *pgt;
 	int opt;
 	addrxlat_status status;
 	unsigned long refcnt;
 	int rc;
+
+	pgt = NULL;
+	ctx = NULL;
+
+	pgt = addrxlat_pgt_new();
+	if (!pgt) {
+		perror("Cannot initialize page table translation");
+		rc = TEST_ERR;
+		goto out;
+	}
 
 	while ((opt = getopt_long(argc, argv, "he:f:l:pr:",
 				  opts, NULL)) != -1) {
@@ -285,7 +299,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'r':
-			rc = set_root(optarg);
+			rc = set_root(optarg, pgt);
 			if (rc != TEST_OK)
 				return rc;
 			break;
@@ -304,12 +318,14 @@ main(int argc, char **argv)
 
 		case 'p':
 			xlatdef.method = ADDRXLAT_PGT;
+			xlatdef.pgt = pgt;
 			break;
 
 		case 'h':
 		default:
 			usage(argv[0]);
-			return (opt == 'h') ? TEST_OK : TEST_ERR;
+			rc = (opt == 'h') ? TEST_OK : TEST_ERR;
+			goto out;
 		}
 	}
 
@@ -327,7 +343,8 @@ main(int argc, char **argv)
 	ctx = addrxlat_new();
 	if (!ctx) {
 		perror("Cannot initialize address translation context");
-		return TEST_ERR;
+		rc = TEST_ERR;
+		goto out;
 	}
 
 	status = addrxlat_set_paging_form(ctx, &paging_form);
@@ -335,7 +352,7 @@ main(int argc, char **argv)
 		fprintf(stderr, "Cannot set paging form: %s\n",
 			addrxlat_err_str(ctx));
 		rc = TEST_ERR;
-		goto err;
+		goto out;
 	}
 
 	addrxlat_cb_read32(ctx, read32);
@@ -343,9 +360,12 @@ main(int argc, char **argv)
 
 	rc = do_xlat(ctx, vaddr);
 
- err:
-	refcnt = addrxlat_decref(ctx);
-	if (refcnt)
+ out:
+	if (pgt && (refcnt = addrxlat_pgt_decref(pgt)) != 0)
+		fprintf(stderr, "WARNING: Leaked %lu pgt references\n",
+			refcnt);
+
+	if (ctx && (refcnt = addrxlat_decref(ctx)) != 0)
 		fprintf(stderr, "WARNING: Leaked %lu addrxlat references\n",
 			refcnt);
 

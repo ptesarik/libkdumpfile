@@ -99,6 +99,7 @@ static const struct attr_template reg_names[] = {
 static kdump_status
 ppc64_vtop_init(kdump_ctx *ctx)
 {
+	addrxlat_fulladdr_t pgtroot;
 	kdump_vaddr_t addr, vmal;
 	struct attr_data *base, *attr;
 	char *endp;
@@ -107,13 +108,13 @@ ppc64_vtop_init(kdump_ctx *ctx)
 	kdump_status res;
 
 	rwlock_unlock(&ctx->shared->lock);
-	res = get_symbol_val(ctx, "swapper_pg_dir", &addr);
+	res = get_symbol_val(ctx, "swapper_pg_dir", &pgtroot.addr);
 	rwlock_wrlock(&ctx->shared->lock);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot resolve %s",
 				 "swapper_pg_dir");
-	ctx->shared->vtop_map.pgt.as = ADDRXLAT_KVADDR;
-	ctx->shared->vtop_map.pgt.addr = addr;
+	pgtroot.as = ADDRXLAT_KVADDR;
+	addrxlat_pgt_set_root(ctx->shared->vtop_map.pgt, &pgtroot);
 
 	rwlock_unlock(&ctx->shared->lock);
 	res = get_symbol_val(ctx, "_stext", &addr);

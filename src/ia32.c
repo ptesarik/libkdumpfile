@@ -127,7 +127,6 @@ ia32_init(kdump_ctx *ctx)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate ia32 private data");
 
-	ctx->shared->vtop_map.pgt.addr = ADDRXLAT_ADDR_MAX;
 	ret = set_vtop_xlat_linear(&ctx->shared->vtop_map,
 				   __START_KERNEL_map, VIRTADDR_MAX,
 				   __START_KERNEL_map);
@@ -178,27 +177,27 @@ static kdump_status
 read_pgt(kdump_ctx *ctx)
 {
 	struct ia32_data *archdata = ctx->shared->archdata;
+	addrxlat_fulladdr_t pgtroot;
 	const addrxlat_paging_form_t *pf;
 	addrxlat_status axres;
 	kdump_status ret;
 
 	rwlock_unlock(&ctx->shared->lock);
-	ret = get_symbol_val(ctx, "swapper_pg_dir",
-			     &ctx->shared->vtop_map.pgt.addr);
+	ret = get_symbol_val(ctx, "swapper_pg_dir", &pgtroot.addr);
 	rwlock_wrlock(&ctx->shared->lock);
 	if (ret != kdump_ok)
 		return ret;
 
-	if (ctx->shared->vtop_map.pgt.addr < __START_KERNEL_map)
+	if (pgtroot.addr < __START_KERNEL_map)
 		return set_error(ctx, kdump_dataerr,
-				 "Wrong page directory address: 0x%llx",
-				 (unsigned long long) ctx->shared->vtop_map.pgt.addr);
-	ctx->shared->vtop_map.pgt.addr -= __START_KERNEL_map;
-	ctx->shared->vtop_map.pgt.as = ADDRXLAT_KPHYSADDR;
+				 "Wrong page directory address:"
+				 " 0x%"ADDRXLAT_PRIXADDR, pgtroot.addr);
+	pgtroot.addr -= __START_KERNEL_map;
+	pgtroot.as = ADDRXLAT_KPHYSADDR;
+	addrxlat_pgt_set_root(ctx->shared->vtop_map.pgt, &pgtroot);
 
 	if (!archdata->pae_state) {
-		kdump_vaddr_t addr = ctx->shared->vtop_map.pgt.addr +
-			3 * sizeof(uint64_t);
+		kdump_vaddr_t addr = pgtroot.addr + 3 * sizeof(uint64_t);
 		uint64_t entry;
 		size_t sz = sizeof entry;
 		ret = readp_locked(ctx, KDUMP_KPHYSADDR, addr, &entry, &sz);
