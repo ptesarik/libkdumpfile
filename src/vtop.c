@@ -152,7 +152,7 @@ set_error_no_vtop(kdump_ctx *ctx)
 kdump_status
 vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	addrxlat_pgt_state_t state;
+	addrxlat_pgt_walk_t state;
 	addrxlat_status res;
 
 	state.base = ctx->shared->vtop_map.pgt;
@@ -176,7 +176,7 @@ vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 kdump_status
 vtop_pgt_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	addrxlat_pgt_state_t state;
+	addrxlat_pgt_walk_t state;
 	addrxlat_status res;
 
 	state.base = ctx->shared->vtop_map_xen.pgt;
@@ -234,7 +234,7 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 kdump_status
 vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 {
-	addrxlat_pgt_state_t state;
+	addrxlat_pgt_walk_t state;
 	addrxlat_status res;
 
 	if (kphys_is_machphys(ctx))

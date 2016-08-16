@@ -277,8 +277,8 @@ addrxlat_pgt_t *addrxlat_get_pgt(addrxlat_ctx *ctx);
 addrxlat_status addrxlat_set_paging_form(
 	addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf);
 
-/** Data type for page table translation. */
-typedef struct _addrxlat_pgt_state {
+/** Data type for a single page table walk. */
+typedef struct _addrxlat_pgt_walk {
 	/** Page table level. */
 	unsigned short level;
 
@@ -300,11 +300,11 @@ typedef struct _addrxlat_pgt_state {
 	 * of the virtual address after all page table bits were used.
 	 */
 	addrxlat_addr_t idx[ADDRXLAT_MAXLEVELS + 1];
-} addrxlat_pgt_state_t;
+} addrxlat_pgt_walk_t;
 
 /** Type of the function which moves to the next-level page table.
  * @param ctx    Address translation object.
- * @param state  Translation state.
+ * @param state  Page table walk state.
  * @returns      Error status.
  *
  * The function is first called by @ref addrxlat_pgt_start to allow
@@ -333,11 +333,11 @@ typedef struct _addrxlat_pgt_state {
  * of paging are skipped (huge pages).
  */
 typedef addrxlat_status addrxlat_pgt_step_fn(
-	addrxlat_ctx *ctx, addrxlat_pgt_state_t *state);
+	addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state);
 
 /** Start page-table address translation.
  * @param ctx            Address translation object.
- * @param[in,out] state  Translation state.
+ * @param[in,out] state  Page table walk state.
  * @param[in] addr       Address to be translated.
  * @returns              Error status.
  *
@@ -346,19 +346,19 @@ typedef addrxlat_status addrxlat_pgt_step_fn(
  * caller prior to calling this function.
  */
 addrxlat_status addrxlat_pgt_start(
-	addrxlat_ctx *ctx, addrxlat_pgt_state_t *state, addrxlat_addr_t addr);
+	addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state, addrxlat_addr_t addr);
 
 /** Descend one level in page table translation.
  * @param ctx            Address translation object.
- * @param[in,out] state  Translation state.
+ * @param[in,out] state  Page table walk state.
  * @returns              Error status.
  */
 addrxlat_status addrxlat_pgt_next(
-	addrxlat_ctx *ctx, addrxlat_pgt_state_t *state);
+	addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state);
 
 /** Translate an address using page tables.
  * @param ctx            Address translation object.
- * @param[in,out] state  Translation state.
+ * @param[in,out] state  Page table walk state.
  * @param[in] addr       Address to be translated.
  * @returns              Error status.
  *
@@ -366,7 +366,7 @@ addrxlat_status addrxlat_pgt_next(
  * On successful return, the resulting address is found in @c state->base.
  */
 addrxlat_status addrxlat_pgt(
-	addrxlat_ctx *ctx, addrxlat_pgt_state_t *state, addrxlat_addr_t addr);
+	addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state, addrxlat_addr_t addr);
 
 /** Address translation method.
  */

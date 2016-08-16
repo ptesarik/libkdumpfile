@@ -49,11 +49,11 @@
 
 /** IA32 page table step function.
  * @param ctx    Address translation object.
- * @param state  Translation state.
+ * @param state  Page table walk state.
  * @returns      Error status.
  */
 addrxlat_status
-pgt_ia32(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
+pgt_ia32(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 {
 	static const char pgt_full_name[][16] = {
 		"Page",
@@ -93,11 +93,11 @@ pgt_ia32(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 
 /** IA32 PAE page table step function.
  * @param ctx    Address translation object.
- * @param state  Translation state.
+ * @param state  Page table walk state.
  * @returns      Error status.
  */
 addrxlat_status
-pgt_ia32_pae(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
+pgt_ia32_pae(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 {
 	static const char pgt_full_name[][16] = {
 		"Page",

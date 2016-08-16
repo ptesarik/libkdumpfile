@@ -52,7 +52,7 @@
 
 /** Check whether an address is canonical.
  * @param ctx    Address translation object.
- * @param state  Translation state.
+ * @param state  Page table walk state.
  * @returns      Zero if @c state corresponds to a canonical address,
  *               non-zero otherwise.
  *
@@ -60,7 +60,7 @@
  * highest bit.
  */
 static int
-is_noncanonical(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
+is_noncanonical(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 {
 	const addrxlat_pgt_t *pgt = ctx->pgt;
 	unsigned short lvl = pgt->pf.levels;
@@ -80,7 +80,7 @@ is_noncanonical(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
  * @returns      Error status.
  */
 addrxlat_status
-pgt_x86_64(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
+pgt_x86_64(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 {
 	static const char pgt_full_name[][16] = {
 		"Page",

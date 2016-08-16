@@ -45,11 +45,11 @@
 
 /** IBM z/Architecture page table step function.
  * @param ctx    Address translation object.
- * @param state  Translation state.
+ * @param state  Page table walk state.
  * @returns      Error status.
  */
 addrxlat_status
-pgt_s390x(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
+pgt_s390x(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 {
 	static const char pgt_full_name[][16] = {
 		"Page",

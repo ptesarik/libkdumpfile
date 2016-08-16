@@ -74,14 +74,14 @@ addrxlat_set_paging_form(addrxlat_ctx *ctx, const addrxlat_paging_form_t *pf)
 
 /** Read the raw PTE value.
  * @param ctx    Address translation object.
- * @param state  Page table translation state.
+ * @param state  Page table walk state.
  * @returns      Error status.
  *
  * On successful return, @c state->raw_pte contains the raw
  * PTE value for the current translation step.
  */
 static addrxlat_status
-read_pte(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
+read_pte(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 {
 	const addrxlat_pgt_t *pgt = ctx->pgt;
 	uint64_t pte64;
@@ -116,7 +116,7 @@ read_pte(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 DEFINE_INTERNAL(pgt_start)
 
 addrxlat_status
-addrxlat_pgt_start(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state,
+addrxlat_pgt_start(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state,
 		   addrxlat_addr_t addr)
 {
 	const addrxlat_pgt_t *pgt = ctx->pgt;
@@ -143,7 +143,7 @@ addrxlat_pgt_start(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state,
 DEFINE_INTERNAL(pgt_next)
 
 addrxlat_status
-addrxlat_pgt_next(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
+addrxlat_pgt_next(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 {
 	const addrxlat_pgt_t *pgt = ctx->pgt;
 	addrxlat_status status;
@@ -168,7 +168,7 @@ addrxlat_pgt_next(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 DEFINE_INTERNAL(pgt)
 
 addrxlat_status
-addrxlat_pgt(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state,
+addrxlat_pgt(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state,
 	     addrxlat_addr_t addr)
 {
 	addrxlat_status status;
@@ -180,9 +180,9 @@ addrxlat_pgt(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state,
 	return status;
 }
 
-/** Update page table state for huge page.
+/** Update page table walk state for huge page.
  * @param ctx    Address translation object.
- * @param state  Page table translation state.
+ * @param state  Page table walk state.
  * @returns      Always @c addrxlat_continue.
  *
  * This function skips all lower paging levels and updates the state
@@ -190,7 +190,7 @@ addrxlat_pgt(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state,
  * terminates.
  */
 addrxlat_status
-pgt_huge_page(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
+pgt_huge_page(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 {
 	const addrxlat_pgt_t *pgt = ctx->pgt;
 	addrxlat_addr_t off = 0;
@@ -206,7 +206,7 @@ pgt_huge_page(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 
 /** Null pgt function. It does not modify anything and always succeeds. */
 addrxlat_status
-pgt_none(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
+pgt_none(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 {
 	return addrxlat_continue;
 }
@@ -222,7 +222,7 @@ static addrxlat_status
 pgt_xlat_by_def(addrxlat_ctx *ctx, addrxlat_addr_t *paddr,
 		const addrxlat_def_t *def)
 {
-	addrxlat_pgt_state_t state;
+	addrxlat_pgt_walk_t state;
 	addrxlat_status status;
 
 	state.base = (def->method == ADDRXLAT_PGT

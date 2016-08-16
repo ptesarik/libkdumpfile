@@ -90,7 +90,7 @@ static unsigned mmu_pshift[MMU_PAGE_COUNT] = {
 };
 
 static addrxlat_status
-check_pgt_state(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
+check_pgt_state(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 {
 	const addrxlat_pgt_t *pgt = ctx->pgt;
 	unsigned short lvl = pgt->pf.levels;
@@ -135,11 +135,11 @@ hugepd_shift(addrxlat_pte_t hpde)
 
 /**  Translate a huge page using its directory entry.
  * @param ctx    Address translation object.
- * @param state  Page table translation state.
+ * @param state  Page table walk state.
  * @returns      Always @c addrxlat_continue.
  */
 addrxlat_status
-huge_pd(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
+huge_pd(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 {
 	const addrxlat_pgt_t *pgt = ctx->pgt;
 	addrxlat_addr_t off;
@@ -183,9 +183,9 @@ is_hugepte(addrxlat_pte_t pte)
 	return (pte & HUGE_PTE_MASK) != 0x0;
 }
 
-/** Update page table translation state for huge page.
+/** Update page table walk state for huge page.
  * @param ctx    Address translation object.
- * @param state  Page table translation state.
+ * @param state  Page table walk state.
  * @returns      Always @c addrxlat_continue.
  *
  * This function skips all lower paging levels and updates the state
@@ -193,7 +193,7 @@ is_hugepte(addrxlat_pte_t pte)
  * offset and terminates.
  */
 addrxlat_status
-huge_page(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
+huge_page(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 {
 	const addrxlat_pgt_t *pgt = ctx->pgt;
 
@@ -205,11 +205,11 @@ huge_page(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
 
 /** IBM POWER page table step function.
  * @param ctx    Address translation object.
- * @param state  Translation state.
+ * @param state  Page table walk state.
  * @returns      Error status.
  */
 addrxlat_status
-pgt_ppc64(addrxlat_ctx *ctx, addrxlat_pgt_state_t *state)
+pgt_ppc64(addrxlat_ctx *ctx, addrxlat_pgt_walk_t *state)
 {
 	static const char pte_name[][4] = {
 		"pte",
