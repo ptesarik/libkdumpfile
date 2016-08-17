@@ -94,8 +94,7 @@ addrxlat_walk_init(addrxlat_walk_t *state, addrxlat_ctx *ctx,
 	}
 	state->idx[i] = addr;
 
-	state->level = 0;
-	status = pgt->step(state);
+	status = pgt->walk_init(state);
 	if (status == addrxlat_continue)
 		state->level = pgt->pf.levels;
 	return status;

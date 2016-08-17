@@ -50,29 +50,6 @@
 #define NONCANONICAL_END	(~NONCANONICAL_START)
 #define VIRTADDR_MAX		UINT64_MAX
 
-/** Check whether an address is canonical.
- * @param state  Page table walk state.
- * @returns      Zero if @c state corresponds to a canonical address,
- *               non-zero otherwise.
- *
- * All bits above the virtual address space size must be copies of the
- * highest bit.
- */
-static int
-is_noncanonical(addrxlat_walk_t *state)
-{
-	const addrxlat_pgt_t *pgt = state->pgt;
-	unsigned short lvl = pgt->pf.levels;
-	struct {
-		int bit : 1;
-	} s;
-	addrxlat_addr_t signext;
-
-	s.bit = state->idx[lvl - 1] >> (pgt->pf.bits[lvl - 1] - 1);
-	signext = s.bit & (pgt->pgt_mask[lvl - 1] >> pgt->vaddr_bits);
-	return state->idx[lvl] != signext;
-}
-
 /** AMD64 (Intel 64) page table step function.
  * @param state  Translation state.
  * @returns      Error status.
@@ -93,12 +70,6 @@ pgt_x86_64(addrxlat_walk_t *state)
 		"pgd",
 	};
 	const addrxlat_pgt_t *pgt = state->pgt;
-
-	if (!state->level)
-		return is_noncanonical(state)
-			? set_error(state->ctx, addrxlat_invalid,
-				    "Non-canonical address")
-			: addrxlat_continue;
 
 	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(state->ctx, addrxlat_notpresent,

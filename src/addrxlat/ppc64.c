@@ -89,8 +89,12 @@ static unsigned mmu_pshift[MMU_PAGE_COUNT] = {
 	[MMU_PAGE_64G] = 36,
 };
 
-static addrxlat_status
-check_pgt_state(addrxlat_walk_t *state)
+/** IBM POWER init function.
+ * @param state  Page table walk state.
+ * @returns      Error status.
+ */
+addrxlat_status
+walk_init_ppc64(addrxlat_walk_t *state)
 {
 	const addrxlat_pgt_t *pgt = state->pgt;
 	unsigned short lvl = pgt->pf.levels;
@@ -215,9 +219,6 @@ pgt_ppc64(addrxlat_walk_t *state)
 		"pgd",
 	};
 	const addrxlat_pgt_t *pgt = state->pgt;
-
-	if (!state->level)
-		return check_pgt_state(state);
 
 	if (!state->raw_pte)
 		return set_error(state->ctx, addrxlat_notpresent,

@@ -67,16 +67,6 @@ pgt_s390x(addrxlat_walk_t *state)
 	};
 	const addrxlat_pgt_t *pgt = state->pgt;
 
-	/* TODO: The top-level table extents should be initialised from
-	 * kernel_asce and checked here, but for now simply assume that
-	 * the top-level table is always maximum size.
-	 */
-	if (!state->level)
-		return state->idx[pgt->pf.levels]
-			? set_error(state->ctx, addrxlat_invalid,
-				    "Virtual address too big")
-			: addrxlat_continue;
-
 	if (PTE_I(state->raw_pte))
 		return set_error(state->ctx, addrxlat_notpresent,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,

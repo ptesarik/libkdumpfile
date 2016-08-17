@@ -41,6 +41,7 @@ addrxlat_pgt_new(void)
 	if (pgt) {
 		pgt->refcnt = 1;
 		pgt->root.as = ADDRXLAT_NOADDR;
+		pgt->walk_init = pgt_none;
 		pgt->step = pgt_none;
 	}
 	return pgt;
@@ -65,8 +66,52 @@ addrxlat_pgt_decref(addrxlat_pgt_t *pgt)
 	return refcnt;
 }
 
+/** Check unsigned address overflow.
+ * @param walk  Page table walk state.
+ * @returns     Error status.
+ *
+ * This function is meant to be used as a walk init function.
+ * It checks whether the input address is too big when interpreted
+ * as an unsigned integer.
+ */
+addrxlat_status
+walk_check_uaddr(addrxlat_walk_t *walk)
+{
+	return walk->idx[walk->pgt->pf.levels]
+		? set_error(walk->ctx, addrxlat_invalid,
+			    "Virtual address too big")
+		: addrxlat_continue;
+}
+
+/** Check signed address overflow.
+ * @param walk  Page table walk state.
+ * @returns     Error status.
+ *
+ * This function is meant to be used as a walk init function.
+ * It checks whether the input address is too big when interpreted
+ * as a signed integer.
+ */
+addrxlat_status
+walk_check_saddr(addrxlat_walk_t *walk)
+{
+	const addrxlat_pgt_t *pgt = walk->pgt;
+	unsigned short lvl = pgt->pf.levels;
+	struct {
+		int bit : 1;
+	} s;
+	addrxlat_addr_t signext;
+
+	s.bit = walk->idx[lvl - 1] >> (pgt->pf.bits[lvl - 1] - 1);
+	signext = s.bit & (pgt->pgt_mask[lvl - 1] >> pgt->vaddr_bits);
+	return walk->idx[lvl] != signext
+		? set_error(walk->ctx, addrxlat_invalid,
+			    "Virtual address too big")
+		: addrxlat_continue;
+}
+
 struct pte_def {
-	addrxlat_pgt_step_fn *fn;
+	addrxlat_walk_init_fn *init;
+	addrxlat_pgt_step_fn *step;
 	unsigned short shift;
 };
 
@@ -76,25 +121,24 @@ addrxlat_status
 addrxlat_pgt_set_form(addrxlat_pgt_t *pgt, const addrxlat_paging_form_t *pf)
 {
 	static const struct pte_def formats[] = {
-		[addrxlat_pte_none] = { pgt_none, 0 },
-		[addrxlat_pte_ia32] = { pgt_ia32, 2 },
-		[addrxlat_pte_ia32_pae] = { pgt_ia32_pae, 3 },
-		[addrxlat_pte_x86_64] = { pgt_x86_64, 3 },
-		[addrxlat_pte_s390x] = { pgt_s390x, 3 },
-		[addrxlat_pte_ppc64] = { pgt_ppc64, 3 },
+		[addrxlat_pte_none] = { pgt_none, pgt_none, 0 },
+		[addrxlat_pte_ia32] = { walk_check_uaddr, pgt_ia32, 2 },
+		[addrxlat_pte_ia32_pae] = { walk_check_uaddr, pgt_ia32_pae, 3 },
+		[addrxlat_pte_x86_64] = { walk_check_saddr, pgt_x86_64, 3 },
+		[addrxlat_pte_s390x] = { walk_check_uaddr, pgt_s390x, 3 },
+		[addrxlat_pte_ppc64] = { walk_init_ppc64, pgt_ppc64, 3 },
 	};
 
 	const struct pte_def *fmt;
 	addrxlat_addr_t mask;
 	unsigned short i;
 
-	fmt = pf->pte_format < ARRAY_SIZE(formats)
-		? &formats[pf->pte_format]
-		: NULL;
-	if (!fmt || !fmt->fn)
+	if (pf->pte_format >= ARRAY_SIZE(formats))
 		return addrxlat_notimpl;
 
-	pgt->step = fmt->fn;
+	fmt = &formats[pf->pte_format];
+	pgt->walk_init = fmt->init;
+	pgt->step = fmt->step;
 	pgt->pte_shift = fmt->shift;
 	pgt->pf = *pf;
 

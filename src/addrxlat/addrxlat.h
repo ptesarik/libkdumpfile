@@ -304,11 +304,11 @@ typedef struct _addrxlat_walk {
 	addrxlat_addr_t idx[ADDRXLAT_MAXLEVELS + 1];
 } addrxlat_walk_t;
 
-/** Type of the function which moves to the next-level page table.
+/** Type of the function which initializes a page table walk.
  * @param walk  Page table walk state.
  * @returns     Error status.
  *
- * The function is first called by @ref addrxlat_walk_init to allow
+ * This function is called by @ref addrxlat_walk_init to allow
  * arch-specific initialization (or direct translation). For this initial
  * call:
  *   - @c walk->level is set to zero
@@ -316,7 +316,14 @@ typedef struct _addrxlat_walk {
  *   - virtual address is broken down to table indices in @c walk->idx
  *   - @c walk->raw_pte is left uninitialized
  *
- * The function is then called repeatedly with a non-zero @c walk->level
+ */
+typedef addrxlat_status addrxlat_walk_init_fn(addrxlat_walk_t *walk);
+
+/** Type of the function which moves to the next-level page table.
+ * @param walk  Page table walk state.
+ * @returns     Error status.
+ *
+ * This function is called repeatedly with a non-zero @c walk->level
  * and @c walk->raw_pte already filled from the page table. On each of
  * these subsequent calls, the callback should interpret the PTE value
  * and update @c walk.

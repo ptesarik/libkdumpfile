@@ -64,12 +64,6 @@ pgt_ia32(addrxlat_walk_t *state)
 	};
 	const addrxlat_pgt_t *pgt = state->pgt;
 
-	if (!state->level)
-		return state->idx[pgt->pf.levels]
-			? set_error(state->ctx, addrxlat_invalid,
-				    "Virtual address too big")
-			: addrxlat_continue;
-
 	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(state->ctx, addrxlat_notpresent,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
@@ -108,12 +102,6 @@ pgt_ia32_pae(addrxlat_walk_t *state)
 		"pgd",
 	};
 	const addrxlat_pgt_t *pgt = state->pgt;
-
-	if (!state->level)
-		return state->idx[pgt->pf.levels]
-			? set_error(state->ctx, addrxlat_invalid,
-				    "Virtual address too big")
-			: addrxlat_continue;
 
 	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(state->ctx, addrxlat_notpresent,

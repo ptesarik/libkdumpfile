@@ -80,6 +80,9 @@ struct _addrxlat_pgt {
 	/** Base address of the root page table. */
 	addrxlat_fulladdr_t root;
 
+	/** Function to initialize a page table walk. */
+	addrxlat_walk_init_fn *walk_init;
+
 	/** Function to make one step in page table translation. */
 	addrxlat_pgt_step_fn *step;
 
@@ -135,6 +138,12 @@ struct _addrxlat_osmap {
 #define pgt_huge_page INTERNAL_NAME(pgt_huge_page)
 addrxlat_status pgt_huge_page(addrxlat_walk_t *state);
 
+#define walk_check_uaddr INTERNAL_NAME(walk_check_uaddr)
+addrxlat_walk_init_fn walk_check_uaddr;
+
+#define walk_check_saddr INTERNAL_NAME(walk_check_saddr)
+addrxlat_walk_init_fn walk_check_saddr;
+
 #define pgt_none INTERNAL_NAME(pgt_none)
 addrxlat_pgt_step_fn pgt_none;
 
@@ -149,6 +158,9 @@ addrxlat_pgt_step_fn pgt_x86_64;
 
 #define pgt_s390x INTERNAL_NAME(pgt_s390x)
 addrxlat_pgt_step_fn pgt_s390x;
+
+#define walk_init_ppc64 INTERNAL_NAME(walk_init_ppc64)
+addrxlat_walk_init_fn walk_init_ppc64;
 
 #define pgt_ppc64 INTERNAL_NAME(pgt_ppc64)
 addrxlat_pgt_step_fn pgt_ppc64;
