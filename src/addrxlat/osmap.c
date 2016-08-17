@@ -38,7 +38,7 @@ addrxlat_osmap_new(void)
 {
 	addrxlat_osmap_t *ret;
 
-	ret = malloc(sizeof(addrxlat_osmap_t));
+	ret = calloc(1, sizeof(addrxlat_osmap_t));
 	if (!ret)
 		return NULL;
 	ret->refcnt = 1;
