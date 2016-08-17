@@ -81,7 +81,7 @@ struct _addrxlat_pgt {
 	addrxlat_fulladdr_t root;
 
 	/** Function to make one step in page table translation. */
-	addrxlat_pgt_step_fn *pgt_step;
+	addrxlat_pgt_step_fn *step;
 
 	/** PTE size as a log2 value. */
 	unsigned short pte_shift;

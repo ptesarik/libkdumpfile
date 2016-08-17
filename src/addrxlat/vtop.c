@@ -95,7 +95,7 @@ addrxlat_walk_init(addrxlat_walk_t *state, addrxlat_ctx *ctx,
 	state->idx[i] = addr;
 
 	state->level = 0;
-	status = pgt->pgt_step(state);
+	status = pgt->step(state);
 	if (status == addrxlat_continue)
 		state->level = pgt->pf.levels;
 	return status;
@@ -123,7 +123,7 @@ addrxlat_walk_next(addrxlat_walk_t *state)
 	if (status != addrxlat_ok)
 		return status;
 
-	return pgt->pgt_step(state);
+	return pgt->step(state);
 }
 
 DEFINE_INTERNAL(walk)

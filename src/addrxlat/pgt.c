@@ -41,7 +41,7 @@ addrxlat_pgt_new(void)
 	if (pgt) {
 		pgt->refcnt = 1;
 		pgt->root.as = ADDRXLAT_NOADDR;
-		pgt->pgt_step = pgt_none;
+		pgt->step = pgt_none;
 	}
 	return pgt;
 }
@@ -94,7 +94,7 @@ addrxlat_pgt_set_form(addrxlat_pgt_t *pgt, const addrxlat_paging_form_t *pf)
 	if (!fmt || !fmt->fn)
 		return addrxlat_notimpl;
 
-	pgt->pgt_step = fmt->fn;
+	pgt->step = fmt->fn;
 	pgt->pte_shift = fmt->shift;
 	pgt->pf = *pf;
 
