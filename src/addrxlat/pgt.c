@@ -33,6 +33,7 @@
 #include "addrxlat-priv.h"
 
 static addrxlat_walk_init_fn walk_init_none;
+static addrxlat_walk_init_fn walk_init_linear;
 static addrxlat_pgt_step_fn pgt_none;
 
 DEFINE_INTERNAL(pgt_new)
@@ -91,6 +92,33 @@ static addrxlat_status
 pgt_none(addrxlat_walk_t *state)
 {
 	return addrxlat_continue;
+}
+
+/** Initialize walk state for linear offset.
+ * @param walk  Page table walk state.
+ * @param addr  Address to be translated.
+ * @returns     Error status.
+ */
+static addrxlat_status
+walk_init_linear(addrxlat_walk_t *walk, addrxlat_addr_t addr)
+{
+	const struct linear_xlat *linear = &walk->pgt->linear;
+
+	walk->base.as = ADDRXLAT_KPHYSADDR;
+	walk->base.addr = -linear->off;
+	walk->level = 1;
+	walk->idx[0] = addr;
+
+	return addrxlat_continue;
+}
+
+addrxlat_status
+addrxlat_pgt_set_offset(addrxlat_pgt_t *pgt, addrxlat_off_t off)
+{
+	pgt->walk_init = walk_init_linear;
+	pgt->step = pgt_none;
+	pgt->linear.off = off;
+	return addrxlat_ok;
 }
 
 /** Initialize walk state for page table walk.

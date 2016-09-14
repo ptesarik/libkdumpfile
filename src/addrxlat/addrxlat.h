@@ -232,6 +232,16 @@ unsigned long addrxlat_pgt_incref(addrxlat_pgt_t *pgt);
  */
 unsigned long addrxlat_pgt_decref(addrxlat_pgt_t *pgt);
 
+/** Set linear offset.
+ * @param pgt  Page table translation object.
+ * @param off  Physical-to-virtual offset.
+ * @returns    Error status.
+ *
+ * Set up a page table translation object for linear translation.
+ */
+addrxlat_status addrxlat_pgt_set_offset(
+	addrxlat_pgt_t *pgt, addrxlat_off_t off);
+
 /** Set paging form description.
  * @param pgt  Page table translation object.
  * @param pf   Paging form description.

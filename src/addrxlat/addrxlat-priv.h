@@ -69,6 +69,13 @@
 /** Maximum length of the error message. */
 #define ERRBUF	64
 
+/** Definitions specific to linear translation.
+ */
+struct linear_xlat {
+	/** Absolute address offset. */
+	addrxlat_off_t off;
+};
+
 /** Definitions specific to pagetable translation.
  * Page table translation uses some pre-computed values, which are
  * stored in this structure on initialization.
@@ -103,6 +110,7 @@ struct _addrxlat_pgt {
 	addrxlat_pgt_step_fn *step;
 
 	union {
+		struct linear_xlat linear;
 		struct pgt_xlat pgt;
 	};
 };
