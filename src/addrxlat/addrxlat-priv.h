@@ -144,9 +144,6 @@ addrxlat_walk_init_fn walk_check_uaddr;
 #define walk_check_saddr INTERNAL_NAME(walk_check_saddr)
 addrxlat_walk_init_fn walk_check_saddr;
 
-#define pgt_none INTERNAL_NAME(pgt_none)
-addrxlat_pgt_step_fn pgt_none;
-
 #define pgt_ia32 INTERNAL_NAME(pgt_ia32)
 addrxlat_pgt_step_fn pgt_ia32;
 

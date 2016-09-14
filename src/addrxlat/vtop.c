@@ -166,13 +166,6 @@ pgt_huge_page(addrxlat_walk_t *state)
 	return addrxlat_continue;
 }
 
-/** Null pgt function. It does not modify anything and always succeeds. */
-addrxlat_status
-pgt_none(addrxlat_walk_t *state)
-{
-	return addrxlat_continue;
-}
-
 DEFINE_INTERNAL(by_def)
 
 addrxlat_status

@@ -32,6 +32,8 @@
 
 #include "addrxlat-priv.h"
 
+static addrxlat_pgt_step_fn pgt_none;
+
 DEFINE_INTERNAL(pgt_new)
 
 addrxlat_pgt_t *
@@ -64,6 +66,18 @@ addrxlat_pgt_decref(addrxlat_pgt_t *pgt)
 	if (!refcnt)
 		free(pgt);
 	return refcnt;
+}
+
+/** Null walk function.
+ * @param walk  Page table walk state.
+ * @returns     Error status.
+ *
+ * This method does not modify anything and always succeeds.
+ */
+static addrxlat_status
+pgt_none(addrxlat_walk_t *state)
+{
+	return addrxlat_continue;
 }
 
 /** Check unsigned address overflow.
