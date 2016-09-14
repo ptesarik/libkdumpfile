@@ -209,16 +209,20 @@ set_root(const char *spec, addrxlat_pgt_t *pgt)
 }
 
 static int
-set_linear(const char *spec)
+set_linear(const char *spec, addrxlat_pgt_t *pgt)
 {
+	long long off;
 	char *endp;
 
-	xlatdef.method = ADDRXLAT_LINEAR;
-	xlatdef.off = strtoll(spec, &endp, 0);
+	off = strtoll(spec, &endp, 0);
 	if (*endp) {
 		fprintf(stderr, "Invalid offset: %s\n", spec);
 		return TEST_ERR;
 	}
+
+	addrxlat_pgt_set_offset(pgt, off);
+	xlatdef.method = ADDRXLAT_PGT;
+	xlatdef.pgt = pgt;
 
 	return TEST_OK;
 }
@@ -273,18 +277,26 @@ main(int argc, char **argv)
 	unsigned long long vaddr;
 	char *endp;
 	addrxlat_ctx *ctx;
-	addrxlat_pgt_t *pgt;
+	addrxlat_pgt_t *pgt, *linear;
 	int opt;
 	addrxlat_status status;
 	unsigned long refcnt;
 	int rc;
 
 	pgt = NULL;
+	linear = NULL;
 	ctx = NULL;
 
 	pgt = addrxlat_pgt_new();
 	if (!pgt) {
 		perror("Cannot initialize page table translation");
+		rc = TEST_ERR;
+		goto out;
+	}
+
+	linear = addrxlat_pgt_new();
+	if (!linear) {
+		perror("Cannot initialize linear translation");
 		rc = TEST_ERR;
 		goto out;
 	}
@@ -311,7 +323,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'l':
-			rc = set_linear(optarg);
+			rc = set_linear(optarg, linear);
 			if (rc != TEST_OK)
 				return rc;
 			break;
@@ -360,6 +372,10 @@ main(int argc, char **argv)
 	rc = do_xlat(ctx, vaddr);
 
  out:
+	if (linear && (refcnt = addrxlat_pgt_decref(linear)) != 0)
+		fprintf(stderr, "WARNING: Leaked %lu pgt references\n",
+			refcnt);
+
 	if (pgt && (refcnt = addrxlat_pgt_decref(pgt)) != 0)
 		fprintf(stderr, "WARNING: Leaked %lu pgt references\n",
 			refcnt);
