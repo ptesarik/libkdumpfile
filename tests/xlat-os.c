@@ -174,19 +174,15 @@ print_ind(const char *desc, const void *ptr)
 static void
 print_xlat(const addrxlat_def_t *def)
 {
-	switch (def->method) {
+	if (def->pgt == NULL)
+		fputs("NONE", stdout);
+	else switch (addrxlat_pgt_get_kind(def->pgt)) {
 	case ADDRXLAT_NONE:
 		fputs("NONE", stdout);
 		break;
 
 	case ADDRXLAT_LINEAR:
-		printf("LINEAR %s%"ADDRXLAT_PRIxADDR,
-		       def->off >= 0 ? "" : "-",
-		       def->off >= 0 ? def->off : -def->off);
-		break;
-
-	case ADDRXLAT_LINEAR_IND:
-		print_ind("LINEAR", def->poff);
+		print_ind("LINEAR", def->pgt);
 		break;
 
 	case ADDRXLAT_PGT:
