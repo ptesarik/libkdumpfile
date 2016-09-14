@@ -109,6 +109,9 @@ struct _addrxlat_pgt {
 	/** Function to make one step in page table translation. */
 	addrxlat_pgt_step_fn *step;
 
+	/** Translation kind. */
+	addrxlat_method_t kind;
+
 	union {
 		struct linear_xlat linear;
 		struct pgt_xlat pgt;

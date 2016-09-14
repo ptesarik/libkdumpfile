@@ -46,6 +46,7 @@ addrxlat_pgt_new(void)
 		pgt->refcnt = 1;
 		pgt->walk_init = walk_init_none;
 		pgt->step = pgt_none;
+		pgt->kind = ADDRXLAT_NONE;
 	}
 	return pgt;
 }
@@ -67,6 +68,12 @@ addrxlat_pgt_decref(addrxlat_pgt_t *pgt)
 	if (!refcnt)
 		free(pgt);
 	return refcnt;
+}
+
+addrxlat_method_t
+addrxlat_pgt_get_kind(const addrxlat_pgt_t *pgt)
+{
+	return pgt->kind;
 }
 
 /** Null walk function.
@@ -117,6 +124,7 @@ addrxlat_pgt_set_offset(addrxlat_pgt_t *pgt, addrxlat_off_t off)
 {
 	pgt->walk_init = walk_init_linear;
 	pgt->step = pgt_none;
+	pgt->kind = ADDRXLAT_LINEAR;
 	pgt->linear.off = off;
 	return addrxlat_ok;
 }
@@ -243,6 +251,7 @@ addrxlat_pgt_set_form(addrxlat_pgt_t *pgt, const addrxlat_paging_form_t *pf)
 	fmt = &formats[pf->pte_format];
 	pgt->walk_init = fmt->init;
 	pgt->step = fmt->step;
+	pgt->kind = ADDRXLAT_PGT;
 	pgt->pgt.pte_shift = fmt->shift;
 	pgt->pgt.pf = *pf;
 

@@ -209,6 +209,22 @@ const char *addrxlat_err_str(addrxlat_ctx *ctx);
 /** Address translation using page tables. */
 typedef struct _addrxlat_pgt addrxlat_pgt_t;
 
+/** Address translation method.
+ */
+typedef enum _addrxlat_method {
+	/** No mapping set. */
+	ADDRXLAT_NONE,
+
+	/** Linear mapping: dest = src + off. */
+	ADDRXLAT_LINEAR,
+
+	/** Linear mapping with indirect offset: dest = src + *poff. */
+	ADDRXLAT_LINEAR_IND,
+
+	/** Page table walk. */
+	ADDRXLAT_PGT,
+} addrxlat_method_t;
+
 /** Allocate a new page table translation object.
  * @returns    New initialized object, or @c NULL on failure.
  *
@@ -231,6 +247,12 @@ unsigned long addrxlat_pgt_incref(addrxlat_pgt_t *pgt);
  * and its address must not be used afterwards.
  */
 unsigned long addrxlat_pgt_decref(addrxlat_pgt_t *pgt);
+
+/** Get the translation kind.
+ * @param pgt  Page table translation object.
+ * @returns    Translation kind.
+ */
+addrxlat_method_t addrxlat_pgt_get_kind(const addrxlat_pgt_t *pgt);
 
 /** Set linear offset.
  * @param pgt  Page table translation object.
@@ -379,22 +401,6 @@ addrxlat_status addrxlat_walk_next(addrxlat_walk_t *walk);
  */
 addrxlat_status addrxlat_walk(addrxlat_ctx *ctx, const addrxlat_pgt_t *pgt,
 			      addrxlat_addr_t *paddr);
-
-/** Address translation method.
- */
-typedef enum _addrxlat_method {
-	/** No mapping set. */
-	ADDRXLAT_NONE,
-
-	/** Linear mapping: dest = src + off. */
-	ADDRXLAT_LINEAR,
-
-	/** Linear mapping with indirect offset: dest = src + *poff. */
-	ADDRXLAT_LINEAR_IND,
-
-	/** Page table walk. */
-	ADDRXLAT_PGT,
-} addrxlat_method_t;
 
 /** Address translation definition.
  * This structure holds all information required to translate an address
