@@ -62,7 +62,7 @@ pgt_ia32(addrxlat_walk_t *state)
 		"pte",
 		"pgd",
 	};
-	const addrxlat_pgt_t *pgt = state->pgt;
+	const struct pgt_xlat *pgt = &state->pgt->pgt;
 
 	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(state->ctx, addrxlat_notpresent,
@@ -101,7 +101,7 @@ pgt_ia32_pae(addrxlat_walk_t *state)
 		"pmd",
 		"pgd",
 	};
-	const addrxlat_pgt_t *pgt = state->pgt;
+	const struct pgt_xlat *pgt = &state->pgt->pgt;
 
 	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(state->ctx, addrxlat_notpresent,

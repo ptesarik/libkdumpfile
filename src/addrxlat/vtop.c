@@ -41,7 +41,7 @@ static addrxlat_status
 read_pte(addrxlat_walk_t *state)
 {
 	addrxlat_ctx *ctx = state->ctx;
-	const addrxlat_pgt_t *pgt = state->pgt;
+	const struct pgt_xlat *pgt = &state->pgt->pgt;
 	uint64_t pte64;
 	uint32_t pte32;
 	addrxlat_pte_t pte;
@@ -137,7 +137,7 @@ addrxlat_walk(addrxlat_ctx *ctx, const addrxlat_pgt_t *pgt,
 addrxlat_status
 pgt_huge_page(addrxlat_walk_t *state)
 {
-	const addrxlat_pgt_t *pgt = state->pgt;
+	const struct pgt_xlat *pgt = &state->pgt->pgt;
 	addrxlat_addr_t off = 0;
 
 	while (state->level > 1) {

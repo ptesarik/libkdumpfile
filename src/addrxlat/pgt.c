@@ -43,7 +43,6 @@ addrxlat_pgt_new(void)
 	addrxlat_pgt_t *pgt = calloc(1, sizeof(addrxlat_pgt_t));
 	if (pgt) {
 		pgt->refcnt = 1;
-		pgt->root.as = ADDRXLAT_NOADDR;
 		pgt->walk_init = walk_init_none;
 		pgt->step = pgt_none;
 	}
@@ -102,7 +101,7 @@ pgt_none(addrxlat_walk_t *state)
 addrxlat_status
 walk_init_pgt(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 {
-	const addrxlat_pgt_t *pgt = walk->pgt;
+	const struct pgt_xlat *pgt = &walk->pgt->pgt;
 	unsigned short i;
 
 	walk->base = pgt->root;
@@ -130,7 +129,7 @@ walk_init_pgt(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 addrxlat_status
 walk_check_uaddr(addrxlat_walk_t *walk)
 {
-	return walk->idx[walk->pgt->pf.levels]
+	return walk->idx[walk->pgt->pgt.pf.levels]
 		? set_error(walk->ctx, addrxlat_invalid,
 			    "Virtual address too big")
 		: addrxlat_continue;
@@ -159,7 +158,7 @@ walk_init_uaddr(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 addrxlat_status
 walk_check_saddr(addrxlat_walk_t *walk)
 {
-	const addrxlat_pgt_t *pgt = walk->pgt;
+	const struct pgt_xlat *pgt = &walk->pgt->pgt;
 	unsigned short lvl = pgt->pf.levels;
 	struct {
 		int bit : 1;
@@ -216,15 +215,15 @@ addrxlat_pgt_set_form(addrxlat_pgt_t *pgt, const addrxlat_paging_form_t *pf)
 	fmt = &formats[pf->pte_format];
 	pgt->walk_init = fmt->init;
 	pgt->step = fmt->step;
-	pgt->pte_shift = fmt->shift;
-	pgt->pf = *pf;
+	pgt->pgt.pte_shift = fmt->shift;
+	pgt->pgt.pf = *pf;
 
-	pgt->vaddr_bits = 0;
+	pgt->pgt.vaddr_bits = 0;
 	mask = 1;
 	for (i = 0; i < pf->levels; ++i) {
-		pgt->vaddr_bits += pf->bits[i];
+		pgt->pgt.vaddr_bits += pf->bits[i];
 		mask <<= pf->bits[i];
-		pgt->pgt_mask[i] = ~(mask - 1);
+		pgt->pgt.pgt_mask[i] = ~(mask - 1);
 	}
 
 	return addrxlat_ok;
@@ -233,17 +232,17 @@ addrxlat_pgt_set_form(addrxlat_pgt_t *pgt, const addrxlat_paging_form_t *pf)
 const addrxlat_paging_form_t *
 addrxlat_pgt_get_form(const addrxlat_pgt_t *pgt)
 {
-	return &pgt->pf;
+	return &pgt->pgt.pf;
 }
 
 void
 addrxlat_pgt_set_root(addrxlat_pgt_t *pgt, const addrxlat_fulladdr_t *root)
 {
-	pgt->root = *root;
+	pgt->pgt.root = *root;
 }
 
 const addrxlat_fulladdr_t *
 addrxlat_pgt_get_root(const addrxlat_pgt_t *pgt)
 {
-	return &pgt->root;
+	return &pgt->pgt.root;
 }

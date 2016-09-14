@@ -69,7 +69,7 @@ pgt_x86_64(addrxlat_walk_t *state)
 		"pud",
 		"pgd",
 	};
-	const addrxlat_pgt_t *pgt = state->pgt;
+	const struct pgt_xlat *pgt = &state->pgt->pgt;
 
 	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(state->ctx, addrxlat_notpresent,

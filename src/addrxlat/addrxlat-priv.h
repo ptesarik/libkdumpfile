@@ -69,22 +69,16 @@
 /** Maximum length of the error message. */
 #define ERRBUF	64
 
-/** Internal state for address translation using page tables.
+/** Definitions specific to pagetable translation.
  * Page table translation uses some pre-computed values, which are
  * stored in this structure on initialization.
  */
-struct _addrxlat_pgt {
-	/** Reference counter. */
-	unsigned long refcnt;
-
+struct pgt_xlat {
 	/** Base address of the root page table. */
 	addrxlat_fulladdr_t root;
 
-	/** Function to initialize a page table walk. */
-	addrxlat_walk_init_fn *walk_init;
-
-	/** Function to make one step in page table translation. */
-	addrxlat_pgt_step_fn *step;
+	/** Paging form description. */
+	addrxlat_paging_form_t pf;
 
 	/** PTE size as a log2 value. */
 	unsigned short pte_shift;
@@ -92,11 +86,25 @@ struct _addrxlat_pgt {
 	/** Size of virtual address space covered by page tables. */
 	unsigned short vaddr_bits;
 
-	/** Paging form description. */
-	addrxlat_paging_form_t pf;
-
 	/** Paging masks, pre-computed from paging form. */
 	addrxlat_addr_t pgt_mask[ADDRXLAT_MAXLEVELS];
+};
+
+/** Internal state for address translation using page tables.
+ */
+struct _addrxlat_pgt {
+	/** Reference counter. */
+	unsigned long refcnt;
+
+	/** Function to initialize a page table walk. */
+	addrxlat_walk_init_fn *walk_init;
+
+	/** Function to make one step in page table translation. */
+	addrxlat_pgt_step_fn *step;
+
+	union {
+		struct pgt_xlat pgt;
+	};
 };
 
 /**  Representation of address translation.
