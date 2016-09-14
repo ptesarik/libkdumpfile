@@ -83,29 +83,26 @@ struct x86_64_data {
 	/** Overridden methods for linux.phys_base attribute. */
 	struct attr_override phys_base_override;
 
-	/** Total physical offset of kernel text mapping. */
-	addrxlat_off_t ktext_off;
+	/** Directmap translation. */
+	addrxlat_pgt_t *directmap;
+
+	/** Kernel text translation. */
+	addrxlat_pgt_t *ktext;
 
 	/** Xen directmap translation. */
 	addrxlat_pgt_t *xen_directmap;
 };
 
-#define ARCH_ANCHOR	((struct x86_64_data*)0)
+enum xlat_type {
+	PGT,
+	DIRECTMAP,
+	KTEXT,
+};
 
 struct region_def {
 	kdump_vaddr_t first, last;
-	addrxlat_def_t xlat;
+	enum xlat_type xlat;
 };
-
-#define PGT	\
-	{ .method = ADDRXLAT_PGT }
-
-#define LINEAR(_off)	\
-	{ .method = ADDRXLAT_LINEAR, .off = (_off) }
-
-#define KTEXT	\
-	{ .method = ADDRXLAT_LINEAR_IND, \
-	  .poff = &(ARCH_ANCHOR->ktext_off) }
 
 /* Original layout (before 2.6.11) */
 static const struct region_def mm_layout_2_6_0[] = {
@@ -113,7 +110,7 @@ static const struct region_def mm_layout_2_6_0[] = {
 	   PGT },
 	/* 0x0000008000000000 - 0x000000ffffffffff     guard hole       */
 	{  0x0000010000000000,  0x000001ffffffffff, /* direct mapping   */
-	   LINEAR(0x0000010000000000) },
+	   DIRECTMAP },
 	/* 0x0000020000000000 - 0x00007fffffffffff     unused hole      */
 	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
 	/* 0xffff800000000000 - 0xfffffeffffffffff     unused hole      */
@@ -138,7 +135,7 @@ static const struct region_def mm_layout_2_6_11[] = {
 	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
 	/* 0xffff800000000000 - 0xffff80ffffffffff     guard hole       */
 	{  0xffff810000000000,  0xffffc0ffffffffff, /* direct mapping   */
-	   LINEAR(0xffff810000000000) },
+	   DIRECTMAP },
 	/* 0xffffc10000000000 - 0xffffc1ffffffffff     guard hole       */
 	{  0xffffc20000000000,  0xffffe1ffffffffff, /* vmalloc/ioremap  */
 	   PGT },
@@ -160,7 +157,7 @@ static const struct region_def mm_layout_2_6_27[] = {
 	/* 0xffff800000000000 - 0xffff80ffffffffff     guard hole       */
 	/* 0xffff810000000000 - 0xffff87ffffffffff     hypervisor area  */
 	{  0xffff880000000000,  0xffffc0ffffffffff, /* direct mapping   */
-	   LINEAR(0xffff880000000000) },
+	   DIRECTMAP },
 	/* 0xffffc10000000000 - 0xffffc1ffffffffff     guard hole       */
 	{  0xffffc20000000000,  0xffffe1ffffffffff, /* vmalloc/ioremap  */
 	   PGT },
@@ -182,7 +179,7 @@ static const struct region_def mm_layout_2_6_31[] = {
 	/* 0xffff800000000000 - 0xffff80ffffffffff     guard hole       */
 	/* 0xffff810000000000 - 0xffff87ffffffffff     hypervisor area  */
 	{  0xffff880000000000,  0xffffc7ffffffffff, /* direct mapping   */
-	   LINEAR(0xffff880000000000) },
+	   DIRECTMAP },
 	/* 0xffffc80000000000 - 0xffffc8ffffffffff     guard hole       */
 	{  0xffffc90000000000,  0xffffe8ffffffffff, /* vmalloc/ioremap  */
 	   PGT },
@@ -390,7 +387,8 @@ add_canonical_regions(kdump_ctx *ctx, struct vtop_map *map)
 static void
 set_ktext_off(struct x86_64_data *archdata, kdump_addr_t phys_base)
 {
-	archdata->ktext_off = __START_KERNEL_map - phys_base;
+	addrxlat_pgt_set_offset(archdata->ktext,
+				__START_KERNEL_map - phys_base);
 }
 
 /** Update the physical base offfset.
@@ -439,21 +437,37 @@ x86_64_init(kdump_ctx *ctx)
 				 "Cannot allocate x86_64 private data");
 	ctx->shared->archdata = archdata;
 
+	archdata->ktext = addrxlat_pgt_new();
+	if (!archdata->ktext) {
+		ret = set_error(ctx, kdump_syserr,
+				"Cannot allocate kernel text mapping");
+		goto err_arch;
+	}
 	set_ktext_off(archdata, get_phys_base(ctx));
 
-	xlat.method = ADDRXLAT_LINEAR_IND,
-	xlat.poff = &archdata->ktext_off;
+	xlat.method = ADDRXLAT_PGT,
+	xlat.pgt = archdata->ktext;
 	ret = set_vtop_xlat(&ctx->shared->vtop_map,
 			    __START_KERNEL_map, VIRTADDR_MAX, &xlat);
-	if (ret != kdump_ok)
-		return set_error(ctx, ret,
-				 "Cannot set up initial kernel mapping");
+	if (ret != kdump_ok) {
+		set_error(ctx, ret,
+			  "Cannot set up initial kernel mapping");
+		goto err_ktext;
+	}
 
 	attr_add_override(gattr(ctx, GKI_phys_base),
 			  &archdata->phys_base_override);
 	archdata->phys_base_override.ops.post_set = update_phys_base;
 
 	return kdump_ok;
+
+ err_ktext:
+	addrxlat_pgt_decref(archdata->ktext);
+
+ err_arch:
+	free(archdata);
+	ctx->shared->archdata = NULL;
+	return ret;
 }
 
 static kdump_status
@@ -547,16 +561,15 @@ remove_ktext_xlat(kdump_ctx *ctx, struct vtop_map *map)
 	addrxlat_range_t *rng;
 	for (rng = map->map->ranges;
 	     rng < &map->map->ranges[map->map->n]; ++rng)
-		if (rng->xlat.method == ADDRXLAT_LINEAR_IND &&
-		    rng->xlat.poff == &archdata->ktext_off) {
-			rng->xlat.method = ADDRXLAT_PGT;
+		if (rng->xlat.method == ADDRXLAT_PGT &&
+		    rng->xlat.pgt == archdata->ktext)
 			rng->xlat.pgt = map->pgt;
-		}
 }
 
 static kdump_status
 x86_64_vtop_init(kdump_ctx *ctx)
 {
+	struct x86_64_data *archdata = ctx->shared->archdata;
 	const struct layout_def *layout = NULL;
 	unsigned i;
 	kdump_status ret;
@@ -573,6 +586,12 @@ x86_64_vtop_init(kdump_ctx *ctx)
 		return set_error(ctx, kdump_nodata,
 				 "Cannot determine virtual memory layout");
 
+	if (!archdata->directmap)
+		archdata->directmap = addrxlat_pgt_new();
+	if (!archdata->directmap)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate directmap");
+
 	flush_vtop_map(&ctx->shared->vtop_map);
 	ret = add_canonical_regions(ctx, &ctx->shared->vtop_map);
 	if (ret != kdump_ok)
@@ -580,21 +599,25 @@ x86_64_vtop_init(kdump_ctx *ctx)
 
 	for (i = 0; i < layout->nregions; ++i) {
 		const struct region_def *def = &layout->regions[i];
-		const addrxlat_def_t *pxlat = &def->xlat;
 		addrxlat_def_t xlat;
 
-		if (def->xlat.method == ADDRXLAT_LINEAR_IND) {
-			xlat = *pxlat;
-			pxlat = &xlat;
-			xlat.poff = ctx->shared->archdata +
-				((void*)def->xlat.poff - (void*)ARCH_ANCHOR);
-		} else if (def->xlat.method == ADDRXLAT_PGT) {
-			xlat = *pxlat;
-			pxlat = &xlat;
+		xlat.method = ADDRXLAT_PGT;
+		switch (def->xlat) {
+		case PGT:
 			xlat.pgt = ctx->shared->vtop_map.pgt;
+			break;
+		case DIRECTMAP:
+			xlat.pgt = archdata->directmap;
+			addrxlat_pgt_set_offset(archdata->directmap,
+						def->first);
+			break;
+		case KTEXT:
+			xlat.pgt = archdata->ktext;
+			break;
 		}
+
 		ret = set_vtop_xlat(&ctx->shared->vtop_map,
-				    def->first, def->last, pxlat);
+				    def->first, def->last, &xlat);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret,
 					 "Cannot set up mapping #%d", i);
@@ -778,6 +801,10 @@ x86_64_cleanup(struct kdump_shared *shared)
 
 	attr_remove_override(sgattr(shared, GKI_phys_base),
 			     &archdata->phys_base_override);
+	if (archdata->directmap)
+		addrxlat_pgt_decref(archdata->directmap);
+	if (archdata->ktext)
+		addrxlat_pgt_decref(archdata->ktext);
 	if (archdata->xen_directmap)
 		addrxlat_pgt_decref(archdata->xen_directmap);
 	free(archdata);
