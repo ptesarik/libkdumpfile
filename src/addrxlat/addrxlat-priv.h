@@ -138,11 +138,20 @@ struct _addrxlat_osmap {
 #define pgt_huge_page INTERNAL_NAME(pgt_huge_page)
 addrxlat_status pgt_huge_page(addrxlat_walk_t *state);
 
+#define walk_init_pgt INTERNAL_NAME(walk_init_pgt)
+addrxlat_walk_init_fn walk_init_pgt;
+
 #define walk_check_uaddr INTERNAL_NAME(walk_check_uaddr)
-addrxlat_walk_init_fn walk_check_uaddr;
+addrxlat_status walk_check_uaddr(addrxlat_walk_t *walk);
+
+#define walk_init_uaddr INTERNAL_NAME(walk_init_uaddr)
+addrxlat_walk_init_fn walk_init_uaddr;
 
 #define walk_check_saddr INTERNAL_NAME(walk_check_saddr)
-addrxlat_walk_init_fn walk_check_saddr;
+addrxlat_status walk_check_saddr(addrxlat_walk_t *walk);
+
+#define walk_init_saddr INTERNAL_NAME(walk_init_saddr)
+addrxlat_walk_init_fn walk_init_saddr;
 
 #define pgt_ia32 INTERNAL_NAME(pgt_ia32)
 addrxlat_pgt_step_fn pgt_ia32;

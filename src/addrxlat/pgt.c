@@ -32,6 +32,7 @@
 
 #include "addrxlat-priv.h"
 
+static addrxlat_walk_init_fn walk_init_none;
 static addrxlat_pgt_step_fn pgt_none;
 
 DEFINE_INTERNAL(pgt_new)
@@ -43,7 +44,7 @@ addrxlat_pgt_new(void)
 	if (pgt) {
 		pgt->refcnt = 1;
 		pgt->root.as = ADDRXLAT_NOADDR;
-		pgt->walk_init = pgt_none;
+		pgt->walk_init = walk_init_none;
 		pgt->step = pgt_none;
 	}
 	return pgt;
@@ -70,6 +71,19 @@ addrxlat_pgt_decref(addrxlat_pgt_t *pgt)
 
 /** Null walk function.
  * @param walk  Page table walk state.
+ * @param addr  Address to be translated.
+ * @returns     Error status.
+ *
+ * This method does not modify anything and always succeeds.
+ */
+static addrxlat_status
+walk_init_none(addrxlat_walk_t *walk, addrxlat_addr_t addr)
+{
+	return addrxlat_continue;
+}
+
+/** Null walk function.
+ * @param walk  Page table walk state.
  * @returns     Error status.
  *
  * This method does not modify anything and always succeeds.
@@ -77,6 +91,31 @@ addrxlat_pgt_decref(addrxlat_pgt_t *pgt)
 static addrxlat_status
 pgt_none(addrxlat_walk_t *state)
 {
+	return addrxlat_continue;
+}
+
+/** Initialize walk state for page table walk.
+ * @param walk  Page table walk state.
+ * @param addr  Address to be translated.
+ * @returns     Always returns success (@c addrxlat_continue)
+ */
+addrxlat_status
+walk_init_pgt(addrxlat_walk_t *walk, addrxlat_addr_t addr)
+{
+	const addrxlat_pgt_t *pgt = walk->pgt;
+	unsigned short i;
+
+	walk->base = pgt->root;
+	walk->level = pgt->pf.levels;
+	for (i = 0; i < pgt->pf.levels; ++i) {
+		unsigned short bits = pgt->pf.bits[i];
+		addrxlat_addr_t mask = bits < sizeof(addrxlat_addr_t) * 8
+			? ((addrxlat_addr_t)1 << bits) - 1
+			: ~(addrxlat_addr_t)0;
+		walk->idx[i] = addr & mask;
+		addr >>= bits;
+	}
+	walk->idx[i] = addr;
 	return addrxlat_continue;
 }
 
@@ -95,6 +134,18 @@ walk_check_uaddr(addrxlat_walk_t *walk)
 		? set_error(walk->ctx, addrxlat_invalid,
 			    "Virtual address too big")
 		: addrxlat_continue;
+}
+
+/** Initialize walk state for unsigned address page table walk.
+ * @param walk  Page table walk state.
+ * @param addr  Address to be translated.
+ * @returns     Error status.
+ */
+addrxlat_status
+walk_init_uaddr(addrxlat_walk_t *walk, addrxlat_addr_t addr)
+{
+	walk_init_pgt(walk, addr);
+	return walk_check_uaddr(walk);
 }
 
 /** Check signed address overflow.
@@ -123,6 +174,18 @@ walk_check_saddr(addrxlat_walk_t *walk)
 		: addrxlat_continue;
 }
 
+/** Initialize walk state for signed address page table walk.
+ * @param walk  Page table walk state.
+ * @param addr  Address to be translated.
+ * @returns     Error status.
+ */
+addrxlat_status
+walk_init_saddr(addrxlat_walk_t *walk, addrxlat_addr_t addr)
+{
+	walk_init_pgt(walk, addr);
+	return walk_check_saddr(walk);
+}
+
 struct pte_def {
 	addrxlat_walk_init_fn *init;
 	addrxlat_pgt_step_fn *step;
@@ -135,11 +198,11 @@ addrxlat_status
 addrxlat_pgt_set_form(addrxlat_pgt_t *pgt, const addrxlat_paging_form_t *pf)
 {
 	static const struct pte_def formats[] = {
-		[addrxlat_pte_none] = { pgt_none, pgt_none, 0 },
-		[addrxlat_pte_ia32] = { walk_check_uaddr, pgt_ia32, 2 },
-		[addrxlat_pte_ia32_pae] = { walk_check_uaddr, pgt_ia32_pae, 3 },
-		[addrxlat_pte_x86_64] = { walk_check_saddr, pgt_x86_64, 3 },
-		[addrxlat_pte_s390x] = { walk_check_uaddr, pgt_s390x, 3 },
+		[addrxlat_pte_none] = { walk_init_pgt, pgt_none, 0 },
+		[addrxlat_pte_ia32] = { walk_init_uaddr, pgt_ia32, 2 },
+		[addrxlat_pte_ia32_pae] = { walk_init_uaddr, pgt_ia32_pae, 3 },
+		[addrxlat_pte_x86_64] = { walk_init_saddr, pgt_x86_64, 3 },
+		[addrxlat_pte_s390x] = { walk_init_uaddr, pgt_s390x, 3 },
 		[addrxlat_pte_ppc64] = { walk_init_ppc64, pgt_ppc64, 3 },
 	};
 

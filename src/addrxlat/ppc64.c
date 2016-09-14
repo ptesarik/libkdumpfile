@@ -91,15 +91,21 @@ static unsigned mmu_pshift[MMU_PAGE_COUNT] = {
 
 /** IBM POWER init function.
  * @param state  Page table walk state.
+ * @param addr   Address to be translated.
  * @returns      Error status.
  */
 addrxlat_status
-walk_init_ppc64(addrxlat_walk_t *state)
+walk_init_ppc64(addrxlat_walk_t *state, addrxlat_addr_t addr)
 {
-	const addrxlat_pgt_t *pgt = state->pgt;
-	unsigned short lvl = pgt->pf.levels;
+	const addrxlat_pgt_t *pgt;
+	unsigned short lvl;
 	unsigned region;
 	addrxlat_addr_t mask;
+
+	walk_init_pgt(state, addr);
+
+	pgt = state->pgt;
+	lvl = pgt->pf.levels;
 
 	region = state->idx[lvl] >> (REGION_SHIFT - pgt->vaddr_bits);
 	if (region != VMALLOC_REGION_ID && region != USER_REGION_ID)

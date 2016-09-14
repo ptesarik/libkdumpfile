@@ -77,27 +77,10 @@ addrxlat_status
 addrxlat_walk_init(addrxlat_walk_t *state, addrxlat_ctx *ctx,
 		   const addrxlat_pgt_t *pgt, addrxlat_addr_t addr)
 {
-	unsigned short i;
-	addrxlat_status status;
-
 	state->ctx = ctx;
 	state->pgt = pgt;
-	state->base = pgt->root;
 
-	for (i = 0; i < pgt->pf.levels; ++i) {
-		unsigned short bits = pgt->pf.bits[i];
-		addrxlat_addr_t mask = bits < sizeof(addrxlat_addr_t) * 8
-			? ((addrxlat_addr_t)1 << bits) - 1
-			: ~(addrxlat_addr_t)0;
-		state->idx[i] = addr & mask;
-		addr >>= bits;
-	}
-	state->idx[i] = addr;
-
-	status = pgt->walk_init(state);
-	if (status == addrxlat_continue)
-		state->level = pgt->pf.levels;
-	return status;
+	return pgt->walk_init(state, addr);
 }
 
 DEFINE_INTERNAL(walk_next)
