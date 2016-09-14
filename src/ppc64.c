@@ -96,15 +96,22 @@ static const struct attr_template reg_names[] = {
 
 #define _64K (1<<16)
 
+struct ppc64_data {
+	/** Directmap translation. */
+	addrxlat_pgt_t *directmap;
+};
+
 static kdump_status
 ppc64_vtop_init(kdump_ctx *ctx)
 {
+	struct ppc64_data *archdata = ctx->shared->archdata;
 	addrxlat_fulladdr_t pgtroot;
 	kdump_vaddr_t addr, vmal;
 	struct attr_data *base, *attr;
 	char *endp;
 	unsigned long off_vm_struct_addr;
 	size_t sz = get_ptr_size(ctx);
+	addrxlat_def_t xlat;
 	kdump_status res;
 
 	rwlock_unlock(&ctx->shared->lock);
@@ -125,10 +132,23 @@ ppc64_vtop_init(kdump_ctx *ctx)
 	set_phys_base(ctx, addr);
 
 	flush_vtop_map(&ctx->shared->vtop_map);
-	res = set_vtop_xlat_linear(&ctx->shared->vtop_map,
-				   addr, addr + 0x1000000000000000, addr);
-	if (res != kdump_ok)
-		return set_error(ctx, res, "Cannot set up directmap");
+
+	archdata->directmap = addrxlat_pgt_new();
+	if (!archdata->directmap) {
+		res = set_error(ctx, kdump_syserr,
+				"Cannot allocate directmap");
+		goto err_arch;
+	}
+	addrxlat_pgt_set_offset(archdata->directmap, addr);
+
+	xlat.method = ADDRXLAT_PGT;
+	xlat.pgt = archdata->directmap;
+	res = set_vtop_xlat(&ctx->shared->vtop_map,
+			    addr, addr + 0x1000000000000000, &xlat);
+	if (res != kdump_ok) {
+		set_error(ctx, res, "Cannot set up directmap");
+		goto err_directmap;
+	}
 
 	rwlock_unlock(&ctx->shared->lock);
 	res = get_symbol_val(ctx, "vmlist", &addr);
@@ -167,6 +187,14 @@ ppc64_vtop_init(kdump_ctx *ctx)
 		return set_error(ctx, res, "Cannot set up pagetable mapping");
 
 	return kdump_ok;
+
+ err_directmap:
+	addrxlat_pgt_decref(archdata->directmap);
+
+ err_arch:
+	free(archdata);
+	ctx->shared->archdata = NULL;
+	return res;
 }
 
 static const addrxlat_paging_form_t ppc64_pf_64k = {
@@ -179,8 +207,15 @@ static const addrxlat_paging_form_t ppc64_pf_64k = {
 static kdump_status
 ppc64_init(kdump_ctx *ctx)
 {
+	struct ppc64_data *archdata;
 	int pagesize;
 	addrxlat_status axres;
+
+	archdata = calloc(1, sizeof(struct ppc64_data));
+	if (!archdata)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate ppc64 private data");
+	ctx->shared->archdata = archdata;
 
 	pagesize = get_page_size(ctx);
 
@@ -249,8 +284,20 @@ process_ppc64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 	return kdump_ok;
 }
 
+static void
+ppc64_cleanup(struct kdump_shared *shared)
+{
+	struct ppc64_data *archdata = shared->archdata;
+
+	if (archdata->directmap)
+		addrxlat_pgt_decref(archdata->directmap);
+	free(archdata);
+	shared->archdata = NULL;
+}
+
 const struct arch_ops ppc64_ops = {
 	.init = ppc64_init,
 	.vtop_init = ppc64_vtop_init,
 	.process_prstatus = process_ppc64_prstatus,
+	.cleanup = ppc64_cleanup,
 };

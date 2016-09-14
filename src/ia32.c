@@ -112,29 +112,54 @@ static const struct attr_template tmpl_pid =
 	{ "pid", NULL, kdump_number };
 
 struct ia32_data {
+	/** Direcmtap translation */
+	addrxlat_pgt_t *directmap;
+
 	int pae_state;		/* <0 .. no, >0 .. yes, 0 .. undetermined */
 };
 
 static kdump_status
 ia32_init(kdump_ctx *ctx)
 {
+	struct ia32_data *archdata;
+	addrxlat_def_t xlat;
 	kdump_status ret;
 
 	clear_attr(ctx, gattr(ctx, GKI_pteval_size));
 
-	ctx->shared->archdata = calloc(1, sizeof(struct ia32_data));
-	if (!ctx->shared->archdata)
+	archdata = calloc(1, sizeof(struct ia32_data));
+	if (!archdata)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate ia32 private data");
+	ctx->shared->archdata = archdata;
 
-	ret = set_vtop_xlat_linear(&ctx->shared->vtop_map,
-				   __START_KERNEL_map, VIRTADDR_MAX,
-				   __START_KERNEL_map);
-	if (ret != kdump_ok)
-		return set_error(ctx, ret,
-				 "Cannot set up initial directmap");
+	archdata->directmap = addrxlat_pgt_new();
+	if (!archdata->directmap) {
+		ret = set_error(ctx, kdump_syserr,
+				"Cannot allocate directmap");
+		goto err_arch;
+	}
+	addrxlat_pgt_set_offset(archdata->directmap, __START_KERNEL_map);
+
+	xlat.method = ADDRXLAT_PGT;
+	xlat.pgt = archdata->directmap;
+	ret = set_vtop_xlat(&ctx->shared->vtop_map,
+			    __START_KERNEL_map, VIRTADDR_MAX,
+			    &xlat);
+	if (ret != kdump_ok) {
+		set_error(ctx, ret, "Cannot set up directmap");
+		goto err_directmap;
+	}
 
 	return kdump_ok;
+
+ err_directmap:
+	addrxlat_pgt_decref(archdata->directmap);
+
+ err_arch:
+	free(archdata);
+	ctx->shared->archdata = NULL;
+	return ret;
 }
 
 static kdump_status
@@ -249,6 +274,8 @@ ia32_cleanup(struct kdump_shared *shared)
 {
 	struct ia32_data *archdata = shared->archdata;
 
+	if (archdata->directmap)
+		addrxlat_pgt_decref(archdata->directmap);
 	free(archdata);
 	shared->archdata = NULL;
 }

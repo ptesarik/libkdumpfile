@@ -85,6 +85,7 @@ struct os_info {
 /**  Private data for the s390x arch-specific methods.
  */
 struct s390x_data {
+	addrxlat_pgt_t *directmap;
 	int pgttype;
 };
 
@@ -157,6 +158,7 @@ determine_pgttype(kdump_ctx *ctx, kdump_vaddr_t pgtroot)
 static kdump_status
 s390x_vtop_init(kdump_ctx *ctx)
 {
+	struct s390x_data *archdata = ctx->shared->archdata;
 	addrxlat_fulladdr_t pgtroot;
 	kdump_vaddr_t addr;
 	kdump_status ret;
@@ -184,6 +186,7 @@ s390x_vtop_init(kdump_ctx *ctx)
 	rwlock_wrlock(&ctx->shared->lock);
 	if (ret == kdump_ok) {
 		uint64_t highmem;
+		addrxlat_def_t xlat;
 		size_t sz = sizeof(highmem);
 		/* In identity mapping virtual == physical */
 		ret = readp_locked(ctx, KDUMP_KPHYSADDR, addr, &highmem, &sz);
@@ -191,8 +194,10 @@ s390x_vtop_init(kdump_ctx *ctx)
 			return ret;
 		highmem = dump64toh(ctx, highmem);
 
-		ret = set_vtop_xlat_linear(&ctx->shared->vtop_map,
-					   0, highmem, 0);
+		xlat.method = ADDRXLAT_PGT;
+		xlat.pgt = archdata->directmap;
+		ret = set_vtop_xlat(&ctx->shared->vtop_map,
+				    0, highmem, &xlat);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret, "Cannot set up directmap");
 	} else if (pgtroot.as == ADDRXLAT_NOADDR)
@@ -342,6 +347,7 @@ static kdump_status
 s390x_init(kdump_ctx *ctx)
 {
 	struct s390x_data *archdata;
+	addrxlat_def_t xlat;
 	kdump_status ret;
 
 	archdata = calloc(1, sizeof(struct s390x_data));
@@ -353,12 +359,31 @@ s390x_init(kdump_ctx *ctx)
 	process_lowcore_info(ctx);
 	clear_error(ctx);
 
-	ret = set_vtop_xlat_linear(&ctx->shared->vtop_map,
-				   0, VIRTADDR_MAX, 0);
-	if (ret != kdump_ok)
-		return set_error(ctx, ret, "Cannot set up initial directmap");
+	archdata->directmap = addrxlat_pgt_new();
+	if (!archdata->directmap) {
+		ret = set_error(ctx, kdump_syserr,
+				"Cannot allocate directmap");
+		goto err_arch;
+	}
+	addrxlat_pgt_set_offset(archdata->directmap, 0);
+
+	xlat.method = ADDRXLAT_PGT;
+	xlat.pgt = archdata->directmap;
+	ret = set_vtop_xlat(&ctx->shared->vtop_map, 0, VIRTADDR_MAX, &xlat);
+	if (ret != kdump_ok) {
+		set_error(ctx, ret, "Cannot set up initial directmap");
+		goto err_directmap;
+	}
 
 	return kdump_ok;
+
+ err_directmap:
+	addrxlat_pgt_decref(archdata->directmap);
+
+ err_arch:
+	free(archdata);
+	ctx->shared->archdata = NULL;
+	return ret;
 }
 
 static void
@@ -366,6 +391,8 @@ s390x_cleanup(struct kdump_shared *shared)
 {
 	struct s390x_data *archdata = shared->archdata;
 
+	if (archdata->directmap)
+		addrxlat_pgt_decref(archdata->directmap);
 	free(archdata);
 	shared->archdata = NULL;
 }

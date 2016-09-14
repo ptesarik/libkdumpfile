@@ -56,18 +56,6 @@ set_vtop_xlat(struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
 }
 
 kdump_status
-set_vtop_xlat_linear(struct vtop_map *map,
-		     kdump_vaddr_t first, kdump_vaddr_t last,
-		     kdump_vaddr_t phys_off)
-{
-	const addrxlat_def_t xlat = {
-		.method = ADDRXLAT_LINEAR,
-		.off = phys_off,
-	};
-	return set_vtop_xlat(map, first, last, &xlat);
-}
-
-kdump_status
 set_vtop_xlat_pgt(struct vtop_map *map,
 		  kdump_vaddr_t first, kdump_vaddr_t last)
 {

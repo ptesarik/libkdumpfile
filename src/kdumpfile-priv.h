@@ -844,11 +844,6 @@ kdump_status set_vtop_xlat(struct vtop_map *map,
 			   kdump_vaddr_t first, kdump_vaddr_t last,
 			   const addrxlat_def_t *xlat);
 
-#define set_vtop_linear INTERNAL_NAME(set_vtop_linear)
-kdump_status set_vtop_xlat_linear(
-	struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
-	kdump_vaddr_t phys_off);
-
 #define set_vtop_pgt INTERNAL_NAME(set_vtop_pgt)
 kdump_status set_vtop_xlat_pgt(
 	struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last);

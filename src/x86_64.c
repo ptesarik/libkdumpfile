@@ -85,6 +85,9 @@ struct x86_64_data {
 
 	/** Total physical offset of kernel text mapping. */
 	addrxlat_off_t ktext_off;
+
+	/** Xen directmap translation. */
+	addrxlat_pgt_t *xen_directmap;
 };
 
 #define ARCH_ANCHOR	((struct x86_64_data*)0)
@@ -617,7 +620,9 @@ x86_64_vtop_init(kdump_ctx *ctx)
 static kdump_status
 x86_64_vtop_init_xen(kdump_ctx *ctx)
 {
+	struct x86_64_data *archdata = ctx->shared->archdata;
 	addrxlat_fulladdr_t pgtroot;
+	addrxlat_def_t xlat;
 	addrxlat_status axres;
 	kdump_status res;
 
@@ -636,19 +641,31 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 	if (res != kdump_ok)
 		return res;
 
+	if (!archdata->xen_directmap)
+		archdata->xen_directmap = addrxlat_pgt_new();
+	if (!archdata->xen_directmap)
+		return set_error(ctx, kdump_syserr,
+				 "Cannot allocate Xen directmap");
+
+	xlat.method = ADDRXLAT_PGT;
+	xlat.pgt = archdata->xen_directmap;
 	if (pgtroot.addr >= XEN_DIRECTMAP_START) {
 		/* Xen versions before 3.2.0 */
-		res = set_vtop_xlat_linear(
+		addrxlat_pgt_set_offset(archdata->xen_directmap,
+					XEN_DIRECTMAP_START);
+		res = set_vtop_xlat(
 			&ctx->shared->vtop_map_xen,
 			XEN_DIRECTMAP_START, XEN_DIRECTMAP_END_OLD,
-			XEN_DIRECTMAP_START);
+			&xlat);
 	} else {
 		kdump_vaddr_t xen_virt_start;
 		xen_virt_start = pgtroot.addr & ~((1ULL<<30) - 1);
-		res = set_vtop_xlat_linear(
+		addrxlat_pgt_set_offset(archdata->xen_directmap,
+					xen_virt_start);
+		res = set_vtop_xlat(
 			&ctx->shared->vtop_map_xen,
 			xen_virt_start,	xen_virt_start + XEN_VIRT_SIZE - 1,
-			xen_virt_start);
+			&xlat);
 	}
 	if (res != kdump_ok)
 		return set_error(ctx, res,
@@ -761,6 +778,8 @@ x86_64_cleanup(struct kdump_shared *shared)
 
 	attr_remove_override(sgattr(shared, GKI_phys_base),
 			     &archdata->phys_base_override);
+	if (archdata->xen_directmap)
+		addrxlat_pgt_decref(archdata->xen_directmap);
 	free(archdata);
 	shared->archdata = NULL;
 }
