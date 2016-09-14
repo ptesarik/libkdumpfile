@@ -18,6 +18,8 @@ static PyObject *DataErrException;
 static PyObject *InvalidException;
 static PyObject *NoKeyException;
 static PyObject *EOFException;
+static PyObject *BusyException;
+static PyObject *AddressTranslationException;
 
 static PyTypeObject attr_dir_object_type;
 static PyTypeObject attr_iterkey_object_type;
@@ -43,6 +45,8 @@ exception_map(kdump_status status)
 	case kdump_invalid:     return InvalidException;
 	case kdump_nokey:       return NoKeyException;
 	case kdump_eof:         return EOFException;
+	case kdump_busy:	return BusyException;
+	case kdump_addrxlat:	return AddressTranslationException;
 	/* If we raise an exception with status == kdump_ok, it's a bug. */
 	case kdump_ok:
 	default:                return PyExc_RuntimeError;
@@ -328,6 +332,8 @@ cleanup_exceptions(void)
 	Py_XDECREF(InvalidException);
 	Py_XDECREF(NoKeyException);
 	Py_XDECREF(EOFException);
+	Py_XDECREF(BusyException);
+	Py_XDECREF(AddressTranslationException);
 }
 
 static int lookup_exceptions (void)
@@ -350,6 +356,8 @@ do {							\
 	lookup_exception(InvalidException);
 	lookup_exception(NoKeyException);
 	lookup_exception(EOFException);
+	lookup_exception(BusyException);
+	lookup_exception(AddressTranslationException);
 #undef lookup_exception
 
 	Py_XDECREF(mod);
