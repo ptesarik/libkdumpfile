@@ -172,11 +172,11 @@ print_ind(const char *desc, const void *ptr)
 }
 
 static void
-print_xlat(const addrxlat_pgt_t *def)
+print_xlat(const addrxlat_def_t *def)
 {
 	if (def == NULL)
 		fputs("NONE", stdout);
-	else switch (addrxlat_pgt_get_kind(def)) {
+	else switch (addrxlat_def_get_kind(def)) {
 	case ADDRXLAT_NONE:
 		fputs("NONE", stdout);
 		break;
@@ -193,7 +193,7 @@ print_xlat(const addrxlat_pgt_t *def)
 }
 
 static void
-print_pgt(const addrxlat_pgt_t *pgt)
+print_pgt(const addrxlat_def_t *pgt)
 {
 	static const char *pte_formats[] = {
 		[addrxlat_pte_none] = "none",
@@ -204,7 +204,7 @@ print_pgt(const addrxlat_pgt_t *pgt)
 		[addrxlat_pte_ppc64] = "ppc64",
 	};
 
-	const addrxlat_paging_form_t *pf = addrxlat_pgt_get_form(pgt);
+	const addrxlat_paging_form_t *pf = addrxlat_def_get_form(pgt);
 	unsigned i;
 
 	fputs("pte_format: ", stdout);
@@ -230,7 +230,7 @@ print_map(const addrxlat_map_t *map)
 		const addrxlat_range_t *range = &map->ranges[i];
 		printf("%"ADDRXLAT_PRIxADDR"-%"ADDRXLAT_PRIxADDR": ",
 			addr, addr + range->endoff);
-		print_xlat(range->pgt);
+		print_xlat(range->def);
 		putchar('\n');
 
 		addr += range->endoff + 1;
@@ -243,7 +243,7 @@ os_map(void)
 	addrxlat_ctx *ctx;
 	addrxlat_osdesc_t desc;
 	addrxlat_osmap_t *osmap;
-	const addrxlat_pgt_t *pgt;
+	const addrxlat_def_t *pgt;
 	addrxlat_status status;
 
 	desc.type = ostype;

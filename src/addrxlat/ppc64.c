@@ -104,7 +104,7 @@ walk_init_ppc64(addrxlat_walk_t *state, addrxlat_addr_t addr)
 
 	walk_init_pgt(state, addr);
 
-	pgt = &state->pgt->pgt;
+	pgt = &state->def->pgt;
 	lvl = pgt->pf.levels;
 
 	region = state->idx[lvl] >> (REGION_SHIFT - pgt->vaddr_bits);
@@ -150,7 +150,7 @@ hugepd_shift(addrxlat_pte_t hpde)
 addrxlat_status
 huge_pd(addrxlat_walk_t *state)
 {
-	const struct pgt_xlat *pgt = &state->pgt->pgt;
+	const struct pgt_xlat *pgt = &state->def->pgt;
 	addrxlat_addr_t off;
 	unsigned pdshift;
 	unsigned short i;
@@ -203,7 +203,7 @@ is_hugepte(addrxlat_pte_t pte)
 addrxlat_status
 huge_page(addrxlat_walk_t *state)
 {
-	const struct pgt_xlat *pgt = &state->pgt->pgt;
+	const struct pgt_xlat *pgt = &state->def->pgt;
 
 	state->base.as = ADDRXLAT_MACHPHYSADDR;
 	state->base.addr = (state->raw_pte >>
@@ -224,7 +224,7 @@ pgt_ppc64(addrxlat_walk_t *state)
 		"pud",
 		"pgd",
 	};
-	const struct pgt_xlat *pgt = &state->pgt->pgt;
+	const struct pgt_xlat *pgt = &state->def->pgt;
 
 	if (!state->raw_pte)
 		return set_error(state->ctx, addrxlat_notpresent,

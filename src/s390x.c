@@ -85,7 +85,7 @@ struct os_info {
 /**  Private data for the s390x arch-specific methods.
  */
 struct s390x_data {
-	addrxlat_pgt_t *directmap;
+	addrxlat_def_t *directmap;
 	int pgttype;
 };
 
@@ -140,7 +140,7 @@ determine_pgttype(kdump_ctx *ctx, kdump_vaddr_t pgtroot)
 			archdata->pgttype = PTE_TT(entry);
 
 			pf.levels = archdata->pgttype + 3;
-			axres = addrxlat_pgt_set_form(
+			axres = addrxlat_def_set_form(
 				ctx->shared->vtop_map.pgt, &pf);
 			if (axres != addrxlat_ok)
 				return set_error_addrxlat(ctx, axres);
@@ -168,7 +168,7 @@ s390x_vtop_init(kdump_ctx *ctx)
 	rwlock_wrlock(&ctx->shared->lock);
 	if (ret == kdump_ok) {
 		pgtroot.as = ADDRXLAT_KPHYSADDR;
-		addrxlat_pgt_set_root(ctx->shared->vtop_map.pgt, &pgtroot);
+		addrxlat_def_set_root(ctx->shared->vtop_map.pgt, &pgtroot);
 		ret = determine_pgttype(ctx, pgtroot.addr);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret,
@@ -355,13 +355,13 @@ s390x_init(kdump_ctx *ctx)
 	process_lowcore_info(ctx);
 	clear_error(ctx);
 
-	archdata->directmap = addrxlat_pgt_new();
+	archdata->directmap = addrxlat_def_new();
 	if (!archdata->directmap) {
 		ret = set_error(ctx, kdump_syserr,
 				"Cannot allocate directmap");
 		goto err_arch;
 	}
-	addrxlat_pgt_set_offset(archdata->directmap, 0);
+	addrxlat_def_set_offset(archdata->directmap, 0);
 
 	ret = set_vtop_xlat(&ctx->shared->vtop_map, 0, VIRTADDR_MAX,
 			    archdata->directmap);
@@ -373,7 +373,7 @@ s390x_init(kdump_ctx *ctx)
 	return kdump_ok;
 
  err_directmap:
-	addrxlat_pgt_decref(archdata->directmap);
+	addrxlat_def_decref(archdata->directmap);
 
  err_arch:
 	free(archdata);
@@ -387,7 +387,7 @@ s390x_cleanup(struct kdump_shared *shared)
 	struct s390x_data *archdata = shared->archdata;
 
 	if (archdata->directmap)
-		addrxlat_pgt_decref(archdata->directmap);
+		addrxlat_def_decref(archdata->directmap);
 	free(archdata);
 	shared->archdata = NULL;
 }

@@ -14,15 +14,15 @@ LIBADDRXLAT_0 {
     addrxlat_map_set;
     addrxlat_map_search;
 
-    addrxlat_pgt_new;
-    addrxlat_pgt_incref;
-    addrxlat_pgt_decref;
-    addrxlat_pgt_get_kind;
-    addrxlat_pgt_set_offset;
-    addrxlat_pgt_set_form;
-    addrxlat_pgt_get_form;
-    addrxlat_pgt_set_root;
-    addrxlat_pgt_get_root;
+    addrxlat_def_new;
+    addrxlat_def_incref;
+    addrxlat_def_decref;
+    addrxlat_def_get_kind;
+    addrxlat_def_set_offset;
+    addrxlat_def_set_form;
+    addrxlat_def_get_form;
+    addrxlat_def_set_root;
+    addrxlat_def_get_root;
 
     addrxlat_walk_init;
     addrxlat_walk_next;

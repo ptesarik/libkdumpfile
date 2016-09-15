@@ -65,7 +65,7 @@ pgt_s390x(addrxlat_walk_t *state)
 		"pgd",
 		"rg1",		/* Invented; does not exist in the wild. */
 	};
-	const struct pgt_xlat *pgt = &state->pgt->pgt;
+	const struct pgt_xlat *pgt = &state->def->pgt;
 
 	if (PTE_I(state->raw_pte))
 		return set_error(state->ctx, addrxlat_notpresent,

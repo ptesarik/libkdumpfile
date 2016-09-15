@@ -69,7 +69,7 @@ pgt_x86_64(addrxlat_walk_t *state)
 		"pud",
 		"pgd",
 	};
-	const struct pgt_xlat *pgt = &state->pgt->pgt;
+	const struct pgt_xlat *pgt = &state->def->pgt;
 
 	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(state->ctx, addrxlat_notpresent,
@@ -104,7 +104,7 @@ canonical_pgt_map(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	addrxlat_range_t range;
 	addrxlat_map_t *newmap;
 
-	range.pgt = osmap->pgt;
+	range.def = osmap->pgt;
 
 	range.endoff = NONCANONICAL_START - 1;
 	newmap = internal_map_set(osmap->map, 0, &range);
@@ -142,7 +142,7 @@ osmap_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	};
 	addrxlat_status status;
 
-	internal_pgt_set_form(osmap->pgt, &x86_64_pf);
+	internal_def_set_form(osmap->pgt, &x86_64_pf);
 	status = canonical_pgt_map(osmap, ctx, osdesc);
 	if (status != addrxlat_ok)
 		return status;

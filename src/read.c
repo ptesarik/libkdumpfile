@@ -103,11 +103,11 @@ static kdump_status
 read_kvpage_choose(kdump_ctx *ctx, struct page_io *pio)
 {
 	kdump_vaddr_t vaddr;
-	const addrxlat_pgt_t *xlat;
+	const addrxlat_def_t *xlat;
 
 	vaddr = pio->pfn << get_page_shift(ctx);
 	xlat = addrxlat_map_search(ctx->shared->vtop_map.map, vaddr);
-	if (xlat && addrxlat_pgt_get_kind(xlat) != ADDRXLAT_PGT)
+	if (xlat && addrxlat_def_get_kind(xlat) != ADDRXLAT_PGT)
 		return read_kvpage_kphys(ctx, pio);
 	else
 		return read_kvpage_machphys(ctx, pio);

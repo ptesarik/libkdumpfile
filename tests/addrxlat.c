@@ -41,7 +41,7 @@ enum read_status {
 
 static addrxlat_paging_form_t paging_form;
 
-static addrxlat_pgt_t *xlat;
+static addrxlat_def_t *xlat;
 
 #define MAXERR	64
 static char read_err_str[MAXERR];
@@ -174,7 +174,7 @@ set_paging_form(const char *spec)
 }
 
 static int
-set_root(const char *spec, addrxlat_pgt_t *pgt)
+set_root(const char *spec, addrxlat_def_t *pgt)
 {
 	addrxlat_fulladdr_t root;
 	char *endp;
@@ -204,12 +204,12 @@ set_root(const char *spec, addrxlat_pgt_t *pgt)
 		return TEST_ERR;
 	}
 
-	addrxlat_pgt_set_root(pgt, &root);
+	addrxlat_def_set_root(pgt, &root);
 	return TEST_OK;
 }
 
 static int
-set_linear(const char *spec, addrxlat_pgt_t *pgt)
+set_linear(const char *spec, addrxlat_def_t *def)
 {
 	long long off;
 	char *endp;
@@ -220,8 +220,8 @@ set_linear(const char *spec, addrxlat_pgt_t *pgt)
 		return TEST_ERR;
 	}
 
-	addrxlat_pgt_set_offset(pgt, off);
-	xlat = pgt;
+	addrxlat_def_set_offset(def, off);
+	xlat = def;
 
 	return TEST_OK;
 }
@@ -276,7 +276,7 @@ main(int argc, char **argv)
 	unsigned long long vaddr;
 	char *endp;
 	addrxlat_ctx *ctx;
-	addrxlat_pgt_t *pgt, *linear;
+	addrxlat_def_t *pgt, *linear;
 	int opt;
 	addrxlat_status status;
 	unsigned long refcnt;
@@ -286,14 +286,14 @@ main(int argc, char **argv)
 	linear = NULL;
 	ctx = NULL;
 
-	pgt = addrxlat_pgt_new();
+	pgt = addrxlat_def_new();
 	if (!pgt) {
 		perror("Cannot initialize page table translation");
 		rc = TEST_ERR;
 		goto out;
 	}
 
-	linear = addrxlat_pgt_new();
+	linear = addrxlat_def_new();
 	if (!linear) {
 		perror("Cannot initialize linear translation");
 		rc = TEST_ERR;
@@ -357,7 +357,7 @@ main(int argc, char **argv)
 		goto out;
 	}
 
-	status = addrxlat_pgt_set_form(pgt, &paging_form);
+	status = addrxlat_def_set_form(pgt, &paging_form);
 	if (status != addrxlat_ok) {
 		fprintf(stderr, "Cannot set paging form\n");
 		rc = TEST_ERR;
@@ -370,11 +370,11 @@ main(int argc, char **argv)
 	rc = do_xlat(ctx, vaddr);
 
  out:
-	if (linear && (refcnt = addrxlat_pgt_decref(linear)) != 0)
+	if (linear && (refcnt = addrxlat_def_decref(linear)) != 0)
 		fprintf(stderr, "WARNING: Leaked %lu pgt references\n",
 			refcnt);
 
-	if (pgt && (refcnt = addrxlat_pgt_decref(pgt)) != 0)
+	if (pgt && (refcnt = addrxlat_def_decref(pgt)) != 0)
 		fprintf(stderr, "WARNING: Leaked %lu pgt references\n",
 			refcnt);
 

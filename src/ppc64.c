@@ -98,7 +98,7 @@ static const struct attr_template reg_names[] = {
 
 struct ppc64_data {
 	/** Directmap translation. */
-	addrxlat_pgt_t *directmap;
+	addrxlat_def_t *directmap;
 };
 
 static kdump_status
@@ -120,7 +120,7 @@ ppc64_vtop_init(kdump_ctx *ctx)
 		return set_error(ctx, res, "Cannot resolve %s",
 				 "swapper_pg_dir");
 	pgtroot.as = ADDRXLAT_KVADDR;
-	addrxlat_pgt_set_root(ctx->shared->vtop_map.pgt, &pgtroot);
+	addrxlat_def_set_root(ctx->shared->vtop_map.pgt, &pgtroot);
 
 	rwlock_unlock(&ctx->shared->lock);
 	res = get_symbol_val(ctx, "_stext", &addr);
@@ -132,13 +132,13 @@ ppc64_vtop_init(kdump_ctx *ctx)
 
 	flush_vtop_map(&ctx->shared->vtop_map);
 
-	archdata->directmap = addrxlat_pgt_new();
+	archdata->directmap = addrxlat_def_new();
 	if (!archdata->directmap) {
 		res = set_error(ctx, kdump_syserr,
 				"Cannot allocate directmap");
 		goto err_arch;
 	}
-	addrxlat_pgt_set_offset(archdata->directmap, addr);
+	addrxlat_def_set_offset(archdata->directmap, addr);
 
 	res = set_vtop_xlat(&ctx->shared->vtop_map,
 			    addr, addr + 0x1000000000000000,
@@ -187,7 +187,7 @@ ppc64_vtop_init(kdump_ctx *ctx)
 	return kdump_ok;
 
  err_directmap:
-	addrxlat_pgt_decref(archdata->directmap);
+	addrxlat_def_decref(archdata->directmap);
 
  err_arch:
 	free(archdata);
@@ -218,7 +218,7 @@ ppc64_init(kdump_ctx *ctx)
 	pagesize = get_page_size(ctx);
 
 	if (pagesize == _64K) {
-		axres = addrxlat_pgt_set_form(
+		axres = addrxlat_def_set_form(
 			ctx->shared->vtop_map.pgt, &ppc64_pf_64k);
 		if (axres != addrxlat_ok)
 			return set_error_addrxlat(ctx, axres);
@@ -288,7 +288,7 @@ ppc64_cleanup(struct kdump_shared *shared)
 	struct ppc64_data *archdata = shared->archdata;
 
 	if (archdata->directmap)
-		addrxlat_pgt_decref(archdata->directmap);
+		addrxlat_def_decref(archdata->directmap);
 	free(archdata);
 	shared->archdata = NULL;
 }

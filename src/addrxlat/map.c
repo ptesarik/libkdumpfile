@@ -80,7 +80,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 			newmap->n = 1;
 			r = prev = newmap->ranges;
 			r->endoff = ADDRXLAT_ADDR_MAX;
-			r->pgt = NULL;
+			r->def = NULL;
 			++left;
 			--delta;
 		} else {
@@ -106,7 +106,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 
 DEFINE_INTERNAL(map_search)
 
-const addrxlat_pgt_t *
+const addrxlat_def_t *
 addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 {
 	const addrxlat_range_t *r = map->ranges;
@@ -115,7 +115,7 @@ addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 
 	while (left-- > 0) {
 		if (addr <= raddr + r->endoff)
-			return r->pgt;
+			return r->def;
 		raddr += r->endoff + 1;
 		++r;
 	}
@@ -126,7 +126,7 @@ addrxlat_status
 addrxlat_by_map(addrxlat_ctx *ctx, addrxlat_addr_t *paddr,
 		const addrxlat_map_t *map)
 {
-	const addrxlat_pgt_t *def = internal_map_search(map, *paddr);
+	const addrxlat_def_t *def = internal_map_search(map, *paddr);
 	return def
 		? internal_walk(ctx, def, paddr)
 		: set_error(ctx, addrxlat_invalid,

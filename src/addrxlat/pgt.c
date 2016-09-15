@@ -34,46 +34,46 @@
 
 static addrxlat_walk_init_fn walk_init_none;
 static addrxlat_walk_init_fn walk_init_linear;
-static addrxlat_pgt_step_fn pgt_none;
+static addrxlat_walk_step_fn step_none;
 
-DEFINE_INTERNAL(pgt_new)
+DEFINE_INTERNAL(def_new)
 
-addrxlat_pgt_t *
-addrxlat_pgt_new(void)
+addrxlat_def_t *
+addrxlat_def_new(void)
 {
-	addrxlat_pgt_t *pgt = calloc(1, sizeof(addrxlat_pgt_t));
-	if (pgt) {
-		pgt->refcnt = 1;
-		pgt->walk_init = walk_init_none;
-		pgt->step = pgt_none;
-		pgt->kind = ADDRXLAT_NONE;
+	addrxlat_def_t *def = calloc(1, sizeof(addrxlat_def_t));
+	if (def) {
+		def->refcnt = 1;
+		def->walk_init = walk_init_none;
+		def->walk_step = step_none;
+		def->kind = ADDRXLAT_NONE;
 	}
-	return pgt;
+	return def;
 }
 
-DEFINE_INTERNAL(pgt_incref)
+DEFINE_INTERNAL(def_incref)
 
 unsigned long
-addrxlat_pgt_incref(addrxlat_pgt_t *pgt)
+addrxlat_def_incref(addrxlat_def_t *def)
 {
-	return ++pgt->refcnt;
+	return ++def->refcnt;
 }
 
-DEFINE_INTERNAL(pgt_decref)
+DEFINE_INTERNAL(def_decref)
 
 unsigned long
-addrxlat_pgt_decref(addrxlat_pgt_t *pgt)
+addrxlat_def_decref(addrxlat_def_t *def)
 {
-	unsigned long refcnt = --pgt->refcnt;
+	unsigned long refcnt = --def->refcnt;
 	if (!refcnt)
-		free(pgt);
+		free(def);
 	return refcnt;
 }
 
 addrxlat_kind_t
-addrxlat_pgt_get_kind(const addrxlat_pgt_t *pgt)
+addrxlat_def_get_kind(const addrxlat_def_t *def)
 {
-	return pgt->kind;
+	return def->kind;
 }
 
 /** Null walk function.
@@ -96,7 +96,7 @@ walk_init_none(addrxlat_walk_t *walk, addrxlat_addr_t addr)
  * This method does not modify anything and always succeeds.
  */
 static addrxlat_status
-pgt_none(addrxlat_walk_t *state)
+step_none(addrxlat_walk_t *state)
 {
 	return addrxlat_continue;
 }
@@ -109,7 +109,7 @@ pgt_none(addrxlat_walk_t *state)
 static addrxlat_status
 walk_init_linear(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 {
-	const struct linear_xlat *linear = &walk->pgt->linear;
+	const struct linear_xlat *linear = &walk->def->linear;
 
 	walk->base.as = ADDRXLAT_KPHYSADDR;
 	walk->base.addr = -linear->off;
@@ -120,12 +120,12 @@ walk_init_linear(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 }
 
 addrxlat_status
-addrxlat_pgt_set_offset(addrxlat_pgt_t *pgt, addrxlat_off_t off)
+addrxlat_def_set_offset(addrxlat_def_t *def, addrxlat_off_t off)
 {
-	pgt->walk_init = walk_init_linear;
-	pgt->step = pgt_none;
-	pgt->kind = ADDRXLAT_LINEAR;
-	pgt->linear.off = off;
+	def->walk_init = walk_init_linear;
+	def->walk_step = step_none;
+	def->kind = ADDRXLAT_LINEAR;
+	def->linear.off = off;
 	return addrxlat_ok;
 }
 
@@ -137,7 +137,7 @@ addrxlat_pgt_set_offset(addrxlat_pgt_t *pgt, addrxlat_off_t off)
 addrxlat_status
 walk_init_pgt(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 {
-	const struct pgt_xlat *pgt = &walk->pgt->pgt;
+	const struct pgt_xlat *pgt = &walk->def->pgt;
 	unsigned short i;
 
 	walk->base = pgt->root;
@@ -165,7 +165,7 @@ walk_init_pgt(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 addrxlat_status
 walk_check_uaddr(addrxlat_walk_t *walk)
 {
-	return walk->idx[walk->pgt->pgt.pf.levels]
+	return walk->idx[walk->def->pgt.pf.levels]
 		? set_error(walk->ctx, addrxlat_invalid,
 			    "Virtual address too big")
 		: addrxlat_continue;
@@ -194,7 +194,7 @@ walk_init_uaddr(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 addrxlat_status
 walk_check_saddr(addrxlat_walk_t *walk)
 {
-	const struct pgt_xlat *pgt = &walk->pgt->pgt;
+	const struct pgt_xlat *pgt = &walk->def->pgt;
 	unsigned short lvl = pgt->pf.levels;
 	struct {
 		int bit : 1;
@@ -223,17 +223,17 @@ walk_init_saddr(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 
 struct pte_def {
 	addrxlat_walk_init_fn *init;
-	addrxlat_pgt_step_fn *step;
+	addrxlat_walk_step_fn *step;
 	unsigned short shift;
 };
 
-DEFINE_INTERNAL(pgt_set_form)
+DEFINE_INTERNAL(def_set_form)
 
 addrxlat_status
-addrxlat_pgt_set_form(addrxlat_pgt_t *pgt, const addrxlat_paging_form_t *pf)
+addrxlat_def_set_form(addrxlat_def_t *def, const addrxlat_paging_form_t *pf)
 {
 	static const struct pte_def formats[] = {
-		[addrxlat_pte_none] = { walk_init_pgt, pgt_none, 0 },
+		[addrxlat_pte_none] = { walk_init_pgt, step_none, 0 },
 		[addrxlat_pte_ia32] = { walk_init_uaddr, pgt_ia32, 2 },
 		[addrxlat_pte_ia32_pae] = { walk_init_uaddr, pgt_ia32_pae, 3 },
 		[addrxlat_pte_x86_64] = { walk_init_saddr, pgt_x86_64, 3 },
@@ -249,37 +249,37 @@ addrxlat_pgt_set_form(addrxlat_pgt_t *pgt, const addrxlat_paging_form_t *pf)
 		return addrxlat_notimpl;
 
 	fmt = &formats[pf->pte_format];
-	pgt->walk_init = fmt->init;
-	pgt->step = fmt->step;
-	pgt->kind = ADDRXLAT_PGT;
-	pgt->pgt.pte_shift = fmt->shift;
-	pgt->pgt.pf = *pf;
+	def->walk_init = fmt->init;
+	def->walk_step = fmt->step;
+	def->kind = ADDRXLAT_PGT;
+	def->pgt.pte_shift = fmt->shift;
+	def->pgt.pf = *pf;
 
-	pgt->pgt.vaddr_bits = 0;
+	def->pgt.vaddr_bits = 0;
 	mask = 1;
 	for (i = 0; i < pf->levels; ++i) {
-		pgt->pgt.vaddr_bits += pf->bits[i];
+		def->pgt.vaddr_bits += pf->bits[i];
 		mask <<= pf->bits[i];
-		pgt->pgt.pgt_mask[i] = ~(mask - 1);
+		def->pgt.pgt_mask[i] = ~(mask - 1);
 	}
 
 	return addrxlat_ok;
 }
 
 const addrxlat_paging_form_t *
-addrxlat_pgt_get_form(const addrxlat_pgt_t *pgt)
+addrxlat_def_get_form(const addrxlat_def_t *def)
 {
-	return &pgt->pgt.pf;
+	return &def->pgt.pf;
 }
 
 void
-addrxlat_pgt_set_root(addrxlat_pgt_t *pgt, const addrxlat_fulladdr_t *root)
+addrxlat_def_set_root(addrxlat_def_t *def, const addrxlat_fulladdr_t *root)
 {
-	pgt->pgt.root = *root;
+	def->pgt.root = *root;
 }
 
 const addrxlat_fulladdr_t *
-addrxlat_pgt_get_root(const addrxlat_pgt_t *pgt)
+addrxlat_def_get_root(const addrxlat_def_t *def)
 {
-	return &pgt->pgt.root;
+	return &def->pgt.root;
 }

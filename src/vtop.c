@@ -39,11 +39,11 @@
 
 kdump_status
 set_vtop_xlat(struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
-	      const addrxlat_pgt_t *xlat)
+	      const addrxlat_def_t *xlat)
 {
 	const addrxlat_range_t range = {
 		.endoff = last - first,
-		.pgt = xlat,
+		.def = xlat,
 	};
 	addrxlat_map_t *newmap;
 
@@ -382,13 +382,13 @@ init_vtop_maps(kdump_ctx *ctx)
 {
 	struct kdump_shared *shared = ctx->shared;
 
-	shared->vtop_map.pgt = addrxlat_pgt_new();
+	shared->vtop_map.pgt = addrxlat_def_new();
 	if (!shared->vtop_map.pgt)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot initialize %s page table translation",
 				 "Linux");
 
-	shared->vtop_map_xen.pgt = addrxlat_pgt_new();
+	shared->vtop_map_xen.pgt = addrxlat_def_new();
 	if (!shared->vtop_map_xen.pgt)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot initialize %s page table translation",

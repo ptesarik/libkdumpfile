@@ -97,17 +97,17 @@ struct pgt_xlat {
 	addrxlat_addr_t pgt_mask[ADDRXLAT_MAXLEVELS];
 };
 
-/** Internal state for address translation using page tables.
+/** Internal definition of the address translation method.
  */
-struct _addrxlat_pgt {
+struct _addrxlat_def {
 	/** Reference counter. */
 	unsigned long refcnt;
 
 	/** Function to initialize a page table walk. */
 	addrxlat_walk_init_fn *walk_init;
 
-	/** Function to make one step in page table translation. */
-	addrxlat_pgt_step_fn *step;
+	/** Function to make one step in address translation. */
+	addrxlat_walk_step_fn *walk_step;
 
 	/** Translation kind. */
 	addrxlat_kind_t kind;
@@ -149,7 +149,7 @@ struct _addrxlat_osmap {
 	addrxlat_map_t *map;
 
 	/** Default page table translation object. */
-	addrxlat_pgt_t *pgt;
+	addrxlat_def_t *pgt;
 };
 
 /* vtop */
@@ -173,22 +173,22 @@ addrxlat_status walk_check_saddr(addrxlat_walk_t *walk);
 addrxlat_walk_init_fn walk_init_saddr;
 
 #define pgt_ia32 INTERNAL_NAME(pgt_ia32)
-addrxlat_pgt_step_fn pgt_ia32;
+addrxlat_walk_step_fn pgt_ia32;
 
 #define pgt_ia32_pae INTERNAL_NAME(pgt_ia32_pae)
-addrxlat_pgt_step_fn pgt_ia32_pae;
+addrxlat_walk_step_fn pgt_ia32_pae;
 
 #define pgt_x86_64 INTERNAL_NAME(pgt_x86_64)
-addrxlat_pgt_step_fn pgt_x86_64;
+addrxlat_walk_step_fn pgt_x86_64;
 
 #define pgt_s390x INTERNAL_NAME(pgt_s390x)
-addrxlat_pgt_step_fn pgt_s390x;
+addrxlat_walk_step_fn pgt_s390x;
 
 #define walk_init_ppc64 INTERNAL_NAME(walk_init_ppc64)
 addrxlat_walk_init_fn walk_init_ppc64;
 
 #define pgt_ppc64 INTERNAL_NAME(pgt_ppc64)
-addrxlat_pgt_step_fn pgt_ppc64;
+addrxlat_walk_step_fn pgt_ppc64;
 
 /* map by OS */
 
@@ -199,17 +199,17 @@ addrxlat_status osmap_x86_64(
 
 /* internal aliases */
 
-#define internal_pgt_new INTERNAL_ALIAS(pgt_new)
-DECLARE_INTERNAL(pgt_new)
+#define internal_def_new INTERNAL_ALIAS(def_new)
+DECLARE_INTERNAL(def_new)
 
-#define internal_pgt_incref INTERNAL_ALIAS(pgt_incref)
-DECLARE_INTERNAL(pgt_incref)
+#define internal_def_incref INTERNAL_ALIAS(def_incref)
+DECLARE_INTERNAL(def_incref)
 
-#define internal_pgt_decref INTERNAL_ALIAS(pgt_decref)
-DECLARE_INTERNAL(pgt_decref)
+#define internal_def_decref INTERNAL_ALIAS(def_decref)
+DECLARE_INTERNAL(def_decref)
 
-#define internal_pgt_set_form INTERNAL_ALIAS(pgt_set_form)
-DECLARE_INTERNAL(pgt_set_form)
+#define internal_def_set_form INTERNAL_ALIAS(def_set_form)
+DECLARE_INTERNAL(def_set_form)
 
 #define internal_walk_init INTERNAL_ALIAS(walk_init)
 DECLARE_INTERNAL(walk_init)

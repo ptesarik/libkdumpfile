@@ -41,7 +41,7 @@ static addrxlat_status
 read_pte(addrxlat_walk_t *state)
 {
 	addrxlat_ctx *ctx = state->ctx;
-	const struct pgt_xlat *pgt = &state->pgt->pgt;
+	const struct pgt_xlat *pgt = &state->def->pgt;
 	uint64_t pte64;
 	uint32_t pte32;
 	addrxlat_pte_t pte;
@@ -75,12 +75,12 @@ DEFINE_INTERNAL(walk_init)
 
 addrxlat_status
 addrxlat_walk_init(addrxlat_walk_t *state, addrxlat_ctx *ctx,
-		   const addrxlat_pgt_t *pgt, addrxlat_addr_t addr)
+		   const addrxlat_def_t *def, addrxlat_addr_t addr)
 {
 	state->ctx = ctx;
-	state->pgt = pgt;
+	state->def = def;
 
-	return pgt->walk_init(state, addr);
+	return def->walk_init(state, addr);
 }
 
 DEFINE_INTERNAL(walk_next)
@@ -88,7 +88,7 @@ DEFINE_INTERNAL(walk_next)
 addrxlat_status
 addrxlat_walk_next(addrxlat_walk_t *state)
 {
-	const addrxlat_pgt_t *pgt = state->pgt;
+	const addrxlat_def_t *def = state->def;
 	addrxlat_status status;
 
 	if (!state->level)
@@ -105,19 +105,19 @@ addrxlat_walk_next(addrxlat_walk_t *state)
 	if (status != addrxlat_ok)
 		return status;
 
-	return pgt->step(state);
+	return def->walk_step(state);
 }
 
 DEFINE_INTERNAL(walk)
 
 addrxlat_status
-addrxlat_walk(addrxlat_ctx *ctx, const addrxlat_pgt_t *pgt,
+addrxlat_walk(addrxlat_ctx *ctx, const addrxlat_def_t *def,
 	      addrxlat_addr_t *paddr)
 {
 	addrxlat_walk_t walk;
 	addrxlat_status status;
 
-	status = internal_walk_init(&walk, ctx, pgt, *paddr);
+	status = internal_walk_init(&walk, ctx, def, *paddr);
 	while (status == addrxlat_continue)
 		status = internal_walk_next(&walk);
 
@@ -137,7 +137,7 @@ addrxlat_walk(addrxlat_ctx *ctx, const addrxlat_pgt_t *pgt,
 addrxlat_status
 pgt_huge_page(addrxlat_walk_t *state)
 {
-	const struct pgt_xlat *pgt = &state->pgt->pgt;
+	const struct pgt_xlat *pgt = &state->def->pgt;
 	addrxlat_addr_t off = 0;
 
 	while (state->level > 1) {
