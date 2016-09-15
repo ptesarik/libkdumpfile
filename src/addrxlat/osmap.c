@@ -58,15 +58,21 @@ addrxlat_osmap_incref(addrxlat_osmap_t *osmap)
 	return ++osmap->refcnt;
 }
 
+static void
+free_map(addrxlat_map_t *map)
+{
+	if (map) {
+		internal_map_clear(map);
+		free(map);
+	}
+}
+
 unsigned long
 addrxlat_osmap_decref(addrxlat_osmap_t *osmap)
 {
 	unsigned long refcnt = --osmap->refcnt;
 	if (!refcnt) {
-		if (osmap->map) {
-			internal_map_clear(osmap->map);
-			free(osmap->map);
-		}
+		free_map(osmap->map);
 		if (osmap->pgt)
 			internal_def_decref(osmap->pgt);
 		free(osmap);
@@ -92,8 +98,7 @@ addrxlat_osmap_init(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 void
 addrxlat_osmap_set_map(addrxlat_osmap_t *osmap, addrxlat_map_t *map)
 {
-	if (osmap->map)
-		free(osmap->map);
+	free_map(osmap->map);
 	osmap->map = map;
 }
 
