@@ -172,21 +172,21 @@ print_ind(const char *desc, const void *ptr)
 }
 
 static void
-print_xlat(const addrxlat_def_t *def)
+print_xlat(const addrxlat_pgt_t *def)
 {
-	if (def->pgt == NULL)
+	if (def == NULL)
 		fputs("NONE", stdout);
-	else switch (addrxlat_pgt_get_kind(def->pgt)) {
+	else switch (addrxlat_pgt_get_kind(def)) {
 	case ADDRXLAT_NONE:
 		fputs("NONE", stdout);
 		break;
 
 	case ADDRXLAT_LINEAR:
-		print_ind("LINEAR", def->pgt);
+		print_ind("LINEAR", def);
 		break;
 
 	case ADDRXLAT_PGT:
-		print_ind("PGT", def->pgt);
+		print_ind("PGT", def);
 		break;
 
 	}
@@ -230,7 +230,7 @@ print_map(const addrxlat_map_t *map)
 		const addrxlat_range_t *range = &map->ranges[i];
 		printf("%"ADDRXLAT_PRIxADDR"-%"ADDRXLAT_PRIxADDR": ",
 			addr, addr + range->endoff);
-		print_xlat(&range->xlat);
+		print_xlat(range->pgt);
 		putchar('\n');
 
 		addr += range->endoff + 1;

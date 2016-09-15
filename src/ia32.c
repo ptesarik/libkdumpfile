@@ -122,7 +122,6 @@ static kdump_status
 ia32_init(kdump_ctx *ctx)
 {
 	struct ia32_data *archdata;
-	addrxlat_def_t xlat;
 	kdump_status ret;
 
 	clear_attr(ctx, gattr(ctx, GKI_pteval_size));
@@ -141,11 +140,9 @@ ia32_init(kdump_ctx *ctx)
 	}
 	addrxlat_pgt_set_offset(archdata->directmap, __START_KERNEL_map);
 
-	xlat.method = ADDRXLAT_PGT;
-	xlat.pgt = archdata->directmap;
 	ret = set_vtop_xlat(&ctx->shared->vtop_map,
 			    __START_KERNEL_map, VIRTADDR_MAX,
-			    &xlat);
+			    archdata->directmap);
 	if (ret != kdump_ok) {
 		set_error(ctx, ret, "Cannot set up directmap");
 		goto err_directmap;

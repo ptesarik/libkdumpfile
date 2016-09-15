@@ -111,7 +111,6 @@ ppc64_vtop_init(kdump_ctx *ctx)
 	char *endp;
 	unsigned long off_vm_struct_addr;
 	size_t sz = get_ptr_size(ctx);
-	addrxlat_def_t xlat;
 	kdump_status res;
 
 	rwlock_unlock(&ctx->shared->lock);
@@ -141,10 +140,9 @@ ppc64_vtop_init(kdump_ctx *ctx)
 	}
 	addrxlat_pgt_set_offset(archdata->directmap, addr);
 
-	xlat.method = ADDRXLAT_PGT;
-	xlat.pgt = archdata->directmap;
 	res = set_vtop_xlat(&ctx->shared->vtop_map,
-			    addr, addr + 0x1000000000000000, &xlat);
+			    addr, addr + 0x1000000000000000,
+			    archdata->directmap);
 	if (res != kdump_ok) {
 		set_error(ctx, res, "Cannot set up directmap");
 		goto err_directmap;

@@ -41,7 +41,7 @@ printmap(const addrxlat_map_t *map)
 	for (i = 0; i < map->n; ++i) {
 		printf("0x%"ADDRXLAT_PRIxADDR "-0x%"ADDRXLAT_PRIxADDR ":%u\n",
 		       addr, addr + map->ranges[i].endoff,
-		       map->ranges[i].xlat.method);
+		       (unsigned)(intptr_t)map->ranges[i].pgt);
 		addr += map->ranges[i].endoff + 1;
 	}
 }
@@ -70,7 +70,8 @@ main(int argc, char **argv)
 		}
 		range.endoff -= addr;
 
-		range.xlat.method = strtoul(endp + 1, &endp, 0);
+		range.pgt = (addrxlat_pgt_t*)(intptr_t)
+			strtoul(endp + 1, &endp, 0);
 		if (*endp) {
 			fprintf(stderr, "Invalid range spec: %s\n", argv[i]);
 			return TEST_ERR;

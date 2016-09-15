@@ -80,7 +80,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 			newmap->n = 1;
 			r = prev = newmap->ranges;
 			r->endoff = ADDRXLAT_ADDR_MAX;
-			r->xlat.method = ADDRXLAT_NONE;
+			r->pgt = NULL;
 			++left;
 			--delta;
 		} else {
@@ -106,33 +106,29 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 
 DEFINE_INTERNAL(map_search)
 
-const addrxlat_def_t *
+const addrxlat_pgt_t *
 addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 {
-	static const addrxlat_def_t def_none = {
-		.method = ADDRXLAT_NONE,
-	};
-
 	const addrxlat_range_t *r = map->ranges;
 	addrxlat_addr_t raddr = 0;
 	size_t left = map ? map->n : 0;
 
 	while (left-- > 0) {
 		if (addr <= raddr + r->endoff)
-			return &r->xlat;
+			return r->pgt;
 		raddr += r->endoff + 1;
 		++r;
 	}
-	return &def_none;
+	return NULL;
 }
 
 addrxlat_status
 addrxlat_by_map(addrxlat_ctx *ctx, addrxlat_addr_t *paddr,
 		const addrxlat_map_t *map)
 {
-	const addrxlat_def_t *def = internal_map_search(map, *paddr);
+	const addrxlat_pgt_t *def = internal_map_search(map, *paddr);
 	return def
-		? internal_by_def(ctx, paddr, def)
+		? internal_walk(ctx, def, paddr)
 		: set_error(ctx, addrxlat_invalid,
 			    "No translation defined");
 }

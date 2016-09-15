@@ -423,7 +423,6 @@ static kdump_status
 x86_64_init(kdump_ctx *ctx)
 {
 	struct x86_64_data *archdata;
-	addrxlat_def_t xlat;
 	addrxlat_status axres;
 	kdump_status ret;
 
@@ -445,10 +444,9 @@ x86_64_init(kdump_ctx *ctx)
 	}
 	set_ktext_off(archdata, get_phys_base(ctx));
 
-	xlat.method = ADDRXLAT_PGT,
-	xlat.pgt = archdata->ktext;
 	ret = set_vtop_xlat(&ctx->shared->vtop_map,
-			    __START_KERNEL_map, VIRTADDR_MAX, &xlat);
+			    __START_KERNEL_map, VIRTADDR_MAX,
+			    archdata->ktext);
 	if (ret != kdump_ok) {
 		set_error(ctx, ret,
 			  "Cannot set up initial kernel mapping");
@@ -561,9 +559,8 @@ remove_ktext_xlat(kdump_ctx *ctx, struct vtop_map *map)
 	addrxlat_range_t *rng;
 	for (rng = map->map->ranges;
 	     rng < &map->map->ranges[map->map->n]; ++rng)
-		if (rng->xlat.method == ADDRXLAT_PGT &&
-		    rng->xlat.pgt == archdata->ktext)
-			rng->xlat.pgt = map->pgt;
+		if (rng->pgt == archdata->ktext)
+			rng->pgt = map->pgt;
 }
 
 static kdump_status
@@ -599,25 +596,24 @@ x86_64_vtop_init(kdump_ctx *ctx)
 
 	for (i = 0; i < layout->nregions; ++i) {
 		const struct region_def *def = &layout->regions[i];
-		addrxlat_def_t xlat;
+		addrxlat_pgt_t *xlat = NULL;
 
-		xlat.method = ADDRXLAT_PGT;
 		switch (def->xlat) {
 		case PGT:
-			xlat.pgt = ctx->shared->vtop_map.pgt;
+			xlat = ctx->shared->vtop_map.pgt;
 			break;
 		case DIRECTMAP:
-			xlat.pgt = archdata->directmap;
+			xlat = archdata->directmap;
 			addrxlat_pgt_set_offset(archdata->directmap,
 						def->first);
 			break;
 		case KTEXT:
-			xlat.pgt = archdata->ktext;
+			xlat = archdata->ktext;
 			break;
 		}
 
 		ret = set_vtop_xlat(&ctx->shared->vtop_map,
-				    def->first, def->last, &xlat);
+				    def->first, def->last, xlat);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret,
 					 "Cannot set up mapping #%d", i);
@@ -645,7 +641,6 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 {
 	struct x86_64_data *archdata = ctx->shared->archdata;
 	addrxlat_fulladdr_t pgtroot;
-	addrxlat_def_t xlat;
 	addrxlat_status axres;
 	kdump_status res;
 
@@ -670,8 +665,6 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate Xen directmap");
 
-	xlat.method = ADDRXLAT_PGT;
-	xlat.pgt = archdata->xen_directmap;
 	if (pgtroot.addr >= XEN_DIRECTMAP_START) {
 		/* Xen versions before 3.2.0 */
 		addrxlat_pgt_set_offset(archdata->xen_directmap,
@@ -679,7 +672,7 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 		res = set_vtop_xlat(
 			&ctx->shared->vtop_map_xen,
 			XEN_DIRECTMAP_START, XEN_DIRECTMAP_END_OLD,
-			&xlat);
+			archdata->xen_directmap);
 	} else {
 		kdump_vaddr_t xen_virt_start;
 		xen_virt_start = pgtroot.addr & ~((1ULL<<30) - 1);
@@ -688,7 +681,7 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 		res = set_vtop_xlat(
 			&ctx->shared->vtop_map_xen,
 			xen_virt_start,	xen_virt_start + XEN_VIRT_SIZE - 1,
-			&xlat);
+			archdata->xen_directmap);
 	}
 	if (res != kdump_ok)
 		return set_error(ctx, res,

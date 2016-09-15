@@ -104,8 +104,7 @@ canonical_pgt_map(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	addrxlat_range_t range;
 	addrxlat_map_t *newmap;
 
-	range.xlat.method = ADDRXLAT_PGT;
-	range.xlat.pgt = osmap->pgt;
+	range.pgt = osmap->pgt;
 
 	range.endoff = NONCANONICAL_START - 1;
 	newmap = internal_map_set(osmap->map, 0, &range);

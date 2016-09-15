@@ -842,7 +842,7 @@ addrxlat_ctx *init_addrxlat(kdump_ctx *ctx);
 #define set_vtop_xlat INTERNAL_NAME(set_vtop_xlat)
 kdump_status set_vtop_xlat(struct vtop_map *map,
 			   kdump_vaddr_t first, kdump_vaddr_t last,
-			   const addrxlat_def_t *xlat);
+			   const addrxlat_pgt_t *xlat);
 
 #define set_vtop_pgt INTERNAL_NAME(set_vtop_pgt)
 kdump_status set_vtop_xlat_pgt(

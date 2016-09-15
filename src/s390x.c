@@ -186,7 +186,6 @@ s390x_vtop_init(kdump_ctx *ctx)
 	rwlock_wrlock(&ctx->shared->lock);
 	if (ret == kdump_ok) {
 		uint64_t highmem;
-		addrxlat_def_t xlat;
 		size_t sz = sizeof(highmem);
 		/* In identity mapping virtual == physical */
 		ret = readp_locked(ctx, KDUMP_KPHYSADDR, addr, &highmem, &sz);
@@ -194,10 +193,8 @@ s390x_vtop_init(kdump_ctx *ctx)
 			return ret;
 		highmem = dump64toh(ctx, highmem);
 
-		xlat.method = ADDRXLAT_PGT;
-		xlat.pgt = archdata->directmap;
 		ret = set_vtop_xlat(&ctx->shared->vtop_map,
-				    0, highmem, &xlat);
+				    0, highmem, archdata->directmap);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret, "Cannot set up directmap");
 	} else if (pgtroot.as == ADDRXLAT_NOADDR)
@@ -347,7 +344,6 @@ static kdump_status
 s390x_init(kdump_ctx *ctx)
 {
 	struct s390x_data *archdata;
-	addrxlat_def_t xlat;
 	kdump_status ret;
 
 	archdata = calloc(1, sizeof(struct s390x_data));
@@ -367,9 +363,8 @@ s390x_init(kdump_ctx *ctx)
 	}
 	addrxlat_pgt_set_offset(archdata->directmap, 0);
 
-	xlat.method = ADDRXLAT_PGT;
-	xlat.pgt = archdata->directmap;
-	ret = set_vtop_xlat(&ctx->shared->vtop_map, 0, VIRTADDR_MAX, &xlat);
+	ret = set_vtop_xlat(&ctx->shared->vtop_map, 0, VIRTADDR_MAX,
+			    archdata->directmap);
 	if (ret != kdump_ok) {
 		set_error(ctx, ret, "Cannot set up initial directmap");
 		goto err_directmap;

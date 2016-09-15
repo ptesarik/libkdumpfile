@@ -438,7 +438,7 @@ typedef struct _addrxlat_range {
 	addrxlat_addr_t endoff;
 
 	/** Translation definition */
-	addrxlat_def_t xlat;
+	const addrxlat_pgt_t *pgt;
 } addrxlat_range_t;
 
 /**  Address translation map.
@@ -466,12 +466,13 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 /** Find an address translation definition in a translation map.
  * @param map   Address translation map.
  * @param addr  Address to be translated.
- * @returns     Translation definition.
+ * @returns     Translation definition, or @c NULL if not found.
  *
- * It is allowed to pass @c NULL as the translation map. The function
- * always returns a pointer to a static variable for @ref ADDRXLAT_NONE.
+ * It is allowed to pass @c NULL as the translation map; the result
+ * is the same as if an empty map was given, i.e. the function always
+ * returns @c NULL.
  */
-const addrxlat_def_t *addrxlat_map_search(
+const addrxlat_pgt_t *addrxlat_map_search(
 	const addrxlat_map_t *map, addrxlat_addr_t addr);
 
 /** Translate an address using a translation map.

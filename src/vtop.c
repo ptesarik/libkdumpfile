@@ -39,11 +39,11 @@
 
 kdump_status
 set_vtop_xlat(struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
-	      const addrxlat_def_t *xlat)
+	      const addrxlat_pgt_t *xlat)
 {
 	const addrxlat_range_t range = {
 		.endoff = last - first,
-		.xlat = *xlat,
+		.pgt = xlat,
 	};
 	addrxlat_map_t *newmap;
 
@@ -59,11 +59,7 @@ kdump_status
 set_vtop_xlat_pgt(struct vtop_map *map,
 		  kdump_vaddr_t first, kdump_vaddr_t last)
 {
-	const addrxlat_def_t xlat = {
-		.method = ADDRXLAT_PGT,
-		.pgt = map->pgt
-	};
-	return set_vtop_xlat(map, first, last, &xlat);
+	return set_vtop_xlat(map, first, last, map->pgt);
 }
 
 void
