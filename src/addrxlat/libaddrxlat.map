@@ -13,6 +13,7 @@ LIBADDRXLAT_0 {
     addrxlat_by_map;
     addrxlat_map_set;
     addrxlat_map_search;
+    addrxlat_map_clear;
 
     addrxlat_def_new;
     addrxlat_def_incref;

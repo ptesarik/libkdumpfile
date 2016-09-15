@@ -100,6 +100,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 		++prev;
 	}
 
+	internal_def_incref(range->def);
 	*prev = *range;
 	return map;
 }
@@ -131,4 +132,17 @@ addrxlat_by_map(addrxlat_ctx *ctx, addrxlat_addr_t *paddr,
 		? internal_walk(ctx, def, paddr)
 		: set_error(ctx, addrxlat_invalid,
 			    "No translation defined");
+}
+
+DEFINE_INTERNAL(map_clear)
+
+void
+addrxlat_map_clear(addrxlat_map_t *map)
+{
+	const addrxlat_range_t *r = map->ranges;
+	while(map->n--) {
+		if (r->def)
+			internal_def_decref(r->def);
+		++r;
+	}
 }

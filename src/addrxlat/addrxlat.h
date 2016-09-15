@@ -406,7 +406,7 @@ typedef struct _addrxlat_range {
 	addrxlat_addr_t endoff;
 
 	/** Translation definition */
-	const addrxlat_def_t *def;
+	addrxlat_def_t *def;
 } addrxlat_range_t;
 
 /**  Address translation map.
@@ -442,6 +442,15 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
  */
 const addrxlat_def_t *addrxlat_map_search(
 	const addrxlat_map_t *map, addrxlat_addr_t addr);
+
+/** Clean up all data used by a translation map.
+ * @param map  Address translation map.
+ *
+ * This function re-initializes the translation map, freeing up all
+ * associated resources. The resulting empty map may be reused after
+ * calling this function.
+ */
+void addrxlat_map_clear(addrxlat_map_t *map);
 
 /** Translate an address using a translation map.
  * @param ctx            Address translation object.

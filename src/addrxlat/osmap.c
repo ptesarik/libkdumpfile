@@ -63,8 +63,10 @@ addrxlat_osmap_decref(addrxlat_osmap_t *osmap)
 {
 	unsigned long refcnt = --osmap->refcnt;
 	if (!refcnt) {
-		if (osmap->map)
+		if (osmap->map) {
+			internal_map_clear(osmap->map);
 			free(osmap->map);
+		}
 		if (osmap->pgt)
 			internal_def_decref(osmap->pgt);
 		free(osmap);

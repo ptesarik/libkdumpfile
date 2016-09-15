@@ -226,6 +226,9 @@ DECLARE_INTERNAL(map_set)
 #define internal_map_search INTERNAL_ALIAS(map_search)
 DECLARE_INTERNAL(map_search)
 
+#define internal_map_clear INTERNAL_ALIAS(map_clear)
+DECLARE_INTERNAL(map_clear)
+
 /* utils */
 
 /** Set the error message.
