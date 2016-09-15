@@ -218,9 +218,6 @@ typedef enum _addrxlat_method {
 	/** Linear mapping: dest = src + off. */
 	ADDRXLAT_LINEAR,
 
-	/** Linear mapping with indirect offset: dest = src + *poff. */
-	ADDRXLAT_LINEAR_IND,
-
 	/** Page table walk. */
 	ADDRXLAT_PGT,
 } addrxlat_method_t;
@@ -401,35 +398,6 @@ addrxlat_status addrxlat_walk_next(addrxlat_walk_t *walk);
  */
 addrxlat_status addrxlat_walk(addrxlat_ctx *ctx, const addrxlat_pgt_t *pgt,
 			      addrxlat_addr_t *paddr);
-
-/** Address translation definition.
- * This structure holds all information required to translate an address
- * using one of the available methods.
- */
-typedef struct _addrxlat_def {
-	/** Address translation method. */
-	addrxlat_method_t method;
-
-	union {
-		/** Offset used by @ref ADDRXLAT_LINEAR. */
-		addrxlat_off_t off;
-
-		/** Pointer to offset used by @ref ADDRXLAT_LINEAR_IND. */
-		const addrxlat_off_t *poff;
-
-		/** Page table translation used by @ref ADDRXLAT_PGT. */
-		const addrxlat_pgt_t *pgt;
-	};
-} addrxlat_def_t;
-
-/** Translate an address using a single translation definition.
- * @param ctx           Address translation object.
- * @param[in,out] addr  Address.
- * @param[in] def       Translation definition.
- * @returns             Error status.
- */
-addrxlat_status addrxlat_by_def(
-	addrxlat_ctx *ctx, addrxlat_addr_t *addr, const addrxlat_def_t *def);
 
 /** Definition of an address range.
  */

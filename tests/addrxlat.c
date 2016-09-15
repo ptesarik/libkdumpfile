@@ -41,7 +41,7 @@ enum read_status {
 
 static addrxlat_paging_form_t paging_form;
 
-static addrxlat_def_t xlatdef;
+static addrxlat_pgt_t *xlat;
 
 #define MAXERR	64
 static char read_err_str[MAXERR];
@@ -221,8 +221,7 @@ set_linear(const char *spec, addrxlat_pgt_t *pgt)
 	}
 
 	addrxlat_pgt_set_offset(pgt, off);
-	xlatdef.method = ADDRXLAT_PGT;
-	xlatdef.pgt = pgt;
+	xlat = pgt;
 
 	return TEST_OK;
 }
@@ -232,7 +231,7 @@ do_xlat(addrxlat_ctx *ctx, addrxlat_addr_t addr)
 {
 	addrxlat_status status;
 
-	status = addrxlat_by_def(ctx, &addr, &xlatdef);
+	status = addrxlat_walk(ctx, xlat, &addr);
 	if (status != addrxlat_ok) {
 		fprintf(stderr, "Address translation failed: %s\n",
 			((int) status > 0
@@ -329,8 +328,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'p':
-			xlatdef.method = ADDRXLAT_PGT;
-			xlatdef.pgt = pgt;
+			xlat = pgt;
 			break;
 
 		case 'h':

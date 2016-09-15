@@ -10,7 +10,6 @@ LIBADDRXLAT_0 {
     addrxlat_get_priv;
 
     addrxlat_walk;
-    addrxlat_by_def;
     addrxlat_by_map;
     addrxlat_map_set;
     addrxlat_map_search;

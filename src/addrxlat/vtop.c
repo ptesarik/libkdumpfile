@@ -148,32 +148,3 @@ pgt_huge_page(addrxlat_walk_t *state)
 	state->idx[0] |= off;
 	return addrxlat_continue;
 }
-
-DEFINE_INTERNAL(by_def)
-
-addrxlat_status
-addrxlat_by_def(addrxlat_ctx *ctx, addrxlat_addr_t *paddr,
-		const addrxlat_def_t *def)
-{
-	switch (def->method) {
-	case ADDRXLAT_NONE:
-		return set_error(ctx, addrxlat_invalid,
-				 "No translation defined");
-
-	case ADDRXLAT_LINEAR:
-		*paddr -= def->off;
-		return addrxlat_ok;
-
-	case ADDRXLAT_LINEAR_IND:
-		*paddr -= *def->poff;
-		return addrxlat_ok;
-
-	case ADDRXLAT_PGT:
-		return internal_walk(ctx, def->pgt, paddr);
-
-	default:
-		return set_error(ctx, addrxlat_invalid,
-				 "Unknown translation method: %u\n",
-				 (unsigned) def->method);
-	}
-}

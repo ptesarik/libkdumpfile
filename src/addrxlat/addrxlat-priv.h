@@ -220,9 +220,6 @@ DECLARE_INTERNAL(walk_next)
 #define internal_walk INTERNAL_ALIAS(walk)
 DECLARE_INTERNAL(walk)
 
-#define internal_by_def INTERNAL_ALIAS(by_def)
-DECLARE_INTERNAL(by_def)
-
 #define internal_map_set INTERNAL_ALIAS(map_set)
 DECLARE_INTERNAL(map_set)
 
