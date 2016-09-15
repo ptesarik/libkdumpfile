@@ -70,7 +70,7 @@ addrxlat_pgt_decref(addrxlat_pgt_t *pgt)
 	return refcnt;
 }
 
-addrxlat_method_t
+addrxlat_kind_t
 addrxlat_pgt_get_kind(const addrxlat_pgt_t *pgt)
 {
 	return pgt->kind;

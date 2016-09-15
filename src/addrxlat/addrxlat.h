@@ -209,9 +209,9 @@ const char *addrxlat_err_str(addrxlat_ctx *ctx);
 /** Address translation using page tables. */
 typedef struct _addrxlat_pgt addrxlat_pgt_t;
 
-/** Address translation method.
+/** Address translation kind.
  */
-typedef enum _addrxlat_method {
+typedef enum _addrxlat_kind {
 	/** No mapping set. */
 	ADDRXLAT_NONE,
 
@@ -220,7 +220,7 @@ typedef enum _addrxlat_method {
 
 	/** Page table walk. */
 	ADDRXLAT_PGT,
-} addrxlat_method_t;
+} addrxlat_kind_t;
 
 /** Allocate a new page table translation object.
  * @returns    New initialized object, or @c NULL on failure.
@@ -249,7 +249,7 @@ unsigned long addrxlat_pgt_decref(addrxlat_pgt_t *pgt);
  * @param pgt  Page table translation object.
  * @returns    Translation kind.
  */
-addrxlat_method_t addrxlat_pgt_get_kind(const addrxlat_pgt_t *pgt);
+addrxlat_kind_t addrxlat_pgt_get_kind(const addrxlat_pgt_t *pgt);
 
 /** Set linear offset.
  * @param pgt  Page table translation object.

@@ -110,7 +110,7 @@ struct _addrxlat_pgt {
 	addrxlat_pgt_step_fn *step;
 
 	/** Translation kind. */
-	addrxlat_method_t kind;
+	addrxlat_kind_t kind;
 
 	union {
 		struct linear_xlat linear;
