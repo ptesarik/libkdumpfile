@@ -142,6 +142,10 @@ osmap_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	};
 	addrxlat_status status;
 
+	osmap->def[ADDRXLAT_OSMAP_PGT] = internal_def_new();
+	if (!osmap->def[ADDRXLAT_OSMAP_PGT])
+		return addrxlat_nomem;
+
 	internal_def_set_form(osmap->def[ADDRXLAT_OSMAP_PGT], &x86_64_pf);
 	status = canonical_pgt_map(osmap, ctx, osdesc);
 	if (status != addrxlat_ok)

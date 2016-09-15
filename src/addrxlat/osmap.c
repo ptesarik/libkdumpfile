@@ -39,16 +39,9 @@ addrxlat_osmap_new(void)
 	addrxlat_osmap_t *ret;
 
 	ret = calloc(1, sizeof(addrxlat_osmap_t));
-	if (!ret)
-		return NULL;
-	ret->refcnt = 1;
-
-	ret->def[ADDRXLAT_OSMAP_PGT] = internal_def_new();
-	if (!ret->def[ADDRXLAT_OSMAP_PGT]) {
-		free(ret);
-		return NULL;
+	if (ret) {
+		ret->refcnt = 1;
 	}
-
 	return ret;
 }
 
