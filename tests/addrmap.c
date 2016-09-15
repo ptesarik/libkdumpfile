@@ -72,6 +72,7 @@ main(int argc, char **argv)
 	unsigned long defidx;
 	char *endp;
 	int i;
+	int ret;
 
 	map = NULL;
 	ndef = 0;
@@ -125,5 +126,22 @@ main(int argc, char **argv)
 	if (map)
 		printmap(map);
 
-	return TEST_OK;
+	addrxlat_map_clear(map);
+
+	ret = TEST_OK;
+	while (ndef-- > 0) {
+		unsigned refcnt;
+
+		if (!defs[ndef])
+			continue;
+
+		refcnt = addrxlat_def_decref(defs[ndef]);
+		if (refcnt) {
+			fprintf(stderr, "Leaked %u references to def %u\n",
+				refcnt, ndef);
+			ret = TEST_FAIL;
+		}
+	}
+
+	return ret;
 }

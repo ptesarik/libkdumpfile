@@ -45,6 +45,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 	addrxlat_addr_t rend = ADDRXLAT_ADDR_MAX;
 	size_t left = 0;
 	int delta = 3;
+	int i;
 
 	if (map)
 		for (r = map->ranges, left = map->n; left > 0; ++r, --left) {
@@ -91,6 +92,11 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 	}
 	map->n += delta;
 
+	for (i = delta; i < 0; ++i)
+		if (r[i].def)
+			internal_def_decref(r[i].def);
+	if (delta > 0 && r->def)
+		internal_def_incref(r->def);
 	memmove(r + delta, r, left * sizeof(*r));
 
 	if (rend != addr + range->endoff)
@@ -100,6 +106,8 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 		++prev;
 	}
 
+	if (prev->def)
+		internal_def_decref(prev->def);
 	internal_def_incref(range->def);
 	*prev = *range;
 	return map;
