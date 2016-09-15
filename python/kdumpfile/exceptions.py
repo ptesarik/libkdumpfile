@@ -9,6 +9,8 @@ KDUMP_DATAERR     = 4
 KDUMP_INVALID     = 5
 KDUMP_NOKEY       = 6
 KDUMP_EOF         = 7
+KDUMP_BUSY        = 8
+KDUMP_ADDRXLAT    = 9
 
 class KDumpBaseException(Exception):
     error = None
@@ -33,3 +35,9 @@ class NoKeyException(KDumpBaseException):
 
 class EOFException(KDumpBaseException):
     error = KDUMP_EOF
+
+class BusyException(KDumpBaseException):
+    error = KDUMP_BUSY
+
+class AddressTranslationException(KDumpBaseException):
+    error = KDUMP_ADDRXLAT
