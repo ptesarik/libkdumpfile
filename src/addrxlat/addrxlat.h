@@ -537,17 +537,34 @@ void addrxlat_osmap_set_map(addrxlat_osmap_t *osmap, addrxlat_map_t *map);
  */
 const addrxlat_map_t *addrxlat_osmap_get_map(const addrxlat_osmap_t *osmap);
 
-/** Explicitly set the page table translation of an OS map object.
- * @param osmap   OS map object.
- * @param pgt     Page table translation definition.
+/** OS map translation definition index.
+ *
+ * The OS map object may create a number of translation definitions
+ * for the OS map. Any of them can be obtained with
+ * @ref addrxlat_osmap_get_xlat or overridden with
+ * @ref addrxlat_osmap_set_xlat using one of these indices.
  */
-void addrxlat_osmap_set_pgt(addrxlat_osmap_t *osmap, addrxlat_def_t *pgt);
+typedef enum _addrxlat_osmap_xlat {
+	ADDRXLAT_OSMAP_PGT,	/**< Kernel-space page table. */
+
+	ADDRXLAT_OSMAP_NUM,	/**< Total number of indices. */
+} addrxlat_osmap_xlat_t;
+
+/** Explicitly set an address translation of an OS map object.
+ * @param osmap   OS map object.
+ * @param xlat    Translation definition index.
+ * @param def     Page table translation definition.
+ */
+void addrxlat_osmap_set_xlat(addrxlat_osmap_t *osmap,
+			     addrxlat_osmap_xlat_t xlat, addrxlat_def_t *def);
 
 /** Get the page table translation of an OS map object.
  * @param osmap   OS map object.
+ * @param xlat    Translation definition index.
  * @returns       Associated page table translation.
  */
-addrxlat_def_t *addrxlat_osmap_get_pgt(addrxlat_osmap_t *osmap);
+addrxlat_def_t *addrxlat_osmap_get_xlat(addrxlat_osmap_t *osmap,
+					addrxlat_osmap_xlat_t xlat);
 
 /** Type of the read callback for 32-bit integers.
  * @param data      Arbitrary user-supplied data.

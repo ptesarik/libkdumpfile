@@ -148,8 +148,8 @@ struct _addrxlat_osmap {
 	/** Translation map. */
 	addrxlat_map_t *map;
 
-	/** Default page table translation object. */
-	addrxlat_def_t *pgt;
+	/** Address translation objects. */
+	addrxlat_def_t *def[ADDRXLAT_OSMAP_NUM];
 };
 
 /* vtop */

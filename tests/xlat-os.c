@@ -276,7 +276,7 @@ os_map(void)
 		return TEST_ERR;
 	}
 
-	pgt = addrxlat_osmap_get_pgt(osmap);
+	pgt = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_PGT);
 	add_symbol(pgt, "rootpgt");
 	print_pgt(pgt);
 

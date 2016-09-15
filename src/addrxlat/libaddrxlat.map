@@ -34,8 +34,8 @@ LIBADDRXLAT_0 {
     addrxlat_osmap_init;
     addrxlat_osmap_set_map;
     addrxlat_osmap_get_map;
-    addrxlat_osmap_set_pgt;
-    addrxlat_osmap_get_pgt;
+    addrxlat_osmap_set_xlat;
+    addrxlat_osmap_get_xlat;
 
   local:
     *;

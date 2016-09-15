@@ -43,8 +43,8 @@ addrxlat_osmap_new(void)
 		return NULL;
 	ret->refcnt = 1;
 
-	ret->pgt = internal_def_new();
-	if (!ret->pgt) {
+	ret->def[ADDRXLAT_OSMAP_PGT] = internal_def_new();
+	if (!ret->def[ADDRXLAT_OSMAP_PGT]) {
 		free(ret);
 		return NULL;
 	}
@@ -72,9 +72,12 @@ addrxlat_osmap_decref(addrxlat_osmap_t *osmap)
 {
 	unsigned long refcnt = --osmap->refcnt;
 	if (!refcnt) {
+		unsigned i;
+
 		free_map(osmap->map);
-		if (osmap->pgt)
-			internal_def_decref(osmap->pgt);
+		for (i = 0; i < ADDRXLAT_OSMAP_NUM; ++i)
+			if (osmap->def[i])
+				internal_def_decref(osmap->def[i]);
 		free(osmap);
 	}
 	return refcnt;
@@ -109,19 +112,20 @@ addrxlat_osmap_get_map(const addrxlat_osmap_t *osmap)
 }
 
 void
-addrxlat_osmap_set_pgt(addrxlat_osmap_t *osmap, addrxlat_def_t *pgt)
+addrxlat_osmap_set_xlat(addrxlat_osmap_t *osmap,
+			addrxlat_osmap_xlat_t xlat, addrxlat_def_t *def)
 {
-	if (osmap->pgt)
-		internal_def_decref(osmap->pgt);
-	osmap->pgt = pgt;
-	if (osmap->pgt)
-		internal_def_incref(osmap->pgt);
+	if (osmap->def[xlat])
+		internal_def_decref(osmap->def[xlat]);
+	osmap->def[xlat] = def;
+	if (def)
+		internal_def_incref(def);
 }
 
 addrxlat_def_t *
-addrxlat_osmap_get_pgt(addrxlat_osmap_t *osmap)
+addrxlat_osmap_get_xlat(addrxlat_osmap_t *osmap, addrxlat_osmap_xlat_t xlat)
 {
-	if (osmap->pgt)
-		internal_def_incref(osmap->pgt);
-	return osmap->pgt;
+	if (osmap->def[xlat])
+		internal_def_incref(osmap->def[xlat]);
+	return osmap->def[xlat];
 }
