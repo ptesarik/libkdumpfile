@@ -32,6 +32,23 @@
 
 #include "testutil.h"
 
+static addrxlat_def_t **defs;
+static unsigned ndef;
+
+static unsigned
+get_def_idx(const addrxlat_def_t *def)
+{
+	unsigned i;
+
+	if (!def)
+		return 0;
+
+	for (i = 0; i < ndef; ++i)
+		if (defs[i] == def)
+			return i;
+	return ~0U;
+}
+
 static void
 printmap(const addrxlat_map_t *map)
 {
@@ -41,7 +58,7 @@ printmap(const addrxlat_map_t *map)
 	for (i = 0; i < map->n; ++i) {
 		printf("0x%"ADDRXLAT_PRIxADDR "-0x%"ADDRXLAT_PRIxADDR ":%u\n",
 		       addr, addr + map->ranges[i].endoff,
-		       (unsigned)(intptr_t)map->ranges[i].def);
+		       get_def_idx(map->ranges[i].def));
 		addr += map->ranges[i].endoff + 1;
 	}
 }
@@ -52,10 +69,12 @@ main(int argc, char **argv)
 	addrxlat_map_t *map;
 	addrxlat_range_t range;
 	addrxlat_addr_t addr;
+	unsigned long defidx;
 	char *endp;
 	int i;
 
 	map = NULL;
+	ndef = 0;
 	for (i = 1; i < argc; ++i) {
 		addr = strtoull(argv[i], &endp, 0);
 		if (*endp != '-') {
@@ -70,13 +89,32 @@ main(int argc, char **argv)
 		}
 		range.endoff -= addr;
 
-		range.def = (addrxlat_def_t*)(intptr_t)
-			strtoul(endp + 1, &endp, 0);
+		defidx = strtoul(endp + 1, &endp, 0);
 		if (*endp) {
 			fprintf(stderr, "Invalid range spec: %s\n", argv[i]);
 			return TEST_ERR;
 		}
+		if (defidx >= ndef) {
+			addrxlat_def_t **newdefs;
+			newdefs = realloc(defs, ((defidx + 1) *
+						 sizeof(addrxlat_def_t *)));
+			if (!newdefs) {
+				fprintf(stderr, "Cannot enlarge def array to"
+					" %lu elements\n", defidx + 1);
+				return TEST_ERR;
+			}
+			defs = newdefs;
+			while (ndef <= defidx)
+				defs[ndef++] = NULL;
+		}
+		if (!defs[defidx])
+			defs[defidx] = addrxlat_def_new();
+		if (!defs[defidx]) {
+			fprintf(stderr, "Cannot allocate def %lu\n", defidx);
+			return TEST_ERR;
+		}
 
+		range.def = defs[defidx];
 		map = addrxlat_map_set(map, addr, &range);
 		if (!map) {
 			perror("Cannot add range");
