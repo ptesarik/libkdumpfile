@@ -41,6 +41,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 {
 	addrxlat_range_t *r = NULL;
 	addrxlat_range_t *prev;
+	addrxlat_addr_t end;
 	addrxlat_addr_t raddr = 0;
 	addrxlat_addr_t rend = ADDRXLAT_ADDR_MAX;
 	size_t left = 0;
@@ -57,16 +58,17 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 
 	if (addr == raddr)
 		--delta;
+	end = addr + range->endoff;
 	rend = raddr - 1;
 	while (left > 0) {
 		--delta;
 		rend += r->endoff + 1;
-		if (rend > addr + range->endoff)
+		if (rend > end)
 			break;
 		++r;
 		--left;
 	}
-	if (rend == addr + range->endoff)
+	if (rend == end)
 		--delta;
 
 	if (delta > 0) {
@@ -99,8 +101,8 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 		internal_def_incref(r->def);
 	memmove(r + delta, r, left * sizeof(*r));
 
-	if (rend != addr + range->endoff)
-		r[delta].endoff = rend - (addr + range->endoff) - 1;
+	if (rend != end)
+		r[delta].endoff = rend - end - 1;
 	if (raddr != addr) {
 		prev->endoff = addr - raddr - 1;
 		++prev;
