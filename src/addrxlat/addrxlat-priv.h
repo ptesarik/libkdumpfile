@@ -211,6 +211,9 @@ DECLARE_INTERNAL(def_decref)
 #define internal_def_set_form INTERNAL_ALIAS(def_set_form)
 DECLARE_INTERNAL(def_set_form)
 
+#define internal_def_set_offset INTERNAL_ALIAS(def_set_offset)
+DECLARE_INTERNAL(def_set_offset)
+
 #define internal_walk_init INTERNAL_ALIAS(walk_init)
 DECLARE_INTERNAL(walk_init)
 

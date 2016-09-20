@@ -119,6 +119,8 @@ walk_init_linear(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 	return addrxlat_continue;
 }
 
+DEFINE_INTERNAL(def_set_offset)
+
 addrxlat_status
 addrxlat_def_set_offset(addrxlat_def_t *def, addrxlat_off_t off)
 {
