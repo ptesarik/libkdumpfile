@@ -489,6 +489,13 @@ typedef struct _addrxlat_osdesc {
 	const char *arch;
 } addrxlat_osdesc_t;
 
+/** Linux kernel version code.
+ * This macro can be used to convert a three-part Linux kernel version
+ * to a single number for use as @c ver in @ref addrxlat_osdesc_t.
+ */
+#define ADDRXLAT_VER_LINUX(a,b,c)	\
+	(((a) << 16) + ((b) << 8) + (c))
+
 /** Address translation map for a specific OS.
  * In addition to a @ref addrxlat_map_t, this structure also contains
  * any OS-specific data.

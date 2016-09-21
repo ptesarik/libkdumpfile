@@ -1,0 +1,10 @@
+pte_format: x86_64
+rpn_shift: 0
+bits: 12 9 9 9 9
+0-7fffffffffff: PGT @rootpgt
+800000000000-ffff7fffffffffff: NONE
+ffff800000000000-ffff87ffffffffff: PGT @rootpgt
+ffff880000000000-ffffc7ffffffffff: LINEAR @direct off=0xffff880000000000
+ffffc80000000000-ffffffff7fffffff: PGT @rootpgt
+ffffffff80000000-ffffffff827fffff: LINEAR @ktext off=0xffffffff80000000
+ffffffff82800000-ffffffffffffffff: PGT @rootpgt

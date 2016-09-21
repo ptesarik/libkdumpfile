@@ -1,0 +1,13 @@
+#! /bin/sh
+
+#
+# Check Linux 2.6.27 X86_64 translation without explicit version,
+# using page table content alone
+#
+
+arch=x86_64
+ostype=1
+osver=0
+pgt=0x1e10000
+
+. "$srcdir"/xlat-os-common
