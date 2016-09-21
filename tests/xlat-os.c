@@ -60,7 +60,7 @@ find_entry(addrxlat_addr_t addr, size_t sz)
 {
 	struct entry *ent;
 	for (ent = entry_list; ent; ent = ent->next)
-		if (ent->addr <= addr && ent->addr + ent->buflen <= addr + sz)
+		if (ent->addr <= addr && ent->addr + ent->buflen >= addr + sz)
 			return ent;
 	return NULL;
 }
