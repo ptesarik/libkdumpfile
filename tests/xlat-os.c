@@ -183,6 +183,8 @@ print_xlat(const addrxlat_def_t *def)
 
 	case ADDRXLAT_LINEAR:
 		print_ind("LINEAR", def);
+		printf(" off=0x%llx",
+		       (unsigned long long) addrxlat_def_get_offset(def));
 		break;
 
 	case ADDRXLAT_PGT:

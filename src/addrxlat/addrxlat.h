@@ -261,6 +261,12 @@ addrxlat_kind_t addrxlat_def_get_kind(const addrxlat_def_t *def);
 addrxlat_status addrxlat_def_set_offset(
 	addrxlat_def_t *def, addrxlat_off_t off);
 
+/** Get linear offset.
+ * @param def  Translation definition of the @c ADDRXLAT_LINEAR kind.
+ * @returns    Physical-to-virtual offset.
+ */
+addrxlat_off_t addrxlat_def_get_offset(const addrxlat_def_t *def);
+
 /** Set paging form description.
  * @param def  Translation definition.
  * @param pf   Paging form description.

@@ -131,6 +131,12 @@ addrxlat_def_set_offset(addrxlat_def_t *def, addrxlat_off_t off)
 	return addrxlat_ok;
 }
 
+addrxlat_off_t
+addrxlat_def_get_offset(const addrxlat_def_t *def)
+{
+	return def->linear.off;
+}
+
 /** Initialize walk state for page table walk.
  * @param walk  Page table walk state.
  * @param addr  Address to be translated.

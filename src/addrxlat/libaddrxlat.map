@@ -20,6 +20,7 @@ LIBADDRXLAT_0 {
     addrxlat_def_decref;
     addrxlat_def_get_kind;
     addrxlat_def_set_offset;
+    addrxlat_def_get_offset;
     addrxlat_def_set_form;
     addrxlat_def_get_form;
     addrxlat_def_set_root;
