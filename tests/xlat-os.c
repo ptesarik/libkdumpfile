@@ -245,7 +245,7 @@ os_map(void)
 	addrxlat_ctx *ctx;
 	addrxlat_osdesc_t desc;
 	addrxlat_osmap_t *osmap;
-	const addrxlat_def_t *pgt;
+	const addrxlat_def_t *def;
 	addrxlat_status status;
 
 	desc.type = ostype;
@@ -278,9 +278,15 @@ os_map(void)
 		return TEST_ERR;
 	}
 
-	pgt = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_PGT);
-	add_symbol(pgt, "rootpgt");
-	print_pgt(pgt);
+	def = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_PGT);
+	add_symbol(def, "rootpgt");
+	print_pgt(def);
+
+	def = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_DIRECT);
+	add_symbol(def, "direct");
+
+	def = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_KTEXT);
+	add_symbol(def, "ktext");
 
 	print_map(addrxlat_osmap_get_map(osmap));
 
