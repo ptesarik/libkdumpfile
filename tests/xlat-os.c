@@ -267,6 +267,23 @@ os_map(void)
 		return TEST_ERR;
 	}
 
+	if (rootpgt != ADDRXLAT_ADDR_MAX) {
+		addrxlat_def_t *pgt;
+		addrxlat_fulladdr_t root;
+
+		pgt = addrxlat_def_new();
+		if (!pgt) {
+			perror("Cannot allocate rootpgt");
+			addrxlat_decref(ctx);
+			return TEST_ERR;
+		}
+		root.as = ADDRXLAT_MACHPHYSADDR;
+		root.addr = rootpgt;
+		addrxlat_def_set_root(pgt, &root);
+		addrxlat_osmap_set_xlat(osmap, ADDRXLAT_OSMAP_PGT, pgt);
+		addrxlat_def_decref(pgt);
+	}
+
 	status = addrxlat_osmap_init(osmap, ctx, &desc);
 	if (status != addrxlat_ok) {
 		fprintf(stderr, "OS map failed: %s\n",
