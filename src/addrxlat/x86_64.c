@@ -254,34 +254,58 @@ linux_layout_by_ver(unsigned version_code)
 	return NULL;
 }
 
+/** Check whether a virtual address is mapped to a physical address.
+ * @param osmap  OS map object.
+ * @param ctx    Address translation context.
+ * @param addr   Address to be checked.
+ * @returns      Non-zero if the address can be translated.
+ */
+static int
+is_mapped(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	  addrxlat_addr_t addr)
+{
+	addrxlat_status status =
+		internal_walk(ctx, osmap->def[ADDRXLAT_OSMAP_PGT], &addr);
+	return status == addrxlat_ok;
+}
+
+/** Check whether an address looks like start of direct mapping.
+ * @param osmap  OS map object.
+ * @param ctx    Address translation context.
+ * @param addr   Address to be checked.
+ * @returns      Non-zero if the address maps to physical address 0.
+ */
+static int
+is_directmap(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	     addrxlat_addr_t addr)
+{
+	addrxlat_status status =
+		internal_walk(ctx, osmap->def[ADDRXLAT_OSMAP_PGT], &addr);
+	return status == addrxlat_ok && addr == 0;
+}
+
+/** Get virtual memory layout by walking page tables.
+ * @param osmap  OS map object.
+ * @param ctx    Address translation context.
+ * @returns      Memory layout, or @c NULL if undetermined.
+ */
 static const struct layout_def*
 linux_layout_by_pgt(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx)
 {
-	addrxlat_addr_t addr;
-	addrxlat_status status;
-
 	/* Only pre-2.6.11 kernels had this direct mapping */
-	addr = 0x0000010000000000;
-	status = internal_walk(ctx, osmap->def[ADDRXLAT_OSMAP_PGT], &addr);
-	if (status == addrxlat_ok && addr == 0)
+	if (is_directmap(osmap, ctx, 0x0000010000000000))
 		return linux_layout_2_6_0;
 
 	/* Only kernels between 2.6.11 and 2.6.27 had this direct mapping */
-	addr = 0xffff810000000000;
-	status = internal_walk(ctx, osmap->def[ADDRXLAT_OSMAP_PGT], &addr);
-	if (status == addrxlat_ok && addr == 0)
+	if (is_directmap(osmap, ctx, 0xffff810000000000))
 		return linux_layout_2_6_11;
 
 	/* Only 2.6.31+ kernels map VMEMMAP at this address */
-	addr = 0xffffea0000000000;
-	status = internal_walk(ctx, osmap->def[ADDRXLAT_OSMAP_PGT], &addr);
-	if (status == addrxlat_ok)
+	if (is_mapped(osmap, ctx, 0xffffea0000000000))
 		return linux_layout_2_6_31;
 
 	/* Sanity check for 2.6.27+ direct mapping */
-	addr = 0xffff880000000000;
-	status = internal_walk(ctx, osmap->def[ADDRXLAT_OSMAP_PGT], &addr);
-	if (status == addrxlat_ok && addr == 0)
+	if (is_directmap(osmap, ctx, 0xffff880000000000))
 		return linux_layout_2_6_27;
 
 	return NULL;
