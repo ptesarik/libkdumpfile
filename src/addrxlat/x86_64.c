@@ -287,15 +287,10 @@ linux_layout_by_pgt(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx)
 	return NULL;
 }
 
-/* The beginning of the kernel text virtual mapping may not be mapped
- * for various reasons. Let's use an offset of 16M to be safe.
- */
-#define LINUX_KTEXT_SKIP		(16ULL << 20)
-
 /** Set Linux kernel text mapping offset.
  * @param osmap  OS map object.
  * @param ctx    Address translation object.
- * @param vaddr  Kernel text start virtual address.
+ * @param vaddr  Any valid kernel text virtual address.
  */
 static void
 set_ktext_offset(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
@@ -304,11 +299,11 @@ set_ktext_offset(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	addrxlat_addr_t addr;
 	addrxlat_status status;
 
-	addr = vaddr + LINUX_KTEXT_SKIP;
+	addr = vaddr;
 	status = internal_walk(ctx, osmap->def[ADDRXLAT_OSMAP_PGT], &addr);
 	if (status == addrxlat_ok)
 		internal_def_set_offset(osmap->def[ADDRXLAT_OSMAP_KTEXT],
-					vaddr + LINUX_KTEXT_SKIP - addr);
+					vaddr - addr);
 }
 
 /** Fall back to page table mapping if needed.
@@ -328,6 +323,11 @@ set_pgt_fallback(addrxlat_osmap_t *osmap, addrxlat_osmap_xlat_t xlat)
 		internal_def_set_form(def, &fallback->pgt.pf);
 	}
 }
+
+/* The beginning of the kernel text virtual mapping may not be mapped
+ * for various reasons. Let's use an offset of 16M to be safe.
+ */
+#define LINUX_KTEXT_SKIP		(16ULL << 20)
 
 /** Initialize a translation map for Linux on x86_64.
  * @param osmap   OS map object.
@@ -368,7 +368,8 @@ map_linux_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 		if (layout->xlat == ADDRXLAT_OSMAP_DIRECT)
 			internal_def_set_offset(range.def, layout->first);
 		if (layout->xlat == ADDRXLAT_OSMAP_KTEXT)
-			set_ktext_offset(osmap, ctx, layout->first);
+			set_ktext_offset(osmap, ctx,
+					 layout->first + LINUX_KTEXT_SKIP);
 
 		newmap = internal_map_set(osmap->map, layout->first, &range);
 		if (!newmap)
