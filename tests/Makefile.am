@@ -160,6 +160,8 @@ test_scripts = \
 	lkcd-unordered-faroff \
 	lkcd-duplicate \
 	lkcd-duplicate-middle \
+	xlat-os-ia32-none \
+	xlat-os-ia32-pae-none \
 	xlat-os-x86_64-none \
 	xlat-linux-x86_64-old \
 	xlat-linux-x86_64-old-nover \
@@ -194,6 +196,8 @@ dist_check_DATA = \
 	elf-empty.data \
 	basic.expect \
 	partial.expect \
+	xlat-os-ia32-none.expect \
+	xlat-os-ia32-pae-none.expect \
 	xlat-os-x86_64-none.expect \
 	xlat-linux-x86_64-old.expect \
 	xlat-linux-x86_64-old-nover.data \

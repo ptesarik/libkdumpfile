@@ -28,6 +28,9 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <stdint.h>
+#include <string.h>
+
 #include "addrxlat-priv.h"
 
 #define PGD_PSE_HIGH_SHIFT	13
@@ -46,6 +49,9 @@
 
 #define _PAGE_PRESENT	(1UL << _PAGE_BIT_PRESENT)
 #define _PAGE_PSE	(1UL << _PAGE_BIT_PSE)
+
+/* Maximum virtual address (architecture limit) */
+#define VIRTADDR_MAX		UINT32_MAX
 
 /** IA32 page table step function.
  * @param state  Page table walk state.
@@ -121,4 +127,87 @@ pgt_ia32_pae(addrxlat_walk_t *state)
 		state->base.addr &= pgt->pgt_mask[0];
 
 	return addrxlat_continue;
+}
+
+/** Initialize a translation map for an Intel IA32 (non-pae) OS.
+ * @param osmap   OS map object.
+ * @param ctx     Address translation object.
+ * @param osdesc  Description of the operating system.
+ * @returns       Error status.
+ */
+static addrxlat_status
+osmap_ia32_nonpae(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+		  const addrxlat_osdesc_t *osdesc)
+{
+	static const addrxlat_paging_form_t ia32_pf = {
+		.pte_format = addrxlat_pte_ia32,
+		.levels = 3,
+		.bits = { 12, 10, 10 }
+	};
+
+	internal_def_set_form(osmap->def[ADDRXLAT_OSMAP_PGT], &ia32_pf);
+	return addrxlat_ok;
+}
+
+/** Initialize a translation map for an Intel IA32 (pae) OS.
+ * @param osmap   OS map object.
+ * @param ctx     Address translation object.
+ * @param osdesc  Description of the operating system.
+ * @returns       Error status.
+ */
+static addrxlat_status
+osmap_ia32_pae(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	       const addrxlat_osdesc_t *osdesc)
+{
+	static const addrxlat_paging_form_t ia32_pf_pae = {
+		.pte_format = addrxlat_pte_ia32_pae,
+		.levels = 4,
+		.bits = { 12, 9, 9, 2 }
+	};
+
+	internal_def_set_form(osmap->def[ADDRXLAT_OSMAP_PGT], &ia32_pf_pae);
+	return addrxlat_ok;
+}
+
+/** Initialize a translation map for an Intel IA32 OS.
+ * @param osmap   OS map object.
+ * @param ctx     Address translation object.
+ * @param osdesc  Description of the operating system.
+ * @returns       Error status.
+ */
+addrxlat_status
+osmap_ia32(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	   const addrxlat_osdesc_t *osdesc)
+{
+	addrxlat_range_t range;
+	addrxlat_map_t *newmap;
+	int pae;
+
+	if (!osdesc->archvar) {
+		return set_error(ctx, addrxlat_notimpl,
+				 "Cannot determine PAE state");
+	} else if (!strcmp(osdesc->archvar, "pae"))
+		pae = 1;
+	else if (!strcmp(osdesc->archvar, "nonpae"))
+		pae = 0;
+	else
+		return set_error(ctx, addrxlat_notimpl,
+				 "Unimplemented architecture variant");
+
+	if (!osmap->def[ADDRXLAT_OSMAP_PGT])
+		osmap->def[ADDRXLAT_OSMAP_PGT] = internal_def_new();
+	if (!osmap->def[ADDRXLAT_OSMAP_PGT])
+		return addrxlat_nomem;
+
+	range.def = osmap->def[ADDRXLAT_OSMAP_PGT];
+	range.endoff = VIRTADDR_MAX;
+	newmap = internal_map_set(osmap->map, 0, &range);
+	if (!newmap)
+		return set_error(ctx, addrxlat_nomem,
+				 "Cannot set up default mapping");
+	osmap->map = newmap;
+
+	return pae
+		? osmap_ia32_pae(osmap, ctx, osdesc)
+		: osmap_ia32_nonpae(osmap, ctx, osdesc);
 }

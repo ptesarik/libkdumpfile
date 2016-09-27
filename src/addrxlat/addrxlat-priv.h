@@ -192,6 +192,11 @@ addrxlat_walk_step_fn pgt_ppc64;
 
 /* map by OS */
 
+#define osmap_ia32 INTERNAL_NAME(osmap_ia32)
+addrxlat_status osmap_ia32(
+	addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	const addrxlat_osdesc_t *osdesc);
+
 #define osmap_x86_64 INTERNAL_NAME(osmap_x86_64)
 addrxlat_status osmap_x86_64(
 	addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,

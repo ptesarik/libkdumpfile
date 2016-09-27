@@ -84,6 +84,11 @@ addrxlat_osmap_init(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 
 	if (!strcmp(osdesc->arch, "x86_64"))
 		ret = osmap_x86_64(osmap, ctx, osdesc);
+	else if ((osdesc->arch[0] == 'i' &&
+		  (osdesc->arch[1] >= '3' && osdesc->arch[1] <= '6') &&
+		  !strcmp(osdesc->arch + 2, "86")) ||
+		 !strcmp(osdesc->arch, "ia32"))
+		ret = osmap_ia32(osmap, ctx, osdesc);
 	else
 		ret = set_error(ctx, addrxlat_notimpl,
 				"Unsupported architecture");

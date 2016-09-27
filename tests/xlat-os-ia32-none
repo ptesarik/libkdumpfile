@@ -1,0 +1,12 @@
+#! /bin/sh
+
+#
+# Check IA32 translation with no OS
+#
+
+arch=ia32
+archvar=nonpae
+ostype=0
+osver=0
+
+. "$srcdir"/xlat-os-common
