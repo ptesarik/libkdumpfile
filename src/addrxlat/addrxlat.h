@@ -496,6 +496,13 @@ typedef struct _addrxlat_osdesc {
 #define ADDRXLAT_VER_LINUX(a,b,c)	\
 	(((a) << 16) + ((b) << 8) + (c))
 
+/** Xen version code.
+ * This macro can be used to convert a Xen major/minor version pair
+ * to a single number for use as @c ver in @ref addrxlat_osdesc_t.
+ */
+#define ADDRXLAT_VER_XEN(major,minor)	\
+	(((major) << 16) | (minor))
+
 /** Address translation map for a specific OS.
  * In addition to a @ref addrxlat_map_t, this structure also contains
  * any OS-specific data.

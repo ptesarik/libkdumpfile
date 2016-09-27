@@ -160,6 +160,7 @@ test_scripts = \
 	lkcd-unordered-faroff \
 	lkcd-duplicate \
 	lkcd-duplicate-middle \
+	xlat-os-x86_64-none \
 	xlat-linux-x86_64-old \
 	xlat-linux-x86_64-old-nover \
 	xlat-linux-x86_64-2.6.11 \
@@ -169,7 +170,18 @@ test_scripts = \
 	xlat-linux-x86_64-2.6.31 \
 	xlat-linux-x86_64-2.6.31-reloc \
 	xlat-linux-x86_64-2.6.31-nover \
-	xlat-os-x86_64-none
+	xlat-xen-x86_64-old \
+	xlat-xen-x86_64-old-nover \
+	xlat-xen-x86_64-3.2 \
+	xlat-xen-x86_64-3.2-nover \
+	xlat-xen-x86_64-4.0dev-nover \
+	xlat-xen-x86_64-4.0 \
+	xlat-xen-x86_64-4.0-nover \
+	xlat-xen-x86_64-4.3 \
+	xlat-xen-x86_64-4.3-nover \
+	xlat-xen-x86_64-4.4 \
+	xlat-xen-x86_64-4.4-nover \
+	xlat-xen-x86_64-4.6-bigmem
 
 dist_check_DATA = \
 	addrmap-single-begin.expect \
@@ -195,8 +207,27 @@ dist_check_DATA = \
 	xlat-linux-x86_64-2.6.31.expect \
 	xlat-linux-x86_64-2.6.31-nover.data \
 	xlat-linux-x86_64-2.6.31-nover.expect \
-	xlat-linux-x86_64-2.6.31-reloc.data
-	xlat-linux-x86_64-2.6.31-reloc.expect
+	xlat-linux-x86_64-2.6.31-reloc.data \
+	xlat-linux-x86_64-2.6.31-reloc.expect \
+	xlat-xen-x86_64-old.expect \
+	xlat-xen-x86_64-old-nover.data \
+	xlat-xen-x86_64-old-nover.expect \
+	xlat-xen-x86_64-3.2.expect \
+	xlat-xen-x86_64-3.2-nover.data \
+	xlat-xen-x86_64-3.2-nover.expect \
+	xlat-xen-x86_64-4.0dev-nover.data \
+	xlat-xen-x86_64-4.0dev-nover.expect \
+	xlat-xen-x86_64-4.0.expect \
+	xlat-xen-x86_64-4.0-nover.data \
+	xlat-xen-x86_64-4.0-nover.expect \
+	xlat-xen-x86_64-4.3.expect \
+	xlat-xen-x86_64-4.3-nover.data \
+	xlat-xen-x86_64-4.3-nover.expect \
+	xlat-xen-x86_64-4.4.expect \
+	xlat-xen-x86_64-4.4-nover.data \
+	xlat-xen-x86_64-4.4-nover.expect \
+	xlat-xen-x86_64-4.6-bigmem.data \
+	xlat-xen-x86_64-4.6-bigmem.expect
 
 dist_check_SCRIPTS = \
 	addrmap-common \

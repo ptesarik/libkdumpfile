@@ -1,0 +1,25 @@
+# direct mapping
+@0xffc94848
+00000000ffc98027
+@0xffc98000
+00000000ffc9a027
+@0xffc9a000
+00000000ffc90063
+@0xffc90000
+0000000000000363
+# hypervisor text
+@0xffc94828
+00000000ffc97027
+@0xffc97a10
+00000000ffc95027
+@0xffc95000
+00000000ffa001e3
+# Page-frame information array (could be mistaken for direct mapping)
+@0xffc94830
+00000000ffc9d027
+@0xffc9d000
+00000000ffc9e027
+@0xffc9e000
+00000000ffc9f027
+@0xffc9f000
+00000000ff9e2363

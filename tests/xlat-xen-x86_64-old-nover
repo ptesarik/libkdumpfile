@@ -1,0 +1,13 @@
+#! /bin/sh
+
+#
+# Check Xen pre-3.2 X86_64 translation without explicit version,
+# using page table content alone
+#
+
+arch=x86_64
+ostype=2
+osver=0
+pgt=0xffc94000
+
+. "$srcdir"/xlat-os-common

@@ -413,6 +413,154 @@ map_linux_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	return addrxlat_ok;
 }
 
+/** Xen direct mapping virtual address. */
+#define XEN_DIRECTMAP	0xffff830000000000
+
+/** Xen direct mapping virtual address with Xen 4.6+ BIGMEM. */
+#define XEN_DIRECTMAP_BIGMEM	0xffff848000000000
+
+/** Xen 1TB directmap size. */
+#define XEN_DIRECTMAP_SIZE_1T	(1ULL << 40)
+
+/** Xen 3.5TB directmap size (BIGMEM). */
+#define XEN_DIRECTMAP_SIZE_3_5T	(3584ULL << 30)
+
+/** Xen 5TB directmap size. */
+#define XEN_DIRECTMAP_SIZE_5T	(5ULL << 40)
+
+/** Xen 3.2-4.0 text virtual address. */
+#define XEN_TEXT_3_2	0xffff828c80000000
+
+/** Xen text virtual address (only during 4.0 development). */
+#define XEN_TEXT_4_0dev	0xffff828880000000
+
+/** Xen 4.0-4.3 text virtual address. */
+#define XEN_TEXT_4_0	0xffff82c480000000
+
+/** Xen 4.3-4.4 text virtual address. */
+#define XEN_TEXT_4_3	0xffff82c4c0000000
+
+/** Xen 4.4+ text virtual address. */
+#define XEN_TEXT_4_4	0xffff82d080000000
+
+/** Xen text mapping size. Always 1GB. */
+#define XEN_TEXT_SIZE	(1ULL << 30)
+
+/** Check whether an address looks like Xen text mapping.
+ * @param osmap  OS map object.
+ * @param ctx    Address translation context.
+ * @param addr   Address to be checked.
+ * @returns      Non-zero if the address maps to a 2M page.
+ */
+static int
+is_xen_ktext(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	     addrxlat_addr_t addr)
+{
+	addrxlat_walk_t walk;
+	addrxlat_status status;
+	unsigned steps;
+
+	status = internal_walk_init(&walk, ctx,
+				    osmap->def[ADDRXLAT_OSMAP_PGT], addr);
+	for (steps = 0; status == addrxlat_continue; ++steps)
+		status = internal_walk_next(&walk);
+
+	return status == addrxlat_ok && steps == 4;
+}
+
+/** Initialize a translation map for Xen on x86_64.
+ * @param osmap   OS map object.
+ * @param ctx     Address translation object.
+ * @param osdesc  Description of the operating system.
+ * @returns       Error status.
+ */
+static addrxlat_status
+map_xen_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	       const addrxlat_osdesc_t *osdesc)
+{
+	addrxlat_range_t range_direct, range_ktext;
+	addrxlat_addr_t addr_direct, addr_ktext;
+	addrxlat_map_t *newmap;
+
+	if (!osmap->def[ADDRXLAT_OSMAP_DIRECT])
+		osmap->def[ADDRXLAT_OSMAP_DIRECT] = internal_def_new();
+	if (!osmap->def[ADDRXLAT_OSMAP_DIRECT])
+		return addrxlat_nomem;
+
+	range_direct.def = osmap->def[ADDRXLAT_OSMAP_DIRECT];
+	range_direct.endoff = XEN_DIRECTMAP_SIZE_5T - 1;
+
+	if (!osmap->def[ADDRXLAT_OSMAP_KTEXT])
+		osmap->def[ADDRXLAT_OSMAP_KTEXT] = internal_def_new();
+	if (!osmap->def[ADDRXLAT_OSMAP_KTEXT])
+		return addrxlat_nomem;
+
+	range_ktext.def = osmap->def[ADDRXLAT_OSMAP_KTEXT];
+	range_ktext.endoff = XEN_TEXT_SIZE - 1;
+
+	addr_direct = XEN_DIRECTMAP;
+	if (is_directmap(osmap, ctx, XEN_DIRECTMAP)) {
+		if (is_xen_ktext(osmap, ctx, XEN_TEXT_4_4))
+			addr_ktext = XEN_TEXT_4_4;
+		else if (is_xen_ktext(osmap, ctx, XEN_TEXT_4_3))
+			addr_ktext = XEN_TEXT_4_3;
+		else if (is_xen_ktext(osmap, ctx, XEN_TEXT_4_0))
+			addr_ktext = XEN_TEXT_4_0;
+		else if (is_xen_ktext(osmap, ctx, XEN_TEXT_3_2)) {
+			range_direct.endoff = XEN_DIRECTMAP_SIZE_1T - 1;
+			addr_ktext = XEN_TEXT_3_2;
+		} else if (is_xen_ktext(osmap, ctx, XEN_TEXT_4_0dev))
+			addr_ktext = XEN_TEXT_4_0dev;
+		else {
+			range_direct.endoff = XEN_DIRECTMAP_SIZE_1T - 1;
+			addr_ktext = 0;
+		}
+	} else if (is_directmap(osmap, ctx, XEN_DIRECTMAP_BIGMEM)) {
+		addr_direct = XEN_DIRECTMAP_BIGMEM;
+		range_direct.endoff = XEN_DIRECTMAP_SIZE_3_5T - 1;
+		addr_ktext = XEN_TEXT_4_4;
+	} else if (osdesc->ver >= ADDRXLAT_VER_XEN(4, 0)) {
+		/* !BIGMEM is assumed for Xen 4.6+. Can we do better? */
+
+		if (osdesc->ver >= ADDRXLAT_VER_XEN(4, 4))
+			addr_ktext = XEN_TEXT_4_4;
+		else if (osdesc->ver >= ADDRXLAT_VER_XEN(4, 3))
+			addr_ktext = XEN_TEXT_4_3;
+		else
+			addr_ktext = XEN_TEXT_4_0;
+	} else if (osdesc->ver) {
+		range_direct.endoff = XEN_DIRECTMAP_SIZE_1T - 1;
+
+		if (osdesc->ver >= ADDRXLAT_VER_XEN(3, 2))
+			addr_ktext = XEN_TEXT_3_2;
+		else
+			/* Prior to Xen 3.2, text was in direct mapping. */
+			addr_ktext = 0;
+	} else
+		return addrxlat_ok;
+
+	internal_def_set_offset(range_direct.def, addr_direct);
+	newmap = internal_map_set(osmap->map, addr_direct, &range_direct);
+	if (!newmap)
+		return set_error(ctx, addrxlat_nomem,
+				 "Cannot set up Xen direct mapping");
+	osmap->map = newmap;
+
+	if (addr_ktext) {
+		set_ktext_offset(osmap, ctx, addr_ktext);
+		newmap = internal_map_set(osmap->map, addr_ktext, &range_ktext);
+		if (!newmap)
+			return set_error(ctx, addrxlat_nomem,
+					 "Cannot set up Xen text mapping");
+		osmap->map = newmap;
+	}
+
+	set_pgt_fallback(osmap, ADDRXLAT_OSMAP_DIRECT);
+	set_pgt_fallback(osmap, ADDRXLAT_OSMAP_KTEXT);
+
+	return addrxlat_ok;
+}
+
 /** Initialize a translation map for an x86_64 OS.
  * @param osmap   OS map object.
  * @param ctx     Address translation object.
@@ -443,6 +591,9 @@ osmap_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	switch (osdesc->type) {
 	case addrxlat_os_linux:
 		return map_linux_x86_64(osmap, ctx, osdesc);
+
+	case addrxlat_os_xen:
+		return map_xen_x86_64(osmap, ctx, osdesc);
 
 	default:
 		return addrxlat_ok;

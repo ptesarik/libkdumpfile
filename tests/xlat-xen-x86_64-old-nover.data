@@ -1,0 +1,9 @@
+# direct mapping (includes hypervisor text)
+@0xffc94830
+00000000ffc98027
+@0xffc98000
+00000000ffc9a027
+@0xffc9a000
+00000000ffc90063
+@0xffc90000
+0000000000000363
