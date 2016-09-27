@@ -487,6 +487,9 @@ typedef struct _addrxlat_osdesc {
 
 	/** Architecture name. */
 	const char *arch;
+
+	/** Architecture variant (e.g. PAE vs. non-PAE). */
+	const char *archvar;
 } addrxlat_osdesc_t;
 
 /** Linux kernel version code.

@@ -578,6 +578,10 @@ osmap_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	};
 	addrxlat_status status;
 
+	if (osdesc->archvar)
+		return set_error(ctx, addrxlat_notimpl,
+				 "Unimplemented architecture variant");
+
 	if (!osmap->def[ADDRXLAT_OSMAP_PGT])
 		osmap->def[ADDRXLAT_OSMAP_PGT] = internal_def_new();
 	if (!osmap->def[ADDRXLAT_OSMAP_PGT])
