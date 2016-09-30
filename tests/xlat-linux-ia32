@@ -1,0 +1,12 @@
+#! /bin/sh
+
+#
+# Check Linux IA32 translation
+#
+
+arch=ia32
+ostype=1
+osver=0
+pgt=0x911000
+
+. "$srcdir"/xlat-os-common

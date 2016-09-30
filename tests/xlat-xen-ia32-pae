@@ -1,0 +1,12 @@
+#! /bin/sh
+
+#
+# Check Xen IA32 PAE translation
+#
+
+arch=ia32
+ostype=2
+osver=0
+pgt=0x100120
+
+. "$srcdir"/xlat-os-common

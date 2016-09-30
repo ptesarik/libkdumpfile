@@ -129,6 +129,55 @@ pgt_ia32_pae(addrxlat_walk_t *state)
 	return addrxlat_continue;
 }
 
+/** Starting virtual address of Linux direct mapping */
+#define LINUX_DIRECTMAP	0xc0000000
+
+/** Starting virtual address of Xen direct mapping */
+#define XEN_DIRECTMAP	0xff000000
+
+static const addrxlat_paging_form_t ia32_pf = {
+	.pte_format = addrxlat_pte_ia32,
+	.levels = 3,
+	.bits = { 12, 10, 10 }
+};
+
+static const addrxlat_paging_form_t ia32_pf_pae = {
+	.pte_format = addrxlat_pte_ia32_pae,
+	.levels = 4,
+	.bits = { 12, 9, 9, 2 }
+};
+
+/** Check whether a page table hierarchy looks like PAE.
+ * @param ctx     Translation context
+ * @param root    Root page table address
+ * @param direct  Starting virtual address of direct mapping
+ * @returns       Non-zero if PAE, zero if non-PAE, negative on error.
+ */
+static int
+is_pae(addrxlat_ctx *ctx, const addrxlat_fulladdr_t *root,
+       addrxlat_addr_t direct)
+{
+	addrxlat_def_t def;
+	addrxlat_addr_t addr;
+	addrxlat_status status;
+
+	def.pgt.root = *root;
+
+	internal_def_set_form(&def, &ia32_pf_pae);
+	addr = direct;
+	status = addrxlat_walk(ctx, &def, &addr);
+	if (status == addrxlat_ok && addr == 0)
+		return 1;
+
+	internal_def_set_form(&def, &ia32_pf);
+	addr = direct;
+	status = addrxlat_walk(ctx, &def, &addr);
+	if (status == addrxlat_ok && addr == 0)
+		return 0;
+
+	return -1;
+}
+
 /** Initialize a translation map for an Intel IA32 (non-pae) OS.
  * @param osmap   OS map object.
  * @param ctx     Address translation object.
@@ -139,12 +188,6 @@ static addrxlat_status
 osmap_ia32_nonpae(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 		  const addrxlat_osdesc_t *osdesc)
 {
-	static const addrxlat_paging_form_t ia32_pf = {
-		.pte_format = addrxlat_pte_ia32,
-		.levels = 3,
-		.bits = { 12, 10, 10 }
-	};
-
 	internal_def_set_form(osmap->def[ADDRXLAT_OSMAP_PGT], &ia32_pf);
 	return addrxlat_ok;
 }
@@ -159,12 +202,6 @@ static addrxlat_status
 osmap_ia32_pae(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	       const addrxlat_osdesc_t *osdesc)
 {
-	static const addrxlat_paging_form_t ia32_pf_pae = {
-		.pte_format = addrxlat_pte_ia32_pae,
-		.levels = 4,
-		.bits = { 12, 9, 9, 2 }
-	};
-
 	internal_def_set_form(osmap->def[ADDRXLAT_OSMAP_PGT], &ia32_pf_pae);
 	return addrxlat_ok;
 }
@@ -184,8 +221,22 @@ osmap_ia32(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	int pae;
 
 	if (!osdesc->archvar) {
-		return set_error(ctx, addrxlat_notimpl,
-				 "Cannot determine PAE state");
+		addrxlat_def_t *pgtdef = osmap->def[ADDRXLAT_OSMAP_PGT];
+
+		if (!pgtdef)
+			pae = -1;
+		else if (osdesc->type == addrxlat_os_linux)
+			pae = is_pae(ctx, &pgtdef->pgt.root,
+				     LINUX_DIRECTMAP);
+		else if (osdesc->type == addrxlat_os_xen)
+			pae = is_pae(ctx, &pgtdef->pgt.root,
+				     XEN_DIRECTMAP);
+		else
+			pae = -1;
+
+		if (pae < 0)
+			return set_error(ctx, addrxlat_notimpl,
+					 "Cannot determine PAE state");
 	} else if (!strcmp(osdesc->archvar, "pae"))
 		pae = 1;
 	else if (!strcmp(osdesc->archvar, "nonpae"))
