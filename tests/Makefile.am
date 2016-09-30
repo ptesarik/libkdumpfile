@@ -249,6 +249,7 @@ dist_check_SCRIPTS = \
 	addrmap-common \
 	addrxlat-common \
 	addrxlat-invalid \
+	diskdump-basic \
 	diskdump-empty \
 	elf-empty \
 	lkcd-empty \
