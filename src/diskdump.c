@@ -149,9 +149,21 @@ struct page_desc {
 	uint64_t	page_flags;	/**< Page flags. */
 };
 
+/** PFN region mapping. */
+struct pfn_rgn {
+	kdump_pfn_t pfn;	/**< Starting PFN. */
+	kdump_pfn_t cnt;	/**< Number of pages in this region. */
+	off_t pos;		/**< File position of the first descriptor. */
+};
+
+/** Region mapping allocation increment.
+ * For optimal performance, this should be a power of two.
+ */
+#define RGN_ALLOC_INC	1024
+
 struct disk_dump_priv {
-	unsigned char *bitmap;	/* for compressed dumps */
-	off_t descoff;		/* position of page descriptor table */
+	struct pfn_rgn *pfn_rgn; /**< PFN region map. */
+	size_t pfn_rgn_num;	 /**< Number of elements in the map. */
 
 	/** Overridden methods for arch.page_size attribute. */
 	struct attr_override page_size_override;
@@ -178,24 +190,42 @@ struct setup_data {
 
 static void diskdump_cleanup(struct kdump_shared *shared);
 
-static inline int
-page_is_dumpable(kdump_ctx *ctx, unsigned int nr)
+static kdump_status
+add_pfn_rgn(kdump_ctx *ctx, const struct pfn_rgn *rgn)
 {
 	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
-	return ddp->bitmap[nr>>3] & (1 << (nr & 7));
+
+	if (ddp->pfn_rgn_num % RGN_ALLOC_INC == 0) {
+		size_t num = ddp->pfn_rgn_num + RGN_ALLOC_INC;
+		struct pfn_rgn *rgn =
+			realloc(ddp->pfn_rgn, num * sizeof(struct pfn_rgn));
+		if (!rgn)
+			return set_error(ctx, kdump_syserr,
+					 "Cannot allocate space for"
+					 " %zu PFN region mappings", num);
+		ddp->pfn_rgn = rgn;
+	}
+
+	ddp->pfn_rgn[ddp->pfn_rgn_num++] = *rgn;
+	return kdump_ok;
 }
 
 static off_t
 pfn_to_pdpos(struct disk_dump_priv *ddp, unsigned long pfn)
 {
-	unsigned i, n;
-
-	n = 0;
-	for (i = 0; i < pfn >> 3; ++i)
-		n += bitcount(ddp->bitmap[i]);
-	n += bitcount(ddp->bitmap[i] & (((1 << (pfn & 0x7)) - 1)));
-
-	return ddp->descoff + n * sizeof(struct page_desc);
+	size_t left = 0, right = ddp->pfn_rgn_num;
+	while (left != right) {
+		size_t mid = (left + right) / 2;
+		const struct pfn_rgn *rgn = ddp->pfn_rgn + mid;
+		if (pfn < rgn->pfn)
+			right = mid;
+		else if (pfn >= rgn->pfn + rgn->cnt)
+			left = mid + 1;
+		else
+			return rgn->pos +
+				(pfn - rgn->pfn) * sizeof(struct page_desc);
+	}
+	return (off_t)-1;
 }
 
 static kdump_status
@@ -208,12 +238,12 @@ diskdump_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 	ssize_t rd;
 	kdump_status ret;
 
-	if (!page_is_dumpable(ctx, pfn)) {
+	pd_pos = pfn_to_pdpos(ddp, pfn);
+	if (pd_pos == (off_t)-1) {
 		memset(ce->data, 0, get_page_size(ctx));
 		return kdump_ok;
 	}
 
-	pd_pos = pfn_to_pdpos(ddp, pfn);
 	rd = pread(get_file_fd(ctx), &pd, sizeof pd, pd_pos);
 	if (rd != sizeof pd)
 		return set_error(ctx, read_error(rd),
@@ -400,17 +430,67 @@ read_notes(kdump_ctx *ctx, off_t off, size_t size)
 	return ret;
 }
 
+static kdump_pfn_t
+skip_clear(unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
+{
+	unsigned char *bp = bitmap + (pfn >> 3);
+	int lead;
+
+	if (bp >= bitmap + size)
+		return pfn;
+
+	lead = ffs(*bp >> (pfn & 7));
+	if (lead)
+		return pfn + lead - 1;
+
+	pfn = (pfn | 7) + 1;
+	++bp;
+	while (bp < bitmap + size && *bp == 0x00)
+		pfn += 8, ++bp;
+	if (bp < bitmap + size)
+		pfn += ffs(*bp) - 1;
+
+	return pfn;
+}
+
+static kdump_pfn_t
+skip_set(unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
+{
+	unsigned char *bp = bitmap + (pfn >> 3);
+	int lead;
+
+	if (bp >= bitmap + size)
+		return pfn;
+
+	lead = ffs(~(*bp >> (pfn & 7)));
+	if (lead)
+		return pfn + lead - 1;
+
+	pfn = (pfn | 7) + 1;
+	++bp;
+	while (bp < bitmap + size && *bp == 0xff)
+		pfn += 8, ++bp;
+	if (bp < bitmap + size)
+		pfn += ffs(~(*bp)) - 1;
+
+	return pfn;
+}
+
 static kdump_status
 read_bitmap(kdump_ctx *ctx, int32_t sub_hdr_size,
 	    int32_t bitmap_blocks)
 {
-	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	off_t off = (1 + sub_hdr_size) * get_page_size(ctx);
+	off_t descoff;
+	unsigned char *bitmap;
 	size_t bitmapsize;
 	kdump_pfn_t max_bitmap_pfn;
+	kdump_pfn_t pfn;
+	struct pfn_rgn rgn;
 	ssize_t rd;
+	kdump_status ret;
 
-	ddp->descoff = off + bitmap_blocks * get_page_size(ctx);
+	descoff = off + bitmap_blocks * get_page_size(ctx);
 
 	bitmapsize = bitmap_blocks * get_page_size(ctx);
 	max_bitmap_pfn = (kdump_pfn_t)bitmapsize * 8;
@@ -425,17 +505,37 @@ read_bitmap(kdump_ctx *ctx, int32_t sub_hdr_size,
 	if (get_max_pfn(ctx) > max_bitmap_pfn)
 		set_max_pfn(ctx, max_bitmap_pfn);
 
-	if (! (ddp->bitmap = ctx_malloc(bitmapsize, ctx, "page bitmap")) )
+	if (! (bitmap = ctx_malloc(bitmapsize, ctx, "page bitmap")) )
 		return kdump_syserr;
 
-	rd = pread(get_file_fd(ctx), ddp->bitmap, bitmapsize, off);
-	if (rd != bitmapsize)
-		return set_error(ctx, read_error(rd),
+	rd = pread(get_file_fd(ctx), bitmap, bitmapsize, off);
+	if (rd != bitmapsize) {
+		ret = set_error(ctx, read_error(rd),
 				 "Cannot read %zu bytes of page bitmap"
 				 " at %llu",
 				 bitmapsize, (unsigned long long) off);
+		goto out_free;
+	}
 
-	return kdump_ok;
+	rgn.pos = descoff;
+	pfn = 0;
+	while (pfn < max_bitmap_pfn) {
+		rgn.pfn = skip_clear(bitmap, bitmapsize, pfn);
+		pfn = skip_set(bitmap, bitmapsize, rgn.pfn);
+		rgn.cnt = pfn - rgn.pfn;
+		if (rgn.cnt) {
+			ret = add_pfn_rgn(ctx, &rgn);
+			if (ret != kdump_ok)
+				goto out_free;
+			rgn.pos += rgn.cnt * sizeof(struct page_desc);
+		}
+	}
+
+	ret = kdump_ok;
+
+ out_free:
+	free(bitmap);
+	return ret;
 }
 
 static kdump_status
@@ -714,8 +814,8 @@ diskdump_cleanup(struct kdump_shared *shared)
 	if (ddp) {
 		attr_remove_override(sgattr(shared, GKI_page_size),
 				     &ddp->page_size_override);
-		if (ddp->bitmap)
-			free(ddp->bitmap);
+		if (ddp->pfn_rgn)
+			free(ddp->pfn_rgn);
 		if (ddp->cbuf_slot >= 0)
 			per_ctx_free(shared, ddp->cbuf_slot);
 		free(ddp);
