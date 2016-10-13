@@ -16,6 +16,7 @@ vmci-cleanup
 vmci-lines-post
 vmci-post
 vtop
+xlatmap
 xlat-os
 
 # Test results

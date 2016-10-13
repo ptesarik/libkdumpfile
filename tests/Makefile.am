@@ -74,6 +74,7 @@ vmci_cleanup_LDADD = $(top_builddir)/src/libkdumpfile.la
 vmci_lines_post_LDADD = $(top_builddir)/src/libkdumpfile.la
 vmci_post_LDADD = $(top_builddir)/src/libkdumpfile.la
 vtop_LDADD = $(top_builddir)/src/libkdumpfile.la
+xlatmap_LDADD = $(top_builddir)/src/libkdumpfile.la -ldl
 
 xlat_os_SOURCES = xlat-os.c
 xlat_os_LDADD = \
@@ -98,6 +99,7 @@ check_PROGRAMS = \
 	vmci-lines-post \
 	vmci-post \
 	vtop \
+	xlatmap \
 	xlat-os
 
 test_scripts = \
@@ -160,6 +162,7 @@ test_scripts = \
 	lkcd-unordered-faroff \
 	lkcd-duplicate \
 	lkcd-duplicate-middle \
+	xlatmap-check \
 	xlat-os-ia32-none \
 	xlat-os-ia32-pae-none \
 	xlat-os-x86_64-none \
@@ -200,6 +203,7 @@ dist_check_DATA = \
 	elf-empty.data \
 	basic.expect \
 	partial.expect \
+	xlatmap.expect \
 	xlat-os-ia32-none.expect \
 	xlat-os-ia32-pae-none.expect \
 	xlat-os-x86_64-none.expect \

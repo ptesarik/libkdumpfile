@@ -1,0 +1,85 @@
+empty -> single region:
+0-ffffffffffffffff: #0
+
+replace single region:
+0-ffffffffffffffff: #1
+
+empty -> begin:
+0-ffff: #0
+10000-ffffffffffffffff: NULL
+
+empty -> end:
+0-fffffffffffeffff: NULL
+ffffffffffff0000-ffffffffffffffff: #0
+
+empty -> middle:
+0-ffff: NULL
+10000-1ffff: #0
+20000-ffffffffffffffff: NULL
+
+split begin:
+0-ffff: #0
+10000-ffffffffffffffff: #1
+
+split end:
+0-ffff: #0
+10000-fffffffffffeffff: #1
+ffffffffffff0000-ffffffffffffffff: #2
+
+split middle:
+0-ffff: #0
+10000-1ffff: #1
+20000-ffffffffffffffff: #0
+
+replace middle:
+0-ffff: #0
+10000-1ffff: #2
+20000-ffffffffffffffff: #0
+
+merge down:
+0-1ffff: #2
+20000-ffffffffffffffff: #0
+
+merge up:
+0-2ffff: #2
+30000-ffffffffffffffff: #0
+
+merge both:
+0-ffffffffffffffff: #0
+
+merge overlap down:
+0-bfff: #0
+c000-1ffff: #1
+20000-ffffffffffffffff: #0
+
+merge overlap up:
+0-bfff: #0
+c000-23fff: #1
+24000-ffffffffffffffff: #0
+
+merge inner:
+0-bfff: #0
+c000-23fff: #1
+24000-ffffffffffffffff: #0
+
+overlap down:
+0-7fff: #0
+8000-17fff: #2
+18000-1ffff: #1
+20000-ffffffffffffffff: #0
+
+overlap up:
+0-ffff: #0
+10000-17fff: #1
+18000-27fff: #2
+28000-ffffffffffffffff: #0
+
+overlap both:
+0-7fff: #0
+8000-27fff: #2
+28000-ffffffffffffffff: #0
+
+overlap multiple:
+0-7fff: #0
+8000-37fff: #3
+38000-ffffffffffffffff: #0
