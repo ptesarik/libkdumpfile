@@ -525,28 +525,28 @@ layout_by_pgt(kdump_ctx *ctx)
 	ret = vtop_pgt(ctx, 0x0000010000000000, &paddr);
 	if (ret == kdump_ok && paddr == 0)
 		return layout_by_version(KERNEL_VERSION(2, 6, 0));
-	if (ret != kdump_nodata)
+	if (ret != kdump_addrxlat)
 		return NULL;
 
 	/* Only kernels between 2.6.11 and 2.6.27 had this direct mapping */
 	ret = vtop_pgt(ctx, 0xffff810000000000, &paddr);
 	if (ret == kdump_ok && paddr == 0)
 		return layout_by_version(KERNEL_VERSION(2, 6, 11));
-	if (ret != kdump_nodata)
+	if (ret != kdump_addrxlat)
 		return NULL;
 
 	/* Only 2.6.31+ kernels map VMEMMAP at this address */
 	ret = vtop_pgt(ctx, 0xffffea0000000000, &paddr);
 	if (ret == kdump_ok)
 		return layout_by_version(KERNEL_VERSION(2, 6, 31));
-	if (ret != kdump_nodata)
+	if (ret != kdump_addrxlat)
 		return NULL;
 
 	/* Sanity check for 2.6.27+ direct mapping */
 	ret = vtop_pgt(ctx, 0xffff880000000000, &paddr);
 	if (ret == kdump_ok && paddr == 0)
 		return layout_by_version(KERNEL_VERSION(2, 6, 27));
-	if (ret != kdump_nodata)
+	if (ret != kdump_addrxlat)
 		return NULL;
 
 	return NULL;
