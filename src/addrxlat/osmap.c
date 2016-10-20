@@ -89,6 +89,8 @@ addrxlat_osmap_init(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 		  !strcmp(osdesc->arch + 2, "86")) ||
 		 !strcmp(osdesc->arch, "ia32"))
 		ret = osmap_ia32(osmap, ctx, osdesc);
+	else if (!strcmp(osdesc->arch, "s390x"))
+		ret = osmap_s390x(osmap, ctx, osdesc);
 	else
 		ret = set_error(ctx, addrxlat_notimpl,
 				"Unsupported architecture");

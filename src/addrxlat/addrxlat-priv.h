@@ -190,10 +190,18 @@ addrxlat_walk_init_fn walk_init_ppc64;
 #define pgt_ppc64 INTERNAL_NAME(pgt_ppc64)
 addrxlat_walk_step_fn pgt_ppc64;
 
+#define paging_max_index INTERNAL_NAME(paging_max_index)
+addrxlat_addr_t paging_max_index(const addrxlat_paging_form_t *pf);
+
 /* map by OS */
 
 #define osmap_ia32 INTERNAL_NAME(osmap_ia32)
 addrxlat_status osmap_ia32(
+	addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	const addrxlat_osdesc_t *osdesc);
+
+#define osmap_s390x INTERNAL_NAME(osmap_s390x)
+addrxlat_status osmap_s390x(
 	addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	const addrxlat_osdesc_t *osdesc);
 

@@ -291,3 +291,22 @@ addrxlat_def_get_root(const addrxlat_def_t *def)
 {
 	return &def->pgt.root;
 }
+
+/* Calculate the maximum index into the page table hierarchy.
+ * @param pf  Paging form.
+ * @returns   Maximum mapped index.
+ *
+ * The maximum offset may not be the same as the maximum address that
+ * can be translated (e.g. x86_64 sign-extends the highest bit).
+ */
+addrxlat_addr_t
+paging_max_index(const addrxlat_paging_form_t *pf)
+{
+	unsigned short i;
+	unsigned bits = 0;
+	for (i = 0; i < pf->levels; ++i)
+		bits += pf->bits[i];
+	return (bits < 8 * sizeof(addrxlat_addr_t)
+		? (((addrxlat_addr_t)1 << bits) - 1)
+		: ADDRXLAT_ADDR_MAX);
+}

@@ -43,6 +43,9 @@
 /* Page-Table Origin has 2K granularity in hardware */
 #define PTO_MASK	(~(((uint64_t)1 << 11) - 1))
 
+/* Maximum pointers in the root page table */
+#define ROOT_PGT_LEN	2048
+
 /** IBM z/Architecture page table step function.
  * @param state  Page table walk state.
  * @returns      Error status.
@@ -105,4 +108,81 @@ pgt_s390x(addrxlat_walk_t *state)
 
 	state->base.addr &= (state->level == 2 ? PTO_MASK : pgt->pgt_mask[0]);
 	return addrxlat_continue;
+}
+
+/* Try to guess the page table type from its content.
+ * @param osmap  OS map object.
+ * @param ctx    Address translation object.
+ * @returns      Error status.
+ */
+static addrxlat_status
+determine_pgttype(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx)
+{
+	addrxlat_def_t *pgtdef;
+	addrxlat_fulladdr_t ptr;
+	uint64_t entry;
+	unsigned i;
+	addrxlat_status status;
+
+	pgtdef = osmap->def[ADDRXLAT_OSMAP_PGT];
+	ptr = pgtdef->pgt.root;
+	for (i = 0; i < ROOT_PGT_LEN; ++i) {
+		status = ctx->cb_read64(ctx->priv, &ptr, &entry);
+		if (status != addrxlat_ok)
+			return set_error(ctx, status,
+					 "Page table at 0x%"ADDRXLAT_PRIxADDR,
+					 ptr.addr);
+		if (!PTE_I(entry)) {
+			addrxlat_paging_form_t pf = {
+				.pte_format = addrxlat_pte_s390x,
+				.bits = { 12, 8, 11, 11, 11, 11 }
+			};
+
+			pf.levels = PTE_TT(entry) + 3;
+			return internal_def_set_form(pgtdef, &pf);
+		}
+		ptr.addr += sizeof(uint64_t);
+	}
+
+	return set_error(ctx, addrxlat_notpresent,
+			 "Empty top-level page table");
+}
+
+
+/** Initialize a translation map for a s390x OS.
+ * @param osmap   OS map object.
+ * @param ctx     Address translation object.
+ * @param osdesc  Description of the operating system.
+ * @returns       Error status.
+ */
+addrxlat_status
+osmap_s390x(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	    const addrxlat_osdesc_t *osdesc)
+{
+	addrxlat_map_t *newmap;
+	addrxlat_range_t range;
+	addrxlat_status status;
+
+	if (osdesc->archvar)
+		return set_error(ctx, addrxlat_notimpl,
+				 "Unimplemented architecture variant");
+
+	if (!osmap->def[ADDRXLAT_OSMAP_PGT])
+		osmap->def[ADDRXLAT_OSMAP_PGT] = internal_def_new();
+	if (!osmap->def[ADDRXLAT_OSMAP_PGT])
+		return addrxlat_nomem;
+
+	status = determine_pgttype(osmap, ctx);
+	if (status != addrxlat_ok)
+		return status;
+
+	range.def = osmap->def[ADDRXLAT_OSMAP_PGT];
+	range.endoff = paging_max_index(&range.def->pgt.pf);
+	newmap = internal_map_set(osmap->map, 0, &range);
+	if (!newmap)
+		return set_error(ctx, addrxlat_nomem,
+				 "Cannot set up default mapping");
+	osmap->map = newmap;
+
+	return addrxlat_ok;
 }

@@ -165,6 +165,10 @@ test_scripts = \
 	xlatmap-check \
 	xlat-os-ia32-none \
 	xlat-os-ia32-pae-none \
+	xlat-os-s390x-2l \
+	xlat-os-s390x-3l \
+	xlat-os-s390x-4l \
+	xlat-os-s390x-5l \
 	xlat-os-x86_64-none \
 	xlat-linux-ia32 \
 	xlat-linux-ia32-pae \
@@ -206,6 +210,14 @@ dist_check_DATA = \
 	xlatmap.expect \
 	xlat-os-ia32-none.expect \
 	xlat-os-ia32-pae-none.expect \
+	xlat-os-s390x-2l.data \
+	xlat-os-s390x-2l.expect \
+	xlat-os-s390x-3l.data \
+	xlat-os-s390x-3l.expect \
+	xlat-os-s390x-4l.data \
+	xlat-os-s390x-4l.expect \
+	xlat-os-s390x-5l.data \
+	xlat-os-s390x-5l.expect \
 	xlat-os-x86_64-none.expect \
 	xlat-linux-ia32.data \
 	xlat-linux-ia32.expect \
