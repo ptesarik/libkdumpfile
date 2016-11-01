@@ -1,5 +1,4 @@
 pte_format: x86_64
-rpn_shift: 0
 bits: 12 9 9 9 9
 0-7fffffffffff: PGT @rootpgt
 800000000000-ffff7fffffffffff: NONE

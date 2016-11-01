@@ -1,5 +1,4 @@
 pte_format: x86_64
-rpn_shift: 0
 bits: 12 9 9 9 9
 0-ffffffffff: PGT @rootpgt
 10000000000-1ffffffffff: LINEAR @direct off=0x10000000000

@@ -196,8 +196,7 @@ ppc64_vtop_init(kdump_ctx *ctx)
 }
 
 static const addrxlat_paging_form_t ppc64_pf_64k = {
-	.pte_format = addrxlat_pte_ppc64_linux,
-	.rpn_shift = 30,
+	.pte_format = addrxlat_pte_ppc64_linux_rpn30,
 	.levels = 4,
 	.bits = { 16, 12, 12, 4 }
 };

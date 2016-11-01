@@ -205,7 +205,7 @@ print_pgt(const addrxlat_def_t *pgt)
 		[addrxlat_pte_ia32_pae] = "ia32_pae",
 		[addrxlat_pte_x86_64] = "x86_64",
 		[addrxlat_pte_s390x] = "s390x",
-		[addrxlat_pte_ppc64_linux] = "ppc64_linux",
+		[addrxlat_pte_ppc64_linux_rpn30] = "ppc64_linux_rpn30",
 	};
 
 	const addrxlat_paging_form_t *pf = addrxlat_def_get_form(pgt);
@@ -217,7 +217,6 @@ print_pgt(const addrxlat_def_t *pgt)
 		printf("%s\n", pte_formats[pf->pte_format]);
 	else
 		printf("%u\n", pf->pte_format);
-	printf("rpn_shift: %u\n", pf->rpn_shift);
 	printf("bits:");
 	for (i = 0; i < pf->levels; ++i)
 		printf(" %u", pf->bits[i]);

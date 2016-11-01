@@ -146,8 +146,8 @@ set_paging_form(const char *spec)
 		paging_form.pte_format = addrxlat_pte_x86_64;
 	else if (!strncasecmp(spec, "s390x:", endp - spec + 1))
 		paging_form.pte_format = addrxlat_pte_s390x;
-	else if (!strncasecmp(spec, "ppc64_linux:", endp - spec + 1))
-		paging_form.pte_format = addrxlat_pte_ppc64_linux;
+	else if (!strncasecmp(spec, "ppc64_linux_rpn30:", endp - spec + 1))
+		paging_form.pte_format = addrxlat_pte_ppc64_linux_rpn30;
 	else {
 		fprintf(stderr, "Unknown PTE format: %s\n", spec);
 		return TEST_ERR;
@@ -161,9 +161,6 @@ set_paging_form(const char *spec)
 		paging_form.bits[paging_form.levels++] =
 			strtoul(endp + 1, &endp, 0);
 	} while (*endp == ',');
-
-	if (*endp == ':')
-		paging_form.rpn_shift = strtoul(endp + 1, &endp, 0);
 
 	if (*endp) {
 		fprintf(stderr, "Invalid paging form: %s\n", spec);

@@ -153,30 +153,32 @@ is_hugepte_linux(addrxlat_pte_t pte)
 }
 
 /** Update page table walk state for Linux huge page.
- * @param state  Page table walk state.
- * @returns      Always @c addrxlat_continue.
+ * @param state      Page table walk state.
+ * @param rpn_shift  RPN shift.
+ * @returns          Always @c addrxlat_continue.
  *
  * This function skips all lower paging levels and updates the state
  * so that the next page table translation step adds the correct page
  * offset and terminates.
  */
 static addrxlat_status
-huge_page_linux(addrxlat_walk_t *state)
+huge_page_linux(addrxlat_walk_t *state, unsigned rpn_shift)
 {
 	const struct pgt_xlat *pgt = &state->def->pgt;
 
 	state->base.as = ADDRXLAT_MACHPHYSADDR;
 	state->base.addr = (state->raw_pte >>
-			    pgt->pf.rpn_shift) << pgt->pf.bits[0];
+			    rpn_shift) << pgt->pf.bits[0];
 	return pgt_huge_page(state);
 }
 
-/** 64-bit IBM POWER Linux page table step function.
- * @param state  Page table walk state.
- * @returns      Error status.
+/** 64-bit IBM POWER Linux page table step function for RPN shift 30.
+ * @param state      Page table walk state.
+ * @param rpn_shift  RPN shift.
+ * @returns          Error status.
  */
-addrxlat_status
-pgt_ppc64_linux(addrxlat_walk_t *state)
+static addrxlat_status
+pgt_ppc64_linux(addrxlat_walk_t *state, unsigned rpn_shift)
 {
 	static const char pte_name[][4] = {
 		"pte",
@@ -196,7 +198,7 @@ pgt_ppc64_linux(addrxlat_walk_t *state)
 		addrxlat_addr_t table_size;
 
 		if (is_hugepte_linux(state->raw_pte))
-			return huge_page_linux(state);
+			return huge_page_linux(state, rpn_shift);
 
 		if (is_hugepd_linux(state->raw_pte))
 			return huge_pd_linux(state);
@@ -208,8 +210,18 @@ pgt_ppc64_linux(addrxlat_walk_t *state)
 	} else {
 		state->base.as = ADDRXLAT_MACHPHYSADDR;
 		state->base.addr = (state->raw_pte >>
-				    pgt->pf.rpn_shift) << pgt->pf.bits[0];
+				    rpn_shift) << pgt->pf.bits[0];
 	}
 
 	return addrxlat_continue;
+}
+
+/** 64-bit IBM POWER Linux page table step function with RPN shift 30.
+ * @param state  Page table walk state.
+ * @returns      Error status.
+ */
+addrxlat_status
+pgt_ppc64_linux_rpn30(addrxlat_walk_t *state)
+{
+	return pgt_ppc64_linux(state, 30);
 }

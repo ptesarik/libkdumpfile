@@ -149,8 +149,8 @@ typedef enum _addrxlat_pte_format {
 	addrxlat_pte_x86_64,	/**< AMD64 (Intel 64)  */
 	addrxlat_pte_s390x,	/**< IBM z/Architecture (64-bit) */
 
-	/** IBM POWER (64-bit) running Linux */
-	addrxlat_pte_ppc64_linux,
+	/** IBM POWER (64-bit) running Linux with RPN shift 30 (64k pages) */
+	addrxlat_pte_ppc64_linux_rpn30,
 } addrxlat_pte_format_t;
 
 /** Maximum address translation levels.
@@ -162,12 +162,6 @@ typedef enum _addrxlat_pte_format {
 
 typedef struct _addrxlat_paging_form {
 	addrxlat_pte_format_t pte_format;
-
-	/** Real PFN shift.
-	 * This is only used on powerpc and specifies the bit position
-	 * of the PFN inside the PTE (or huge PTE).
-	 */
-	unsigned short rpn_shift;
 
 	unsigned short levels;
 	unsigned short bits[ADDRXLAT_MAXLEVELS];

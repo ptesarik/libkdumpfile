@@ -246,7 +246,8 @@ addrxlat_def_set_form(addrxlat_def_t *def, const addrxlat_paging_form_t *pf)
 		[addrxlat_pte_ia32_pae] = { walk_init_uaddr, pgt_ia32_pae, 3 },
 		[addrxlat_pte_x86_64] = { walk_init_saddr, pgt_x86_64, 3 },
 		[addrxlat_pte_s390x] = { walk_init_uaddr, pgt_s390x, 3 },
-		[addrxlat_pte_ppc64_linux] = { walk_init_pgt, pgt_ppc64_linux, 3 },
+		[addrxlat_pte_ppc64_linux_rpn30] =
+			{ walk_init_pgt, pgt_ppc64_linux_rpn30, 3 },
 	};
 
 	const struct pte_def *fmt;

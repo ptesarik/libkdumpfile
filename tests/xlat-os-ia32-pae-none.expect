@@ -1,5 +1,4 @@
 pte_format: ia32_pae
-rpn_shift: 0
 bits: 12 9 9 2
 0-ffffffff: PGT @rootpgt
 100000000-ffffffffffffffff: NONE

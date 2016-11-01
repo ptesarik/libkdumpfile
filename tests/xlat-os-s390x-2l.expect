@@ -1,5 +1,4 @@
 pte_format: s390x
-rpn_shift: 0
 bits: 12 8 11
 0-7fffffff: PGT @rootpgt
 80000000-ffffffffffffffff: NONE
