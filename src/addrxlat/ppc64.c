@@ -30,15 +30,6 @@
 
 #include "addrxlat-priv.h"
 
-/** Bit position of the virtual address region.
- */
-#define REGION_SHIFT	60
-
-#define USER_REGION_ID          0x0
-#define KERNEL_REGION_ID        0xc
-#define VMALLOC_REGION_ID       0xd /* FIXME: only true for Book3S! */
-#define VMEMMAP_REGION_ID       0xf
-
 /**  Page entry flag for a huge page directory.
  * The corresponding entry is huge if the most significant bit is zero.
  */
@@ -89,43 +80,12 @@ static unsigned mmu_pshift[MMU_PAGE_COUNT] = {
 	[MMU_PAGE_64G] = 36,
 };
 
-/** IBM POWER init function.
- * @param state  Page table walk state.
- * @param addr   Address to be translated.
- * @returns      Error status.
- */
-addrxlat_status
-walk_init_ppc64(addrxlat_walk_t *state, addrxlat_addr_t addr)
-{
-	const struct pgt_xlat *pgt;
-	unsigned short lvl;
-	unsigned region;
-	addrxlat_addr_t mask;
-
-	walk_init_pgt(state, addr);
-
-	pgt = &state->def->pgt;
-	lvl = pgt->pf.levels;
-
-	region = state->idx[lvl] >> (REGION_SHIFT - pgt->vaddr_bits);
-	if (region != VMALLOC_REGION_ID && region != USER_REGION_ID)
-		return set_error(state->ctx, addrxlat_invalid,
-				 "Region 0x%x has no page tables", region);
-
-	mask = (1ULL << (REGION_SHIFT - pgt->vaddr_bits)) - 1;
-	if (state->idx[lvl] & mask)
-		return set_error(state->ctx, addrxlat_invalid,
-				 "Virtual address too big");
-
-	return addrxlat_continue;
-}
-
-/**  Check whether a page directory is huge.
+/**  Check whether a Linux page directory is huge.
  * @param pte  Page table entry (value).
  * @returns    Non-zero if this is a huge page directory entry.
  */
 static inline int
-is_hugepd(addrxlat_pte_t pte)
+is_hugepd_linux(addrxlat_pte_t pte)
 {
 	return !(pte & PD_HUGE);
 }
@@ -143,12 +103,12 @@ hugepd_shift(addrxlat_pte_t hpde)
 		: 0U;
 }
 
-/**  Translate a huge page using its directory entry.
+/**  Translate a Linux huge page using its directory entry.
  * @param state  Page table walk state.
  * @returns      Always @c addrxlat_continue.
  */
-addrxlat_status
-huge_pd(addrxlat_walk_t *state)
+static addrxlat_status
+huge_pd_linux(addrxlat_walk_t *state)
 {
 	const struct pgt_xlat *pgt = &state->def->pgt;
 	addrxlat_addr_t off;
@@ -182,17 +142,17 @@ huge_pd(addrxlat_walk_t *state)
 	return addrxlat_continue;
 }
 
-/**  Check whether a page table entry is huge.
+/**  Check whether a Linux page table entry is huge.
  * @param pte  Page table entry (value).
  * @returns    Non-zero if this is a huge page entry.
  */
 static inline int
-is_hugepte(addrxlat_pte_t pte)
+is_hugepte_linux(addrxlat_pte_t pte)
 {
 	return (pte & HUGE_PTE_MASK) != 0x0;
 }
 
-/** Update page table walk state for huge page.
+/** Update page table walk state for Linux huge page.
  * @param state  Page table walk state.
  * @returns      Always @c addrxlat_continue.
  *
@@ -200,8 +160,8 @@ is_hugepte(addrxlat_pte_t pte)
  * so that the next page table translation step adds the correct page
  * offset and terminates.
  */
-addrxlat_status
-huge_page(addrxlat_walk_t *state)
+static addrxlat_status
+huge_page_linux(addrxlat_walk_t *state)
 {
 	const struct pgt_xlat *pgt = &state->def->pgt;
 
@@ -211,12 +171,12 @@ huge_page(addrxlat_walk_t *state)
 	return pgt_huge_page(state);
 }
 
-/** IBM POWER page table step function.
+/** 64-bit IBM POWER Linux page table step function.
  * @param state  Page table walk state.
  * @returns      Error status.
  */
 addrxlat_status
-pgt_ppc64(addrxlat_walk_t *state)
+pgt_ppc64_linux(addrxlat_walk_t *state)
 {
 	static const char pte_name[][4] = {
 		"pte",
@@ -235,11 +195,11 @@ pgt_ppc64(addrxlat_walk_t *state)
 	if (state->level > 1) {
 		addrxlat_addr_t table_size;
 
-		if (is_hugepte(state->raw_pte))
-			return huge_page(state);
+		if (is_hugepte_linux(state->raw_pte))
+			return huge_page_linux(state);
 
-		if (is_hugepd(state->raw_pte))
-			return huge_pd(state);
+		if (is_hugepd_linux(state->raw_pte))
+			return huge_pd_linux(state);
 
 		table_size = ((addrxlat_addr_t)1 << pgt->pte_shift <<
 			      pgt->pf.bits[state->level - 1]);

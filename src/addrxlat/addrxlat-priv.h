@@ -184,11 +184,8 @@ addrxlat_walk_step_fn pgt_x86_64;
 #define pgt_s390x INTERNAL_NAME(pgt_s390x)
 addrxlat_walk_step_fn pgt_s390x;
 
-#define walk_init_ppc64 INTERNAL_NAME(walk_init_ppc64)
-addrxlat_walk_init_fn walk_init_ppc64;
-
-#define pgt_ppc64 INTERNAL_NAME(pgt_ppc64)
-addrxlat_walk_step_fn pgt_ppc64;
+#define pgt_ppc64_linux INTERNAL_NAME(pgt_ppc64_linux)
+addrxlat_walk_step_fn pgt_ppc64_linux;
 
 #define paging_max_index INTERNAL_NAME(paging_max_index)
 addrxlat_addr_t paging_max_index(const addrxlat_paging_form_t *pf);

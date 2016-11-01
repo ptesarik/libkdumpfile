@@ -148,7 +148,9 @@ typedef enum _addrxlat_pte_format {
 	addrxlat_pte_ia32_pae,	/**< Intel IA32 with PAE */
 	addrxlat_pte_x86_64,	/**< AMD64 (Intel 64)  */
 	addrxlat_pte_s390x,	/**< IBM z/Architecture (64-bit) */
-	addrxlat_pte_ppc64,	/**< IBM POWER (64-bit) */
+
+	/** IBM POWER (64-bit) running Linux */
+	addrxlat_pte_ppc64_linux,
 } addrxlat_pte_format_t;
 
 /** Maximum address translation levels.

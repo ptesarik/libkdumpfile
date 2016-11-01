@@ -146,8 +146,8 @@ set_paging_form(const char *spec)
 		paging_form.pte_format = addrxlat_pte_x86_64;
 	else if (!strncasecmp(spec, "s390x:", endp - spec))
 		paging_form.pte_format = addrxlat_pte_s390x;
-	else if (!strncasecmp(spec, "ppc64:", endp - spec))
-		paging_form.pte_format = addrxlat_pte_ppc64;
+	else if (!strncasecmp(spec, "ppc64_linux:", endp - spec))
+		paging_form.pte_format = addrxlat_pte_ppc64_linux;
 	else {
 		fprintf(stderr, "Unknown PTE format: %s\n", spec);
 		return TEST_ERR;

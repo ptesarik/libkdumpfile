@@ -205,7 +205,7 @@ print_pgt(const addrxlat_def_t *pgt)
 		[addrxlat_pte_ia32_pae] = "ia32_pae",
 		[addrxlat_pte_x86_64] = "x86_64",
 		[addrxlat_pte_s390x] = "s390x",
-		[addrxlat_pte_ppc64] = "ppc64",
+		[addrxlat_pte_ppc64_linux] = "ppc64_linux",
 	};
 
 	const addrxlat_paging_form_t *pf = addrxlat_def_get_form(pgt);
