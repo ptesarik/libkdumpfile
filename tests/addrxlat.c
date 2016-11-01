@@ -136,17 +136,17 @@ set_paging_form(const char *spec)
 		return TEST_ERR;
 	}
 
-	if (!strncasecmp(spec, "none:", endp - spec))
+	if (!strncasecmp(spec, "none:", endp - spec + 1))
 		paging_form.pte_format = addrxlat_pte_none;
-	else if (!strncasecmp(spec, "ia32:", endp - spec))
+	else if (!strncasecmp(spec, "ia32:", endp - spec + 1))
 		paging_form.pte_format = addrxlat_pte_ia32;
-	else if (!strncasecmp(spec, "ia32_pae:", endp - spec))
+	else if (!strncasecmp(spec, "ia32_pae:", endp - spec + 1))
 		paging_form.pte_format = addrxlat_pte_ia32_pae;
-	else if (!strncasecmp(spec, "x86_64:", endp - spec))
+	else if (!strncasecmp(spec, "x86_64:", endp - spec + 1))
 		paging_form.pte_format = addrxlat_pte_x86_64;
-	else if (!strncasecmp(spec, "s390x:", endp - spec))
+	else if (!strncasecmp(spec, "s390x:", endp - spec + 1))
 		paging_form.pte_format = addrxlat_pte_s390x;
-	else if (!strncasecmp(spec, "ppc64_linux:", endp - spec))
+	else if (!strncasecmp(spec, "ppc64_linux:", endp - spec + 1))
 		paging_form.pte_format = addrxlat_pte_ppc64_linux;
 	else {
 		fprintf(stderr, "Unknown PTE format: %s\n", spec);
