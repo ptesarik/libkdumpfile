@@ -165,13 +165,13 @@ is_pae(addrxlat_ctx *ctx, const addrxlat_fulladdr_t *root,
 
 	internal_def_set_form(&def, &ia32_pf_pae);
 	addr = direct;
-	status = addrxlat_walk(ctx, &def, &addr);
+	status = internal_walk(ctx, &def, &addr);
 	if (status == addrxlat_ok && addr == 0)
 		return 1;
 
 	internal_def_set_form(&def, &ia32_pf);
 	addr = direct;
-	status = addrxlat_walk(ctx, &def, &addr);
+	status = internal_walk(ctx, &def, &addr);
 	if (status == addrxlat_ok && addr == 0)
 		return 0;
 
