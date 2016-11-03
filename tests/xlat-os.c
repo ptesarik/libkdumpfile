@@ -153,9 +153,11 @@ static unsigned num_symbols;
 static void
 add_symbol(const void *ptr, const char *name)
 {
-	symbols[num_symbols].p = ptr;
-	symbols[num_symbols].name = name;
-	++num_symbols;
+	if (ptr) {
+		symbols[num_symbols].p = ptr;
+		symbols[num_symbols].name = name;
+		++num_symbols;
+	}
 }
 
 static void
