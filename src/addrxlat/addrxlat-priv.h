@@ -242,6 +242,39 @@ DECLARE_INTERNAL(map_search)
 #define internal_map_clear INTERNAL_ALIAS(map_clear)
 DECLARE_INTERNAL(map_clear)
 
+/** Optional action associated with an OS-map region. */
+enum osmap_action {
+	OSMAP_ACT_NONE,
+	OSMAP_ACT_DIRECT,
+	OSMAP_ACT_X86_64_KTEXT,
+};
+
+/** Single OS-map region definition. */
+struct osmap_region {
+	addrxlat_addr_t first, last;
+	addrxlat_osmap_xlat_t xlat;
+	enum osmap_action act;
+};
+
+/** OS-map layout table end marker. */
+#define OSMAP_REGION_END	{ 0, 0, ADDRXLAT_OSMAP_NUM }
+
+/** Type of the action function for @ref osmap_set_layout.
+ * @param osmap   OS map object.
+ * @parma ctx     Address translation object.
+ * @param region  Associated region definition.
+ */
+typedef void osmap_action_fn(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+			     const struct osmap_region *);
+
+#define x86_64_ktext_hook INTERNAL_NAME(x86_64_ktext_hook)
+osmap_action_fn x86_64_ktext_hook;
+
+#define osmap_set_layout INTERNAL_NAME(osmap_set_layout)
+addrxlat_status osmap_set_layout(addrxlat_osmap_t *osmap,
+				 addrxlat_ctx *ctx,
+				 const struct osmap_region layout[]);
+
 /* utils */
 
 /** Set the error message.

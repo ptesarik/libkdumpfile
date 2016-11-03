@@ -50,20 +50,13 @@
 #define NONCANONICAL_END	(~NONCANONICAL_START)
 #define VIRTADDR_MAX		UINT64_MAX
 
-struct layout_def {
-	addrxlat_addr_t first, last;
-	addrxlat_osmap_xlat_t xlat;
-};
-
-#define LAYOUT_END	{ 0, 0, ADDRXLAT_OSMAP_NUM }
-
 /* Original Linux layout (before 2.6.11) */
-static const struct layout_def linux_layout_2_6_0[] = {
+static const struct osmap_region linux_layout_2_6_0[] = {
 	{  0x0000000000000000,  0x0000007fffffffff, /* user space       */
 	   ADDRXLAT_OSMAP_PGT },
 	/* 0x0000008000000000 - 0x000000ffffffffff     guard hole       */
 	{  0x0000010000000000,  0x000001ffffffffff, /* direct mapping   */
-	   ADDRXLAT_OSMAP_DIRECT },
+	   ADDRXLAT_OSMAP_DIRECT, OSMAP_ACT_DIRECT },
 	/* 0x0000020000000000 - 0x00007fffffffffff     unused hole      */
 	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
 	/* 0xffff800000000000 - 0xfffffeffffffffff     unused hole      */
@@ -71,7 +64,7 @@ static const struct layout_def linux_layout_2_6_0[] = {
 	   ADDRXLAT_OSMAP_PGT },
 	/* 0xffffff8000000000 - 0xffffffff7fffffff     unused hole      */
 	{  0xffffffff80000000,  0xffffffff827fffff, /* kernel text      */
-	   ADDRXLAT_OSMAP_KTEXT },
+	   ADDRXLAT_OSMAP_KTEXT, OSMAP_ACT_X86_64_KTEXT },
 	/* 0xffffffff82800000 - 0xffffffff9fffffff     unused hole      */
 	{  0xffffffffa0000000,  0xffffffffafffffff, /* modules          */
 	   ADDRXLAT_OSMAP_PGT },
@@ -79,17 +72,17 @@ static const struct layout_def linux_layout_2_6_0[] = {
 	{  0xffffffffff5ed000,  0xffffffffffdfffff, /* fixmap/vsyscalls */
 	   ADDRXLAT_OSMAP_PGT },
 	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
-	LAYOUT_END
+	OSMAP_REGION_END
 };
 
 /* Linux layout introduced in 2.6.11 */
-static const struct layout_def linux_layout_2_6_11[] = {
+static const struct osmap_region linux_layout_2_6_11[] = {
 	{  0x0000000000000000,  0x00007fffffffffff, /* user space       */
 	   ADDRXLAT_OSMAP_PGT },
 	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
 	/* 0xffff800000000000 - 0xffff80ffffffffff     guard hole       */
 	{  0xffff810000000000,  0xffffc0ffffffffff, /* direct mapping   */
-	   ADDRXLAT_OSMAP_DIRECT },
+	   ADDRXLAT_OSMAP_DIRECT, OSMAP_ACT_DIRECT },
 	/* 0xffffc10000000000 - 0xffffc1ffffffffff     guard hole       */
 	{  0xffffc20000000000,  0xffffe1ffffffffff, /* vmalloc/ioremap  */
 	   ADDRXLAT_OSMAP_PGT },
@@ -97,23 +90,23 @@ static const struct layout_def linux_layout_2_6_11[] = {
 	   ADDRXLAT_OSMAP_PGT },		    /*   (2.6.24+ only) */
 	/* 0xffffe30000000000 - 0xffffffff7fffffff     unused hole      */
 	{  0xffffffff80000000,  0xffffffff827fffff, /* kernel text      */
-	   ADDRXLAT_OSMAP_KTEXT },
+	   ADDRXLAT_OSMAP_KTEXT, OSMAP_ACT_X86_64_KTEXT },
 	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
 	{  0xffffffff88000000,  0xffffffffffdfffff, /* modules and      */
 	   ADDRXLAT_OSMAP_PGT },		    /*  fixmap/vsyscall */
 	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
-	LAYOUT_END
+	OSMAP_REGION_END
 };
 
 /** Linux layout with hypervisor area, introduced in 2.6.27 */
-static const struct layout_def linux_layout_2_6_27[] = {
+static const struct osmap_region linux_layout_2_6_27[] = {
 	{  0x0000000000000000,  0x00007fffffffffff, /* user space       */
 	   ADDRXLAT_OSMAP_PGT },
 	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
 	/* 0xffff800000000000 - 0xffff80ffffffffff     guard hole       */
 	/* 0xffff810000000000 - 0xffff87ffffffffff     hypervisor area  */
 	{  0xffff880000000000,  0xffffc0ffffffffff, /* direct mapping   */
-	   ADDRXLAT_OSMAP_DIRECT },
+	   ADDRXLAT_OSMAP_DIRECT, OSMAP_ACT_DIRECT },
 	/* 0xffffc10000000000 - 0xffffc1ffffffffff     guard hole       */
 	{  0xffffc20000000000,  0xffffe1ffffffffff, /* vmalloc/ioremap  */
 	   ADDRXLAT_OSMAP_PGT },
@@ -121,23 +114,23 @@ static const struct layout_def linux_layout_2_6_27[] = {
 	   ADDRXLAT_OSMAP_PGT },
 	/* 0xffffe30000000000 - 0xffffffff7fffffff     unused hole      */
 	{  0xffffffff80000000,  0xffffffff827fffff, /* kernel text      */
-	   ADDRXLAT_OSMAP_KTEXT },
+	   ADDRXLAT_OSMAP_KTEXT, OSMAP_ACT_X86_64_KTEXT },
 	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
 	{  0xffffffff88000000,  0xffffffffffdfffff, /* modules and      */
 	   ADDRXLAT_OSMAP_PGT },		    /*  fixmap/vsyscall */
 	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
-	LAYOUT_END
+	OSMAP_REGION_END
 };
 
 /** Linux layout with 64T direct mapping, introduced in 2.6.31 */
-static const struct layout_def linux_layout_2_6_31[] = {
+static const struct osmap_region linux_layout_2_6_31[] = {
 	{  0x0000000000000000,  0x00007fffffffffff, /* user space       */
 	   ADDRXLAT_OSMAP_PGT },
 	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
 	/* 0xffff800000000000 - 0xffff80ffffffffff     guard hole       */
 	/* 0xffff810000000000 - 0xffff87ffffffffff     hypervisor area  */
 	{  0xffff880000000000,  0xffffc7ffffffffff, /* direct mapping   */
-	   ADDRXLAT_OSMAP_DIRECT },
+	   ADDRXLAT_OSMAP_DIRECT, OSMAP_ACT_DIRECT },
 	/* 0xffffc80000000000 - 0xffffc8ffffffffff     guard hole       */
 	{  0xffffc90000000000,  0xffffe8ffffffffff, /* vmalloc/ioremap  */
 	   ADDRXLAT_OSMAP_PGT },
@@ -152,12 +145,12 @@ static const struct layout_def linux_layout_2_6_31[] = {
 	   ADDRXLAT_OSMAP_PGT },		    /*     (3.14+ only) */
 	/* 0xffffffff00000000 - 0xffffffff7fffffff     guard hole       */
 	{  0xffffffff80000000,  0xffffffff827fffff, /* kernel text      */
-	   ADDRXLAT_OSMAP_KTEXT },
+	   ADDRXLAT_OSMAP_KTEXT, OSMAP_ACT_X86_64_KTEXT },
 	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
 	{  0xffffffff88000000,  0xffffffffffdfffff, /* modules and      */
 	   ADDRXLAT_OSMAP_PGT },		    /*  fixmap/vsyscall */
 	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
-	LAYOUT_END
+	OSMAP_REGION_END
 };
 
 /** AMD64 (Intel 64) page table step function.
@@ -239,7 +232,7 @@ canonical_pgt_map(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
  * @param ver  Version code.
  * @returns    Layout definition, or @c NULL.
  */
-static const struct layout_def*
+static const struct osmap_region *
 linux_layout_by_ver(unsigned version_code)
 {
 #define LINUX_LAYOUT_BY_VER(a, b, c)			\
@@ -289,7 +282,7 @@ is_directmap(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
  * @param ctx    Address translation context.
  * @returns      Memory layout, or @c NULL if undetermined.
  */
-static const struct layout_def*
+static const struct osmap_region *
 linux_layout_by_pgt(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx)
 {
 	/* Only pre-2.6.11 kernels had this direct mapping */
@@ -353,6 +346,18 @@ set_pgt_fallback(addrxlat_osmap_t *osmap, addrxlat_osmap_xlat_t xlat)
  */
 #define LINUX_KTEXT_SKIP		(16ULL << 20)
 
+/** Action function for @ref OSMAP_ACT_X86_64_KTEXT.
+ * @param osmap   OS map object.
+ * @parma ctx     Address translation object.
+ * @param region  Associated region definition.
+ */
+void
+x86_64_ktext_hook(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+		  const struct osmap_region *region)
+{
+	set_ktext_offset(osmap, ctx, region->first + LINUX_KTEXT_SKIP);
+}
+
 /** Initialize a translation map for Linux on x86_64.
  * @param osmap   OS map object.
  * @param ctx     Address translation object.
@@ -363,8 +368,8 @@ static addrxlat_status
 map_linux_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 		 const addrxlat_osdesc_t *osdesc)
 {
-	const struct layout_def *layout = NULL;
-	addrxlat_map_t *newmap;
+	const struct osmap_region *layout;
+	addrxlat_status status;
 
 	if (!osmap->def[ADDRXLAT_OSMAP_DIRECT])
 		osmap->def[ADDRXLAT_OSMAP_DIRECT] = internal_def_new();
@@ -383,29 +388,9 @@ map_linux_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	if (!layout)
 		return addrxlat_ok;
 
-	while (layout->xlat != ADDRXLAT_OSMAP_NUM) {
-		addrxlat_range_t range;
-
-		range.endoff = layout->last - layout->first;
-		range.def = osmap->def[layout->xlat];
-
-		if (layout->xlat == ADDRXLAT_OSMAP_DIRECT)
-			internal_def_set_offset(range.def, layout->first);
-		if (layout->xlat == ADDRXLAT_OSMAP_KTEXT)
-			set_ktext_offset(osmap, ctx,
-					 layout->first + LINUX_KTEXT_SKIP);
-
-		newmap = internal_map_set(osmap->map, layout->first, &range);
-		if (!newmap)
-			return set_error(ctx, addrxlat_nomem,
-					 "Cannot set up mapping for"
-					 " 0x%"ADDRXLAT_PRIxADDR
-					 "-0x%"ADDRXLAT_PRIxADDR,
-					 layout->first, layout->last);
-		osmap->map = newmap;
-
-		++layout;
-	}
+	status = osmap_set_layout(osmap, ctx, layout);
+	if (status != addrxlat_ok)
+		return status;
 
 	set_pgt_fallback(osmap, ADDRXLAT_OSMAP_DIRECT);
 	set_pgt_fallback(osmap, ADDRXLAT_OSMAP_KTEXT);

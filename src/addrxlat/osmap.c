@@ -129,3 +129,55 @@ addrxlat_osmap_get_xlat(addrxlat_osmap_t *osmap, addrxlat_osmap_xlat_t xlat)
 		internal_def_incref(osmap->def[xlat]);
 	return osmap->def[xlat];
 }
+
+/** Action function for @ref OSMAP_ACT_DIRECT.
+ * @param osmap   OS map object.
+ * @parma ctx     Address translation object.
+ * @param region  Associated region definition.
+ */
+static void
+direct_hook(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	    const struct osmap_region *region)
+{
+	internal_def_set_offset(osmap->def[region->xlat], region->first);
+}
+
+/** Set memory map layout.
+ * @param osmap   OS map object.
+ * @parma ctx     Address translation object.
+ * @param layout  Layout definition table.
+ * @returns       Error status.
+ */
+addrxlat_status
+osmap_set_layout(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+		 const struct osmap_region layout[])
+{
+	static osmap_action_fn *const actions[] = {
+		[OSMAP_ACT_DIRECT] = direct_hook,
+		[OSMAP_ACT_X86_64_KTEXT] = x86_64_ktext_hook,
+	};
+
+	const struct osmap_region *region;
+	addrxlat_map_t *newmap;
+
+	for (region = layout; region->xlat != ADDRXLAT_OSMAP_NUM; ++region) {
+		addrxlat_range_t range;
+
+		if (region->act != OSMAP_ACT_NONE)
+			actions[region->act](osmap, ctx, region);
+
+		range.endoff = region->last - region->first;
+		range.def = osmap->def[region->xlat];
+		newmap = internal_map_set(osmap->map, region->first, &range);
+		if (!newmap)
+			return set_error(ctx, addrxlat_nomem,
+					 "Cannot set up mapping for"
+					 " 0x%"ADDRXLAT_PRIxADDR
+					 "-0x%"ADDRXLAT_PRIxADDR,
+					 region->first,
+					 region->last);
+		osmap->map = newmap;
+	}
+
+	return addrxlat_ok;
+}
