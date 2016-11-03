@@ -163,6 +163,14 @@ osmap_set_layout(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	for (region = layout; region->xlat != ADDRXLAT_OSMAP_NUM; ++region) {
 		addrxlat_range_t range;
 
+		if (!osmap->def[region->xlat])
+			osmap->def[region->xlat] = internal_def_new();
+		if (!osmap->def[region->xlat])
+			return set_error(ctx, addrxlat_nomem,
+					 "Cannot allocate translation"
+					 " definition %u",
+					 (unsigned) region->xlat);
+
 		if (region->act != OSMAP_ACT_NONE)
 			actions[region->act](osmap, ctx, region);
 

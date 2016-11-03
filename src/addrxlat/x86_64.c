@@ -371,16 +371,6 @@ map_linux_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	const struct osmap_region *layout;
 	addrxlat_status status;
 
-	if (!osmap->def[ADDRXLAT_OSMAP_DIRECT])
-		osmap->def[ADDRXLAT_OSMAP_DIRECT] = internal_def_new();
-	if (!osmap->def[ADDRXLAT_OSMAP_DIRECT])
-		return addrxlat_nomem;
-
-	if (!osmap->def[ADDRXLAT_OSMAP_KTEXT])
-		osmap->def[ADDRXLAT_OSMAP_KTEXT] = internal_def_new();
-	if (!osmap->def[ADDRXLAT_OSMAP_KTEXT])
-		return addrxlat_nomem;
-
 	layout = linux_layout_by_pgt(osmap, ctx);
 
 	if (!layout && osdesc->ver)
