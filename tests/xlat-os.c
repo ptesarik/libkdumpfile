@@ -182,7 +182,7 @@ print_xlat(const addrxlat_def_t *def)
 		fputs("NONE", stdout);
 	else switch (addrxlat_def_get_kind(def)) {
 	case ADDRXLAT_NONE:
-		fputs("NONE", stdout);
+		print_ind("NONE", def);
 		break;
 
 	case ADDRXLAT_LINEAR:
