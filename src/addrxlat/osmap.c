@@ -77,7 +77,7 @@ addrxlat_osmap_decref(addrxlat_osmap_t *osmap)
 }
 
 addrxlat_status
-addrxlat_osmap_init(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+addrxlat_osmap_init(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 		    const addrxlat_osdesc_t *osdesc)
 {
 	addrxlat_status ret;
@@ -138,7 +138,7 @@ addrxlat_osmap_get_xlat(addrxlat_osmap_t *osmap, addrxlat_osmap_xlat_t xlat)
  * @param region  Associated region definition.
  */
 static void
-direct_hook(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+direct_hook(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	    const struct osmap_region *region)
 {
 	internal_meth_set_offset(osmap->meth[region->xlat], region->first);
@@ -151,7 +151,7 @@ direct_hook(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
  * @returns       Error status.
  */
 addrxlat_status
-osmap_set_layout(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+osmap_set_layout(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 		 const struct osmap_region layout[])
 {
 	static osmap_action_fn *const actions[] = {

@@ -201,7 +201,7 @@ pgt_x86_64(addrxlat_walk_t *state)
  * @returns           New translation map, or @c NULL on error.
  */
 static addrxlat_status
-canonical_pgt_map(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+canonical_pgt_map(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 		  const addrxlat_osdesc_t *osdesc)
 {
 	addrxlat_range_t range;
@@ -254,7 +254,7 @@ linux_layout_by_ver(unsigned version_code)
  * @returns      Non-zero if the address can be translated.
  */
 static int
-is_mapped(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+is_mapped(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	  addrxlat_addr_t addr)
 {
 	addrxlat_status status =
@@ -269,7 +269,7 @@ is_mapped(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
  * @returns      Non-zero if the address maps to physical address 0.
  */
 static int
-is_directmap(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+is_directmap(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	     addrxlat_addr_t addr)
 {
 	addrxlat_status status =
@@ -283,7 +283,7 @@ is_directmap(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
  * @returns      Memory layout, or @c NULL if undetermined.
  */
 static const struct osmap_region *
-linux_layout_by_pgt(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx)
+linux_layout_by_pgt(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx)
 {
 	/* Only pre-2.6.11 kernels had this direct mapping */
 	if (is_directmap(osmap, ctx, 0x0000010000000000))
@@ -310,7 +310,7 @@ linux_layout_by_pgt(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx)
  * @param vaddr  Any valid kernel text virtual address.
  */
 static void
-set_ktext_offset(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+set_ktext_offset(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 		 addrxlat_addr_t vaddr)
 {
 	addrxlat_addr_t addr;
@@ -352,7 +352,7 @@ set_pgt_fallback(addrxlat_osmap_t *osmap, addrxlat_osmap_xlat_t xlat)
  * @param region  Associated region definition.
  */
 void
-x86_64_ktext_hook(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+x86_64_ktext_hook(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 		  const struct osmap_region *region)
 {
 	set_ktext_offset(osmap, ctx, region->first + LINUX_KTEXT_SKIP);
@@ -365,7 +365,7 @@ x86_64_ktext_hook(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
  * @returns       Error status.
  */
 static addrxlat_status
-map_linux_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+map_linux_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 		 const addrxlat_osdesc_t *osdesc)
 {
 	const struct osmap_region *layout;
@@ -428,7 +428,7 @@ map_linux_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
  * @returns      Non-zero if the address maps to a 2M page.
  */
 static int
-is_xen_ktext(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+is_xen_ktext(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	     addrxlat_addr_t addr)
 {
 	addrxlat_walk_t walk;
@@ -450,7 +450,7 @@ is_xen_ktext(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
  * @returns       Error status.
  */
 static addrxlat_status
-map_xen_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+map_xen_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	       const addrxlat_osdesc_t *osdesc)
 {
 	addrxlat_range_t range_direct, range_ktext;
@@ -543,7 +543,7 @@ map_xen_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
  * @returns       Error status.
  */
 addrxlat_status
-osmap_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+osmap_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	     const addrxlat_osdesc_t *osdesc)
 {
 	static const addrxlat_paging_form_t x86_64_pf = {

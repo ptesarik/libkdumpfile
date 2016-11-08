@@ -154,7 +154,7 @@ static const addrxlat_paging_form_t ia32_pf_pae = {
  * @returns       Non-zero if PAE, zero if non-PAE, negative on error.
  */
 static int
-is_pae(addrxlat_ctx *ctx, const addrxlat_fulladdr_t *root,
+is_pae(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *root,
        addrxlat_addr_t direct)
 {
 	addrxlat_meth_t meth;
@@ -185,7 +185,7 @@ is_pae(addrxlat_ctx *ctx, const addrxlat_fulladdr_t *root,
  * @returns       Error status.
  */
 static addrxlat_status
-osmap_ia32_nonpae(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+osmap_ia32_nonpae(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 		  const addrxlat_osdesc_t *osdesc)
 {
 	internal_meth_set_form(osmap->meth[ADDRXLAT_OSMAP_PGT], &ia32_pf);
@@ -199,7 +199,7 @@ osmap_ia32_nonpae(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
  * @returns       Error status.
  */
 static addrxlat_status
-osmap_ia32_pae(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+osmap_ia32_pae(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	       const addrxlat_osdesc_t *osdesc)
 {
 	internal_meth_set_form(osmap->meth[ADDRXLAT_OSMAP_PGT], &ia32_pf_pae);
@@ -213,7 +213,7 @@ osmap_ia32_pae(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
  * @returns       Error status.
  */
 addrxlat_status
-osmap_ia32(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+osmap_ia32(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	   const addrxlat_osdesc_t *osdesc)
 {
 	addrxlat_range_t range;

@@ -23,16 +23,15 @@ AM_CFLAGS = -fvisibility=hidden
 
 lib_LTLIBRARIES = libaddrxlat.la
 libaddrxlat_la_SOURCES = \
+	meth.c \
+	ctx.c \
+	vtop.c \
+	map.c \
+	osmap.c \
 	ppc64.c \
 	ia32.c \
 	s390x.c \
-	x86_64.c \
-	setup.c \
-	util.c \
-	meth.c \
-	vtop.c \
-	map.c \
-	osmap.c
+	x86_64.c
 
 EXTRA_libaddrxlat_la_DEPENDENCIES = libaddrxlat.map
 

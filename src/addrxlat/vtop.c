@@ -40,7 +40,7 @@
 static addrxlat_status
 read_pte(addrxlat_walk_t *state)
 {
-	addrxlat_ctx *ctx = state->ctx;
+	addrxlat_ctx_t *ctx = state->ctx;
 	const struct pgt_xlat *pgt = &state->meth->pgt;
 	uint64_t pte64;
 	uint32_t pte32;
@@ -74,7 +74,7 @@ read_pte(addrxlat_walk_t *state)
 DEFINE_INTERNAL(walk_init)
 
 addrxlat_status
-addrxlat_walk_init(addrxlat_walk_t *state, addrxlat_ctx *ctx,
+addrxlat_walk_init(addrxlat_walk_t *state, addrxlat_ctx_t *ctx,
 		   const addrxlat_meth_t *meth, addrxlat_addr_t addr)
 {
 	state->ctx = ctx;
@@ -111,7 +111,7 @@ addrxlat_walk_next(addrxlat_walk_t *state)
 DEFINE_INTERNAL(walk)
 
 addrxlat_status
-addrxlat_walk(addrxlat_ctx *ctx, const addrxlat_meth_t *meth,
+addrxlat_walk(addrxlat_ctx_t *ctx, const addrxlat_meth_t *meth,
 	      addrxlat_addr_t *paddr)
 {
 	addrxlat_walk_t walk;

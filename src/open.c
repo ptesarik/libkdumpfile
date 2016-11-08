@@ -400,7 +400,7 @@ kdump_free(kdump_ctx *ctx)
 		if (shared->per_ctx_size[slot])
 			free(ctx->data[slot]);
 
-	addrxlat_decref(ctx->addrxlat);
+	addrxlat_ctx_decref(ctx->addrxlat);
 
 	list_del(&ctx->list);
 	isempty = list_empty(&shared->ctx);

@@ -116,7 +116,7 @@ pgt_s390x(addrxlat_walk_t *state)
  * @returns      Error status.
  */
 static addrxlat_status
-determine_pgttype(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx)
+determine_pgttype(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx)
 {
 	addrxlat_meth_t *pgtmeth;
 	addrxlat_fulladdr_t ptr;
@@ -156,7 +156,7 @@ determine_pgttype(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx)
  * @returns       Error status.
  */
 addrxlat_status
-osmap_s390x(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+osmap_s390x(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	    const addrxlat_osdesc_t *osdesc)
 {
 	addrxlat_map_t *newmap;

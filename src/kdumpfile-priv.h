@@ -571,7 +571,7 @@ struct _kdump_ctx {
 	void *priv;		/**< User private data. */
 
 	/** Address translation context. */
-	addrxlat_ctx *addrxlat;
+	addrxlat_ctx_t *addrxlat;
 
 	/* callbacks */
 	kdump_get_symbol_val_fn *cb_get_symbol_val;
@@ -837,7 +837,7 @@ kdump_status process_arch_notes(kdump_ctx *ctx, void *data, size_t size);
 kdump_status init_vtop_maps(kdump_ctx *ctx);
 
 #define init_addrxlat INTERNAL_NAME(init_addrxlat)
-addrxlat_ctx *init_addrxlat(kdump_ctx *ctx);
+addrxlat_ctx_t *init_addrxlat(kdump_ctx *ctx);
 
 #define set_vtop_xlat INTERNAL_NAME(set_vtop_xlat)
 kdump_status set_vtop_xlat(struct vtop_map *map,

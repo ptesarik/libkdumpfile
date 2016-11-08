@@ -250,7 +250,7 @@ static const struct osmap_region linux_layout[] = {
  * @returns       Error status.
  */
 static addrxlat_status
-map_linux_ppc64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+map_linux_ppc64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 		const addrxlat_osdesc_t *osdesc)
 {
 	static const addrxlat_paging_form_t ppc64_pf_64k = {
@@ -278,7 +278,7 @@ map_linux_ppc64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
  * @returns       Error status.
  */
 addrxlat_status
-osmap_ppc64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+osmap_ppc64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	    const addrxlat_osdesc_t *osdesc)
 {
 	switch (osdesc->type) {

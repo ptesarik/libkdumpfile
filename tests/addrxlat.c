@@ -224,7 +224,7 @@ set_linear(const char *spec, addrxlat_meth_t *meth)
 }
 
 static int
-do_xlat(addrxlat_ctx *ctx, addrxlat_addr_t addr)
+do_xlat(addrxlat_ctx_t *ctx, addrxlat_addr_t addr)
 {
 	addrxlat_status status;
 
@@ -232,7 +232,7 @@ do_xlat(addrxlat_ctx *ctx, addrxlat_addr_t addr)
 	if (status != addrxlat_ok) {
 		fprintf(stderr, "Address translation failed: %s\n",
 			((int) status > 0
-			 ? addrxlat_err_str(ctx)
+			 ? addrxlat_ctx_err(ctx)
 			 : read_err_str));
 		return TEST_FAIL;
 	}
@@ -272,7 +272,7 @@ main(int argc, char **argv)
 {
 	unsigned long long vaddr;
 	char *endp;
-	addrxlat_ctx *ctx;
+	addrxlat_ctx_t *ctx;
 	addrxlat_meth_t *pgt, *linear;
 	int opt;
 	addrxlat_status status;
@@ -347,7 +347,7 @@ main(int argc, char **argv)
 		return TEST_ERR;
 	}
 
-	ctx = addrxlat_new();
+	ctx = addrxlat_ctx_new();
 	if (!ctx) {
 		perror("Cannot initialize address translation context");
 		rc = TEST_ERR;
@@ -361,8 +361,8 @@ main(int argc, char **argv)
 		goto out;
 	}
 
-	addrxlat_cb_read32(ctx, read32);
-	addrxlat_cb_read64(ctx, read64);
+	addrxlat_ctx_cb_read32(ctx, read32);
+	addrxlat_ctx_cb_read64(ctx, read64);
 
 	rc = do_xlat(ctx, vaddr);
 
@@ -375,7 +375,7 @@ main(int argc, char **argv)
 		fprintf(stderr, "WARNING: Leaked %lu pgt references\n",
 			refcnt);
 
-	if (ctx && (refcnt = addrxlat_decref(ctx)) != 0)
+	if (ctx && (refcnt = addrxlat_ctx_decref(ctx)) != 0)
 		fprintf(stderr, "WARNING: Leaked %lu addrxlat references\n",
 			refcnt);
 

@@ -167,41 +167,6 @@ typedef struct _addrxlat_paging_form {
 	unsigned short bits[ADDRXLAT_MAXLEVELS];
 } addrxlat_paging_form_t;
 
-typedef struct _addrxlat_ctx addrxlat_ctx;
-
-/** Allocate and initialize a new address translation object.
- * @returns    New initialized object, or @c NULL on failure.
- *
- * This call can fail if and only if memory allocation fails.
- * The reference count of the newly created object is one.
- */
-addrxlat_ctx *addrxlat_new(void);
-
-/** Increment the reference counter.
- * @param ctx  Address translation object.
- * @returns    New reference count.
- */
-unsigned long addrxlat_incref(addrxlat_ctx *ctx);
-
-/** Decrement the reference counter.
- * @param ctx  Address translation object.
- * @returns    New reference count.
- *
- * If the new reference count is zero, the underlying object is freed
- * and its address must not be used afterwards.
- */
-unsigned long addrxlat_decref(addrxlat_ctx *ctx);
-
-/**  Get a detailed error string.
- * @param ctx  Address translation object.
- * @returns    Last error string.
- *
- * If an error status is returned, this function can be used to get
- * a human-readable description of the error. The error string is
- * never reset, so you should check the return status first.
- */
-const char *addrxlat_err_str(addrxlat_ctx *ctx);
-
 /** Address translation method. */
 typedef struct _addrxlat_meth addrxlat_meth_t;
 
@@ -312,10 +277,96 @@ void addrxlat_meth_set_root(
 const addrxlat_fulladdr_t *addrxlat_meth_get_root(
 	const addrxlat_meth_t *meth);
 
+typedef struct _addrxlat_ctx addrxlat_ctx_t;
+
+/** Allocate and initialize a new address translation context.
+ * @returns    New initialized context, or @c NULL on failure.
+ *
+ * This call can fail if and only if memory allocation fails.
+ * The reference count of the newly created object is one.
+ */
+addrxlat_ctx_t *addrxlat_ctx_new(void);
+
+/** Increment the reference counter.
+ * @param ctx  Address translation context.
+ * @returns    New reference count.
+ */
+unsigned long addrxlat_ctx_incref(addrxlat_ctx_t *ctx);
+
+/** Decrement the reference counter.
+ * @param ctx  Address translation context.
+ * @returns    New reference count.
+ *
+ * If the new reference count is zero, the underlying object is freed
+ * and its address must not be used afterwards.
+ */
+unsigned long addrxlat_ctx_decref(addrxlat_ctx_t *ctx);
+
+/**  Get a detailed error string.
+ * @param ctx  Address translation context.
+ * @returns    Last error string.
+ *
+ * If an error status is returned, this function can be used to get
+ * a human-readable description of the error. The error string is
+ * never reset, so you should check the return status first.
+ */
+const char *addrxlat_ctx_err(addrxlat_ctx_t *ctx);
+
+/**  Set private callback data.
+ * @param ctx  Address translation context.
+ * @param data Generic data pointer.
+ *
+ * Callback data can be used to associate the address translation context
+ * with an arbitrary object. The addrxlat library does not interpret the
+ * pointer in any way, but it is passed as the first argument to callback
+ * functions. It can also be retrieved with @ref addrxlat_ctx_get_cbdata.
+ */
+void addrxlat_ctx_set_cbdata(addrxlat_ctx_t *ctx, void *data);
+
+/**  Get private callback data.
+ * @param ctx  Address translation context.
+ * @returns    Pointer stored previously with @ref addrxlat_ctx_set_cbdata.
+ */
+void *addrxlat_ctx_get_cbdata(addrxlat_ctx_t *ctx);
+
+/** Type of the read callback for 32-bit integers.
+ * @param data      Arbitrary user-supplied data.
+ * @param[in] addr  Address of the 32-bit integer.
+ * @param[out] val  Value in host byte order.
+ * @returns         Error status.
+ */
+typedef addrxlat_status addrxlat_read32_fn(
+	void *data, const addrxlat_fulladdr_t *addr, uint32_t *val);
+
+/** Set the read callback for 32-bit integers.
+ * @param ctx  Address translation context.
+ * @param cb   New callback function.
+ * @returns    Previous callback function.
+ */
+addrxlat_read32_fn *addrxlat_ctx_cb_read32(
+	addrxlat_ctx_t *ctx, addrxlat_read32_fn *cb);
+
+/** Type of the read callback for 64-bit integers.
+ * @param data      Arbitrary user-supplied data.
+ * @param[in] addr  Address of the 64-bit integer.
+ * @param[out] val  Value in host byte order.
+ * @returns         Error status.
+ */
+typedef addrxlat_status addrxlat_read64_fn(
+	void *data, const addrxlat_fulladdr_t *addr, uint64_t *val);
+
+/** Set the read callback for 64-bit integers.
+ * @param ctx  Address translation context.
+ * @param cb   New callback function.
+ * @returns    Previous callback function.
+ */
+addrxlat_read64_fn *addrxlat_ctx_cb_read64(
+	addrxlat_ctx_t *ctx, addrxlat_read64_fn *cb);
+
 /** Data type for a single page table walk. */
 typedef struct _addrxlat_walk {
 	/** Address translation context. */
-	addrxlat_ctx *ctx;
+	addrxlat_ctx_t *ctx;
 
 	/** Translation method. */
 	const addrxlat_meth_t *meth;
@@ -380,7 +431,7 @@ typedef addrxlat_status addrxlat_walk_step_fn(addrxlat_walk_t *walk);
 
 /** Initialize page-table walk.
  * @param walk  Page table walk state.
- * @param ctx   Address translation object.
+ * @param ctx   Address translation context.
  * @param meth  Translation method.
  * @param add   Address to be translated.
  * @returns     Error status.
@@ -389,7 +440,7 @@ typedef addrxlat_status addrxlat_walk_step_fn(addrxlat_walk_t *walk);
  * in @c ctx.
  */
 addrxlat_status addrxlat_walk_init(
-	addrxlat_walk_t *walk, addrxlat_ctx *ctx,
+	addrxlat_walk_t *walk, addrxlat_ctx_t *ctx,
 	const addrxlat_meth_t *meth, addrxlat_addr_t addr);
 
 /** Descend one level in page table translation.
@@ -399,14 +450,14 @@ addrxlat_status addrxlat_walk_init(
 addrxlat_status addrxlat_walk_next(addrxlat_walk_t *walk);
 
 /** Translate an address using page tables.
- * @param ctx    Address translation object.
+ * @param ctx    Address translation context.
  * @param meth   Translation method.
  * @param paddr  Address to be translated.
  * @returns      Error status.
  *
  * On successful return, the resulting address is found in @c *paddr.
  */
-addrxlat_status addrxlat_walk(addrxlat_ctx *ctx, const addrxlat_meth_t *meth,
+addrxlat_status addrxlat_walk(addrxlat_ctx_t *ctx, const addrxlat_meth_t *meth,
 			      addrxlat_addr_t *paddr);
 
 /** Definition of an address range.
@@ -463,13 +514,14 @@ const addrxlat_meth_t *addrxlat_map_search(
 void addrxlat_map_clear(addrxlat_map_t *map);
 
 /** Translate an address using a translation map.
- * @param ctx            Address translation object.
+ * @param ctx            Address translation context.
  * @param[in,out] paddr  Address.
  * @param[in] map        Translation map.
  * @returns              Error status.
  */
 addrxlat_status addrxlat_by_map(
-	addrxlat_ctx *ctx, addrxlat_addr_t *paddr, const addrxlat_map_t *map);
+	addrxlat_ctx_t *ctx, addrxlat_addr_t *paddr,
+	const addrxlat_map_t *map);
 
 /** Operating system type. */
 typedef enum _addrxlat_ostype {
@@ -540,7 +592,7 @@ unsigned long addrxlat_osmap_decref(addrxlat_osmap_t *osmap);
 
 /** Set up translation for a given operating system.
  * @param osmap   OS map object.
- * @param ctx     Address translation object.
+ * @param ctx     Address translation context.
  * @param osdesc  Description of the operating system.
  * @returns       Error status.
  *
@@ -549,7 +601,7 @@ unsigned long addrxlat_osmap_decref(addrxlat_osmap_t *osmap);
  * operating system.
  */
 addrxlat_status addrxlat_osmap_init(
-	addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	const addrxlat_osdesc_t *osdesc);
 
 /** Explicitly set the translation map of an OS map object.
@@ -597,57 +649,6 @@ void addrxlat_osmap_set_xlat(
  */
 addrxlat_meth_t *addrxlat_osmap_get_xlat(
 	addrxlat_osmap_t *osmap, addrxlat_osmap_xlat_t xlat);
-
-/** Type of the read callback for 32-bit integers.
- * @param data      Arbitrary user-supplied data.
- * @param[in] addr  Address of the 32-bit integer.
- * @param[out] val  Value in host byte order.
- * @returns         Error status.
- */
-typedef addrxlat_status addrxlat_read32_fn(
-	void *data, const addrxlat_fulladdr_t *addr, uint32_t *val);
-
-/** Set the read callback for 32-bit integers.
- * @param ctx  Address translation object.
- * @param cb   New callback function.
- * @returns    Previous callback function.
- */
-addrxlat_read32_fn *addrxlat_cb_read32(
-	addrxlat_ctx *ctx, addrxlat_read32_fn *cb);
-
-/** Type of the read callback for 64-bit integers.
- * @param data      Arbitrary user-supplied data.
- * @param[in] addr  Address of the 64-bit integer.
- * @param[out] val  Value in host byte order.
- * @returns         Error status.
- */
-typedef addrxlat_status addrxlat_read64_fn(
-	void *data, const addrxlat_fulladdr_t *addr, uint64_t *val);
-
-/** Set the read callback for 64-bit integers.
- * @param ctx  Address translation object.
- * @param cb   New callback function.
- * @returns    Previous callback function.
- */
-addrxlat_read64_fn *addrxlat_cb_read64(
-	addrxlat_ctx *ctx, addrxlat_read64_fn *cb);
-
-/**  Set pointer to user private data.
- * @param ctx  Address translation object.
- * @param data Generic data pointer.
- *
- * A private pointer can be used to associate the address translation
- * object with arbitrary data. The addrxlat library does not use the
- * pointer in any way, but it can be retrieved later from a @ref addrxlat_ctx
- * pointer with @ref addrxlat_get_priv.
- */
-void addrxlat_set_priv(addrxlat_ctx *ctx, void *data);
-
-/**  Get pointer to user private data.
- * @param ctx  Address translation object.
- * @returns    The data pointer stored previously with @ref addrxlat_set_priv.
- */
-void *addrxlat_get_priv(addrxlat_ctx *ctx);
 
 #ifdef  __cplusplus
 }

@@ -1,5 +1,5 @@
-/** @internal @file src/addrxlat/util.c
- * @brief Utility functions.
+/** @internal @file src/addrxlat/ctx.c
+ * @brief Address translation context routines.
  */
 /* Copyright (C) 2016 Petr Tesarik <ptesarik@suse.com>
 
@@ -29,13 +29,73 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 
 #include "addrxlat-priv.h"
 
+addrxlat_ctx_t *
+addrxlat_ctx_new(void)
+{
+	addrxlat_ctx_t *ctx = calloc(1, sizeof(addrxlat_ctx_t));
+	if (ctx) {
+		ctx->refcnt = 1;
+	}
+	return ctx;
+}
+
+unsigned long
+addrxlat_ctx_incref(addrxlat_ctx_t *ctx)
+{
+	return ++ctx->refcnt;
+}
+
+unsigned long
+addrxlat_ctx_decref(addrxlat_ctx_t *ctx)
+{
+	unsigned long refcnt = --ctx->refcnt;
+	if (!refcnt)
+		free(ctx);
+	return refcnt;
+}
+
+const char *
+addrxlat_ctx_err(addrxlat_ctx_t *ctx)
+{
+	return ctx->err_buf;
+}
+
+void
+addrxlat_ctx_set_cbdata(addrxlat_ctx_t *ctx, void *data)
+{
+	ctx->priv = data;
+}
+
+void *
+addrxlat_ctx_get_cbdata(addrxlat_ctx_t *ctx)
+{
+	return ctx->priv;
+}
+
+addrxlat_read32_fn *
+addrxlat_ctx_cb_read32(addrxlat_ctx_t *ctx, addrxlat_read32_fn *cb)
+{
+	addrxlat_read32_fn *oldval = ctx->cb_read32;
+	ctx->cb_read32 = cb;
+	return oldval;
+}
+
+addrxlat_read64_fn *
+addrxlat_ctx_cb_read64(addrxlat_ctx_t *ctx, addrxlat_read64_fn *cb)
+{
+	addrxlat_read64_fn *oldval = ctx->cb_read64;
+	ctx->cb_read64 = cb;
+	return oldval;
+}
+
 addrxlat_status
-set_error(addrxlat_ctx *ctx, addrxlat_status status, const char *msgfmt, ...)
+set_error(addrxlat_ctx_t *ctx, addrxlat_status status, const char *msgfmt, ...)
 {
 	va_list ap;
 	int msglen;
@@ -51,26 +111,4 @@ set_error(addrxlat_ctx *ctx, addrxlat_status status, const char *msgfmt, ...)
 		strcpy(ctx->err_buf, "(set_error failed)");
 
 	return status;
-}
-
-const char *
-addrxlat_err_str(addrxlat_ctx *ctx)
-{
-	return ctx->err_buf;
-}
-
-addrxlat_read32_fn *
-addrxlat_cb_read32(addrxlat_ctx *ctx, addrxlat_read32_fn *cb)
-{
-	addrxlat_read32_fn *oldval = ctx->cb_read32;
-	ctx->cb_read32 = cb;
-	return oldval;
-}
-
-addrxlat_read64_fn *
-addrxlat_cb_read64(addrxlat_ctx *ctx, addrxlat_read64_fn *cb)
-{
-	addrxlat_read64_fn *oldval = ctx->cb_read64;
-	ctx->cb_read64 = cb;
-	return oldval;
 }

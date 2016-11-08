@@ -187,7 +187,7 @@ addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 }
 
 addrxlat_status
-addrxlat_by_map(addrxlat_ctx *ctx, addrxlat_addr_t *paddr,
+addrxlat_by_map(addrxlat_ctx_t *ctx, addrxlat_addr_t *paddr,
 		const addrxlat_map_t *map)
 {
 	const addrxlat_meth_t *meth = internal_map_search(map, *paddr);

@@ -194,22 +194,22 @@ addrxlat_addr_t paging_max_index(const addrxlat_paging_form_t *pf);
 
 #define osmap_ia32 INTERNAL_NAME(osmap_ia32)
 addrxlat_status osmap_ia32(
-	addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	const addrxlat_osdesc_t *osdesc);
 
 #define osmap_ppc64 INTERNAL_NAME(osmap_ppc64)
 addrxlat_status osmap_ppc64(
-	addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	const addrxlat_osdesc_t *osdesc);
 
 #define osmap_s390x INTERNAL_NAME(osmap_s390x)
 addrxlat_status osmap_s390x(
-	addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	const addrxlat_osdesc_t *osdesc);
 
 #define osmap_x86_64 INTERNAL_NAME(osmap_x86_64)
 addrxlat_status osmap_x86_64(
-	addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	const addrxlat_osdesc_t *osdesc);
 
 /* internal aliases */
@@ -269,10 +269,10 @@ struct osmap_region {
 
 /** Type of the action function for @ref osmap_set_layout.
  * @param osmap   OS map object.
- * @parma ctx     Address translation object.
+ * @parma ctx     Address translation context.
  * @param region  Associated region definition.
  */
-typedef void osmap_action_fn(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+typedef void osmap_action_fn(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 			     const struct osmap_region *);
 
 #define x86_64_ktext_hook INTERNAL_NAME(x86_64_ktext_hook)
@@ -280,19 +280,19 @@ osmap_action_fn x86_64_ktext_hook;
 
 #define osmap_set_layout INTERNAL_NAME(osmap_set_layout)
 addrxlat_status osmap_set_layout(addrxlat_osmap_t *osmap,
-				 addrxlat_ctx *ctx,
+				 addrxlat_ctx_t *ctx,
 				 const struct osmap_region layout[]);
 
 /* utils */
 
 /** Set the error message.
- * @param ctx     Address tranlsation object.
+ * @param ctx     Address translation context.
  * @param status  Error status
  * @param msgfmt  Message format string (@c printf style).
  */
 #define set_error INTERNAL_NAME(set_error)
 addrxlat_status set_error(
-	addrxlat_ctx *ctx, addrxlat_status status,
+	addrxlat_ctx_t *ctx, addrxlat_status status,
 	const char *msgfmt, ...)
 	__attribute__ ((format (printf, 3, 4)));
 

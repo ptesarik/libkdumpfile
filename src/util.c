@@ -126,7 +126,7 @@ set_error_addrxlat(kdump_ctx *ctx, addrxlat_status status)
 	else
 		ret = kdump_addrxlat;
 
-	return set_error(ctx, ret, "%s", addrxlat_err_str(ctx->addrxlat));
+	return set_error(ctx, ret, "%s", addrxlat_ctx_err(ctx->addrxlat));
 }
 
 void *

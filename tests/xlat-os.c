@@ -245,7 +245,7 @@ print_map(const addrxlat_map_t *map)
 static int
 os_map(void)
 {
-	addrxlat_ctx *ctx;
+	addrxlat_ctx_t *ctx;
 	addrxlat_osdesc_t desc;
 	addrxlat_osmap_t *osmap;
 	const addrxlat_meth_t *meth;
@@ -256,18 +256,18 @@ os_map(void)
 	desc.arch = arch;
 	desc.archvar = archvar;
 
-	ctx = addrxlat_new();
+	ctx = addrxlat_ctx_new();
 	if (!ctx) {
 		perror("Cannot allocate addrxlat");
 		return TEST_ERR;
 	}
-	addrxlat_cb_read32(ctx, read32);
-	addrxlat_cb_read64(ctx, read64);
+	addrxlat_ctx_cb_read32(ctx, read32);
+	addrxlat_ctx_cb_read64(ctx, read64);
 
 	osmap = addrxlat_osmap_new();
 	if (!osmap) {
 		perror("Cannot allocate osmap");
-		addrxlat_decref(ctx);
+		addrxlat_ctx_decref(ctx);
 		return TEST_ERR;
 	}
 
@@ -278,7 +278,7 @@ os_map(void)
 		pgt = addrxlat_meth_new();
 		if (!pgt) {
 			perror("Cannot allocate rootpgt");
-			addrxlat_decref(ctx);
+			addrxlat_ctx_decref(ctx);
 			return TEST_ERR;
 		}
 		root.as = ADDRXLAT_MACHPHYSADDR;
@@ -292,10 +292,10 @@ os_map(void)
 	if (status != addrxlat_ok) {
 		fprintf(stderr, "OS map failed: %s\n",
 			(status > 0
-			 ? addrxlat_err_str(ctx)
+			 ? addrxlat_ctx_err(ctx)
 			 : read_err_str));
 		addrxlat_osmap_decref(osmap);
-		addrxlat_decref(ctx);
+		addrxlat_ctx_decref(ctx);
 		return TEST_ERR;
 	}
 
@@ -318,7 +318,7 @@ os_map(void)
 	print_map(addrxlat_osmap_get_map(osmap));
 
 	addrxlat_osmap_decref(osmap);
-	addrxlat_decref(ctx);
+	addrxlat_ctx_decref(ctx);
 	return TEST_OK;
 }
 
