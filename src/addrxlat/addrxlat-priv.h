@@ -197,6 +197,11 @@ addrxlat_status osmap_ia32(
 	addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	const addrxlat_osdesc_t *osdesc);
 
+#define osmap_ppc64 INTERNAL_NAME(osmap_ppc64)
+addrxlat_status osmap_ppc64(
+	addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	const addrxlat_osdesc_t *osdesc);
+
 #define osmap_s390x INTERNAL_NAME(osmap_s390x)
 addrxlat_status osmap_s390x(
 	addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,

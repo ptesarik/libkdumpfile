@@ -565,8 +565,10 @@ const addrxlat_map_t *addrxlat_osmap_get_map(const addrxlat_osmap_t *osmap);
  */
 typedef enum _addrxlat_osmap_xlat {
 	ADDRXLAT_OSMAP_PGT,	/**< Kernel-space page table. */
+	ADDRXLAT_OSMAP_UPGT,	/**< User-space page table. */
 	ADDRXLAT_OSMAP_DIRECT,	/**< Direct mapping. */
 	ADDRXLAT_OSMAP_KTEXT,	/**< Kernel text mapping. */
+	ADDRXLAT_OSMAP_VMEMMAP,	/**< Fixed VMEMMAP (on IBM POWER). */
 
 	ADDRXLAT_OSMAP_NUM,	/**< Total number of indices. */
 } addrxlat_osmap_xlat_t;

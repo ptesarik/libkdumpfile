@@ -303,11 +303,17 @@ os_map(void)
 	add_symbol(def, "rootpgt");
 	print_pgt(def);
 
+	def = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_UPGT);
+	add_symbol(def, "userpgt");
+
 	def = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_DIRECT);
 	add_symbol(def, "direct");
 
 	def = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_KTEXT);
 	add_symbol(def, "ktext");
+
+	def = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_VMEMMAP);
+	add_symbol(def, "vmemmap");
 
 	print_map(addrxlat_osmap_get_map(osmap));
 

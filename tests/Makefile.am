@@ -172,6 +172,7 @@ test_scripts = \
 	xlat-os-x86_64-none \
 	xlat-linux-ia32 \
 	xlat-linux-ia32-pae \
+	xlat-linux-ppc64-64k \
 	xlat-linux-x86_64-old \
 	xlat-linux-x86_64-old-nover \
 	xlat-linux-x86_64-2.6.11 \
@@ -223,6 +224,7 @@ dist_check_DATA = \
 	xlat-linux-ia32.expect \
 	xlat-linux-ia32-pae.data \
 	xlat-linux-ia32-pae.expect \
+	xlat-linux-ppc64-64k.expect \
 	xlat-linux-x86_64-old.expect \
 	xlat-linux-x86_64-old-nover.data \
 	xlat-linux-x86_64-old-nover.expect \

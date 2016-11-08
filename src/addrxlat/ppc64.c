@@ -225,3 +225,68 @@ pgt_ppc64_linux_rpn30(addrxlat_walk_t *state)
 {
 	return pgt_ppc64_linux(state, 30);
 }
+
+/* Linux virtual memory layout */
+static const struct osmap_region linux_layout[] = {
+	{  0x0000000000000000,  0x00000fffffffffff, /* userspace        */
+	   ADDRXLAT_OSMAP_UPGT },
+	/* 0x0000100000000000 - 0xbfffffffffffffff     invalid          */
+	{  0xc000000000000000,  0xcfffffffffffffff, /* direct mapping   */
+	   ADDRXLAT_OSMAP_DIRECT, OSMAP_ACT_DIRECT },
+	{  0xd000000000000000,  0xd00007ffffffffff, /* vmalloc          */
+	   ADDRXLAT_OSMAP_PGT },
+	{  0xd000080000000000,  0xd0000fffffffffff, /* IO mappings      */
+	   ADDRXLAT_OSMAP_PGT },
+	/* 0xd000100000000000 - 0xefffffffffffffff     reserved         */
+	{  0xf000000000000000,  0xffffffffffffffff, /* vmemmap          */
+	   ADDRXLAT_OSMAP_VMEMMAP },
+	OSMAP_REGION_END
+};
+
+/** Initialize a translation map for Linux/ppc64.
+ * @param osmap   OS map object.
+ * @param ctx     Address translation object.
+ * @param osdesc  Description of the operating system.
+ * @returns       Error status.
+ */
+static addrxlat_status
+map_linux_ppc64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+		const addrxlat_osdesc_t *osdesc)
+{
+	static const addrxlat_paging_form_t ppc64_pf_64k = {
+		.pte_format = addrxlat_pte_ppc64_linux_rpn30,
+		.levels = 4,
+		.bits = { 16, 12, 12, 4 }
+	};
+
+	addrxlat_status status;
+
+	status = osmap_set_layout(osmap, ctx, linux_layout);
+	if (status != addrxlat_ok)
+		return status;
+
+	internal_def_set_form(osmap->def[ADDRXLAT_OSMAP_PGT], &ppc64_pf_64k);
+	internal_def_set_form(osmap->def[ADDRXLAT_OSMAP_UPGT], &ppc64_pf_64k);
+
+	return addrxlat_ok;
+}
+
+/** Initialize a translation map for a 64-bit IBM POWER OS.
+ * @param osmap   OS map object.
+ * @param ctx     Address translation object.
+ * @param osdesc  Description of the operating system.
+ * @returns       Error status.
+ */
+addrxlat_status
+osmap_ppc64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
+	    const addrxlat_osdesc_t *osdesc)
+{
+	switch (osdesc->type) {
+	case addrxlat_os_linux:
+		return map_linux_ppc64(osmap, ctx, osdesc);
+
+	default:
+		return set_error(ctx, addrxlat_notimpl,
+				 "OS type not implemented");
+	}
+}
