@@ -202,8 +202,8 @@ unsigned long addrxlat_decref(addrxlat_ctx *ctx);
  */
 const char *addrxlat_err_str(addrxlat_ctx *ctx);
 
-/** Definition of an address translation. */
-typedef struct _addrxlat_def addrxlat_def_t;
+/** Address translation method. */
+typedef struct _addrxlat_meth addrxlat_meth_t;
 
 /** Address translation kind.
  */
@@ -218,81 +218,82 @@ typedef enum _addrxlat_kind {
 	ADDRXLAT_PGT,
 } addrxlat_kind_t;
 
-/** Allocate a translation definition.
+/** Allocate a translation method.
  * @returns    New initialized object, or @c NULL on failure.
  *
  * This call can fail if and only if memory allocation fails.
  * The reference count of the newly created object is one.
  */
-addrxlat_def_t *addrxlat_def_new(void);
+addrxlat_meth_t *addrxlat_meth_new(void);
 
-/** Increment translation definition reference counter.
- * @param def  Translation definition.
- * @returns    New reference count.
+/** Increment translation method reference counter.
+ * @param meth  Translation method.
+ * @returns     New reference count.
  */
-unsigned long addrxlat_def_incref(addrxlat_def_t *def);
+unsigned long addrxlat_meth_incref(addrxlat_meth_t *meth);
 
-/** Decrement page table translation reference counter.
- * @param def  Translation definition.
- * @returns    New reference count.
+/** Decrement translation method reference counter.
+ * @param meth  Translation method.
+ * @returns     New reference count.
  *
  * If the new reference count is zero, the underlying object is freed
  * and its address must not be used afterwards.
  */
-unsigned long addrxlat_def_decref(addrxlat_def_t *def);
+unsigned long addrxlat_meth_decref(addrxlat_meth_t *meth);
 
-/** Get the kind of a translation definition.
- * @param def  Translation definition.
- * @returns    Translation kind.
+/** Get the kind of a translation method.
+ * @param meth  Translation method.
+ * @returns     Translation kind.
  */
-addrxlat_kind_t addrxlat_def_get_kind(const addrxlat_def_t *def);
+addrxlat_kind_t addrxlat_meth_get_kind(const addrxlat_meth_t *meth);
 
 /** Set linear offset.
- * @param def  Translation definition.
- * @param off  Physical-to-virtual offset.
- * @returns    Error status.
+ * @param meth  Translation method.
+ * @param off   Physical-to-virtual offset.
+ * @returns     Error status.
  *
- * Set up a page table translation object for linear translation.
+ * Set up a translation method for linear translation.
  */
-addrxlat_status addrxlat_def_set_offset(
-	addrxlat_def_t *def, addrxlat_off_t off);
+addrxlat_status addrxlat_meth_set_offset(
+	addrxlat_meth_t *meth, addrxlat_off_t off);
 
 /** Get linear offset.
- * @param def  Translation definition of the @c ADDRXLAT_LINEAR kind.
- * @returns    Physical-to-virtual offset.
+ * @param meth  Translation method of the @c ADDRXLAT_LINEAR kind.
+ * @returns     Physical-to-virtual offset.
  */
-addrxlat_off_t addrxlat_def_get_offset(const addrxlat_def_t *def);
+addrxlat_off_t addrxlat_meth_get_offset(const addrxlat_meth_t *meth);
 
 /** Set paging form description.
- * @param def  Translation definition.
- * @param pf   Paging form description.
- * @returns    Error status.
+ * @param meth  Translation method.
+ * @param pf    Paging form description.
+ * @returns     Error status.
  *
  * This function sets the paging form and initializes pre-computed
  * internal state of a page table translation object. It also stores
  * a copy of the paging form description inside the translation object.
  */
-addrxlat_status addrxlat_def_set_form(
-	addrxlat_def_t *def, const addrxlat_paging_form_t *pf);
+addrxlat_status addrxlat_meth_set_form(
+	addrxlat_meth_t *meth, const addrxlat_paging_form_t *pf);
 
 /** Get paging form description.
- * @param def  Translation definition.
- * @returns    Pointer to the internal paging form description.
+ * @param meth  Translation method.
+ * @returns     Pointer to the internal paging form description.
  *
  * The returned pointer is valid as long as you hold a reference to
  * the translation object. It does not change by subsequent calls to
- * @ref addrxlat_def_set_form (but the referenced value does).
+ * @ref addrxlat_meth_set_form (but the referenced value does).
  */
-const addrxlat_paging_form_t *addrxlat_def_get_form(const addrxlat_def_t *def);
+const addrxlat_paging_form_t *addrxlat_meth_get_form(
+	const addrxlat_meth_t *meth);
 
 /** Set root page table base address.
- * @param def   Translation definition.
+ * @param meth  Translation method.
  * @param root  Address of the root page table.
  *
  * This function stores a copy of the root page table base address in
  */
-void addrxlat_def_set_root(
-	addrxlat_def_t *def, const addrxlat_fulladdr_t *root);
+void addrxlat_meth_set_root(
+	addrxlat_meth_t *meth, const addrxlat_fulladdr_t *root);
 
 /** Get root page table base address.
  * @param  pgt  Page table translation object.
@@ -300,17 +301,18 @@ void addrxlat_def_set_root(
  *
  * The returned pointer is valid as long as you hold a reference to
  * the translation object. It does not change by subsequent calls to
- * @ref addrxlat_def_set_root (but the referenced value does).
+ * @ref addrxlat_meth_set_root (but the referenced value does).
  */
-const addrxlat_fulladdr_t *addrxlat_def_get_root(const addrxlat_def_t *pgt);
+const addrxlat_fulladdr_t *addrxlat_meth_get_root(
+	const addrxlat_meth_t *meth);
 
 /** Data type for a single page table walk. */
 typedef struct _addrxlat_walk {
 	/** Address translation context. */
 	addrxlat_ctx *ctx;
 
-	/** Translation definition. */
-	const addrxlat_def_t *def;
+	/** Translation method. */
+	const addrxlat_meth_t *meth;
 
 	/** Page table level. */
 	unsigned short level;
@@ -373,7 +375,7 @@ typedef addrxlat_status addrxlat_walk_step_fn(addrxlat_walk_t *walk);
 /** Initialize page-table walk.
  * @param walk  Page table walk state.
  * @param ctx   Address translation object.
- * @param def   Translation definition.
+ * @param meth  Translation method.
  * @param add   Address to be translated.
  * @returns     Error status.
  *
@@ -382,7 +384,7 @@ typedef addrxlat_status addrxlat_walk_step_fn(addrxlat_walk_t *walk);
  */
 addrxlat_status addrxlat_walk_init(
 	addrxlat_walk_t *walk, addrxlat_ctx *ctx,
-	const addrxlat_def_t *def, addrxlat_addr_t addr);
+	const addrxlat_meth_t *meth, addrxlat_addr_t addr);
 
 /** Descend one level in page table translation.
  * @param walk  Page table walk state.
@@ -392,13 +394,13 @@ addrxlat_status addrxlat_walk_next(addrxlat_walk_t *walk);
 
 /** Translate an address using page tables.
  * @param ctx    Address translation object.
- * @param def    Translation definition.
+ * @param meth   Translation method.
  * @param paddr  Address to be translated.
  * @returns      Error status.
  *
  * On successful return, the resulting address is found in @c *paddr.
  */
-addrxlat_status addrxlat_walk(addrxlat_ctx *ctx, const addrxlat_def_t *def,
+addrxlat_status addrxlat_walk(addrxlat_ctx *ctx, const addrxlat_meth_t *meth,
 			      addrxlat_addr_t *paddr);
 
 /** Definition of an address range.
@@ -407,8 +409,8 @@ typedef struct _addrxlat_range {
 	/** Max address offset inside the range. */
 	addrxlat_addr_t endoff;
 
-	/** Translation definition */
-	addrxlat_def_t *def;
+	/** Translation method */
+	addrxlat_meth_t *meth;
 } addrxlat_range_t;
 
 /**  Address translation map.
@@ -433,16 +435,16 @@ addrxlat_map_t *
 addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 		 const addrxlat_range_t *range);
 
-/** Find an address translation definition in a translation map.
+/** Find an address translation method in a translation map.
  * @param map   Address translation map.
  * @param addr  Address to be translated.
- * @returns     Translation definition, or @c NULL if not found.
+ * @returns     Translation method, or @c NULL if not found.
  *
  * It is allowed to pass @c NULL as the translation map; the result
  * is the same as if an empty map was given, i.e. the function always
  * returns @c NULL.
  */
-const addrxlat_def_t *addrxlat_map_search(
+const addrxlat_meth_t *addrxlat_map_search(
 	const addrxlat_map_t *map, addrxlat_addr_t addr);
 
 /** Clean up all data used by a translation map.
@@ -556,9 +558,9 @@ void addrxlat_osmap_set_map(addrxlat_osmap_t *osmap, addrxlat_map_t *map);
  */
 const addrxlat_map_t *addrxlat_osmap_get_map(const addrxlat_osmap_t *osmap);
 
-/** OS map translation definition index.
+/** OS map translation method index.
  *
- * The OS map object may create a number of translation definitions
+ * The OS map object may create a number of translation methods
  * for the OS map. Any of them can be obtained with
  * @ref addrxlat_osmap_get_xlat or overridden with
  * @ref addrxlat_osmap_set_xlat using one of these indices.
@@ -573,21 +575,22 @@ typedef enum _addrxlat_osmap_xlat {
 	ADDRXLAT_OSMAP_NUM,	/**< Total number of indices. */
 } addrxlat_osmap_xlat_t;
 
-/** Explicitly set an address translation of an OS map object.
+/** Explicitly set an address translation method for an OS map object.
  * @param osmap   OS map object.
- * @param xlat    Translation definition index.
- * @param def     Page table translation definition.
+ * @param xlat    Translation method index.
+ * @param meth    Actual translation method.
  */
-void addrxlat_osmap_set_xlat(addrxlat_osmap_t *osmap,
-			     addrxlat_osmap_xlat_t xlat, addrxlat_def_t *def);
+void addrxlat_osmap_set_xlat(
+	addrxlat_osmap_t *osmap, addrxlat_osmap_xlat_t xlat,
+	addrxlat_meth_t *meth);
 
 /** Get the page table translation of an OS map object.
  * @param osmap   OS map object.
- * @param xlat    Translation definition index.
- * @returns       Associated page table translation.
+ * @param xlat    Translation method index.
+ * @returns       Associated translation method.
  */
-addrxlat_def_t *addrxlat_osmap_get_xlat(addrxlat_osmap_t *osmap,
-					addrxlat_osmap_xlat_t xlat);
+addrxlat_meth_t *addrxlat_osmap_get_xlat(
+	addrxlat_osmap_t *osmap, addrxlat_osmap_xlat_t xlat);
 
 /** Type of the read callback for 32-bit integers.
  * @param data      Arbitrary user-supplied data.

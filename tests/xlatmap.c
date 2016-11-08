@@ -39,12 +39,12 @@
 #define NMAPS 11
 static addrxlat_map_t *map[NMAPS];
 
-#define NDEFS 4
-static addrxlat_def_t *def[NDEFS];
-static unsigned long ref[NDEFS];
+#define NMETHS 4
+static addrxlat_meth_t *meth[NMETHS];
+static unsigned long ref[NMETHS];
 
 #define CANARY_EXTRA_REF	100
-static addrxlat_def_t *canary;
+static addrxlat_meth_t *canary;
 static unsigned long canaryref;
 
 static int result;
@@ -87,7 +87,7 @@ realloc(void *ptr, size_t size)
 				       offsetof(addrxlat_map_t, ranges) +
 				       oldn * sizeof(oldmap->ranges[0]));
 			for (i = oldn; i < newn; ++i)
-				newmap->ranges[i].def = canary;
+				newmap->ranges[i].meth = canary;
 		} else
 			memcpy(newmap, oldmap, size);
 	} else
@@ -106,18 +106,18 @@ printmap(const addrxlat_map_t *map)
 	for (i = 0; i < map->n; ++i) {
 		printf("%"ADDRXLAT_PRIxADDR"-%"ADDRXLAT_PRIxADDR": ",
 		       addr, addr + map->ranges[i].endoff);
-		if (!map->ranges[i].def)
+		if (!map->ranges[i].meth)
 			printf("NULL\n");
-		else if (map->ranges[i].def == canary)
+		else if (map->ranges[i].meth == canary)
 			printf("CANARY\n");
 		else {
-			for (j = 0; j < NDEFS; ++j)
-				if (map->ranges[i].def == def[j]) {
+			for (j = 0; j < NMETHS; ++j)
+				if (map->ranges[i].meth == meth[j]) {
 					printf("#%zu\n", j);
 					break;
 				}
-			if (j >= NDEFS)
-				printf("UNKNOWN: %p\n", map->ranges[i].def);
+			if (j >= NMETHS)
+				printf("UNKNOWN: %p\n", map->ranges[i].meth);
 		}
 
 		addr += map->ranges[i].endoff + 1;
@@ -125,10 +125,10 @@ printmap(const addrxlat_map_t *map)
 }
 
 static void
-check_def_ref(unsigned idx, unsigned long expect)
+check_meth_ref(unsigned idx, unsigned long expect)
 {
-	addrxlat_def_incref(def[idx]);
-	ref[idx] = addrxlat_def_decref(def[idx]);
+	addrxlat_meth_incref(meth[idx]);
+	ref[idx] = addrxlat_meth_decref(meth[idx]);
 	if (ref[idx] != expect) {
 		printf("Wrong reference count for #%d: %lu != %lu\n",
 		       idx, ref[idx], expect);
@@ -140,8 +140,8 @@ static void
 check_canary(void)
 {
 	unsigned long ref;
-	addrxlat_def_incref(canary);
-	ref = addrxlat_def_decref(canary);
+	addrxlat_meth_incref(canary);
+	ref = addrxlat_meth_decref(canary);
 	if (ref != canaryref) {
 		printf("Canary reference changed by %ld!\n", ref - canaryref);
 		canaryref = ref;
@@ -171,14 +171,14 @@ split_middle(addrxlat_map_t **pmap)
 	addrxlat_range_t range;
 
 	range.endoff = ADDRXLAT_ADDR_MAX;
-	range.def = def[0];
+	range.meth = meth[0];
 	map_set(pmap, 0, &range);
-	check_def_ref(0, ++ref[0]);
+	check_meth_ref(0, ++ref[0]);
 	range.endoff = 0xffff;
-	range.def = def[1];
+	range.meth = meth[1];
 	map_set(pmap, 0x10000, &range);
-	check_def_ref(0, ++ref[0]);
-	check_def_ref(1, ++ref[1]);
+	check_meth_ref(0, ++ref[0]);
+	check_meth_ref(1, ++ref[1]);
 }
 
 int
@@ -196,74 +196,74 @@ main(int argc, char **argv)
 		return TEST_ERR;
 	}
 
-	canary = addrxlat_def_new();
+	canary = addrxlat_meth_new();
 	if (!canary) {
 		perror("Cannot allocate canary");
 		return TEST_ERR;
 	}
 	for (i = 0; i < CANARY_EXTRA_REF; ++i)
-		canaryref = addrxlat_def_incref(canary);
+		canaryref = addrxlat_meth_incref(canary);
 
-	for (i = 0; i < NDEFS; ++i) {
-		def[i] = addrxlat_def_new();
-		if (!def[i]) {
-			perror("Cannot allocate addrxlat definition");
+	for (i = 0; i < NMETHS; ++i) {
+		meth[i] = addrxlat_meth_new();
+		if (!meth[i]) {
+			perror("Cannot allocate addrxlat method");
 			return TEST_ERR;
 		}
-		check_def_ref(i, ++ref[i]);
+		check_meth_ref(i, ++ref[i]);
 	}
 
 	puts("empty -> single region:");
 	range.endoff = ADDRXLAT_ADDR_MAX;
-	range.def = def[0];
+	range.meth = meth[0];
 	map_set(&map[0], 0, &range);
-	check_def_ref(0, ++ref[0]);
+	check_meth_ref(0, ++ref[0]);
 	printmap(map[0]);
 
 	puts("\nreplace single region:");
 	range.endoff = ADDRXLAT_ADDR_MAX;
-	range.def = def[1];
+	range.meth = meth[1];
 	map_set(&map[0], 0, &range);
-	check_def_ref(0, --ref[0]);
-	check_def_ref(1, ++ref[1]);
+	check_meth_ref(0, --ref[0]);
+	check_meth_ref(1, ++ref[1]);
 	printmap(map[0]);
 
 	puts("\nempty -> begin:");
 	range.endoff = 0xffff;
-	range.def = def[0];
+	range.meth = meth[0];
 	map_set(&map[1], 0, &range);
-	check_def_ref(0, ++ref[0]);
+	check_meth_ref(0, ++ref[0]);
 	printmap(map[1]);
 
 	puts("\nempty -> end:");
 	range.endoff = 0xffff;
-	range.def = def[0];
+	range.meth = meth[0];
 	map_set(&map[2], ADDRXLAT_ADDR_MAX - range.endoff, &range);
-	check_def_ref(0, ++ref[0]);
+	check_meth_ref(0, ++ref[0]);
 	printmap(map[2]);
 
 	puts("\nempty -> middle:");
 	range.endoff = 0xffff;
-	range.def = def[0];
+	range.meth = meth[0];
 	map_set(&map[3], 0x10000, &range);
-	check_def_ref(0, ++ref[0]);
+	check_meth_ref(0, ++ref[0]);
 	printmap(map[3]);
 
 	puts("\nsplit begin:");
 	range.endoff = 0xffff;
-	range.def = def[0];
+	range.meth = meth[0];
 	map_set(&map[0], 0, &range);
-	check_def_ref(0, ++ref[0]);
-	check_def_ref(1, ref[1]);
+	check_meth_ref(0, ++ref[0]);
+	check_meth_ref(1, ref[1]);
 	printmap(map[0]);
 
 	puts("\nsplit end:");
 	range.endoff = 0xffff;
-	range.def = def[2];
+	range.meth = meth[2];
 	map_set(&map[0], ADDRXLAT_ADDR_MAX - range.endoff, &range);
-	check_def_ref(0, ref[0]);
-	check_def_ref(1, ref[1]);
-	check_def_ref(2, ++ref[2]);
+	check_meth_ref(0, ref[0]);
+	check_meth_ref(1, ref[1]);
+	check_meth_ref(2, ++ref[2]);
 	printmap(map[0]);
 
 	puts("\nsplit middle:");
@@ -272,107 +272,107 @@ main(int argc, char **argv)
 
 	puts("\nreplace middle:");
 	range.endoff = 0xffff;
-	range.def = def[2];
+	range.meth = meth[2];
 	map_set(&map[4], 0x10000, &range);
-	check_def_ref(0, ref[0]);
-	check_def_ref(1, --ref[1]);
-	check_def_ref(2, ++ref[2]);
+	check_meth_ref(0, ref[0]);
+	check_meth_ref(1, --ref[1]);
+	check_meth_ref(2, ++ref[2]);
 	printmap(map[4]);
 
 	puts("\nmerge down:");
 	range.endoff= 0xffff;
-	range.def = def[2];
+	range.meth = meth[2];
 	map_set(&map[4], 0, &range);
-	check_def_ref(0, --ref[0]);
-	check_def_ref(2, ref[2]);
+	check_meth_ref(0, --ref[0]);
+	check_meth_ref(2, ref[2]);
 	printmap(map[4]);
 
 	puts("\nmerge up:");
 	range.endoff = 0xffff;
-	range.def = def[2];
+	range.meth = meth[2];
 	map_set(&map[4], 0x20000, &range);
-	check_def_ref(0, ref[0]);
-	check_def_ref(2, ref[2]);
+	check_meth_ref(0, ref[0]);
+	check_meth_ref(2, ref[2]);
 	printmap(map[4]);
 
 	puts("\nmerge both:");
 	split_middle(&map[5]);
 	range.endoff = 0xffff;
-	range.def = def[0];
+	range.meth = meth[0];
 	map_set(&map[5], 0x10000, &range);
-	check_def_ref(0, --ref[0]);
-	check_def_ref(1, --ref[1]);
+	check_meth_ref(0, --ref[0]);
+	check_meth_ref(1, --ref[1]);
 	printmap(map[5]);
 
 	puts("\nmerge overlap down:");
 	split_middle(&map[6]);
 	range.endoff = 0x7fff;
-	range.def = def[1];
+	range.meth = meth[1];
 	map_set(&map[6], 0xc000, &range);
-	check_def_ref(0, ref[0]);
-	check_def_ref(1, ref[1]);
+	check_meth_ref(0, ref[0]);
+	check_meth_ref(1, ref[1]);
 	printmap(map[6]);
 
 	puts("\nmerge overlap up:");
 	range.endoff = 0x7fff;
-	range.def = def[1];
+	range.meth = meth[1];
 	map_set(&map[6], 0x1c000, &range);
-	check_def_ref(0, ref[0]);
-	check_def_ref(1, ref[1]);
+	check_meth_ref(0, ref[0]);
+	check_meth_ref(1, ref[1]);
 	printmap(map[6]);
 
 	puts("\nmerge inner:");
 	range.endoff = 0x7fff;
-	range.def = def[1];
+	range.meth = meth[1];
 	map_set(&map[6], 0x14000, &range);
-	check_def_ref(0, ref[0]);
-	check_def_ref(1, ref[1]);
+	check_meth_ref(0, ref[0]);
+	check_meth_ref(1, ref[1]);
 	printmap(map[6]);
 
 	puts("\noverlap down:");
 	split_middle(&map[7]);
 	range.endoff = 0xffff;
-	range.def = def[2];
+	range.meth = meth[2];
 	map_set(&map[7], 0x8000, &range);
-	check_def_ref(0, ref[0]);
-	check_def_ref(1, ref[1]);
-	check_def_ref(2, ++ref[2]);
+	check_meth_ref(0, ref[0]);
+	check_meth_ref(1, ref[1]);
+	check_meth_ref(2, ++ref[2]);
 	printmap(map[7]);
 
 	puts("\noverlap up:");
 	split_middle(&map[8]);
 	range.endoff = 0xffff;
-	range.def = def[2];
+	range.meth = meth[2];
 	map_set(&map[8], 0x18000, &range);
-	check_def_ref(0, ref[0]);
-	check_def_ref(1, ref[1]);
-	check_def_ref(2, ++ref[2]);
+	check_meth_ref(0, ref[0]);
+	check_meth_ref(1, ref[1]);
+	check_meth_ref(2, ++ref[2]);
 	printmap(map[8]);
 
 	puts("\noverlap both:");
 	split_middle(&map[9]);
 	range.endoff = 0x1ffff;
-	range.def = def[2];
+	range.meth = meth[2];
 	map_set(&map[9], 0x8000, &range);
-	check_def_ref(0, ref[0]);
-	check_def_ref(1, --ref[1]);
-	check_def_ref(2, ++ref[2]);
+	check_meth_ref(0, ref[0]);
+	check_meth_ref(1, --ref[1]);
+	check_meth_ref(2, ++ref[2]);
 	printmap(map[9]);
 
 	puts("\noverlap multiple:");
 	split_middle(&map[10]);
 	range.endoff = 0xffff;
-	range.def = def[2];
+	range.meth = meth[2];
 	map_set(&map[10], 0x20000, &range);
-	check_def_ref(0, ref[0]);
-	check_def_ref(2, ++ref[2]);
+	check_meth_ref(0, ref[0]);
+	check_meth_ref(2, ++ref[2]);
 	range.endoff = 0x2ffff;
-	range.def = def[3];
+	range.meth = meth[3];
 	map_set(&map[10], 0x8000, &range);
-	check_def_ref(0, ref[0]);
-	check_def_ref(1, --ref[1]);
-	check_def_ref(2, --ref[2]);
-	check_def_ref(3, ++ref[3]);
+	check_meth_ref(0, ref[0]);
+	check_meth_ref(1, --ref[1]);
+	check_meth_ref(2, --ref[2]);
+	check_meth_ref(3, ++ref[3]);
 	printmap(map[10]);
 
 	/* Cleanup must not crash */
@@ -380,9 +380,9 @@ main(int argc, char **argv)
 		addrxlat_map_clear(map[i]);
 		free(map[i]);
 	}
-	for (i = 0; i < NDEFS; ++i)
-		if (addrxlat_def_decref(def[i])) {
-			printf("Leaked reference to #%u\n", i);
+	for (i = 0; i < NMETHS; ++i)
+		if (addrxlat_meth_decref(meth[i])) {
+			printf("Leaked reference to method #%u\n", i);
 			result = TEST_FAIL;
 		}
 

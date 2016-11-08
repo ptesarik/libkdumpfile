@@ -176,30 +176,30 @@ print_ind(const char *desc, const void *ptr)
 }
 
 static void
-print_xlat(const addrxlat_def_t *def)
+print_xlat(const addrxlat_meth_t *meth)
 {
-	if (def == NULL)
+	if (meth == NULL)
 		fputs("NONE", stdout);
-	else switch (addrxlat_def_get_kind(def)) {
+	else switch (addrxlat_meth_get_kind(meth)) {
 	case ADDRXLAT_NONE:
-		print_ind("NONE", def);
+		print_ind("NONE", meth);
 		break;
 
 	case ADDRXLAT_LINEAR:
-		print_ind("LINEAR", def);
+		print_ind("LINEAR", meth);
 		printf(" off=0x%llx",
-		       (unsigned long long) addrxlat_def_get_offset(def));
+		       (unsigned long long) addrxlat_meth_get_offset(meth));
 		break;
 
 	case ADDRXLAT_PGT:
-		print_ind("PGT", def);
+		print_ind("PGT", meth);
 		break;
 
 	}
 }
 
 static void
-print_pgt(const addrxlat_def_t *pgt)
+print_pgt(const addrxlat_meth_t *pgt)
 {
 	static const char *pte_formats[] = {
 		[addrxlat_pte_none] = "none",
@@ -210,7 +210,7 @@ print_pgt(const addrxlat_def_t *pgt)
 		[addrxlat_pte_ppc64_linux_rpn30] = "ppc64_linux_rpn30",
 	};
 
-	const addrxlat_paging_form_t *pf = addrxlat_def_get_form(pgt);
+	const addrxlat_paging_form_t *pf = addrxlat_meth_get_form(pgt);
 	unsigned i;
 
 	fputs("pte_format: ", stdout);
@@ -235,7 +235,7 @@ print_map(const addrxlat_map_t *map)
 		const addrxlat_range_t *range = &map->ranges[i];
 		printf("%"ADDRXLAT_PRIxADDR"-%"ADDRXLAT_PRIxADDR": ",
 			addr, addr + range->endoff);
-		print_xlat(range->def);
+		print_xlat(range->meth);
 		putchar('\n');
 
 		addr += range->endoff + 1;
@@ -248,7 +248,7 @@ os_map(void)
 	addrxlat_ctx *ctx;
 	addrxlat_osdesc_t desc;
 	addrxlat_osmap_t *osmap;
-	const addrxlat_def_t *def;
+	const addrxlat_meth_t *meth;
 	addrxlat_status status;
 
 	desc.type = ostype;
@@ -272,10 +272,10 @@ os_map(void)
 	}
 
 	if (rootpgt != ADDRXLAT_ADDR_MAX) {
-		addrxlat_def_t *pgt;
+		addrxlat_meth_t *pgt;
 		addrxlat_fulladdr_t root;
 
-		pgt = addrxlat_def_new();
+		pgt = addrxlat_meth_new();
 		if (!pgt) {
 			perror("Cannot allocate rootpgt");
 			addrxlat_decref(ctx);
@@ -283,9 +283,9 @@ os_map(void)
 		}
 		root.as = ADDRXLAT_MACHPHYSADDR;
 		root.addr = rootpgt;
-		addrxlat_def_set_root(pgt, &root);
+		addrxlat_meth_set_root(pgt, &root);
 		addrxlat_osmap_set_xlat(osmap, ADDRXLAT_OSMAP_PGT, pgt);
-		addrxlat_def_decref(pgt);
+		addrxlat_meth_decref(pgt);
 	}
 
 	status = addrxlat_osmap_init(osmap, ctx, &desc);
@@ -299,21 +299,21 @@ os_map(void)
 		return TEST_ERR;
 	}
 
-	def = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_PGT);
-	add_symbol(def, "rootpgt");
-	print_pgt(def);
+	meth = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_PGT);
+	add_symbol(meth, "rootpgt");
+	print_pgt(meth);
 
-	def = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_UPGT);
-	add_symbol(def, "userpgt");
+	meth = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_UPGT);
+	add_symbol(meth, "userpgt");
 
-	def = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_DIRECT);
-	add_symbol(def, "direct");
+	meth = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_DIRECT);
+	add_symbol(meth, "direct");
 
-	def = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_KTEXT);
-	add_symbol(def, "ktext");
+	meth = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_KTEXT);
+	add_symbol(meth, "ktext");
 
-	def = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_VMEMMAP);
-	add_symbol(def, "vmemmap");
+	meth = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_VMEMMAP);
+	add_symbol(meth, "vmemmap");
 
 	print_map(addrxlat_osmap_get_map(osmap));
 

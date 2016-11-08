@@ -99,7 +99,7 @@ struct pgt_xlat {
 
 /** Internal definition of the address translation method.
  */
-struct _addrxlat_def {
+struct _addrxlat_meth {
 	/** Reference counter. */
 	unsigned long refcnt;
 
@@ -148,8 +148,8 @@ struct _addrxlat_osmap {
 	/** Translation map. */
 	addrxlat_map_t *map;
 
-	/** Address translation objects. */
-	addrxlat_def_t *def[ADDRXLAT_OSMAP_NUM];
+	/** Address translation methods. */
+	addrxlat_meth_t *meth[ADDRXLAT_OSMAP_NUM];
 };
 
 /* vtop */
@@ -214,20 +214,20 @@ addrxlat_status osmap_x86_64(
 
 /* internal aliases */
 
-#define internal_def_new INTERNAL_ALIAS(def_new)
-DECLARE_INTERNAL(def_new)
+#define internal_meth_new INTERNAL_ALIAS(meth_new)
+DECLARE_INTERNAL(meth_new)
 
-#define internal_def_incref INTERNAL_ALIAS(def_incref)
-DECLARE_INTERNAL(def_incref)
+#define internal_meth_incref INTERNAL_ALIAS(meth_incref)
+DECLARE_INTERNAL(meth_incref)
 
-#define internal_def_decref INTERNAL_ALIAS(def_decref)
-DECLARE_INTERNAL(def_decref)
+#define internal_meth_decref INTERNAL_ALIAS(meth_decref)
+DECLARE_INTERNAL(meth_decref)
 
-#define internal_def_set_form INTERNAL_ALIAS(def_set_form)
-DECLARE_INTERNAL(def_set_form)
+#define internal_meth_set_form INTERNAL_ALIAS(meth_set_form)
+DECLARE_INTERNAL(meth_set_form)
 
-#define internal_def_set_offset INTERNAL_ALIAS(def_set_offset)
-DECLARE_INTERNAL(def_set_offset)
+#define internal_meth_set_offset INTERNAL_ALIAS(meth_set_offset)
+DECLARE_INTERNAL(meth_set_offset)
 
 #define internal_walk_init INTERNAL_ALIAS(walk_init)
 DECLARE_INTERNAL(walk_init)

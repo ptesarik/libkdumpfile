@@ -69,8 +69,8 @@ addrxlat_osmap_decref(addrxlat_osmap_t *osmap)
 
 		free_map(osmap->map);
 		for (i = 0; i < ADDRXLAT_OSMAP_NUM; ++i)
-			if (osmap->def[i])
-				internal_def_decref(osmap->def[i]);
+			if (osmap->meth[i])
+				internal_meth_decref(osmap->meth[i]);
 		free(osmap);
 	}
 	return refcnt;
@@ -115,21 +115,21 @@ addrxlat_osmap_get_map(const addrxlat_osmap_t *osmap)
 
 void
 addrxlat_osmap_set_xlat(addrxlat_osmap_t *osmap,
-			addrxlat_osmap_xlat_t xlat, addrxlat_def_t *def)
+			addrxlat_osmap_xlat_t xlat, addrxlat_meth_t *meth)
 {
-	if (osmap->def[xlat])
-		internal_def_decref(osmap->def[xlat]);
-	osmap->def[xlat] = def;
-	if (def)
-		internal_def_incref(def);
+	if (osmap->meth[xlat])
+		internal_meth_decref(osmap->meth[xlat]);
+	osmap->meth[xlat] = meth;
+	if (meth)
+		internal_meth_incref(meth);
 }
 
-addrxlat_def_t *
+addrxlat_meth_t *
 addrxlat_osmap_get_xlat(addrxlat_osmap_t *osmap, addrxlat_osmap_xlat_t xlat)
 {
-	if (osmap->def[xlat])
-		internal_def_incref(osmap->def[xlat]);
-	return osmap->def[xlat];
+	if (osmap->meth[xlat])
+		internal_meth_incref(osmap->meth[xlat]);
+	return osmap->meth[xlat];
 }
 
 /** Action function for @ref OSMAP_ACT_DIRECT.
@@ -141,7 +141,7 @@ static void
 direct_hook(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	    const struct osmap_region *region)
 {
-	internal_def_set_offset(osmap->def[region->xlat], region->first);
+	internal_meth_set_offset(osmap->meth[region->xlat], region->first);
 }
 
 /** Set memory map layout.
@@ -165,19 +165,19 @@ osmap_set_layout(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	for (region = layout; region->xlat != ADDRXLAT_OSMAP_NUM; ++region) {
 		addrxlat_range_t range;
 
-		if (!osmap->def[region->xlat])
-			osmap->def[region->xlat] = internal_def_new();
-		if (!osmap->def[region->xlat])
+		if (!osmap->meth[region->xlat])
+			osmap->meth[region->xlat] = internal_meth_new();
+		if (!osmap->meth[region->xlat])
 			return set_error(ctx, addrxlat_nomem,
 					 "Cannot allocate translation"
-					 " definition %u",
+					 " method %u",
 					 (unsigned) region->xlat);
 
 		if (region->act != OSMAP_ACT_NONE)
 			actions[region->act](osmap, ctx, region);
 
 		range.endoff = region->last - region->first;
-		range.def = osmap->def[region->xlat];
+		range.meth = osmap->meth[region->xlat];
 		newmap = internal_map_set(osmap->map, region->first, &range);
 		if (!newmap)
 			return set_error(ctx, addrxlat_nomem,

@@ -110,7 +110,7 @@ hugepd_shift(addrxlat_pte_t hpde)
 static addrxlat_status
 huge_pd_linux(addrxlat_walk_t *state)
 {
-	const struct pgt_xlat *pgt = &state->def->pgt;
+	const struct pgt_xlat *pgt = &state->meth->pgt;
 	addrxlat_addr_t off;
 	unsigned pdshift;
 	unsigned short i;
@@ -164,7 +164,7 @@ is_hugepte_linux(addrxlat_pte_t pte)
 static addrxlat_status
 huge_page_linux(addrxlat_walk_t *state, unsigned rpn_shift)
 {
-	const struct pgt_xlat *pgt = &state->def->pgt;
+	const struct pgt_xlat *pgt = &state->meth->pgt;
 
 	state->base.as = ADDRXLAT_MACHPHYSADDR;
 	state->base.addr = (state->raw_pte >>
@@ -186,7 +186,7 @@ pgt_ppc64_linux(addrxlat_walk_t *state, unsigned rpn_shift)
 		"pud",
 		"pgd",
 	};
-	const struct pgt_xlat *pgt = &state->def->pgt;
+	const struct pgt_xlat *pgt = &state->meth->pgt;
 
 	if (!state->raw_pte)
 		return set_error(state->ctx, addrxlat_notpresent,
@@ -265,8 +265,8 @@ map_linux_ppc64(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	if (status != addrxlat_ok)
 		return status;
 
-	internal_def_set_form(osmap->def[ADDRXLAT_OSMAP_PGT], &ppc64_pf_64k);
-	internal_def_set_form(osmap->def[ADDRXLAT_OSMAP_UPGT], &ppc64_pf_64k);
+	internal_meth_set_form(osmap->meth[ADDRXLAT_OSMAP_PGT], &ppc64_pf_64k);
+	internal_meth_set_form(osmap->meth[ADDRXLAT_OSMAP_UPGT], &ppc64_pf_64k);
 
 	return addrxlat_ok;
 }

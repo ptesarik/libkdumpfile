@@ -113,7 +113,7 @@ static const struct attr_template tmpl_pid =
 
 struct ia32_data {
 	/** Direcmtap translation */
-	addrxlat_def_t *directmap;
+	addrxlat_meth_t *directmap;
 
 	int pae_state;		/* <0 .. no, >0 .. yes, 0 .. undetermined */
 };
@@ -132,13 +132,13 @@ ia32_init(kdump_ctx *ctx)
 				 "Cannot allocate ia32 private data");
 	ctx->shared->archdata = archdata;
 
-	archdata->directmap = addrxlat_def_new();
+	archdata->directmap = addrxlat_meth_new();
 	if (!archdata->directmap) {
 		ret = set_error(ctx, kdump_syserr,
 				"Cannot allocate directmap");
 		goto err_arch;
 	}
-	addrxlat_def_set_offset(archdata->directmap, __START_KERNEL_map);
+	addrxlat_meth_set_offset(archdata->directmap, __START_KERNEL_map);
 
 	ret = set_vtop_xlat(&ctx->shared->vtop_map,
 			    __START_KERNEL_map, VIRTADDR_MAX,
@@ -151,7 +151,7 @@ ia32_init(kdump_ctx *ctx)
 	return kdump_ok;
 
  err_directmap:
-	addrxlat_def_decref(archdata->directmap);
+	addrxlat_meth_decref(archdata->directmap);
 
  err_arch:
 	free(archdata);
@@ -216,7 +216,7 @@ read_pgt(kdump_ctx *ctx)
 				 " 0x%"ADDRXLAT_PRIXADDR, pgtroot.addr);
 	pgtroot.addr -= __START_KERNEL_map;
 	pgtroot.as = ADDRXLAT_KPHYSADDR;
-	addrxlat_def_set_root(ctx->shared->vtop_map.pgt, &pgtroot);
+	addrxlat_meth_set_root(ctx->shared->vtop_map.pgt, &pgtroot);
 
 	if (!archdata->pae_state) {
 		kdump_vaddr_t addr = pgtroot.addr + 3 * sizeof(uint64_t);
@@ -229,7 +229,7 @@ read_pgt(kdump_ctx *ctx)
 	}
 
 	pf = (archdata->pae_state > 0 ? &ia32_pf_pae : &ia32_pf);
-	axres = addrxlat_def_set_form(ctx->shared->vtop_map.pgt, pf);
+	axres = addrxlat_meth_set_form(ctx->shared->vtop_map.pgt, pf);
 	if (axres != addrxlat_ok)
 		return set_error_addrxlat(ctx, axres);
 
@@ -272,7 +272,7 @@ ia32_cleanup(struct kdump_shared *shared)
 	struct ia32_data *archdata = shared->archdata;
 
 	if (archdata->directmap)
-		addrxlat_def_decref(archdata->directmap);
+		addrxlat_meth_decref(archdata->directmap);
 	free(archdata);
 	shared->archdata = NULL;
 }

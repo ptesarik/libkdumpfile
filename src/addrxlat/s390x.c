@@ -68,7 +68,7 @@ pgt_s390x(addrxlat_walk_t *state)
 		"pgd",
 		"rg1",		/* Invented; does not exist in the wild. */
 	};
-	const struct pgt_xlat *pgt = &state->def->pgt;
+	const struct pgt_xlat *pgt = &state->meth->pgt;
 
 	if (PTE_I(state->raw_pte))
 		return set_error(state->ctx, addrxlat_notpresent,
@@ -118,14 +118,14 @@ pgt_s390x(addrxlat_walk_t *state)
 static addrxlat_status
 determine_pgttype(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx)
 {
-	addrxlat_def_t *pgtdef;
+	addrxlat_meth_t *pgtmeth;
 	addrxlat_fulladdr_t ptr;
 	uint64_t entry;
 	unsigned i;
 	addrxlat_status status;
 
-	pgtdef = osmap->def[ADDRXLAT_OSMAP_PGT];
-	ptr = pgtdef->pgt.root;
+	pgtmeth = osmap->meth[ADDRXLAT_OSMAP_PGT];
+	ptr = pgtmeth->pgt.root;
 	for (i = 0; i < ROOT_PGT_LEN; ++i) {
 		status = ctx->cb_read64(ctx->priv, &ptr, &entry);
 		if (status != addrxlat_ok)
@@ -139,7 +139,7 @@ determine_pgttype(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx)
 			};
 
 			pf.levels = PTE_TT(entry) + 3;
-			return internal_def_set_form(pgtdef, &pf);
+			return internal_meth_set_form(pgtmeth, &pf);
 		}
 		ptr.addr += sizeof(uint64_t);
 	}
@@ -167,17 +167,17 @@ osmap_s390x(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 		return set_error(ctx, addrxlat_notimpl,
 				 "Unimplemented architecture variant");
 
-	if (!osmap->def[ADDRXLAT_OSMAP_PGT])
-		osmap->def[ADDRXLAT_OSMAP_PGT] = internal_def_new();
-	if (!osmap->def[ADDRXLAT_OSMAP_PGT])
+	if (!osmap->meth[ADDRXLAT_OSMAP_PGT])
+		osmap->meth[ADDRXLAT_OSMAP_PGT] = internal_meth_new();
+	if (!osmap->meth[ADDRXLAT_OSMAP_PGT])
 		return addrxlat_nomem;
 
 	status = determine_pgttype(osmap, ctx);
 	if (status != addrxlat_ok)
 		return status;
 
-	range.def = osmap->def[ADDRXLAT_OSMAP_PGT];
-	range.endoff = paging_max_index(&range.def->pgt.pf);
+	range.meth = osmap->meth[ADDRXLAT_OSMAP_PGT];
+	range.endoff = paging_max_index(&range.meth->pgt.pf);
 	newmap = internal_map_set(osmap->map, 0, &range);
 	if (!newmap)
 		return set_error(ctx, addrxlat_nomem,

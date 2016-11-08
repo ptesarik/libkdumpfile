@@ -68,7 +68,7 @@ pgt_ia32(addrxlat_walk_t *state)
 		"pte",
 		"pgd",
 	};
-	const struct pgt_xlat *pgt = &state->def->pgt;
+	const struct pgt_xlat *pgt = &state->meth->pgt;
 
 	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(state->ctx, addrxlat_notpresent,
@@ -107,7 +107,7 @@ pgt_ia32_pae(addrxlat_walk_t *state)
 		"pmd",
 		"pgd",
 	};
-	const struct pgt_xlat *pgt = &state->def->pgt;
+	const struct pgt_xlat *pgt = &state->meth->pgt;
 
 	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(state->ctx, addrxlat_notpresent,
@@ -157,21 +157,21 @@ static int
 is_pae(addrxlat_ctx *ctx, const addrxlat_fulladdr_t *root,
        addrxlat_addr_t direct)
 {
-	addrxlat_def_t def;
+	addrxlat_meth_t meth;
 	addrxlat_addr_t addr;
 	addrxlat_status status;
 
-	def.pgt.root = *root;
+	meth.pgt.root = *root;
 
-	internal_def_set_form(&def, &ia32_pf_pae);
+	internal_meth_set_form(&meth, &ia32_pf_pae);
 	addr = direct;
-	status = internal_walk(ctx, &def, &addr);
+	status = internal_walk(ctx, &meth, &addr);
 	if (status == addrxlat_ok && addr == 0)
 		return 1;
 
-	internal_def_set_form(&def, &ia32_pf);
+	internal_meth_set_form(&meth, &ia32_pf);
 	addr = direct;
-	status = internal_walk(ctx, &def, &addr);
+	status = internal_walk(ctx, &meth, &addr);
 	if (status == addrxlat_ok && addr == 0)
 		return 0;
 
@@ -188,7 +188,7 @@ static addrxlat_status
 osmap_ia32_nonpae(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 		  const addrxlat_osdesc_t *osdesc)
 {
-	internal_def_set_form(osmap->def[ADDRXLAT_OSMAP_PGT], &ia32_pf);
+	internal_meth_set_form(osmap->meth[ADDRXLAT_OSMAP_PGT], &ia32_pf);
 	return addrxlat_ok;
 }
 
@@ -202,7 +202,7 @@ static addrxlat_status
 osmap_ia32_pae(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	       const addrxlat_osdesc_t *osdesc)
 {
-	internal_def_set_form(osmap->def[ADDRXLAT_OSMAP_PGT], &ia32_pf_pae);
+	internal_meth_set_form(osmap->meth[ADDRXLAT_OSMAP_PGT], &ia32_pf_pae);
 	return addrxlat_ok;
 }
 
@@ -221,15 +221,15 @@ osmap_ia32(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 	int pae;
 
 	if (!osdesc->archvar) {
-		addrxlat_def_t *pgtdef = osmap->def[ADDRXLAT_OSMAP_PGT];
+		addrxlat_meth_t *pgtmeth = osmap->meth[ADDRXLAT_OSMAP_PGT];
 
-		if (!pgtdef)
+		if (!pgtmeth)
 			pae = -1;
 		else if (osdesc->type == addrxlat_os_linux)
-			pae = is_pae(ctx, &pgtdef->pgt.root,
+			pae = is_pae(ctx, &pgtmeth->pgt.root,
 				     LINUX_DIRECTMAP);
 		else if (osdesc->type == addrxlat_os_xen)
-			pae = is_pae(ctx, &pgtdef->pgt.root,
+			pae = is_pae(ctx, &pgtmeth->pgt.root,
 				     XEN_DIRECTMAP);
 		else
 			pae = -1;
@@ -245,12 +245,12 @@ osmap_ia32(addrxlat_osmap_t *osmap, addrxlat_ctx *ctx,
 		return set_error(ctx, addrxlat_notimpl,
 				 "Unimplemented architecture variant");
 
-	if (!osmap->def[ADDRXLAT_OSMAP_PGT])
-		osmap->def[ADDRXLAT_OSMAP_PGT] = internal_def_new();
-	if (!osmap->def[ADDRXLAT_OSMAP_PGT])
+	if (!osmap->meth[ADDRXLAT_OSMAP_PGT])
+		osmap->meth[ADDRXLAT_OSMAP_PGT] = internal_meth_new();
+	if (!osmap->meth[ADDRXLAT_OSMAP_PGT])
 		return addrxlat_nomem;
 
-	range.def = osmap->def[ADDRXLAT_OSMAP_PGT];
+	range.meth = osmap->meth[ADDRXLAT_OSMAP_PGT];
 	range.endoff = VIRTADDR_MAX;
 	newmap = internal_map_set(osmap->map, 0, &range);
 	if (!newmap)

@@ -29,7 +29,7 @@ libaddrxlat_la_SOURCES = \
 	x86_64.c \
 	setup.c \
 	util.c \
-	pgt.c \
+	meth.c \
 	vtop.c \
 	map.c \
 	osmap.c

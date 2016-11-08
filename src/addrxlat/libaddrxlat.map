@@ -9,22 +9,22 @@ LIBADDRXLAT_0 {
     addrxlat_set_priv;
     addrxlat_get_priv;
 
+    addrxlat_meth_new;
+    addrxlat_meth_incref;
+    addrxlat_meth_decref;
+    addrxlat_meth_get_kind;
+    addrxlat_meth_set_offset;
+    addrxlat_meth_get_offset;
+    addrxlat_meth_set_form;
+    addrxlat_meth_get_form;
+    addrxlat_meth_set_root;
+    addrxlat_meth_get_root;
+
     addrxlat_walk;
     addrxlat_by_map;
     addrxlat_map_set;
     addrxlat_map_search;
     addrxlat_map_clear;
-
-    addrxlat_def_new;
-    addrxlat_def_incref;
-    addrxlat_def_decref;
-    addrxlat_def_get_kind;
-    addrxlat_def_set_offset;
-    addrxlat_def_get_offset;
-    addrxlat_def_set_form;
-    addrxlat_def_get_form;
-    addrxlat_def_set_root;
-    addrxlat_def_get_root;
 
     addrxlat_walk_init;
     addrxlat_walk_next;

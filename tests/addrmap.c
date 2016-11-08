@@ -32,19 +32,19 @@
 
 #include "testutil.h"
 
-static addrxlat_def_t **defs;
-static unsigned ndef;
+static addrxlat_meth_t **meths;
+static unsigned nmeth;
 
 static unsigned
-get_def_idx(const addrxlat_def_t *def)
+get_meth_idx(const addrxlat_meth_t *meth)
 {
 	unsigned i;
 
-	if (!def)
+	if (!meth)
 		return 0;
 
-	for (i = 0; i < ndef; ++i)
-		if (defs[i] == def)
+	for (i = 0; i < nmeth; ++i)
+		if (meths[i] == meth)
 			return i;
 	return ~0U;
 }
@@ -58,7 +58,7 @@ printmap(const addrxlat_map_t *map)
 	for (i = 0; i < map->n; ++i) {
 		printf("0x%"ADDRXLAT_PRIxADDR "-0x%"ADDRXLAT_PRIxADDR ":%u\n",
 		       addr, addr + map->ranges[i].endoff,
-		       get_def_idx(map->ranges[i].def));
+		       get_meth_idx(map->ranges[i].meth));
 		addr += map->ranges[i].endoff + 1;
 	}
 }
@@ -69,13 +69,13 @@ main(int argc, char **argv)
 	addrxlat_map_t *map;
 	addrxlat_range_t range;
 	addrxlat_addr_t addr;
-	unsigned long defidx;
+	unsigned long methidx;
 	char *endp;
 	int i;
 	int ret;
 
 	map = NULL;
-	ndef = 0;
+	nmeth = 0;
 	for (i = 1; i < argc; ++i) {
 		addr = strtoull(argv[i], &endp, 0);
 		if (*endp != '-') {
@@ -90,32 +90,33 @@ main(int argc, char **argv)
 		}
 		range.endoff -= addr;
 
-		defidx = strtoul(endp + 1, &endp, 0);
+		methidx = strtoul(endp + 1, &endp, 0);
 		if (*endp) {
 			fprintf(stderr, "Invalid range spec: %s\n", argv[i]);
 			return TEST_ERR;
 		}
-		if (defidx >= ndef) {
-			addrxlat_def_t **newdefs;
-			newdefs = realloc(defs, ((defidx + 1) *
-						 sizeof(addrxlat_def_t *)));
-			if (!newdefs) {
-				fprintf(stderr, "Cannot enlarge def array to"
-					" %lu elements\n", defidx + 1);
+		if (methidx >= nmeth) {
+			addrxlat_meth_t **newmeths;
+			newmeths = realloc(meths, ((methidx + 1) *
+						 sizeof(addrxlat_meth_t *)));
+			if (!newmeths) {
+				fprintf(stderr, "Cannot enlarge methods array"
+					" to %lu elements\n", methidx + 1);
 				return TEST_ERR;
 			}
-			defs = newdefs;
-			while (ndef <= defidx)
-				defs[ndef++] = NULL;
+			meths = newmeths;
+			while (nmeth <= methidx)
+				meths[nmeth++] = NULL;
 		}
-		if (!defs[defidx])
-			defs[defidx] = addrxlat_def_new();
-		if (!defs[defidx]) {
-			fprintf(stderr, "Cannot allocate def %lu\n", defidx);
+		if (!meths[methidx])
+			meths[methidx] = addrxlat_meth_new();
+		if (!meths[methidx]) {
+			fprintf(stderr, "Cannot allocate method %lu\n",
+				methidx);
 			return TEST_ERR;
 		}
 
-		range.def = defs[defidx];
+		range.meth = meths[methidx];
 		map = addrxlat_map_set(map, addr, &range);
 		if (!map) {
 			perror("Cannot add range");
@@ -129,16 +130,16 @@ main(int argc, char **argv)
 	addrxlat_map_clear(map);
 
 	ret = TEST_OK;
-	while (ndef-- > 0) {
+	while (nmeth-- > 0) {
 		unsigned refcnt;
 
-		if (!defs[ndef])
+		if (!meths[nmeth])
 			continue;
 
-		refcnt = addrxlat_def_decref(defs[ndef]);
+		refcnt = addrxlat_meth_decref(meths[nmeth]);
 		if (refcnt) {
-			fprintf(stderr, "Leaked %u references to def %u\n",
-				refcnt, ndef);
+			fprintf(stderr, "Leaked %u references to method %u\n",
+				refcnt, nmeth);
 			ret = TEST_FAIL;
 		}
 	}

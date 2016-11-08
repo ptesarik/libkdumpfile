@@ -64,7 +64,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 			++first, --left;
 		}
 		/* include the previous region if it can be merged */
-		if (raddr && raddr == addr && first[-1].def == range->def) {
+		if (raddr && raddr == addr && first[-1].meth == range->meth) {
 			--first, ++left;
 			raddr -= first->endoff + 1;
 		}
@@ -80,18 +80,18 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 			rend += last->endoff + 1;
 		}
 		/* include the following region if it can be merged */
-		if (left > 0 && rend == end && last[1].def == range->def) {
+		if (left > 0 && rend == end && last[1].meth == range->meth) {
 			--delta;
 			++last, --left;
 			rend += last->endoff + 1;
 		}
 
 		/* merge up and/or down */
-		if (first->def == range->def) {
+		if (first->meth == range->meth) {
 			extend += addr - raddr;
 			raddr = addr;
 		}
-		if (last->def == range->def) {
+		if (last->meth == range->meth) {
 			extend += rend - end;
 			rend = end;
 		}
@@ -121,7 +121,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 			newmap->n = 1;
 			first = last = newmap->ranges;
 			first->endoff = ADDRXLAT_ADDR_MAX;
-			first->def = NULL;
+			first->meth = NULL;
 			++left;
 			--delta;
 		} else {
@@ -133,12 +133,12 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 
 	/* drop references to overlapped regions */
 	for (i = delta; i < 0; ++i)
-		if (last[i].def)
-			internal_def_decref(last[i].def);
+		if (last[i].meth)
+			internal_meth_decref(last[i].meth);
 	if (delta) {
 		/* if a region is split, take an extra reference  */
-		if (delta > 1 && last->def)
-			internal_def_incref(last->def);
+		if (delta > 1 && last->meth)
+			internal_meth_incref(last->meth);
 
 		memmove(last + delta, last, left * sizeof(*last));
 		last += delta;
@@ -156,21 +156,21 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 	}
 
 	/* take an extra reference to the new region */
-	internal_def_incref(range->def);
+	internal_meth_incref(range->meth);
 
 	/* drop reference to the previous value, unless an unitialized
 	 * array entry is being inserted */
-	if (delta <= 0 && first->def)
-		internal_def_decref(first->def);
+	if (delta <= 0 && first->meth)
+		internal_meth_decref(first->meth);
 
 	first->endoff = range->endoff + extend;
-	first->def = range->def;
+	first->meth = range->meth;
 	return map;
 }
 
 DEFINE_INTERNAL(map_search)
 
-const addrxlat_def_t *
+const addrxlat_meth_t *
 addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 {
 	const addrxlat_range_t *r = map->ranges;
@@ -179,7 +179,7 @@ addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 
 	while (left-- > 0) {
 		if (addr <= raddr + r->endoff)
-			return r->def;
+			return r->meth;
 		raddr += r->endoff + 1;
 		++r;
 	}
@@ -190,11 +190,11 @@ addrxlat_status
 addrxlat_by_map(addrxlat_ctx *ctx, addrxlat_addr_t *paddr,
 		const addrxlat_map_t *map)
 {
-	const addrxlat_def_t *def = internal_map_search(map, *paddr);
-	return def
-		? internal_walk(ctx, def, paddr)
+	const addrxlat_meth_t *meth = internal_map_search(map, *paddr);
+	return meth
+		? internal_walk(ctx, meth, paddr)
 		: set_error(ctx, addrxlat_invalid,
-			    "No translation defined");
+			    "No translation method defined");
 }
 
 DEFINE_INTERNAL(map_clear)
@@ -204,8 +204,8 @@ addrxlat_map_clear(addrxlat_map_t *map)
 {
 	const addrxlat_range_t *r = map->ranges;
 	while(map->n--) {
-		if (r->def)
-			internal_def_decref(r->def);
+		if (r->meth)
+			internal_meth_decref(r->meth);
 		++r;
 	}
 }

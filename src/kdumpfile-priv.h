@@ -492,7 +492,7 @@ struct attr_hash {
 /**  Map for virtual-to-physical translation
  */
 struct vtop_map {
-	addrxlat_def_t *pgt;	/**< page table translation */
+	addrxlat_meth_t *pgt;	/**< page table translation */
 	addrxlat_map_t *map;	/**< address translation map */
 };
 
@@ -842,7 +842,7 @@ addrxlat_ctx *init_addrxlat(kdump_ctx *ctx);
 #define set_vtop_xlat INTERNAL_NAME(set_vtop_xlat)
 kdump_status set_vtop_xlat(struct vtop_map *map,
 			   kdump_vaddr_t first, kdump_vaddr_t last,
-			   addrxlat_def_t *xlat);
+			   addrxlat_meth_t *xlat);
 
 #define set_vtop_pgt INTERNAL_NAME(set_vtop_pgt)
 kdump_status set_vtop_xlat_pgt(
