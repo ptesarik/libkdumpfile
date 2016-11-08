@@ -32,10 +32,6 @@
 
 #include "addrxlat-priv.h"
 
-static addrxlat_walk_init_fn walk_init_none;
-static addrxlat_walk_init_fn walk_init_linear;
-static addrxlat_walk_step_fn step_none;
-
 DEFINE_INTERNAL(meth_new)
 
 addrxlat_meth_t *
@@ -44,9 +40,7 @@ addrxlat_meth_new(void)
 	addrxlat_meth_t *meth = calloc(1, sizeof(addrxlat_meth_t));
 	if (meth) {
 		meth->refcnt = 1;
-		meth->walk_init = walk_init_none;
-		meth->walk_step = step_none;
-		meth->kind = ADDRXLAT_NONE;
+		internal_meth_set_none(meth);
 	}
 	return meth;
 }
@@ -99,6 +93,17 @@ static addrxlat_status
 step_none(addrxlat_walk_t *state)
 {
 	return addrxlat_continue;
+}
+
+DEFINE_INTERNAL(meth_set_none)
+
+addrxlat_status
+addrxlat_meth_set_none(addrxlat_meth_t *meth)
+{
+	meth->walk_init = walk_init_none;
+	meth->walk_step = step_none;
+	meth->kind = ADDRXLAT_NONE;
+	return addrxlat_ok;
 }
 
 /** Initialize walk state for linear offset.

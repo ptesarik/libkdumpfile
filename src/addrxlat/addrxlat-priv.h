@@ -223,6 +223,9 @@ DECLARE_INTERNAL(meth_incref)
 #define internal_meth_decref INTERNAL_ALIAS(meth_decref)
 DECLARE_INTERNAL(meth_decref)
 
+#define internal_meth_set_none INTERNAL_ALIAS(meth_set_none)
+DECLARE_INTERNAL(meth_set_none)
+
 #define internal_meth_set_form INTERNAL_ALIAS(meth_set_form)
 DECLARE_INTERNAL(meth_set_form)
 

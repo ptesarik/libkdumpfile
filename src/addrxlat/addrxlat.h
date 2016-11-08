@@ -247,6 +247,12 @@ unsigned long addrxlat_meth_decref(addrxlat_meth_t *meth);
  */
 addrxlat_kind_t addrxlat_meth_get_kind(const addrxlat_meth_t *meth);
 
+/** Set up null translation.
+ * @param meth  Translation method.
+ * @returns     Error status.
+ */
+addrxlat_status addrxlat_meth_set_none(addrxlat_meth_t *meth);
+
 /** Set linear offset.
  * @param meth  Translation method.
  * @param off   Physical-to-virtual offset.
