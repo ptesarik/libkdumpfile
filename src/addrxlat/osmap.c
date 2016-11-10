@@ -80,24 +80,29 @@ addrxlat_status
 addrxlat_osmap_init(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 		    const addrxlat_osdesc_t *osdesc)
 {
-	addrxlat_status ret;
+	struct osmap_init_data ctl;
+	osmap_arch_fn *arch_fn;
 
 	if (!strcmp(osdesc->arch, "x86_64"))
-		ret = osmap_x86_64(osmap, ctx, osdesc);
+		arch_fn = osmap_x86_64;
 	else if ((osdesc->arch[0] == 'i' &&
 		  (osdesc->arch[1] >= '3' && osdesc->arch[1] <= '6') &&
 		  !strcmp(osdesc->arch + 2, "86")) ||
 		 !strcmp(osdesc->arch, "ia32"))
-		ret = osmap_ia32(osmap, ctx, osdesc);
+		arch_fn = osmap_ia32;
 	else if (!strcmp(osdesc->arch, "s390x"))
-		ret = osmap_s390x(osmap, ctx, osdesc);
+		arch_fn = osmap_s390x;
 	else if (!strcmp(osdesc->arch, "ppc64"))
-		ret = osmap_ppc64(osmap, ctx, osdesc);
+		arch_fn = osmap_ppc64;
 	else
-		ret = set_error(ctx, addrxlat_notimpl,
+		return set_error(ctx, addrxlat_notimpl,
 				"Unsupported architecture");
 
-	return ret;
+	ctl.osmap = osmap;
+	ctl.ctx = ctx;
+	ctl.osdesc = osdesc;
+
+	return arch_fn(&ctl);
 }
 
 void
@@ -133,28 +138,24 @@ addrxlat_osmap_get_xlat(addrxlat_osmap_t *osmap, addrxlat_osmap_xlat_t xlat)
 }
 
 /** Action function for @ref OSMAP_ACT_DIRECT.
- * @param osmap   OS map object.
- * @parma ctx     Address translation object.
- * @param region  Associated region definition.
+ * @parma ctl  Initialization data.
  */
 static void
-direct_hook(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
-	    const struct osmap_region *region)
+direct_hook(struct osmap_init_data *ctl, const struct osmap_region *region)
 {
 	addrxlat_def_t def;
 	def.kind = ADDRXLAT_LINEAR;
 	def.param.linear.off = region->first;
-	internal_meth_set_def(osmap->meth[region->xlat], &def);
+	internal_meth_set_def(ctl->osmap->meth[region->xlat], &def);
 }
 
 /** Set memory map layout.
- * @param osmap   OS map object.
- * @parma ctx     Address translation object.
+ * @parma ctl     Initialization data.
  * @param layout  Layout definition table.
  * @returns       Error status.
  */
 addrxlat_status
-osmap_set_layout(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
+osmap_set_layout(struct osmap_init_data *ctl,
 		 const struct osmap_region layout[])
 {
 	static osmap_action_fn *const actions[] = {
@@ -168,28 +169,29 @@ osmap_set_layout(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	for (region = layout; region->xlat != ADDRXLAT_OSMAP_NUM; ++region) {
 		addrxlat_range_t range;
 
-		if (!osmap->meth[region->xlat])
-			osmap->meth[region->xlat] = internal_meth_new();
-		if (!osmap->meth[region->xlat])
-			return set_error(ctx, addrxlat_nomem,
+		if (!ctl->osmap->meth[region->xlat])
+			ctl->osmap->meth[region->xlat] = internal_meth_new();
+		if (!ctl->osmap->meth[region->xlat])
+			return set_error(ctl->ctx, addrxlat_nomem,
 					 "Cannot allocate translation"
 					 " method %u",
 					 (unsigned) region->xlat);
 
 		if (region->act != OSMAP_ACT_NONE)
-			actions[region->act](osmap, ctx, region);
+			actions[region->act](ctl, region);
 
 		range.endoff = region->last - region->first;
-		range.meth = osmap->meth[region->xlat];
-		newmap = internal_map_set(osmap->map, region->first, &range);
+		range.meth = ctl->osmap->meth[region->xlat];
+		newmap = internal_map_set(ctl->osmap->map,
+					  region->first, &range);
 		if (!newmap)
-			return set_error(ctx, addrxlat_nomem,
+			return set_error(ctl->ctx, addrxlat_nomem,
 					 "Cannot set up mapping for"
 					 " 0x%"ADDRXLAT_PRIxADDR
 					 "-0x%"ADDRXLAT_PRIxADDR,
 					 region->first,
 					 region->last);
-		osmap->map = newmap;
+		ctl->osmap->map = newmap;
 	}
 
 	return addrxlat_ok;

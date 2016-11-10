@@ -195,36 +195,34 @@ pgt_x86_64(addrxlat_walk_t *state)
 }
 
 /** Create a page table address map for x86_64 canonical regions.
- * @param osmap   OS map object.
- * @param ctx     Address translation object.
- * @param osdesc  Description of the operating system.
- * @returns           New translation map, or @c NULL on error.
+ * @param ctl  Initialization data.
+ * @returns    New translation map, or @c NULL on error.
  */
 static addrxlat_status
-canonical_pgt_map(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
-		  const addrxlat_osdesc_t *osdesc)
+canonical_pgt_map(struct osmap_init_data *ctl)
 {
 	addrxlat_range_t range;
 	addrxlat_map_t *newmap;
 
-	range.meth = osmap->meth[ADDRXLAT_OSMAP_PGT];
+	range.meth = ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
 
 	range.endoff = NONCANONICAL_START - 1;
-	newmap = internal_map_set(osmap->map, 0, &range);
+	newmap = internal_map_set(ctl->osmap->map, 0, &range);
 	if (!newmap)
 		goto err;
-	osmap->map = newmap;
+	ctl->osmap->map = newmap;
 
 	range.endoff = VIRTADDR_MAX - NONCANONICAL_END - 1;
-	newmap = internal_map_set(osmap->map, NONCANONICAL_END + 1, &range);
+	newmap = internal_map_set(ctl->osmap->map,
+				  NONCANONICAL_END + 1, &range);
 	if (!newmap)
 		goto err;
-	osmap->map = newmap;
+	ctl->osmap->map = newmap;
 
 	return addrxlat_ok;
 
  err:
-	return set_error(ctx, addrxlat_nomem,
+	return set_error(ctl->ctx, addrxlat_nomem,
 			 "Cannot set up default mapping");
 }
 
@@ -350,43 +348,40 @@ set_pgt_fallback(addrxlat_osmap_t *osmap, addrxlat_osmap_xlat_t xlat)
 #define LINUX_KTEXT_SKIP		(16ULL << 20)
 
 /** Action function for @ref OSMAP_ACT_X86_64_KTEXT.
- * @param osmap   OS map object.
- * @parma ctx     Address translation object.
+ * @parma ctl     Initialization data.
  * @param region  Associated region definition.
  */
 void
-x86_64_ktext_hook(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
+x86_64_ktext_hook(struct osmap_init_data *ctl,
 		  const struct osmap_region *region)
 {
-	set_ktext_offset(osmap, ctx, region->first + LINUX_KTEXT_SKIP);
+	set_ktext_offset(ctl->osmap, ctl->ctx,
+			 region->first + LINUX_KTEXT_SKIP);
 }
 
 /** Initialize a translation map for Linux on x86_64.
- * @param osmap   OS map object.
- * @param ctx     Address translation object.
- * @param osdesc  Description of the operating system.
- * @returns       Error status.
+ * @param ctl  Initialization data.
+ * @returns    Error status.
  */
 static addrxlat_status
-map_linux_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
-		 const addrxlat_osdesc_t *osdesc)
+map_linux_x86_64(struct osmap_init_data *ctl)
 {
 	const struct osmap_region *layout;
 	addrxlat_status status;
 
-	layout = linux_layout_by_pgt(osmap, ctx);
+	layout = linux_layout_by_pgt(ctl->osmap, ctl->ctx);
 
-	if (!layout && osdesc->ver)
-		layout = linux_layout_by_ver(osdesc->ver);
+	if (!layout && ctl->osdesc->ver)
+		layout = linux_layout_by_ver(ctl->osdesc->ver);
 	if (!layout)
 		return addrxlat_ok;
 
-	status = osmap_set_layout(osmap, ctx, layout);
+	status = osmap_set_layout(ctl, layout);
 	if (status != addrxlat_ok)
 		return status;
 
-	set_pgt_fallback(osmap, ADDRXLAT_OSMAP_DIRECT);
-	set_pgt_fallback(osmap, ADDRXLAT_OSMAP_KTEXT);
+	set_pgt_fallback(ctl->osmap, ADDRXLAT_OSMAP_DIRECT);
+	set_pgt_fallback(ctl->osmap, ADDRXLAT_OSMAP_KTEXT);
 
 	return addrxlat_ok;
 }
@@ -425,21 +420,20 @@ map_linux_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 #define XEN_TEXT_SIZE	(1ULL << 30)
 
 /** Check whether an address looks like Xen text mapping.
- * @param osmap  OS map object.
- * @param ctx    Address translation context.
+ * @param ctl    Initialization data.
  * @param addr   Address to be checked.
  * @returns      Non-zero if the address maps to a 2M page.
  */
 static int
-is_xen_ktext(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
-	     addrxlat_addr_t addr)
+is_xen_ktext(struct osmap_init_data *ctl, addrxlat_addr_t addr)
 {
 	addrxlat_walk_t walk;
 	addrxlat_status status;
 	unsigned steps;
 
-	status = internal_walk_init(&walk, ctx,
-				    osmap->meth[ADDRXLAT_OSMAP_PGT], addr);
+	status = internal_walk_init(&walk, ctl->ctx,
+				    ctl->osmap->meth[ADDRXLAT_OSMAP_PGT],
+				    addr);
 	for (steps = 0; status == addrxlat_continue; ++steps)
 		status = internal_walk_next(&walk);
 
@@ -447,70 +441,67 @@ is_xen_ktext(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 }
 
 /** Initialize a translation map for Xen on x86_64.
- * @param osmap   OS map object.
- * @param ctx     Address translation object.
- * @param osdesc  Description of the operating system.
- * @returns       Error status.
+ * @param ctl  Initialization data.
+ * @returns    Error status.
  */
 static addrxlat_status
-map_xen_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
-	       const addrxlat_osdesc_t *osdesc)
+map_xen_x86_64(struct osmap_init_data *ctl)
 {
 	addrxlat_range_t range_direct, range_ktext;
 	addrxlat_addr_t addr_direct, addr_ktext;
 	addrxlat_map_t *newmap;
 	addrxlat_def_t def;
 
-	if (!osmap->meth[ADDRXLAT_OSMAP_DIRECT])
-		osmap->meth[ADDRXLAT_OSMAP_DIRECT] = internal_meth_new();
-	if (!osmap->meth[ADDRXLAT_OSMAP_DIRECT])
+	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_DIRECT])
+		ctl->osmap->meth[ADDRXLAT_OSMAP_DIRECT] = internal_meth_new();
+	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_DIRECT])
 		return addrxlat_nomem;
 
-	range_direct.meth = osmap->meth[ADDRXLAT_OSMAP_DIRECT];
+	range_direct.meth = ctl->osmap->meth[ADDRXLAT_OSMAP_DIRECT];
 	range_direct.endoff = XEN_DIRECTMAP_SIZE_5T - 1;
 
-	if (!osmap->meth[ADDRXLAT_OSMAP_KTEXT])
-		osmap->meth[ADDRXLAT_OSMAP_KTEXT] = internal_meth_new();
-	if (!osmap->meth[ADDRXLAT_OSMAP_KTEXT])
+	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_KTEXT])
+		ctl->osmap->meth[ADDRXLAT_OSMAP_KTEXT] = internal_meth_new();
+	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_KTEXT])
 		return addrxlat_nomem;
 
-	range_ktext.meth = osmap->meth[ADDRXLAT_OSMAP_KTEXT];
+	range_ktext.meth = ctl->osmap->meth[ADDRXLAT_OSMAP_KTEXT];
 	range_ktext.endoff = XEN_TEXT_SIZE - 1;
 
 	addr_direct = XEN_DIRECTMAP;
-	if (is_directmap(osmap, ctx, XEN_DIRECTMAP)) {
-		if (is_xen_ktext(osmap, ctx, XEN_TEXT_4_4))
+	if (is_directmap(ctl->osmap, ctl->ctx, XEN_DIRECTMAP)) {
+		if (is_xen_ktext(ctl, XEN_TEXT_4_4))
 			addr_ktext = XEN_TEXT_4_4;
-		else if (is_xen_ktext(osmap, ctx, XEN_TEXT_4_3))
+		else if (is_xen_ktext(ctl, XEN_TEXT_4_3))
 			addr_ktext = XEN_TEXT_4_3;
-		else if (is_xen_ktext(osmap, ctx, XEN_TEXT_4_0))
+		else if (is_xen_ktext(ctl, XEN_TEXT_4_0))
 			addr_ktext = XEN_TEXT_4_0;
-		else if (is_xen_ktext(osmap, ctx, XEN_TEXT_3_2)) {
+		else if (is_xen_ktext(ctl, XEN_TEXT_3_2)) {
 			range_direct.endoff = XEN_DIRECTMAP_SIZE_1T - 1;
 			addr_ktext = XEN_TEXT_3_2;
-		} else if (is_xen_ktext(osmap, ctx, XEN_TEXT_4_0dev))
+		} else if (is_xen_ktext(ctl, XEN_TEXT_4_0dev))
 			addr_ktext = XEN_TEXT_4_0dev;
 		else {
 			range_direct.endoff = XEN_DIRECTMAP_SIZE_1T - 1;
 			addr_ktext = 0;
 		}
-	} else if (is_directmap(osmap, ctx, XEN_DIRECTMAP_BIGMEM)) {
+	} else if (is_directmap(ctl->osmap, ctl->ctx, XEN_DIRECTMAP_BIGMEM)) {
 		addr_direct = XEN_DIRECTMAP_BIGMEM;
 		range_direct.endoff = XEN_DIRECTMAP_SIZE_3_5T - 1;
 		addr_ktext = XEN_TEXT_4_4;
-	} else if (osdesc->ver >= ADDRXLAT_VER_XEN(4, 0)) {
+	} else if (ctl->osdesc->ver >= ADDRXLAT_VER_XEN(4, 0)) {
 		/* !BIGMEM is assumed for Xen 4.6+. Can we do better? */
 
-		if (osdesc->ver >= ADDRXLAT_VER_XEN(4, 4))
+		if (ctl->osdesc->ver >= ADDRXLAT_VER_XEN(4, 4))
 			addr_ktext = XEN_TEXT_4_4;
-		else if (osdesc->ver >= ADDRXLAT_VER_XEN(4, 3))
+		else if (ctl->osdesc->ver >= ADDRXLAT_VER_XEN(4, 3))
 			addr_ktext = XEN_TEXT_4_3;
 		else
 			addr_ktext = XEN_TEXT_4_0;
-	} else if (osdesc->ver) {
+	} else if (ctl->osdesc->ver) {
 		range_direct.endoff = XEN_DIRECTMAP_SIZE_1T - 1;
 
-		if (osdesc->ver >= ADDRXLAT_VER_XEN(3, 2))
+		if (ctl->osdesc->ver >= ADDRXLAT_VER_XEN(3, 2))
 			addr_ktext = XEN_TEXT_3_2;
 		else
 			/* Prior to Xen 3.2, text was in direct mapping. */
@@ -521,36 +512,34 @@ map_xen_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	def.kind = ADDRXLAT_LINEAR;
 	def.param.linear.off = addr_direct;
 	internal_meth_set_def(range_direct.meth, &def);
-	newmap = internal_map_set(osmap->map, addr_direct, &range_direct);
+	newmap = internal_map_set(ctl->osmap->map, addr_direct, &range_direct);
 	if (!newmap)
-		return set_error(ctx, addrxlat_nomem,
+		return set_error(ctl->ctx, addrxlat_nomem,
 				 "Cannot set up Xen direct mapping");
-	osmap->map = newmap;
+	ctl->osmap->map = newmap;
 
 	if (addr_ktext) {
-		set_ktext_offset(osmap, ctx, addr_ktext);
-		newmap = internal_map_set(osmap->map, addr_ktext, &range_ktext);
+		set_ktext_offset(ctl->osmap, ctl->ctx, addr_ktext);
+		newmap = internal_map_set(ctl->osmap->map,
+					  addr_ktext, &range_ktext);
 		if (!newmap)
-			return set_error(ctx, addrxlat_nomem,
+			return set_error(ctl->ctx, addrxlat_nomem,
 					 "Cannot set up Xen text mapping");
-		osmap->map = newmap;
+		ctl->osmap->map = newmap;
 	}
 
-	set_pgt_fallback(osmap, ADDRXLAT_OSMAP_DIRECT);
-	set_pgt_fallback(osmap, ADDRXLAT_OSMAP_KTEXT);
+	set_pgt_fallback(ctl->osmap, ADDRXLAT_OSMAP_DIRECT);
+	set_pgt_fallback(ctl->osmap, ADDRXLAT_OSMAP_KTEXT);
 
 	return addrxlat_ok;
 }
 
 /** Initialize a translation map for an x86_64 OS.
- * @param osmap   OS map object.
- * @param ctx     Address translation object.
- * @param osdesc  Description of the operating system.
- * @returns       Error status.
+ * @param ctl  Initialization data.
+ * @returns    Error status.
  */
 addrxlat_status
-osmap_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
-	     const addrxlat_osdesc_t *osdesc)
+osmap_x86_64(struct osmap_init_data *ctl)
 {
 	static const addrxlat_paging_form_t x86_64_pf = {
 		.pte_format = addrxlat_pte_x86_64,
@@ -561,30 +550,30 @@ osmap_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	addrxlat_def_t def;
 	addrxlat_status status;
 
-	if (osdesc->archvar)
-		return set_error(ctx, addrxlat_notimpl,
+	if (ctl->osdesc->archvar)
+		return set_error(ctl->ctx, addrxlat_notimpl,
 				 "Unimplemented architecture variant");
 
-	if (!osmap->meth[ADDRXLAT_OSMAP_PGT])
-		osmap->meth[ADDRXLAT_OSMAP_PGT] = internal_meth_new();
-	if (!osmap->meth[ADDRXLAT_OSMAP_PGT])
+	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_PGT])
+		ctl->osmap->meth[ADDRXLAT_OSMAP_PGT] = internal_meth_new();
+	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_PGT])
 		return addrxlat_nomem;
 
-	meth = osmap->meth[ADDRXLAT_OSMAP_PGT];
+	meth = ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
 	def.kind = ADDRXLAT_PGT;
 	def.param.pgt.pf = x86_64_pf;
 	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);
-	status = canonical_pgt_map(osmap, ctx, osdesc);
+	status = canonical_pgt_map(ctl);
 	if (status != addrxlat_ok)
 		return status;
 
-	switch (osdesc->type) {
+	switch (ctl->osdesc->type) {
 	case addrxlat_os_linux:
-		return map_linux_x86_64(osmap, ctx, osdesc);
+		return map_linux_x86_64(ctl);
 
 	case addrxlat_os_xen:
-		return map_xen_x86_64(osmap, ctx, osdesc);
+		return map_xen_x86_64(ctl);
 
 	default:
 		return addrxlat_ok;

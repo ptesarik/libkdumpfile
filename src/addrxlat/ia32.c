@@ -185,19 +185,16 @@ is_pae(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *root,
 }
 
 /** Initialize a translation map for an Intel IA32 (non-pae) OS.
- * @param osmap   OS map object.
- * @param ctx     Address translation object.
- * @param osdesc  Description of the operating system.
- * @returns       Error status.
+ * @param ctl  Initialization data.
+ * @returns    Error status.
  */
 static addrxlat_status
-osmap_ia32_nonpae(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
-		  const addrxlat_osdesc_t *osdesc)
+osmap_ia32_nonpae(struct osmap_init_data *ctl)
 {
 	addrxlat_meth_t *meth;
 	addrxlat_def_t def;
 
-	meth = osmap->meth[ADDRXLAT_OSMAP_PGT];
+	meth = ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
 	def.kind = ADDRXLAT_PGT;
 	def.param.pgt.pf = ia32_pf;
 	def_choose_pgtroot(&def, meth);
@@ -206,19 +203,16 @@ osmap_ia32_nonpae(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 }
 
 /** Initialize a translation map for an Intel IA32 (pae) OS.
- * @param osmap   OS map object.
- * @param ctx     Address translation object.
- * @param osdesc  Description of the operating system.
- * @returns       Error status.
+ * @param ctl  Initialization data.
+ * @returns    Error status.
  */
 static addrxlat_status
-osmap_ia32_pae(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
-	       const addrxlat_osdesc_t *osdesc)
+osmap_ia32_pae(struct osmap_init_data *ctl)
 {
 	addrxlat_meth_t *meth;
 	addrxlat_def_t def;
 
-	meth = osmap->meth[ADDRXLAT_OSMAP_PGT];
+	meth = ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
 	def.kind = ADDRXLAT_PGT;
 	def.param.pgt.pf = ia32_pf_pae;
 	def_choose_pgtroot(&def, meth);
@@ -227,58 +221,56 @@ osmap_ia32_pae(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 }
 
 /** Initialize a translation map for an Intel IA32 OS.
- * @param osmap   OS map object.
- * @param ctx     Address translation object.
- * @param osdesc  Description of the operating system.
- * @returns       Error status.
+ * @param ctl  Initialization data.
+ * @returns    Error status.
  */
 addrxlat_status
-osmap_ia32(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
-	   const addrxlat_osdesc_t *osdesc)
+osmap_ia32(struct osmap_init_data *ctl)
 {
 	addrxlat_range_t range;
 	addrxlat_map_t *newmap;
 	int pae;
 
-	if (!osdesc->archvar) {
-		addrxlat_meth_t *pgtmeth = osmap->meth[ADDRXLAT_OSMAP_PGT];
+	if (!ctl->osdesc->archvar) {
+		addrxlat_meth_t *pgtmeth =
+			ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
 
 		if (!pgtmeth)
 			pae = -1;
-		else if (osdesc->type == addrxlat_os_linux)
-			pae = is_pae(ctx, &pgtmeth->def.param.pgt.root,
+		else if (ctl->osdesc->type == addrxlat_os_linux)
+			pae = is_pae(ctl->ctx, &pgtmeth->def.param.pgt.root,
 				     LINUX_DIRECTMAP);
-		else if (osdesc->type == addrxlat_os_xen)
-			pae = is_pae(ctx, &pgtmeth->def.param.pgt.root,
+		else if (ctl->osdesc->type == addrxlat_os_xen)
+			pae = is_pae(ctl->ctx, &pgtmeth->def.param.pgt.root,
 				     XEN_DIRECTMAP);
 		else
 			pae = -1;
 
 		if (pae < 0)
-			return set_error(ctx, addrxlat_notimpl,
+			return set_error(ctl->ctx, addrxlat_notimpl,
 					 "Cannot determine PAE state");
-	} else if (!strcmp(osdesc->archvar, "pae"))
+	} else if (!strcmp(ctl->osdesc->archvar, "pae"))
 		pae = 1;
-	else if (!strcmp(osdesc->archvar, "nonpae"))
+	else if (!strcmp(ctl->osdesc->archvar, "nonpae"))
 		pae = 0;
 	else
-		return set_error(ctx, addrxlat_notimpl,
+		return set_error(ctl->ctx, addrxlat_notimpl,
 				 "Unimplemented architecture variant");
 
-	if (!osmap->meth[ADDRXLAT_OSMAP_PGT])
-		osmap->meth[ADDRXLAT_OSMAP_PGT] = internal_meth_new();
-	if (!osmap->meth[ADDRXLAT_OSMAP_PGT])
+	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_PGT])
+		ctl->osmap->meth[ADDRXLAT_OSMAP_PGT] = internal_meth_new();
+	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_PGT])
 		return addrxlat_nomem;
 
-	range.meth = osmap->meth[ADDRXLAT_OSMAP_PGT];
+	range.meth = ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
 	range.endoff = VIRTADDR_MAX;
-	newmap = internal_map_set(osmap->map, 0, &range);
+	newmap = internal_map_set(ctl->osmap->map, 0, &range);
 	if (!newmap)
-		return set_error(ctx, addrxlat_nomem,
+		return set_error(ctl->ctx, addrxlat_nomem,
 				 "Cannot set up default mapping");
-	osmap->map = newmap;
+	ctl->osmap->map = newmap;
 
 	return pae
-		? osmap_ia32_pae(osmap, ctx, osdesc)
-		: osmap_ia32_nonpae(osmap, ctx, osdesc);
+		? osmap_ia32_pae(ctl)
+		: osmap_ia32_nonpae(ctl);
 }

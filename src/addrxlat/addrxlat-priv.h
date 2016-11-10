@@ -179,25 +179,66 @@ addrxlat_addr_t paging_max_index(const addrxlat_paging_form_t *pf);
 
 /* map by OS */
 
+/** Data used during OS map initialization. */
+struct osmap_init_data {
+	/** Target OS map object. */
+	addrxlat_osmap_t *osmap;
+
+	/** Translation context used for initialization. */
+	addrxlat_ctx_t *ctx;
+
+	/** OS description. */
+	const addrxlat_osdesc_t *osdesc;
+};
+
+/** Arch-specific OS map initialization funciton.
+ * @param ctl    Initialization data.
+ * @returns      Error status.
+ */
+typedef addrxlat_status osmap_arch_fn(struct osmap_init_data *ctl);
+
 #define osmap_ia32 INTERNAL_NAME(osmap_ia32)
-addrxlat_status osmap_ia32(
-	addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
-	const addrxlat_osdesc_t *osdesc);
+osmap_arch_fn osmap_ia32;
 
 #define osmap_ppc64 INTERNAL_NAME(osmap_ppc64)
-addrxlat_status osmap_ppc64(
-	addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
-	const addrxlat_osdesc_t *osdesc);
+osmap_arch_fn osmap_ppc64;
 
 #define osmap_s390x INTERNAL_NAME(osmap_s390x)
-addrxlat_status osmap_s390x(
-	addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
-	const addrxlat_osdesc_t *osdesc);
+osmap_arch_fn osmap_s390x;
 
 #define osmap_x86_64 INTERNAL_NAME(osmap_x86_64)
-addrxlat_status osmap_x86_64(
-	addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
-	const addrxlat_osdesc_t *osdesc);
+osmap_arch_fn osmap_x86_64;
+
+/** Optional action associated with an OS-map region. */
+enum osmap_action {
+	OSMAP_ACT_NONE,
+	OSMAP_ACT_DIRECT,
+	OSMAP_ACT_X86_64_KTEXT,
+};
+
+/** Single OS-map region definition. */
+struct osmap_region {
+	addrxlat_addr_t first, last;
+	addrxlat_osmap_xlat_t xlat;
+	enum osmap_action act;
+};
+
+/** OS-map layout table end marker. */
+#define OSMAP_REGION_END	{ 0, 0, ADDRXLAT_OSMAP_NUM }
+
+/** Type of the action function for @ref osmap_set_layout.
+ * @parma ctl     Initialization data.
+ * @param region  Associated region definition.
+ */
+typedef void osmap_action_fn(
+	struct osmap_init_data *ctl, const struct osmap_region *);
+
+#define x86_64_ktext_hook INTERNAL_NAME(x86_64_ktext_hook)
+osmap_action_fn x86_64_ktext_hook;
+
+#define osmap_set_layout INTERNAL_NAME(osmap_set_layout)
+addrxlat_status osmap_set_layout(
+	struct osmap_init_data *ctl, const struct osmap_region layout[]);
 
 /* internal aliases */
 
@@ -230,39 +271,6 @@ DECLARE_INTERNAL(map_search)
 
 #define internal_map_clear INTERNAL_ALIAS(map_clear)
 DECLARE_INTERNAL(map_clear)
-
-/** Optional action associated with an OS-map region. */
-enum osmap_action {
-	OSMAP_ACT_NONE,
-	OSMAP_ACT_DIRECT,
-	OSMAP_ACT_X86_64_KTEXT,
-};
-
-/** Single OS-map region definition. */
-struct osmap_region {
-	addrxlat_addr_t first, last;
-	addrxlat_osmap_xlat_t xlat;
-	enum osmap_action act;
-};
-
-/** OS-map layout table end marker. */
-#define OSMAP_REGION_END	{ 0, 0, ADDRXLAT_OSMAP_NUM }
-
-/** Type of the action function for @ref osmap_set_layout.
- * @param osmap   OS map object.
- * @parma ctx     Address translation context.
- * @param region  Associated region definition.
- */
-typedef void osmap_action_fn(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
-			     const struct osmap_region *);
-
-#define x86_64_ktext_hook INTERNAL_NAME(x86_64_ktext_hook)
-osmap_action_fn x86_64_ktext_hook;
-
-#define osmap_set_layout INTERNAL_NAME(osmap_set_layout)
-addrxlat_status osmap_set_layout(addrxlat_osmap_t *osmap,
-				 addrxlat_ctx_t *ctx,
-				 const struct osmap_region layout[]);
 
 /* utils */
 

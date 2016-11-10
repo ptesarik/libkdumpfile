@@ -155,39 +155,36 @@ determine_pgttype(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx)
 
 
 /** Initialize a translation map for a s390x OS.
- * @param osmap   OS map object.
- * @param ctx     Address translation object.
- * @param osdesc  Description of the operating system.
+ * @param ctl  Initialization data.
  * @returns       Error status.
  */
 addrxlat_status
-osmap_s390x(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
-	    const addrxlat_osdesc_t *osdesc)
+osmap_s390x(struct osmap_init_data *ctl)
 {
 	addrxlat_map_t *newmap;
 	addrxlat_range_t range;
 	addrxlat_status status;
 
-	if (osdesc->archvar)
-		return set_error(ctx, addrxlat_notimpl,
+	if (ctl->osdesc->archvar)
+		return set_error(ctl->ctx, addrxlat_notimpl,
 				 "Unimplemented architecture variant");
 
-	if (!osmap->meth[ADDRXLAT_OSMAP_PGT])
-		osmap->meth[ADDRXLAT_OSMAP_PGT] = internal_meth_new();
-	if (!osmap->meth[ADDRXLAT_OSMAP_PGT])
+	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_PGT])
+		ctl->osmap->meth[ADDRXLAT_OSMAP_PGT] = internal_meth_new();
+	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_PGT])
 		return addrxlat_nomem;
 
-	status = determine_pgttype(osmap, ctx);
+	status = determine_pgttype(ctl->osmap, ctl->ctx);
 	if (status != addrxlat_ok)
 		return status;
 
-	range.meth = osmap->meth[ADDRXLAT_OSMAP_PGT];
+	range.meth = ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
 	range.endoff = paging_max_index(&range.meth->def.param.pgt.pf);
-	newmap = internal_map_set(osmap->map, 0, &range);
+	newmap = internal_map_set(ctl->osmap->map, 0, &range);
 	if (!newmap)
-		return set_error(ctx, addrxlat_nomem,
+		return set_error(ctl->ctx, addrxlat_nomem,
 				 "Cannot set up default mapping");
-	osmap->map = newmap;
+	ctl->osmap->map = newmap;
 
 	return addrxlat_ok;
 }

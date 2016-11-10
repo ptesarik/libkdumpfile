@@ -244,14 +244,11 @@ static const struct osmap_region linux_layout[] = {
 };
 
 /** Initialize a translation map for Linux/ppc64.
- * @param osmap   OS map object.
- * @param ctx     Address translation object.
- * @param osdesc  Description of the operating system.
+ * @param ctl  Initialization data.
  * @returns       Error status.
  */
 static addrxlat_status
-map_linux_ppc64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
-		const addrxlat_osdesc_t *osdesc)
+map_linux_ppc64(struct osmap_init_data *ctl)
 {
 	static const addrxlat_paging_form_t ppc64_pf_64k = {
 		.pte_format = addrxlat_pte_ppc64_linux_rpn30,
@@ -263,17 +260,17 @@ map_linux_ppc64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	addrxlat_def_t def;
 	addrxlat_status status;
 
-	status = osmap_set_layout(osmap, ctx, linux_layout);
+	status = osmap_set_layout(ctl, linux_layout);
 	if (status != addrxlat_ok)
 		return status;
 
-	meth = osmap->meth[ADDRXLAT_OSMAP_PGT];
+	meth = ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
 	def.kind = ADDRXLAT_PGT;
 	def.param.pgt.pf = ppc64_pf_64k;
 	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);
 
-	meth = osmap->meth[ADDRXLAT_OSMAP_UPGT];
+	meth = ctl->osmap->meth[ADDRXLAT_OSMAP_UPGT];
 	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);
 
@@ -281,21 +278,18 @@ map_linux_ppc64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 }
 
 /** Initialize a translation map for a 64-bit IBM POWER OS.
- * @param osmap   OS map object.
- * @param ctx     Address translation object.
- * @param osdesc  Description of the operating system.
- * @returns       Error status.
+ * @param ctl  Initialization data.
+ * @returns    Error status.
  */
 addrxlat_status
-osmap_ppc64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
-	    const addrxlat_osdesc_t *osdesc)
+osmap_ppc64(struct osmap_init_data *ctl)
 {
-	switch (osdesc->type) {
+	switch (ctl->osdesc->type) {
 	case addrxlat_os_linux:
-		return map_linux_ppc64(osmap, ctx, osdesc);
+		return map_linux_ppc64(ctl);
 
 	default:
-		return set_error(ctx, addrxlat_notimpl,
+		return set_error(ctl->ctx, addrxlat_notimpl,
 				 "OS type not implemented");
 	}
 }
