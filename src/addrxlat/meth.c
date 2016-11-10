@@ -32,6 +32,8 @@
 
 #include "addrxlat-priv.h"
 
+static void setup_none(addrxlat_meth_t *meth);
+
 DEFINE_INTERNAL(meth_new)
 
 addrxlat_meth_t *
@@ -40,7 +42,8 @@ addrxlat_meth_new(void)
 	addrxlat_meth_t *meth = calloc(1, sizeof(addrxlat_meth_t));
 	if (meth) {
 		meth->refcnt = 1;
-		internal_meth_set_none(meth);
+		meth->def.kind = ADDRXLAT_NONE;
+		setup_none(meth);
 	}
 	return meth;
 }
@@ -62,12 +65,6 @@ addrxlat_meth_decref(addrxlat_meth_t *meth)
 	if (!refcnt)
 		free(meth);
 	return refcnt;
-}
-
-addrxlat_kind_t
-addrxlat_meth_get_kind(const addrxlat_meth_t *meth)
-{
-	return meth->kind;
 }
 
 /** Null walk function.
@@ -95,15 +92,14 @@ step_none(addrxlat_walk_t *state)
 	return addrxlat_continue;
 }
 
-DEFINE_INTERNAL(meth_set_none)
-
-addrxlat_status
-addrxlat_meth_set_none(addrxlat_meth_t *meth)
+/** Set up null translation.
+ * @param meth  Translation method.
+ */
+static void
+setup_none(addrxlat_meth_t *meth)
 {
 	meth->walk_init = walk_init_none;
 	meth->walk_step = step_none;
-	meth->kind = ADDRXLAT_NONE;
-	return addrxlat_ok;
 }
 
 /** Initialize walk state for linear offset.
@@ -114,7 +110,7 @@ addrxlat_meth_set_none(addrxlat_meth_t *meth)
 static addrxlat_status
 walk_init_linear(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 {
-	const struct linear_xlat *linear = &walk->meth->linear;
+	const addrxlat_def_linear_t *linear = &walk->meth->def.param.linear;
 
 	walk->base.as = ADDRXLAT_KPHYSADDR;
 	walk->base.addr = -linear->off;
@@ -124,22 +120,14 @@ walk_init_linear(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 	return addrxlat_continue;
 }
 
-DEFINE_INTERNAL(meth_set_offset)
-
-addrxlat_status
-addrxlat_meth_set_offset(addrxlat_meth_t *meth, addrxlat_off_t off)
+/** Set up linear translation.
+ * @param meth  Translation method.
+ */
+static void
+setup_linear(addrxlat_meth_t *meth)
 {
 	meth->walk_init = walk_init_linear;
 	meth->walk_step = step_none;
-	meth->kind = ADDRXLAT_LINEAR;
-	meth->linear.off = off;
-	return addrxlat_ok;
-}
-
-addrxlat_off_t
-addrxlat_meth_get_offset(const addrxlat_meth_t *meth)
-{
-	return meth->linear.off;
 }
 
 /** Initialize walk state for page table walk.
@@ -150,7 +138,7 @@ addrxlat_meth_get_offset(const addrxlat_meth_t *meth)
 addrxlat_status
 walk_init_pgt(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 {
-	const struct pgt_xlat *pgt = &walk->meth->pgt;
+	const addrxlat_def_pgt_t *pgt = &walk->meth->def.param.pgt;
 	unsigned short i;
 
 	walk->base = pgt->root;
@@ -178,7 +166,7 @@ walk_init_pgt(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 addrxlat_status
 walk_check_uaddr(addrxlat_walk_t *walk)
 {
-	return walk->idx[walk->meth->pgt.pf.levels]
+	return walk->idx[walk->meth->def.param.pgt.pf.levels]
 		? set_error(walk->ctx, addrxlat_invalid,
 			    "Virtual address too big")
 		: addrxlat_continue;
@@ -207,15 +195,16 @@ walk_init_uaddr(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 addrxlat_status
 walk_check_saddr(addrxlat_walk_t *walk)
 {
-	const struct pgt_xlat *pgt = &walk->meth->pgt;
-	unsigned short lvl = pgt->pf.levels;
+	const addrxlat_paging_form_t *pf = &walk->meth->def.param.pgt.pf;
+	const struct pgt_extra_def *extra = &walk->meth->extra.pgt;
+	unsigned short lvl = pf->levels;
 	struct {
 		int bit : 1;
 	} s;
 	addrxlat_addr_t signext;
 
-	s.bit = walk->idx[lvl - 1] >> (pgt->pf.bits[lvl - 1] - 1);
-	signext = s.bit & (pgt->pgt_mask[lvl - 1] >> pgt->vaddr_bits);
+	s.bit = walk->idx[lvl - 1] >> (pf->bits[lvl - 1] - 1);
+	signext = s.bit & (extra->pgt_mask[lvl - 1] >> extra->vaddr_bits);
 	return walk->idx[lvl] != signext
 		? set_error(walk->ctx, addrxlat_invalid,
 			    "Virtual address too big")
@@ -240,10 +229,13 @@ struct pte_def {
 	unsigned short shift;
 };
 
-DEFINE_INTERNAL(meth_set_form)
-
-addrxlat_status
-addrxlat_meth_set_form(addrxlat_meth_t *meth, const addrxlat_paging_form_t *pf)
+/** Set up page table translation.
+ * @param meth  Translation method.
+ * @param def   Translation definition.
+ * @returns     Error status.
+ */
+static addrxlat_status
+setup_pgt(addrxlat_meth_t *meth, const addrxlat_def_t *def)
 {
 	static const struct pte_def formats[] = {
 		[addrxlat_pte_none] = { walk_init_pgt, step_none, 0 },
@@ -255,6 +247,8 @@ addrxlat_meth_set_form(addrxlat_meth_t *meth, const addrxlat_paging_form_t *pf)
 			{ walk_init_pgt, pgt_ppc64_linux_rpn30, 3 },
 	};
 
+	const addrxlat_paging_form_t *pf = &def->param.pgt.pf;
+	struct pgt_extra_def *extra = &meth->extra.pgt;
 	const struct pte_def *fmt;
 	addrxlat_addr_t mask;
 	unsigned short i;
@@ -265,37 +259,53 @@ addrxlat_meth_set_form(addrxlat_meth_t *meth, const addrxlat_paging_form_t *pf)
 	fmt = &formats[pf->pte_format];
 	meth->walk_init = fmt->init;
 	meth->walk_step = fmt->step;
-	meth->kind = ADDRXLAT_PGT;
-	meth->pgt.pte_shift = fmt->shift;
-	meth->pgt.pf = *pf;
+	extra->pte_shift = fmt->shift;
 
-	meth->pgt.vaddr_bits = 0;
+	extra->vaddr_bits = 0;
 	mask = 1;
 	for (i = 0; i < pf->levels; ++i) {
-		meth->pgt.vaddr_bits += pf->bits[i];
+		extra->vaddr_bits += pf->bits[i];
 		mask <<= pf->bits[i];
-		meth->pgt.pgt_mask[i] = ~(mask - 1);
+		extra->pgt_mask[i] = ~(mask - 1);
 	}
 
 	return addrxlat_ok;
 }
 
-const addrxlat_paging_form_t *
-addrxlat_meth_get_form(const addrxlat_meth_t *meth)
+DEFINE_INTERNAL(meth_set_def)
+
+addrxlat_status
+addrxlat_meth_set_def(addrxlat_meth_t *meth, const addrxlat_def_t *def)
 {
-	return &meth->pgt.pf;
+	addrxlat_status status;
+
+	switch (def->kind) {
+	case ADDRXLAT_NONE:
+		setup_none(meth);
+		break;
+
+	case ADDRXLAT_LINEAR:
+		setup_linear(meth);
+		break;
+
+	case ADDRXLAT_PGT:
+		status = setup_pgt(meth, def);
+		if (status != addrxlat_ok)
+			return status;
+		break;
+
+	default:
+		return addrxlat_notimpl;
+	}
+
+	meth->def = *def;
+	return addrxlat_ok;
 }
 
-void
-addrxlat_meth_set_root(addrxlat_meth_t *meth, const addrxlat_fulladdr_t *root)
+const addrxlat_def_t *
+addrxlat_meth_get_def(const addrxlat_meth_t *meth)
 {
-	meth->pgt.root = *root;
-}
-
-const addrxlat_fulladdr_t *
-addrxlat_meth_get_root(const addrxlat_meth_t *meth)
-{
-	return &meth->pgt.root;
+	return &meth->def;
 }
 
 /* Calculate the maximum index into the page table hierarchy.

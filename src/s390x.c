@@ -134,14 +134,20 @@ determine_pgttype(kdump_ctx *ctx, kdump_vaddr_t pgtroot)
 				.pte_format = addrxlat_pte_s390x,
 				.bits = { 12, 8, 11, 11, 11, 11 }
 			};
+			addrxlat_def_t def;
 			addrxlat_status axres;
 
 			unref_page(ctx, &pio);
 			archdata->pgttype = PTE_TT(entry);
 
-			pf.levels = archdata->pgttype + 3;
-			axres = addrxlat_meth_set_form(
-				ctx->shared->vtop_map.pgt, &pf);
+			def.kind = ADDRXLAT_PGT;
+			def.param.pgt.pf = pf;
+			def.param.pgt.pf.levels = archdata->pgttype + 3;
+			def.param.pgt.root.as = ADDRXLAT_KPHYSADDR;
+			def.param.pgt.root.addr = pgtroot;
+
+			axres = addrxlat_meth_set_def(
+				ctx->shared->vtop_map.pgt, &def);
 			if (axres != addrxlat_ok)
 				return set_error_addrxlat(ctx, axres);
 
@@ -168,7 +174,6 @@ s390x_vtop_init(kdump_ctx *ctx)
 	rwlock_wrlock(&ctx->shared->lock);
 	if (ret == kdump_ok) {
 		pgtroot.as = ADDRXLAT_KPHYSADDR;
-		addrxlat_meth_set_root(ctx->shared->vtop_map.pgt, &pgtroot);
 		ret = determine_pgttype(ctx, pgtroot.addr);
 		if (ret != kdump_ok)
 			return set_error(ctx, ret,
@@ -344,6 +349,7 @@ static kdump_status
 s390x_init(kdump_ctx *ctx)
 {
 	struct s390x_data *archdata;
+	addrxlat_def_t def;
 	kdump_status ret;
 
 	archdata = calloc(1, sizeof(struct s390x_data));
@@ -361,7 +367,9 @@ s390x_init(kdump_ctx *ctx)
 				"Cannot allocate directmap");
 		goto err_arch;
 	}
-	addrxlat_meth_set_offset(archdata->directmap, 0);
+	def.kind = ADDRXLAT_LINEAR;
+	def.param.linear.off = 0;
+	addrxlat_meth_set_def(archdata->directmap, &def);
 
 	ret = set_vtop_xlat(&ctx->shared->vtop_map, 0, VIRTADDR_MAX,
 			    archdata->directmap);

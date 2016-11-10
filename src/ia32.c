@@ -122,6 +122,7 @@ static kdump_status
 ia32_init(kdump_ctx *ctx)
 {
 	struct ia32_data *archdata;
+	addrxlat_def_t def;
 	kdump_status ret;
 
 	clear_attr(ctx, gattr(ctx, GKI_pteval_size));
@@ -138,7 +139,9 @@ ia32_init(kdump_ctx *ctx)
 				"Cannot allocate directmap");
 		goto err_arch;
 	}
-	addrxlat_meth_set_offset(archdata->directmap, __START_KERNEL_map);
+	def.kind = ADDRXLAT_LINEAR;
+	def.param.linear.off = __START_KERNEL_map;
+	addrxlat_meth_set_def(archdata->directmap, &def);
 
 	ret = set_vtop_xlat(&ctx->shared->vtop_map,
 			    __START_KERNEL_map, VIRTADDR_MAX,
@@ -199,27 +202,27 @@ static kdump_status
 read_pgt(kdump_ctx *ctx)
 {
 	struct ia32_data *archdata = ctx->shared->archdata;
-	addrxlat_fulladdr_t pgtroot;
-	const addrxlat_paging_form_t *pf;
+	addrxlat_def_t def;
 	addrxlat_status axres;
 	kdump_status ret;
 
 	rwlock_unlock(&ctx->shared->lock);
-	ret = get_symbol_val(ctx, "swapper_pg_dir", &pgtroot.addr);
+	ret = get_symbol_val(ctx, "swapper_pg_dir", &def.param.pgt.root.addr);
 	rwlock_wrlock(&ctx->shared->lock);
 	if (ret != kdump_ok)
 		return ret;
 
-	if (pgtroot.addr < __START_KERNEL_map)
+	if (def.param.pgt.root.addr < __START_KERNEL_map)
 		return set_error(ctx, kdump_dataerr,
 				 "Wrong page directory address:"
-				 " 0x%"ADDRXLAT_PRIXADDR, pgtroot.addr);
-	pgtroot.addr -= __START_KERNEL_map;
-	pgtroot.as = ADDRXLAT_KPHYSADDR;
-	addrxlat_meth_set_root(ctx->shared->vtop_map.pgt, &pgtroot);
+				 " 0x%"ADDRXLAT_PRIXADDR,
+				 def.param.pgt.root.addr);
+	def.param.pgt.root.addr -= __START_KERNEL_map;
+	def.param.pgt.root.as = ADDRXLAT_KPHYSADDR;
 
 	if (!archdata->pae_state) {
-		kdump_vaddr_t addr = pgtroot.addr + 3 * sizeof(uint64_t);
+		kdump_vaddr_t addr = def.param.pgt.root.addr +
+			3 * sizeof(uint64_t);
 		uint64_t entry;
 		size_t sz = sizeof entry;
 		ret = readp_locked(ctx, KDUMP_KPHYSADDR, addr, &entry, &sz);
@@ -228,8 +231,8 @@ read_pgt(kdump_ctx *ctx)
 		archdata->pae_state = entry ? 1 : -1;
 	}
 
-	pf = (archdata->pae_state > 0 ? &ia32_pf_pae : &ia32_pf);
-	axres = addrxlat_meth_set_form(ctx->shared->vtop_map.pgt, pf);
+	def.param.pgt.pf = (archdata->pae_state > 0 ? ia32_pf_pae : ia32_pf);
+	axres = addrxlat_meth_set_def(ctx->shared->vtop_map.pgt, &def);
 	if (axres != addrxlat_ok)
 		return set_error_addrxlat(ctx, axres);
 

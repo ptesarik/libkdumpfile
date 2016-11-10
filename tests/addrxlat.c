@@ -39,8 +39,6 @@ enum read_status {
 	read_notfound,
 };
 
-static addrxlat_paging_form_t paging_form;
-
 static addrxlat_meth_t *xlat;
 
 #define MAXERR	64
@@ -126,7 +124,7 @@ add_entry(const char *spec)
 }
 
 static int
-set_paging_form(const char *spec)
+set_paging_form(addrxlat_paging_form_t *pf, const char *spec)
 {
 	char *endp;
 
@@ -137,28 +135,28 @@ set_paging_form(const char *spec)
 	}
 
 	if (!strncasecmp(spec, "none:", endp - spec + 1))
-		paging_form.pte_format = addrxlat_pte_none;
+		pf->pte_format = addrxlat_pte_none;
 	else if (!strncasecmp(spec, "ia32:", endp - spec + 1))
-		paging_form.pte_format = addrxlat_pte_ia32;
+		pf->pte_format = addrxlat_pte_ia32;
 	else if (!strncasecmp(spec, "ia32_pae:", endp - spec + 1))
-		paging_form.pte_format = addrxlat_pte_ia32_pae;
+		pf->pte_format = addrxlat_pte_ia32_pae;
 	else if (!strncasecmp(spec, "x86_64:", endp - spec + 1))
-		paging_form.pte_format = addrxlat_pte_x86_64;
+		pf->pte_format = addrxlat_pte_x86_64;
 	else if (!strncasecmp(spec, "s390x:", endp - spec + 1))
-		paging_form.pte_format = addrxlat_pte_s390x;
+		pf->pte_format = addrxlat_pte_s390x;
 	else if (!strncasecmp(spec, "ppc64_linux_rpn30:", endp - spec + 1))
-		paging_form.pte_format = addrxlat_pte_ppc64_linux_rpn30;
+		pf->pte_format = addrxlat_pte_ppc64_linux_rpn30;
 	else {
 		fprintf(stderr, "Unknown PTE format: %s\n", spec);
 		return TEST_ERR;
 	}
 
 	do {
-		if (paging_form.levels >= ADDRXLAT_MAXLEVELS) {
+		if (pf->levels >= ADDRXLAT_MAXLEVELS) {
 			fprintf(stderr, "Too many paging levels!\n");
 			return TEST_ERR;
 		}
-		paging_form.bits[paging_form.levels++] =
+		pf->bits[pf->levels++] =
 			strtoul(endp + 1, &endp, 0);
 	} while (*endp == ',');
 
@@ -171,9 +169,8 @@ set_paging_form(const char *spec)
 }
 
 static int
-set_root(const char *spec, addrxlat_meth_t *pgt)
+set_root(addrxlat_fulladdr_t *root, const char *spec)
 {
-	addrxlat_fulladdr_t root;
 	char *endp;
 
 	endp = strchr(spec, ':');
@@ -183,42 +180,37 @@ set_root(const char *spec, addrxlat_meth_t *pgt)
 	}
 
 	if (!strncasecmp(spec, "KPHYSADDR:", endp - spec))
-		root.as = ADDRXLAT_KPHYSADDR;
+		root->as = ADDRXLAT_KPHYSADDR;
 	else if (!strncasecmp(spec, "MACHPHYSADDR:", endp - spec))
-		root.as = ADDRXLAT_MACHPHYSADDR;
+		root->as = ADDRXLAT_MACHPHYSADDR;
 	else if (!strncasecmp(spec, "KVADDR:", endp - spec))
-		root.as = ADDRXLAT_KVADDR;
+		root->as = ADDRXLAT_KVADDR;
 	else if (!strncasecmp(spec, "XENVADDR:", endp - spec))
-		root.as = ADDRXLAT_XENVADDR;
+		root->as = ADDRXLAT_XENVADDR;
 	else {
 		fprintf(stderr, "Invalid address spec: %s\n", spec);
 		return TEST_ERR;
 	}
 
-	root.addr = strtoull(endp + 1, &endp, 0);
+	root->addr = strtoull(endp + 1, &endp, 0);
 	if (*endp) {
 		fprintf(stderr, "Invalid address spec: %s\n", spec);
 		return TEST_ERR;
 	}
 
-	addrxlat_meth_set_root(pgt, &root);
 	return TEST_OK;
 }
 
 static int
-set_linear(const char *spec, addrxlat_meth_t *meth)
+set_linear(addrxlat_off_t *off, const char *spec)
 {
-	long long off;
 	char *endp;
 
-	off = strtoll(spec, &endp, 0);
+	*off = strtoll(spec, &endp, 0);
 	if (*endp) {
 		fprintf(stderr, "Invalid offset: %s\n", spec);
 		return TEST_ERR;
 	}
-
-	addrxlat_meth_set_offset(meth, off);
-	xlat = meth;
 
 	return TEST_OK;
 }
@@ -273,41 +265,35 @@ main(int argc, char **argv)
 	unsigned long long vaddr;
 	char *endp;
 	addrxlat_ctx_t *ctx;
-	addrxlat_meth_t *pgt, *linear;
+	addrxlat_def_t pgt, linear, *def;
 	int opt;
 	addrxlat_status status;
 	unsigned long refcnt;
 	int rc;
 
-	pgt = NULL;
-	linear = NULL;
 	ctx = NULL;
+	def = NULL;
 
-	pgt = addrxlat_meth_new();
-	if (!pgt) {
-		perror("Cannot initialize page table translation");
-		rc = TEST_ERR;
-		goto out;
-	}
+	pgt.kind = ADDRXLAT_PGT;
+	pgt.param.pgt.root.as = ADDRXLAT_NONE;
+	pgt.param.pgt.root.addr = 0;
 
-	linear = addrxlat_meth_new();
-	if (!linear) {
-		perror("Cannot initialize linear translation");
-		rc = TEST_ERR;
-		goto out;
-	}
+	linear.kind = ADDRXLAT_LINEAR;
+	linear.param.linear.off = 0;
 
 	while ((opt = getopt_long(argc, argv, "he:f:l:pr:",
 				  opts, NULL)) != -1) {
 		switch (opt) {
 		case 'f':
-			rc = set_paging_form(optarg);
+			def = &pgt;
+			rc = set_paging_form(&def->param.pgt.pf, optarg);
 			if (rc != TEST_OK)
 				return rc;
 			break;
 
 		case 'r':
-			rc = set_root(optarg, pgt);
+			def = &pgt;
+			rc = set_root(&def->param.pgt.root, optarg);
 			if (rc != TEST_OK)
 				return rc;
 			break;
@@ -319,13 +305,14 @@ main(int argc, char **argv)
 			break;
 
 		case 'l':
-			rc = set_linear(optarg, linear);
+			def = &linear;
+			rc = set_linear(&def->param.linear.off, optarg);
 			if (rc != TEST_OK)
 				return rc;
 			break;
 
 		case 'p':
-			xlat = pgt;
+			def = &pgt;
 			break;
 
 		case 'h':
@@ -334,6 +321,11 @@ main(int argc, char **argv)
 			rc = (opt == 'h') ? TEST_OK : TEST_ERR;
 			goto out;
 		}
+	}
+
+	if (def == NULL) {
+		fputs("No translation method specified\n", stderr);
+		return TEST_ERR;
 	}
 
 	if (argc - optind != 1 || !*argv[optind]) {
@@ -347,16 +339,23 @@ main(int argc, char **argv)
 		return TEST_ERR;
 	}
 
-	ctx = addrxlat_ctx_new();
-	if (!ctx) {
-		perror("Cannot initialize address translation context");
+	xlat = addrxlat_meth_new();
+	if (!xlat) {
+		perror("Cannot allocate translation method");
 		rc = TEST_ERR;
 		goto out;
 	}
 
-	status = addrxlat_meth_set_form(pgt, &paging_form);
+	status = addrxlat_meth_set_def(xlat, def);
 	if (status != addrxlat_ok) {
-		fprintf(stderr, "Cannot set paging form\n");
+		fprintf(stderr, "Cannot set up address translation\n");
+		rc = TEST_ERR;
+		goto out;
+	}
+
+	ctx = addrxlat_ctx_new();
+	if (!ctx) {
+		perror("Cannot initialize address translation context");
 		rc = TEST_ERR;
 		goto out;
 	}
@@ -367,12 +366,8 @@ main(int argc, char **argv)
 	rc = do_xlat(ctx, vaddr);
 
  out:
-	if (linear && (refcnt = addrxlat_meth_decref(linear)) != 0)
-		fprintf(stderr, "WARNING: Leaked %lu pgt references\n",
-			refcnt);
-
-	if (pgt && (refcnt = addrxlat_meth_decref(pgt)) != 0)
-		fprintf(stderr, "WARNING: Leaked %lu pgt references\n",
+	if (xlat && (refcnt = addrxlat_meth_decref(xlat)) != 0)
+		fprintf(stderr, "WARNING: Leaked %lu method references\n",
 			refcnt);
 
 	if (ctx && (refcnt = addrxlat_ctx_decref(ctx)) != 0)

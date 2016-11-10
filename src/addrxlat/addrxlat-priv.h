@@ -69,24 +69,11 @@
 /** Maximum length of the error message. */
 #define ERRBUF	64
 
-/** Definitions specific to linear translation.
- */
-struct linear_xlat {
-	/** Absolute address offset. */
-	addrxlat_off_t off;
-};
-
-/** Definitions specific to pagetable translation.
+/** Extra definitions specific to pagetable translation.
  * Page table translation uses some pre-computed values, which are
  * stored in this structure on initialization.
  */
-struct pgt_xlat {
-	/** Base address of the root page table. */
-	addrxlat_fulladdr_t root;
-
-	/** Paging form description. */
-	addrxlat_paging_form_t pf;
-
+struct pgt_extra_def {
 	/** PTE size as a log2 value. */
 	unsigned short pte_shift;
 
@@ -109,13 +96,13 @@ struct _addrxlat_meth {
 	/** Function to make one step in address translation. */
 	addrxlat_walk_step_fn *walk_step;
 
-	/** Translation kind. */
-	addrxlat_kind_t kind;
+	/** Translation definition. */
+	addrxlat_def_t def;
 
+	/** Extra kind-specific fields. */
 	union {
-		struct linear_xlat linear;
-		struct pgt_xlat pgt;
-	};
+		struct pgt_extra_def pgt;
+	} extra;
 };
 
 /**  Representation of address translation.
@@ -153,6 +140,9 @@ struct _addrxlat_osmap {
 };
 
 /* vtop */
+
+#define noaddr INTERNAL_NAME(noaddr)
+extern const addrxlat_fulladdr_t noaddr;
 
 #define pgt_huge_page INTERNAL_NAME(pgt_huge_page)
 addrxlat_status pgt_huge_page(addrxlat_walk_t *state);
@@ -223,14 +213,8 @@ DECLARE_INTERNAL(meth_incref)
 #define internal_meth_decref INTERNAL_ALIAS(meth_decref)
 DECLARE_INTERNAL(meth_decref)
 
-#define internal_meth_set_none INTERNAL_ALIAS(meth_set_none)
-DECLARE_INTERNAL(meth_set_none)
-
-#define internal_meth_set_form INTERNAL_ALIAS(meth_set_form)
-DECLARE_INTERNAL(meth_set_form)
-
-#define internal_meth_set_offset INTERNAL_ALIAS(meth_set_offset)
-DECLARE_INTERNAL(meth_set_offset)
+#define internal_meth_set_def INTERNAL_ALIAS(meth_set_def)
+DECLARE_INTERNAL(meth_set_def)
 
 #define internal_walk_init INTERNAL_ALIAS(walk_init)
 DECLARE_INTERNAL(walk_init)

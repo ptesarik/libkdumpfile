@@ -141,7 +141,10 @@ static void
 direct_hook(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	    const struct osmap_region *region)
 {
-	internal_meth_set_offset(osmap->meth[region->xlat], region->first);
+	addrxlat_def_t def;
+	def.kind = ADDRXLAT_LINEAR;
+	def.param.linear.off = region->first;
+	internal_meth_set_def(osmap->meth[region->xlat], &def);
 }
 
 /** Set memory map layout.

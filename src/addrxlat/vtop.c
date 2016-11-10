@@ -30,6 +30,8 @@
 
 #include "addrxlat-priv.h"
 
+const addrxlat_fulladdr_t noaddr = { ADDRXLAT_NOADDR };
+
 /** Read the raw PTE value.
  * @param state  Page table walk state.
  * @returns      Error status.
@@ -41,7 +43,7 @@ static addrxlat_status
 read_pte(addrxlat_walk_t *state)
 {
 	addrxlat_ctx_t *ctx = state->ctx;
-	const struct pgt_xlat *pgt = &state->meth->pgt;
+	const struct pgt_extra_def *pgt = &state->meth->extra.pgt;
 	uint64_t pte64;
 	uint32_t pte32;
 	addrxlat_pte_t pte;
@@ -137,7 +139,7 @@ addrxlat_walk(addrxlat_ctx_t *ctx, const addrxlat_meth_t *meth,
 addrxlat_status
 pgt_huge_page(addrxlat_walk_t *state)
 {
-	const struct pgt_xlat *pgt = &state->meth->pgt;
+	const addrxlat_def_pgt_t *pgt = &state->meth->def.param.pgt;
 	addrxlat_addr_t off = 0;
 
 	while (state->level > 1) {

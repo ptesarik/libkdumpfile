@@ -110,7 +110,7 @@ hugepd_shift(addrxlat_pte_t hpde)
 static addrxlat_status
 huge_pd_linux(addrxlat_walk_t *state)
 {
-	const struct pgt_xlat *pgt = &state->meth->pgt;
+	const addrxlat_paging_form_t *pf = &state->meth->def.param.pgt.pf;
 	addrxlat_addr_t off;
 	unsigned pdshift;
 	unsigned short i;
@@ -128,7 +128,7 @@ huge_pd_linux(addrxlat_walk_t *state)
 	i = state->level;
 	while (--i) {
 		off |= state->idx[i];
-		off <<= pgt->pf.bits[i - 1];
+		off <<= pf->bits[i - 1];
 	}
 
 	/* Calculate the index in the huge page table. */
@@ -164,11 +164,10 @@ is_hugepte_linux(addrxlat_pte_t pte)
 static addrxlat_status
 huge_page_linux(addrxlat_walk_t *state, unsigned rpn_shift)
 {
-	const struct pgt_xlat *pgt = &state->meth->pgt;
+	const addrxlat_paging_form_t *pf = &state->meth->def.param.pgt.pf;
 
 	state->base.as = ADDRXLAT_MACHPHYSADDR;
-	state->base.addr = (state->raw_pte >>
-			    rpn_shift) << pgt->pf.bits[0];
+	state->base.addr = (state->raw_pte >> rpn_shift) << pf->bits[0];
 	return pgt_huge_page(state);
 }
 
@@ -186,7 +185,8 @@ pgt_ppc64_linux(addrxlat_walk_t *state, unsigned rpn_shift)
 		"pud",
 		"pgd",
 	};
-	const struct pgt_xlat *pgt = &state->meth->pgt;
+	const addrxlat_paging_form_t *pf = &state->meth->def.param.pgt.pf;
+	const struct pgt_extra_def *pgt = &state->meth->extra.pgt;
 
 	if (!state->raw_pte)
 		return set_error(state->ctx, addrxlat_notpresent,
@@ -204,13 +204,13 @@ pgt_ppc64_linux(addrxlat_walk_t *state, unsigned rpn_shift)
 			return huge_pd_linux(state);
 
 		table_size = ((addrxlat_addr_t)1 << pgt->pte_shift <<
-			      pgt->pf.bits[state->level - 1]);
+			      pf->bits[state->level - 1]);
 		state->base.as = ADDRXLAT_KVADDR;
 		state->base.addr = state->raw_pte & ~(table_size - 1);
 	} else {
 		state->base.as = ADDRXLAT_MACHPHYSADDR;
 		state->base.addr = (state->raw_pte >>
-				    rpn_shift) << pgt->pf.bits[0];
+				    rpn_shift) << pf->bits[0];
 	}
 
 	return addrxlat_continue;
@@ -259,14 +259,27 @@ map_linux_ppc64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 		.bits = { 16, 12, 12, 4 }
 	};
 
+	addrxlat_meth_t *meth;
+	addrxlat_def_t def;
 	addrxlat_status status;
 
 	status = osmap_set_layout(osmap, ctx, linux_layout);
 	if (status != addrxlat_ok)
 		return status;
 
-	internal_meth_set_form(osmap->meth[ADDRXLAT_OSMAP_PGT], &ppc64_pf_64k);
-	internal_meth_set_form(osmap->meth[ADDRXLAT_OSMAP_UPGT], &ppc64_pf_64k);
+	meth = osmap->meth[ADDRXLAT_OSMAP_PGT];
+	def.kind = ADDRXLAT_PGT;
+	def.param.pgt.pf = ppc64_pf_64k;
+	def.param.pgt.root = meth->def.kind == ADDRXLAT_PGT
+		? meth->def.param.pgt.root
+		: noaddr;
+	internal_meth_set_def(meth, &def);
+
+	meth = osmap->meth[ADDRXLAT_OSMAP_UPGT];
+	def.param.pgt.root = meth->def.kind == ADDRXLAT_PGT
+		? meth->def.param.pgt.root
+		: noaddr;
+	internal_meth_set_def(meth, &def);
 
 	return addrxlat_ok;
 }

@@ -68,7 +68,8 @@ pgt_s390x(addrxlat_walk_t *state)
 		"pgd",
 		"rg1",		/* Invented; does not exist in the wild. */
 	};
-	const struct pgt_xlat *pgt = &state->meth->pgt;
+	const addrxlat_paging_form_t *pf = &state->meth->def.param.pgt.pf;
+	const struct pgt_extra_def *pgt = &state->meth->extra.pgt;
 
 	if (PTE_I(state->raw_pte))
 		return set_error(state->ctx, addrxlat_notpresent,
@@ -95,7 +96,7 @@ pgt_s390x(addrxlat_walk_t *state)
 
 	if (state->level >= 3) {
 		unsigned pgidx = state->idx[state->level - 1] >>
-			(pgt->pf.bits[state->level - 1] - pgt->pf.bits[0]);
+			(pf->bits[state->level - 1] - pf->bits[0]);
 		if (pgidx < PTE_TF(state->raw_pte) ||
 		    pgidx > PTE_TL(state->raw_pte))
 			return set_error(state->ctx, addrxlat_notpresent,
@@ -125,7 +126,7 @@ determine_pgttype(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx)
 	addrxlat_status status;
 
 	pgtmeth = osmap->meth[ADDRXLAT_OSMAP_PGT];
-	ptr = pgtmeth->pgt.root;
+	ptr = pgtmeth->def.param.pgt.root;
 	for (i = 0; i < ROOT_PGT_LEN; ++i) {
 		status = ctx->cb_read64(ctx->priv, &ptr, &entry);
 		if (status != addrxlat_ok)
@@ -137,9 +138,16 @@ determine_pgttype(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx)
 				.pte_format = addrxlat_pte_s390x,
 				.bits = { 12, 8, 11, 11, 11, 11 }
 			};
+			addrxlat_def_t def;
 
-			pf.levels = PTE_TT(entry) + 3;
-			return internal_meth_set_form(pgtmeth, &pf);
+			def.kind = ADDRXLAT_PGT;
+			def.param.pgt.pf = pf;
+			def.param.pgt.pf.levels = PTE_TT(entry) + 3;
+			def.param.pgt.root = pgtmeth->def.kind == ADDRXLAT_PGT
+				? pgtmeth->def.param.pgt.root
+				: noaddr;
+
+			return internal_meth_set_def(pgtmeth, &def);
 		}
 		ptr.addr += sizeof(uint64_t);
 	}
@@ -177,7 +185,7 @@ osmap_s390x(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 		return status;
 
 	range.meth = osmap->meth[ADDRXLAT_OSMAP_PGT];
-	range.endoff = paging_max_index(&range.meth->pgt.pf);
+	range.endoff = paging_max_index(&range.meth->def.param.pgt.pf);
 	newmap = internal_map_set(osmap->map, 0, &range);
 	if (!newmap)
 		return set_error(ctx, addrxlat_nomem,

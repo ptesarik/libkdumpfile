@@ -172,7 +172,7 @@ pgt_x86_64(addrxlat_walk_t *state)
 		"pud",
 		"pgd",
 	};
-	const struct pgt_xlat *pgt = &state->meth->pgt;
+	const struct pgt_extra_def *pgt = &state->meth->extra.pgt;
 
 	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(state->ctx, addrxlat_notpresent,
@@ -318,9 +318,12 @@ set_ktext_offset(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 
 	addr = vaddr;
 	status = internal_walk(ctx, osmap->meth[ADDRXLAT_OSMAP_PGT], &addr);
-	if (status == addrxlat_ok)
-		internal_meth_set_offset(osmap->meth[ADDRXLAT_OSMAP_KTEXT],
-					 vaddr - addr);
+	if (status == addrxlat_ok) {
+		addrxlat_def_t def;
+		def.kind = ADDRXLAT_LINEAR;
+		def.param.linear.off = vaddr - addr;
+		internal_meth_set_def(osmap->meth[ADDRXLAT_OSMAP_KTEXT], &def);
+	}
 }
 
 /** Fall back to page table mapping if needed.
@@ -335,9 +338,9 @@ set_pgt_fallback(addrxlat_osmap_t *osmap, addrxlat_osmap_xlat_t xlat)
 {
 	addrxlat_meth_t *meth = osmap->meth[xlat];
 
-	if (meth->kind == ADDRXLAT_NONE) {
+	if (meth->def.kind == ADDRXLAT_NONE) {
 		addrxlat_meth_t *fallback = osmap->meth[ADDRXLAT_OSMAP_PGT];
-		internal_meth_set_form(meth, &fallback->pgt.pf);
+		internal_meth_set_def(meth, &fallback->def);
 	}
 }
 
@@ -456,6 +459,7 @@ map_xen_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	addrxlat_range_t range_direct, range_ktext;
 	addrxlat_addr_t addr_direct, addr_ktext;
 	addrxlat_map_t *newmap;
+	addrxlat_def_t def;
 
 	if (!osmap->meth[ADDRXLAT_OSMAP_DIRECT])
 		osmap->meth[ADDRXLAT_OSMAP_DIRECT] = internal_meth_new();
@@ -514,7 +518,9 @@ map_xen_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	} else
 		return addrxlat_ok;
 
-	internal_meth_set_offset(range_direct.meth, addr_direct);
+	def.kind = ADDRXLAT_LINEAR;
+	def.param.linear.off = addr_direct;
+	internal_meth_set_def(range_direct.meth, &def);
 	newmap = internal_map_set(osmap->map, addr_direct, &range_direct);
 	if (!newmap)
 		return set_error(ctx, addrxlat_nomem,
@@ -551,6 +557,8 @@ osmap_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 		.levels = 5,
 		.bits = { 12, 9, 9, 9, 9 }
 	};
+	addrxlat_meth_t *meth;
+	addrxlat_def_t def;
 	addrxlat_status status;
 
 	if (osdesc->archvar)
@@ -562,7 +570,13 @@ osmap_x86_64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	if (!osmap->meth[ADDRXLAT_OSMAP_PGT])
 		return addrxlat_nomem;
 
-	internal_meth_set_form(osmap->meth[ADDRXLAT_OSMAP_PGT], &x86_64_pf);
+	meth = osmap->meth[ADDRXLAT_OSMAP_PGT];
+	def.kind = ADDRXLAT_PGT;
+	def.param.pgt.pf = x86_64_pf;
+	def.param.pgt.root = meth->def.kind == ADDRXLAT_PGT
+		? meth->def.param.pgt.root
+		: noaddr;
+	internal_meth_set_def(meth, &def);
 	status = canonical_pgt_map(osmap, ctx, osdesc);
 	if (status != addrxlat_ok)
 		return status;

@@ -3,14 +3,8 @@ LIBADDRXLAT_0 {
     addrxlat_meth_new;
     addrxlat_meth_incref;
     addrxlat_meth_decref;
-    addrxlat_meth_get_kind;
-    addrxlat_meth_set_none;
-    addrxlat_meth_set_offset;
-    addrxlat_meth_get_offset;
-    addrxlat_meth_set_form;
-    addrxlat_meth_get_form;
-    addrxlat_meth_set_root;
-    addrxlat_meth_get_root;
+    addrxlat_meth_set_def;
+    addrxlat_meth_get_def;
 
     addrxlat_ctx_new;
     addrxlat_ctx_incref;

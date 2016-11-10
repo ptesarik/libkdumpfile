@@ -68,7 +68,8 @@ pgt_ia32(addrxlat_walk_t *state)
 		"pte",
 		"pgd",
 	};
-	const struct pgt_xlat *pgt = &state->meth->pgt;
+	const addrxlat_paging_form_t *pf = &state->meth->def.param.pgt.pf;
+	const struct pgt_extra_def *pgt = &state->meth->extra.pgt;
 
 	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(state->ctx, addrxlat_notpresent,
@@ -83,7 +84,7 @@ pgt_ia32(addrxlat_walk_t *state)
 		--state->level;
 		state->base.addr = (state->raw_pte & pgt->pgt_mask[1]) |
 			pgd_pse_high(state->raw_pte);
-		state->idx[0] |= state->idx[1] << pgt->pf.bits[0];
+		state->idx[0] |= state->idx[1] << pf->bits[0];
 	} else
 		state->base.addr = state->raw_pte & pgt->pgt_mask[0];
 
@@ -107,7 +108,8 @@ pgt_ia32_pae(addrxlat_walk_t *state)
 		"pmd",
 		"pgd",
 	};
-	const struct pgt_xlat *pgt = &state->meth->pgt;
+	const addrxlat_paging_form_t *pf = &state->meth->def.param.pgt.pf;
+	const struct pgt_extra_def *pgt = &state->meth->extra.pgt;
 
 	if (!(state->raw_pte & _PAGE_PRESENT))
 		return set_error(state->ctx, addrxlat_notpresent,
@@ -122,7 +124,7 @@ pgt_ia32_pae(addrxlat_walk_t *state)
 	if (state->level == 2 && (state->raw_pte & _PAGE_PSE)) {
 		--state->level;
 		state->base.addr &= pgt->pgt_mask[1];
-		state->idx[0] |= state->idx[1] << pgt->pf.bits[0];
+		state->idx[0] |= state->idx[1] << pf->bits[0];
 	} else
 		state->base.addr &= pgt->pgt_mask[0];
 
@@ -158,18 +160,22 @@ is_pae(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *root,
        addrxlat_addr_t direct)
 {
 	addrxlat_meth_t meth;
+	addrxlat_def_t def;
 	addrxlat_addr_t addr;
 	addrxlat_status status;
 
-	meth.pgt.root = *root;
+	def.kind = ADDRXLAT_PGT;
+	def.param.pgt.root = *root;
 
-	internal_meth_set_form(&meth, &ia32_pf_pae);
+	def.param.pgt.pf = ia32_pf_pae;
+	internal_meth_set_def(&meth, &def);
 	addr = direct;
 	status = internal_walk(ctx, &meth, &addr);
 	if (status == addrxlat_ok && addr == 0)
 		return 1;
 
-	internal_meth_set_form(&meth, &ia32_pf);
+	def.param.pgt.pf = ia32_pf;
+	internal_meth_set_def(&meth, &def);
 	addr = direct;
 	status = internal_walk(ctx, &meth, &addr);
 	if (status == addrxlat_ok && addr == 0)
@@ -188,7 +194,16 @@ static addrxlat_status
 osmap_ia32_nonpae(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 		  const addrxlat_osdesc_t *osdesc)
 {
-	internal_meth_set_form(osmap->meth[ADDRXLAT_OSMAP_PGT], &ia32_pf);
+	addrxlat_meth_t *meth;
+	addrxlat_def_t def;
+
+	meth = osmap->meth[ADDRXLAT_OSMAP_PGT];
+	def.kind = ADDRXLAT_PGT;
+	def.param.pgt.pf = ia32_pf;
+	def.param.pgt.root = meth->def.kind == ADDRXLAT_PGT
+		? meth->def.param.pgt.root
+		: noaddr;
+	internal_meth_set_def(meth, &def);
 	return addrxlat_ok;
 }
 
@@ -202,7 +217,16 @@ static addrxlat_status
 osmap_ia32_pae(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	       const addrxlat_osdesc_t *osdesc)
 {
-	internal_meth_set_form(osmap->meth[ADDRXLAT_OSMAP_PGT], &ia32_pf_pae);
+	addrxlat_meth_t *meth;
+	addrxlat_def_t def;
+
+	meth = osmap->meth[ADDRXLAT_OSMAP_PGT];
+	def.kind = ADDRXLAT_PGT;
+	def.param.pgt.pf = ia32_pf_pae;
+	def.param.pgt.root = meth->def.kind == ADDRXLAT_PGT
+		? meth->def.param.pgt.root
+		: noaddr;
+	internal_meth_set_def(meth, &def);
 	return addrxlat_ok;
 }
 
@@ -226,10 +250,10 @@ osmap_ia32(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 		if (!pgtmeth)
 			pae = -1;
 		else if (osdesc->type == addrxlat_os_linux)
-			pae = is_pae(ctx, &pgtmeth->pgt.root,
+			pae = is_pae(ctx, &pgtmeth->def.param.pgt.root,
 				     LINUX_DIRECTMAP);
 		else if (osdesc->type == addrxlat_os_xen)
-			pae = is_pae(ctx, &pgtmeth->pgt.root,
+			pae = is_pae(ctx, &pgtmeth->def.param.pgt.root,
 				     XEN_DIRECTMAP);
 		else
 			pae = -1;

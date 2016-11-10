@@ -101,26 +101,40 @@ struct ppc64_data {
 	addrxlat_meth_t *directmap;
 };
 
+static const addrxlat_paging_form_t ppc64_pf_64k = {
+	.pte_format = addrxlat_pte_ppc64_linux_rpn30,
+	.levels = 4,
+	.bits = { 16, 12, 12, 4 }
+};
+
 static kdump_status
 ppc64_vtop_init(kdump_ctx *ctx)
 {
 	struct ppc64_data *archdata = ctx->shared->archdata;
-	addrxlat_fulladdr_t pgtroot;
+	addrxlat_def_t def;
 	kdump_vaddr_t addr, vmal;
 	struct attr_data *base, *attr;
 	char *endp;
 	unsigned long off_vm_struct_addr;
 	size_t sz = get_ptr_size(ctx);
+	size_t pagesize = get_page_size(ctx);
+	addrxlat_status axres;
 	kdump_status res;
 
+	if (pagesize != _64K)
+		return set_error(ctx, kdump_nodata,
+				 "PAGESIZE == %zd", pagesize);
+
 	rwlock_unlock(&ctx->shared->lock);
-	res = get_symbol_val(ctx, "swapper_pg_dir", &pgtroot.addr);
+	res = get_symbol_val(ctx, "swapper_pg_dir", &def.param.pgt.root.addr);
 	rwlock_wrlock(&ctx->shared->lock);
 	if (res != kdump_ok)
 		return set_error(ctx, res, "Cannot resolve %s",
 				 "swapper_pg_dir");
-	pgtroot.as = ADDRXLAT_KVADDR;
-	addrxlat_meth_set_root(ctx->shared->vtop_map.pgt, &pgtroot);
+	def.kind = ADDRXLAT_PGT;
+	def.param.pgt.root.as = ADDRXLAT_KVADDR;
+	def.param.pgt.pf = ppc64_pf_64k;
+	addrxlat_meth_set_def(ctx->shared->vtop_map.pgt, &def);
 
 	rwlock_unlock(&ctx->shared->lock);
 	res = get_symbol_val(ctx, "_stext", &addr);
@@ -138,7 +152,11 @@ ppc64_vtop_init(kdump_ctx *ctx)
 				"Cannot allocate directmap");
 		goto err_arch;
 	}
-	addrxlat_meth_set_offset(archdata->directmap, addr);
+	def.kind = ADDRXLAT_LINEAR;
+	def.param.linear.off = addr;
+	axres = addrxlat_meth_set_def(archdata->directmap, &def);
+	if (axres != addrxlat_ok)
+		return set_error_addrxlat(ctx, axres);
 
 	res = set_vtop_xlat(&ctx->shared->vtop_map,
 			    addr, addr + 0x1000000000000000,
@@ -195,34 +213,16 @@ ppc64_vtop_init(kdump_ctx *ctx)
 	return res;
 }
 
-static const addrxlat_paging_form_t ppc64_pf_64k = {
-	.pte_format = addrxlat_pte_ppc64_linux_rpn30,
-	.levels = 4,
-	.bits = { 16, 12, 12, 4 }
-};
-
 static kdump_status
 ppc64_init(kdump_ctx *ctx)
 {
 	struct ppc64_data *archdata;
-	int pagesize;
-	addrxlat_status axres;
 
 	archdata = calloc(1, sizeof(struct ppc64_data));
 	if (!archdata)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate ppc64 private data");
 	ctx->shared->archdata = archdata;
-
-	pagesize = get_page_size(ctx);
-
-	if (pagesize == _64K) {
-		axres = addrxlat_meth_set_form(
-			ctx->shared->vtop_map.pgt, &ppc64_pf_64k);
-		if (axres != addrxlat_ok)
-			return set_error_addrxlat(ctx, axres);
-	} else
-		return set_error(ctx, kdump_nodata, "PAGESIZE == %d", pagesize);
 
 	return kdump_ok;
 }

@@ -206,76 +206,49 @@ unsigned long addrxlat_meth_incref(addrxlat_meth_t *meth);
  */
 unsigned long addrxlat_meth_decref(addrxlat_meth_t *meth);
 
-/** Get the kind of a translation method.
- * @param meth  Translation method.
- * @returns     Translation kind.
- */
-addrxlat_kind_t addrxlat_meth_get_kind(const addrxlat_meth_t *meth);
+/** Parameters of linear translation. */
+typedef struct _addrxlat_def_linear {
+	addrxlat_off_t off;	/**< Address offset. */
+} addrxlat_def_linear_t;
 
-/** Set up null translation.
+/** Parameters of page table translation. */
+typedef struct {
+	addrxlat_fulladdr_t root;  /**< Root page table address. */
+	addrxlat_paging_form_t pf; /**< Paging form. */
+} addrxlat_def_pgt_t;
+
+/** Parameters of the translation method. */
+typedef union _addrxlat_def_param {
+	addrxlat_def_linear_t linear; /**< For @ref ADDRXLAT_LINEAR. */
+	addrxlat_def_pgt_t pgt;	      /**< For @ref ADDRXLAT_PGT. */
+} addrxlat_def_param_t;
+
+/** Address translation definition. */
+typedef struct _addrxlat_def {
+	/** Kind of translation method. */
+	addrxlat_kind_t kind;
+
+	/** Additional parameters. */
+	addrxlat_def_param_t param;
+} addrxlat_def_t;
+
+/** Set up a translation definition.
  * @param meth  Translation method.
+ * @param def   Translation definition.
  * @returns     Error status.
  */
-addrxlat_status addrxlat_meth_set_none(addrxlat_meth_t *meth);
+addrxlat_status addrxlat_meth_set_def(addrxlat_meth_t *meth,
+				      const addrxlat_def_t *def);
 
-/** Set linear offset.
+/** Get the translation definition.
  * @param meth  Translation method.
- * @param off   Physical-to-virtual offset.
- * @returns     Error status.
- *
- * Set up a translation method for linear translation.
- */
-addrxlat_status addrxlat_meth_set_offset(
-	addrxlat_meth_t *meth, addrxlat_off_t off);
-
-/** Get linear offset.
- * @param meth  Translation method of the @c ADDRXLAT_LINEAR kind.
- * @returns     Physical-to-virtual offset.
- */
-addrxlat_off_t addrxlat_meth_get_offset(const addrxlat_meth_t *meth);
-
-/** Set paging form description.
- * @param meth  Translation method.
- * @param pf    Paging form description.
- * @returns     Error status.
- *
- * This function sets the paging form and initializes pre-computed
- * internal state of a page table translation object. It also stores
- * a copy of the paging form description inside the translation object.
- */
-addrxlat_status addrxlat_meth_set_form(
-	addrxlat_meth_t *meth, const addrxlat_paging_form_t *pf);
-
-/** Get paging form description.
- * @param meth  Translation method.
- * @returns     Pointer to the internal paging form description.
+ * @returns     Translation definition.
  *
  * The returned pointer is valid as long as you hold a reference to
  * the translation object. It does not change by subsequent calls to
- * @ref addrxlat_meth_set_form (but the referenced value does).
+ * @ref addrxlat_meth_set_def (but the referenced value does).
  */
-const addrxlat_paging_form_t *addrxlat_meth_get_form(
-	const addrxlat_meth_t *meth);
-
-/** Set root page table base address.
- * @param meth  Translation method.
- * @param root  Address of the root page table.
- *
- * This function stores a copy of the root page table base address in
- */
-void addrxlat_meth_set_root(
-	addrxlat_meth_t *meth, const addrxlat_fulladdr_t *root);
-
-/** Get root page table base address.
- * @param  pgt  Page table translation object.
- * @returns     Pointer to the internal root page table.
- *
- * The returned pointer is valid as long as you hold a reference to
- * the translation object. It does not change by subsequent calls to
- * @ref addrxlat_meth_set_root (but the referenced value does).
- */
-const addrxlat_fulladdr_t *addrxlat_meth_get_root(
-	const addrxlat_meth_t *meth);
+const addrxlat_def_t *addrxlat_meth_get_def(const addrxlat_meth_t *meth);
 
 typedef struct _addrxlat_ctx addrxlat_ctx_t;
 

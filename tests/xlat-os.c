@@ -180,21 +180,25 @@ print_xlat(const addrxlat_meth_t *meth)
 {
 	if (meth == NULL)
 		fputs("NONE", stdout);
-	else switch (addrxlat_meth_get_kind(meth)) {
-	case ADDRXLAT_NONE:
-		print_ind("NONE", meth);
-		break;
+	else {
+		const addrxlat_def_t *def = addrxlat_meth_get_def(meth);
 
-	case ADDRXLAT_LINEAR:
-		print_ind("LINEAR", meth);
-		printf(" off=0x%llx",
-		       (unsigned long long) addrxlat_meth_get_offset(meth));
-		break;
+		switch (def->kind) {
+		case ADDRXLAT_NONE:
+			print_ind("NONE", meth);
+			break;
 
-	case ADDRXLAT_PGT:
-		print_ind("PGT", meth);
-		break;
+		case ADDRXLAT_LINEAR:
+			print_ind("LINEAR", meth);
+			printf(" off=0x%llx",
+			       (unsigned long long) def->param.linear.off);
+			break;
 
+		case ADDRXLAT_PGT:
+			print_ind("PGT", meth);
+			break;
+
+		}
 	}
 }
 
@@ -210,7 +214,8 @@ print_pgt(const addrxlat_meth_t *pgt)
 		[addrxlat_pte_ppc64_linux_rpn30] = "ppc64_linux_rpn30",
 	};
 
-	const addrxlat_paging_form_t *pf = addrxlat_meth_get_form(pgt);
+	const addrxlat_def_t *def = addrxlat_meth_get_def(pgt);
+	const addrxlat_paging_form_t *pf = &def->param.pgt.pf;
 	unsigned i;
 
 	fputs("pte_format: ", stdout);
@@ -273,7 +278,7 @@ os_map(void)
 
 	if (rootpgt != ADDRXLAT_ADDR_MAX) {
 		addrxlat_meth_t *pgt;
-		addrxlat_fulladdr_t root;
+		addrxlat_def_t def;
 
 		pgt = addrxlat_meth_new();
 		if (!pgt) {
@@ -281,9 +286,12 @@ os_map(void)
 			addrxlat_ctx_decref(ctx);
 			return TEST_ERR;
 		}
-		root.as = ADDRXLAT_MACHPHYSADDR;
-		root.addr = rootpgt;
-		addrxlat_meth_set_root(pgt, &root);
+		def.kind = ADDRXLAT_PGT;
+		def.param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
+		def.param.pgt.root.addr = rootpgt;
+		def.param.pgt.pf.pte_format = addrxlat_pte_none;
+		def.param.pgt.pf.levels = 0;
+		addrxlat_meth_set_def(pgt, &def);
 		addrxlat_osmap_set_xlat(osmap, ADDRXLAT_OSMAP_PGT, pgt);
 		addrxlat_meth_decref(pgt);
 	}
