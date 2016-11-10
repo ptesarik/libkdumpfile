@@ -200,9 +200,7 @@ osmap_ia32_nonpae(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	meth = osmap->meth[ADDRXLAT_OSMAP_PGT];
 	def.kind = ADDRXLAT_PGT;
 	def.param.pgt.pf = ia32_pf;
-	def.param.pgt.root = meth->def.kind == ADDRXLAT_PGT
-		? meth->def.param.pgt.root
-		: noaddr;
+	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);
 	return addrxlat_ok;
 }
@@ -223,9 +221,7 @@ osmap_ia32_pae(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	meth = osmap->meth[ADDRXLAT_OSMAP_PGT];
 	def.kind = ADDRXLAT_PGT;
 	def.param.pgt.pf = ia32_pf_pae;
-	def.param.pgt.root = meth->def.kind == ADDRXLAT_PGT
-		? meth->def.param.pgt.root
-		: noaddr;
+	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);
 	return addrxlat_ok;
 }

@@ -270,15 +270,11 @@ map_linux_ppc64(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	meth = osmap->meth[ADDRXLAT_OSMAP_PGT];
 	def.kind = ADDRXLAT_PGT;
 	def.param.pgt.pf = ppc64_pf_64k;
-	def.param.pgt.root = meth->def.kind == ADDRXLAT_PGT
-		? meth->def.param.pgt.root
-		: noaddr;
+	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);
 
 	meth = osmap->meth[ADDRXLAT_OSMAP_UPGT];
-	def.param.pgt.root = meth->def.kind == ADDRXLAT_PGT
-		? meth->def.param.pgt.root
-		: noaddr;
+	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);
 
 	return addrxlat_ok;

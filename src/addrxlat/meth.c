@@ -326,3 +326,20 @@ paging_max_index(const addrxlat_paging_form_t *pf)
 		? (((addrxlat_addr_t)1 << bits) - 1)
 		: ADDRXLAT_ADDR_MAX);
 }
+
+/** Choose the page table root for a translation definition.
+ * @param def   Translation definition.
+ * @param meth  Translation method.
+ *
+ * If @c meth already specifies a page table root, it is reused. If not
+ * (e.g. it is a null translation), an ADDRXLAT_NONE address is used to
+ * specify that the address is unknown.
+ */
+void
+def_choose_pgtroot(addrxlat_def_t *def, const addrxlat_meth_t *meth)
+{
+	if (meth->def.kind == ADDRXLAT_PGT)
+		def->param.pgt.root = meth->def.param.pgt.root;
+	else
+		def->param.pgt.root.as = ADDRXLAT_NONE;
+}

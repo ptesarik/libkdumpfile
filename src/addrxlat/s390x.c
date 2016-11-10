@@ -143,10 +143,7 @@ determine_pgttype(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx)
 			def.kind = ADDRXLAT_PGT;
 			def.param.pgt.pf = pf;
 			def.param.pgt.pf.levels = PTE_TT(entry) + 3;
-			def.param.pgt.root = pgtmeth->def.kind == ADDRXLAT_PGT
-				? pgtmeth->def.param.pgt.root
-				: noaddr;
-
+			def_choose_pgtroot(&def, pgtmeth);
 			return internal_meth_set_def(pgtmeth, &def);
 		}
 		ptr.addr += sizeof(uint64_t);

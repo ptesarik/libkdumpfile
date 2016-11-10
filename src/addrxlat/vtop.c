@@ -30,8 +30,6 @@
 
 #include "addrxlat-priv.h"
 
-const addrxlat_fulladdr_t noaddr = { ADDRXLAT_NOADDR };
-
 /** Read the raw PTE value.
  * @param state  Page table walk state.
  * @returns      Error status.

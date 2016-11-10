@@ -141,9 +141,6 @@ struct _addrxlat_osmap {
 
 /* vtop */
 
-#define noaddr INTERNAL_NAME(noaddr)
-extern const addrxlat_fulladdr_t noaddr;
-
 #define pgt_huge_page INTERNAL_NAME(pgt_huge_page)
 addrxlat_status pgt_huge_page(addrxlat_walk_t *state);
 
@@ -268,6 +265,9 @@ addrxlat_status osmap_set_layout(addrxlat_osmap_t *osmap,
 				 const struct osmap_region layout[]);
 
 /* utils */
+
+#define def_choose_pgtroot INTERNAL_NAME(def_choose_pgtroot)
+void def_choose_pgtroot(addrxlat_def_t *def, const addrxlat_meth_t *meth);
 
 /** Set the error message.
  * @param ctx     Address translation context.
