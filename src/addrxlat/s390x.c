@@ -165,10 +165,6 @@ osmap_s390x(struct osmap_init_data *ctl)
 	addrxlat_range_t range;
 	addrxlat_status status;
 
-	if (ctl->osdesc->archvar)
-		return set_error(ctl->ctx, addrxlat_notimpl,
-				 "Unimplemented architecture variant");
-
 	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_PGT])
 		ctl->osmap->meth[ADDRXLAT_OSMAP_PGT] = internal_meth_new();
 	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_PGT])

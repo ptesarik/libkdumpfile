@@ -82,6 +82,7 @@ addrxlat_osmap_init(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 {
 	struct osmap_init_data ctl;
 	osmap_arch_fn *arch_fn;
+	addrxlat_status status;
 
 	if (!strcmp(osdesc->arch, "x86_64"))
 		arch_fn = osmap_x86_64;
@@ -101,6 +102,10 @@ addrxlat_osmap_init(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 	ctl.osmap = osmap;
 	ctl.ctx = ctx;
 	ctl.osdesc = osdesc;
+
+	status = parse_opts(&ctl.popt, ctx, osdesc->opts);
+	if (status != addrxlat_ok)
+		return status;
 
 	return arch_fn(&ctl);
 }

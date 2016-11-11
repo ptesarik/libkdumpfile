@@ -229,9 +229,9 @@ osmap_ia32(struct osmap_init_data *ctl)
 {
 	addrxlat_range_t range;
 	addrxlat_map_t *newmap;
-	int pae;
+	long pae;
 
-	if (!ctl->osdesc->archvar) {
+	if (!ctl->popt.val[OPT_pae].set) {
 		addrxlat_meth_t *pgtmeth =
 			ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
 
@@ -249,13 +249,8 @@ osmap_ia32(struct osmap_init_data *ctl)
 		if (pae < 0)
 			return set_error(ctl->ctx, addrxlat_notimpl,
 					 "Cannot determine PAE state");
-	} else if (!strcmp(ctl->osdesc->archvar, "pae"))
-		pae = 1;
-	else if (!strcmp(ctl->osdesc->archvar, "nonpae"))
-		pae = 0;
-	else
-		return set_error(ctl->ctx, addrxlat_notimpl,
-				 "Unimplemented architecture variant");
+	} else
+		pae = ctl->popt.val[OPT_pae].num;
 
 	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_PGT])
 		ctl->osmap->meth[ADDRXLAT_OSMAP_PGT] = internal_meth_new();

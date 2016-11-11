@@ -177,6 +177,37 @@ addrxlat_walk_step_fn pgt_ppc64_linux_rpn30;
 #define paging_max_index INTERNAL_NAME(paging_max_index)
 addrxlat_addr_t paging_max_index(const addrxlat_paging_form_t *pf);
 
+/* Option parsing. */
+
+/** All options recognized by @ref parse_opts. */
+enum optidx {
+	OPT_pae,		/**< [ia32] PAE state (boolean). */
+
+	OPT_NUM			/**< Total number of options. */
+};
+
+/** Single option value. */
+struct optval {
+	unsigned char set;	/**< Non-zero if the option was specified. */
+	union {
+		const char *str;	/**< String(-like) values. */
+		long num;		/**< Number(-like) values. */
+	};
+};
+
+/** This structure holds parsed options. */
+struct parsed_opts {
+	/** Buffer for parsed option values. */
+	char *buf;
+
+	/** Parsed option values. */
+	struct optval val[OPT_NUM];
+};
+
+#define parse_opts INTERNAL_NAME(parse_opts)
+addrxlat_status parse_opts(
+	struct parsed_opts *popt, addrxlat_ctx_t *ctx, const char *opts);
+
 /* map by OS */
 
 /** Data used during OS map initialization. */
@@ -189,6 +220,9 @@ struct osmap_init_data {
 
 	/** OS description. */
 	const addrxlat_osdesc_t *osdesc;
+
+	/** Parsed options. */
+	struct parsed_opts popt;
 };
 
 /** Arch-specific OS map initialization funciton.

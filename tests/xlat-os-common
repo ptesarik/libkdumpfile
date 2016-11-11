@@ -9,8 +9,8 @@ resultfile="out/${name}.result"
 expectfile="$srcdir/$name.expect"
 datafile="$srcdir/$name.data"
 
-archvarspec=
-test -n "$archvar" && archvarspec="archvar=$archvar"
+optspec=
+test -n "$opts" && optspec="opts=$opts"
 pgtspec=
 test -n "$pgt" && pgtspec="rootpgt=$pgt"
 dataspec=
@@ -21,7 +21,7 @@ echo -n "Checking... "
 ostype=$ostype
 osver=$osver
 arch=$arch
-$archvarspec
+$optspec
 $pgtspec
 $dataspec
 EOF

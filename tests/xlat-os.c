@@ -122,7 +122,7 @@ add_entry(addrxlat_addr_t addr, void *buf, size_t sz)
 static unsigned long long ostype;
 static unsigned long long osver;
 static char *arch;
-static char *archvar;
+static char *opts;
 static unsigned long long rootpgt = ADDRXLAT_ADDR_MAX;
 
 static char *data_file;
@@ -131,7 +131,7 @@ static const struct param param_array[] = {
 	PARAM_NUMBER("ostype", ostype),
 	PARAM_NUMBER("osver", osver),
 	PARAM_STRING("arch", arch),
-	PARAM_STRING("archvar", archvar),
+	PARAM_STRING("opts", opts),
 	PARAM_NUMBER("rootpgt", rootpgt),
 
 	PARAM_STRING("DATA", data_file)
@@ -259,7 +259,7 @@ os_map(void)
 	desc.type = ostype;
 	desc.ver = osver;
 	desc.arch = arch;
-	desc.archvar = archvar;
+	desc.opts = opts;
 
 	ctx = addrxlat_ctx_new();
 	if (!ctx) {
