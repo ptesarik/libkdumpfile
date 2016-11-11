@@ -40,8 +40,6 @@ unescape_hex(const char **pp)
 {
 	char n, ret;
 
-	++(*pp);
-
 	ret = unhex(**pp);
 	if (ret < 0) {
 		*pp = NULL;
@@ -101,6 +99,7 @@ unescape(const char **pp)
 	case 't': ret = '\t'; break;
 	case 'v': ret = '\v'; break;
 	case 'x':
+		++(*pp);
 		return unescape_hex(pp);
 
 	case '0':
@@ -114,10 +113,10 @@ unescape(const char **pp)
 		return unescape_oct(pp);
 
 	case '\0':
-		*pp = NULL;
-		break;
+		return ret;
 	}
 
+	++(*pp);
 	return ret;
 }
 
@@ -135,7 +134,7 @@ set_param_string(const struct param *param, const char *val)
 
 	p = val;
 	q = str;
-	while (p && *p)
+	while (*p)
 		if (*p == '\\')
 			*q++ = unescape(&p);
 		else
