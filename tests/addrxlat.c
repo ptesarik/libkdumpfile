@@ -151,6 +151,7 @@ set_paging_form(addrxlat_paging_form_t *pf, const char *spec)
 		return TEST_ERR;
 	}
 
+	pf->levels = 0;
 	do {
 		if (pf->levels >= ADDRXLAT_MAXLEVELS) {
 			fprintf(stderr, "Too many paging levels!\n");
