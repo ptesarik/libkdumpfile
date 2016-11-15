@@ -7,5 +7,6 @@
 arch=ppc64
 ostype=1
 osver=0
+opts="pagesize=65536"
 
 . "$srcdir"/xlat-os-common

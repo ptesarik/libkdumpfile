@@ -80,6 +80,9 @@ static unsigned mmu_pshift[MMU_PAGE_COUNT] = {
 	[MMU_PAGE_64G] = 36,
 };
 
+/** Symbolic constant to be used for 64KB (to avoid typos). */
+#define _64K (1<<16)
+
 /**  Check whether a Linux page directory is huge.
  * @param pte  Page table entry (value).
  * @returns    Non-zero if this is a huge page directory entry.
@@ -256,9 +259,18 @@ map_linux_ppc64(struct osmap_init_data *ctl)
 		.bits = { 16, 12, 12, 4 }
 	};
 
+	long pagesize;
 	addrxlat_meth_t *meth;
 	addrxlat_def_t def;
 	addrxlat_status status;
+
+	pagesize = ctl->popt.val[OPT_pagesize].set
+		? ctl->popt.val[OPT_pagesize].num
+		: _64K;		/* default 64k */
+
+	if (pagesize != _64K)
+		return set_error(ctl->ctx, addrxlat_notimpl,
+				 "Unsupported page size: %ld", pagesize);
 
 	status = osmap_set_layout(ctl, linux_layout);
 	if (status != addrxlat_ok)
