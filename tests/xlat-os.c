@@ -198,6 +198,10 @@ print_xlat(const addrxlat_meth_t *meth)
 			print_ind("PGT", meth);
 			break;
 
+		case ADDRXLAT_LOOKUP:
+			print_ind("LOOKUP", meth);
+			break;
+
 		}
 	}
 }

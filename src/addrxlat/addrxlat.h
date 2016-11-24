@@ -181,6 +181,9 @@ typedef enum _addrxlat_kind {
 
 	/** Page table walk. */
 	ADDRXLAT_PGT,
+
+	/** Table lookup. */
+	ADDRXLAT_LOOKUP,
 } addrxlat_kind_t;
 
 /** Allocate a translation method.
@@ -212,15 +215,41 @@ typedef struct _addrxlat_def_linear {
 } addrxlat_def_linear_t;
 
 /** Parameters of page table translation. */
-typedef struct {
+typedef struct _addrxlat_def_pgt {
 	addrxlat_fulladdr_t root;  /**< Root page table address. */
 	addrxlat_paging_form_t pf; /**< Paging form. */
 } addrxlat_def_pgt_t;
+
+/** Lookup table element.
+ * This defines the virtual<->physical mapping for a single object.
+ * Addresses inside the object are mapped linearly using an offset.
+ */
+typedef struct _addrxlat_lookup_elem {
+	addrxlat_addr_t virt;	/**< Virtual address. */
+	addrxlat_addr_t phys;	/**< Corresponding physical address. */
+} addrxlat_lookup_elem_t;
+
+/** Parameters of table lookup translation. */
+typedef struct _addrxlat_def_lookup {
+	/** Max address offset inside each object.
+	 * This is in fact object size - 1. However, specifying the end
+	 * offset gives maximum flexibility (from 1-byte objects to the
+	 * full size of the address space).
+	 */
+	addrxlat_addr_t endoff;
+
+	/** Size of the table. */
+	size_t nelem;
+
+	/** Lookup table. */
+	const addrxlat_lookup_elem_t *tbl;
+} addrxlat_def_lookup_t;
 
 /** Parameters of the translation method. */
 typedef union _addrxlat_def_param {
 	addrxlat_def_linear_t linear; /**< For @ref ADDRXLAT_LINEAR. */
 	addrxlat_def_pgt_t pgt;	      /**< For @ref ADDRXLAT_PGT. */
+	addrxlat_def_lookup_t lookup; /**< For @ref ADDRXLAT_LOOKUP.  */
 } addrxlat_def_param_t;
 
 /** Address translation definition. */

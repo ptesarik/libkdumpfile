@@ -1,0 +1,64 @@
+#! /bin/sh
+
+#
+# Check table lookup translation.
+#
+
+endoff="0xffff"
+xlat="-e 0xf000000000010000:0xa0000"
+xlat="$xlat -e 0xf000000000020000:0xf0000"
+
+list="0xf000000000011234:0xa1234"	# Inside the range
+list="$list 0xf000000000010000:0xa0000" # First address in range
+list="$list 0xf00000000001ffff:0xaffff" # Last address in range
+list="$list 0xf000000000020000:0xf0000"	# Second range
+
+totalrc=0
+for tst in $list; do
+    input="${tst%:*}"
+    expect="${tst##*:}"
+    echo -n "Checking $input... "
+    output=$( ./addrxlat -t $endoff $xlat $input )
+    rc=$?
+    if [ $rc -gt 1 ]; then
+        echo ERROR
+        echo "Cannot translate $input" >&2
+        exit $rc
+    elif [ $rc -ne 0 ]; then
+        echo FAILED
+        totalrc=$rc
+    elif [ "$output" != "$expect" ]; then
+        echo FAILED
+        echo "Result does not match for $input: $output" >&2
+        totalrc=1
+    else
+        echo OK
+    fi
+done
+
+# Check out of range
+list="0xa000000000011234"	# Completely off
+list="$list 0xf00000000000ffff"	# One below the range
+list="$list 0xf000000000030000"	# One above the range
+
+totalrc=0
+for tst in $list; do
+    input="${tst%:*}"
+    expect="${tst##*:}"
+    echo -n "Checking $input... "
+    output=$( ./addrxlat -t $endoff $xlat $input 2>&1 )
+    rc=$?
+    if [ $rc -gt 1 ]; then
+        echo ERROR
+        echo "Cannot translate $input" >&2
+        exit $rc
+    elif [ $rc -eq 0 ]; then
+        echo FAILED
+        echo "Unexpected success for $input: $output" >&2
+        totalrc=1
+    else
+        echo OK
+    fi
+done
+
+exit $totalrc

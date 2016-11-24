@@ -272,6 +272,42 @@ setup_pgt(addrxlat_meth_t *meth, const addrxlat_def_t *def)
 	return addrxlat_ok;
 }
 
+/** Initialize walk state for table lookup.
+ * @param walk  Page table walk state.
+ * @param addr  Address to be translated.
+ * @returns     Error status.
+ */
+static addrxlat_status
+walk_init_lookup(addrxlat_walk_t *walk, addrxlat_addr_t addr)
+{
+	const addrxlat_def_lookup_t *lookup = &walk->meth->def.param.lookup;
+	size_t i;
+
+	for (i = 0; i < lookup->nelem; ++i) {
+		const addrxlat_lookup_elem_t *elem = &lookup->tbl[i];
+		if (elem->virt <= addr &&
+		    addr <= elem->virt + lookup->endoff) {
+			walk->base.as = ADDRXLAT_KPHYSADDR;
+			walk->base.addr = elem->phys;
+			walk->level = 1;
+			walk->idx[0] = addr - elem->virt;
+			return addrxlat_continue;
+		}
+	}
+
+	return set_error(walk->ctx, addrxlat_notpresent, "Not mapped");
+}
+
+/** Set up table lookup translation.
+ * @param meth  Translation method.
+ */
+static void
+setup_lookup(addrxlat_meth_t *meth)
+{
+	meth->walk_init = walk_init_lookup;
+	meth->walk_step = step_none;
+}
+
 DEFINE_INTERNAL(meth_set_def)
 
 addrxlat_status
@@ -292,6 +328,10 @@ addrxlat_meth_set_def(addrxlat_meth_t *meth, const addrxlat_def_t *def)
 		status = setup_pgt(meth, def);
 		if (status != addrxlat_ok)
 			return status;
+		break;
+
+	case ADDRXLAT_LOOKUP:
+		setup_lookup(meth);
 		break;
 
 	default:

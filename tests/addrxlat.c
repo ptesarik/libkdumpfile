@@ -44,49 +44,46 @@ static addrxlat_meth_t *xlat;
 #define MAXERR	64
 static char read_err_str[MAXERR];
 
-struct entry {
-	struct entry *next;
-	addrxlat_addr_t addr;
-	unsigned long long val;
-};
+#define ALLOC_INC 32
 
-struct entry *entry_list;
+static size_t nentries;
+static addrxlat_lookup_elem_t *entries;
 
-struct entry*
+addrxlat_lookup_elem_t*
 find_entry(addrxlat_addr_t addr)
 {
-	struct entry *ent;
-	for (ent = entry_list; ent; ent = ent->next)
-		if (ent->addr == addr)
-			return ent;
+	size_t i;
+	for (i = 0; i < nentries; ++i)
+		if (entries[i].virt == addr)
+			return &entries[i];
 	return NULL;
 }
 
 static addrxlat_status
 read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 {
-	struct entry *ent = find_entry(addr->addr);
+	addrxlat_lookup_elem_t *ent = find_entry(addr->addr);
 	if (!ent) {
 		snprintf(read_err_str, sizeof read_err_str,
 			 "No entry for address 0x%"ADDRXLAT_PRIxADDR,
 			 addr->addr);
 		return -read_notfound;
 	}
-	*val = ent->val;
+	*val = ent->phys;
 	return addrxlat_ok;
 }
 
 static addrxlat_status
 read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 {
-	struct entry *ent = find_entry(addr->addr);
+	addrxlat_lookup_elem_t *ent = find_entry(addr->addr);
 	if (!ent) {
 		snprintf(read_err_str, sizeof read_err_str,
 			 "No entry for address 0x%"ADDRXLAT_PRIxADDR,
 			 addr->addr);
 		return -read_notfound;
 	}
-	*val = ent->val;
+	*val = ent->phys;
 	return addrxlat_ok;
 }
 
@@ -94,7 +91,6 @@ static int
 add_entry(const char *spec)
 {
 	unsigned long long addr, val;
-	struct entry *ent;
 	char *endp;
 
 	addr = strtoull(spec, &endp, 0);
@@ -109,16 +105,20 @@ add_entry(const char *spec)
 		return TEST_ERR;
 	}
 
-	ent = malloc(sizeof(*ent));
-	if (!ent) {
-		perror("Cannot allocate entry");
-		return TEST_ERR;
+	if ((nentries % ALLOC_INC) == 0) {
+		addrxlat_lookup_elem_t *newentries;
+		newentries = realloc(entries, ((nentries + ALLOC_INC) *
+					       sizeof(*entries)));
+		if (!newentries) {
+			perror("Cannot allocate entry");
+			return TEST_ERR;
+		}
+		entries = newentries;
 	}
 
-	ent->next = entry_list;
-	ent->addr = addr;
-	ent->val = val;
-	entry_list = ent;
+	entries[nentries].virt = addr;
+	entries[nentries].phys = val;
+	++nentries;
 
 	return TEST_OK;
 }
@@ -217,6 +217,20 @@ set_linear(addrxlat_off_t *off, const char *spec)
 }
 
 static int
+set_lookup(addrxlat_addr_t *endoff, const char *spec)
+{
+	char *endp;
+
+	*endoff = strtoll(spec, &endp, 0);
+	if (*endp) {
+		fprintf(stderr, "Invalid page size: %s\n", spec);
+		return TEST_ERR;
+	}
+
+	return TEST_OK;
+}
+
+static int
 do_xlat(addrxlat_ctx_t *ctx, addrxlat_addr_t addr)
 {
 	addrxlat_status status;
@@ -242,6 +256,7 @@ static const struct option opts[] = {
 	{ "root", required_argument, NULL, 'r' },
 	{ "linear", required_argument, NULL, 'l' },
 	{ "pgt", no_argument, NULL, 'p' },
+	{ "table", required_argument, NULL, 't' },
 	{ NULL, 0, NULL, 0 }
 };
 
@@ -254,9 +269,10 @@ usage(const char *name)
 		"Options:\n"
 		"  -l|--linear off       Use linear transation\n"
 		"  -p|--pgt              Use page table translation\n"
+		"  -t|--table pgendoff   Use table lookup translation\n"
 		"  -f|--form fmt:bits    Set paging form\n"
 		"  -r|--root as:addr     Set the root page table address\n"
-		"  -e|--entry addr:val   Set page table entry value\n",
+		"  -e|--entry addr:val   Set table entry value\n",
 		name);
 }
 
@@ -266,7 +282,7 @@ main(int argc, char **argv)
 	unsigned long long vaddr;
 	char *endp;
 	addrxlat_ctx_t *ctx;
-	addrxlat_def_t pgt, linear, *def;
+	addrxlat_def_t pgt, linear, lookup, *def;
 	int opt;
 	addrxlat_status status;
 	unsigned long refcnt;
@@ -282,7 +298,10 @@ main(int argc, char **argv)
 	linear.kind = ADDRXLAT_LINEAR;
 	linear.param.linear.off = 0;
 
-	while ((opt = getopt_long(argc, argv, "he:f:l:pr:",
+	lookup.kind = ADDRXLAT_LOOKUP;
+	lookup.param.lookup.endoff = 0;
+
+	while ((opt = getopt_long(argc, argv, "he:f:l:pr:t:",
 				  opts, NULL)) != -1) {
 		switch (opt) {
 		case 'f':
@@ -316,6 +335,13 @@ main(int argc, char **argv)
 			def = &pgt;
 			break;
 
+		case 't':
+			def = &lookup;
+			rc = set_lookup(&def->param.lookup.endoff, optarg);
+			if (rc != TEST_OK)
+				return rc;
+			break;
+
 		case 'h':
 		default:
 			usage(argv[0]);
@@ -346,6 +372,9 @@ main(int argc, char **argv)
 		rc = TEST_ERR;
 		goto out;
 	}
+
+	lookup.param.lookup.nelem = nentries;
+	lookup.param.lookup.tbl = entries;
 
 	status = addrxlat_meth_set_def(xlat, def);
 	if (status != addrxlat_ok) {
