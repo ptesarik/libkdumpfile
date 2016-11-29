@@ -117,6 +117,9 @@ struct _addrxlat_ctx {
 	/** Callback private data. */
 	void *priv;
 
+	/** Callback for getting symbolic information. */
+	addrxlat_sym_fn *cb_sym;
+
 	/** Callback for reading 32-bit integers. */
 	addrxlat_read32_fn *cb_read32;
 

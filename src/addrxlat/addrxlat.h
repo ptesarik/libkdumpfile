@@ -331,6 +331,66 @@ void addrxlat_ctx_set_cbdata(addrxlat_ctx_t *ctx, void *data);
  */
 void *addrxlat_ctx_get_cbdata(addrxlat_ctx_t *ctx);
 
+/** Type of symbolic information. */
+typedef enum _addrxlat_sym_type {
+	/** Symbol value.
+	 * Input:
+	 * - @c args[0] = symbol name
+	 * Output:
+	 * - @c val = symbol value (e.g. address of a variable)
+	 */
+	ADDRXLAT_SYM_VALUE,
+
+	/** Size of an object.
+	 * Input:
+	 * - @c args[0] = name of symbol or data type
+	 * Output:
+	 * - @c val = @c sizeof(args[0])
+	 */
+	ADDRXLAT_SYM_SIZEOF,
+
+	/** Offset of a member within a structure.
+	 * Input:
+	 * - @c args[0] = container name (e.g. of a @c struct)
+	 * - @c args[1] = element name (e.g. a structure member)
+	 * Output:
+	 * - @c val = @c offsetof(args[0],args[1])
+	 */
+	ADDRXLAT_SYM_OFFSETOF,
+} addrxlat_sym_type_t;
+
+/** Data structure used to hold symbolic information. */
+typedef struct _addrxlat_sym {
+	/** [out] Resolved value. */
+	addrxlat_addr_t val;
+
+	/** [in] Type of information. */
+	addrxlat_sym_type_t type;
+
+	/** [in] Symbolic arguments. */
+	const char *args[];
+} addrxlat_sym_t;
+
+/** Type of the symbolic information callback.
+ * @param data  Arbitrary user-supplied data.
+ * @param sym   Symbolic information, updated on success.
+ * @returns     Error status.
+ *
+ * The callback function should check the information type and fill in
+ * the output fields in @c sym. If it is called for a type that is not
+ * handled (including an unknown type, not listed above), it must return
+ * @ref addrxlat_notimpl,
+ */
+typedef addrxlat_status addrxlat_sym_fn(void *data, addrxlat_sym_t *sym);
+
+/** Set the symbolic information callback.
+ * @param ctx  Address translation context.
+ * @param cb   New callback function.
+ * @returns    Previous callback function.
+ */
+addrxlat_sym_fn *addrxlat_ctx_cb_sym(
+	addrxlat_ctx_t *ctx, addrxlat_sym_fn *cb);
+
 /** Type of the read callback for 32-bit integers.
  * @param data      Arbitrary user-supplied data.
  * @param[in] addr  Address of the 32-bit integer.

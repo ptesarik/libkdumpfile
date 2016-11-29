@@ -78,6 +78,14 @@ addrxlat_ctx_get_cbdata(addrxlat_ctx_t *ctx)
 	return ctx->priv;
 }
 
+addrxlat_sym_fn *
+addrxlat_ctx_cb_sym(addrxlat_ctx_t *ctx, addrxlat_sym_fn *cb)
+{
+	addrxlat_sym_fn *oldval = ctx->cb_sym;
+	ctx->cb_sym = cb;
+	return oldval;
+}
+
 addrxlat_read32_fn *
 addrxlat_ctx_cb_read32(addrxlat_ctx_t *ctx, addrxlat_read32_fn *cb)
 {

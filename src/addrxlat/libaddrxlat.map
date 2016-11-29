@@ -12,6 +12,7 @@ LIBADDRXLAT_0 {
     addrxlat_ctx_err;
     addrxlat_ctx_set_cbdata;
     addrxlat_ctx_get_cbdata;
+    addrxlat_ctx_cb_sym;
     addrxlat_ctx_cb_read32;
     addrxlat_ctx_cb_read64;
 
