@@ -315,6 +315,19 @@ DECLARE_INTERNAL(map_clear)
 #define def_choose_pgtroot INTERNAL_NAME(def_choose_pgtroot)
 void def_choose_pgtroot(addrxlat_def_t *def, const addrxlat_meth_t *meth);
 
+#define get_symval INTERNAL_NAME(get_symval)
+addrxlat_status get_symval(
+	addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val);
+
+#define get_sizeof INTERNAL_NAME(get_sizeof)
+addrxlat_status get_sizeof(
+	addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *sz);
+
+#define get_offsetof INTERNAL_NAME(get_offsetof)
+addrxlat_status get_offsetof(
+	addrxlat_ctx_t *ctx, const char *type, const char *memb,
+	addrxlat_addr_t *off);
+
 /** Set the error message.
  * @param ctx     Address translation context.
  * @param status  Error status

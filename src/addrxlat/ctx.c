@@ -102,6 +102,106 @@ addrxlat_ctx_cb_read64(addrxlat_ctx_t *ctx, addrxlat_read64_fn *cb)
 	return oldval;
 }
 
+/** Resolve a symbol value.
+ * @param      ctx   Address translation context.
+ * @param      name  Symbol name.
+ * @param[out] val   Symbol value, returned on sucess.
+ * @returns          Error status.
+ *
+ * The symbol is resolved using a user-supplied callback.
+ */
+addrxlat_status
+get_symval(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
+{
+	struct {
+		addrxlat_sym_t sym;
+		const char *name;
+	} info;
+	addrxlat_status status;
+
+	if (!ctx->cb_sym)
+		return set_error(ctx, addrxlat_notimpl,
+				 "No symbolic information callback");
+
+	info.sym.type = ADDRXLAT_SYM_VALUE;
+	info.name = name;
+	status = ctx->cb_sym(ctx->priv, (addrxlat_sym_t*)&info);
+	if (status != addrxlat_ok)
+		return set_error(ctx, status,
+				 "Cannot resolve \"%s\"", info.name);
+
+	*val = info.sym.val;
+	return status;
+}
+
+/** Get the size of a symbol or type.
+ * @param      ctx   Address translation context.
+ * @param      name  Symbol name or type name.
+ * @param[out] sz    Size in bytes, returned on sucess.
+ * @returns          Error status.
+ *
+ * The size is determined using a user-supplied callback.
+ */
+addrxlat_status
+get_sizeof(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *sz)
+{
+	struct {
+		addrxlat_sym_t sym;
+		const char *name;
+	} info;
+	addrxlat_status status;
+
+	if (!ctx->cb_sym)
+		return set_error(ctx, addrxlat_notimpl,
+				 "No symbolic information callback");
+
+	info.sym.type = ADDRXLAT_SYM_SIZEOF;
+	info.name = name;
+	status = ctx->cb_sym(ctx->priv, (addrxlat_sym_t*)&info);
+	if (status != addrxlat_ok)
+		return set_error(ctx, status, "Cannot get sizeof(%s)",
+				 info.name);
+
+	*sz = info.sym.val;
+	return status;
+}
+
+/** Get the relative offset of a member inside a type.
+ * @param      ctx   Address translation context.
+ * @param      type  Container type name.
+ * @param      memb  Member name.
+ * @param[out] val   Symbol value, returned on sucess.
+ * @returns          Error status.
+ *
+ * The symbol is resolved using a user-supplied callback.
+ */
+addrxlat_status
+get_offsetof(addrxlat_ctx_t *ctx, const char *type, const char *memb,
+	     addrxlat_addr_t *off)
+{
+	struct {
+		addrxlat_sym_t sym;
+		const char *type;
+		const char *memb;
+	} info;
+	addrxlat_status status;
+
+	if (!ctx->cb_sym)
+		return set_error(ctx, addrxlat_notimpl,
+				 "No symbolic information callback");
+
+	info.sym.type = ADDRXLAT_SYM_VALUE;
+	info.type = type;
+	info.memb = memb;
+	status = ctx->cb_sym(ctx->priv, (addrxlat_sym_t*)&info);
+	if (status != addrxlat_ok)
+		return set_error(ctx, status, "Cannot get offsetof(%s, %s)",
+				 info.type, info.memb);
+
+	*off = info.sym.val;
+	return status;
+}
+
 addrxlat_status
 set_error(addrxlat_ctx_t *ctx, addrxlat_status status, const char *msgfmt, ...)
 {
