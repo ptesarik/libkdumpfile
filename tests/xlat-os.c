@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <endian.h>
+#include <ctype.h>
 #include <addrxlat.h>
 
 #include "testutil.h"
@@ -42,6 +43,11 @@ enum read_status {
 #define MAXERR	64
 static char read_err_str[MAXERR];
 
+struct sym {
+	struct sym *next;
+	addrxlat_sym_t sym;
+};
+
 struct store_page_data {
 	addrxlat_addr_t addr;
 };
@@ -53,7 +59,7 @@ struct entry {
 	char buf[];
 };
 
-struct entry *entry_list;
+static struct entry *entry_list;
 
 struct entry*
 find_entry(addrxlat_addr_t addr, size_t sz)
@@ -119,12 +125,74 @@ add_entry(addrxlat_addr_t addr, void *buf, size_t sz)
 	return TEST_OK;
 }
 
+#define MAX_SYMDATA_ARGS	2
+struct store_symdata {
+	addrxlat_sym_type_t type;
+	const char *args[MAX_SYMDATA_ARGS];
+};
+
+struct symdata {
+	struct symdata *next;
+	struct store_symdata ss;
+	addrxlat_addr_t val;
+};
+
+static struct symdata *symdata;
+
+static int
+add_symdata(const struct store_symdata *ss, addrxlat_addr_t val)
+{
+	struct symdata *sd = malloc(sizeof(*sd));
+	if (!sd) {
+		perror("Cannot allocat symbol data");
+		return TEST_ERR;
+	}
+
+	sd->ss = *ss;
+	sd->val = val;
+	sd->next = symdata;
+	symdata = sd;
+	return TEST_OK;
+}
+
+static addrxlat_status
+get_symdata(void *data, addrxlat_sym_t *sym)
+{
+	struct symdata *sd;
+	for (sd = symdata; sd; sd = sd->next) {
+		if (sd->ss.type != sym->type)
+			continue;
+
+		switch (sd->ss.type) {
+		case ADDRXLAT_SYM_VALUE:
+		case ADDRXLAT_SYM_SIZEOF:
+			if (sd->ss.args[0] &&
+			    !strcmp(sd->ss.args[0], sym->args[0])) {
+				sym->val = sd->val;
+				return addrxlat_ok;
+			}
+			break;
+
+		case ADDRXLAT_SYM_OFFSETOF:
+			if (sd->ss.args[0] && sd->ss.args[1] &&
+			    !strcmp(sd->ss.args[0], sym->args[0]) &&
+			    !strcmp(sd->ss.args[1], sym->args[1])) {
+				sym->val = sd->val;
+				return addrxlat_ok;
+			}
+		}
+	}
+
+	return addrxlat_notpresent;
+}
+
 static unsigned long long ostype;
 static unsigned long long osver;
 static char *arch;
 static char *opts;
 static unsigned long long rootpgt = ADDRXLAT_ADDR_MAX;
 
+static char *sym_file;
 static char *data_file;
 
 static const struct param param_array[] = {
@@ -134,6 +202,7 @@ static const struct param param_array[] = {
 	PARAM_STRING("opts", opts),
 	PARAM_NUMBER("rootpgt", rootpgt),
 
+	PARAM_STRING("SYM", sym_file),
 	PARAM_STRING("DATA", data_file)
 };
 
@@ -272,6 +341,7 @@ os_map(void)
 	}
 	addrxlat_ctx_cb_read32(ctx, read32);
 	addrxlat_ctx_cb_read64(ctx, read64);
+	addrxlat_ctx_cb_sym(ctx, get_symdata);
 
 	osmap = addrxlat_osmap_new();
 	if (!osmap) {
@@ -332,6 +402,117 @@ os_map(void)
 	addrxlat_osmap_decref(osmap);
 	addrxlat_ctx_decref(ctx);
 	return TEST_OK;
+}
+
+static int
+symheader(struct page_data *pg, char *p)
+{
+	struct store_symdata *ss = pg->priv;
+	char *delim;
+	int argc;
+
+	delim = strchr(p, '(');
+	if (!delim) {
+		fprintf(stderr, "Invalid symbolic header: %s\n", p);
+		return TEST_FAIL;
+	}
+
+	if (!strncmp(p, "VALUE", 5)) {
+		ss->type = ADDRXLAT_SYM_VALUE;
+		p += 5;
+	} else if (!strncmp(p, "SIZEOF", 6)) {
+		ss->type = ADDRXLAT_SYM_SIZEOF;
+		p += 6;
+	} else if (!strncmp(p, "OFFSETOF", 8)) {
+		ss->type = ADDRXLAT_SYM_OFFSETOF;
+		p += 8;
+	} else {
+		fprintf(stderr, "Invalid symbolic header: %s\n", p);
+		return TEST_FAIL;
+	}
+
+	while (isspace(*p))
+		++p;
+	if (*p != '(') {
+		fprintf(stderr, "Invalid symbolic header: %s\n", p);
+		return TEST_FAIL;
+	}
+	++p;
+
+	for (argc = 0; argc < MAX_SYMDATA_ARGS; ++argc) {
+		char *endp, *arg;
+
+		while (isspace(*p))
+			++p;
+		delim = strpbrk(p, ",)");
+		if (!delim) {
+			fprintf(stderr, "Invalid symbolic header: %s\n", p);
+			return TEST_FAIL;
+		}
+
+		endp = delim;
+		while (isspace(endp[-1]))
+			--endp;
+
+		arg = malloc(endp - p + 1);
+		if (!arg) {
+			fprintf(stderr, "Cannot allocate arg #%d\n", argc + 1);
+			return TEST_ERR;
+		}
+		memcpy(arg, p, endp - p);
+		arg[endp - p] = '\0';
+		ss->args[argc] = arg;
+
+		if (*delim == ')') {
+			while (++argc < MAX_SYMDATA_ARGS)
+				ss->args[argc] = NULL;
+			return TEST_OK;
+		}
+
+		p = delim + 1;
+	}
+
+	fprintf(stderr, "Too many symbolic arguments: %s\n", p);
+	return TEST_FAIL;
+}
+
+static int
+storesym(struct page_data *pg)
+{
+	struct store_symdata *ss = pg->priv;
+	addrxlat_addr_t val;
+	size_t sz = pg->len;
+
+	if (sz > sizeof(val))
+		sz = sizeof(val);
+	val = 0;
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+	memcpy(&val, pg->buf, pg->len);
+#else
+	memcpy((char*)(&val + 1) - sz,
+	       pg->buf + sizeof(val) - pg->len,
+	       pg->len);
+#endif
+	return add_symdata(ss, val);
+}
+
+static int
+read_sym(void)
+{
+	struct store_symdata ss;
+	struct page_data pg;
+
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+	pg.endian = data_le;
+#else
+	pg.endian = data_be;
+#endif
+
+	pg.parse_hdr = symheader;
+	pg.write_page = storesym;
+	pg.priv = &ss;
+
+	return process_data(&pg, sym_file);
 }
 
 static int
@@ -401,6 +582,12 @@ main(int argc, char **argv)
 		fclose(param);
 	if (rc != TEST_OK)
 		return rc;
+
+	if (sym_file) {
+		rc = read_sym();
+		if (rc != TEST_OK)
+			return rc;
+	}
 
 	if (data_file) {
 		rc = read_data();

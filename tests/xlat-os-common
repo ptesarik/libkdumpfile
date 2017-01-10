@@ -7,12 +7,15 @@ mkdir -p out || exit 99
 name=$( basename "$0" )
 resultfile="out/${name}.result"
 expectfile="$srcdir/$name.expect"
+symfile="$srcdir/$name.sym"
 datafile="$srcdir/$name.data"
 
 optspec=
 test -n "$opts" && optspec="opts=$opts"
 pgtspec=
 test -n "$pgt" && pgtspec="rootpgt=$pgt"
+symspec=
+test -f "$symfile" && symspec="SYM=$symfile"
 dataspec=
 test -f "$datafile" && dataspec="DATA=$datafile"
 
@@ -23,6 +26,7 @@ osver=$osver
 arch=$arch
 $optspec
 $pgtspec
+$symspec
 $dataspec
 EOF
 rc=$?
