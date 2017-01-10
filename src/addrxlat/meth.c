@@ -381,5 +381,5 @@ def_choose_pgtroot(addrxlat_def_t *def, const addrxlat_meth_t *meth)
 	if (meth->def.kind == ADDRXLAT_PGT)
 		def->param.pgt.root = meth->def.param.pgt.root;
 	else
-		def->param.pgt.root.as = ADDRXLAT_NONE;
+		def->param.pgt.root.as = ADDRXLAT_NOADDR;
 }

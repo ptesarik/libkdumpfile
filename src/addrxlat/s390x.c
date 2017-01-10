@@ -111,26 +111,60 @@ pgt_s390x(addrxlat_walk_t *state)
 	return addrxlat_continue;
 }
 
-/* Try to guess the page table type from its content.
- * @param osmap  OS map object.
- * @param ctx    Address translation object.
- * @returns      Error status.
+/** Determine OS-specific page table root.
+ * @param ctl        Initialization data.
+ * @param[out] root  Page table root address (set on successful return).
+ * @returns          Error status.
  */
 static addrxlat_status
-determine_pgttype(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx)
+get_pgtroot(struct osmap_init_data *ctl, addrxlat_fulladdr_t *root)
+{
+	addrxlat_status status;
+
+	switch (ctl->osdesc->type) {
+	case addrxlat_os_linux:
+		status = get_symval(ctl->ctx, "swapper_pg_dir", &root->addr);
+		if (status == addrxlat_ok) {
+			root->as = ADDRXLAT_KPHYSADDR;
+			return addrxlat_ok;
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	return set_error(ctl->ctx, addrxlat_notimpl,
+			 "Cannot determine page table root address");
+}
+
+/* Try to guess the page table type from its content.
+ * @param ctl  Initialization data.
+ * @returns    Error status.
+ */
+static addrxlat_status
+determine_pgttype(struct osmap_init_data *ctl)
 {
 	addrxlat_meth_t *pgtmeth;
+	addrxlat_def_t def;
 	addrxlat_fulladdr_t ptr;
 	uint64_t entry;
 	unsigned i;
 	addrxlat_status status;
 
-	pgtmeth = osmap->meth[ADDRXLAT_OSMAP_PGT];
+	pgtmeth = ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
+	def_choose_pgtroot(&def, pgtmeth);
+	if (def.param.pgt.root.as == ADDRXLAT_NOADDR) {
+		status = get_pgtroot(ctl, &pgtmeth->def.param.pgt.root);
+		if (status != addrxlat_ok)
+			return status;
+	}
+
 	ptr = pgtmeth->def.param.pgt.root;
 	for (i = 0; i < ROOT_PGT_LEN; ++i) {
-		status = ctx->cb_read64(ctx->priv, &ptr, &entry);
+		status = ctl->ctx->cb_read64(ctl->ctx->priv, &ptr, &entry);
 		if (status != addrxlat_ok)
-			return set_error(ctx, status,
+			return set_error(ctl->ctx, status,
 					 "Page table at 0x%"ADDRXLAT_PRIxADDR,
 					 ptr.addr);
 		if (!PTE_I(entry)) {
@@ -138,25 +172,22 @@ determine_pgttype(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx)
 				.pte_format = addrxlat_pte_s390x,
 				.bits = { 12, 8, 11, 11, 11, 11 }
 			};
-			addrxlat_def_t def;
 
 			def.kind = ADDRXLAT_PGT;
 			def.param.pgt.pf = pf;
 			def.param.pgt.pf.levels = PTE_TT(entry) + 3;
-			def_choose_pgtroot(&def, pgtmeth);
 			return internal_meth_set_def(pgtmeth, &def);
 		}
 		ptr.addr += sizeof(uint64_t);
 	}
 
-	return set_error(ctx, addrxlat_notpresent,
+	return set_error(ctl->ctx, addrxlat_notpresent,
 			 "Empty top-level page table");
 }
 
-
 /** Initialize a translation map for a s390x OS.
  * @param ctl  Initialization data.
- * @returns       Error status.
+ * @returns    Error status.
  */
 addrxlat_status
 osmap_s390x(struct osmap_init_data *ctl)
@@ -170,7 +201,7 @@ osmap_s390x(struct osmap_init_data *ctl)
 	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_PGT])
 		return addrxlat_nomem;
 
-	status = determine_pgttype(ctl->osmap, ctl->ctx);
+	status = determine_pgttype(ctl);
 	if (status != addrxlat_ok)
 		return status;
 

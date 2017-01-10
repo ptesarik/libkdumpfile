@@ -174,6 +174,9 @@ test_scripts = \
 	xlat-linux-ia32 \
 	xlat-linux-ia32-pae \
 	xlat-linux-ppc64-64k \
+	xlat-linux-s390x-2l \
+	xlat-linux-s390x-3l \
+	xlat-linux-s390x-4l \
 	xlat-linux-x86_64-old \
 	xlat-linux-x86_64-old-nover \
 	xlat-linux-x86_64-2.6.11 \
@@ -226,6 +229,15 @@ dist_check_DATA = \
 	xlat-linux-ia32-pae.data \
 	xlat-linux-ia32-pae.expect \
 	xlat-linux-ppc64-64k.expect \
+	xlat-linux-s390x-2l.data \
+	xlat-linux-s390x-2l.expect \
+	xlat-linux-s390x-2l.sym \
+	xlat-linux-s390x-3l.data \
+	xlat-linux-s390x-3l.expect \
+	xlat-linux-s390x-3l.sym \
+	xlat-linux-s390x-4l.data \
+	xlat-linux-s390x-4l.expect \
+	xlat-linux-s390x-4l.sym \
 	xlat-linux-x86_64-old.expect \
 	xlat-linux-x86_64-old-nover.data \
 	xlat-linux-x86_64-old-nover.expect \
