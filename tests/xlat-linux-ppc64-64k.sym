@@ -1,0 +1,8 @@
+@VALUE(vmemmap_list)
+c000000001234560
+@OFFSETOF(vmemmap_backing, list)
+0
+@OFFSETOF(vmemmap_backing, phys)
+8
+@OFFSETOF(vmemmap_backing, virt_addr)
+10

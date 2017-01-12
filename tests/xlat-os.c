@@ -245,6 +245,20 @@ print_ind(const char *desc, const void *ptr)
 }
 
 static void
+print_lookup_tbl(const addrxlat_meth_t *meth)
+{
+	const addrxlat_def_t *def = addrxlat_meth_get_def(meth);
+	const addrxlat_lookup_elem_t *p = def->param.lookup.tbl;
+	size_t n = def->param.lookup.nelem;
+
+	while (n--) {
+		printf("\n  %"ADDRXLAT_PRIxADDR" -> %"ADDRXLAT_PRIxADDR,
+		       p->phys, p->virt);
+		++p;
+	}
+}
+
+static void
 print_xlat(const addrxlat_meth_t *meth)
 {
 	if (meth == NULL)
@@ -269,6 +283,7 @@ print_xlat(const addrxlat_meth_t *meth)
 
 		case ADDRXLAT_LOOKUP:
 			print_ind("LOOKUP", meth);
+			print_lookup_tbl(meth);
 			break;
 
 		}

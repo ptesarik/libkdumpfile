@@ -228,7 +228,9 @@ dist_check_DATA = \
 	xlat-linux-ia32.expect \
 	xlat-linux-ia32-pae.data \
 	xlat-linux-ia32-pae.expect \
+	xlat-linux-ppc64-64k.data \
 	xlat-linux-ppc64-64k.expect \
+	xlat-linux-ppc64-64k.sym \
 	xlat-linux-s390x-2l.data \
 	xlat-linux-s390x-2l.expect \
 	xlat-linux-s390x-2l.sym \

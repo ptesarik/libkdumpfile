@@ -30,6 +30,8 @@
 
 #include "addrxlat-priv.h"
 
+#include <stdlib.h>
+
 /**  Page entry flag for a huge page directory.
  * The corresponding entry is huge if the most significant bit is zero.
  */
@@ -246,6 +248,88 @@ static const struct osmap_region linux_layout[] = {
 	OSMAP_REGION_END
 };
 
+/** Get VMEMMAP translation definition.
+ * @param ctl  Initialization data.
+ * @param def  Translation definition.
+ * @returns    Error status.
+ */
+static addrxlat_status
+get_vmemmap_def(struct osmap_init_data *ctl, addrxlat_def_t *def)
+{
+	addrxlat_addr_t vmemmap_list, elem, first_elem;
+	addrxlat_fulladdr_t readptr;
+	uint64_t data;
+	addrxlat_addr_t off_list, off_phys, off_virt;
+	unsigned cnt;
+	addrxlat_lookup_elem_t *tblp;
+	addrxlat_status status;
+
+	status = get_symval(ctl->ctx, "vmemmap_list", &vmemmap_list);
+	if (status != addrxlat_ok)
+		return status;
+
+	status = get_offsetof(ctl->ctx, "vmemmap_backing", "list", &off_list);
+	if (status != addrxlat_ok)
+		return status;
+
+	status = get_offsetof(ctl->ctx, "vmemmap_backing", "phys", &off_phys);
+	if (status != addrxlat_ok)
+		return status;
+
+	status = get_offsetof(ctl->ctx, "vmemmap_backing", "virt_addr",
+			      &off_virt);
+	if (status != addrxlat_ok)
+		return status;
+
+	readptr.as = ADDRXLAT_KVADDR;
+	readptr.addr = vmemmap_list;
+	status = read64(ctl->ctx, &readptr, &data, "vmemmap_list");
+	if (status != addrxlat_ok)
+		return status;
+	first_elem = data;
+
+	for (cnt = 0, elem = first_elem; elem != 0; ++cnt) {
+		readptr.addr = elem + off_list;
+		status = read64(ctl->ctx, &readptr, &data, "vmemmap list");
+		if (status != addrxlat_ok)
+			return status;
+		elem = data;
+	}
+
+	def->param.lookup.nelem = cnt;
+	tblp = malloc(cnt * sizeof(addrxlat_lookup_elem_t));
+	if (!tblp)
+		return set_error(ctl->ctx, addrxlat_nomem,
+				 "Cannot allocate VMEMMAP translation");
+	def->param.lookup.tbl = tblp;
+
+	for (elem = first_elem; elem != 0; ++tblp) {
+		readptr.addr = elem + off_phys;
+		status = read64(ctl->ctx, &readptr, &data, "vmemmap phys");
+		if (status != addrxlat_ok)
+			goto err_free;
+		tblp->phys = data;
+
+		readptr.addr = elem + off_virt;
+		status = read64(ctl->ctx, &readptr, &data, "vmemmap virt");
+		if (status != addrxlat_ok)
+			goto err_free;
+		tblp->virt = data;
+
+		readptr.addr = elem + off_list;
+		status = read64(ctl->ctx, &readptr, &data, "vmemmap list");
+		if (status != addrxlat_ok)
+			goto err_free;
+		elem = data;
+	}
+
+	return addrxlat_ok;
+
+ err_free:
+	free((void*)def->param.lookup.tbl);
+	return status;
+}
+
 /** Initialize a translation map for Linux/ppc64.
  * @param ctl  Initialization data.
  * @returns       Error status.
@@ -285,6 +369,16 @@ map_linux_ppc64(struct osmap_init_data *ctl)
 	meth = ctl->osmap->meth[ADDRXLAT_OSMAP_UPGT];
 	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);
+
+	meth = ctl->osmap->meth[ADDRXLAT_OSMAP_VMEMMAP];
+	if (meth->def.kind == ADDRXLAT_NONE) {
+		status = get_vmemmap_def(ctl, &def);
+		if (status != addrxlat_ok)
+			return status;
+		def.kind = ADDRXLAT_LOOKUP;
+		def.param.lookup.endoff = pagesize - 1;
+		internal_meth_set_def(meth, &def);
+	}
 
 	return addrxlat_ok;
 }
