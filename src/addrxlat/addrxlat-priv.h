@@ -312,6 +312,16 @@ DECLARE_INTERNAL(map_clear)
 
 /* utils */
 
+#define read32 INTERNAL_NAME(read32)
+addrxlat_status read32(
+	addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint32_t *val,
+	const char *what);
+
+#define read64 INTERNAL_NAME(read64)
+addrxlat_status read64(
+	addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint64_t *val,
+	const char *what);
+
 #define def_choose_pgtroot INTERNAL_NAME(def_choose_pgtroot)
 void def_choose_pgtroot(addrxlat_def_t *def, const addrxlat_meth_t *meth);
 

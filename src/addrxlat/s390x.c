@@ -162,11 +162,9 @@ determine_pgttype(struct osmap_init_data *ctl)
 
 	ptr = pgtmeth->def.param.pgt.root;
 	for (i = 0; i < ROOT_PGT_LEN; ++i) {
-		status = ctl->ctx->cb_read64(ctl->ctx->priv, &ptr, &entry);
+		status = read64(ctl->ctx, &ptr, &entry, "page table");
 		if (status != addrxlat_ok)
-			return set_error(ctl->ctx, status,
-					 "Page table at 0x%"ADDRXLAT_PRIxADDR,
-					 ptr.addr);
+			return status;
 		if (!PTE_I(entry)) {
 			addrxlat_paging_form_t pf = {
 				.pte_format = addrxlat_pte_s390x,

@@ -94,12 +94,50 @@ addrxlat_ctx_cb_read32(addrxlat_ctx_t *ctx, addrxlat_read32_fn *cb)
 	return oldval;
 }
 
+/** Read a 32-bit value, making an error message if needed.
+ * @param     ctx   Address translation context.
+ * @param[in] addr  Full address of the data.
+ * @param[out] val  32-bit data (on successful return).
+ * @param     what  Descriptive object name.
+ * @returns         Error status.
+ */
+addrxlat_status
+read32(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint32_t *val,
+       const char *what)
+{
+	addrxlat_status status = ctx->cb_read32(ctx->priv, addr, val);
+	if (status != addrxlat_ok)
+		return set_error(ctx, status,
+				 "Cannot read the %s value of %s at 0x%"ADDRXLAT_PRIxADDR,
+				 "32-bit", what, addr->addr);
+	return addrxlat_ok;
+}
+
 addrxlat_read64_fn *
 addrxlat_ctx_cb_read64(addrxlat_ctx_t *ctx, addrxlat_read64_fn *cb)
 {
 	addrxlat_read64_fn *oldval = ctx->cb_read64;
 	ctx->cb_read64 = cb;
 	return oldval;
+}
+
+/** Read a 64-bit value, making an error message if needed.
+ * @param     ctx   Address translation context.
+ * @param[in] addr  Full address of the data.
+ * @param[out] val  64-bit data (on successful return).
+ * @param     what  Descriptive object name.
+ * @returns         Error status.
+ */
+addrxlat_status
+read64(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint64_t *val,
+       const char *what)
+{
+	addrxlat_status status = ctx->cb_read64(ctx->priv, addr, val);
+	if (status != addrxlat_ok)
+		return set_error(ctx, status,
+				 "Cannot read the %s value of %s at 0x%"ADDRXLAT_PRIxADDR,
+				 "64-bit", what, addr->addr);
+	return addrxlat_ok;
 }
 
 /** Resolve a symbol value.
