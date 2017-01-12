@@ -228,7 +228,7 @@ get_offsetof(addrxlat_ctx_t *ctx, const char *type, const char *memb,
 		return set_error(ctx, addrxlat_notimpl,
 				 "No symbolic information callback");
 
-	info.sym.type = ADDRXLAT_SYM_VALUE;
+	info.sym.type = ADDRXLAT_SYM_OFFSETOF;
 	info.type = type;
 	info.memb = memb;
 	status = ctx->cb_sym(ctx->priv, (addrxlat_sym_t*)&info);
