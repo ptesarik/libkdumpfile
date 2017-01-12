@@ -241,7 +241,10 @@ typedef struct _addrxlat_def_lookup {
 	/** Size of the table. */
 	size_t nelem;
 
-	/** Lookup table. */
+	/** Lookup table.
+	 * The lookup table is owned by the translation method, i.e. it
+	 * is freed when the method reference count becomes zero.
+	 */
 	const addrxlat_lookup_elem_t *tbl;
 } addrxlat_def_lookup_t;
 

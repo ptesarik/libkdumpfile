@@ -62,8 +62,12 @@ unsigned long
 addrxlat_meth_decref(addrxlat_meth_t *meth)
 {
 	unsigned long refcnt = --meth->refcnt;
-	if (!refcnt)
+	if (!refcnt) {
+		if (meth->def.kind == ADDRXLAT_LOOKUP &&
+		    meth->def.param.lookup.tbl != NULL)
+			free((void*)meth->def.param.lookup.tbl);
 		free(meth);
+	}
 	return refcnt;
 }
 
