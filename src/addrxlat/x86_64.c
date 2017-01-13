@@ -383,9 +383,15 @@ map_linux_x86_64(struct osmap_init_data *ctl)
 
 		status = get_symval(ctl->ctx, "init_level4_pgt", &addr);
 		if (status == addrxlat_ok) {
+			addrxlat_addr_t physbase;
+
+			physbase = ctl->popt.val[OPT_physbase].set
+				? ctl->popt.val[OPT_physbase].num
+				: 0;
+
 			meth->def.param.pgt.root.as = ADDRXLAT_KPHYSADDR;
 			meth->def.param.pgt.root.addr =
-				addr - __START_KERNEL_map;
+				addr - __START_KERNEL_map + physbase;
 		}
 	}
 

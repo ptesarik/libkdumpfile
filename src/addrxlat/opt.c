@@ -79,6 +79,7 @@ static const struct optdesc opt3[] = {
 /** Eight-character options. */
 static const struct optdesc opt8[] = {
 	DEF(pagesize, number),
+	DEF(physbase, number),
 	END
 };
 
