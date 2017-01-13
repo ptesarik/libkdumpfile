@@ -243,15 +243,19 @@ dist_check_DATA = \
 	xlat-linux-x86_64-old.expect \
 	xlat-linux-x86_64-old-nover.data \
 	xlat-linux-x86_64-old-nover.expect \
+	xlat-linux-x86_64-old-nover.sym \
 	xlat-linux-x86_64-2.6.11.expect \
 	xlat-linux-x86_64-2.6.11-nover.data \
 	xlat-linux-x86_64-2.6.11-nover.expect \
+	xlat-linux-x86_64-2.6.11-nover.sym \
 	xlat-linux-x86_64-2.6.27.expect \
 	xlat-linux-x86_64-2.6.27-nover.data \
 	xlat-linux-x86_64-2.6.27-nover.expect \
+	xlat-linux-x86_64-2.6.27-nover.sym \
 	xlat-linux-x86_64-2.6.31.expect \
 	xlat-linux-x86_64-2.6.31-nover.data \
 	xlat-linux-x86_64-2.6.31-nover.expect \
+	xlat-linux-x86_64-2.6.31-nover.sym \
 	xlat-linux-x86_64-2.6.31-reloc.data \
 	xlat-linux-x86_64-2.6.31-reloc.expect \
 	xlat-xen-ia32.data \

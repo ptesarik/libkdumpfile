@@ -50,6 +50,13 @@
 #define NONCANONICAL_END	(~NONCANONICAL_START)
 #define VIRTADDR_MAX		UINT64_MAX
 
+/** Kernel text mapping (virtual addresses).
+ * Note that this mapping has never changed, so these constants
+ * apply to all kernel versions.
+ */
+#define __START_KERNEL_map	0xffffffff80000000ULL
+#define __END_KERNEL_map	0xffffffff827fffffULL
+
 /* Original Linux layout (before 2.6.11) */
 static const struct osmap_region linux_layout_2_6_0[] = {
 	{  0x0000000000000000,  0x0000007fffffffff, /* user space       */
@@ -63,7 +70,7 @@ static const struct osmap_region linux_layout_2_6_0[] = {
 	{  0xffffff0000000000,  0xffffff7fffffffff, /* vmalloc/ioremap  */
 	   ADDRXLAT_OSMAP_PGT },
 	/* 0xffffff8000000000 - 0xffffffff7fffffff     unused hole      */
-	{  0xffffffff80000000,  0xffffffff827fffff, /* kernel text      */
+	{  __START_KERNEL_map,  __END_KERNEL_map,   /* kernel text      */
 	   ADDRXLAT_OSMAP_KTEXT, OSMAP_ACT_X86_64_KTEXT },
 	/* 0xffffffff82800000 - 0xffffffff9fffffff     unused hole      */
 	{  0xffffffffa0000000,  0xffffffffafffffff, /* modules          */
@@ -89,7 +96,7 @@ static const struct osmap_region linux_layout_2_6_11[] = {
 	{  0xffffe20000000000,  0xffffe2ffffffffff, /* VMEMMAP          */
 	   ADDRXLAT_OSMAP_PGT },		    /*   (2.6.24+ only) */
 	/* 0xffffe30000000000 - 0xffffffff7fffffff     unused hole      */
-	{  0xffffffff80000000,  0xffffffff827fffff, /* kernel text      */
+	{  __START_KERNEL_map,  __END_KERNEL_map,   /* kernel text      */
 	   ADDRXLAT_OSMAP_KTEXT, OSMAP_ACT_X86_64_KTEXT },
 	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
 	{  0xffffffff88000000,  0xffffffffffdfffff, /* modules and      */
@@ -113,7 +120,7 @@ static const struct osmap_region linux_layout_2_6_27[] = {
 	{  0xffffe20000000000,  0xffffe2ffffffffff, /* VMEMMAP          */
 	   ADDRXLAT_OSMAP_PGT },
 	/* 0xffffe30000000000 - 0xffffffff7fffffff     unused hole      */
-	{  0xffffffff80000000,  0xffffffff827fffff, /* kernel text      */
+	{  __START_KERNEL_map,  __END_KERNEL_map,   /* kernel text      */
 	   ADDRXLAT_OSMAP_KTEXT, OSMAP_ACT_X86_64_KTEXT },
 	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
 	{  0xffffffff88000000,  0xffffffffffdfffff, /* modules and      */
@@ -144,7 +151,7 @@ static const struct osmap_region linux_layout_2_6_31[] = {
 	{  0xffffffef00000000,  0xfffffffeffffffff, /* EFI runtime      */
 	   ADDRXLAT_OSMAP_PGT },		    /*     (3.14+ only) */
 	/* 0xffffffff00000000 - 0xffffffff7fffffff     guard hole       */
-	{  0xffffffff80000000,  0xffffffff827fffff, /* kernel text      */
+	{  __START_KERNEL_map,  __END_KERNEL_map,   /* kernel text      */
 	   ADDRXLAT_OSMAP_KTEXT, OSMAP_ACT_X86_64_KTEXT },
 	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
 	{  0xffffffff88000000,  0xffffffffffdfffff, /* modules and      */
@@ -367,7 +374,20 @@ static addrxlat_status
 map_linux_x86_64(struct osmap_init_data *ctl)
 {
 	const struct osmap_region *layout;
+	addrxlat_meth_t *meth;
 	addrxlat_status status;
+
+	meth = ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
+	if (meth->def.param.pgt.root.as == ADDRXLAT_NOADDR) {
+		addrxlat_addr_t addr;
+
+		status = get_symval(ctl->ctx, "init_level4_pgt", &addr);
+		if (status == addrxlat_ok) {
+			meth->def.param.pgt.root.as = ADDRXLAT_KPHYSADDR;
+			meth->def.param.pgt.root.addr =
+				addr - __START_KERNEL_map;
+		}
+	}
 
 	layout = linux_layout_by_pgt(ctl->osmap, ctl->ctx);
 

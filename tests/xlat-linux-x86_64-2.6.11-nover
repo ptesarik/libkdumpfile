@@ -8,6 +8,5 @@
 arch=x86_64
 ostype=1
 osver=0
-pgt=0x1e10000
 
 . "$srcdir"/xlat-os-common
