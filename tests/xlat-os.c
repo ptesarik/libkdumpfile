@@ -38,6 +38,13 @@
 enum read_status {
 	read_ok = addrxlat_ok,
 	read_notfound,
+	read_vtop_failed,
+	read_unknown_as,
+};
+
+struct cbdata {
+	addrxlat_ctx_t *ctx;
+	addrxlat_osmap_t *osmap;
 };
 
 #define MAXERR	64
@@ -72,18 +79,65 @@ find_entry(addrxlat_addr_t addr, size_t sz)
 }
 
 static addrxlat_status
+get_physaddr(struct cbdata *cbd, const addrxlat_fulladdr_t *addr,
+	     addrxlat_addr_t *physaddr)
+{
+	addrxlat_status status;
+
+	*physaddr = addr->addr;
+
+	switch (addr->as) {
+	case ADDRXLAT_MACHPHYSADDR:
+		break;
+
+	case ADDRXLAT_KPHYSADDR:
+		/* FIXME: Xen address translation not yet implemented.
+		 * On bare metal, kernel physical addresses are identical
+		 * to machine physical addresses.
+		 */
+		break;
+
+	case ADDRXLAT_KVADDR:
+		status = addrxlat_by_map(cbd->ctx, physaddr,
+					 addrxlat_osmap_get_map(cbd->osmap));
+		if (status != addrxlat_ok) {
+			snprintf(read_err_str, sizeof read_err_str,
+				 "Cannot translate virt addr 0x%"ADDRXLAT_PRIxADDR,
+				 addr->addr);
+			return -read_vtop_failed;
+		}
+		break;
+
+	default:
+		snprintf(read_err_str, sizeof read_err_str,
+			 "No method to handle address space %u",
+			 (unsigned) addr->as);
+		return -read_unknown_as;
+	}
+
+	return addrxlat_ok;
+}
+
+static addrxlat_status
 read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 {
-	struct entry *ent = find_entry(addr->addr, sizeof(uint32_t));
+	addrxlat_addr_t physaddr;
+	addrxlat_status status;
+	struct entry *ent;
 	uint32_t *p;
 
+	status = get_physaddr(data, addr, &physaddr);
+	if (status != addrxlat_ok)
+		return status;
+
+	ent = find_entry(physaddr, sizeof(uint32_t));
 	if (!ent) {
 		snprintf(read_err_str, sizeof read_err_str,
 			 "No entry for address 0x%"ADDRXLAT_PRIxADDR,
-			 addr->addr);
+			 physaddr);
 		return -read_notfound;
 	}
-	p = (uint32_t*)(ent->buf + addr->addr - ent->addr);
+	p = (uint32_t*)(ent->buf + physaddr - ent->addr);
 	*val = *p;
 	return addrxlat_ok;
 }
@@ -91,16 +145,23 @@ read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 static addrxlat_status
 read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 {
-	struct entry *ent = find_entry(addr->addr, sizeof(uint64_t));
+	addrxlat_addr_t physaddr;
+	addrxlat_status status;
+	struct entry *ent;
 	uint64_t *p;
 
+	status = get_physaddr(data, addr, &physaddr);
+	if (status != addrxlat_ok)
+		return status;
+
+	ent = find_entry(physaddr, sizeof(uint64_t));
 	if (!ent) {
 		snprintf(read_err_str, sizeof read_err_str,
 			 "No entry for address 0x%"ADDRXLAT_PRIxADDR,
-			 addr->addr);
+			 physaddr);
 		return -read_notfound;
 	}
-	p = (uint64_t*)(ent->buf + addr->addr - ent->addr);
+	p = (uint64_t*)(ent->buf + physaddr - ent->addr);
 	*val = *p;
 	return addrxlat_ok;
 }
@@ -338,9 +399,8 @@ print_map(const addrxlat_map_t *map)
 static int
 os_map(void)
 {
-	addrxlat_ctx_t *ctx;
+	struct cbdata data;
 	addrxlat_osdesc_t desc;
-	addrxlat_osmap_t *osmap;
 	const addrxlat_meth_t *meth;
 	addrxlat_status status;
 
@@ -349,19 +409,20 @@ os_map(void)
 	desc.arch = arch;
 	desc.opts = opts;
 
-	ctx = addrxlat_ctx_new();
-	if (!ctx) {
+	data.ctx = addrxlat_ctx_new();
+	if (!data.ctx) {
 		perror("Cannot allocate addrxlat");
 		return TEST_ERR;
 	}
-	addrxlat_ctx_cb_read32(ctx, read32);
-	addrxlat_ctx_cb_read64(ctx, read64);
-	addrxlat_ctx_cb_sym(ctx, get_symdata);
+	addrxlat_ctx_set_cbdata(data.ctx, &data);
+	addrxlat_ctx_cb_read32(data.ctx, read32);
+	addrxlat_ctx_cb_read64(data.ctx, read64);
+	addrxlat_ctx_cb_sym(data.ctx, get_symdata);
 
-	osmap = addrxlat_osmap_new();
-	if (!osmap) {
+	data.osmap = addrxlat_osmap_new();
+	if (!data.osmap) {
 		perror("Cannot allocate osmap");
-		addrxlat_ctx_decref(ctx);
+		addrxlat_ctx_decref(data.ctx);
 		return TEST_ERR;
 	}
 
@@ -372,7 +433,7 @@ os_map(void)
 		pgt = addrxlat_meth_new();
 		if (!pgt) {
 			perror("Cannot allocate rootpgt");
-			addrxlat_ctx_decref(ctx);
+			addrxlat_ctx_decref(data.ctx);
 			return TEST_ERR;
 		}
 		def.kind = ADDRXLAT_PGT;
@@ -381,41 +442,41 @@ os_map(void)
 		def.param.pgt.pf.pte_format = addrxlat_pte_none;
 		def.param.pgt.pf.levels = 0;
 		addrxlat_meth_set_def(pgt, &def);
-		addrxlat_osmap_set_xlat(osmap, ADDRXLAT_OSMAP_PGT, pgt);
+		addrxlat_osmap_set_xlat(data.osmap, ADDRXLAT_OSMAP_PGT, pgt);
 		addrxlat_meth_decref(pgt);
 	}
 
-	status = addrxlat_osmap_init(osmap, ctx, &desc);
+	status = addrxlat_osmap_init(data.osmap, data.ctx, &desc);
 	if (status != addrxlat_ok) {
 		fprintf(stderr, "OS map failed: %s\n",
 			(status > 0
-			 ? addrxlat_ctx_err(ctx)
+			 ? addrxlat_ctx_err(data.ctx)
 			 : read_err_str));
-		addrxlat_osmap_decref(osmap);
-		addrxlat_ctx_decref(ctx);
+		addrxlat_osmap_decref(data.osmap);
+		addrxlat_ctx_decref(data.ctx);
 		return TEST_ERR;
 	}
 
-	meth = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_PGT);
+	meth = addrxlat_osmap_get_xlat(data.osmap, ADDRXLAT_OSMAP_PGT);
 	add_symbol(meth, "rootpgt");
 	print_pgt(meth);
 
-	meth = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_UPGT);
+	meth = addrxlat_osmap_get_xlat(data.osmap, ADDRXLAT_OSMAP_UPGT);
 	add_symbol(meth, "userpgt");
 
-	meth = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_DIRECT);
+	meth = addrxlat_osmap_get_xlat(data.osmap, ADDRXLAT_OSMAP_DIRECT);
 	add_symbol(meth, "direct");
 
-	meth = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_KTEXT);
+	meth = addrxlat_osmap_get_xlat(data.osmap, ADDRXLAT_OSMAP_KTEXT);
 	add_symbol(meth, "ktext");
 
-	meth = addrxlat_osmap_get_xlat(osmap, ADDRXLAT_OSMAP_VMEMMAP);
+	meth = addrxlat_osmap_get_xlat(data.osmap, ADDRXLAT_OSMAP_VMEMMAP);
 	add_symbol(meth, "vmemmap");
 
-	print_map(addrxlat_osmap_get_map(osmap));
+	print_map(addrxlat_osmap_get_map(data.osmap));
 
-	addrxlat_osmap_decref(osmap);
-	addrxlat_ctx_decref(ctx);
+	addrxlat_osmap_decref(data.osmap);
+	addrxlat_ctx_decref(data.ctx);
 	return TEST_OK;
 }
 
