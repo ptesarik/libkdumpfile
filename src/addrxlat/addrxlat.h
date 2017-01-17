@@ -58,6 +58,7 @@ typedef enum _addrxlat_status {
 	addrxlat_notpresent,		/**< Page not present. */
 	addrxlat_invalid,		/**< Invalid address. */
 	addrxlat_nomem,			/**< Memory allocation failure. */
+	addrxlat_nodata,		/**< Uninitialized data. */
 
 	/** Base for custom status codes.
 	 * More importantly, this enumerator forces the whole enum

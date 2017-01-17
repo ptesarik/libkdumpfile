@@ -145,6 +145,10 @@ walk_init_pgt(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 	const addrxlat_def_pgt_t *pgt = &walk->meth->def.param.pgt;
 	unsigned short i;
 
+	if (pgt->root.as == ADDRXLAT_NOADDR)
+		return set_error(walk->ctx, addrxlat_nodata,
+				 "Page table address not specified");
+
 	walk->base = pgt->root;
 	walk->level = pgt->pf.levels;
 	for (i = 0; i < pgt->pf.levels; ++i) {
@@ -184,7 +188,10 @@ walk_check_uaddr(addrxlat_walk_t *walk)
 addrxlat_status
 walk_init_uaddr(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 {
-	walk_init_pgt(walk, addr);
+	addrxlat_status status;
+	status = walk_init_pgt(walk, addr);
+	if (status != addrxlat_continue)
+		return status;
 	return walk_check_uaddr(walk);
 }
 
@@ -223,7 +230,10 @@ walk_check_saddr(addrxlat_walk_t *walk)
 addrxlat_status
 walk_init_saddr(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 {
-	walk_init_pgt(walk, addr);
+	addrxlat_status status;
+	status = walk_init_pgt(walk, addr);
+	if (status != addrxlat_continue)
+		return status;
 	return walk_check_saddr(walk);
 }
 
