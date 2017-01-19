@@ -252,6 +252,31 @@ linux_layout_by_ver(unsigned version_code)
 	return NULL;
 }
 
+/** Check whether the PGT translation method is usable.
+ * @param osmap  OS map object.
+ * @returns      Non-zero if PGT can be used, zero otherwise.
+ */
+static addrxlat_status
+is_pgt_usable(addrxlat_osmap_t *osmap)
+{
+	const addrxlat_meth_t *meth, *pgtmeth;
+
+	pgtmeth = osmap->meth[ADDRXLAT_OSMAP_PGT];
+	switch (pgtmeth->def.param.pgt.root.as) {
+	case ADDRXLAT_MACHPHYSADDR:
+	case ADDRXLAT_KPHYSADDR:
+		return 1;
+
+	case ADDRXLAT_KVADDR:
+		meth = internal_map_search(osmap->map,
+					   pgtmeth->def.param.pgt.root.addr);
+		return meth != pgtmeth;
+
+	default:
+		return 0;
+	}
+}
+
 /** Check whether a virtual address is mapped to a physical address.
  * @param osmap  OS map object.
  * @param ctx    Address translation context.
@@ -290,6 +315,9 @@ is_directmap(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 static const struct osmap_region *
 linux_layout_by_pgt(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx)
 {
+	if (!is_pgt_usable(osmap))
+		return NULL;
+
 	/* Only pre-2.6.11 kernels had this direct mapping */
 	if (is_directmap(osmap, ctx, 0x0000010000000000))
 		return linux_layout_2_6_0;
@@ -313,13 +341,17 @@ linux_layout_by_pgt(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx)
  * @param osmap  OS map object.
  * @param ctx    Address translation object.
  * @param vaddr  Any valid kernel text virtual address.
+ * @returns      Error status.
  */
-static void
+static addrxlat_status
 set_ktext_offset(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 		 addrxlat_addr_t vaddr)
 {
 	addrxlat_addr_t addr;
 	addrxlat_status status;
+
+	if (!is_pgt_usable(osmap))
+		return addrxlat_nodata;
 
 	addr = vaddr;
 	status = internal_walk(ctx, osmap->meth[ADDRXLAT_OSMAP_PGT], &addr);
@@ -327,8 +359,10 @@ set_ktext_offset(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 		addrxlat_def_t def;
 		def.kind = ADDRXLAT_LINEAR;
 		def.param.linear.off = vaddr - addr;
-		internal_meth_set_def(osmap->meth[ADDRXLAT_OSMAP_KTEXT], &def);
+		status = internal_meth_set_def(
+			osmap->meth[ADDRXLAT_OSMAP_KTEXT], &def);
 	}
+	return status;
 }
 
 /** Fall back to page table mapping if needed.
@@ -383,15 +417,8 @@ map_linux_x86_64(struct osmap_init_data *ctl)
 
 		status = get_symval(ctl->ctx, "init_level4_pgt", &addr);
 		if (status == addrxlat_ok) {
-			addrxlat_addr_t physbase;
-
-			physbase = ctl->popt.val[OPT_physbase].set
-				? ctl->popt.val[OPT_physbase].num
-				: 0;
-
-			meth->def.param.pgt.root.as = ADDRXLAT_KPHYSADDR;
-			meth->def.param.pgt.root.addr =
-				addr - __START_KERNEL_map + physbase;
+			meth->def.param.pgt.root.as = ADDRXLAT_KVADDR;
+			meth->def.param.pgt.root.addr = addr;
 		}
 	}
 
