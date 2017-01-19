@@ -252,7 +252,6 @@ osmap_arch_fn osmap_x86_64;
 enum osmap_action {
 	OSMAP_ACT_NONE,
 	OSMAP_ACT_DIRECT,
-	OSMAP_ACT_X86_64_KTEXT,
 };
 
 /** Single OS-map region definition. */

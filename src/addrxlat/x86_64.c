@@ -384,18 +384,6 @@ set_pgt_fallback(addrxlat_osmap_t *osmap, addrxlat_osmap_xlat_t xlat)
  */
 #define LINUX_KTEXT_SKIP		(16ULL << 20)
 
-/** Action function for @ref OSMAP_ACT_X86_64_KTEXT.
- * @param ctl     Initialization data.
- * @param region  Associated region definition.
- */
-void
-x86_64_ktext_hook(struct osmap_init_data *ctl,
-		  const struct osmap_region *region)
-{
-	set_ktext_offset(ctl->osmap, ctl->ctx,
-			 region->first + LINUX_KTEXT_SKIP);
-}
-
 /** Set up Linux kernel text translation method.
  * @param ctl     Initialization data.
  * @param region  Associated region definition.

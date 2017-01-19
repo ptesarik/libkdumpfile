@@ -165,7 +165,6 @@ osmap_set_layout(struct osmap_init_data *ctl,
 {
 	static osmap_action_fn *const actions[] = {
 		[OSMAP_ACT_DIRECT] = direct_hook,
-		[OSMAP_ACT_X86_64_KTEXT] = x86_64_ktext_hook,
 	};
 
 	const struct osmap_region *region;
