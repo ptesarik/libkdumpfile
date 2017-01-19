@@ -225,6 +225,7 @@ get_symdata(void *data, addrxlat_sym_t *sym)
 			continue;
 
 		switch (sd->ss.type) {
+		case ADDRXLAT_SYM_REG:
 		case ADDRXLAT_SYM_VALUE:
 		case ADDRXLAT_SYM_SIZEOF:
 			if (sd->ss.args[0] &&
@@ -493,7 +494,10 @@ symheader(struct page_data *pg, char *p)
 		return TEST_FAIL;
 	}
 
-	if (!strncmp(p, "VALUE", 5)) {
+	if (!strncmp(p, "REG", 3)) {
+		ss->type = ADDRXLAT_SYM_REG;
+		p += 3;
+	} else if (!strncmp(p, "VALUE", 5)) {
 		ss->type = ADDRXLAT_SYM_VALUE;
 		p += 5;
 	} else if (!strncmp(p, "SIZEOF", 6)) {

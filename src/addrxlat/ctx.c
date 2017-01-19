@@ -140,6 +140,38 @@ read64(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint64_t *val,
 	return addrxlat_ok;
 }
 
+/** Get register value.
+ * @param      ctx   Address translation context.
+ * @param      name  Register name.
+ * @param[out] val   Register value, returned on sucess.
+ * @returns          Error status.
+ *
+ * The register value is obtained using a user-supplied callback.
+ */
+addrxlat_status
+get_reg(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
+{
+	struct {
+		addrxlat_sym_t sym;
+		const char *name;
+	} info;
+	addrxlat_status status;
+
+	if (!ctx->cb_sym)
+		return set_error(ctx, addrxlat_notimpl,
+				 "No symbolic information callback");
+
+	info.sym.type = ADDRXLAT_SYM_REG;
+	info.name = name;
+	status = ctx->cb_sym(ctx->priv, (addrxlat_sym_t*)&info);
+	if (status != addrxlat_ok)
+		return set_error(ctx, status,
+				 "Cannot read register \"%s\"", info.name);
+
+	*val = info.sym.val;
+	return status;
+}
+
 /** Resolve a symbol value.
  * @param      ctx   Address translation context.
  * @param      name  Symbol name.

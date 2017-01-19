@@ -326,6 +326,10 @@ addrxlat_status read64(
 #define def_choose_pgtroot INTERNAL_NAME(def_choose_pgtroot)
 void def_choose_pgtroot(addrxlat_def_t *def, const addrxlat_meth_t *meth);
 
+#define get_reg INTERNAL_NAME(get_reg)
+addrxlat_status get_reg(
+	addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val);
+
 #define get_symval INTERNAL_NAME(get_symval)
 addrxlat_status get_symval(
 	addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val);

@@ -337,6 +337,14 @@ void *addrxlat_ctx_get_cbdata(addrxlat_ctx_t *ctx);
 
 /** Type of symbolic information. */
 typedef enum _addrxlat_sym_type {
+	/** Register value.
+	 * Input:
+	 * - @c args[0] = register name
+	 * Output:
+	 * - @c val = register value
+	 */
+	ADDRXLAT_SYM_REG,
+
 	/** Symbol value.
 	 * Input:
 	 * - @c args[0] = symbol name
