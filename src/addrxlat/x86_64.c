@@ -70,8 +70,7 @@ static const struct osmap_region linux_layout_2_6_0[] = {
 	{  0xffffff0000000000,  0xffffff7fffffffff, /* vmalloc/ioremap  */
 	   ADDRXLAT_OSMAP_PGT },
 	/* 0xffffff8000000000 - 0xffffffff7fffffff     unused hole      */
-	{  __START_KERNEL_map,  __END_KERNEL_map,   /* kernel text      */
-	   ADDRXLAT_OSMAP_KTEXT, OSMAP_ACT_X86_64_KTEXT },
+	/* 0xffffffff80000000 - 0xffffffff827fffff     kernel text      */
 	/* 0xffffffff82800000 - 0xffffffff9fffffff     unused hole      */
 	{  0xffffffffa0000000,  0xffffffffafffffff, /* modules          */
 	   ADDRXLAT_OSMAP_PGT },
@@ -96,8 +95,7 @@ static const struct osmap_region linux_layout_2_6_11[] = {
 	{  0xffffe20000000000,  0xffffe2ffffffffff, /* VMEMMAP          */
 	   ADDRXLAT_OSMAP_PGT },		    /*   (2.6.24+ only) */
 	/* 0xffffe30000000000 - 0xffffffff7fffffff     unused hole      */
-	{  __START_KERNEL_map,  __END_KERNEL_map,   /* kernel text      */
-	   ADDRXLAT_OSMAP_KTEXT, OSMAP_ACT_X86_64_KTEXT },
+	/* 0xffffffff80000000 - 0xffffffff827fffff     kernel text      */
 	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
 	{  0xffffffff88000000,  0xffffffffffdfffff, /* modules and      */
 	   ADDRXLAT_OSMAP_PGT },		    /*  fixmap/vsyscall */
@@ -120,8 +118,7 @@ static const struct osmap_region linux_layout_2_6_27[] = {
 	{  0xffffe20000000000,  0xffffe2ffffffffff, /* VMEMMAP          */
 	   ADDRXLAT_OSMAP_PGT },
 	/* 0xffffe30000000000 - 0xffffffff7fffffff     unused hole      */
-	{  __START_KERNEL_map,  __END_KERNEL_map,   /* kernel text      */
-	   ADDRXLAT_OSMAP_KTEXT, OSMAP_ACT_X86_64_KTEXT },
+	/* 0xffffffff80000000 - 0xffffffff827fffff     kernel text      */
 	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
 	{  0xffffffff88000000,  0xffffffffffdfffff, /* modules and      */
 	   ADDRXLAT_OSMAP_PGT },		    /*  fixmap/vsyscall */
@@ -151,8 +148,7 @@ static const struct osmap_region linux_layout_2_6_31[] = {
 	{  0xffffffef00000000,  0xfffffffeffffffff, /* EFI runtime      */
 	   ADDRXLAT_OSMAP_PGT },		    /*     (3.14+ only) */
 	/* 0xffffffff00000000 - 0xffffffff7fffffff     guard hole       */
-	{  __START_KERNEL_map,  __END_KERNEL_map,   /* kernel text      */
-	   ADDRXLAT_OSMAP_KTEXT, OSMAP_ACT_X86_64_KTEXT },
+	/* 0xffffffff80000000 - 0xffffffff827fffff     kernel text      */
 	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
 	{  0xffffffff88000000,  0xffffffffffdfffff, /* modules and      */
 	   ADDRXLAT_OSMAP_PGT },		    /*  fixmap/vsyscall */
@@ -389,7 +385,7 @@ set_pgt_fallback(addrxlat_osmap_t *osmap, addrxlat_osmap_xlat_t xlat)
 #define LINUX_KTEXT_SKIP		(16ULL << 20)
 
 /** Action function for @ref OSMAP_ACT_X86_64_KTEXT.
- * @parma ctl     Initialization data.
+ * @param ctl     Initialization data.
  * @param region  Associated region definition.
  */
 void
@@ -398,6 +394,59 @@ x86_64_ktext_hook(struct osmap_init_data *ctl,
 {
 	set_ktext_offset(ctl->osmap, ctl->ctx,
 			 region->first + LINUX_KTEXT_SKIP);
+}
+
+/** Set up Linux kernel text translation method.
+ * @param ctl     Initialization data.
+ * @param region  Associated region definition.
+ */
+static addrxlat_status
+linux_ktext_meth(struct osmap_init_data *ctl)
+{
+	if (ctl->popt.val[OPT_physbase].set) {
+		addrxlat_def_t def;
+
+		def.kind = ADDRXLAT_LINEAR;
+		def.param.linear.off = __START_KERNEL_map -
+			ctl->popt.val[OPT_physbase].num;
+		return internal_meth_set_def(
+			ctl->osmap->meth[ADDRXLAT_OSMAP_KTEXT], &def);
+	}
+
+	return set_ktext_offset(ctl->osmap, ctl->ctx,
+				  __START_KERNEL_map + LINUX_KTEXT_SKIP);
+}
+
+/** Set up Linux kernel text mapping on x86_64.
+ * @param ctl  Initialization data.
+ * @returns    Error status.
+ */
+static addrxlat_status
+linux_ktext_map(struct osmap_init_data *ctl)
+{
+	addrxlat_range_t range;
+	addrxlat_map_t *newmap;
+	addrxlat_status status;
+
+	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_KTEXT])
+		ctl->osmap->meth[ADDRXLAT_OSMAP_KTEXT] = internal_meth_new();
+	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_KTEXT])
+		return addrxlat_nomem;
+
+	range.meth = ctl->osmap->meth[ADDRXLAT_OSMAP_KTEXT];
+	if (range.meth->def.kind == ADDRXLAT_NONE) {
+		status = linux_ktext_meth(ctl);
+		if (status != addrxlat_ok && status != addrxlat_nodata)
+			return status;
+	}
+
+	range.endoff = __END_KERNEL_map - __START_KERNEL_map;
+	newmap = internal_map_set(ctl->osmap->map, __START_KERNEL_map, &range);
+	if (!newmap)
+		return set_error(ctl->ctx, addrxlat_nomem,
+				 "Cannot set up Linux kernel text mapping");
+	ctl->osmap->map = newmap;
+	return addrxlat_ok;
 }
 
 /** Initialize a translation map for Linux on x86_64.
@@ -421,6 +470,10 @@ map_linux_x86_64(struct osmap_init_data *ctl)
 			meth->def.param.pgt.root.addr = addr;
 		}
 	}
+
+	status = linux_ktext_map(ctl);
+	if (status != addrxlat_ok)
+		return status;
 
 	layout = linux_layout_by_pgt(ctl->osmap, ctl->ctx);
 
