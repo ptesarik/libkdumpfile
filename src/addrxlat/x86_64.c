@@ -449,6 +449,35 @@ linux_ktext_map(struct osmap_init_data *ctl)
 	return addrxlat_ok;
 }
 
+/** Get Linux page table root address using symbolic information.
+ * @param ctl  Initialization data.
+ * @returns    Error status.
+ */
+static addrxlat_status
+get_linux_pgtroot(struct osmap_init_data *ctl)
+{
+	addrxlat_meth_t *meth;
+	addrxlat_addr_t addr;
+
+	meth = ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
+	if (meth->def.param.pgt.root.as != ADDRXLAT_NOADDR)
+		return addrxlat_ok;
+
+	if (get_reg(ctl->ctx, "cr3", &addr) == addrxlat_ok) {
+		meth->def.param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
+		meth->def.param.pgt.root.addr = addr;
+		return addrxlat_ok;
+	}
+
+	if (get_symval(ctl->ctx, "init_level4_pgt", &addr) == addrxlat_ok) {
+		meth->def.param.pgt.root.as = ADDRXLAT_KVADDR;
+		meth->def.param.pgt.root.addr = addr;
+		return addrxlat_ok;
+	}
+
+	return addrxlat_nodata;
+}
+
 /** Initialize a translation map for Linux on x86_64.
  * @param ctl  Initialization data.
  * @returns    Error status.
@@ -457,19 +486,9 @@ static addrxlat_status
 map_linux_x86_64(struct osmap_init_data *ctl)
 {
 	const struct osmap_region *layout;
-	addrxlat_meth_t *meth;
 	addrxlat_status status;
 
-	meth = ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
-	if (meth->def.param.pgt.root.as == ADDRXLAT_NOADDR) {
-		addrxlat_addr_t addr;
-
-		status = get_symval(ctl->ctx, "init_level4_pgt", &addr);
-		if (status == addrxlat_ok) {
-			meth->def.param.pgt.root.as = ADDRXLAT_KVADDR;
-			meth->def.param.pgt.root.addr = addr;
-		}
-	}
+	get_linux_pgtroot(ctl);
 
 	status = linux_ktext_map(ctl);
 	if (status != addrxlat_ok)

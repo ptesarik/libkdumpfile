@@ -187,6 +187,7 @@ test_scripts = \
 	xlat-linux-x86_64-2.6.31-reloc \
 	xlat-linux-x86_64-2.6.31-nover \
 	xlat-linux-x86_64-2.6.31-nover-reloc \
+	xlat-linux-x86_64-2.6.31-nover-reg \
 	xlat-xen-ia32 \
 	xlat-xen-ia32-pae \
 	xlat-xen-x86_64-old \
@@ -257,6 +258,9 @@ dist_check_DATA = \
 	xlat-linux-x86_64-2.6.31-nover.data \
 	xlat-linux-x86_64-2.6.31-nover.expect \
 	xlat-linux-x86_64-2.6.31-nover.sym \
+	xlat-linux-x86_64-2.6.31-nover-reg.data \
+	xlat-linux-x86_64-2.6.31-nover-reg.expect \
+	xlat-linux-x86_64-2.6.31-nover-reg.sym \
 	xlat-linux-x86_64-2.6.31-nover-reloc.data \
 	xlat-linux-x86_64-2.6.31-nover-reloc.expect \
 	xlat-linux-x86_64-2.6.31-nover-reloc.sym \
