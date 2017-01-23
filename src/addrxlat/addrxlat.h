@@ -604,7 +604,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
  * is the same as if an empty map was given, i.e. the function always
  * returns @c NULL.
  */
-const addrxlat_meth_t *addrxlat_map_search(
+addrxlat_meth_t *addrxlat_map_search(
 	const addrxlat_map_t *map, addrxlat_addr_t addr);
 
 /** Clean up all data used by a translation map.

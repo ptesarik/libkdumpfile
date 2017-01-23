@@ -170,7 +170,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 
 DEFINE_INTERNAL(map_search)
 
-const addrxlat_meth_t *
+addrxlat_meth_t *
 addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 {
 	const addrxlat_range_t *r = map->ranges;
