@@ -570,6 +570,10 @@ typedef struct _addrxlat_range {
 } addrxlat_range_t;
 
 /**  Address translation map.
+ * Note that the start address does not have to be stored in the
+ * structure. The first range in a map starts at address 0, and
+ * each following range starts right after the previous one (i.e.
+ * at @c endoff + 1).
  */
 typedef struct _addrxlat_map {
 	/** Number of elements in @c ranges. */
