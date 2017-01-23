@@ -321,6 +321,35 @@ print_lookup_tbl(const addrxlat_meth_t *meth)
 }
 
 static void
+print_addrspace(addrxlat_addrspace_t as)
+{
+	switch (as) {
+	case ADDRXLAT_KPHYSADDR:
+		fputs("KPHYSADDR", stdout);
+		break;
+
+	case ADDRXLAT_MACHPHYSADDR:
+		fputs("MACHPHYSADDR", stdout);
+		break;
+
+	case ADDRXLAT_KVADDR:
+		fputs("KVADDR", stdout);
+		break;
+
+	case ADDRXLAT_XENVADDR:
+		fputs("XENVADDR", stdout);
+		break;
+
+	case ADDRXLAT_NOADDR:
+		fputs("NOADDR", stdout);
+		break;
+
+	default:
+		printf("<addrspace %ld>", (long) as);
+	}
+}
+
+static void
 print_xlat(const addrxlat_meth_t *meth)
 {
 	if (meth == NULL)
@@ -346,6 +375,19 @@ print_xlat(const addrxlat_meth_t *meth)
 		case ADDRXLAT_LOOKUP:
 			print_ind("LOOKUP", meth);
 			print_lookup_tbl(meth);
+			break;
+
+
+		case ADDRXLAT_MEMARR:
+			print_ind("MEMARR", meth);
+			fputs(" base=", stdout);
+			print_addrspace(def->param.memarr.base.as);
+			printf(":%"ADDRXLAT_PRIxADDR
+			       " shift=%u elemsz=%u valsz=%u",
+			       def->param.memarr.base.addr,
+			       def->param.memarr.shift,
+			       def->param.memarr.elemsz,
+			       def->param.memarr.valsz);
 			break;
 
 		}

@@ -322,6 +322,61 @@ setup_lookup(addrxlat_meth_t *meth)
 	meth->walk_step = step_none;
 }
 
+/** Initialize walk state for memory array lookup.
+ * @param walk  Page table walk state.
+ * @param addr  Address to be translated.
+ * @returns     Error status.
+ */
+static addrxlat_status
+walk_init_memarr(addrxlat_walk_t *walk, addrxlat_addr_t addr)
+{
+	const addrxlat_def_memarr_t *memarr = &walk->meth->def.param.memarr;
+	addrxlat_fulladdr_t elemaddr = memarr->base;
+	uint64_t val64;
+	uint32_t val32;
+	addrxlat_addr_t val;
+	size_t idx = addr >> memarr->shift;
+	addrxlat_status status;
+
+	elemaddr.addr += idx * memarr->elemsz;
+	switch (memarr->valsz) {
+	case 4:
+		status = read32(walk->ctx, &elemaddr, &val32,
+				"Memory array value");
+		val =val32;
+		break;
+
+	case 8:
+		status = read64(walk->ctx, &elemaddr, &val64,
+				"Memory array value");
+		val = val64;
+		break;
+
+	default:
+		return set_error(walk->ctx, addrxlat_notimpl,
+				 "Unsupported value size: %u", memarr->valsz);
+	}
+
+	if (status != addrxlat_ok)
+		return status;
+
+	walk->base.as = ADDRXLAT_KPHYSADDR;
+	walk->base.addr = val << memarr->shift;
+	walk->level = 1;
+	walk->idx[0] = addr & ((1ULL << memarr->shift) - 1);
+	return addrxlat_continue;
+}
+
+/** Set up memory array translation.
+ * @param meth  Translation method.
+ */
+static void
+setup_memarr(addrxlat_meth_t *meth)
+{
+	meth->walk_init = walk_init_memarr;
+	meth->walk_step = step_none;
+}
+
 DEFINE_INTERNAL(meth_set_def)
 
 addrxlat_status
@@ -346,6 +401,10 @@ addrxlat_meth_set_def(addrxlat_meth_t *meth, const addrxlat_def_t *def)
 
 	case ADDRXLAT_LOOKUP:
 		setup_lookup(meth);
+		break;
+
+	case ADDRXLAT_MEMARR:
+		setup_memarr(meth);
 		break;
 
 	default:

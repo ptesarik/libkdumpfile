@@ -1,0 +1,62 @@
+#! /bin/sh
+
+#
+# Check memory array translation.
+#
+
+base="KVADDR:0x1234000"
+shift=12
+elemsz=8
+valsz=8
+xlat="-e 0x1234008:0x5678"
+xlat="$xlat -e 0x1235000:0x0"
+
+list="0x1abc:0x5678abc"			# PFN 1
+list="$list 0x200def:0xdef"		# PFN 0x200
+
+totalrc=0
+for tst in $list; do
+    input="${tst%:*}"
+    expect="${tst##*:}"
+    echo -n "Checking $input... "
+    output=$( ./addrxlat -m $base:$shift:$elemsz:$valsz $xlat $input )
+    rc=$?
+    if [ $rc -gt 1 ]; then
+        echo ERROR
+        echo "Cannot translate $input" >&2
+        exit $rc
+    elif [ $rc -ne 0 ]; then
+        echo FAILED
+        totalrc=$rc
+    elif [ "$output" != "$expect" ]; then
+        echo FAILED
+        echo "Result does not match for $input: $output" >&2
+        totalrc=1
+    else
+        echo OK
+    fi
+done
+
+# Check failures
+list="0x123456"			# Read failure
+
+for tst in $list; do
+    input="${tst%:*}"
+    expect="${tst##*:}"
+    echo -n "Checking $input... "
+    output=$( ./addrxlat -t $endoff $xlat $input 2>&1 )
+    rc=$?
+    if [ $rc -ne 99 ]; then
+        echo ERROR
+        echo "Cannot translate $input" >&2
+        exit $rc
+    elif [ $rc -eq 0 ]; then
+        echo FAILED
+        echo "Unexpected success for $input: $output" >&2
+        totalrc=1
+    else
+        echo OK
+    fi
+done
+
+exit $totalrc

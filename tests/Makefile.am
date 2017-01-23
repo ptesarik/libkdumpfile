@@ -126,6 +126,7 @@ test_scripts = \
 	addrxlat-invalid-x86_64 \
 	addrxlat-linear \
 	addrxlat-table \
+	addrxlat-memarr \
 	diskdump-empty-i386 \
 	diskdump-empty-ppc64 \
 	diskdump-empty-s390x \

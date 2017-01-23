@@ -185,6 +185,9 @@ typedef enum _addrxlat_kind {
 
 	/** Table lookup. */
 	ADDRXLAT_LOOKUP,
+
+	/** Array in target memory. */
+	ADDRXLAT_MEMARR,
 } addrxlat_kind_t;
 
 /** Allocate a translation method.
@@ -249,11 +252,33 @@ typedef struct _addrxlat_def_lookup {
 	const addrxlat_lookup_elem_t *tbl;
 } addrxlat_def_lookup_t;
 
+/** Parameters of memory array translation. */
+typedef struct _addrxlat_def_memarr {
+	/** Base address of the translation array. */
+	addrxlat_fulladdr_t base;
+
+	/** Address bit shift.
+	 * The address is shifted right by this many bits to
+	 * get the corresponding index inside the memory array.
+	 * The target value is then shifted left and remaining
+	 * bits are copied from the source address.
+	 * The intention is to allow indexing by page frame number.
+	 */
+	unsigned shift;
+
+	/** Size of each array element. */
+	unsigned elemsz;
+
+	/** Size of the value. */
+	unsigned valsz;
+} addrxlat_def_memarr_t;
+
 /** Parameters of the translation method. */
 typedef union _addrxlat_def_param {
 	addrxlat_def_linear_t linear; /**< For @ref ADDRXLAT_LINEAR. */
 	addrxlat_def_pgt_t pgt;	      /**< For @ref ADDRXLAT_PGT. */
 	addrxlat_def_lookup_t lookup; /**< For @ref ADDRXLAT_LOOKUP.  */
+	addrxlat_def_memarr_t memarr; /**< For @ref ADDRXLAT_MEMARR. */
 } addrxlat_def_param_t;
 
 /** Address translation definition. */

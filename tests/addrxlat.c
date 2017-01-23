@@ -169,6 +169,21 @@ set_paging_form(addrxlat_paging_form_t *pf, const char *spec)
 	return TEST_OK;
 }
 
+static addrxlat_addrspace_t
+get_addrspace(const char *p, const char *endp)
+{
+	if (!strncasecmp(p, "KPHYSADDR:", endp - p))
+		return ADDRXLAT_KPHYSADDR;
+	else if (!strncasecmp(p, "MACHPHYSADDR:", endp - p))
+		return ADDRXLAT_MACHPHYSADDR;
+	else if (!strncasecmp(p, "KVADDR:", endp - p))
+		return ADDRXLAT_KVADDR;
+	else if (!strncasecmp(p, "XENVADDR:", endp - p))
+		return ADDRXLAT_XENVADDR;
+	else
+		return ADDRXLAT_NOADDR;
+}
+
 static int
 set_root(addrxlat_fulladdr_t *root, const char *spec)
 {
@@ -180,15 +195,8 @@ set_root(addrxlat_fulladdr_t *root, const char *spec)
 		return TEST_ERR;
 	}
 
-	if (!strncasecmp(spec, "KPHYSADDR:", endp - spec))
-		root->as = ADDRXLAT_KPHYSADDR;
-	else if (!strncasecmp(spec, "MACHPHYSADDR:", endp - spec))
-		root->as = ADDRXLAT_MACHPHYSADDR;
-	else if (!strncasecmp(spec, "KVADDR:", endp - spec))
-		root->as = ADDRXLAT_KVADDR;
-	else if (!strncasecmp(spec, "XENVADDR:", endp - spec))
-		root->as = ADDRXLAT_XENVADDR;
-	else {
+	root->as = get_addrspace(spec, endp);
+	if (root->as == ADDRXLAT_NOADDR) {
 		fprintf(stderr, "Invalid address spec: %s\n", spec);
 		return TEST_ERR;
 	}
@@ -231,6 +239,51 @@ set_lookup(addrxlat_addr_t *endoff, const char *spec)
 }
 
 static int
+set_memarr(addrxlat_def_memarr_t *ma, const char *spec)
+{
+	char *endp;
+
+	endp = strchr(spec, ':');
+	if (!endp) {
+		fprintf(stderr, "Invalid memory array: %s\n", spec);
+		return TEST_ERR;
+	}
+
+	ma->base.as = get_addrspace(spec, endp);
+	if (ma->base.as == ADDRXLAT_NOADDR) {
+		fprintf(stderr, "Invalid base address space: %s\n", spec);
+		return TEST_ERR;
+	}
+
+	ma->base.addr = strtoull(endp + 1, &endp, 0);
+	if (*endp != ':') {
+		fprintf(stderr, "Invalid base address: %s\n", spec);
+		return TEST_ERR;
+	}
+
+	ma->shift = strtoul(endp + 1, &endp, 0);
+	if (*endp != ':') {
+		fprintf(stderr, "Invalid shift: %s\n", spec);
+		return TEST_ERR;
+	}
+
+	ma->elemsz = strtoul(endp + 1, &endp, 0);
+	if (*endp != ':') {
+		fprintf(stderr, "Invalid element size: %s\n", spec);
+		return TEST_ERR;
+	}
+
+	ma->valsz = strtoul(endp + 1, &endp, 0);
+	if (*endp) {
+		fprintf(stderr, "Invalid value size: %s\n", spec);
+		return TEST_ERR;
+	}
+
+	return TEST_OK;
+}
+
+
+static int
 do_xlat(addrxlat_ctx_t *ctx, addrxlat_addr_t addr)
 {
 	addrxlat_status status;
@@ -255,6 +308,7 @@ static const struct option opts[] = {
 	{ "form", required_argument, NULL, 'f' },
 	{ "root", required_argument, NULL, 'r' },
 	{ "linear", required_argument, NULL, 'l' },
+	{ "memarr", required_argument, NULL, 'm' },
 	{ "pgt", no_argument, NULL, 'p' },
 	{ "table", required_argument, NULL, 't' },
 	{ NULL, 0, NULL, 0 }
@@ -270,6 +324,7 @@ usage(const char *name)
 		"  -l|--linear off       Use linear transation\n"
 		"  -p|--pgt              Use page table translation\n"
 		"  -t|--table pgendoff   Use table lookup translation\n"
+		"  -m|--memarr params    Use memory array translation\n"
 		"  -f|--form fmt:bits    Set paging form\n"
 		"  -r|--root as:addr     Set the root page table address\n"
 		"  -e|--entry addr:val   Set table entry value\n",
@@ -282,7 +337,7 @@ main(int argc, char **argv)
 	unsigned long long vaddr;
 	char *endp;
 	addrxlat_ctx_t *ctx;
-	addrxlat_def_t pgt, linear, lookup, *def;
+	addrxlat_def_t pgt, linear, lookup, memarr, *def;
 	int opt;
 	addrxlat_status status;
 	unsigned long refcnt;
@@ -301,7 +356,10 @@ main(int argc, char **argv)
 	lookup.kind = ADDRXLAT_LOOKUP;
 	lookup.param.lookup.endoff = 0;
 
-	while ((opt = getopt_long(argc, argv, "he:f:l:pr:t:",
+	memarr.kind = ADDRXLAT_MEMARR;
+	memarr.param.memarr.base.as = ADDRXLAT_NOADDR;
+
+	while ((opt = getopt_long(argc, argv, "he:f:l:m:pr:t:",
 				  opts, NULL)) != -1) {
 		switch (opt) {
 		case 'f':
@@ -327,6 +385,13 @@ main(int argc, char **argv)
 		case 'l':
 			def = &linear;
 			rc = set_linear(&def->param.linear.off, optarg);
+			if (rc != TEST_OK)
+				return rc;
+			break;
+
+		case 'm':
+			def = &memarr;
+			rc = set_memarr(&def->param.memarr, optarg);
 			if (rc != TEST_OK)
 				return rc;
 			break;
