@@ -136,7 +136,7 @@ struct _addrxlat_sys {
 	unsigned long refcnt;
 
 	/** Translation map. */
-	addrxlat_map_t *map;
+	addrxlat_map_t *map[ADDRXLAT_SYS_MAP_NUM];
 
 	/** Address translation methods. */
 	addrxlat_meth_t *meth[ADDRXLAT_SYS_METH_NUM];
@@ -273,7 +273,8 @@ typedef void sys_action_fn(
 
 #define sys_set_layout INTERNAL_NAME(sys_set_layout)
 addrxlat_status sys_set_layout(
-	struct sys_init_data *ctl, const struct sys_region layout[]);
+	struct sys_init_data *ctl, addrxlat_sys_map_t idx,
+	const struct sys_region layout[]);
 
 /* internal aliases */
 

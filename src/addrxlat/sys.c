@@ -67,7 +67,9 @@ addrxlat_sys_decref(addrxlat_sys_t *sys)
 	if (!refcnt) {
 		unsigned i;
 
-		free_map(sys->map);
+		for (i = 0; i < ADDRXLAT_SYS_MAP_NUM; ++i)
+			free_map(sys->map[i]);
+
 		for (i = 0; i < ADDRXLAT_SYS_METH_NUM; ++i)
 			if (sys->meth[i])
 				internal_meth_decref(sys->meth[i]);
@@ -111,16 +113,17 @@ addrxlat_sys_init(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 }
 
 void
-addrxlat_sys_set_map(addrxlat_sys_t *sys, addrxlat_map_t *map)
+addrxlat_sys_set_map(addrxlat_sys_t *sys, addrxlat_sys_map_t idx,
+		      addrxlat_map_t *map)
 {
-	free_map(sys->map);
-	sys->map = map;
+	free_map(sys->map[idx]);
+	sys->map[idx] = map;
 }
 
 const addrxlat_map_t *
-addrxlat_sys_get_map(const addrxlat_sys_t *sys)
+addrxlat_sys_get_map(const addrxlat_sys_t *sys, addrxlat_sys_map_t idx)
 {
-	return sys->map;
+	return sys->map[idx];
 }
 
 void
@@ -156,11 +159,12 @@ direct_hook(struct sys_init_data *ctl, const struct sys_region *region)
 
 /** Set memory map layout.
  * @parma ctl     Initialization data.
+ * @param idx     Map index.
  * @param layout  Layout definition table.
  * @returns       Error status.
  */
 addrxlat_status
-sys_set_layout(struct sys_init_data *ctl,
+sys_set_layout(struct sys_init_data *ctl, addrxlat_sys_map_t idx,
 	       const struct sys_region layout[])
 {
 	static sys_action_fn *const actions[] = {
@@ -187,7 +191,7 @@ sys_set_layout(struct sys_init_data *ctl,
 
 		range.endoff = region->last - region->first;
 		range.meth = ctl->sys->meth[region->meth];
-		newmap = internal_map_set(ctl->sys->map,
+		newmap = internal_map_set(ctl->sys->map[idx],
 					  region->first, &range);
 		if (!newmap)
 			return set_error(ctl->ctx, addrxlat_nomem,
@@ -196,7 +200,7 @@ sys_set_layout(struct sys_init_data *ctl,
 					 "-0x%"ADDRXLAT_PRIxADDR,
 					 region->first,
 					 region->last);
-		ctl->sys->map = newmap;
+		ctl->sys->map[idx] = newmap;
 	}
 
 	return addrxlat_ok;

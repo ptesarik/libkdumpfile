@@ -99,7 +99,9 @@ get_physaddr(struct cbdata *cbd, const addrxlat_fulladdr_t *addr,
 
 	case ADDRXLAT_KVADDR:
 		status = addrxlat_by_map(cbd->ctx, physaddr,
-					 addrxlat_sys_get_map(cbd->sys));
+					 addrxlat_sys_get_map(
+						 cbd->sys,
+						 ADDRXLAT_SYS_MAP_KV_PHYS));
 		if (status != addrxlat_ok) {
 			snprintf(read_err_str, sizeof read_err_str,
 				 "Cannot translate virt addr 0x%"ADDRXLAT_PRIxADDR,
@@ -516,7 +518,7 @@ os_map(void)
 	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_VMEMMAP);
 	add_symbol(meth, "vmemmap");
 
-	print_map(addrxlat_sys_get_map(data.sys));
+	print_map(addrxlat_sys_get_map(data.sys, ADDRXLAT_SYS_MAP_KV_PHYS));
 
 	addrxlat_sys_decref(data.sys);
 	addrxlat_ctx_decref(data.ctx);

@@ -707,17 +707,43 @@ addrxlat_status addrxlat_sys_init(
 	addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	const addrxlat_osdesc_t *osdesc);
 
+/** Translation system map index.
+ *
+ * The OS map object contains several translation maps to allow
+ * translation between different address spaces. They can be
+ * manipulated directly using
+ * @ref addrxlat_sys_set_map and
+ * @ref addrxlat_sys_get_map
+ * using one of these indices.
+ */
+typedef enum _addrxlat_sys_map {
+	/** Map kernel virtual addresses to physical addresses.
+	 * This translation accepts @ref ADDRXLAT_KVADDR on input
+	 * and translates it to a physical address. This is either
+	 * @ref ADDRXLAT_KPHYSADDR or @ref ADDRXLAT_MACHPHYSADDR,
+	 * whichever is more efficient.
+	 */
+	ADDRXLAT_SYS_MAP_KV_PHYS,
+
+	ADDRXLAT_SYS_MAP_NUM,	/**< Total number of indices. */
+} addrxlat_sys_map_t;
+
 /** Explicitly set the translation map of an OS map object.
  * @param sys     Translation system.
+ * @param idx     Map index.
  * @param map     Translation map.
  */
-void addrxlat_sys_set_map(addrxlat_sys_t *sys, addrxlat_map_t *map);
+void addrxlat_sys_set_map(
+	addrxlat_sys_t *sys, addrxlat_sys_map_t idx,
+	addrxlat_map_t *map);
 
 /** Get the translation map of an OS map object.
  * @param sys     Translation system.
+ * @param idx     Map index.
  * @returns       Associated translation map.
  */
-const addrxlat_map_t *addrxlat_sys_get_map(const addrxlat_sys_t *sys);
+const addrxlat_map_t *addrxlat_sys_get_map(
+	const addrxlat_sys_t *sys, addrxlat_sys_map_t idx);
 
 /** Translation system method index.
  *

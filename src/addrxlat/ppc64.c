@@ -356,7 +356,7 @@ map_linux_ppc64(struct sys_init_data *ctl)
 		return set_error(ctl->ctx, addrxlat_notimpl,
 				 "Unsupported page size: %ld", pagesize);
 
-	status = sys_set_layout(ctl, linux_layout);
+	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, linux_layout);
 	if (status != addrxlat_ok)
 		return status;
 

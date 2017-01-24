@@ -210,17 +210,18 @@ canonical_pgt_map(struct sys_init_data *ctl)
 	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 
 	range.endoff = NONCANONICAL_START - 1;
-	newmap = internal_map_set(ctl->sys->map, 0, &range);
+	newmap = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS],
+				  0, &range);
 	if (!newmap)
 		goto err;
-	ctl->sys->map = newmap;
+	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
 
 	range.endoff = VIRTADDR_MAX - NONCANONICAL_END - 1;
-	newmap = internal_map_set(ctl->sys->map,
+	newmap = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS],
 				  NONCANONICAL_END + 1, &range);
 	if (!newmap)
 		goto err;
-	ctl->sys->map = newmap;
+	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
 
 	return addrxlat_ok;
 
@@ -264,7 +265,7 @@ is_pgt_usable(addrxlat_sys_t *sys)
 		return 1;
 
 	case ADDRXLAT_KVADDR:
-		meth = internal_map_search(sys->map,
+		meth = internal_map_search(sys->map[ADDRXLAT_SYS_MAP_KV_PHYS],
 					   pgtmeth->def.param.pgt.root.addr);
 		return meth != pgtmeth;
 
@@ -429,11 +430,12 @@ linux_ktext_map(struct sys_init_data *ctl)
 	}
 
 	range.endoff = __END_KERNEL_map - __START_KERNEL_map;
-	newmap = internal_map_set(ctl->sys->map, __START_KERNEL_map, &range);
+	newmap = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS],
+				  __START_KERNEL_map, &range);
 	if (!newmap)
 		return set_error(ctl->ctx, addrxlat_nomem,
 				 "Cannot set up Linux kernel text mapping");
-	ctl->sys->map = newmap;
+	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
 	return addrxlat_ok;
 }
 
@@ -489,7 +491,7 @@ map_linux_x86_64(struct sys_init_data *ctl)
 	if (!layout)
 		return addrxlat_ok;
 
-	status = sys_set_layout(ctl, layout);
+	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, layout);
 	if (status != addrxlat_ok)
 		return status;
 
@@ -625,20 +627,21 @@ map_xen_x86_64(struct sys_init_data *ctl)
 	def.kind = ADDRXLAT_LINEAR;
 	def.param.linear.off = addr_direct;
 	internal_meth_set_def(range_direct.meth, &def);
-	newmap = internal_map_set(ctl->sys->map, addr_direct, &range_direct);
+	newmap = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS],
+				  addr_direct, &range_direct);
 	if (!newmap)
 		return set_error(ctl->ctx, addrxlat_nomem,
 				 "Cannot set up Xen direct mapping");
-	ctl->sys->map = newmap;
+	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
 
 	if (addr_ktext) {
 		set_ktext_offset(ctl->sys, ctl->ctx, addr_ktext);
-		newmap = internal_map_set(ctl->sys->map,
+		newmap = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS],
 					  addr_ktext, &range_ktext);
 		if (!newmap)
 			return set_error(ctl->ctx, addrxlat_nomem,
 					 "Cannot set up Xen text mapping");
-		ctl->sys->map = newmap;
+		ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
 	}
 
 	set_pgt_fallback(ctl->sys, ADDRXLAT_SYS_METH_DIRECT);

@@ -205,11 +205,12 @@ sys_s390x(struct sys_init_data *ctl)
 
 	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	range.endoff = paging_max_index(&range.meth->def.param.pgt.pf);
-	newmap = internal_map_set(ctl->sys->map, 0, &range);
+	newmap = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS],
+				  0, &range);
 	if (!newmap)
 		return set_error(ctl->ctx, addrxlat_nomem,
 				 "Cannot set up default mapping");
-	ctl->sys->map = newmap;
+	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
 
 	return addrxlat_ok;
 }
