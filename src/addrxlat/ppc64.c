@@ -232,20 +232,20 @@ pgt_ppc64_linux_rpn30(addrxlat_walk_t *state)
 }
 
 /* Linux virtual memory layout */
-static const struct osmap_region linux_layout[] = {
+static const struct sys_region linux_layout[] = {
 	{  0x0000000000000000,  0x00000fffffffffff, /* userspace        */
-	   ADDRXLAT_OSMAP_UPGT },
+	   ADDRXLAT_SYS_METH_UPGT },
 	/* 0x0000100000000000 - 0xbfffffffffffffff     invalid          */
 	{  0xc000000000000000,  0xcfffffffffffffff, /* direct mapping   */
-	   ADDRXLAT_OSMAP_DIRECT, OSMAP_ACT_DIRECT },
+	   ADDRXLAT_SYS_METH_DIRECT, SYS_ACT_DIRECT },
 	{  0xd000000000000000,  0xd00007ffffffffff, /* vmalloc          */
-	   ADDRXLAT_OSMAP_PGT },
+	   ADDRXLAT_SYS_METH_PGT },
 	{  0xd000080000000000,  0xd0000fffffffffff, /* IO mappings      */
-	   ADDRXLAT_OSMAP_PGT },
+	   ADDRXLAT_SYS_METH_PGT },
 	/* 0xd000100000000000 - 0xefffffffffffffff     reserved         */
 	{  0xf000000000000000,  0xffffffffffffffff, /* vmemmap          */
-	   ADDRXLAT_OSMAP_VMEMMAP },
-	OSMAP_REGION_END
+	   ADDRXLAT_SYS_METH_VMEMMAP },
+	SYS_REGION_END
 };
 
 /** Get VMEMMAP translation definition.
@@ -254,7 +254,7 @@ static const struct osmap_region linux_layout[] = {
  * @returns    Error status.
  */
 static addrxlat_status
-get_vmemmap_def(struct osmap_init_data *ctl, addrxlat_def_t *def)
+get_vmemmap_def(struct sys_init_data *ctl, addrxlat_def_t *def)
 {
 	addrxlat_addr_t vmemmap_list, elem, first_elem;
 	addrxlat_fulladdr_t readptr;
@@ -335,7 +335,7 @@ get_vmemmap_def(struct osmap_init_data *ctl, addrxlat_def_t *def)
  * @returns       Error status.
  */
 static addrxlat_status
-map_linux_ppc64(struct osmap_init_data *ctl)
+map_linux_ppc64(struct sys_init_data *ctl)
 {
 	static const addrxlat_paging_form_t ppc64_pf_64k = {
 		.pte_format = addrxlat_pte_ppc64_linux_rpn30,
@@ -356,21 +356,21 @@ map_linux_ppc64(struct osmap_init_data *ctl)
 		return set_error(ctl->ctx, addrxlat_notimpl,
 				 "Unsupported page size: %ld", pagesize);
 
-	status = osmap_set_layout(ctl, linux_layout);
+	status = sys_set_layout(ctl, linux_layout);
 	if (status != addrxlat_ok)
 		return status;
 
-	meth = ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
+	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	def.kind = ADDRXLAT_PGT;
 	def.param.pgt.pf = ppc64_pf_64k;
 	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);
 
-	meth = ctl->osmap->meth[ADDRXLAT_OSMAP_UPGT];
+	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT];
 	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);
 
-	meth = ctl->osmap->meth[ADDRXLAT_OSMAP_VMEMMAP];
+	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_VMEMMAP];
 	if (meth->def.kind == ADDRXLAT_NONE) {
 		status = get_vmemmap_def(ctl, &def);
 		if (status != addrxlat_ok)
@@ -388,7 +388,7 @@ map_linux_ppc64(struct osmap_init_data *ctl)
  * @returns    Error status.
  */
 addrxlat_status
-osmap_ppc64(struct osmap_init_data *ctl)
+sys_ppc64(struct sys_init_data *ctl)
 {
 	switch (ctl->osdesc->type) {
 	case addrxlat_os_linux:

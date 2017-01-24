@@ -665,36 +665,36 @@ typedef struct _addrxlat_osdesc {
 #define ADDRXLAT_VER_XEN(major,minor)	\
 	(((major) << 16) | (minor))
 
-/** Address translation map for a specific OS.
+/** Address translations system.
  * In addition to a @ref addrxlat_map_t, this structure also contains
  * any OS-specific data.
  */
-typedef struct _addrxlat_osmap addrxlat_osmap_t;
+typedef struct _addrxlat_sys addrxlat_sys_t;
 
-/** Allocate a new OS translation map.
- * @returns  A new OS translation map, or @c NULL.
+/** Allocate a new translation system.
+ * @returns  A new translation system, or @c NULL.
  *
  * This call can fail if and only if memory allocation fails.
  */
-addrxlat_osmap_t *addrxlat_osmap_new(void);
+addrxlat_sys_t *addrxlat_sys_new(void);
 
-/** Increment OS map reference counter.
- * @param osmap  OS map object.
+/** Increment translation system reference counter.
+ * @param sys    Translation system.
  * @returns      New reference count.
  */
-unsigned long addrxlat_osmap_incref(addrxlat_osmap_t *osmap);
+unsigned long addrxlat_sys_incref(addrxlat_sys_t *sys);
 
-/** Decrement OS map reference counter.
- * @param osmap  OS map object.
+/** Decrement translation system reference counter.
+ * @param sys    Translation system.
  * @returns      New reference count.
  *
  * If the new reference count is zero, the underlying object is freed
  * and its address must not be used afterwards.
  */
-unsigned long addrxlat_osmap_decref(addrxlat_osmap_t *osmap);
+unsigned long addrxlat_sys_decref(addrxlat_sys_t *sys);
 
-/** Set up translation for a given operating system.
- * @param osmap   OS map object.
+/** Set up a translation system for a pre-defined operating system.
+ * @param sys     Translation sytem.
  * @param ctx     Address translation context.
  * @param osdesc  Description of the operating system.
  * @returns       Error status.
@@ -703,55 +703,55 @@ unsigned long addrxlat_osmap_decref(addrxlat_osmap_t *osmap);
  * determine the translation map and page-table translation for an
  * operating system.
  */
-addrxlat_status addrxlat_osmap_init(
-	addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
+addrxlat_status addrxlat_sys_init(
+	addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	const addrxlat_osdesc_t *osdesc);
 
 /** Explicitly set the translation map of an OS map object.
- * @param osmap   OS map object.
+ * @param sys     Translation system.
  * @param map     Translation map.
  */
-void addrxlat_osmap_set_map(addrxlat_osmap_t *osmap, addrxlat_map_t *map);
+void addrxlat_sys_set_map(addrxlat_sys_t *sys, addrxlat_map_t *map);
 
 /** Get the translation map of an OS map object.
- * @param osmap   OS map object.
+ * @param sys     Translation system.
  * @returns       Associated translation map.
  */
-const addrxlat_map_t *addrxlat_osmap_get_map(const addrxlat_osmap_t *osmap);
+const addrxlat_map_t *addrxlat_sys_get_map(const addrxlat_sys_t *sys);
 
-/** OS map translation method index.
+/** Translation system method index.
  *
- * The OS map object may create a number of translation methods
- * for the OS map. Any of them can be obtained with
- * @ref addrxlat_osmap_get_xlat or overridden with
- * @ref addrxlat_osmap_set_xlat using one of these indices.
+ * A translation system uses a number of translation methods to do its job.
+ * Any of them can be obtained with
+ * @ref addrxlat_sys_get_xlat or overridden with
+ * @ref addrxlat_sys_set_xlat using one of these indices.
  */
-typedef enum _addrxlat_osmap_xlat {
-	ADDRXLAT_OSMAP_PGT,	/**< Kernel-space page table. */
-	ADDRXLAT_OSMAP_UPGT,	/**< User-space page table. */
-	ADDRXLAT_OSMAP_DIRECT,	/**< Direct mapping. */
-	ADDRXLAT_OSMAP_KTEXT,	/**< Kernel text mapping. */
-	ADDRXLAT_OSMAP_VMEMMAP,	/**< Fixed VMEMMAP (on IBM POWER). */
+typedef enum _addrxlat_sys_meth {
+	ADDRXLAT_SYS_METH_PGT,	   /**< Kernel-space page table. */
+	ADDRXLAT_SYS_METH_UPGT,	   /**< User-space page table. */
+	ADDRXLAT_SYS_METH_DIRECT,  /**< Direct mapping. */
+	ADDRXLAT_SYS_METH_KTEXT,   /**< Kernel text mapping. */
+	ADDRXLAT_SYS_METH_VMEMMAP, /**< Fixed VMEMMAP (on IBM POWER). */
 
-	ADDRXLAT_OSMAP_NUM,	/**< Total number of indices. */
-} addrxlat_osmap_xlat_t;
+	ADDRXLAT_SYS_METH_NUM,	   /**< Total number of indices. */
+} addrxlat_sys_meth_t;
 
-/** Explicitly set an address translation method for an OS map object.
- * @param osmap   OS map object.
- * @param xlat    Translation method index.
+/** Explicitly set an address translation method for a translation system.
+ * @param sys     Translation system.
+ * @param idx     Translation method index.
  * @param meth    Actual translation method.
  */
-void addrxlat_osmap_set_xlat(
-	addrxlat_osmap_t *osmap, addrxlat_osmap_xlat_t xlat,
+void addrxlat_sys_set_xlat(
+	addrxlat_sys_t *sys, addrxlat_sys_meth_t idx,
 	addrxlat_meth_t *meth);
 
-/** Get the page table translation of an OS map object.
- * @param osmap   OS map object.
- * @param xlat    Translation method index.
+/** Get a specific translation method of a translation system.
+ * @param sys     Translation system.
+ * @param idx     Translation method index.
  * @returns       Associated translation method.
  */
-addrxlat_meth_t *addrxlat_osmap_get_xlat(
-	addrxlat_osmap_t *osmap, addrxlat_osmap_xlat_t xlat);
+addrxlat_meth_t *addrxlat_sys_get_xlat(
+	addrxlat_sys_t *sys, addrxlat_sys_meth_t idx);
 
 #ifdef  __cplusplus
 }

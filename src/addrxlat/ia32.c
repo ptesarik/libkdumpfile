@@ -189,12 +189,12 @@ is_pae(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *root,
  * @returns    Error status.
  */
 static addrxlat_status
-osmap_ia32_nonpae(struct osmap_init_data *ctl)
+sys_ia32_nonpae(struct sys_init_data *ctl)
 {
 	addrxlat_meth_t *meth;
 	addrxlat_def_t def;
 
-	meth = ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
+	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	def.kind = ADDRXLAT_PGT;
 	def.param.pgt.pf = ia32_pf;
 	def_choose_pgtroot(&def, meth);
@@ -207,12 +207,12 @@ osmap_ia32_nonpae(struct osmap_init_data *ctl)
  * @returns    Error status.
  */
 static addrxlat_status
-osmap_ia32_pae(struct osmap_init_data *ctl)
+sys_ia32_pae(struct sys_init_data *ctl)
 {
 	addrxlat_meth_t *meth;
 	addrxlat_def_t def;
 
-	meth = ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
+	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	def.kind = ADDRXLAT_PGT;
 	def.param.pgt.pf = ia32_pf_pae;
 	def_choose_pgtroot(&def, meth);
@@ -225,7 +225,7 @@ osmap_ia32_pae(struct osmap_init_data *ctl)
  * @returns    Error status.
  */
 addrxlat_status
-osmap_ia32(struct osmap_init_data *ctl)
+sys_ia32(struct sys_init_data *ctl)
 {
 	addrxlat_range_t range;
 	addrxlat_map_t *newmap;
@@ -233,7 +233,7 @@ osmap_ia32(struct osmap_init_data *ctl)
 
 	if (!ctl->popt.val[OPT_pae].set) {
 		addrxlat_meth_t *pgtmeth =
-			ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
+			ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 
 		if (!pgtmeth)
 			pae = -1;
@@ -252,20 +252,20 @@ osmap_ia32(struct osmap_init_data *ctl)
 	} else
 		pae = ctl->popt.val[OPT_pae].num;
 
-	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_PGT])
-		ctl->osmap->meth[ADDRXLAT_OSMAP_PGT] = internal_meth_new();
-	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_PGT])
+	if (!ctl->sys->meth[ADDRXLAT_SYS_METH_PGT])
+		ctl->sys->meth[ADDRXLAT_SYS_METH_PGT] = internal_meth_new();
+	if (!ctl->sys->meth[ADDRXLAT_SYS_METH_PGT])
 		return addrxlat_nomem;
 
-	range.meth = ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
+	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	range.endoff = VIRTADDR_MAX;
-	newmap = internal_map_set(ctl->osmap->map, 0, &range);
+	newmap = internal_map_set(ctl->sys->map, 0, &range);
 	if (!newmap)
 		return set_error(ctl->ctx, addrxlat_nomem,
 				 "Cannot set up default mapping");
-	ctl->osmap->map = newmap;
+	ctl->sys->map = newmap;
 
 	return pae
-		? osmap_ia32_pae(ctl)
-		: osmap_ia32_nonpae(ctl);
+		? sys_ia32_pae(ctl)
+		: sys_ia32_nonpae(ctl);
 }

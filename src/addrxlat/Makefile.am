@@ -28,7 +28,7 @@ libaddrxlat_la_SOURCES = \
 	vtop.c \
 	map.c \
 	opt.c \
-	osmap.c \
+	sys.c \
 	ppc64.c \
 	ia32.c \
 	s390x.c \

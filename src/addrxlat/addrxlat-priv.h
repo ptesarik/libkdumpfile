@@ -129,9 +129,9 @@ struct _addrxlat_ctx {
 	char err_buf[ERRBUF];	/**< Error string. */
 };
 
-/** Translation map with OS-specific pieces.
+/** Translation system.
  */
-struct _addrxlat_osmap {
+struct _addrxlat_sys {
 	/** Reference counter. */
 	unsigned long refcnt;
 
@@ -139,7 +139,7 @@ struct _addrxlat_osmap {
 	addrxlat_map_t *map;
 
 	/** Address translation methods. */
-	addrxlat_meth_t *meth[ADDRXLAT_OSMAP_NUM];
+	addrxlat_meth_t *meth[ADDRXLAT_SYS_METH_NUM];
 };
 
 /* vtop */
@@ -213,12 +213,12 @@ struct parsed_opts {
 addrxlat_status parse_opts(
 	struct parsed_opts *popt, addrxlat_ctx_t *ctx, const char *opts);
 
-/* map by OS */
+/* Translation system */
 
-/** Data used during OS map initialization. */
-struct osmap_init_data {
-	/** Target OS map object. */
-	addrxlat_osmap_t *osmap;
+/** Data used during translation system initialization. */
+struct sys_init_data {
+	/** Target translation system. */
+	addrxlat_sys_t *sys;
 
 	/** Translation context used for initialization. */
 	addrxlat_ctx_t *ctx;
@@ -230,53 +230,53 @@ struct osmap_init_data {
 	struct parsed_opts popt;
 };
 
-/** Arch-specific OS map initialization funciton.
+/** Arch-specific translation system initialization funciton.
  * @param ctl    Initialization data.
  * @returns      Error status.
  */
-typedef addrxlat_status osmap_arch_fn(struct osmap_init_data *ctl);
+typedef addrxlat_status sys_arch_fn(struct sys_init_data *ctl);
 
-#define osmap_ia32 INTERNAL_NAME(osmap_ia32)
-osmap_arch_fn osmap_ia32;
+#define sys_ia32 INTERNAL_NAME(sys_ia32)
+sys_arch_fn sys_ia32;
 
-#define osmap_ppc64 INTERNAL_NAME(osmap_ppc64)
-osmap_arch_fn osmap_ppc64;
+#define sys_ppc64 INTERNAL_NAME(sys_ppc64)
+sys_arch_fn sys_ppc64;
 
-#define osmap_s390x INTERNAL_NAME(osmap_s390x)
-osmap_arch_fn osmap_s390x;
+#define sys_s390x INTERNAL_NAME(sys_s390x)
+sys_arch_fn sys_s390x;
 
-#define osmap_x86_64 INTERNAL_NAME(osmap_x86_64)
-osmap_arch_fn osmap_x86_64;
+#define sys_x86_64 INTERNAL_NAME(sys_x86_64)
+sys_arch_fn sys_x86_64;
 
-/** Optional action associated with an OS-map region. */
-enum osmap_action {
-	OSMAP_ACT_NONE,
-	OSMAP_ACT_DIRECT,
+/** Optional action associated with a translation system region. */
+enum sys_action {
+	SYS_ACT_NONE,
+	SYS_ACT_DIRECT,
 };
 
 /** Single OS-map region definition. */
-struct osmap_region {
+struct sys_region {
 	addrxlat_addr_t first, last;
-	addrxlat_osmap_xlat_t xlat;
-	enum osmap_action act;
+	addrxlat_sys_meth_t meth;
+	enum sys_action act;
 };
 
 /** OS-map layout table end marker. */
-#define OSMAP_REGION_END	{ 0, 0, ADDRXLAT_OSMAP_NUM }
+#define SYS_REGION_END	{ 0, 0, ADDRXLAT_SYS_METH_NUM }
 
-/** Type of the action function for @ref osmap_set_layout.
+/** Type of the action function for @ref sys_set_layout.
  * @parma ctl     Initialization data.
  * @param region  Associated region definition.
  */
-typedef void osmap_action_fn(
-	struct osmap_init_data *ctl, const struct osmap_region *);
+typedef void sys_action_fn(
+	struct sys_init_data *ctl, const struct sys_region *);
 
 #define x86_64_ktext_hook INTERNAL_NAME(x86_64_ktext_hook)
-osmap_action_fn x86_64_ktext_hook;
+sys_action_fn x86_64_ktext_hook;
 
-#define osmap_set_layout INTERNAL_NAME(osmap_set_layout)
-addrxlat_status osmap_set_layout(
-	struct osmap_init_data *ctl, const struct osmap_region layout[]);
+#define sys_set_layout INTERNAL_NAME(sys_set_layout)
+addrxlat_status sys_set_layout(
+	struct sys_init_data *ctl, const struct sys_region layout[]);
 
 /* internal aliases */
 

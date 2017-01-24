@@ -117,7 +117,7 @@ pgt_s390x(addrxlat_walk_t *state)
  * @returns          Error status.
  */
 static addrxlat_status
-get_pgtroot(struct osmap_init_data *ctl, addrxlat_fulladdr_t *root)
+get_pgtroot(struct sys_init_data *ctl, addrxlat_fulladdr_t *root)
 {
 	addrxlat_status status;
 
@@ -143,7 +143,7 @@ get_pgtroot(struct osmap_init_data *ctl, addrxlat_fulladdr_t *root)
  * @returns    Error status.
  */
 static addrxlat_status
-determine_pgttype(struct osmap_init_data *ctl)
+determine_pgttype(struct sys_init_data *ctl)
 {
 	addrxlat_meth_t *pgtmeth;
 	addrxlat_def_t def;
@@ -152,7 +152,7 @@ determine_pgttype(struct osmap_init_data *ctl)
 	unsigned i;
 	addrxlat_status status;
 
-	pgtmeth = ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
+	pgtmeth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	def_choose_pgtroot(&def, pgtmeth);
 	if (def.param.pgt.root.as == ADDRXLAT_NOADDR) {
 		status = get_pgtroot(ctl, &pgtmeth->def.param.pgt.root);
@@ -188,28 +188,28 @@ determine_pgttype(struct osmap_init_data *ctl)
  * @returns    Error status.
  */
 addrxlat_status
-osmap_s390x(struct osmap_init_data *ctl)
+sys_s390x(struct sys_init_data *ctl)
 {
 	addrxlat_map_t *newmap;
 	addrxlat_range_t range;
 	addrxlat_status status;
 
-	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_PGT])
-		ctl->osmap->meth[ADDRXLAT_OSMAP_PGT] = internal_meth_new();
-	if (!ctl->osmap->meth[ADDRXLAT_OSMAP_PGT])
+	if (!ctl->sys->meth[ADDRXLAT_SYS_METH_PGT])
+		ctl->sys->meth[ADDRXLAT_SYS_METH_PGT] = internal_meth_new();
+	if (!ctl->sys->meth[ADDRXLAT_SYS_METH_PGT])
 		return addrxlat_nomem;
 
 	status = determine_pgttype(ctl);
 	if (status != addrxlat_ok)
 		return status;
 
-	range.meth = ctl->osmap->meth[ADDRXLAT_OSMAP_PGT];
+	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	range.endoff = paging_max_index(&range.meth->def.param.pgt.pf);
-	newmap = internal_map_set(ctl->osmap->map, 0, &range);
+	newmap = internal_map_set(ctl->sys->map, 0, &range);
 	if (!newmap)
 		return set_error(ctl->ctx, addrxlat_nomem,
 				 "Cannot set up default mapping");
-	ctl->osmap->map = newmap;
+	ctl->sys->map = newmap;
 
 	return addrxlat_ok;
 }

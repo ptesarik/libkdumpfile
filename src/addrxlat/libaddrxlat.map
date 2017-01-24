@@ -25,14 +25,14 @@ LIBADDRXLAT_0 {
     addrxlat_walk_init;
     addrxlat_walk_next;
 
-    addrxlat_osmap_new;
-    addrxlat_osmap_incref;
-    addrxlat_osmap_decref;
-    addrxlat_osmap_init;
-    addrxlat_osmap_set_map;
-    addrxlat_osmap_get_map;
-    addrxlat_osmap_set_xlat;
-    addrxlat_osmap_get_xlat;
+    addrxlat_sys_new;
+    addrxlat_sys_incref;
+    addrxlat_sys_decref;
+    addrxlat_sys_init;
+    addrxlat_sys_set_map;
+    addrxlat_sys_get_map;
+    addrxlat_sys_set_xlat;
+    addrxlat_sys_get_xlat;
 
   local:
     *;

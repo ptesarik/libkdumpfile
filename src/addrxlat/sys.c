@@ -1,7 +1,7 @@
-/** @internal @file src/addrxlat/osmap.c
- * @brief OS translation map routines.
+/** @internal @file src/addrxlat/sys.c
+ * @brief Translation system routines.
  */
-/* Copyright (C) 2016 Petr Tesarik <ptesarik@suse.com>
+/* Copyright (C) 2016-2017 Petr Tesarik <ptesarik@suse.com>
 
    This file is free software; you can redistribute it and/or modify
    it under the terms of either
@@ -33,12 +33,12 @@
 
 #include "addrxlat-priv.h"
 
-addrxlat_osmap_t *
-addrxlat_osmap_new(void)
+addrxlat_sys_t *
+addrxlat_sys_new(void)
 {
-	addrxlat_osmap_t *ret;
+	addrxlat_sys_t *ret;
 
-	ret = calloc(1, sizeof(addrxlat_osmap_t));
+	ret = calloc(1, sizeof(addrxlat_sys_t));
 	if (ret) {
 		ret->refcnt = 1;
 	}
@@ -46,9 +46,9 @@ addrxlat_osmap_new(void)
 }
 
 unsigned long
-addrxlat_osmap_incref(addrxlat_osmap_t *osmap)
+addrxlat_sys_incref(addrxlat_sys_t *sys)
 {
-	return ++osmap->refcnt;
+	return ++sys->refcnt;
 }
 
 static void
@@ -61,45 +61,45 @@ free_map(addrxlat_map_t *map)
 }
 
 unsigned long
-addrxlat_osmap_decref(addrxlat_osmap_t *osmap)
+addrxlat_sys_decref(addrxlat_sys_t *sys)
 {
-	unsigned long refcnt = --osmap->refcnt;
+	unsigned long refcnt = --sys->refcnt;
 	if (!refcnt) {
 		unsigned i;
 
-		free_map(osmap->map);
-		for (i = 0; i < ADDRXLAT_OSMAP_NUM; ++i)
-			if (osmap->meth[i])
-				internal_meth_decref(osmap->meth[i]);
-		free(osmap);
+		free_map(sys->map);
+		for (i = 0; i < ADDRXLAT_SYS_METH_NUM; ++i)
+			if (sys->meth[i])
+				internal_meth_decref(sys->meth[i]);
+		free(sys);
 	}
 	return refcnt;
 }
 
 addrxlat_status
-addrxlat_osmap_init(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
-		    const addrxlat_osdesc_t *osdesc)
+addrxlat_sys_init(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
+		  const addrxlat_osdesc_t *osdesc)
 {
-	struct osmap_init_data ctl;
-	osmap_arch_fn *arch_fn;
+	struct sys_init_data ctl;
+	sys_arch_fn *arch_fn;
 	addrxlat_status status;
 
 	if (!strcmp(osdesc->arch, "x86_64"))
-		arch_fn = osmap_x86_64;
+		arch_fn = sys_x86_64;
 	else if ((osdesc->arch[0] == 'i' &&
 		  (osdesc->arch[1] >= '3' && osdesc->arch[1] <= '6') &&
 		  !strcmp(osdesc->arch + 2, "86")) ||
 		 !strcmp(osdesc->arch, "ia32"))
-		arch_fn = osmap_ia32;
+		arch_fn = sys_ia32;
 	else if (!strcmp(osdesc->arch, "s390x"))
-		arch_fn = osmap_s390x;
+		arch_fn = sys_s390x;
 	else if (!strcmp(osdesc->arch, "ppc64"))
-		arch_fn = osmap_ppc64;
+		arch_fn = sys_ppc64;
 	else
 		return set_error(ctx, addrxlat_notimpl,
 				"Unsupported architecture");
 
-	ctl.osmap = osmap;
+	ctl.sys = sys;
 	ctl.ctx = ctx;
 	ctl.osdesc = osdesc;
 
@@ -111,47 +111,47 @@ addrxlat_osmap_init(addrxlat_osmap_t *osmap, addrxlat_ctx_t *ctx,
 }
 
 void
-addrxlat_osmap_set_map(addrxlat_osmap_t *osmap, addrxlat_map_t *map)
+addrxlat_sys_set_map(addrxlat_sys_t *sys, addrxlat_map_t *map)
 {
-	free_map(osmap->map);
-	osmap->map = map;
+	free_map(sys->map);
+	sys->map = map;
 }
 
 const addrxlat_map_t *
-addrxlat_osmap_get_map(const addrxlat_osmap_t *osmap)
+addrxlat_sys_get_map(const addrxlat_sys_t *sys)
 {
-	return osmap->map;
+	return sys->map;
 }
 
 void
-addrxlat_osmap_set_xlat(addrxlat_osmap_t *osmap,
-			addrxlat_osmap_xlat_t xlat, addrxlat_meth_t *meth)
+addrxlat_sys_set_xlat(addrxlat_sys_t *sys,
+		      addrxlat_sys_meth_t idx, addrxlat_meth_t *meth)
 {
-	if (osmap->meth[xlat])
-		internal_meth_decref(osmap->meth[xlat]);
-	osmap->meth[xlat] = meth;
+	if (sys->meth[idx])
+		internal_meth_decref(sys->meth[idx]);
+	sys->meth[idx] = meth;
 	if (meth)
 		internal_meth_incref(meth);
 }
 
 addrxlat_meth_t *
-addrxlat_osmap_get_xlat(addrxlat_osmap_t *osmap, addrxlat_osmap_xlat_t xlat)
+addrxlat_sys_get_xlat(addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
 {
-	if (osmap->meth[xlat])
-		internal_meth_incref(osmap->meth[xlat]);
-	return osmap->meth[xlat];
+	if (sys->meth[idx])
+		internal_meth_incref(sys->meth[idx]);
+	return sys->meth[idx];
 }
 
-/** Action function for @ref OSMAP_ACT_DIRECT.
+/** Action function for @ref SYS_ACT_DIRECT.
  * @parma ctl  Initialization data.
  */
 static void
-direct_hook(struct osmap_init_data *ctl, const struct osmap_region *region)
+direct_hook(struct sys_init_data *ctl, const struct sys_region *region)
 {
 	addrxlat_def_t def;
 	def.kind = ADDRXLAT_LINEAR;
 	def.param.linear.off = region->first;
-	internal_meth_set_def(ctl->osmap->meth[region->xlat], &def);
+	internal_meth_set_def(ctl->sys->meth[region->meth], &def);
 }
 
 /** Set memory map layout.
@@ -160,33 +160,34 @@ direct_hook(struct osmap_init_data *ctl, const struct osmap_region *region)
  * @returns       Error status.
  */
 addrxlat_status
-osmap_set_layout(struct osmap_init_data *ctl,
-		 const struct osmap_region layout[])
+sys_set_layout(struct sys_init_data *ctl,
+	       const struct sys_region layout[])
 {
-	static osmap_action_fn *const actions[] = {
-		[OSMAP_ACT_DIRECT] = direct_hook,
+	static sys_action_fn *const actions[] = {
+		[SYS_ACT_DIRECT] = direct_hook,
 	};
 
-	const struct osmap_region *region;
+	const struct sys_region *region;
 	addrxlat_map_t *newmap;
 
-	for (region = layout; region->xlat != ADDRXLAT_OSMAP_NUM; ++region) {
+	for (region = layout; region->meth != ADDRXLAT_SYS_METH_NUM;
+	     ++region) {
 		addrxlat_range_t range;
 
-		if (!ctl->osmap->meth[region->xlat])
-			ctl->osmap->meth[region->xlat] = internal_meth_new();
-		if (!ctl->osmap->meth[region->xlat])
+		if (!ctl->sys->meth[region->meth])
+			ctl->sys->meth[region->meth] = internal_meth_new();
+		if (!ctl->sys->meth[region->meth])
 			return set_error(ctl->ctx, addrxlat_nomem,
 					 "Cannot allocate translation"
 					 " method %u",
-					 (unsigned) region->xlat);
+					 (unsigned) region->meth);
 
-		if (region->act != OSMAP_ACT_NONE)
+		if (region->act != SYS_ACT_NONE)
 			actions[region->act](ctl, region);
 
 		range.endoff = region->last - region->first;
-		range.meth = ctl->osmap->meth[region->xlat];
-		newmap = internal_map_set(ctl->osmap->map,
+		range.meth = ctl->sys->meth[region->meth];
+		newmap = internal_map_set(ctl->sys->map,
 					  region->first, &range);
 		if (!newmap)
 			return set_error(ctl->ctx, addrxlat_nomem,
@@ -195,7 +196,7 @@ osmap_set_layout(struct osmap_init_data *ctl,
 					 "-0x%"ADDRXLAT_PRIxADDR,
 					 region->first,
 					 region->last);
-		ctl->osmap->map = newmap;
+		ctl->sys->map = newmap;
 	}
 
 	return addrxlat_ok;

@@ -44,7 +44,7 @@ enum read_status {
 
 struct cbdata {
 	addrxlat_ctx_t *ctx;
-	addrxlat_osmap_t *osmap;
+	addrxlat_sys_t *sys;
 };
 
 #define MAXERR	64
@@ -99,7 +99,7 @@ get_physaddr(struct cbdata *cbd, const addrxlat_fulladdr_t *addr,
 
 	case ADDRXLAT_KVADDR:
 		status = addrxlat_by_map(cbd->ctx, physaddr,
-					 addrxlat_osmap_get_map(cbd->osmap));
+					 addrxlat_sys_get_map(cbd->sys));
 		if (status != addrxlat_ok) {
 			snprintf(read_err_str, sizeof read_err_str,
 				 "Cannot translate virt addr 0x%"ADDRXLAT_PRIxADDR,
@@ -462,9 +462,9 @@ os_map(void)
 	addrxlat_ctx_cb_read64(data.ctx, read64);
 	addrxlat_ctx_cb_sym(data.ctx, get_symdata);
 
-	data.osmap = addrxlat_osmap_new();
-	if (!data.osmap) {
-		perror("Cannot allocate osmap");
+	data.sys = addrxlat_sys_new();
+	if (!data.sys) {
+		perror("Cannot allocate translation system");
 		addrxlat_ctx_decref(data.ctx);
 		return TEST_ERR;
 	}
@@ -485,40 +485,40 @@ os_map(void)
 		def.param.pgt.pf.pte_format = addrxlat_pte_none;
 		def.param.pgt.pf.levels = 0;
 		addrxlat_meth_set_def(pgt, &def);
-		addrxlat_osmap_set_xlat(data.osmap, ADDRXLAT_OSMAP_PGT, pgt);
+		addrxlat_sys_set_xlat(data.sys, ADDRXLAT_SYS_METH_PGT, pgt);
 		addrxlat_meth_decref(pgt);
 	}
 
-	status = addrxlat_osmap_init(data.osmap, data.ctx, &desc);
+	status = addrxlat_sys_init(data.sys, data.ctx, &desc);
 	if (status != addrxlat_ok) {
 		fprintf(stderr, "OS map failed: %s\n",
 			(status > 0
 			 ? addrxlat_ctx_err(data.ctx)
 			 : read_err_str));
-		addrxlat_osmap_decref(data.osmap);
+		addrxlat_sys_decref(data.sys);
 		addrxlat_ctx_decref(data.ctx);
 		return TEST_ERR;
 	}
 
-	meth = addrxlat_osmap_get_xlat(data.osmap, ADDRXLAT_OSMAP_PGT);
+	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_PGT);
 	add_symbol(meth, "rootpgt");
 	print_pgt(meth);
 
-	meth = addrxlat_osmap_get_xlat(data.osmap, ADDRXLAT_OSMAP_UPGT);
+	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_UPGT);
 	add_symbol(meth, "userpgt");
 
-	meth = addrxlat_osmap_get_xlat(data.osmap, ADDRXLAT_OSMAP_DIRECT);
+	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_DIRECT);
 	add_symbol(meth, "direct");
 
-	meth = addrxlat_osmap_get_xlat(data.osmap, ADDRXLAT_OSMAP_KTEXT);
+	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_KTEXT);
 	add_symbol(meth, "ktext");
 
-	meth = addrxlat_osmap_get_xlat(data.osmap, ADDRXLAT_OSMAP_VMEMMAP);
+	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_VMEMMAP);
 	add_symbol(meth, "vmemmap");
 
-	print_map(addrxlat_osmap_get_map(data.osmap));
+	print_map(addrxlat_sys_get_map(data.sys));
 
-	addrxlat_osmap_decref(data.osmap);
+	addrxlat_sys_decref(data.sys);
 	addrxlat_ctx_decref(data.ctx);
 	return TEST_OK;
 }
