@@ -271,9 +271,6 @@ struct sys_region {
 typedef void sys_action_fn(
 	struct sys_init_data *ctl, const struct sys_region *);
 
-#define x86_64_ktext_hook INTERNAL_NAME(x86_64_ktext_hook)
-sys_action_fn x86_64_ktext_hook;
-
 #define sys_set_layout INTERNAL_NAME(sys_set_layout)
 addrxlat_status sys_set_layout(
 	struct sys_init_data *ctl, const struct sys_region layout[]);

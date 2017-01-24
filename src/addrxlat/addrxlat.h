@@ -28,8 +28,8 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _LIBADDRXLAT_H
-#define _LIBADDRXLAT_H	1
+#ifndef _ADDRXLAT_H
+#define _ADDRXLAT_H	1
 
 #include <stddef.h>
 #include <stdint.h>
@@ -757,4 +757,4 @@ addrxlat_meth_t *addrxlat_sys_get_xlat(
 }
 #endif
 
-#endif	/* libaddrxlat.h */
+#endif	/* addrxlat.h */
