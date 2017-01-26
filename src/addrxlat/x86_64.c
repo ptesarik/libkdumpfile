@@ -196,39 +196,6 @@ pgt_x86_64(addrxlat_walk_t *state)
 	return addrxlat_continue;
 }
 
-/** Create a page table address map for x86_64 canonical regions.
- * @param ctl  Initialization data.
- * @returns    New translation map, or @c NULL on error.
- */
-static addrxlat_status
-canonical_pgt_map(struct sys_init_data *ctl)
-{
-	addrxlat_range_t range;
-	addrxlat_map_t *newmap;
-
-	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
-
-	range.endoff = NONCANONICAL_START - 1;
-	newmap = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS],
-				  0, &range);
-	if (!newmap)
-		goto err;
-	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
-
-	range.endoff = VIRTADDR_MAX - NONCANONICAL_END - 1;
-	newmap = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS],
-				  NONCANONICAL_END + 1, &range);
-	if (!newmap)
-		goto err;
-	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
-
-	return addrxlat_ok;
-
- err:
-	return set_error(ctl->ctx, addrxlat_nomem,
-			 "Cannot set up default mapping");
-}
-
 /** Get Linux virtual memory layout by kernel version.
  * @param ver  Version code.
  * @returns    Layout definition, or @c NULL.
@@ -649,6 +616,16 @@ map_xen_x86_64(struct sys_init_data *ctl)
 	return addrxlat_ok;
 }
 
+/** Generic x86_64 layout */
+static const struct sys_region layout_generic[] = {
+	{  0,  NONCANONICAL_START - 1,		/* lower half       */
+	   ADDRXLAT_SYS_METH_PGT },
+	/* NONCANONICAL_START - NONCANONICAL_END   non-canonical    */
+	{  NONCANONICAL_END + 1,  VIRTADDR_MAX,	/* higher half      */
+	   ADDRXLAT_SYS_METH_PGT },
+	SYS_REGION_END
+};
+
 /** Initialize a translation map for an x86_64 OS.
  * @param ctl  Initialization data.
  * @returns    Error status.
@@ -676,7 +653,8 @@ sys_x86_64(struct sys_init_data *ctl)
 	def.param.pgt.pf = x86_64_pf;
 	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);
-	status = canonical_pgt_map(ctl);
+
+	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, layout_generic);
 	if (status != addrxlat_ok)
 		return status;
 
