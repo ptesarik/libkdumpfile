@@ -146,7 +146,7 @@ addrxlat_sys_get_xlat(addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
 }
 
 /** Action function for @ref SYS_ACT_DIRECT.
- * @parma ctl  Initialization data.
+ * @param ctl  Initialization data.
  */
 static void
 direct_hook(struct sys_init_data *ctl, const struct sys_region *region)
@@ -159,7 +159,7 @@ direct_hook(struct sys_init_data *ctl, const struct sys_region *region)
 }
 
 /** Set memory map layout.
- * @parma ctl     Initialization data.
+ * @param ctl     Initialization data.
  * @param idx     Map index.
  * @param layout  Layout definition table.
  * @returns       Error status.

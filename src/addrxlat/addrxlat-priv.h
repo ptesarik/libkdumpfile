@@ -250,7 +250,7 @@ struct sys_region {
 #define SYS_REGION_END	{ 0, 0, ADDRXLAT_SYS_METH_NUM }
 
 /** Type of the action function for @ref sys_set_layout.
- * @parma ctl     Initialization data.
+ * @param ctl     Initialization data.
  * @param region  Associated region definition.
  */
 typedef void sys_action_fn(
