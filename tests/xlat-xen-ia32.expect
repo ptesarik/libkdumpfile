@@ -1,4 +1,4 @@
-pte_format: ia32
-bits: 12 10 10
 0-ffffffff: PGT @rootpgt
+  pte_format: ia32
+  bits: 12 10 10
 100000000-ffffffffffffffff: NONE

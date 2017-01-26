@@ -1,5 +1,7 @@
-pte_format: x86_64
-bits: 12 9 9 9 9
 0-7fffffffffff: PGT @rootpgt
+  pte_format: x86_64
+  bits: 12 9 9 9 9
 800000000000-ffff7fffffffffff: NONE
 ffff800000000000-ffffffffffffffff: PGT @rootpgt
+  pte_format: x86_64
+  bits: 12 9 9 9 9

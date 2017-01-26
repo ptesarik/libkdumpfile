@@ -323,6 +323,33 @@ print_lookup_tbl(const addrxlat_meth_t *meth)
 }
 
 static void
+print_pgt(const addrxlat_meth_t *pgt)
+{
+	static const char *pte_formats[] = {
+		[addrxlat_pte_none] = "none",
+		[addrxlat_pte_ia32] = "ia32",
+		[addrxlat_pte_ia32_pae] = "ia32_pae",
+		[addrxlat_pte_x86_64] = "x86_64",
+		[addrxlat_pte_s390x] = "s390x",
+		[addrxlat_pte_ppc64_linux_rpn30] = "ppc64_linux_rpn30",
+	};
+
+	const addrxlat_def_t *def = addrxlat_meth_get_def(pgt);
+	const addrxlat_paging_form_t *pf = &def->param.pgt.pf;
+	unsigned i;
+
+	fputs("\n  pte_format: ", stdout);
+	if (pf->pte_format < ARRAY_SIZE(pte_formats) &&
+	    pte_formats[pf->pte_format])
+		printf("%s", pte_formats[pf->pte_format]);
+	else
+		printf("%u", pf->pte_format);
+	printf("\n  bits:");
+	for (i = 0; i < pf->levels; ++i)
+		printf(" %u", pf->bits[i]);
+}
+
+static void
 print_addrspace(addrxlat_addrspace_t as)
 {
 	switch (as) {
@@ -372,6 +399,7 @@ print_xlat(const addrxlat_meth_t *meth)
 
 		case ADDRXLAT_PGT:
 			print_ind("PGT", meth);
+			print_pgt(meth);
 			break;
 
 		case ADDRXLAT_LOOKUP:
@@ -394,34 +422,6 @@ print_xlat(const addrxlat_meth_t *meth)
 
 		}
 	}
-}
-
-static void
-print_pgt(const addrxlat_meth_t *pgt)
-{
-	static const char *pte_formats[] = {
-		[addrxlat_pte_none] = "none",
-		[addrxlat_pte_ia32] = "ia32",
-		[addrxlat_pte_ia32_pae] = "ia32_pae",
-		[addrxlat_pte_x86_64] = "x86_64",
-		[addrxlat_pte_s390x] = "s390x",
-		[addrxlat_pte_ppc64_linux_rpn30] = "ppc64_linux_rpn30",
-	};
-
-	const addrxlat_def_t *def = addrxlat_meth_get_def(pgt);
-	const addrxlat_paging_form_t *pf = &def->param.pgt.pf;
-	unsigned i;
-
-	fputs("pte_format: ", stdout);
-	if (pf->pte_format < ARRAY_SIZE(pte_formats) &&
-	    pte_formats[pf->pte_format])
-		printf("%s\n", pte_formats[pf->pte_format]);
-	else
-		printf("%u\n", pf->pte_format);
-	printf("bits:");
-	for (i = 0; i < pf->levels; ++i)
-		printf(" %u", pf->bits[i]);
-	putchar('\n');
 }
 
 static void
@@ -505,7 +505,6 @@ os_map(void)
 
 	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_PGT);
 	add_symbol(meth, "rootpgt");
-	print_pgt(meth);
 
 	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_UPGT);
 	add_symbol(meth, "userpgt");

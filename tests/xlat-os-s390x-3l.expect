@@ -1,4 +1,4 @@
-pte_format: s390x
-bits: 12 8 11 11
 0-3ffffffffff: PGT @rootpgt
+  pte_format: s390x
+  bits: 12 8 11 11
 40000000000-ffffffffffffffff: NONE

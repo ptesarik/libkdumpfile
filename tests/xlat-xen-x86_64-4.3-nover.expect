@@ -1,9 +1,15 @@
-pte_format: x86_64
-bits: 12 9 9 9 9
 0-7fffffffffff: PGT @rootpgt
+  pte_format: x86_64
+  bits: 12 9 9 9 9
 800000000000-ffff7fffffffffff: NONE
 ffff800000000000-ffff82c4bfffffff: PGT @rootpgt
+  pte_format: x86_64
+  bits: 12 9 9 9 9
 ffff82c4c0000000-ffff82c4ffffffff: LINEAR @ktext off=0xffff82c3c0600000
 ffff82c500000000-ffff82ffffffffff: PGT @rootpgt
+  pte_format: x86_64
+  bits: 12 9 9 9 9
 ffff830000000000-ffff87ffffffffff: LINEAR @direct off=0xffff830000000000
 ffff880000000000-ffffffffffffffff: PGT @rootpgt
+  pte_format: x86_64
+  bits: 12 9 9 9 9

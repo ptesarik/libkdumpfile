@@ -1,9 +1,11 @@
-pte_format: ppc64_linux_rpn30
-bits: 16 12 12 4
 0-fffffffffff: PGT @userpgt
+  pte_format: ppc64_linux_rpn30
+  bits: 16 12 12 4
 100000000000-bfffffffffffffff: NONE
 c000000000000000-cfffffffffffffff: LINEAR @direct off=0xc000000000000000
 d000000000000000-d0000fffffffffff: PGT @rootpgt
+  pte_format: ppc64_linux_rpn30
+  bits: 16 12 12 4
 d000100000000000-efffffffffffffff: NONE
 f000000000000000-ffffffffffffffff: LOOKUP @vmemmap
   f000000000000000 -> fe0000
