@@ -141,33 +141,6 @@ typedef struct _addrxlat_fulladdr {
 	addrxlat_addrspace_t as; /**< Address space for @c addr. */
 } addrxlat_fulladdr_t;
 
-/** Page table entry format.
- */
-typedef enum _addrxlat_pte_format {
-	addrxlat_pte_none,	/**< Undefined */
-	addrxlat_pte_ia32,	/**< Original 32-bit Intel */
-	addrxlat_pte_ia32_pae,	/**< Intel IA32 with PAE */
-	addrxlat_pte_x86_64,	/**< AMD64 (Intel 64)  */
-	addrxlat_pte_s390x,	/**< IBM z/Architecture (64-bit) */
-
-	/** IBM POWER (64-bit) running Linux with RPN shift 30 (64k pages) */
-	addrxlat_pte_ppc64_linux_rpn30,
-} addrxlat_pte_format_t;
-
-/** Maximum address translation levels.
- * This is a theoretical limit, with enough reserve for future enhancements.
- * Currently, IBM z/Architecture has up to 5 levels, but only 4 are used
- * by the Linux kernel. All other architectures have less paging levels.
- */
-#define ADDRXLAT_MAXLEVELS	8
-
-typedef struct _addrxlat_paging_form {
-	addrxlat_pte_format_t pte_format;
-
-	unsigned short levels;
-	unsigned short bits[ADDRXLAT_MAXLEVELS];
-} addrxlat_paging_form_t;
-
 /** Address translation method. */
 typedef struct _addrxlat_meth addrxlat_meth_t;
 
@@ -217,6 +190,44 @@ unsigned long addrxlat_meth_decref(addrxlat_meth_t *meth);
 typedef struct _addrxlat_def_linear {
 	addrxlat_off_t off;	/**< Address offset. */
 } addrxlat_def_linear_t;
+
+/** Page table entry format.
+ */
+typedef enum _addrxlat_pte_format {
+	addrxlat_pte_none,	/**< Undefined */
+	addrxlat_pte_ia32,	/**< Original 32-bit Intel */
+	addrxlat_pte_ia32_pae,	/**< Intel IA32 with PAE */
+	addrxlat_pte_x86_64,	/**< AMD64 (Intel 64)  */
+	addrxlat_pte_s390x,	/**< IBM z/Architecture (64-bit) */
+
+	/** IBM POWER (64-bit) running Linux with RPN shift 30 (64k pages) */
+	addrxlat_pte_ppc64_linux_rpn30,
+} addrxlat_pte_format_t;
+
+/** Maximum address translation levels.
+ * This is a theoretical limit, with enough reserve for future enhancements.
+ * Currently, IBM z/Architecture has up to 5 levels, but only 4 are used
+ * by the Linux kernel. All other architectures have less paging levels.
+ */
+#define ADDRXLAT_MAXLEVELS	8
+
+typedef struct _addrxlat_paging_form {
+	/** Format of each page table entry. */
+	addrxlat_pte_format_t pte_format;
+
+	/** Number of paging levels.
+	 * Note that this is one higher than the number of page tables,
+	 * because adding the offset within a page is also counted as
+	 * one level here.
+	 */
+	unsigned short levels;
+
+	/** Number of bits in each source address part.
+	 * This array is sorted from lowest-level tables to the top level;
+	 * the first element corresponds to page size.
+	 */
+	unsigned short bits[ADDRXLAT_MAXLEVELS];
+} addrxlat_paging_form_t;
 
 /** Parameters of page table translation. */
 typedef struct _addrxlat_def_pgt {
