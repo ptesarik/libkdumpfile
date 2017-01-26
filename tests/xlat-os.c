@@ -482,6 +482,7 @@ os_map(void)
 			return TEST_ERR;
 		}
 		def.kind = ADDRXLAT_PGT;
+		def.target_as = ADDRXLAT_MACHPHYSADDR;
 		def.param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
 		def.param.pgt.root.addr = rootpgt;
 		def.param.pgt.pf.pte_format = addrxlat_pte_none;

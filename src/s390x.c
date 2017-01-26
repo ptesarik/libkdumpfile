@@ -141,6 +141,7 @@ determine_pgttype(kdump_ctx *ctx, kdump_vaddr_t pgtroot)
 			archdata->pgttype = PTE_TT(entry);
 
 			def.kind = ADDRXLAT_PGT;
+			def.target_as = ADDRXLAT_MACHPHYSADDR;
 			def.param.pgt.pf = pf;
 			def.param.pgt.pf.levels = archdata->pgttype + 3;
 			def.param.pgt.root.as = ADDRXLAT_KPHYSADDR;
@@ -368,6 +369,7 @@ s390x_init(kdump_ctx *ctx)
 		goto err_arch;
 	}
 	def.kind = ADDRXLAT_LINEAR;
+	def.target_as = ADDRXLAT_KPHYSADDR;
 	def.param.linear.off = 0;
 	addrxlat_meth_set_def(archdata->directmap, &def);
 

@@ -390,6 +390,7 @@ set_ktext_off(struct x86_64_data *archdata, kdump_addr_t phys_base)
 	addrxlat_def_t def;
 
 	def.kind = ADDRXLAT_LINEAR;
+	def.target_as = ADDRXLAT_KPHYSADDR;
 	def.param.linear.off = __START_KERNEL_map - phys_base;
 	addrxlat_meth_set_def(archdata->ktext, &def);
 }
@@ -431,6 +432,7 @@ x86_64_init(kdump_ctx *ctx)
 	kdump_status ret;
 
 	def.kind = ADDRXLAT_PGT;
+	def.target_as = ADDRXLAT_MACHPHYSADDR;
 	def.param.pgt.root.as = ADDRXLAT_NONE;
 	def.param.pgt.pf = x86_64_pf;
 	axres = addrxlat_meth_set_def(ctx->shared->vtop_map.pgt, &def);
@@ -507,6 +509,7 @@ get_pml4(kdump_ctx *ctx)
 		return ret;
 
 	def.kind = ADDRXLAT_PGT;
+	def.target_as = ADDRXLAT_MACHPHYSADDR;
 	def.param.pgt.pf = x86_64_pf;
 	addrxlat_meth_set_def(ctx->shared->vtop_map.pgt, &def);
 	return kdump_ok;
@@ -616,6 +619,7 @@ x86_64_vtop_init(kdump_ctx *ctx)
 		case DIRECTMAP:
 			xlat = archdata->directmap;
 			axdef.kind = ADDRXLAT_LINEAR;
+			axdef.target_as = ADDRXLAT_KPHYSADDR;
 			axdef.param.linear.off = def->first;
 			addrxlat_meth_set_def(archdata->directmap, &axdef);
 			break;
@@ -658,6 +662,7 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 	kdump_status res;
 
 	def.kind = ADDRXLAT_PGT;
+	def.target_as = ADDRXLAT_MACHPHYSADDR;
 	def.param.pgt.root.as = ADDRXLAT_NONE;
 	def.param.pgt.pf = x86_64_pf;
 	axres = addrxlat_meth_set_def(ctx->shared->vtop_map_xen.pgt, &def);
@@ -683,6 +688,7 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 	if (pgtroot >= XEN_DIRECTMAP_START) {
 		/* Xen versions before 3.2.0 */
 		def.kind = ADDRXLAT_LINEAR;
+		def.target_as = ADDRXLAT_MACHPHYSADDR;
 		def.param.linear.off = XEN_DIRECTMAP_START;
 		addrxlat_meth_set_def(archdata->xen_directmap, &def);
 		res = set_vtop_xlat(
@@ -691,6 +697,7 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 			archdata->xen_directmap);
 	} else {
 		def.kind = ADDRXLAT_LINEAR;
+		def.target_as = ADDRXLAT_MACHPHYSADDR;
 		def.param.linear.off = pgtroot & ~((1ULL<<30) - 1);
 		addrxlat_meth_set_def(archdata->xen_directmap, &def);
 		res = set_vtop_xlat(
@@ -704,6 +711,7 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 				 "Cannot set up initial kernel mapping");
 
 	def.kind = ADDRXLAT_PGT;
+	def.target_as = ADDRXLAT_MACHPHYSADDR;
 	def.param.pgt.root.as = ADDRXLAT_XENVADDR;
 	def.param.pgt.root.addr = pgtroot;
 	addrxlat_meth_set_def(ctx->shared->vtop_map_xen.pgt, &def);

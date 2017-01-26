@@ -153,6 +153,7 @@ direct_hook(struct sys_init_data *ctl, const struct sys_region *region)
 {
 	addrxlat_def_t def;
 	def.kind = ADDRXLAT_LINEAR;
+	def.target_as = ADDRXLAT_KPHYSADDR;
 	def.param.linear.off = region->first;
 	internal_meth_set_def(ctl->sys->meth[region->meth], &def);
 }

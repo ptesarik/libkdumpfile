@@ -85,7 +85,6 @@ pgt_s390x(addrxlat_walk_t *state)
 				 (unsigned) PTE_TT(state->raw_pte),
 				 pgt_full_name[state->level]);
 
-	state->base.as = ADDRXLAT_MACHPHYSADDR;
 	state->base.addr = state->raw_pte;
 
 	if (state->level >= 2 && state->level <= 3 &&
@@ -172,6 +171,7 @@ determine_pgttype(struct sys_init_data *ctl)
 			};
 
 			def.kind = ADDRXLAT_PGT;
+			def.target_as = ADDRXLAT_MACHPHYSADDR;
 			def.param.pgt.pf = pf;
 			def.param.pgt.pf.levels = PTE_TT(entry) + 3;
 			return internal_meth_set_def(pgtmeth, &def);

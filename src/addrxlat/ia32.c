@@ -79,7 +79,6 @@ pgt_ia32(addrxlat_walk_t *state)
 				 (unsigned) state->idx[state->level],
 				 state->raw_pte);
 
-	state->base.as = ADDRXLAT_MACHPHYSADDR;
 	if (state->level == 2 && (state->raw_pte & _PAGE_PSE)) {
 		--state->level;
 		state->base.addr = (state->raw_pte & pgt->pgt_mask[1]) |
@@ -119,7 +118,6 @@ pgt_ia32_pae(addrxlat_walk_t *state)
 				 (unsigned) state->idx[state->level],
 				 state->raw_pte);
 
-	state->base.as = ADDRXLAT_MACHPHYSADDR;
 	state->base.addr = state->raw_pte & ~PHYSADDR_MASK_PAE;
 	if (state->level == 2 && (state->raw_pte & _PAGE_PSE)) {
 		--state->level;
@@ -165,6 +163,7 @@ is_pae(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *root,
 	addrxlat_status status;
 
 	def.kind = ADDRXLAT_PGT;
+	def.target_as = ADDRXLAT_MACHPHYSADDR;
 	def.param.pgt.root = *root;
 
 	def.param.pgt.pf = ia32_pf_pae;
@@ -196,6 +195,7 @@ sys_ia32_nonpae(struct sys_init_data *ctl)
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	def.kind = ADDRXLAT_PGT;
+	def.target_as = ADDRXLAT_MACHPHYSADDR;
 	def.param.pgt.pf = ia32_pf;
 	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);
@@ -214,6 +214,7 @@ sys_ia32_pae(struct sys_init_data *ctl)
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	def.kind = ADDRXLAT_PGT;
+	def.target_as = ADDRXLAT_MACHPHYSADDR;
 	def.param.pgt.pf = ia32_pf_pae;
 	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);

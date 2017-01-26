@@ -132,6 +132,7 @@ ppc64_vtop_init(kdump_ctx *ctx)
 		return set_error(ctx, res, "Cannot resolve %s",
 				 "swapper_pg_dir");
 	def.kind = ADDRXLAT_PGT;
+	def.target_as = ADDRXLAT_MACHPHYSADDR;
 	def.param.pgt.root.as = ADDRXLAT_KVADDR;
 	def.param.pgt.pf = ppc64_pf_64k;
 	addrxlat_meth_set_def(ctx->shared->vtop_map.pgt, &def);
@@ -153,6 +154,7 @@ ppc64_vtop_init(kdump_ctx *ctx)
 		goto err_arch;
 	}
 	def.kind = ADDRXLAT_LINEAR;
+	def.target_as = ADDRXLAT_KPHYSADDR;
 	def.param.linear.off = addr;
 	axres = addrxlat_meth_set_def(archdata->directmap, &def);
 	if (axres != addrxlat_ok)

@@ -171,7 +171,6 @@ huge_page_linux(addrxlat_walk_t *state, unsigned rpn_shift)
 {
 	const addrxlat_paging_form_t *pf = &state->meth->def.param.pgt.pf;
 
-	state->base.as = ADDRXLAT_MACHPHYSADDR;
 	state->base.addr = (state->raw_pte >> rpn_shift) << pf->bits[0];
 	return pgt_huge_page(state);
 }
@@ -212,11 +211,9 @@ pgt_ppc64_linux(addrxlat_walk_t *state, unsigned rpn_shift)
 			      pf->bits[state->level - 1]);
 		state->base.as = ADDRXLAT_KVADDR;
 		state->base.addr = state->raw_pte & ~(table_size - 1);
-	} else {
-		state->base.as = ADDRXLAT_MACHPHYSADDR;
-		state->base.addr = (state->raw_pte >>
-				    rpn_shift) << pf->bits[0];
-	}
+	} else
+		state->base.addr =
+			(state->raw_pte >> rpn_shift) << pf->bits[0];
 
 	return addrxlat_continue;
 }
@@ -362,6 +359,7 @@ map_linux_ppc64(struct sys_init_data *ctl)
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	def.kind = ADDRXLAT_PGT;
+	def.target_as = ADDRXLAT_MACHPHYSADDR;
 	def.param.pgt.pf = ppc64_pf_64k;
 	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);

@@ -347,16 +347,20 @@ main(int argc, char **argv)
 	def = NULL;
 
 	pgt.kind = ADDRXLAT_PGT;
+	pgt.target_as = ADDRXLAT_MACHPHYSADDR;
 	pgt.param.pgt.root.as = ADDRXLAT_NONE;
 	pgt.param.pgt.root.addr = 0;
 
 	linear.kind = ADDRXLAT_LINEAR;
+	linear.target_as = ADDRXLAT_MACHPHYSADDR;
 	linear.param.linear.off = 0;
 
 	lookup.kind = ADDRXLAT_LOOKUP;
+	lookup.target_as = ADDRXLAT_MACHPHYSADDR;
 	lookup.param.lookup.endoff = 0;
 
 	memarr.kind = ADDRXLAT_MEMARR;
+	memarr.target_as = ADDRXLAT_MACHPHYSADDR;
 	memarr.param.memarr.base.as = ADDRXLAT_NOADDR;
 
 	while ((opt = getopt_long(argc, argv, "he:f:l:m:pr:t:",

@@ -286,6 +286,9 @@ typedef struct _addrxlat_def {
 	/** Kind of translation method. */
 	addrxlat_kind_t kind;
 
+	/** Target address space. */
+	addrxlat_addrspace_t target_as;
+
 	/** Additional parameters. */
 	addrxlat_def_param_t param;
 } addrxlat_def_t;

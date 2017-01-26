@@ -185,7 +185,6 @@ pgt_x86_64(addrxlat_walk_t *state)
 				 (unsigned) state->idx[state->level],
 				 state->raw_pte);
 
-	state->base.as = ADDRXLAT_MACHPHYSADDR;
 	state->base.addr = state->raw_pte & ~PHYSADDR_MASK;
 	if (state->level >= 2 && state->level <= 3 &&
 	    (state->raw_pte & _PAGE_PSE)) {
@@ -673,6 +672,7 @@ sys_x86_64(struct sys_init_data *ctl)
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	def.kind = ADDRXLAT_PGT;
+	def.target_as = ADDRXLAT_MACHPHYSADDR;
 	def.param.pgt.pf = x86_64_pf;
 	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);

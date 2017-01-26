@@ -96,7 +96,7 @@ addrxlat_walk_next(addrxlat_walk_t *state)
 
 	--state->level;
 	if (!state->level) {
-		state->base.as = ADDRXLAT_KPHYSADDR;
+		state->base.as = meth->def.target_as;
 		state->base.addr += state->idx[0];
 		return addrxlat_ok;
 	}
@@ -105,6 +105,7 @@ addrxlat_walk_next(addrxlat_walk_t *state)
 	if (status != addrxlat_ok)
 		return status;
 
+	state->base.as = meth->def.target_as;
 	return meth->walk_step(state);
 }
 

@@ -140,6 +140,7 @@ ia32_init(kdump_ctx *ctx)
 		goto err_arch;
 	}
 	def.kind = ADDRXLAT_LINEAR;
+	def.target_as = ADDRXLAT_KPHYSADDR;
 	def.param.linear.off = __START_KERNEL_map;
 	addrxlat_meth_set_def(archdata->directmap, &def);
 
@@ -205,6 +206,9 @@ read_pgt(kdump_ctx *ctx)
 	addrxlat_def_t def;
 	addrxlat_status axres;
 	kdump_status ret;
+
+	def.kind = ADDRXLAT_PGT;
+	def.target_as = ADDRXLAT_MACHPHYSADDR;
 
 	rwlock_unlock(&ctx->shared->lock);
 	ret = get_symbol_val(ctx, "swapper_pg_dir", &def.param.pgt.root.addr);
