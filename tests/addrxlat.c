@@ -136,6 +136,10 @@ set_paging_form(addrxlat_paging_form_t *pf, const char *spec)
 
 	if (!strncasecmp(spec, "none:", endp - spec + 1))
 		pf->pte_format = addrxlat_pte_none;
+	else if (!strncasecmp(spec, "pfn32:", endp - spec + 1))
+		pf->pte_format = addrxlat_pte_pfn32;
+	else if (!strncasecmp(spec, "pfn64:", endp - spec + 1))
+		pf->pte_format = addrxlat_pte_pfn64;
 	else if (!strncasecmp(spec, "ia32:", endp - spec + 1))
 		pf->pte_format = addrxlat_pte_ia32;
 	else if (!strncasecmp(spec, "ia32_pae:", endp - spec + 1))

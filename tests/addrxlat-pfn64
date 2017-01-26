@@ -1,0 +1,19 @@
+#! /bin/sh
+
+#
+# Check simple VTOP translation with 64-bit page frame numbers.
+#
+
+pf="pfn64:12,8,8"
+
+ptes="-e 0x0000:0x1"
+ptes="$ptes -e 0x0008:0x2"
+ptes="$ptes -e 0x1000:0xa"
+ptes="$ptes -e 0x1008:0xb"
+ptes="$ptes -e 0x2000:0xc"
+
+list="0x123:0xa123"		# top 0 -> idx 0
+list="$list 0x1234:0xb234"	# top 0 -> idx 1
+list="$list 0x100567:0xc567"	# top 1 -> idx 0
+
+. "$srcdir"/addrxlat-common

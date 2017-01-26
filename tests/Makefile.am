@@ -111,6 +111,8 @@ test_scripts = \
 	addrmap-overlap-end \
 	addrmap-reduce \
 	addrxlat-identity \
+	addrxlat-pfn32 \
+	addrxlat-pfn64 \
 	addrxlat-ia32 \
 	addrxlat-ia32-pae \
 	addrxlat-ppc64-64k \
@@ -119,6 +121,8 @@ test_scripts = \
 	addrxlat-s390x-4l \
 	addrxlat-s390x-5l \
 	addrxlat-x86_64 \
+	addrxlat-invalid-pfn32 \
+	addrxlat-invalid-pfn64 \
 	addrxlat-invalid-ia32 \
 	addrxlat-invalid-ia32-pae \
 	addrxlat-invalid-s390x-2l \

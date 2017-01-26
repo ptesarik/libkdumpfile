@@ -195,6 +195,8 @@ typedef struct _addrxlat_def_linear {
  */
 typedef enum _addrxlat_pte_format {
 	addrxlat_pte_none,	/**< Undefined */
+	addrxlat_pte_pfn32,	/**< 32-bit page frame number */
+	addrxlat_pte_pfn64,	/**< 64-bit page frame number */
 	addrxlat_pte_ia32,	/**< Original 32-bit Intel */
 	addrxlat_pte_ia32_pae,	/**< Intel IA32 with PAE */
 	addrxlat_pte_x86_64,	/**< AMD64 (Intel 64)  */

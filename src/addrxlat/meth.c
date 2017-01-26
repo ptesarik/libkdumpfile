@@ -237,6 +237,21 @@ walk_init_saddr(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 	return walk_check_saddr(walk);
 }
 
+/** Page frame number walk function.
+ * @param walk  Page table walk state.
+ * @returns     Error status.
+ *
+ * This function handles page frame numbers in a table.
+ */
+static addrxlat_status
+step_pfn(addrxlat_walk_t *state)
+{
+	state->base.addr =
+		state->raw_pte << state->meth->def.param.pgt.pf.bits[0];
+
+	return addrxlat_continue;
+}
+
 struct pte_def {
 	addrxlat_walk_init_fn *init;
 	addrxlat_walk_step_fn *step;
@@ -253,6 +268,8 @@ setup_pgt(addrxlat_meth_t *meth, const addrxlat_def_t *def)
 {
 	static const struct pte_def formats[] = {
 		[addrxlat_pte_none] = { walk_init_pgt, step_none, 0 },
+		[addrxlat_pte_pfn32] = { walk_init_uaddr, step_pfn, 2 },
+		[addrxlat_pte_pfn64] = { walk_init_uaddr, step_pfn, 3 },
 		[addrxlat_pte_ia32] = { walk_init_uaddr, pgt_ia32, 2 },
 		[addrxlat_pte_ia32_pae] = { walk_init_uaddr, pgt_ia32_pae, 3 },
 		[addrxlat_pte_x86_64] = { walk_init_saddr, pgt_x86_64, 3 },

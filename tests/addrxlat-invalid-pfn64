@@ -1,0 +1,12 @@
+#! /bin/sh
+
+#
+# Check invalid PFN64 VTOP translation.
+#
+
+pf="pfn64:12,8,8"
+ptes="-e 0x118:0x1"
+ptes="$ptes -e 0x1228:0xa"
+list="0x12345678"
+
+. "$srcdir"/addrxlat-invalid
