@@ -139,7 +139,7 @@ setup_linear(addrxlat_meth_t *meth)
  * @param addr  Address to be translated.
  * @returns     Always returns success (@c addrxlat_continue)
  */
-addrxlat_status
+static addrxlat_status
 walk_init_pgt(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 {
 	const addrxlat_def_pgt_t *pgt = &walk->meth->def.param.pgt;
@@ -171,7 +171,7 @@ walk_init_pgt(addrxlat_walk_t *walk, addrxlat_addr_t addr)
  * It checks whether the input address is too big when interpreted
  * as an unsigned integer.
  */
-addrxlat_status
+static addrxlat_status
 walk_check_uaddr(addrxlat_walk_t *walk)
 {
 	return walk->idx[walk->meth->def.param.pgt.pf.levels]
@@ -185,7 +185,7 @@ walk_check_uaddr(addrxlat_walk_t *walk)
  * @param addr  Address to be translated.
  * @returns     Error status.
  */
-addrxlat_status
+static addrxlat_status
 walk_init_uaddr(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 {
 	addrxlat_status status;
@@ -203,7 +203,7 @@ walk_init_uaddr(addrxlat_walk_t *walk, addrxlat_addr_t addr)
  * It checks whether the input address is too big when interpreted
  * as a signed integer.
  */
-addrxlat_status
+static addrxlat_status
 walk_check_saddr(addrxlat_walk_t *walk)
 {
 	const addrxlat_paging_form_t *pf = &walk->meth->def.param.pgt.pf;
@@ -227,7 +227,7 @@ walk_check_saddr(addrxlat_walk_t *walk)
  * @param addr  Address to be translated.
  * @returns     Error status.
  */
-addrxlat_status
+static addrxlat_status
 walk_init_saddr(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 {
 	addrxlat_status status;
