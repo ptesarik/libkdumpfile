@@ -378,7 +378,7 @@ map_linux_ppc64(struct sys_init_data *ctl)
 		internal_meth_set_def(meth, &def);
 	}
 
-	return addrxlat_ok;
+	return sys_set_physmaps(ctl, (1ULL << (64 - 30 + 16)) - 1);
 }
 
 /** Initialize a translation map for a 64-bit IBM POWER OS.

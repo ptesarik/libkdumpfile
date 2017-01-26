@@ -741,6 +741,14 @@ typedef enum _addrxlat_sys_map {
 	 */
 	ADDRXLAT_SYS_MAP_KV_PHYS,
 
+	/** Map machine physical addresses to kernel physical addresses.
+	 */
+	ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS,
+
+	/** Map kernel physical addresses to machine physical addresses.
+	 */
+	ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS,
+
 	ADDRXLAT_SYS_MAP_NUM,	/**< Total number of indices. */
 } addrxlat_sys_map_t;
 
@@ -774,6 +782,12 @@ typedef enum _addrxlat_sys_meth {
 	ADDRXLAT_SYS_METH_DIRECT,  /**< Direct mapping. */
 	ADDRXLAT_SYS_METH_KTEXT,   /**< Kernel text mapping. */
 	ADDRXLAT_SYS_METH_VMEMMAP, /**< Fixed VMEMMAP (on IBM POWER). */
+
+	/** Default machine physical to kernel physical mapping. */
+	ADDRXLAT_SYS_METH_MACHPHYS_KPHYS,
+
+	/**< Default kernel physical to machine physical mapping. */
+	ADDRXLAT_SYS_METH_KPHYS_MACHPHYS,
 
 	ADDRXLAT_SYS_METH_NUM,	   /**< Total number of indices. */
 } addrxlat_sys_meth_t;

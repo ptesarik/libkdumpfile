@@ -518,7 +518,28 @@ os_map(void)
 	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_VMEMMAP);
 	add_symbol(meth, "vmemmap");
 
+	meth = addrxlat_sys_get_xlat(data.sys,
+				     ADDRXLAT_SYS_METH_MACHPHYS_KPHYS);
+	add_symbol(meth, "machphys_kphys");
+
+	meth = addrxlat_sys_get_xlat(data.sys,
+				     ADDRXLAT_SYS_METH_KPHYS_MACHPHYS);
+	add_symbol(meth, "kphys_machphys");
+
+	puts("KV -> PHYS:");
 	print_map(addrxlat_sys_get_map(data.sys, ADDRXLAT_SYS_MAP_KV_PHYS));
+
+	putchar('\n');
+
+	puts("MACHPHYS -> KPHYS:");
+	print_map(addrxlat_sys_get_map(data.sys,
+				       ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS));
+
+	putchar('\n');
+
+	puts("KPHYS -> MACHPHYS:");
+	print_map(addrxlat_sys_get_map(data.sys,
+				       ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS));
 
 	addrxlat_sys_decref(data.sys);
 	addrxlat_ctx_decref(data.ctx);

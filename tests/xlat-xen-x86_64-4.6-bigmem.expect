@@ -1,3 +1,4 @@
+KV -> PHYS:
 0-7fffffffffff: PGT @rootpgt
   pte_format: x86_64
   bits: 12 9 9 9 9
@@ -13,3 +14,11 @@ ffff848000000000-ffff87ffffffffff: LINEAR @direct off=0xffff848000000000
 ffff880000000000-ffffffffffffffff: PGT @rootpgt
   pte_format: x86_64
   bits: 12 9 9 9 9
+
+MACHPHYS -> KPHYS:
+0-fffffffffffff: LINEAR @machphys_kphys off=0x0
+10000000000000-ffffffffffffffff: NONE
+
+KPHYS -> MACHPHYS:
+0-fffffffffffff: LINEAR @kphys_machphys off=0x0
+10000000000000-ffffffffffffffff: NONE

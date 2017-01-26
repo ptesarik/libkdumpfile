@@ -658,6 +658,10 @@ sys_x86_64(struct sys_init_data *ctl)
 	if (status != addrxlat_ok)
 		return status;
 
+	status = sys_set_physmaps(ctl, PHYSADDR_SIZE - 1);
+	if (status != addrxlat_ok)
+		return status;
+
 	switch (ctl->osdesc->type) {
 	case addrxlat_os_linux:
 		return map_linux_x86_64(ctl);

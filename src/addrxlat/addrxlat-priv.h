@@ -237,6 +237,8 @@ sys_arch_fn sys_x86_64;
 enum sys_action {
 	SYS_ACT_NONE,
 	SYS_ACT_DIRECT,
+	SYS_ACT_IDENT_KPHYS,
+	SYS_ACT_IDENT_MACHPHYS,
 };
 
 /** Single OS-map region definition. */
@@ -260,6 +262,10 @@ typedef void sys_action_fn(
 addrxlat_status sys_set_layout(
 	struct sys_init_data *ctl, addrxlat_sys_map_t idx,
 	const struct sys_region layout[]);
+
+#define sys_set_physmaps INTERNAL_NAME(sys_set_physmaps)
+addrxlat_status
+sys_set_physmaps(struct sys_init_data *ctl, addrxlat_addr_t maxaddr);
 
 /* internal aliases */
 

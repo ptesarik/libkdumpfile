@@ -39,7 +39,12 @@
 #define pgd_pse_high(pgd)	\
 	((((pgd) >> PGD_PSE_HIGH_SHIFT) & PGD_PSE_HIGH_MASK) << 32)
 
-/* Maximum physical address bits (architectural limit) */
+/* Non-PAE maximum physical address bits (architectural limit) */
+#define PHYSADDR_BITS_MAX_NONPAE	32
+#define PHYSADDR_SIZE_NONPAE	((uint64_t)1 << PHYSADDR_BITS_MAX_NONPAE)
+#define PHYSADDR_MASK_NONPAE	(~(PHYSADDR_SIZE_NONPAE-1))
+
+/* PAE maximum physical address bits (architectural limit) */
 #define PHYSADDR_BITS_MAX_PAE	52
 #define PHYSADDR_SIZE_PAE	((uint64_t)1 << PHYSADDR_BITS_MAX_PAE)
 #define PHYSADDR_MASK_PAE	(~(PHYSADDR_SIZE_PAE-1))
@@ -192,6 +197,11 @@ sys_ia32_nonpae(struct sys_init_data *ctl)
 {
 	addrxlat_meth_t *meth;
 	addrxlat_def_t def;
+	addrxlat_status status;
+
+	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_NONPAE - 1);
+	if (status != addrxlat_ok)
+		return status;
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	def.kind = ADDRXLAT_PGT;
@@ -211,6 +221,11 @@ sys_ia32_pae(struct sys_init_data *ctl)
 {
 	addrxlat_meth_t *meth;
 	addrxlat_def_t def;
+	addrxlat_status status;
+
+	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_PAE - 1);
+	if (status != addrxlat_ok)
+		return status;
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	def.kind = ADDRXLAT_PGT;

@@ -1,4 +1,11 @@
+KV -> PHYS:
 0-3ffffffffff: PGT @rootpgt
   pte_format: s390x
   bits: 12 8 11 11
 40000000000-ffffffffffffffff: NONE
+
+MACHPHYS -> KPHYS:
+0-ffffffffffffffff: LINEAR @machphys_kphys off=0x0
+
+KPHYS -> MACHPHYS:
+0-ffffffffffffffff: LINEAR @kphys_machphys off=0x0

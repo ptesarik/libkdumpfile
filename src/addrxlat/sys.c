@@ -147,6 +147,9 @@ addrxlat_sys_get_xlat(addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
 
 /** Action function for @ref SYS_ACT_DIRECT.
  * @param ctl  Initialization data.
+ *
+ * This action sets up the direct mapping as a linear mapping that
+ * maps the current region to kernel physical addresses starting at 0.
  */
 static void
 direct_hook(struct sys_init_data *ctl, const struct sys_region *region)
@@ -156,6 +159,48 @@ direct_hook(struct sys_init_data *ctl, const struct sys_region *region)
 	def.target_as = ADDRXLAT_KPHYSADDR;
 	def.param.linear.off = region->first;
 	internal_meth_set_def(ctl->sys->meth[region->meth], &def);
+}
+
+/** Action function for @ref SYS_ACT_IDENT_KPHYS.
+ * @param ctl  Initialization data.
+ *
+ * If the current method is @c ADDRXLAT_NONE, this action sets it up
+ * as identity mapping to kernel physical addresses.
+ * If the current method is not @c ADDRXLAT_NONE, nothing is done.
+ */
+static void
+ident_kphys_hook(struct sys_init_data *ctl, const struct sys_region *region)
+{
+	addrxlat_meth_t *meth = ctl->sys->meth[region->meth];
+	addrxlat_def_t def;
+
+	if (meth->def.kind == ADDRXLAT_NONE) {
+		def.kind = ADDRXLAT_LINEAR;
+		def.target_as = ADDRXLAT_KPHYSADDR;
+		def.param.linear.off = 0;
+		internal_meth_set_def(meth, &def);
+	}
+}
+
+/** Action function for @ref SYS_ACT_IDENT_MACHPHYS.
+ * @param ctl  Initialization data.
+ *
+ * If the current method is @c ADDRXLAT_NONE, this action sets it up
+ * as identity mapping to machine physical addresses.
+ * If the current method is not @c ADDRXLAT_NONE, nothing is done.
+ */
+static void
+ident_machphys_hook(struct sys_init_data *ctl, const struct sys_region *region)
+{
+	addrxlat_meth_t *meth = ctl->sys->meth[region->meth];
+	addrxlat_def_t def;
+
+	if (meth->def.kind == ADDRXLAT_NONE) {
+		def.kind = ADDRXLAT_LINEAR;
+		def.target_as = ADDRXLAT_MACHPHYSADDR;
+		def.param.linear.off = 0;
+		internal_meth_set_def(meth, &def);
+	}
 }
 
 /** Set memory map layout.
@@ -170,6 +215,8 @@ sys_set_layout(struct sys_init_data *ctl, addrxlat_sys_map_t idx,
 {
 	static sys_action_fn *const actions[] = {
 		[SYS_ACT_DIRECT] = direct_hook,
+		[SYS_ACT_IDENT_KPHYS] = ident_kphys_hook,
+		[SYS_ACT_IDENT_MACHPHYS] = ident_machphys_hook,
 	};
 
 	const struct sys_region *region;
@@ -205,4 +252,30 @@ sys_set_layout(struct sys_init_data *ctl, addrxlat_sys_map_t idx,
 	}
 
 	return addrxlat_ok;
+}
+
+/** Set default (identity) physical mappings.
+ * @param ctl     Initialization data.
+ * @param maxaddr Maximum physical address.
+ * @returns       Error status.
+ */
+addrxlat_status
+sys_set_physmaps(struct sys_init_data *ctl, addrxlat_addr_t maxaddr)
+{
+	struct sys_region layout[2];
+	addrxlat_status status;
+
+	layout[1].meth = ADDRXLAT_SYS_METH_NUM;
+	layout[0].first = 0;
+	layout[0].last = maxaddr;
+
+	layout[0].meth = ADDRXLAT_SYS_METH_MACHPHYS_KPHYS;
+	layout[0].act = SYS_ACT_IDENT_KPHYS;
+	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS, layout);
+	if (status != addrxlat_ok)
+		return status;
+
+	layout[0].meth = ADDRXLAT_SYS_METH_KPHYS_MACHPHYS;
+	layout[0].act = SYS_ACT_IDENT_MACHPHYS;
+	return sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS, layout);
 }

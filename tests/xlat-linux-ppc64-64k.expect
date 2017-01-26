@@ -1,3 +1,4 @@
+KV -> PHYS:
 0-fffffffffff: PGT @userpgt
   pte_format: ppc64_linux_rpn30
   bits: 16 12 12 4
@@ -10,3 +11,11 @@ d000100000000000-efffffffffffffff: NONE
 f000000000000000-ffffffffffffffff: LOOKUP @vmemmap
   f000000000000000 -> fe0000
   f000000000010000 -> fd0000
+
+MACHPHYS -> KPHYS:
+0-3ffffffffffff: LINEAR @machphys_kphys off=0x0
+4000000000000-ffffffffffffffff: NONE
+
+KPHYS -> MACHPHYS:
+0-3ffffffffffff: LINEAR @kphys_machphys off=0x0
+4000000000000-ffffffffffffffff: NONE

@@ -1,4 +1,13 @@
+KV -> PHYS:
 0-ffffffff: PGT @rootpgt
   pte_format: ia32_pae
   bits: 12 9 9 2
 100000000-ffffffffffffffff: NONE
+
+MACHPHYS -> KPHYS:
+0-fffffffffffff: LINEAR @machphys_kphys off=0x0
+10000000000000-ffffffffffffffff: NONE
+
+KPHYS -> MACHPHYS:
+0-fffffffffffff: LINEAR @kphys_machphys off=0x0
+10000000000000-ffffffffffffffff: NONE
