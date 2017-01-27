@@ -64,28 +64,40 @@ struct optdesc {
 
 /** Define an option without repeating its name. */
 #define DEF(name, type)				\
-	{ OPT_ ## name, opt_ ## type, #name }
+	{ { OPT_ ## name, opt_ ## type }, #name }
 
 /** Option table terminator. */
 #define END					\
-	{ OPT_NUM }
+	{ { OPT_NUM } }
 
 /** Three-character options. */
-static const struct optdesc opt3[] = {
+static const struct {
+	struct optdesc opt;
+	char name[4];
+} opt3[] = {
 	DEF(pae, bool),
 	END
 };
 
 /** Eight-character options. */
-static const struct optdesc opt8[] = {
+static const struct {
+	struct optdesc opt;
+	char name[9];
+} opt8[] = {
 	DEF(pagesize, number),
 	DEF(physbase, number),
 	END
 };
 
-static const struct optdesc *const options[] = {
-	[3] = opt3,
-	[8] = opt8,
+#define DEFPTR(len)						\
+	[len] = { &opt ## len[0].opt, sizeof(opt ## len[0]) }
+
+static const struct {
+	const struct optdesc *opt;
+	size_t elemsz;
+} options[] = {
+	DEFPTR(3),
+	DEFPTR(8),
 };
 
 /** Parse a single option value.
@@ -160,14 +172,14 @@ parse_opt(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 	if (klen >= ARRAY_SIZE(options))
 		goto err;
 
-	opt = options[klen];
+	opt = options[klen].opt;
 	if (!opt)
 		goto err;
 
 	while (opt->idx != OPT_NUM) {
 		if (!strcasecmp(key, opt->name))
 			return parse_val(popt, ctx, opt, val);
-		opt = (void*)(opt + 1) + klen + 1;
+		opt = (void*)(opt) + options[klen].elemsz;
 	}
 
  err:
