@@ -251,13 +251,6 @@ struct sys_region {
 /** OS-map layout table end marker. */
 #define SYS_REGION_END	{ 0, 0, ADDRXLAT_SYS_METH_NUM }
 
-/** Type of the action function for @ref sys_set_layout.
- * @param ctl     Initialization data.
- * @param region  Associated region definition.
- */
-typedef void sys_action_fn(
-	struct sys_init_data *ctl, const struct sys_region *);
-
 #define sys_set_layout INTERNAL_NAME(sys_set_layout)
 addrxlat_status sys_set_layout(
 	struct sys_init_data *ctl, addrxlat_sys_map_t idx,

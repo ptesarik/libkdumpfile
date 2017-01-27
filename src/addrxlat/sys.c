@@ -146,32 +146,32 @@ addrxlat_sys_get_xlat(addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
 }
 
 /** Action function for @ref SYS_ACT_DIRECT.
- * @param ctl  Initialization data.
+ * @param meth    Current directmap translation method.
+ * @param region  Directmap region definition.
  *
  * This action sets up the direct mapping as a linear mapping that
  * maps the current region to kernel physical addresses starting at 0.
  */
 static void
-direct_hook(struct sys_init_data *ctl, const struct sys_region *region)
+act_direct(addrxlat_meth_t *meth, const struct sys_region *region)
 {
 	addrxlat_def_t def;
 	def.kind = ADDRXLAT_LINEAR;
 	def.target_as = ADDRXLAT_KPHYSADDR;
 	def.param.linear.off = region->first;
-	internal_meth_set_def(ctl->sys->meth[region->meth], &def);
+	internal_meth_set_def(meth, &def);
 }
 
 /** Action function for @ref SYS_ACT_IDENT_KPHYS.
- * @param ctl  Initialization data.
+ * @param meth  Current translation method.
  *
  * If the current method is @c ADDRXLAT_NONE, this action sets it up
  * as identity mapping to kernel physical addresses.
  * If the current method is not @c ADDRXLAT_NONE, nothing is done.
  */
 static void
-ident_kphys_hook(struct sys_init_data *ctl, const struct sys_region *region)
+act_ident_kphys(addrxlat_meth_t *meth)
 {
-	addrxlat_meth_t *meth = ctl->sys->meth[region->meth];
 	addrxlat_def_t def;
 
 	if (meth->def.kind == ADDRXLAT_NONE) {
@@ -183,16 +183,15 @@ ident_kphys_hook(struct sys_init_data *ctl, const struct sys_region *region)
 }
 
 /** Action function for @ref SYS_ACT_IDENT_MACHPHYS.
- * @param ctl  Initialization data.
+ * @param meth  Current translation method.
  *
  * If the current method is @c ADDRXLAT_NONE, this action sets it up
  * as identity mapping to machine physical addresses.
  * If the current method is not @c ADDRXLAT_NONE, nothing is done.
  */
 static void
-ident_machphys_hook(struct sys_init_data *ctl, const struct sys_region *region)
+act_ident_machphys(addrxlat_meth_t *meth)
 {
-	addrxlat_meth_t *meth = ctl->sys->meth[region->meth];
 	addrxlat_def_t def;
 
 	if (meth->def.kind == ADDRXLAT_NONE) {
@@ -213,12 +212,6 @@ addrxlat_status
 sys_set_layout(struct sys_init_data *ctl, addrxlat_sys_map_t idx,
 	       const struct sys_region layout[])
 {
-	static sys_action_fn *const actions[] = {
-		[SYS_ACT_DIRECT] = direct_hook,
-		[SYS_ACT_IDENT_KPHYS] = ident_kphys_hook,
-		[SYS_ACT_IDENT_MACHPHYS] = ident_machphys_hook,
-	};
-
 	const struct sys_region *region;
 	addrxlat_map_t *newmap;
 
@@ -228,17 +221,32 @@ sys_set_layout(struct sys_init_data *ctl, addrxlat_sys_map_t idx,
 
 		if (!ctl->sys->meth[region->meth])
 			ctl->sys->meth[region->meth] = internal_meth_new();
-		if (!ctl->sys->meth[region->meth])
+		range.meth = ctl->sys->meth[region->meth];
+		if (!range.meth)
 			return set_error(ctl->ctx, addrxlat_nomem,
 					 "Cannot allocate translation"
 					 " method %u",
 					 (unsigned) region->meth);
-
-		if (region->act != SYS_ACT_NONE)
-			actions[region->act](ctl, region);
-
 		range.endoff = region->last - region->first;
 		range.meth = ctl->sys->meth[region->meth];
+
+		switch (region->act) {
+		case SYS_ACT_DIRECT:
+			act_direct(range.meth, region);
+			break;
+
+		case SYS_ACT_IDENT_KPHYS:
+			act_ident_kphys(range.meth);
+			break;
+
+		case SYS_ACT_IDENT_MACHPHYS:
+			act_ident_machphys(range.meth);
+			break;
+
+		default:
+			break;
+		}
+
 		newmap = internal_map_set(ctl->sys->map[idx],
 					  region->first, &range);
 		if (!newmap)
