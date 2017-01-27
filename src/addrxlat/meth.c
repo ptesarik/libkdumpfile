@@ -252,12 +252,6 @@ step_pfn(addrxlat_walk_t *state)
 	return addrxlat_continue;
 }
 
-struct pte_def {
-	addrxlat_walk_init_fn *init;
-	addrxlat_walk_step_fn *step;
-	unsigned short shift;
-};
-
 /** Set up page table translation.
  * @param meth  Translation method.
  * @param def   Translation definition.
@@ -266,31 +260,31 @@ struct pte_def {
 static addrxlat_status
 setup_pgt(addrxlat_meth_t *meth, const addrxlat_def_t *def)
 {
-	static const struct pte_def formats[] = {
-		[addrxlat_pte_none] = { walk_init_pgt, step_none, 0 },
-		[addrxlat_pte_pfn32] = { walk_init_uaddr, step_pfn, 2 },
-		[addrxlat_pte_pfn64] = { walk_init_uaddr, step_pfn, 3 },
-		[addrxlat_pte_ia32] = { walk_init_uaddr, pgt_ia32, 2 },
-		[addrxlat_pte_ia32_pae] = { walk_init_uaddr, pgt_ia32_pae, 3 },
-		[addrxlat_pte_x86_64] = { walk_init_saddr, pgt_x86_64, 3 },
-		[addrxlat_pte_s390x] = { walk_init_uaddr, pgt_s390x, 3 },
-		[addrxlat_pte_ppc64_linux_rpn30] =
-			{ walk_init_pgt, pgt_ppc64_linux_rpn30, 3 },
-	};
-
 	const addrxlat_paging_form_t *pf = &def->param.pgt.pf;
 	struct pgt_extra_def *extra = &meth->extra.pgt;
-	const struct pte_def *fmt;
 	addrxlat_addr_t mask;
 	unsigned short i;
 
-	if (pf->pte_format >= ARRAY_SIZE(formats))
-		return addrxlat_notimpl;
+#define SETUP(fmt, init, step, shift)		\
+	case fmt:				\
+		meth->walk_init = init;		\
+		meth->walk_step = step;		\
+		extra->pte_shift = shift;	\
+		break
 
-	fmt = &formats[pf->pte_format];
-	meth->walk_init = fmt->init;
-	meth->walk_step = fmt->step;
-	extra->pte_shift = fmt->shift;
+	switch (pf->pte_format) {
+		SETUP(addrxlat_pte_none, walk_init_pgt, step_none, 0);
+		SETUP(addrxlat_pte_pfn32, walk_init_uaddr, step_pfn, 2);
+		SETUP(addrxlat_pte_pfn64, walk_init_uaddr, step_pfn, 3);
+		SETUP(addrxlat_pte_ia32, walk_init_uaddr, pgt_ia32, 2);
+		SETUP(addrxlat_pte_ia32_pae, walk_init_uaddr, pgt_ia32_pae, 3);
+		SETUP(addrxlat_pte_x86_64, walk_init_saddr, pgt_x86_64, 3);
+		SETUP(addrxlat_pte_s390x, walk_init_uaddr, pgt_s390x, 3);
+		SETUP(addrxlat_pte_ppc64_linux_rpn30,
+		      walk_init_pgt, pgt_ppc64_linux_rpn30, 3);
+	default:
+		return addrxlat_notimpl;
+	};
 
 	extra->vaddr_bits = 0;
 	mask = 1;
