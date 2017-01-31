@@ -30,6 +30,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "addrxlat-priv.h"
 
@@ -48,11 +49,61 @@ is_posix_space(int c)
 		c == '\r' || c == '\t' || c == '\v');
 }
 
+/** Convert an address space string to its enumeration value.
+ * @param str     String to be converted.
+ * @param endptr  On output, address of the first invalid character.
+ * @returns       Address space (or @ref ADDRXLAT_NOADDR on failure).
+ *
+ * An address space can be specified as:
+ *   - one of the @ref addrxlat_addr_t symbols with the @c ADDRXLAT_
+ *     prefix stripped (case insensitive), or
+ *   - a numeric value.
+ */
+static addrxlat_addrspace_t
+strtoas(const char *str, char **endptr)
+{
+	const char *p;
+
+	if (isdigit(*str))
+		return strtoul(str, endptr, 0);
+
+	p = str;
+	while (isalnum(*p))
+		++p;
+	*endptr = (char*)p;	/* Optimistic assumption... */
+
+	switch (p - str) {
+	case 6:
+		if (!strncasecmp(str, "KVADDR", 6))
+			return ADDRXLAT_KVADDR;
+		break;
+
+	case 7:
+		if (!strncasecmp(str, "XENVADDR", 7))
+			return ADDRXLAT_XENVADDR;
+		break;
+
+	case 9:
+		if (!strncasecmp(str, "KPHYSADDR", 9))
+			return ADDRXLAT_KPHYSADDR;
+		break;
+
+	case 12:
+		if (!strncasecmp(str, "MACHPHYSADDR", 12))
+			return ADDRXLAT_MACHPHYSADDR;
+		break;
+	}
+
+	*endptr = (char*)str;
+	return ADDRXLAT_NOADDR;
+}
+
 /** Type of option. */
 enum opttype {
 	opt_string,		/**< Unparsed string option */
 	opt_number,		/**< Signed number */
 	opt_bool,		/**< Boolean value */
+	opt_fulladdr,		/**< Full address */
 };
 
 /** Option description. */
@@ -117,42 +168,63 @@ parse_val(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 	switch (opt->type) {
 	case opt_string:
 		optval->str = val;
-		goto ok;
+		break;
 
 	case opt_bool:
 		if (!val ||
 		    !strcasecmp(val, "yes") ||
 		    !strcasecmp(val, "true")) {
 			optval->num = 1;
-			goto ok;
+			break;
 		} else if (!strcasecmp(val, "no") ||
 			   !strcasecmp(val, "false")) {
 			optval->num = 0;
-			goto ok;
+			break;
 		}
 		/* else fall-through */
 
 	case opt_number:
 		if (!val)
-			return set_error(ctx, addrxlat_invalid,
-					 "Missing value for option '%s'",
-					 opt->name);
+			goto err_noval;
 
 		optval->num = strtol(val, &endp, 0);
-		if (*val && !*endp)
-			goto ok;
+		if (!*val || *endp)
+			goto err_badval;
 
-		return set_error(ctx, addrxlat_invalid,
-				 "Invalid value for option '%s': %s",
-				 opt->name, val);
+		break;
+
+	case opt_fulladdr:
+		if (!val)
+			goto err_noval;
+
+		optval->fulladdr.as = strtoas(val, &endp);
+		if (*val == ':' || *endp != ':')
+			goto err_badval;
+
+		val = endp + 1;
+		optval->fulladdr.addr = strtoull(val, &endp, 0);
+		if (!*val || *endp)
+			goto err_badval;
+
+		break;
+
+	default:
+		return set_error(ctx, addrxlat_notimpl,
+				 "Unknown option type: %u",
+				 (unsigned) opt->type);
 	}
 
-	return set_error(ctx, addrxlat_notimpl,
-			 "Unknown option type: %u", (unsigned) opt->type);
-
- ok:
 	optval->set = 1;
 	return addrxlat_ok;
+
+ err_noval:
+	return set_error(ctx, addrxlat_invalid,
+			 "Missing value for option '%s'", opt->name);
+
+ err_badval:
+	return set_error(ctx, addrxlat_invalid,
+			 "'%s' is not a valid value for option '%s'",
+			 val, opt->name);
 }
 
 /** Parse a single option.
