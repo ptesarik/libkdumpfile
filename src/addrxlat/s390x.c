@@ -198,6 +198,10 @@ sys_s390x(struct sys_init_data *ctl)
 	addrxlat_range_t range;
 	addrxlat_status status;
 
+	status = sys_set_physmaps(ctl, ~(uint64_t)0);
+	if (status != addrxlat_ok)
+		return status;
+
 	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_PGT);
 	if (status != addrxlat_ok)
 		return status;
@@ -215,5 +219,5 @@ sys_s390x(struct sys_init_data *ctl)
 				 "Cannot set up default mapping");
 	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
 
-	return sys_set_physmaps(ctl, ~(uint64_t)0);
+	return addrxlat_ok;
 }
