@@ -251,6 +251,10 @@ struct sys_region {
 /** OS-map layout table end marker. */
 #define SYS_REGION_END	{ 0, 0, ADDRXLAT_SYS_METH_NUM }
 
+#define sys_ensure_meth INTERNAL_NAME(sys_ensure_meth)
+addrxlat_status sys_ensure_meth(
+	struct sys_init_data *ctl, addrxlat_sys_meth_t idx);
+
 #define sys_set_layout INTERNAL_NAME(sys_set_layout)
 addrxlat_status sys_set_layout(
 	struct sys_init_data *ctl, addrxlat_sys_map_t idx,

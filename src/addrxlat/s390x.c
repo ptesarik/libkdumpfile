@@ -194,10 +194,9 @@ sys_s390x(struct sys_init_data *ctl)
 	addrxlat_range_t range;
 	addrxlat_status status;
 
-	if (!ctl->sys->meth[ADDRXLAT_SYS_METH_PGT])
-		ctl->sys->meth[ADDRXLAT_SYS_METH_PGT] = internal_meth_new();
-	if (!ctl->sys->meth[ADDRXLAT_SYS_METH_PGT])
-		return addrxlat_nomem;
+	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_PGT);
+	if (status != addrxlat_ok)
+		return status;
 
 	status = determine_pgttype(ctl);
 	if (status != addrxlat_ok)

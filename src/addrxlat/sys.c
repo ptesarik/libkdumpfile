@@ -202,6 +202,25 @@ act_ident_machphys(addrxlat_meth_t *meth)
 	}
 }
 
+/** Allocate a translation method if needed.
+ * @param ctl  Initialization data.
+ * @parma idx  Method index
+ * @returns    Error status.
+ */
+addrxlat_status
+sys_ensure_meth(struct sys_init_data *ctl, addrxlat_sys_meth_t idx)
+{
+	if (ctl->sys->meth[idx])
+		return addrxlat_ok;
+
+	if ( (ctl->sys->meth[idx] = internal_meth_new()) )
+		return addrxlat_ok;
+
+	return set_error(ctl->ctx, addrxlat_nomem,
+			 "Cannot allocate translation method %u",
+			 (unsigned) idx);
+}
+
 /** Set memory map layout.
  * @param ctl     Initialization data.
  * @param idx     Map index.
@@ -218,15 +237,12 @@ sys_set_layout(struct sys_init_data *ctl, addrxlat_sys_map_t idx,
 	for (region = layout; region->meth != ADDRXLAT_SYS_METH_NUM;
 	     ++region) {
 		addrxlat_range_t range;
+		addrxlat_status status;
 
-		if (!ctl->sys->meth[region->meth])
-			ctl->sys->meth[region->meth] = internal_meth_new();
-		range.meth = ctl->sys->meth[region->meth];
-		if (!range.meth)
-			return set_error(ctl->ctx, addrxlat_nomem,
-					 "Cannot allocate translation"
-					 " method %u",
-					 (unsigned) region->meth);
+		status = sys_ensure_meth(ctl, region->meth);
+		if (status != addrxlat_ok)
+			return status;
+
 		range.endoff = region->last - region->first;
 		range.meth = ctl->sys->meth[region->meth];
 

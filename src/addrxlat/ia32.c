@@ -246,6 +246,7 @@ sys_ia32(struct sys_init_data *ctl)
 	addrxlat_range_t range;
 	addrxlat_map_t *newmap;
 	long pae;
+	addrxlat_status status;
 
 	if (!ctl->popt.val[OPT_pae].set) {
 		addrxlat_meth_t *pgtmeth =
@@ -268,10 +269,9 @@ sys_ia32(struct sys_init_data *ctl)
 	} else
 		pae = ctl->popt.val[OPT_pae].num;
 
-	if (!ctl->sys->meth[ADDRXLAT_SYS_METH_PGT])
-		ctl->sys->meth[ADDRXLAT_SYS_METH_PGT] = internal_meth_new();
-	if (!ctl->sys->meth[ADDRXLAT_SYS_METH_PGT])
-		return addrxlat_nomem;
+	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_PGT);
+	if (status != addrxlat_ok)
+		return status;
 
 	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	range.endoff = VIRTADDR_MAX;

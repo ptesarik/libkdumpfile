@@ -383,10 +383,9 @@ linux_ktext_map(struct sys_init_data *ctl)
 	addrxlat_map_t *newmap;
 	addrxlat_status status;
 
-	if (!ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT])
-		ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT] = internal_meth_new();
-	if (!ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT])
-		return addrxlat_nomem;
+	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_KTEXT);
+	if (status != addrxlat_ok)
+		return status;
 
 	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT];
 	if (range.meth->def.kind == ADDRXLAT_NONE) {
@@ -532,20 +531,17 @@ map_xen_x86_64(struct sys_init_data *ctl)
 	addrxlat_addr_t addr_direct, addr_ktext;
 	addrxlat_map_t *newmap;
 	addrxlat_def_t def;
+	addrxlat_status status;
 
-	if (!ctl->sys->meth[ADDRXLAT_SYS_METH_DIRECT])
-		ctl->sys->meth[ADDRXLAT_SYS_METH_DIRECT] = internal_meth_new();
-	if (!ctl->sys->meth[ADDRXLAT_SYS_METH_DIRECT])
-		return addrxlat_nomem;
-
+	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_DIRECT);
+	if (status != addrxlat_ok)
+		return status;
 	range_direct.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_DIRECT];
 	range_direct.endoff = XEN_DIRECTMAP_SIZE_5T - 1;
 
-	if (!ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT])
-		ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT] = internal_meth_new();
-	if (!ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT])
-		return addrxlat_nomem;
-
+	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_KTEXT);
+	if (status != addrxlat_ok)
+		return status;
 	range_ktext.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT];
 	range_ktext.endoff = XEN_TEXT_SIZE - 1;
 
@@ -642,10 +638,9 @@ sys_x86_64(struct sys_init_data *ctl)
 	addrxlat_def_t def;
 	addrxlat_status status;
 
-	if (!ctl->sys->meth[ADDRXLAT_SYS_METH_PGT])
-		ctl->sys->meth[ADDRXLAT_SYS_METH_PGT] = internal_meth_new();
-	if (!ctl->sys->meth[ADDRXLAT_SYS_METH_PGT])
-		return addrxlat_nomem;
+	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_PGT);
+	if (status != addrxlat_ok)
+		return status;
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	def.kind = ADDRXLAT_PGT;
