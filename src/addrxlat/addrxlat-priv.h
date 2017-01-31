@@ -172,6 +172,7 @@ enum optidx {
 	OPT_pae,		/**< [ia32] PAE state (boolean). */
 	OPT_pagesize,		/**< Page size (number). */
 	OPT_physbase,		/**< [x86-64] Linux physical base address. */
+	OPT_rootpgt,		/**< Root page table address. */
 
 	OPT_NUM			/**< Total number of options. */
 };

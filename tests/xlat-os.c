@@ -254,7 +254,6 @@ static unsigned long long ostype;
 static unsigned long long osver;
 static char *arch;
 static char *opts;
-static unsigned long long rootpgt = ADDRXLAT_ADDR_MAX;
 
 static char *sym_file;
 static char *data_file;
@@ -264,7 +263,6 @@ static const struct param param_array[] = {
 	PARAM_NUMBER("osver", osver),
 	PARAM_STRING("arch", arch),
 	PARAM_STRING("opts", opts),
-	PARAM_NUMBER("rootpgt", rootpgt),
 
 	PARAM_STRING("SYM", sym_file),
 	PARAM_STRING("DATA", data_file)
@@ -469,27 +467,6 @@ os_map(void)
 		perror("Cannot allocate translation system");
 		addrxlat_ctx_decref(data.ctx);
 		return TEST_ERR;
-	}
-
-	if (rootpgt != ADDRXLAT_ADDR_MAX) {
-		addrxlat_meth_t *pgt;
-		addrxlat_def_t def;
-
-		pgt = addrxlat_meth_new();
-		if (!pgt) {
-			perror("Cannot allocate rootpgt");
-			addrxlat_ctx_decref(data.ctx);
-			return TEST_ERR;
-		}
-		def.kind = ADDRXLAT_PGT;
-		def.target_as = ADDRXLAT_MACHPHYSADDR;
-		def.param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
-		def.param.pgt.root.addr = rootpgt;
-		def.param.pgt.pf.pte_format = addrxlat_pte_none;
-		def.param.pgt.pf.levels = 0;
-		addrxlat_meth_set_def(pgt, &def);
-		addrxlat_sys_set_xlat(data.sys, ADDRXLAT_SYS_METH_PGT, pgt);
-		addrxlat_meth_decref(pgt);
 	}
 
 	status = addrxlat_sys_init(data.sys, data.ctx, &desc);

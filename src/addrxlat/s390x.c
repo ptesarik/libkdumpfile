@@ -144,31 +144,35 @@ get_pgtroot(struct sys_init_data *ctl, addrxlat_fulladdr_t *root)
 static addrxlat_status
 determine_pgttype(struct sys_init_data *ctl)
 {
-	addrxlat_meth_t *pgtmeth;
 	addrxlat_def_t def;
 	addrxlat_fulladdr_t ptr;
 	uint64_t entry;
 	unsigned i;
 	addrxlat_status status;
 
-	pgtmeth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
-	def_choose_pgtroot(&def, pgtmeth);
+	if (ctl->popt.val[OPT_rootpgt].set)
+		def.param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
+	else
+		def.param.pgt.root.as = ADDRXLAT_NOADDR;
+
 	if (def.param.pgt.root.as == ADDRXLAT_NOADDR) {
-		status = get_pgtroot(ctl, &pgtmeth->def.param.pgt.root);
+		status = get_pgtroot(ctl, &def.param.pgt.root);
 		if (status != addrxlat_ok)
 			return status;
 	}
 
-	ptr = pgtmeth->def.param.pgt.root;
+	ptr = def.param.pgt.root;
 	for (i = 0; i < ROOT_PGT_LEN; ++i) {
 		status = read64(ctl->ctx, &ptr, &entry, "page table");
 		if (status != addrxlat_ok)
 			return status;
 		if (!PTE_I(entry)) {
-			addrxlat_paging_form_t pf = {
+			static const addrxlat_paging_form_t pf = {
 				.pte_format = addrxlat_pte_s390x,
 				.bits = { 12, 8, 11, 11, 11, 11 }
 			};
+			addrxlat_meth_t *pgtmeth =
+				ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 
 			def.kind = ADDRXLAT_PGT;
 			def.target_as = ADDRXLAT_MACHPHYSADDR;

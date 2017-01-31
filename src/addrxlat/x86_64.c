@@ -645,8 +645,11 @@ sys_x86_64(struct sys_init_data *ctl)
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	def.kind = ADDRXLAT_PGT;
 	def.target_as = ADDRXLAT_MACHPHYSADDR;
+	if (ctl->popt.val[OPT_rootpgt].set)
+		def.param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
+	else
+		def.param.pgt.root.as = ADDRXLAT_NOADDR;
 	def.param.pgt.pf = x86_64_pf;
-	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);
 
 	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, layout_generic);

@@ -206,8 +206,11 @@ sys_ia32_nonpae(struct sys_init_data *ctl)
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	def.kind = ADDRXLAT_PGT;
 	def.target_as = ADDRXLAT_MACHPHYSADDR;
+	if (ctl->popt.val[OPT_rootpgt].set)
+		def.param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
+	else
+		def.param.pgt.root.as = ADDRXLAT_NOADDR;
 	def.param.pgt.pf = ia32_pf;
-	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);
 	return addrxlat_ok;
 }
@@ -230,8 +233,11 @@ sys_ia32_pae(struct sys_init_data *ctl)
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	def.kind = ADDRXLAT_PGT;
 	def.target_as = ADDRXLAT_MACHPHYSADDR;
+	if (ctl->popt.val[OPT_rootpgt].set)
+		def.param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
+	else
+		def.param.pgt.root.as = ADDRXLAT_NOADDR;
 	def.param.pgt.pf = ia32_pf_pae;
-	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);
 	return addrxlat_ok;
 }
@@ -246,28 +252,27 @@ sys_ia32(struct sys_init_data *ctl)
 	addrxlat_range_t range;
 	addrxlat_map_t *newmap;
 	long pae;
+	struct optval *rootpgtopt;
 	addrxlat_status status;
 
-	if (!ctl->popt.val[OPT_pae].set) {
-		addrxlat_meth_t *pgtmeth =
-			ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	rootpgtopt = &ctl->popt.val[OPT_rootpgt];
 
-		if (!pgtmeth)
-			pae = -1;
-		else if (ctl->osdesc->type == addrxlat_os_linux)
-			pae = is_pae(ctl->ctx, &pgtmeth->def.param.pgt.root,
-				     LINUX_DIRECTMAP);
-		else if (ctl->osdesc->type == addrxlat_os_xen)
-			pae = is_pae(ctl->ctx, &pgtmeth->def.param.pgt.root,
-				     XEN_DIRECTMAP);
-		else
-			pae = -1;
-
-		if (pae < 0)
-			return set_error(ctl->ctx, addrxlat_notimpl,
-					 "Cannot determine PAE state");
-	} else
+	if (ctl->popt.val[OPT_pae].set)
 		pae = ctl->popt.val[OPT_pae].num;
+	else if (!rootpgtopt->set)
+		pae = -1;
+	else if (ctl->osdesc->type == addrxlat_os_linux)
+		pae = is_pae(ctl->ctx, &rootpgtopt->fulladdr,
+			     LINUX_DIRECTMAP);
+	else if (ctl->osdesc->type == addrxlat_os_xen)
+		pae = is_pae(ctl->ctx, &rootpgtopt->fulladdr,
+			     XEN_DIRECTMAP);
+	else
+		pae = -1;
+
+	if (pae < 0)
+		return set_error(ctl->ctx, addrxlat_notimpl,
+				 "Cannot determine PAE state");
 
 	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_PGT);
 	if (status != addrxlat_ok)

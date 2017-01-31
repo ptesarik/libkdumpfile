@@ -12,8 +12,6 @@ datafile="$srcdir/$name.data"
 
 optspec=
 test -n "$opts" && optspec="opts=$opts"
-pgtspec=
-test -n "$pgt" && pgtspec="rootpgt=$pgt"
 symspec=
 test -f "$symfile" && symspec="SYM=$symfile"
 dataspec=
@@ -25,7 +23,6 @@ ostype=$ostype
 osver=$osver
 arch=$arch
 $optspec
-$pgtspec
 $symspec
 $dataspec
 EOF

@@ -8,6 +8,6 @@
 arch=x86_64
 ostype=2
 osver=0
-pgt=0xffc94000
+opts=rootpgt=MACHPHYSADDR:0xffc94000
 
 . "$srcdir"/xlat-os-common

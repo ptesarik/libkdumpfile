@@ -130,6 +130,14 @@ static const struct {
 	END
 };
 
+static const struct {
+	struct optdesc opt;
+	char name[8];
+} opt7[] = {
+	DEF(rootpgt, fulladdr),
+	END
+};
+
 /** Eight-character options. */
 static const struct {
 	struct optdesc opt;
@@ -148,6 +156,7 @@ static const struct {
 	size_t elemsz;
 } options[] = {
 	DEFPTR(3),
+	DEFPTR(7),
 	DEFPTR(8),
 };
 
