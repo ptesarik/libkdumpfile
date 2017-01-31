@@ -185,13 +185,10 @@ static void
 act_ident_kphys(addrxlat_meth_t *meth)
 {
 	addrxlat_def_t def;
-
-	if (meth->def.kind == ADDRXLAT_NONE) {
-		def.kind = ADDRXLAT_LINEAR;
-		def.target_as = ADDRXLAT_KPHYSADDR;
-		def.param.linear.off = 0;
-		internal_meth_set_def(meth, &def);
-	}
+	def.kind = ADDRXLAT_LINEAR;
+	def.target_as = ADDRXLAT_KPHYSADDR;
+	def.param.linear.off = 0;
+	internal_meth_set_def(meth, &def);
 }
 
 /** Action function for @ref SYS_ACT_IDENT_MACHPHYS.
@@ -205,13 +202,10 @@ static void
 act_ident_machphys(addrxlat_meth_t *meth)
 {
 	addrxlat_def_t def;
-
-	if (meth->def.kind == ADDRXLAT_NONE) {
-		def.kind = ADDRXLAT_LINEAR;
-		def.target_as = ADDRXLAT_MACHPHYSADDR;
-		def.param.linear.off = 0;
-		internal_meth_set_def(meth, &def);
-	}
+	def.kind = ADDRXLAT_LINEAR;
+	def.target_as = ADDRXLAT_MACHPHYSADDR;
+	def.param.linear.off = 0;
+	internal_meth_set_def(meth, &def);
 }
 
 /** Allocate a translation method if needed.
