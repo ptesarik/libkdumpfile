@@ -51,13 +51,27 @@ addrxlat_sys_incref(addrxlat_sys_t *sys)
 	return ++sys->refcnt;
 }
 
+/** Clean up all translation system maps and methods.
+ * @param sys  Translation system.
+ */
 static void
-free_map(addrxlat_map_t *map)
+sys_cleanup(addrxlat_sys_t *sys)
 {
-	if (map) {
-		internal_map_clear(map);
-		free(map);
-	}
+	unsigned i;
+
+	for (i = 0; i < ADDRXLAT_SYS_MAP_NUM; ++i)
+		if (sys->map[i]) {
+			internal_map_clear(sys->map[i]);
+			free(sys->map[i]);
+			sys->map[i] = NULL;
+		}
+
+
+	for (i = 0; i < ADDRXLAT_SYS_METH_NUM; ++i)
+		if (sys->meth[i]) {
+			internal_meth_decref(sys->meth[i]);
+			sys->meth[i] = NULL;
+		}
 }
 
 unsigned long
@@ -65,14 +79,7 @@ addrxlat_sys_decref(addrxlat_sys_t *sys)
 {
 	unsigned long refcnt = --sys->refcnt;
 	if (!refcnt) {
-		unsigned i;
-
-		for (i = 0; i < ADDRXLAT_SYS_MAP_NUM; ++i)
-			free_map(sys->map[i]);
-
-		for (i = 0; i < ADDRXLAT_SYS_METH_NUM; ++i)
-			if (sys->meth[i])
-				internal_meth_decref(sys->meth[i]);
+		sys_cleanup(sys);
 		free(sys);
 	}
 	return refcnt;
@@ -101,6 +108,8 @@ addrxlat_sys_init(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 		return set_error(ctx, addrxlat_notimpl,
 				"Unsupported architecture");
 
+	sys_cleanup(sys);
+
 	ctl.sys = sys;
 	ctl.ctx = ctx;
 	ctl.osdesc = osdesc;
@@ -116,7 +125,10 @@ void
 addrxlat_sys_set_map(addrxlat_sys_t *sys, addrxlat_sys_map_t idx,
 		      addrxlat_map_t *map)
 {
-	free_map(sys->map[idx]);
+	if (sys->map[idx]) {
+		internal_map_clear(sys->map[idx]);
+		free(sys->map[idx]);
+	}
 	sys->map[idx] = map;
 }
 
