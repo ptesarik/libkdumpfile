@@ -91,10 +91,16 @@ get_physaddr(struct cbdata *cbd, const addrxlat_fulladdr_t *addr,
 		break;
 
 	case ADDRXLAT_KPHYSADDR:
-		/* FIXME: Xen address translation not yet implemented.
-		 * On bare metal, kernel physical addresses are identical
-		 * to machine physical addresses.
-		 */
+		status = addrxlat_by_map(cbd->ctx, physaddr,
+					 addrxlat_sys_get_map(
+						 cbd->sys,
+						 ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS));
+		if (status != addrxlat_ok) {
+			snprintf(read_err_str, sizeof read_err_str,
+				 "Cannot translate kernel physical addr 0x%"ADDRXLAT_PRIxADDR,
+				 addr->addr);
+			return -read_vtop_failed;
+		}
 		break;
 
 	case ADDRXLAT_KVADDR:
