@@ -321,6 +321,7 @@ set_ktext_offset(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	if (status == addrxlat_ok) {
 		addrxlat_def_t def;
 		def.kind = ADDRXLAT_LINEAR;
+		def.target_as = ADDRXLAT_KPHYSADDR;
 		def.param.linear.off = vaddr - addr;
 		status = internal_meth_set_def(
 			sys->meth[ADDRXLAT_SYS_METH_KTEXT], &def);
@@ -362,6 +363,7 @@ linux_ktext_meth(struct sys_init_data *ctl)
 		addrxlat_def_t def;
 
 		def.kind = ADDRXLAT_LINEAR;
+		def.target_as = ADDRXLAT_KPHYSADDR;
 		def.param.linear.off = __START_KERNEL_map -
 			ctl->popt.val[OPT_physbase].num;
 		return internal_meth_set_def(
