@@ -527,87 +527,75 @@ is_xen_ktext(struct sys_init_data *ctl, addrxlat_addr_t addr)
 static addrxlat_status
 map_xen_x86_64(struct sys_init_data *ctl)
 {
-	addrxlat_range_t range_direct, range_ktext;
-	addrxlat_addr_t addr_direct, addr_ktext;
-	addrxlat_map_t *newmap;
-	addrxlat_def_t def;
+	struct sys_region layout[4];
 	addrxlat_status status;
 
-	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_DIRECT);
-	if (status != addrxlat_ok)
-		return status;
-	range_direct.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_DIRECT];
-	range_direct.endoff = XEN_DIRECTMAP_SIZE_5T - 1;
+	layout[0].first = XEN_DIRECTMAP;
+	layout[0].last = XEN_DIRECTMAP + XEN_DIRECTMAP_SIZE_5T - 1;
+	layout[0].meth = ADDRXLAT_SYS_METH_DIRECT;
+	layout[0].act = SYS_ACT_DIRECT;
 
-	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_KTEXT);
-	if (status != addrxlat_ok)
-		return status;
-	range_ktext.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT];
-	range_ktext.endoff = XEN_TEXT_SIZE - 1;
+	layout[1].meth = ADDRXLAT_SYS_METH_KTEXT;
+	layout[1].act = SYS_ACT_NONE;
 
-	addr_direct = XEN_DIRECTMAP;
+	layout[2].meth = ADDRXLAT_SYS_METH_NUM;
+
 	if (is_directmap(ctl->sys, ctl->ctx, XEN_DIRECTMAP)) {
 		if (is_xen_ktext(ctl, XEN_TEXT_4_4))
-			addr_ktext = XEN_TEXT_4_4;
+			layout[1].first = XEN_TEXT_4_4;
 		else if (is_xen_ktext(ctl, XEN_TEXT_4_3))
-			addr_ktext = XEN_TEXT_4_3;
+			layout[1].first = XEN_TEXT_4_3;
 		else if (is_xen_ktext(ctl, XEN_TEXT_4_0))
-			addr_ktext = XEN_TEXT_4_0;
+			layout[1].first = XEN_TEXT_4_0;
 		else if (is_xen_ktext(ctl, XEN_TEXT_3_2)) {
-			range_direct.endoff = XEN_DIRECTMAP_SIZE_1T - 1;
-			addr_ktext = XEN_TEXT_3_2;
+			layout[0].last =
+				XEN_DIRECTMAP + XEN_DIRECTMAP_SIZE_1T - 1;
+			layout[1].first = XEN_TEXT_3_2;
 		} else if (is_xen_ktext(ctl, XEN_TEXT_4_0dev))
-			addr_ktext = XEN_TEXT_4_0dev;
+			layout[1].first = XEN_TEXT_4_0dev;
 		else {
-			range_direct.endoff = XEN_DIRECTMAP_SIZE_1T - 1;
-			addr_ktext = 0;
+			layout[0].last =
+				XEN_DIRECTMAP + XEN_DIRECTMAP_SIZE_1T - 1;
+			layout[1].meth = ADDRXLAT_SYS_METH_NUM;
 		}
 	} else if (is_directmap(ctl->sys, ctl->ctx, XEN_DIRECTMAP_BIGMEM)) {
-		addr_direct = XEN_DIRECTMAP_BIGMEM;
-		range_direct.endoff = XEN_DIRECTMAP_SIZE_3_5T - 1;
-		addr_ktext = XEN_TEXT_4_4;
+		layout[0].first = XEN_DIRECTMAP_BIGMEM;
+		layout[0].last =
+			XEN_DIRECTMAP_BIGMEM + XEN_DIRECTMAP_SIZE_3_5T - 1;
+		layout[1].first = XEN_TEXT_4_4;
 	} else if (ctl->osdesc->ver >= ADDRXLAT_VER_XEN(4, 0)) {
 		/* !BIGMEM is assumed for Xen 4.6+. Can we do better? */
 
 		if (ctl->osdesc->ver >= ADDRXLAT_VER_XEN(4, 4))
-			addr_ktext = XEN_TEXT_4_4;
+			layout[1].first = XEN_TEXT_4_4;
 		else if (ctl->osdesc->ver >= ADDRXLAT_VER_XEN(4, 3))
-			addr_ktext = XEN_TEXT_4_3;
+			layout[1].first = XEN_TEXT_4_3;
 		else
-			addr_ktext = XEN_TEXT_4_0;
+			layout[1].first = XEN_TEXT_4_0;
 	} else if (ctl->osdesc->ver) {
-		range_direct.endoff = XEN_DIRECTMAP_SIZE_1T - 1;
+		layout[0].last =
+			XEN_DIRECTMAP + XEN_DIRECTMAP_SIZE_1T - 1;
 
 		if (ctl->osdesc->ver >= ADDRXLAT_VER_XEN(3, 2))
-			addr_ktext = XEN_TEXT_3_2;
+			layout[1].first = XEN_TEXT_3_2;
 		else
 			/* Prior to Xen 3.2, text was in direct mapping. */
-			addr_ktext = 0;
+			layout[1].meth = ADDRXLAT_SYS_METH_NUM;
 	} else
 		return addrxlat_ok;
 
-	def.kind = ADDRXLAT_LINEAR;
-	def.param.linear.off = addr_direct;
-	internal_meth_set_def(range_direct.meth, &def);
-	newmap = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS],
-				  addr_direct, &range_direct);
-	if (!newmap)
-		return set_error(ctl->ctx, addrxlat_nomem,
-				 "Cannot set up Xen direct mapping");
-	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
+	layout[1].last = layout[1].first + XEN_TEXT_SIZE - 1;
 
-	if (addr_ktext) {
-		set_ktext_offset(ctl->sys, ctl->ctx, addr_ktext);
-		newmap = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS],
-					  addr_ktext, &range_ktext);
-		if (!newmap)
-			return set_error(ctl->ctx, addrxlat_nomem,
-					 "Cannot set up Xen text mapping");
-		ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
+	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, layout);
+	if (status != addrxlat_ok)
+		return status;
+
+	if (layout[1].meth == ADDRXLAT_SYS_METH_KTEXT) {
+		set_ktext_offset(ctl->sys, ctl->ctx, layout[1].first);
+		set_pgt_fallback(ctl->sys, ADDRXLAT_SYS_METH_KTEXT);
 	}
 
 	set_pgt_fallback(ctl->sys, ADDRXLAT_SYS_METH_DIRECT);
-	set_pgt_fallback(ctl->sys, ADDRXLAT_SYS_METH_KTEXT);
 
 	return addrxlat_ok;
 }
