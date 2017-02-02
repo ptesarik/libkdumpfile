@@ -15,6 +15,10 @@ ffffffff82800000-ffffffffffffffff: PGT @rootpgt
   pte_format: x86_64
   bits: 12 9 9 9 9
 
+KPHYS -> DIRECT:
+0-3fffffffffff: LINEAR @rdirect off=0x780000000000
+400000000000-ffffffffffffffff: NONE
+
 MACHPHYS -> KPHYS:
 0-fffffffffffff: LINEAR @machphys_kphys off=0x0
 10000000000000-ffffffffffffffff: NONE

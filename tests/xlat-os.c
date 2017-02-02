@@ -434,6 +434,9 @@ print_map(const addrxlat_map_t *map)
 	addrxlat_addr_t addr = 0;
 	unsigned i;
 
+	if (!map)
+		return;
+
 	for (i = 0; i < map->n; ++i) {
 		const addrxlat_range_t *range = &map->ranges[i];
 		printf("%"ADDRXLAT_PRIxADDR"-%"ADDRXLAT_PRIxADDR": ",
@@ -501,6 +504,9 @@ os_map(void)
 	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_VMEMMAP);
 	add_symbol(meth, "vmemmap");
 
+	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_RDIRECT);
+	add_symbol(meth, "rdirect");
+
 	meth = addrxlat_sys_get_xlat(data.sys,
 				     ADDRXLAT_SYS_METH_MACHPHYS_KPHYS);
 	add_symbol(meth, "machphys_kphys");
@@ -511,6 +517,12 @@ os_map(void)
 
 	puts("KV -> PHYS:");
 	print_map(addrxlat_sys_get_map(data.sys, ADDRXLAT_SYS_MAP_KV_PHYS));
+
+	putchar('\n');
+
+	puts("KPHYS -> DIRECT:");
+	print_map(addrxlat_sys_get_map(data.sys,
+				       ADDRXLAT_SYS_MAP_KPHYS_DIRECT));
 
 	putchar('\n');
 

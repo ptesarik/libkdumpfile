@@ -3,6 +3,8 @@ KV -> PHYS:
   pte_format: s390x
   bits: 12 8 11 11 11 11
 
+KPHYS -> DIRECT:
+
 MACHPHYS -> KPHYS:
 0-ffffffffffffffff: LINEAR @machphys_kphys off=0x0
 

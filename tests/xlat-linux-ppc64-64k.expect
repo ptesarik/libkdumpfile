@@ -12,6 +12,10 @@ f000000000000000-ffffffffffffffff: LOOKUP @vmemmap
   f000000000000000 -> fe0000
   f000000000010000 -> fd0000
 
+KPHYS -> DIRECT:
+0-fffffffffffffff: LINEAR @rdirect off=0x4000000000000000
+1000000000000000-ffffffffffffffff: NONE
+
 MACHPHYS -> KPHYS:
 0-3ffffffffffff: LINEAR @machphys_kphys off=0x0
 4000000000000-ffffffffffffffff: NONE

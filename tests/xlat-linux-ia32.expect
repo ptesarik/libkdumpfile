@@ -4,6 +4,8 @@ KV -> PHYS:
   bits: 12 10 10
 100000000-ffffffffffffffff: NONE
 
+KPHYS -> DIRECT:
+
 MACHPHYS -> KPHYS:
 0-ffffffff: LINEAR @machphys_kphys off=0x0
 100000000-ffffffffffffffff: NONE

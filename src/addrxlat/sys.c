@@ -157,21 +157,59 @@ addrxlat_sys_get_xlat(addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
 	return sys->meth[idx];
 }
 
+/** Allocate a translation method if needed.
+ * @param ctl  Initialization data.
+ * @parma idx  Method index
+ * @returns    Error status.
+ */
+addrxlat_status
+sys_ensure_meth(struct sys_init_data *ctl, addrxlat_sys_meth_t idx)
+{
+	if (ctl->sys->meth[idx])
+		return addrxlat_ok;
+
+	if ( (ctl->sys->meth[idx] = internal_meth_new()) )
+		return addrxlat_ok;
+
+	return set_error(ctl->ctx, addrxlat_nomem,
+			 "Cannot allocate translation method %u",
+			 (unsigned) idx);
+}
+
 /** Action function for @ref SYS_ACT_DIRECT.
+ * @param ctl     Initialization data.
  * @param meth    Current directmap translation method.
  * @param region  Directmap region definition.
  *
  * This action sets up the direct mapping as a linear mapping that
  * maps the current region to kernel physical addresses starting at 0.
  */
-static void
-act_direct(addrxlat_meth_t *meth, const struct sys_region *region)
+static addrxlat_status
+act_direct(struct sys_init_data *ctl,
+	   addrxlat_meth_t *meth, const struct sys_region *region)
 {
+	struct sys_region layout[2] = {
+		{ 0, region->last - region->first,
+		  ADDRXLAT_SYS_METH_RDIRECT },
+		SYS_REGION_END
+	};
 	addrxlat_def_t def;
+	addrxlat_status status;
+
 	def.kind = ADDRXLAT_LINEAR;
 	def.target_as = ADDRXLAT_KPHYSADDR;
 	def.param.linear.off = region->first;
 	internal_meth_set_def(meth, &def);
+
+	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_RDIRECT);
+	if (status != addrxlat_ok)
+		return status;
+
+	def.target_as = ADDRXLAT_KVADDR;
+	def.param.linear.off = -region->first;
+	internal_meth_set_def(ctl->sys->meth[ADDRXLAT_SYS_METH_RDIRECT], &def);
+
+	return sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KPHYS_DIRECT, layout);
 }
 
 /** Action function for @ref SYS_ACT_IDENT_KPHYS.
@@ -208,25 +246,6 @@ act_ident_machphys(addrxlat_meth_t *meth)
 	internal_meth_set_def(meth, &def);
 }
 
-/** Allocate a translation method if needed.
- * @param ctl  Initialization data.
- * @parma idx  Method index
- * @returns    Error status.
- */
-addrxlat_status
-sys_ensure_meth(struct sys_init_data *ctl, addrxlat_sys_meth_t idx)
-{
-	if (ctl->sys->meth[idx])
-		return addrxlat_ok;
-
-	if ( (ctl->sys->meth[idx] = internal_meth_new()) )
-		return addrxlat_ok;
-
-	return set_error(ctl->ctx, addrxlat_nomem,
-			 "Cannot allocate translation method %u",
-			 (unsigned) idx);
-}
-
 /** Set memory map layout.
  * @param ctl     Initialization data.
  * @param idx     Map index.
@@ -254,7 +273,9 @@ sys_set_layout(struct sys_init_data *ctl, addrxlat_sys_map_t idx,
 
 		switch (region->act) {
 		case SYS_ACT_DIRECT:
-			act_direct(range.meth, region);
+			status = act_direct(ctl, range.meth, region);
+			if (status != addrxlat_ok)
+				return status;
 			break;
 
 		case SYS_ACT_IDENT_KPHYS:
