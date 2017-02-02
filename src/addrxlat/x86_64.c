@@ -460,7 +460,6 @@ map_linux_x86_64(struct sys_init_data *ctl)
 	if (status != addrxlat_ok)
 		return status;
 
-	set_pgt_fallback(ctl->sys, ADDRXLAT_SYS_METH_DIRECT);
 	set_pgt_fallback(ctl->sys, ADDRXLAT_SYS_METH_KTEXT);
 
 	return addrxlat_ok;
@@ -594,8 +593,6 @@ map_xen_x86_64(struct sys_init_data *ctl)
 		set_ktext_offset(ctl->sys, ctl->ctx, layout[1].first);
 		set_pgt_fallback(ctl->sys, ADDRXLAT_SYS_METH_KTEXT);
 	}
-
-	set_pgt_fallback(ctl->sys, ADDRXLAT_SYS_METH_DIRECT);
 
 	return addrxlat_ok;
 }
