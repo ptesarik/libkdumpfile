@@ -297,60 +297,20 @@ add_symbol(const void *ptr, const char *name)
 	}
 }
 
-static void
-print_ind(const char *desc, const void *ptr)
+static int
+print_ind(const void *ptr)
 {
 	unsigned i;
 
 	for (i = 0; i < num_symbols; ++i) {
 		if (symbols[i].p == ptr) {
-			printf("%s @%s", desc, symbols[i].name);
-			return;
+			printf("@%s", symbols[i].name);
+			return 0;
 		}
 	};
 
-	printf("%s @%p", desc, ptr);
-}
-
-static void
-print_lookup_tbl(const addrxlat_meth_t *meth)
-{
-	const addrxlat_def_t *def = addrxlat_meth_get_def(meth);
-	const addrxlat_lookup_elem_t *p = def->param.lookup.tbl;
-	size_t n = def->param.lookup.nelem;
-
-	while (n--) {
-		printf("\n  %"ADDRXLAT_PRIxADDR" -> %"ADDRXLAT_PRIxADDR,
-		       p->phys, p->virt);
-		++p;
-	}
-}
-
-static void
-print_pgt(const addrxlat_meth_t *pgt)
-{
-	static const char *pte_formats[] = {
-		[addrxlat_pte_none] = "none",
-		[addrxlat_pte_ia32] = "ia32",
-		[addrxlat_pte_ia32_pae] = "ia32_pae",
-		[addrxlat_pte_x86_64] = "x86_64",
-		[addrxlat_pte_s390x] = "s390x",
-		[addrxlat_pte_ppc64_linux_rpn30] = "ppc64_linux_rpn30",
-	};
-
-	const addrxlat_def_t *def = addrxlat_meth_get_def(pgt);
-	const addrxlat_paging_form_t *pf = &def->param.pgt.pf;
-	unsigned i;
-
-	fputs("\n  pte_format: ", stdout);
-	if (pf->pte_format < ARRAY_SIZE(pte_formats) &&
-	    pte_formats[pf->pte_format])
-		printf("%s", pte_formats[pf->pte_format]);
-	else
-		printf("%u", pf->pte_format);
-	printf("\n  bits:");
-	for (i = 0; i < pf->levels; ++i)
-		printf(" %u", pf->bits[i]);
+	printf("@%p", ptr);
+	return -1;
 }
 
 static void
@@ -383,49 +343,139 @@ print_addrspace(addrxlat_addrspace_t as)
 }
 
 static void
+print_target_as(const addrxlat_def_t *def)
+{
+	fputs("  target_as=", stdout);
+	print_addrspace(def->target_as);
+	putchar('\n');
+}
+
+static void
+print_fulladdr(const addrxlat_fulladdr_t *addr)
+{
+	print_addrspace(addr->as);
+	if (addr->as != ADDRXLAT_NOADDR)
+		printf(":0x%"ADDRXLAT_PRIxADDR, addr->addr);
+}
+
+static void
+print_linear(const addrxlat_def_t *def)
+{
+	puts("LINEAR");
+	print_target_as(def);
+	printf("  off=0x%"PRIxFAST64"\n",
+	       (uint_fast64_t) def->param.linear.off);
+}
+
+static void
+print_pgt(const addrxlat_def_t *def)
+{
+	static const char *pte_formats[] = {
+		[addrxlat_pte_none] = "none",
+		[addrxlat_pte_ia32] = "ia32",
+		[addrxlat_pte_ia32_pae] = "ia32_pae",
+		[addrxlat_pte_x86_64] = "x86_64",
+		[addrxlat_pte_s390x] = "s390x",
+		[addrxlat_pte_ppc64_linux_rpn30] = "ppc64_linux_rpn30",
+	};
+
+	const addrxlat_paging_form_t *pf = &def->param.pgt.pf;
+	unsigned i;
+
+	puts("PGT");
+	print_target_as(def);
+	fputs("  root=", stdout);
+	print_fulladdr(&def->param.pgt.root);
+	putchar('\n');
+	fputs("  pte_format=", stdout);
+	if (pf->pte_format < ARRAY_SIZE(pte_formats) &&
+	    pte_formats[pf->pte_format])
+		printf("%s", pte_formats[pf->pte_format]);
+	else
+		printf("%u", pf->pte_format);
+	printf("\n  bits=");
+	for (i = 0; i < pf->levels; ++i)
+		printf("%s%u", i ? "," : "", pf->bits[i]);
+	putchar('\n');
+}
+
+static void
+print_lookup(const addrxlat_def_t *def)
+{
+	const addrxlat_lookup_elem_t *p = def->param.lookup.tbl;
+	size_t n = def->param.lookup.nelem;
+
+	puts("LOOKUP");
+	print_target_as(def);
+	while (n--) {
+		printf("  %"ADDRXLAT_PRIxADDR" -> %"ADDRXLAT_PRIxADDR"\n",
+		       p->phys, p->virt);
+		++p;
+	}
+}
+
+static void
+print_memarr(const addrxlat_def_t *def)
+{
+	puts("MEMARR");
+	print_target_as(def);
+	fputs("  base=", stdout);
+	print_fulladdr(&def->param.memarr.base);
+	putchar('\n');
+	printf("  shift=%u\n", def->param.memarr.shift);
+	printf("  elemsz=%u\n", def->param.memarr.elemsz);
+	printf("  valsz=%u\n", def->param.memarr.valsz);
+}
+
+static void
+print_meth(const addrxlat_meth_t *meth)
+{
+	const addrxlat_def_t *def = addrxlat_meth_get_def(meth);
+
+	switch (def->kind) {
+	case ADDRXLAT_NONE:
+		puts("NONE");
+		break;
+
+	case ADDRXLAT_LINEAR:
+		print_linear(def);
+		break;
+
+	case ADDRXLAT_PGT:
+		print_pgt(def);
+		break;
+
+	case ADDRXLAT_LOOKUP:
+		print_lookup(def);
+		break;
+
+	case ADDRXLAT_MEMARR:
+		print_memarr(def);
+		break;
+	}
+}
+
+static void
+add_meth(const addrxlat_meth_t *meth, const char *name)
+{
+	if (meth) {
+		add_symbol(meth, name);
+		printf("@%s: ", name);
+		print_meth(meth);
+		putchar('\n');
+	}
+}
+
+static void
 print_xlat(const addrxlat_meth_t *meth)
 {
 	if (meth == NULL)
-		fputs("NONE", stdout);
-	else {
-		const addrxlat_def_t *def = addrxlat_meth_get_def(meth);
-
-		switch (def->kind) {
-		case ADDRXLAT_NONE:
-			print_ind("NONE", meth);
-			break;
-
-		case ADDRXLAT_LINEAR:
-			print_ind("LINEAR", meth);
-			printf(" off=0x%llx",
-			       (unsigned long long) def->param.linear.off);
-			break;
-
-		case ADDRXLAT_PGT:
-			print_ind("PGT", meth);
-			print_pgt(meth);
-			break;
-
-		case ADDRXLAT_LOOKUP:
-			print_ind("LOOKUP", meth);
-			print_lookup_tbl(meth);
-			break;
-
-
-		case ADDRXLAT_MEMARR:
-			print_ind("MEMARR", meth);
-			fputs(" base=", stdout);
-			print_addrspace(def->param.memarr.base.as);
-			printf(":%"ADDRXLAT_PRIxADDR
-			       " shift=%u elemsz=%u valsz=%u",
-			       def->param.memarr.base.addr,
-			       def->param.memarr.shift,
-			       def->param.memarr.elemsz,
-			       def->param.memarr.valsz);
-			break;
-
-		}
-	}
+		puts("NONE");
+	else if (print_ind(meth)) {
+		putchar(' ');
+		print_meth(meth);
+	} else
+		putchar('\n');
 }
 
 static void
@@ -442,7 +492,6 @@ print_map(const addrxlat_map_t *map)
 		printf("%"ADDRXLAT_PRIxADDR"-%"ADDRXLAT_PRIxADDR": ",
 			addr, addr + range->endoff);
 		print_xlat(range->meth);
-		putchar('\n');
 
 		addr += range->endoff + 1;
 	}
@@ -490,30 +539,30 @@ os_map(void)
 	}
 
 	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_PGT);
-	add_symbol(meth, "rootpgt");
+	add_meth(meth, "rootpgt");
 
 	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_UPGT);
-	add_symbol(meth, "userpgt");
+	add_meth(meth, "userpgt");
 
 	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_DIRECT);
-	add_symbol(meth, "direct");
+	add_meth(meth, "direct");
 
 	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_KTEXT);
-	add_symbol(meth, "ktext");
+	add_meth(meth, "ktext");
 
 	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_VMEMMAP);
-	add_symbol(meth, "vmemmap");
+	add_meth(meth, "vmemmap");
 
 	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_RDIRECT);
-	add_symbol(meth, "rdirect");
+	add_meth(meth, "rdirect");
 
 	meth = addrxlat_sys_get_xlat(data.sys,
 				     ADDRXLAT_SYS_METH_MACHPHYS_KPHYS);
-	add_symbol(meth, "machphys_kphys");
+	add_meth(meth, "machphys_kphys");
 
 	meth = addrxlat_sys_get_xlat(data.sys,
 				     ADDRXLAT_SYS_METH_KPHYS_MACHPHYS);
-	add_symbol(meth, "kphys_machphys");
+	add_meth(meth, "kphys_machphys");
 
 	puts("KV -> PHYS:");
 	print_map(addrxlat_sys_get_map(data.sys, ADDRXLAT_SYS_MAP_KV_PHYS));

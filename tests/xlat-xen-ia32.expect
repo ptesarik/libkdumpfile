@@ -1,15 +1,27 @@
+@rootpgt: PGT
+  target_as=MACHPHYSADDR
+  root=MACHPHYSADDR:0x1e3000
+  pte_format=ia32
+  bits=12,10,10
+
+@machphys_kphys: LINEAR
+  target_as=KPHYSADDR
+  off=0x0
+
+@kphys_machphys: LINEAR
+  target_as=MACHPHYSADDR
+  off=0x0
+
 KV -> PHYS:
-0-ffffffff: PGT @rootpgt
-  pte_format: ia32
-  bits: 12 10 10
+0-ffffffff: @rootpgt
 100000000-ffffffffffffffff: NONE
 
 KPHYS -> DIRECT:
 
 MACHPHYS -> KPHYS:
-0-ffffffff: LINEAR @machphys_kphys off=0x0
+0-ffffffff: @machphys_kphys
 100000000-ffffffffffffffff: NONE
 
 KPHYS -> MACHPHYS:
-0-ffffffff: LINEAR @kphys_machphys off=0x0
+0-ffffffff: @kphys_machphys
 100000000-ffffffffffffffff: NONE

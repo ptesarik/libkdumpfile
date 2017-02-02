@@ -1,28 +1,46 @@
+@rootpgt: PGT
+  target_as=MACHPHYSADDR
+  root=MACHPHYSADDR:0xffc94000
+  pte_format=x86_64
+  bits=12,9,9,9,9
+
+@direct: LINEAR
+  target_as=KPHYSADDR
+  off=0xffff830000000000
+
+@ktext: LINEAR
+  target_as=KPHYSADDR
+  off=0xffff82c3c0600000
+
+@rdirect: LINEAR
+  target_as=KVADDR
+  off=0x7d0000000000
+
+@machphys_kphys: LINEAR
+  target_as=KPHYSADDR
+  off=0x0
+
+@kphys_machphys: LINEAR
+  target_as=MACHPHYSADDR
+  off=0x0
+
 KV -> PHYS:
-0-7fffffffffff: PGT @rootpgt
-  pte_format: x86_64
-  bits: 12 9 9 9 9
+0-7fffffffffff: @rootpgt
 800000000000-ffff7fffffffffff: NONE
-ffff800000000000-ffff82c4bfffffff: PGT @rootpgt
-  pte_format: x86_64
-  bits: 12 9 9 9 9
-ffff82c4c0000000-ffff82c4ffffffff: LINEAR @ktext off=0xffff82c3c0600000
-ffff82c500000000-ffff82ffffffffff: PGT @rootpgt
-  pte_format: x86_64
-  bits: 12 9 9 9 9
-ffff830000000000-ffff87ffffffffff: LINEAR @direct off=0xffff830000000000
-ffff880000000000-ffffffffffffffff: PGT @rootpgt
-  pte_format: x86_64
-  bits: 12 9 9 9 9
+ffff800000000000-ffff82c4bfffffff: @rootpgt
+ffff82c4c0000000-ffff82c4ffffffff: @ktext
+ffff82c500000000-ffff82ffffffffff: @rootpgt
+ffff830000000000-ffff87ffffffffff: @direct
+ffff880000000000-ffffffffffffffff: @rootpgt
 
 KPHYS -> DIRECT:
-0-4ffffffffff: LINEAR @rdirect off=0x7d0000000000
+0-4ffffffffff: @rdirect
 50000000000-ffffffffffffffff: NONE
 
 MACHPHYS -> KPHYS:
-0-fffffffffffff: LINEAR @machphys_kphys off=0x0
+0-fffffffffffff: @machphys_kphys
 10000000000000-ffffffffffffffff: NONE
 
 KPHYS -> MACHPHYS:
-0-fffffffffffff: LINEAR @kphys_machphys off=0x0
+0-fffffffffffff: @kphys_machphys
 10000000000000-ffffffffffffffff: NONE

@@ -1,13 +1,25 @@
+@rootpgt: PGT
+  target_as=MACHPHYSADDR
+  root=MACHPHYSADDR:0x8b5000
+  pte_format=s390x
+  bits=12,8,11,11,11
+
+@machphys_kphys: LINEAR
+  target_as=KPHYSADDR
+  off=0x0
+
+@kphys_machphys: LINEAR
+  target_as=MACHPHYSADDR
+  off=0x0
+
 KV -> PHYS:
-0-1fffffffffffff: PGT @rootpgt
-  pte_format: s390x
-  bits: 12 8 11 11 11
+0-1fffffffffffff: @rootpgt
 20000000000000-ffffffffffffffff: NONE
 
 KPHYS -> DIRECT:
 
 MACHPHYS -> KPHYS:
-0-ffffffffffffffff: LINEAR @machphys_kphys off=0x0
+0-ffffffffffffffff: @machphys_kphys
 
 KPHYS -> MACHPHYS:
-0-ffffffffffffffff: LINEAR @kphys_machphys off=0x0
+0-ffffffffffffffff: @kphys_machphys
