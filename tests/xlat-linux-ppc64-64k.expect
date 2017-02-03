@@ -16,6 +16,7 @@
 
 @vmemmap: LOOKUP
   target_as=KPHYSADDR
+  endoff=0xffff
   f000000000000000 -> fe0000
   f000000000010000 -> fd0000
 

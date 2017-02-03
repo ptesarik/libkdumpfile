@@ -407,6 +407,7 @@ print_lookup(const addrxlat_def_t *def)
 
 	puts("LOOKUP");
 	print_target_as(def);
+	printf("  endoff=0x%"ADDRXLAT_PRIxADDR"\n", def->param.lookup.endoff);
 	while (n--) {
 		printf("  %"ADDRXLAT_PRIxADDR" -> %"ADDRXLAT_PRIxADDR"\n",
 		       p->orig, p->dest);
