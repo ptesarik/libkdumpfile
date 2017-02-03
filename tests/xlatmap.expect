@@ -93,3 +93,9 @@ punch hole:
 
 merge hole:
 0-ffffffffffffffff: NULL
+
+no merge beyond end of map:
+0-ffff: #0
+10000-1ffff: NULL
+20000-fffffffffffeffff: #0
+ffffffffffff0000-ffffffffffffffff: NULL

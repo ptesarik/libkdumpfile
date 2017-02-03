@@ -36,7 +36,7 @@
 
 #include "testutil.h"
 
-#define NMAPS 13
+#define NMAPS 14
 static addrxlat_map_t *map[NMAPS];
 
 #define NMETHS 4
@@ -391,6 +391,21 @@ main(int argc, char **argv)
 	range.meth = NULL;
 	map_set(&map[12], 0x10000, &range);
 	printmap(map[12]);
+
+	puts("\nno merge beyond end of map:");
+	range.endoff = 0xffff;
+	range.meth = meth[0];
+	map_set(&map[13], 0, &range);
+	check_meth_ref(0, ++ref[0]);
+	map_set(&map[13], 0x20000, &range);
+	check_meth_ref(0, ++ref[0]);
+	/* remove the last element, keeping a known value at [n+1] */
+	map[13]->ranges[2].endoff += map[13]->ranges[3].endoff + 1;
+	--map[13]->n;
+	range.endoff = 0xffff;
+	range.meth = NULL;
+	map_set(&map[13], ADDRXLAT_ADDR_MAX - range.endoff, &range);
+	printmap(map[13]);
 
 	/* Cleanup must not crash */
 	for (i = 0; i < NMAPS; ++i) {

@@ -80,7 +80,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 			rend += last->endoff + 1;
 		}
 		/* include the following region if it can be merged */
-		if (left > 0 && rend == end && last[1].meth == range->meth) {
+		if (left > 1 && rend == end && last[1].meth == range->meth) {
 			--delta;
 			++last, --left;
 			rend += last->endoff + 1;
