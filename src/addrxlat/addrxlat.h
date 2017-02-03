@@ -238,12 +238,12 @@ typedef struct _addrxlat_def_pgt {
 } addrxlat_def_pgt_t;
 
 /** Lookup table element.
- * This defines the virtual<->physical mapping for a single object.
+ * This defines address mapping for a single object.
  * Addresses inside the object are mapped linearly using an offset.
  */
 typedef struct _addrxlat_lookup_elem {
-	addrxlat_addr_t virt;	/**< Virtual address. */
-	addrxlat_addr_t phys;	/**< Corresponding physical address. */
+	addrxlat_addr_t orig;	/**< Original address. */
+	addrxlat_addr_t dest;	/**< Corresponding destination address. */
 } addrxlat_lookup_elem_t;
 
 /** Parameters of table lookup translation. */

@@ -305,13 +305,13 @@ get_vmemmap_def(struct sys_init_data *ctl, addrxlat_def_t *def)
 		status = read64(ctl->ctx, &readptr, &data, "vmemmap phys");
 		if (status != addrxlat_ok)
 			goto err_free;
-		tblp->phys = data;
+		tblp->orig = data;
 
 		readptr.addr = elem + off_virt;
 		status = read64(ctl->ctx, &readptr, &data, "vmemmap virt");
 		if (status != addrxlat_ok)
 			goto err_free;
-		tblp->virt = data;
+		tblp->dest = data;
 
 		readptr.addr = elem + off_list;
 		status = read64(ctl->ctx, &readptr, &data, "vmemmap list");
@@ -374,6 +374,7 @@ map_linux_ppc64(struct sys_init_data *ctl)
 		if (status != addrxlat_ok)
 			return status;
 		def.kind = ADDRXLAT_LOOKUP;
+		def.target_as = ADDRXLAT_KPHYSADDR;
 		def.param.lookup.endoff = pagesize - 1;
 		internal_meth_set_def(meth, &def);
 	}

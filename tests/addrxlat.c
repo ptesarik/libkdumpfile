@@ -54,7 +54,7 @@ find_entry(addrxlat_addr_t addr)
 {
 	size_t i;
 	for (i = 0; i < nentries; ++i)
-		if (entries[i].virt == addr)
+		if (entries[i].orig == addr)
 			return &entries[i];
 	return NULL;
 }
@@ -69,7 +69,7 @@ read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 			 addr->addr);
 		return -read_notfound;
 	}
-	*val = ent->phys;
+	*val = ent->dest;
 	return addrxlat_ok;
 }
 
@@ -83,7 +83,7 @@ read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 			 addr->addr);
 		return -read_notfound;
 	}
-	*val = ent->phys;
+	*val = ent->dest;
 	return addrxlat_ok;
 }
 
@@ -116,8 +116,8 @@ add_entry(const char *spec)
 		entries = newentries;
 	}
 
-	entries[nentries].virt = addr;
-	entries[nentries].phys = val;
+	entries[nentries].orig = addr;
+	entries[nentries].dest = val;
 	++nentries;
 
 	return TEST_OK;

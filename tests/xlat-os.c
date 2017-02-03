@@ -409,7 +409,7 @@ print_lookup(const addrxlat_def_t *def)
 	print_target_as(def);
 	while (n--) {
 		printf("  %"ADDRXLAT_PRIxADDR" -> %"ADDRXLAT_PRIxADDR"\n",
-		       p->phys, p->virt);
+		       p->orig, p->dest);
 		++p;
 	}
 }

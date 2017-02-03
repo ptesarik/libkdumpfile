@@ -310,12 +310,12 @@ walk_init_lookup(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 
 	for (i = 0; i < lookup->nelem; ++i) {
 		const addrxlat_lookup_elem_t *elem = &lookup->tbl[i];
-		if (elem->virt <= addr &&
-		    addr <= elem->virt + lookup->endoff) {
-			walk->base.as = ADDRXLAT_KPHYSADDR;
-			walk->base.addr = elem->phys;
+		if (elem->orig <= addr &&
+		    addr <= elem->orig + lookup->endoff) {
+			walk->base.as = walk->meth->def.target_as;
+			walk->base.addr = elem->dest;
 			walk->level = 1;
-			walk->idx[0] = addr - elem->virt;
+			walk->idx[0] = addr - elem->orig;
 			return addrxlat_continue;
 		}
 	}

@@ -15,7 +15,7 @@
   off=0xc000000000000000
 
 @vmemmap: LOOKUP
-  target_as=MACHPHYSADDR
+  target_as=KPHYSADDR
   f000000000000000 -> fe0000
   f000000000010000 -> fd0000
 
