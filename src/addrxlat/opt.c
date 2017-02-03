@@ -301,6 +301,7 @@ parse_opts(struct parsed_opts *popt, addrxlat_ctx_t *ctx, const char *opts)
 		char quot, *key, *val;
 		size_t keylen;
 
+		quot = 0;
 		key = dst;
 		val = NULL;
 		while (*p) {
