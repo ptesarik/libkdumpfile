@@ -31,8 +31,8 @@ LIBADDRXLAT_0 {
     addrxlat_sys_init;
     addrxlat_sys_set_map;
     addrxlat_sys_get_map;
-    addrxlat_sys_set_xlat;
-    addrxlat_sys_get_xlat;
+    addrxlat_sys_set_meth;
+    addrxlat_sys_get_meth;
 
   local:
     *;

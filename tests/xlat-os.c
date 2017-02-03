@@ -538,29 +538,29 @@ os_map(void)
 		return TEST_ERR;
 	}
 
-	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_PGT);
+	meth = addrxlat_sys_get_meth(data.sys, ADDRXLAT_SYS_METH_PGT);
 	add_meth(meth, "rootpgt");
 
-	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_UPGT);
+	meth = addrxlat_sys_get_meth(data.sys, ADDRXLAT_SYS_METH_UPGT);
 	add_meth(meth, "userpgt");
 
-	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_DIRECT);
+	meth = addrxlat_sys_get_meth(data.sys, ADDRXLAT_SYS_METH_DIRECT);
 	add_meth(meth, "direct");
 
-	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_KTEXT);
+	meth = addrxlat_sys_get_meth(data.sys, ADDRXLAT_SYS_METH_KTEXT);
 	add_meth(meth, "ktext");
 
-	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_VMEMMAP);
+	meth = addrxlat_sys_get_meth(data.sys, ADDRXLAT_SYS_METH_VMEMMAP);
 	add_meth(meth, "vmemmap");
 
-	meth = addrxlat_sys_get_xlat(data.sys, ADDRXLAT_SYS_METH_RDIRECT);
+	meth = addrxlat_sys_get_meth(data.sys, ADDRXLAT_SYS_METH_RDIRECT);
 	add_meth(meth, "rdirect");
 
-	meth = addrxlat_sys_get_xlat(data.sys,
+	meth = addrxlat_sys_get_meth(data.sys,
 				     ADDRXLAT_SYS_METH_MACHPHYS_KPHYS);
 	add_meth(meth, "machphys_kphys");
 
-	meth = addrxlat_sys_get_xlat(data.sys,
+	meth = addrxlat_sys_get_meth(data.sys,
 				     ADDRXLAT_SYS_METH_KPHYS_MACHPHYS);
 	add_meth(meth, "kphys_machphys");
 

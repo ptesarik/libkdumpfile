@@ -778,8 +778,8 @@ const addrxlat_map_t *addrxlat_sys_get_map(
  *
  * A translation system uses a number of translation methods to do its job.
  * Any of them can be obtained with
- * @ref addrxlat_sys_get_xlat or overridden with
- * @ref addrxlat_sys_set_xlat using one of these indices.
+ * @ref addrxlat_sys_get_meth or overridden with
+ * @ref addrxlat_sys_set_meth using one of these indices.
  */
 typedef enum _addrxlat_sys_meth {
 	ADDRXLAT_SYS_METH_PGT,	   /**< Kernel-space page table. */
@@ -802,9 +802,9 @@ typedef enum _addrxlat_sys_meth {
 /** Explicitly set an address translation method for a translation system.
  * @param sys     Translation system.
  * @param idx     Translation method index.
- * @param meth    Actual translation method.
+ * @param meth    New translation method.
  */
-void addrxlat_sys_set_xlat(
+void addrxlat_sys_set_meth(
 	addrxlat_sys_t *sys, addrxlat_sys_meth_t idx,
 	addrxlat_meth_t *meth);
 
@@ -813,7 +813,7 @@ void addrxlat_sys_set_xlat(
  * @param idx     Translation method index.
  * @returns       Associated translation method.
  */
-addrxlat_meth_t *addrxlat_sys_get_xlat(
+addrxlat_meth_t *addrxlat_sys_get_meth(
 	addrxlat_sys_t *sys, addrxlat_sys_meth_t idx);
 
 #ifdef  __cplusplus

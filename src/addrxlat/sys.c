@@ -139,7 +139,7 @@ addrxlat_sys_get_map(const addrxlat_sys_t *sys, addrxlat_sys_map_t idx)
 }
 
 void
-addrxlat_sys_set_xlat(addrxlat_sys_t *sys,
+addrxlat_sys_set_meth(addrxlat_sys_t *sys,
 		      addrxlat_sys_meth_t idx, addrxlat_meth_t *meth)
 {
 	if (sys->meth[idx])
@@ -150,7 +150,7 @@ addrxlat_sys_set_xlat(addrxlat_sys_t *sys,
 }
 
 addrxlat_meth_t *
-addrxlat_sys_get_xlat(addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
+addrxlat_sys_get_meth(addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
 {
 	if (sys->meth[idx])
 		internal_meth_incref(sys->meth[idx]);
