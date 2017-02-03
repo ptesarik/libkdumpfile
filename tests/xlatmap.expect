@@ -83,3 +83,13 @@ overlap multiple:
 0-7fff: #0
 8000-37fff: #3
 38000-ffffffffffffffff: #0
+
+punch hole:
+0-ffff: NULL
+10000-17fff: #0
+18000-18fff: NULL
+19000-1ffff: #0
+20000-ffffffffffffffff: NULL
+
+merge hole:
+0-ffffffffffffffff: NULL

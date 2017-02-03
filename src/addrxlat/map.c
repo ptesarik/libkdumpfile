@@ -99,7 +99,12 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 		delta = 3;
 		left = 0;
 		first = last = NULL;
-		rend = ADDRXLAT_ADDR_MAX;
+		if (!range->meth) {
+			extend = ADDRXLAT_ADDR_MAX - (end - addr);
+			raddr = addr;
+			rend = end;
+		} else
+			rend = ADDRXLAT_ADDR_MAX;
 	}
 
 	/* split begin and/or end */
@@ -156,7 +161,8 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 	}
 
 	/* take an extra reference to the new region */
-	internal_meth_incref(range->meth);
+	if (range->meth)
+		internal_meth_incref(range->meth);
 
 	/* drop reference to the previous value, unless an unitialized
 	 * array entry is being inserted */

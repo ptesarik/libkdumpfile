@@ -36,7 +36,7 @@
 
 #include "testutil.h"
 
-#define NMAPS 11
+#define NMAPS 13
 static addrxlat_map_t *map[NMAPS];
 
 #define NMETHS 4
@@ -374,6 +374,23 @@ main(int argc, char **argv)
 	check_meth_ref(2, --ref[2]);
 	check_meth_ref(3, ++ref[3]);
 	printmap(map[10]);
+
+	puts("\npunch hole:");
+	range.endoff = 0xffff;
+	range.meth = meth[0];
+	map_set(&map[11], 0x10000, &range);
+	check_meth_ref(0, ++ref[0]);
+	range.endoff = 0xfff;
+	range.meth = NULL;
+	map_set(&map[11], 0x18000, &range);
+	check_meth_ref(0, ++ref[0]);
+	printmap(map[11]);
+
+	puts("\nmerge hole:");
+	range.endoff = 0xffff;
+	range.meth = NULL;
+	map_set(&map[12], 0x10000, &range);
+	printmap(map[12]);
 
 	/* Cleanup must not crash */
 	for (i = 0; i < NMAPS; ++i) {
