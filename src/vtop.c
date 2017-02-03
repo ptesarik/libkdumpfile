@@ -191,11 +191,12 @@ kdump_status
 map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	 const struct vtop_map *map)
 {
+	addrxlat_fulladdr_t faddr = { .addr = vaddr, .as = ADDRXLAT_KVADDR };
 	addrxlat_status status;
 
-	status = addrxlat_by_map(ctx->addrxlat, &vaddr, map->map);
+	status = addrxlat_by_map(ctx->addrxlat, &faddr, map->map);
 	if (status == addrxlat_ok)
-		*paddr = vaddr;
+		*paddr = faddr.addr;
 	return set_error_addrxlat(ctx, status);
 }
 

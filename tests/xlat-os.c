@@ -79,19 +79,16 @@ find_entry(addrxlat_addr_t addr, size_t sz)
 }
 
 static addrxlat_status
-get_physaddr(struct cbdata *cbd, const addrxlat_fulladdr_t *addr,
-	     addrxlat_addr_t *physaddr)
+get_physaddr(struct cbdata *cbd, addrxlat_fulladdr_t *addr)
 {
 	addrxlat_status status;
-
-	*physaddr = addr->addr;
 
 	switch (addr->as) {
 	case ADDRXLAT_MACHPHYSADDR:
 		break;
 
 	case ADDRXLAT_KPHYSADDR:
-		status = addrxlat_by_map(cbd->ctx, physaddr,
+		status = addrxlat_by_map(cbd->ctx, addr,
 					 addrxlat_sys_get_map(
 						 cbd->sys,
 						 ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS));
@@ -104,7 +101,7 @@ get_physaddr(struct cbdata *cbd, const addrxlat_fulladdr_t *addr,
 		break;
 
 	case ADDRXLAT_KVADDR:
-		status = addrxlat_by_map(cbd->ctx, physaddr,
+		status = addrxlat_by_map(cbd->ctx, addr,
 					 addrxlat_sys_get_map(
 						 cbd->sys,
 						 ADDRXLAT_SYS_MAP_KV_PHYS));
@@ -129,23 +126,23 @@ get_physaddr(struct cbdata *cbd, const addrxlat_fulladdr_t *addr,
 static addrxlat_status
 read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 {
-	addrxlat_addr_t physaddr;
+	addrxlat_fulladdr_t physaddr = *addr;
 	addrxlat_status status;
 	struct entry *ent;
 	uint32_t *p;
 
-	status = get_physaddr(data, addr, &physaddr);
+	status = get_physaddr(data, &physaddr);
 	if (status != addrxlat_ok)
 		return status;
 
-	ent = find_entry(physaddr, sizeof(uint32_t));
+	ent = find_entry(physaddr.addr, sizeof(uint32_t));
 	if (!ent) {
 		snprintf(read_err_str, sizeof read_err_str,
 			 "No entry for address 0x%"ADDRXLAT_PRIxADDR,
-			 physaddr);
+			 physaddr.addr);
 		return -read_notfound;
 	}
-	p = (uint32_t*)(ent->buf + physaddr - ent->addr);
+	p = (uint32_t*)(ent->buf + physaddr.addr - ent->addr);
 	*val = *p;
 	return addrxlat_ok;
 }
@@ -153,23 +150,23 @@ read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 static addrxlat_status
 read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 {
-	addrxlat_addr_t physaddr;
+	addrxlat_fulladdr_t physaddr = *addr;
 	addrxlat_status status;
 	struct entry *ent;
 	uint64_t *p;
 
-	status = get_physaddr(data, addr, &physaddr);
+	status = get_physaddr(data, &physaddr);
 	if (status != addrxlat_ok)
 		return status;
 
-	ent = find_entry(physaddr, sizeof(uint64_t));
+	ent = find_entry(physaddr.addr, sizeof(uint64_t));
 	if (!ent) {
 		snprintf(read_err_str, sizeof read_err_str,
 			 "No entry for address 0x%"ADDRXLAT_PRIxADDR,
-			 physaddr);
+			 physaddr.addr);
 		return -read_notfound;
 	}
-	p = (uint64_t*)(ent->buf + physaddr - ent->addr);
+	p = (uint64_t*)(ent->buf + physaddr.addr - ent->addr);
 	*val = *p;
 	return addrxlat_ok;
 }

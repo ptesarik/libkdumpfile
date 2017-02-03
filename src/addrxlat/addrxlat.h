@@ -639,7 +639,7 @@ void addrxlat_map_clear(addrxlat_map_t *map);
  * @returns              Error status.
  */
 addrxlat_status addrxlat_by_map(
-	addrxlat_ctx_t *ctx, addrxlat_addr_t *paddr,
+	addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
 	const addrxlat_map_t *map);
 
 /** Operating system type. */

@@ -193,14 +193,21 @@ addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 }
 
 addrxlat_status
-addrxlat_by_map(addrxlat_ctx_t *ctx, addrxlat_addr_t *paddr,
+addrxlat_by_map(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
 		const addrxlat_map_t *map)
 {
-	const addrxlat_meth_t *meth = internal_map_search(map, *paddr);
-	return meth
-		? internal_walk(ctx, meth, paddr)
-		: set_error(ctx, addrxlat_invalid,
-			    "No translation method defined");
+	const addrxlat_meth_t *meth;
+	addrxlat_status status;
+
+	meth = internal_map_search(map, paddr->addr);
+	if (!meth)
+		return set_error(ctx, addrxlat_invalid,
+				 "No translation method defined");
+
+	status = internal_walk(ctx, meth, &paddr->addr);
+	if (status == addrxlat_ok)
+		paddr->as = meth->def.target_as;
+	return status;
 }
 
 DEFINE_INTERNAL(map_clear)
