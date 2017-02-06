@@ -632,6 +632,12 @@ addrxlat_meth_t *addrxlat_map_search(
  */
 void addrxlat_map_clear(addrxlat_map_t *map);
 
+/** Duplicate a translation map.
+ * @param map  Source translation map.
+ * @returns    Copy of @c map, or @c NULL on allocation failure.
+ */
+addrxlat_map_t *addrxlat_map_dup(const addrxlat_map_t *map);
+
 /** Translate an address using a translation map.
  * @param ctx            Address translation context.
  * @param[in,out] paddr  Address.

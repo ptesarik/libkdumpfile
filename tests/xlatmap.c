@@ -36,7 +36,7 @@
 
 #include "testutil.h"
 
-#define NMAPS 14
+#define NMAPS 15
 static addrxlat_map_t *map[NMAPS];
 
 #define NMETHS 4
@@ -406,6 +406,11 @@ main(int argc, char **argv)
 	range.meth = NULL;
 	map_set(&map[13], ADDRXLAT_ADDR_MAX - range.endoff, &range);
 	printmap(map[13]);
+
+	puts("\nduplicate punch hole:");
+	map[14] = addrxlat_map_dup(map[11]);
+	check_meth_ref(0, ref[0] += 2);
+	printmap(map[14]);
 
 	/* Cleanup must not crash */
 	for (i = 0; i < NMAPS; ++i) {

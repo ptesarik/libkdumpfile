@@ -222,3 +222,28 @@ addrxlat_map_clear(addrxlat_map_t *map)
 		++r;
 	}
 }
+
+addrxlat_map_t *
+addrxlat_map_dup(const addrxlat_map_t *map)
+{
+	const addrxlat_range_t *q;
+	addrxlat_range_t *r;
+	addrxlat_map_t *ret;
+	size_t todo;
+
+	ret = malloc(offsetof(addrxlat_map_t, ranges) +
+		     map->n * sizeof(ret->ranges[0]));
+	if (!ret)
+		return ret;
+
+	q = map->ranges;
+	r = ret->ranges;
+	todo = ret->n = map->n;
+	while (todo--) {
+		if (q->meth)
+			internal_meth_incref(q->meth);
+		*r++ = *q++;
+	}
+
+	return ret;
+}
