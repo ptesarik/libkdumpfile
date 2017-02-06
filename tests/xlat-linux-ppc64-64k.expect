@@ -32,6 +32,8 @@
   target_as=MACHPHYSADDR
   off=0x0
 
+KV -> HW:
+
 KV -> PHYS:
 0-fffffffffff: @userpgt
 100000000000-bfffffffffffffff: NONE

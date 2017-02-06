@@ -739,6 +739,21 @@ addrxlat_status addrxlat_sys_init(
  * using one of these indices.
  */
 typedef enum _addrxlat_sys_map {
+	/** Map virtual addresses using same method as hardware.
+	 * Unlike @ref ADDRXLAT_SYS_MAP_KV_PHYS, translations
+	 * in this map will always walk the hardware page table.
+	 * This is mostly useful for implementing a verbose @c vtop
+	 * command. It may be also used if translation using
+	 * @ref ADDRXLAT_SYS_MAP_KV_PHYS results in the wrong
+	 * physical address space and further translation is
+	 * unavailable or too expensive.
+	 * Note: This map may be incomplete (or not available)
+	 * even if the virtual address can be in fact translated.
+	 * For example, with IBM Power ISA with hashed page tables,
+	 * only a fraction the address space is usually mapped.
+	 */
+	ADDRXLAT_SYS_MAP_HW,
+
 	/** Map kernel virtual addresses to physical addresses.
 	 * This translation accepts @ref ADDRXLAT_KVADDR on input
 	 * and translates it to a physical address. This is either

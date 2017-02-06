@@ -12,6 +12,10 @@
   target_as=MACHPHYSADDR
   off=0x0
 
+KV -> HW:
+0-1fffffffffffff: @rootpgt
+20000000000000-ffffffffffffffff: NONE
+
 KV -> PHYS:
 0-1fffffffffffff: @rootpgt
 20000000000000-ffffffffffffffff: NONE

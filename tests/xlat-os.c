@@ -562,6 +562,11 @@ os_map(void)
 				     ADDRXLAT_SYS_METH_KPHYS_MACHPHYS);
 	add_meth(meth, "kphys_machphys");
 
+	puts("KV -> HW:");
+	print_map(addrxlat_sys_get_map(data.sys, ADDRXLAT_SYS_MAP_HW));
+
+	putchar('\n');
+
 	puts("KV -> PHYS:");
 	print_map(addrxlat_sys_get_map(data.sys, ADDRXLAT_SYS_MAP_KV_PHYS));
 

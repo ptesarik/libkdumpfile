@@ -621,6 +621,7 @@ sys_x86_64(struct sys_init_data *ctl)
 		.levels = 5,
 		.bits = { 12, 9, 9, 9, 9 }
 	};
+	addrxlat_map_t *map;
 	addrxlat_meth_t *meth;
 	addrxlat_def_t def;
 	addrxlat_status status;
@@ -639,9 +640,15 @@ sys_x86_64(struct sys_init_data *ctl)
 	def.param.pgt.pf = x86_64_pf;
 	internal_meth_set_def(meth, &def);
 
-	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, layout_generic);
+	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_HW, layout_generic);
 	if (status != addrxlat_ok)
 		return status;
+
+	map = addrxlat_map_dup(ctl->sys->map[ADDRXLAT_SYS_MAP_HW]);
+	if (!map)
+		return set_error(ctl->ctx, addrxlat_nomem,
+				 "Cannot duplicate hardware mapping");
+	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = map;
 
 	status = sys_set_physmaps(ctl, PHYSADDR_SIZE - 1);
 	if (status != addrxlat_ok)
