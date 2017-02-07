@@ -23,9 +23,11 @@
   elemsz=8
   valsz=8
 
-@kphys_machphys: LINEAR
+@kphys_machphys: PGT
   target_as=MACHPHYSADDR
-  off=0x0
+  root=MACHPHYSADDR:0x3abc000
+  pte_format=pfn64
+  bits=12,9,9,9
 
 KV -> HW:
 0-7fffffffffff: @rootpgt
@@ -50,3 +52,5 @@ MACHPHYS -> KPHYS:
 10000000000000-ffffffffffffffff: NONE
 
 KPHYS -> MACHPHYS:
+0-7fffffffff: @kphys_machphys
+8000000000-ffffffffffffffff: NONE

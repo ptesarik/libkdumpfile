@@ -39,3 +39,11 @@ ffffffffffffffff 0000000000040060
 # machine_to_phys_mapping virtual address
 @0x73e380
 ffff800000000000
+
+# Xen p2m nested tables
+@0x3abc008
+0000000000003abe
+@0x3abe000
+0000000000003abf
+@0x3abf2f8
+0000000000000002

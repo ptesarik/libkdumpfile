@@ -369,6 +369,8 @@ print_pgt(const addrxlat_def_t *def)
 {
 	static const char *pte_formats[] = {
 		[addrxlat_pte_none] = "none",
+		[addrxlat_pte_pfn32] = "pfn32",
+		[addrxlat_pte_pfn64] = "pfn64",
 		[addrxlat_pte_ia32] = "ia32",
 		[addrxlat_pte_ia32_pae] = "ia32_pae",
 		[addrxlat_pte_x86_64] = "x86_64",

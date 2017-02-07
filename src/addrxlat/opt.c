@@ -149,6 +149,15 @@ static const struct {
 	END
 };
 
+/** Eleven-character options. */
+static const struct {
+	struct optdesc opt;
+	char name[12];
+} opt11[] = {
+	DEF(xen_p2m_mfn, number),
+	END
+};
+
 #define DEFPTR(len)						\
 	[len] = { &opt ## len[0].opt, sizeof(opt ## len[0]) }
 
@@ -159,6 +168,7 @@ static const struct {
 	DEFPTR(3),
 	DEFPTR(7),
 	DEFPTR(8),
+	DEFPTR(11),
 };
 
 /** Parse a single option value.

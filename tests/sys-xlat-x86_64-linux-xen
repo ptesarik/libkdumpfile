@@ -11,4 +11,9 @@ list="MACHPHYSADDR:0x1234:KPHYSADDR"
 # machine to reverse directmap
 list="$list MACHPHYSADDR:0x1234:KVADDR"
 
+# kernel to machine
+list="$list KPHYSADDR:0x4005fedc:MACHPHYSADDR"
+# directmap to machine
+list="$list KVADDR:0xffff88004005fedc:MACHPHYSADDR"
+
 . "$srcdir"/sys-xlat-common

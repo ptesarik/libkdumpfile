@@ -463,6 +463,50 @@ set_xen_mach2phys(struct sys_init_data *ctl, addrxlat_addr_t m2p)
 	return addrxlat_meth_set_def(meth, &def);
 }
 
+/** Initialize Xen p2m translation.
+ * @param ctl  Initialization data.
+ * @returns    Error status.
+ */
+ addrxlat_status
+set_xen_p2m(struct sys_init_data *ctl)
+{
+	static const addrxlat_paging_form_t xen_p2m_pf = {
+		.pte_format = addrxlat_pte_pfn64,
+		.levels = 4,
+		.bits = { 12, 9, 9, 9 }
+	};
+
+	addrxlat_addr_t p2m_maddr;
+	addrxlat_map_t *map;
+	addrxlat_meth_t *meth;
+	addrxlat_def_t def;
+	addrxlat_range_t range;
+
+	map = ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS];
+	internal_map_clear(map);
+	if (!ctl->popt.val[OPT_xen_p2m_mfn].set)
+		return addrxlat_ok; /* leave undefined */
+	p2m_maddr = ctl->popt.val[OPT_xen_p2m_mfn].num << PAGE_SHIFT;
+
+	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_KPHYS_MACHPHYS];
+	def.kind = ADDRXLAT_PGT;
+	def.target_as = ADDRXLAT_MACHPHYSADDR;
+	def.param.pgt.root.addr = p2m_maddr;
+	def.param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
+	def.param.pgt.pf = xen_p2m_pf;
+	internal_meth_set_def(meth, &def);
+
+	range.endoff = paging_max_index(&xen_p2m_pf);
+	range.meth = meth;
+	map = addrxlat_map_set(map, 0, &range);
+	if (!map)
+		return set_error(ctl->ctx, addrxlat_nomem,
+				 "Cannot allocate Xen p2m map");
+	ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS] = map;
+
+	return addrxlat_ok;
+}
+
 /** Initialize a translation map for Linux on x86_64.
  * @param ctl  Initialization data.
  * @returns    Error status.
@@ -481,12 +525,13 @@ map_linux_x86_64(struct sys_init_data *ctl)
 
 	if (ctl->popt.val[OPT_xen_xlat].set &&
 	    ctl->popt.val[OPT_xen_xlat].num) {
-		status = set_xen_mach2phys(ctl, XEN_MACH2PHYS_ADDR);
+		status = set_xen_p2m(ctl);
 		if (status != addrxlat_ok)
 			return status;
 
-		internal_map_clear(
-			ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS]);
+		status = set_xen_mach2phys(ctl, XEN_MACH2PHYS_ADDR);
+		if (status != addrxlat_ok)
+			return status;
 	}
 
 	layout = linux_layout_by_pgt(ctl->sys, ctl->ctx);
