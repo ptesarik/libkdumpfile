@@ -216,11 +216,13 @@ void
 addrxlat_map_clear(addrxlat_map_t *map)
 {
 	const addrxlat_range_t *r = map->ranges;
-	while(map->n--) {
+	size_t n = map->n;
+	while(n--) {
 		if (r->meth)
 			internal_meth_decref(r->meth);
 		++r;
 	}
+	map->n = 0;
 }
 
 addrxlat_map_t *
