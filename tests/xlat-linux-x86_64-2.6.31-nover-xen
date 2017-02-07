@@ -1,0 +1,13 @@
+#! /bin/sh
+
+#
+# Check Linux 2.6.31 X86_64 translation without explicit version,
+# using non-autotranslated Xen page table content alone
+#
+
+arch=x86_64
+ostype=1
+osver=0
+opts="physbase=0 xen_xlat=true"
+
+. "$srcdir"/xlat-os-common

@@ -1,0 +1,14 @@
+#! /bin/sh
+
+#
+# Check translation by system using Linux/x86_64 definitions
+#
+
+sysname=xlat-linux-x86_64-2.6.31-nover-xen
+
+# machine to kernel
+list="MACHPHYSADDR:0x1234:KPHYSADDR"
+# machine to reverse directmap
+list="$list MACHPHYSADDR:0x1234:KVADDR"
+
+. "$srcdir"/sys-xlat-common

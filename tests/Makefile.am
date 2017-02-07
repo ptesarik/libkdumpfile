@@ -174,6 +174,7 @@ test_scripts = \
 	lkcd-duplicate \
 	lkcd-duplicate-middle \
 	sys-xlat-x86_64-linux \
+	sys-xlat-x86_64-linux-xen \
 	xlatmap-check \
 	xlat-os-ia32-none \
 	xlat-os-ia32-pae-none \
@@ -199,6 +200,7 @@ test_scripts = \
 	xlat-linux-x86_64-2.6.31-nover \
 	xlat-linux-x86_64-2.6.31-nover-reloc \
 	xlat-linux-x86_64-2.6.31-nover-reg \
+	xlat-linux-x86_64-2.6.31-nover-xen \
 	xlat-xen-ia32 \
 	xlat-xen-ia32-pae \
 	xlat-xen-x86_64-old \
@@ -226,6 +228,7 @@ dist_check_DATA = \
 	basic.expect \
 	partial.expect \
 	sys-xlat-x86_64-linux.expect \
+	sys-xlat-x86_64-linux-xen.expect \
 	xlatmap.expect \
 	xlat-os-ia32-none.expect \
 	xlat-os-ia32-pae-none.expect \
@@ -276,6 +279,9 @@ dist_check_DATA = \
 	xlat-linux-x86_64-2.6.31-nover-reloc.data \
 	xlat-linux-x86_64-2.6.31-nover-reloc.expect \
 	xlat-linux-x86_64-2.6.31-nover-reloc.sym \
+	xlat-linux-x86_64-2.6.31-nover-xen.data \
+	xlat-linux-x86_64-2.6.31-nover-xen.expect \
+	xlat-linux-x86_64-2.6.31-nover-xen.sym \
 	xlat-linux-x86_64-2.6.31-reloc.data \
 	xlat-linux-x86_64-2.6.31-reloc.expect \
 	xlat-linux-x86_64-2.6.31-reloc.sym \

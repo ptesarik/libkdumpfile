@@ -173,6 +173,7 @@ enum optidx {
 	OPT_pagesize,		/**< Page size (number). */
 	OPT_physbase,		/**< [x86-64] Linux physical base address. */
 	OPT_rootpgt,		/**< Root page table address. */
+	OPT_xen_xlat,		/**< Use Xen m2p and p2m translation. */
 
 	OPT_NUM			/**< Total number of options. */
 };

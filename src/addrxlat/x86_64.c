@@ -46,9 +46,15 @@
 /* Maximum virtual address bits (architecture limit) */
 #define VIRTADDR_BITS_MAX	48
 
+/** Page size in bits. */
+#define PAGE_SHIFT		12
+
 #define NONCANONICAL_START	((uint64_t)1<<(VIRTADDR_BITS_MAX-1))
 #define NONCANONICAL_END	(~NONCANONICAL_START)
 #define VIRTADDR_MAX		UINT64_MAX
+
+/** Virtual address of the Xen machine-to-physical map. */
+#define XEN_MACH2PHYS_ADDR	0xffff800000000000ULL
 
 /** Kernel text mapping (virtual addresses).
  * Note that this mapping has never changed, so these constants
@@ -437,6 +443,28 @@ get_linux_pgtroot(struct sys_init_data *ctl)
 
 /** Initialize a translation map for Linux on x86_64.
  * @param ctl  Initialization data.
+ * @param m2p  Virtual address of the machine-to-physical array.
+ * @returns    Error status.
+ */
+static addrxlat_status
+set_xen_mach2phys(struct sys_init_data *ctl, addrxlat_addr_t m2p)
+{
+	addrxlat_meth_t *meth;
+	addrxlat_def_t def;
+
+	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_MACHPHYS_KPHYS];
+	def.kind = ADDRXLAT_MEMARR;
+	def.target_as = ADDRXLAT_KPHYSADDR;
+	def.param.memarr.base.as = ADDRXLAT_KVADDR;
+	def.param.memarr.base.addr = m2p;
+	def.param.memarr.shift = PAGE_SHIFT;
+	def.param.memarr.elemsz = sizeof(uint64_t);
+	def.param.memarr.valsz = sizeof(uint64_t);
+	return addrxlat_meth_set_def(meth, &def);
+}
+
+/** Initialize a translation map for Linux on x86_64.
+ * @param ctl  Initialization data.
  * @returns    Error status.
  */
 static addrxlat_status
@@ -450,6 +478,16 @@ map_linux_x86_64(struct sys_init_data *ctl)
 	status = linux_ktext_map(ctl);
 	if (status != addrxlat_ok)
 		return status;
+
+	if (ctl->popt.val[OPT_xen_xlat].set &&
+	    ctl->popt.val[OPT_xen_xlat].num) {
+		status = set_xen_mach2phys(ctl, XEN_MACH2PHYS_ADDR);
+		if (status != addrxlat_ok)
+			return status;
+
+		internal_map_clear(
+			ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS]);
+	}
 
 	layout = linux_layout_by_pgt(ctl->sys, ctl->ctx);
 

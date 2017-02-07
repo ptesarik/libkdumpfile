@@ -145,6 +145,7 @@ static const struct {
 } opt8[] = {
 	DEF(pagesize, number),
 	DEF(physbase, number),
+	DEF(xen_xlat, bool),
 	END
 };
 
