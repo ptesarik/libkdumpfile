@@ -69,6 +69,10 @@ privptr_LDADD = $(top_builddir)/src/libkdumpfile.la
 subattr_SOURCES = subattr.c
 subattr_LDADD = $(top_builddir)/src/libkdumpfile.la
 
+sys_xlat_LDADD = \
+	$(LDADD) \
+	$(top_builddir)/src/libkdumpfile.la
+
 thread_errstr_LDADD = $(top_builddir)/src/libkdumpfile.la
 vmci_cleanup_LDADD = $(top_builddir)/src/libkdumpfile.la
 vmci_lines_post_LDADD = $(top_builddir)/src/libkdumpfile.la
@@ -94,6 +98,7 @@ check_PROGRAMS = \
 	multiread \
 	privptr \
 	subattr \
+	sys-xlat \
 	thread-errstr \
 	vmci-cleanup \
 	vmci-lines-post \
@@ -168,6 +173,7 @@ test_scripts = \
 	lkcd-unordered-faroff \
 	lkcd-duplicate \
 	lkcd-duplicate-middle \
+	sys-xlat-x86_64-linux \
 	xlatmap-check \
 	xlat-os-ia32-none \
 	xlat-os-ia32-pae-none \
@@ -219,6 +225,7 @@ dist_check_DATA = \
 	elf-empty.data \
 	basic.expect \
 	partial.expect \
+	sys-xlat-x86_64-linux.expect \
 	xlatmap.expect \
 	xlat-os-ia32-none.expect \
 	xlat-os-ia32-pae-none.expect \
@@ -306,6 +313,7 @@ dist_check_SCRIPTS = \
 	lkcd-empty \
 	lkcd-basic \
 	lkcd-wrong-page-size \
+	sys-xlat-common \
 	xlat-os-common \
 	$(test_scripts)
 

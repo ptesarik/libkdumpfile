@@ -330,3 +330,52 @@ sys_set_physmaps(struct sys_init_data *ctl, addrxlat_addr_t maxaddr)
 	layout[0].act = SYS_ACT_IDENT_MACHPHYS;
 	return sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS, layout);
 }
+
+#define DSTMAP(dst, mapidx) \
+	[(ADDRXLAT_ ## dst)] = (ADDRXLAT_SYS_MAP_ ## mapidx) + 1
+
+static const addrxlat_sys_map_t
+map_trans[][3] = {
+	[ADDRXLAT_KPHYSADDR] = {
+		DSTMAP(MACHPHYSADDR, KPHYS_MACHPHYS),
+		DSTMAP(KVADDR, KPHYS_DIRECT),
+	},
+	[ADDRXLAT_MACHPHYSADDR] = {
+		DSTMAP(KPHYSADDR, MACHPHYS_KPHYS),
+		DSTMAP(KVADDR, MACHPHYS_KPHYS),
+	},
+	[ADDRXLAT_KVADDR] = {
+		DSTMAP(KPHYSADDR, KV_PHYS),
+		DSTMAP(MACHPHYSADDR, KV_PHYS),
+	},
+};
+
+addrxlat_status
+addrxlat_by_sys(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
+		addrxlat_addrspace_t goal, const addrxlat_sys_t *sys)
+{
+
+	addrxlat_sys_map_t mapidx;
+	addrxlat_map_t *map;
+	addrxlat_status status;
+
+	if (paddr->as == goal)
+		return addrxlat_ok;
+
+	if (paddr->as >= ARRAY_SIZE(map_trans) ||
+	    goal >= ARRAY_SIZE(map_trans[0]))
+		return set_error(ctx, addrxlat_notimpl,
+				 "Unrecognized address space");
+
+	mapidx = map_trans[paddr->as][goal] - 1;
+	if (mapidx < 0 || !(map = sys->map[mapidx]))
+		return set_error(ctx, addrxlat_nometh, "No way to translate");
+
+	status = addrxlat_by_map(ctx, paddr, map);
+	if (status != addrxlat_ok)
+		return status;
+	if (paddr->as != goal)
+		return addrxlat_by_sys(ctx, paddr, goal, sys);
+
+	return addrxlat_ok;
+}

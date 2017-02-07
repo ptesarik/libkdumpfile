@@ -11,6 +11,7 @@ mklkcd
 multiread
 privptr
 subattr
+sys-xlat
 thread-errstr
 vmci-cleanup
 vmci-lines-post

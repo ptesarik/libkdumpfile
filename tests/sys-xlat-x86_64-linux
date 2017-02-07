@@ -1,0 +1,29 @@
+#! /bin/sh
+
+#
+# Check translation by system using Linux/x86_64 definitions
+#
+
+sysname=xlat-linux-x86_64-2.6.31-nover-reloc
+
+# directmap
+list="KVADDR:0xffff880012345678:KPHYSADDR"
+# dtto including identity mapping to machine physical
+list="$list KVADDR:0xffff880012345678:MACHPHYSADDR"
+
+# kernel text
+list="$list KVADDR:0xffffffff80001234:KPHYSADDR"
+# dtto including identity mapping to machine physical
+list="$list KVADDR:0xffffffff80001234:MACHPHYSADDR"
+
+# VMEMMAP using page tables
+list="$list KVADDR:0xffffea000000abcd:MACHPHYSADDR"
+# dtto including identity mapping to kernel physical
+list="$list KVADDR:0xffffea000000abcd:KPHYSADDR"
+
+# reverse directmap
+list="$list KPHYSADDR:0x5678:KVADDR"
+# dtto including identity mapping from machine physical
+list="$list MACHPHYSADDR:0x5678:KVADDR"
+
+. "$srcdir"/sys-xlat-common

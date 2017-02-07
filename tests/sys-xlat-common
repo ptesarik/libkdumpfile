@@ -1,0 +1,39 @@
+#
+# Common code for checking address translation by system
+#
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+resultfile="out/${name}.result"
+expectfile="$srcdir/$name.expect"
+cfgfile="$srcdir/$sysname.expect"
+datafile="$srcdir/$sysname.data"
+
+cfgspec=
+test -f "$cfgfile" && cfgspec="CONFIG=$cfgfile"
+dataspec=
+test -f "$datafile" && dataspec="DATA=$datafile"
+
+echo -n "Checking... "
+./sys-xlat $list >"$resultfile" <<EOF
+$cfgspec
+$dataspec
+EOF
+rc=$?
+if [ $rc -gt 1 ]; then
+    echo ERROR
+    echo "Cannot set $input" >&2
+    exit $rc
+elif [ $rc -ne 0 ]; then
+    echo FAILED
+    exit $rc
+elif ! diff "$expectfile" "$resultfile"; then
+    echo FAILED
+    echo "Result does not match" >&2
+    exit 1
+else
+    echo OK
+fi
+
+exit 0

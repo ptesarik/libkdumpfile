@@ -59,6 +59,7 @@ typedef enum _addrxlat_status {
 	addrxlat_invalid,		/**< Invalid address. */
 	addrxlat_nomem,			/**< Memory allocation failure. */
 	addrxlat_nodata,		/**< Uninitialized data. */
+	addrxlat_nometh,		/**< No translation method. */
 
 	/** Base for custom status codes.
 	 * More importantly, this enumerator forces the whole enum
@@ -836,6 +837,24 @@ void addrxlat_sys_set_meth(
  */
 addrxlat_meth_t *addrxlat_sys_get_meth(
 	addrxlat_sys_t *sys, addrxlat_sys_meth_t idx);
+
+/** Translate an address using a translation system.
+ * @param ctx            Address translation context.
+ * @param[in,out] paddr  Address.
+ * @param goal           Target address space.
+ * @param sys            Translation system.
+ * @returns              Error status.
+ *
+ * This function performs all address translations (possibly repeated)
+ * necessary to convert the original address @c orig to the target
+ * address space @c goal. On success, it stores the result in @c dest.
+ *
+ * NB: If there is no way to translate the source address space to
+ * target address space, this function returns @ref addrxlat_nometh.
+ */
+addrxlat_status addrxlat_by_sys(
+	addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
+	addrxlat_addrspace_t goal, const addrxlat_sys_t *sys);
 
 #ifdef  __cplusplus
 }

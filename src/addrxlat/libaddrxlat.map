@@ -17,7 +17,6 @@ LIBADDRXLAT_0 {
     addrxlat_ctx_cb_read64;
 
     addrxlat_walk;
-    addrxlat_by_map;
     addrxlat_map_set;
     addrxlat_map_search;
     addrxlat_map_clear;
@@ -34,6 +33,9 @@ LIBADDRXLAT_0 {
     addrxlat_sys_get_map;
     addrxlat_sys_set_meth;
     addrxlat_sys_get_meth;
+
+    addrxlat_by_map;
+    addrxlat_by_sys;
 
   local:
     *;
