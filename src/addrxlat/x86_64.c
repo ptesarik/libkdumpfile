@@ -395,14 +395,12 @@ linux_ktext_map(struct sys_init_data *ctl)
 	if (status != addrxlat_ok)
 		return status;
 
-	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT];
-	if (range.meth->def.kind == ADDRXLAT_NONE) {
-		status = linux_ktext_meth(ctl);
-		if (status != addrxlat_ok && status != addrxlat_nodata)
-			return status;
-	}
+	status = linux_ktext_meth(ctl);
+	if (status != addrxlat_ok && status != addrxlat_nodata)
+		return status;
 
 	range.endoff = __END_KERNEL_map - __START_KERNEL_map;
+	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT];
 	newmap = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS],
 				  __START_KERNEL_map, &range);
 	if (!newmap)
