@@ -51,7 +51,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 
 	extend = 0;
 	raddr = 0;
-	if (map) {
+	if (map && map->n) {
 		delta = 2;
 		left = map->n;
 
@@ -122,7 +122,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 		if (!newmap)
 			return newmap;
 
-		if (!map) {
+		if (!first) {
 			newmap->n = 1;
 			first = last = newmap->ranges;
 			first->endoff = ADDRXLAT_ADDR_MAX;

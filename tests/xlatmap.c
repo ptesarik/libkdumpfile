@@ -36,7 +36,7 @@
 
 #include "testutil.h"
 
-#define NMAPS 15
+#define NMAPS 16
 static addrxlat_map_t *map[NMAPS];
 
 #define NMETHS 4
@@ -411,6 +411,18 @@ main(int argc, char **argv)
 	map[14] = addrxlat_map_dup(map[11]);
 	check_meth_ref(0, ref[0] += 2);
 	printmap(map[14]);
+
+	puts("\nno merge with stale data:");
+	range.endoff = 0xffff;
+	range.meth = meth[0];
+	map_set(&map[15], 0, &range);
+	check_meth_ref(0, ++ref[0]);
+	addrxlat_map_clear(map[15]);
+	check_meth_ref(0, --ref[0]);
+	range.endoff = 0x1ffff;
+	map_set(&map[15], 0, &range);
+	check_meth_ref(0, ++ref[0]);
+	printmap(map[15]);
 
 	/* Cleanup must not crash */
 	for (i = 0; i < NMAPS; ++i) {
