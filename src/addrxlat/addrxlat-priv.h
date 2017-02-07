@@ -67,7 +67,7 @@
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 /** Maximum length of the error message. */
-#define ERRBUF	64
+#define ERRBUF	80
 
 /** Extra definitions specific to pagetable translation.
  * Page table translation uses some pre-computed values, which are

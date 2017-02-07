@@ -353,13 +353,13 @@ walk_init_memarr(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 	switch (memarr->valsz) {
 	case 4:
 		status = read32(walk->ctx, &elemaddr, &val32,
-				"Memory array value");
+				"memory array element");
 		val =val32;
 		break;
 
 	case 8:
 		status = read64(walk->ctx, &elemaddr, &val64,
-				"Memory array value");
+				"memory array element");
 		val = val64;
 		break;
 
