@@ -194,6 +194,7 @@ test_scripts = \
 	xlat-linux-x86_64-2.6.11 \
 	xlat-linux-x86_64-2.6.11-nover \
 	xlat-linux-x86_64-2.6.27 \
+	xlat-linux-x86_64-2.6.27-cr3-xen \
 	xlat-linux-x86_64-2.6.27-nover \
 	xlat-linux-x86_64-2.6.31 \
 	xlat-linux-x86_64-2.6.31-cr3 \
@@ -266,6 +267,9 @@ dist_check_DATA = \
 	xlat-linux-x86_64-2.6.11-nover.expect \
 	xlat-linux-x86_64-2.6.11-nover.sym \
 	xlat-linux-x86_64-2.6.27.expect \
+	xlat-linux-x86_64-2.6.27-cr3-xen.data \
+	xlat-linux-x86_64-2.6.27-cr3-xen.expect \
+	xlat-linux-x86_64-2.6.27-cr3-xen.sym \
 	xlat-linux-x86_64-2.6.27-nover.data \
 	xlat-linux-x86_64-2.6.27-nover.expect \
 	xlat-linux-x86_64-2.6.27-nover.sym \

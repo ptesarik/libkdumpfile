@@ -267,13 +267,17 @@ is_mapped(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
  * @param addr   Address to be checked.
  * @returns      Non-zero if the address maps to physical address 0.
  */
-static int
+int
 is_directmap(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	     addrxlat_addr_t addr)
 {
-	addrxlat_status status =
-		internal_walk(ctx, sys->meth[ADDRXLAT_SYS_METH_PGT], &addr);
-	return status == addrxlat_ok && addr == 0;
+	addrxlat_fulladdr_t faddr;
+	addrxlat_status status;
+
+	faddr.addr = addr;
+	faddr.as = ADDRXLAT_KVADDR;
+	status = internal_by_sys(ctx, &faddr, ADDRXLAT_KPHYSADDR, sys);
+	return status == addrxlat_ok && faddr.addr == 0;
 }
 
 /** Get virtual memory layout by walking page tables.
@@ -316,23 +320,27 @@ static addrxlat_status
 set_ktext_offset(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 		 addrxlat_addr_t vaddr)
 {
-	addrxlat_addr_t addr;
+	addrxlat_fulladdr_t faddr;
+	addrxlat_def_t def;
 	addrxlat_status status;
 
 	if (!is_pgt_usable(sys))
 		return addrxlat_nodata;
 
-	addr = vaddr;
-	status = internal_walk(ctx, sys->meth[ADDRXLAT_SYS_METH_PGT], &addr);
-	if (status == addrxlat_ok) {
-		addrxlat_def_t def;
-		def.kind = ADDRXLAT_LINEAR;
-		def.target_as = ADDRXLAT_KPHYSADDR;
-		def.param.linear.off = vaddr - addr;
-		status = internal_meth_set_def(
-			sys->meth[ADDRXLAT_SYS_METH_KTEXT], &def);
-	}
-	return status;
+	faddr.addr = vaddr;
+	faddr.as = ADDRXLAT_KVADDR;
+	status = internal_by_map(ctx, &faddr, sys->map[ADDRXLAT_SYS_MAP_HW]);
+	if (status != addrxlat_ok)
+		return status;
+
+	status = internal_by_sys(ctx, &faddr, ADDRXLAT_KPHYSADDR, sys);
+	if (status != addrxlat_ok)
+		return status;
+
+	def.kind = ADDRXLAT_LINEAR;
+	def.target_as = ADDRXLAT_KPHYSADDR;
+	def.param.linear.off = vaddr - faddr.addr;
+	return internal_meth_set_def(sys->meth[ADDRXLAT_SYS_METH_KTEXT], &def);
 }
 
 /** Fall back to page table mapping if needed.

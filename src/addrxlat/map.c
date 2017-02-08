@@ -192,6 +192,8 @@ addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 	return NULL;
 }
 
+DEFINE_INTERNAL(by_map)
+
 addrxlat_status
 addrxlat_by_map(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
 		const addrxlat_map_t *map)

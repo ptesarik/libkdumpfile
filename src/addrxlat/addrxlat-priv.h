@@ -302,6 +302,12 @@ DECLARE_INTERNAL(map_search)
 #define internal_map_clear INTERNAL_ALIAS(map_clear)
 DECLARE_INTERNAL(map_clear)
 
+#define internal_by_map INTERNAL_ALIAS(by_map)
+DECLARE_INTERNAL(by_map)
+
+#define internal_by_sys INTERNAL_ALIAS(by_sys)
+DECLARE_INTERNAL(by_sys)
+
 /* utils */
 
 #define read32 INTERNAL_NAME(read32)

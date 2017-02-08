@@ -350,6 +350,8 @@ map_trans[][3] = {
 	},
 };
 
+DEFINE_INTERNAL(by_sys)
+
 addrxlat_status
 addrxlat_by_sys(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
 		addrxlat_addrspace_t goal, const addrxlat_sys_t *sys)
