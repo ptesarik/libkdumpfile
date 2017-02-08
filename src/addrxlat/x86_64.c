@@ -517,10 +517,6 @@ map_linux_x86_64(struct sys_init_data *ctl)
 
 	get_linux_pgtroot(ctl);
 
-	status = linux_ktext_map(ctl);
-	if (status != addrxlat_ok)
-		return status;
-
 	if (ctl->popt.val[OPT_xen_xlat].set &&
 	    ctl->popt.val[OPT_xen_xlat].num) {
 		status = set_xen_p2m(ctl);
@@ -531,6 +527,10 @@ map_linux_x86_64(struct sys_init_data *ctl)
 		if (status != addrxlat_ok)
 			return status;
 	}
+
+	status = linux_ktext_map(ctl);
+	if (status != addrxlat_ok)
+		return status;
 
 	layout = linux_layout_by_pgt(ctl->sys, ctl->ctx);
 
