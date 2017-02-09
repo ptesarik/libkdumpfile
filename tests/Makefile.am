@@ -53,6 +53,8 @@ clearattr_LDADD = \
 	$(LDADD) \
 	$(top_builddir)/src/libkdumpfile.la
 
+err_addrxlat_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
+
 mkdiskdump_SOURCES = mkdiskdump.c
 mkelf_SOURCES = mkelf.c
 mklkcd_SOURCES = mklkcd.c
@@ -92,6 +94,7 @@ check_PROGRAMS = \
 	checkattr \
 	clearattr \
 	dumpdata \
+	err-addrxlat \
 	mkdiskdump \
 	mkelf \
 	mklkcd \
@@ -330,6 +333,7 @@ dist_check_SCRIPTS = \
 TESTS = $(test_scripts) \
 	attriter \
 	clearattr \
+	err-addrxlat \
 	privptr \
 	subattr \
 	thread-errstr \

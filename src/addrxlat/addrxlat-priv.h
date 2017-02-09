@@ -66,8 +66,8 @@
 /** Number of elements in an array variable. */
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
-/** Maximum length of the error message. */
-#define ERRBUF	80
+/** Size of the fallback error buffer. */
+#define ERRBUF	64
 
 /** Extra definitions specific to pagetable translation.
  * Page table translation uses some pre-computed values, which are
@@ -127,7 +127,8 @@ struct _addrxlat_ctx {
 	addrxlat_read64_fn *cb_read64;
 
 	char *err_str;		/**< Error string. */
-	char err_buf[ERRBUF];	/**< Buffer for the error string. */
+	char *err_dyn;		/**< Dynamically allocated error string. */
+	char err_buf[ERRBUF];	/**< Fallback buffer for the error string. */
 };
 
 /** Translation system.

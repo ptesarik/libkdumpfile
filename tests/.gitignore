@@ -5,6 +5,7 @@ attriter
 checkattr
 clearattr
 dumpdata
+err-addrxlat
 mkdiskdump
 mkelf
 mklkcd

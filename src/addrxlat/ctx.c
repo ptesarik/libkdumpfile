@@ -55,8 +55,11 @@ unsigned long
 addrxlat_ctx_decref(addrxlat_ctx_t *ctx)
 {
 	unsigned long refcnt = --ctx->refcnt;
-	if (!refcnt)
+	if (!refcnt) {
+		if (ctx->err_dyn)
+			free(ctx->err_dyn);
 		free(ctx);
+	}
 	return refcnt;
 }
 
@@ -283,53 +286,81 @@ addrxlat_status
 addrxlat_ctx_err(addrxlat_ctx_t *ctx, addrxlat_status status,
 		 const char *msgfmt, ...)
 {
-	static const char failure[] = "(set_error failed)";
+	static const char failure[] = "(bad format string)";
 	static const char delim[] = { ':', ' ' };
-	static const char ellipsis[] = { '.', '.', '.' };
 
 	va_list ap;
-	char msgbuf[ERRBUF];
-	const char *msg;
-	int msglen;
+	char *msg, *newbuf;
+	int msglen, dlen;
 	size_t remain;
 
 	if (status == addrxlat_ok)
 		return status;
 
+	/* Get length of formatted message. */
 	va_start(ap, msgfmt);
-	msglen = vsnprintf(msgbuf, sizeof(msgbuf), msgfmt, ap);
+	msglen = vsnprintf(NULL, 0, msgfmt, ap);
 	va_end(ap);
 
+	/* Cope with invalid format string.  */
 	if (msglen < 0) {
-		msg = failure;
+		msgfmt = failure;
 		msglen = sizeof(failure) - 1;
-	} else {
-		msg = msgbuf;
-		if (msglen >= sizeof(msgbuf))
-			msglen = sizeof(msgbuf) - 1;
 	}
 
-	if (!ctx->err_str) {
-		ctx->err_str = ctx->err_buf + sizeof(ctx->err_buf) - 1;
-		*ctx->err_str = '\0';
+	/* Calculate required and already allocated space. */
+	msg = ctx->err_str;
+	if (!msg || !*msg) {
+		msg = ctx->err_buf + sizeof(ctx->err_buf) - 1;
+		*msg = '\0';
 		remain = sizeof(ctx->err_buf) - 1;
+		dlen = 0;
 	} else {
-		remain = ctx->err_str - ctx->err_buf;
-		if (remain >= sizeof(delim)) {
-			ctx->err_str -= sizeof(delim);
-			memcpy(ctx->err_str, delim, sizeof(delim));
-			remain -= sizeof(delim);
+		remain = msg - ctx->err_buf;
+		if (remain >= sizeof(ctx->err_buf))
+			remain = msg - ctx->err_dyn;
+		dlen = sizeof(delim);
+	}
+
+	va_start(ap, msgfmt);
+	msglen += dlen;
+	if (remain < msglen) {
+		size_t curlen = strlen(msg);
+		newbuf = realloc(ctx->err_dyn, 1 + curlen + msglen + 1);
+		if (newbuf) {
+			if (ctx->err_dyn <= msg && msg <= ctx->err_dyn + 1)
+				msg += newbuf - ctx->err_dyn;
+			ctx->err_dyn = newbuf;
+			memmove(newbuf + msglen + 1, msg, curlen + 1);
+			vsnprintf(newbuf + 1, msglen + 1, msgfmt, ap);
+			msg = newbuf + msglen + 1;
+			remain = msglen;
+		} else if (remain) {
+			char lbuf[ERRBUF];
+			vsnprintf(lbuf, sizeof lbuf, msgfmt, ap);
+			if (msglen - dlen >= sizeof(lbuf)) {
+				lbuf[sizeof(lbuf) - 2] = '>';
+				msglen = sizeof(lbuf) - 1 + dlen;
+			}
+			memcpy(msg - remain, lbuf + msglen - remain, remain);
+			msglen = remain;
+			*(msg - remain) = '<';
+			--remain;
+		} else {
+			msglen = 0;
+			*msg = '<';
 		}
+	} else
+		vsnprintf(msg - msglen, msglen + 1, msgfmt, ap);
+	va_end(ap);
+
+	/* Add delimiter (or its part) if needed. */
+	if (dlen) {
+		if (remain > dlen)
+			remain = dlen;
+		memcpy(msg - remain, delim + sizeof(delim) - remain, remain);
 	}
 
-	if (remain >= msglen) {
-		ctx->err_str -= msglen;
-		memcpy(ctx->err_str, msg, msglen);
-	} else {
-		ctx->err_str = ctx->err_buf;
-		memcpy(ctx->err_str, msg + msglen - remain, remain);
-		memcpy(ctx->err_str, ellipsis, sizeof(ellipsis));
-	}
-
+	ctx->err_str = msg - msglen;
 	return status;
 }
