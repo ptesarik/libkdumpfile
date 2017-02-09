@@ -63,7 +63,7 @@ addrxlat_ctx_decref(addrxlat_ctx_t *ctx)
 const char *
 addrxlat_ctx_err(addrxlat_ctx_t *ctx)
 {
-	return ctx->err_buf;
+	return ctx->err_str;
 }
 
 void
@@ -272,21 +272,65 @@ get_offsetof(addrxlat_ctx_t *ctx, const char *type, const char *memb,
 	return status;
 }
 
+/** Set the error message.
+ * @param ctx     Address translation context.
+ * @param status  Error status
+ * @param msgfmt  Message format string (@c printf style).
+ *
+ * This function prepends the new error message to the existing
+ * content of the error buffer, resulting in a kind of error
+ * backtrace.
+ */
 addrxlat_status
 set_error(addrxlat_ctx_t *ctx, addrxlat_status status, const char *msgfmt, ...)
 {
+	static const char failure[] = "(set_error failed)";
+	static const char delim[] = { ':', ' ' };
+	static const char ellipsis[] = { '.', '.', '.' };
+
 	va_list ap;
+	char msgbuf[ERRBUF];
+	const char *msg;
 	int msglen;
+	size_t remain;
 
 	if (status == addrxlat_ok)
 		return status;
 
 	va_start(ap, msgfmt);
-	msglen = vsnprintf(ctx->err_buf, sizeof(ctx->err_buf), msgfmt, ap);
+	msglen = vsnprintf(msgbuf, sizeof(msgbuf), msgfmt, ap);
 	va_end(ap);
 
-	if (msglen < 0)
-		strcpy(ctx->err_buf, "(set_error failed)");
+	if (msglen < 0) {
+		msg = failure;
+		msglen = sizeof(failure) - 1;
+	} else {
+		msg = msgbuf;
+		if (msglen >= sizeof(msgbuf))
+			msglen = sizeof(msgbuf) - 1;
+	}
+
+	if (!ctx->err_str) {
+		ctx->err_str = ctx->err_buf + sizeof(ctx->err_buf) - 1;
+		*ctx->err_str = '\0';
+		remain = sizeof(ctx->err_buf) - 1;
+	} else {
+		remain = ctx->err_str - ctx->err_buf;
+		if (remain >= sizeof(delim)) {
+			ctx->err_str -= sizeof(delim);
+			memcpy(ctx->err_str, delim, sizeof(delim));
+			remain -= sizeof(delim);
+		}
+	}
+
+	if (remain >= msglen) {
+		ctx->err_str -= msglen;
+		memcpy(ctx->err_str, msg, msglen);
+	} else {
+		ctx->err_str = ctx->err_buf;
+		memcpy(ctx->err_str, msg + msglen - remain, remain);
+		memcpy(ctx->err_str, ellipsis, sizeof(ellipsis));
+	}
 
 	return status;
 }

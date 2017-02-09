@@ -77,6 +77,8 @@ addrxlat_status
 addrxlat_walk_init(addrxlat_walk_t *state, addrxlat_ctx_t *ctx,
 		   const addrxlat_meth_t *meth, addrxlat_addr_t addr)
 {
+	clear_error(ctx);
+
 	state->ctx = ctx;
 	state->meth = meth;
 
@@ -90,6 +92,8 @@ addrxlat_walk_next(addrxlat_walk_t *state)
 {
 	const addrxlat_meth_t *meth = state->meth;
 	addrxlat_status status;
+
+	clear_error(state->ctx);
 
 	if (!state->level)
 		return addrxlat_ok;
@@ -117,6 +121,8 @@ addrxlat_walk(addrxlat_ctx_t *ctx, const addrxlat_meth_t *meth,
 {
 	addrxlat_walk_t walk;
 	addrxlat_status status;
+
+	/* clear_error(ctx) called from internal_walk_init() */
 
 	status = internal_walk_init(&walk, ctx, meth, *paddr);
 	while (status == addrxlat_continue)

@@ -201,6 +201,8 @@ addrxlat_by_map(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
 	const addrxlat_meth_t *meth;
 	addrxlat_status status;
 
+	clear_error(ctx);
+
 	meth = internal_map_search(map, paddr->addr);
 	if (!meth)
 		return set_error(ctx, addrxlat_invalid,

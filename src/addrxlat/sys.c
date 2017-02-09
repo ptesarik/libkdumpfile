@@ -93,6 +93,8 @@ addrxlat_sys_init(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	sys_arch_fn *arch_fn;
 	addrxlat_status status;
 
+	clear_error(ctx);
+
 	if (!strcmp(osdesc->arch, "x86_64"))
 		arch_fn = sys_x86_64;
 	else if ((osdesc->arch[0] == 'i' &&
@@ -360,6 +362,8 @@ addrxlat_by_sys(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
 	addrxlat_sys_map_t mapidx;
 	addrxlat_map_t *map;
 	addrxlat_status status;
+
+	clear_error(ctx);
 
 	if (paddr->as == goal)
 		return addrxlat_ok;

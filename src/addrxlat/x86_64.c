@@ -258,6 +258,7 @@ is_mapped(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 {
 	addrxlat_status status =
 		internal_walk(ctx, sys->meth[ADDRXLAT_SYS_METH_PGT], &addr);
+	clear_error(ctx);
 	return status == addrxlat_ok;
 }
 
@@ -277,6 +278,7 @@ is_directmap(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	faddr.addr = addr;
 	faddr.as = ADDRXLAT_KVADDR;
 	status = internal_by_sys(ctx, &faddr, ADDRXLAT_KPHYSADDR, sys);
+	clear_error(ctx);
 	return status == addrxlat_ok && faddr.addr == 0;
 }
 
@@ -406,6 +408,7 @@ linux_ktext_map(struct sys_init_data *ctl)
 	status = linux_ktext_meth(ctl);
 	if (status != addrxlat_ok && status != addrxlat_nodata)
 		return status;
+	clear_error(ctl->ctx);
 
 	range.endoff = __END_KERNEL_map - __START_KERNEL_map;
 	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT];
@@ -437,12 +440,14 @@ get_linux_pgtroot(struct sys_init_data *ctl)
 		meth->def.param.pgt.root.addr = addr;
 		return addrxlat_ok;
 	}
+	clear_error(ctl->ctx);
 
 	if (get_symval(ctl->ctx, "init_level4_pgt", &addr) == addrxlat_ok) {
 		meth->def.param.pgt.root.as = ADDRXLAT_KVADDR;
 		meth->def.param.pgt.root.addr = addr;
 		return addrxlat_ok;
 	}
+	clear_error(ctl->ctx);
 
 	return addrxlat_nodata;
 }
@@ -606,6 +611,7 @@ is_xen_ktext(struct sys_init_data *ctl, addrxlat_addr_t addr)
 				    addr);
 	for (steps = 0; status == addrxlat_continue; ++steps)
 		status = internal_walk_next(&walk);
+	clear_error(ctl->ctx);
 
 	return status == addrxlat_ok && steps == 4;
 }
@@ -682,6 +688,7 @@ map_xen_x86_64(struct sys_init_data *ctl)
 
 	if (layout[1].meth == ADDRXLAT_SYS_METH_KTEXT) {
 		set_ktext_offset(ctl->sys, ctl->ctx, layout[1].first);
+		clear_error(ctl->ctx);
 		set_pgt_fallback(ctl->sys, ADDRXLAT_SYS_METH_KTEXT);
 	}
 

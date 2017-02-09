@@ -177,6 +177,7 @@ is_pae(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *root,
 	status = internal_walk(ctx, &meth, &addr);
 	if (status == addrxlat_ok && addr == 0)
 		return 1;
+	clear_error(ctx);
 
 	def.param.pgt.pf = ia32_pf;
 	internal_meth_set_def(&meth, &def);
@@ -184,6 +185,7 @@ is_pae(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *root,
 	status = internal_walk(ctx, &meth, &addr);
 	if (status == addrxlat_ok && addr == 0)
 		return 0;
+	clear_error(ctx);
 
 	return -1;
 }

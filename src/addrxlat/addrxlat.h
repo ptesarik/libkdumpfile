@@ -355,8 +355,9 @@ unsigned long addrxlat_ctx_decref(addrxlat_ctx_t *ctx);
  * @returns    Last error string.
  *
  * If an error status is returned, this function can be used to get
- * a human-readable description of the error. The error string is
- * never reset, so you should check the return status first.
+ * a human-readable description of the error. The error string is not
+ * reset by calling this function, but it is reset by calling any
+ * library function that returns @ref addrxlat_status.
  */
 const char *addrxlat_ctx_err(addrxlat_ctx_t *ctx);
 

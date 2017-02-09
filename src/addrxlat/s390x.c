@@ -133,6 +133,7 @@ get_pgtroot(struct sys_init_data *ctl, addrxlat_fulladdr_t *root)
 		break;
 	}
 
+	clear_error(ctl->ctx);
 	return set_error(ctl->ctx, addrxlat_notimpl,
 			 "Cannot determine page table root address");
 }

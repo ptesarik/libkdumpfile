@@ -126,7 +126,8 @@ struct _addrxlat_ctx {
 	/** Callback for reading 64-bit integers. */
 	addrxlat_read64_fn *cb_read64;
 
-	char err_buf[ERRBUF];	/**< Error string. */
+	char *err_str;		/**< Error string. */
+	char err_buf[ERRBUF];	/**< Buffer for the error string. */
 };
 
 /** Translation system.
@@ -340,15 +341,19 @@ addrxlat_status get_offsetof(
 	addrxlat_ctx_t *ctx, const char *type, const char *memb,
 	addrxlat_addr_t *off);
 
-/** Set the error message.
- * @param ctx     Address translation context.
- * @param status  Error status
- * @param msgfmt  Message format string (@c printf style).
- */
 #define set_error INTERNAL_NAME(set_error)
 addrxlat_status set_error(
 	addrxlat_ctx_t *ctx, addrxlat_status status,
 	const char *msgfmt, ...)
 	__attribute__ ((format (printf, 3, 4)));
+
+/** Clear the error message.
+ * @param ctx     Address translation context.
+ */
+static inline void
+clear_error(addrxlat_ctx_t *ctx)
+{
+	ctx->err_str = NULL;
+}
 
 #endif	/* addrxlat-priv.h */
