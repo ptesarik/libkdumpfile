@@ -34,15 +34,7 @@
 
 #include "testutil.h"
 
-enum read_status {
-	read_ok = addrxlat_ok,
-	read_notfound,
-};
-
 static addrxlat_meth_t *xlat;
-
-#define MAXERR	64
-static char read_err_str[MAXERR];
 
 #define ALLOC_INC 32
 
@@ -62,13 +54,10 @@ find_entry(addrxlat_addr_t addr)
 static addrxlat_status
 read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 {
+	addrxlat_ctx_t *ctx = data;
 	addrxlat_lookup_elem_t *ent = find_entry(addr->addr);
-	if (!ent) {
-		snprintf(read_err_str, sizeof read_err_str,
-			 "No entry for address 0x%"ADDRXLAT_PRIxADDR,
-			 addr->addr);
-		return -read_notfound;
-	}
+	if (!ent)
+		return addrxlat_ctx_err(ctx, addrxlat_nodata, "No data");
 	*val = ent->dest;
 	return addrxlat_ok;
 }
@@ -76,13 +65,10 @@ read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 static addrxlat_status
 read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 {
+	addrxlat_ctx_t *ctx = data;
 	addrxlat_lookup_elem_t *ent = find_entry(addr->addr);
-	if (!ent) {
-		snprintf(read_err_str, sizeof read_err_str,
-			 "No entry for address 0x%"ADDRXLAT_PRIxADDR,
-			 addr->addr);
-		return -read_notfound;
-	}
+	if (!ent)
+		return addrxlat_ctx_err(ctx, addrxlat_nodata, "No data");
 	*val = ent->dest;
 	return addrxlat_ok;
 }
@@ -295,9 +281,7 @@ do_xlat(addrxlat_ctx_t *ctx, addrxlat_addr_t addr)
 	status = addrxlat_walk(ctx, xlat, &addr);
 	if (status != addrxlat_ok) {
 		fprintf(stderr, "Address translation failed: %s\n",
-			((int) status > 0
-			 ? addrxlat_ctx_err(ctx)
-			 : read_err_str));
+			addrxlat_ctx_get_err(ctx));
 		return TEST_FAIL;
 	}
 
@@ -463,6 +447,7 @@ main(int argc, char **argv)
 		goto out;
 	}
 
+	addrxlat_ctx_set_cbdata(ctx, ctx);
 	addrxlat_ctx_cb_read32(ctx, read32);
 	addrxlat_ctx_cb_read64(ctx, read64);
 

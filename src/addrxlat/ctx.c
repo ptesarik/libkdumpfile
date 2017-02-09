@@ -60,8 +60,13 @@ addrxlat_ctx_decref(addrxlat_ctx_t *ctx)
 	return refcnt;
 }
 
+void addrxlat_ctx_clear_err(addrxlat_ctx_t *ctx)
+{
+	clear_error(ctx);
+}
+
 const char *
-addrxlat_ctx_err(addrxlat_ctx_t *ctx)
+addrxlat_ctx_get_err(addrxlat_ctx_t *ctx)
 {
 	return ctx->err_str;
 }
@@ -272,17 +277,11 @@ get_offsetof(addrxlat_ctx_t *ctx, const char *type, const char *memb,
 	return status;
 }
 
-/** Set the error message.
- * @param ctx     Address translation context.
- * @param status  Error status
- * @param msgfmt  Message format string (@c printf style).
- *
- * This function prepends the new error message to the existing
- * content of the error buffer, resulting in a kind of error
- * backtrace.
- */
+DEFINE_INTERNAL(ctx_err);
+
 addrxlat_status
-set_error(addrxlat_ctx_t *ctx, addrxlat_status status, const char *msgfmt, ...)
+addrxlat_ctx_err(addrxlat_ctx_t *ctx, addrxlat_status status,
+		 const char *msgfmt, ...)
 {
 	static const char failure[] = "(set_error failed)";
 	static const char delim[] = { ':', ' ' };

@@ -47,9 +47,6 @@ struct cbdata {
 	addrxlat_sys_t *sys;
 };
 
-#define MAXERR	64
-static char read_err_str[MAXERR];
-
 struct sym {
 	struct sym *next;
 	addrxlat_sym_t sym;
@@ -92,12 +89,10 @@ get_physaddr(struct cbdata *cbd, addrxlat_fulladdr_t *addr)
 					 addrxlat_sys_get_map(
 						 cbd->sys,
 						 ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS));
-		if (status != addrxlat_ok) {
-			snprintf(read_err_str, sizeof read_err_str,
-				 "Cannot translate kernel physical addr 0x%"ADDRXLAT_PRIxADDR,
-				 addr->addr);
-			return -read_vtop_failed;
-		}
+		if (status != addrxlat_ok)
+			return addrxlat_ctx_err(cbd->ctx, -read_vtop_failed,
+						"Cannot translate kernel physical addr 0x%"ADDRXLAT_PRIxADDR,
+						addr->addr);
 		break;
 
 	case ADDRXLAT_KVADDR:
@@ -105,19 +100,16 @@ get_physaddr(struct cbdata *cbd, addrxlat_fulladdr_t *addr)
 					 addrxlat_sys_get_map(
 						 cbd->sys,
 						 ADDRXLAT_SYS_MAP_KV_PHYS));
-		if (status != addrxlat_ok) {
-			snprintf(read_err_str, sizeof read_err_str,
-				 "Cannot translate virt addr 0x%"ADDRXLAT_PRIxADDR,
-				 addr->addr);
-			return -read_vtop_failed;
-		}
+		if (status != addrxlat_ok)
+			return addrxlat_ctx_err(cbd->ctx, -read_vtop_failed,
+						"Cannot translate virt addr 0x%"ADDRXLAT_PRIxADDR,
+						addr->addr);
 		break;
 
 	default:
-		snprintf(read_err_str, sizeof read_err_str,
-			 "No method to handle address space %u",
-			 (unsigned) addr->as);
-		return -read_unknown_as;
+		return addrxlat_ctx_err(cbd->ctx, -read_unknown_as,
+					"No method to handle address space %u",
+					(unsigned) addr->as);
 	}
 
 	return addrxlat_ok;
@@ -126,22 +118,19 @@ get_physaddr(struct cbdata *cbd, addrxlat_fulladdr_t *addr)
 static addrxlat_status
 read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 {
+	struct cbdata *cbd = data;
 	addrxlat_fulladdr_t physaddr = *addr;
 	addrxlat_status status;
 	struct entry *ent;
 	uint32_t *p;
 
-	status = get_physaddr(data, &physaddr);
+	status = get_physaddr(cbd, &physaddr);
 	if (status != addrxlat_ok)
 		return status;
 
 	ent = find_entry(physaddr.addr, sizeof(uint32_t));
-	if (!ent) {
-		snprintf(read_err_str, sizeof read_err_str,
-			 "No entry for address 0x%"ADDRXLAT_PRIxADDR,
-			 physaddr.addr);
-		return -read_notfound;
-	}
+	if (!ent)
+		return addrxlat_ctx_err(cbd->ctx, -read_notfound, "No data");
 	p = (uint32_t*)(ent->buf + physaddr.addr - ent->addr);
 	*val = *p;
 	return addrxlat_ok;
@@ -150,22 +139,19 @@ read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 static addrxlat_status
 read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 {
+	struct cbdata *cbd = data;
 	addrxlat_fulladdr_t physaddr = *addr;
 	addrxlat_status status;
 	struct entry *ent;
 	uint64_t *p;
 
-	status = get_physaddr(data, &physaddr);
+	status = get_physaddr(cbd, &physaddr);
 	if (status != addrxlat_ok)
 		return status;
 
 	ent = find_entry(physaddr.addr, sizeof(uint64_t));
-	if (!ent) {
-		snprintf(read_err_str, sizeof read_err_str,
-			 "No entry for address 0x%"ADDRXLAT_PRIxADDR,
-			 physaddr.addr);
-		return -read_notfound;
-	}
+	if (!ent)
+		return addrxlat_ctx_err(cbd->ctx, -read_notfound, "No data");
 	p = (uint64_t*)(ent->buf + physaddr.addr - ent->addr);
 	*val = *p;
 	return addrxlat_ok;
@@ -530,9 +516,7 @@ os_map(void)
 	status = addrxlat_sys_init(data.sys, data.ctx, &desc);
 	if (status != addrxlat_ok) {
 		fprintf(stderr, "OS map failed: %s\n",
-			(status > 0
-			 ? addrxlat_ctx_err(data.ctx)
-			 : read_err_str));
+			addrxlat_ctx_get_err(data.ctx));
 		addrxlat_sys_decref(data.sys);
 		addrxlat_ctx_decref(data.ctx);
 		return TEST_ERR;

@@ -350,6 +350,26 @@ unsigned long addrxlat_ctx_incref(addrxlat_ctx_t *ctx);
  */
 unsigned long addrxlat_ctx_decref(addrxlat_ctx_t *ctx);
 
+/** Prepend an error message.
+ * @param ctx     Address translation context.
+ * @param status  Error status.
+ * @param msgfmt  Message format string (@c printf style).
+ * @returns       The error status which was passed as argument.
+ *
+ * This function prepends the new error message to the existing
+ * content of the error buffer, resulting in a kind of error
+ * backtrace.
+ */
+addrxlat_status addrxlat_ctx_err(
+	addrxlat_ctx_t *ctx, addrxlat_status status,
+	const char *msgfmt, ...)
+	__attribute__ ((format (printf, 3, 4)));
+
+/** Clear the error message.
+ * @param ctx  Address translation context.
+ */
+void addrxlat_ctx_clear_err(addrxlat_ctx_t *ctx);
+
 /**  Get a detailed error string.
  * @param ctx  Address translation context.
  * @returns    Last error string.
@@ -359,7 +379,7 @@ unsigned long addrxlat_ctx_decref(addrxlat_ctx_t *ctx);
  * reset by calling this function, but it is reset by calling any
  * library function that returns @ref addrxlat_status.
  */
-const char *addrxlat_ctx_err(addrxlat_ctx_t *ctx);
+const char *addrxlat_ctx_get_err(addrxlat_ctx_t *ctx);
 
 /**  Set private callback data.
  * @param ctx  Address translation context.

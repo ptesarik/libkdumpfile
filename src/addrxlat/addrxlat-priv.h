@@ -273,6 +273,10 @@ sys_set_physmaps(struct sys_init_data *ctl, addrxlat_addr_t maxaddr);
 
 /* internal aliases */
 
+#define internal_ctx_set_error INTERNAL_ALIAS(ctx_err)
+DECLARE_INTERNAL(ctx_err);
+#define set_error internal_ctx_err
+
 #define internal_meth_new INTERNAL_ALIAS(meth_new)
 DECLARE_INTERNAL(meth_new)
 
@@ -340,12 +344,6 @@ addrxlat_status get_sizeof(
 addrxlat_status get_offsetof(
 	addrxlat_ctx_t *ctx, const char *type, const char *memb,
 	addrxlat_addr_t *off);
-
-#define set_error INTERNAL_NAME(set_error)
-addrxlat_status set_error(
-	addrxlat_ctx_t *ctx, addrxlat_status status,
-	const char *msgfmt, ...)
-	__attribute__ ((format (printf, 3, 4)));
 
 /** Clear the error message.
  * @param ctx     Address translation context.
