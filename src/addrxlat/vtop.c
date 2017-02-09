@@ -66,9 +66,13 @@ read_pte(addrxlat_walk_t *state)
 				 1 << pgt->pte_shift);
 	}
 
-	if (status == addrxlat_ok)
-		state->raw_pte = pte;
-	return status;
+	if (status != addrxlat_ok)
+		return set_error(ctx, status,
+				 "Cannot read PTE at 0x%"ADDRXLAT_PRIxADDR,
+				 state->base.addr);
+
+	state->raw_pte = pte;
+	return addrxlat_ok;
 }
 
 DEFINE_INTERNAL(walk_init)
