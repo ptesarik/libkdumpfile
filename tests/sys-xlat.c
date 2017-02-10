@@ -983,6 +983,11 @@ int main(int argc, char *argv[])
 	char *paramfn = NULL;
 	FILE *param, *cfg;
 	struct cbdata data;
+	addrxlat_cb_t cb = {
+		.data = &data,
+		.read32 = read32,
+		.read64 = read64
+	};
 	int c;
 	int i;
 	int rc;
@@ -1025,9 +1030,7 @@ int main(int argc, char *argv[])
 		perror("Cannot allocate addrxlat");
 		return TEST_ERR;
 	}
-	addrxlat_ctx_set_cbdata(data.ctx, &data);
-	addrxlat_ctx_cb_read32(data.ctx, read32);
-	addrxlat_ctx_cb_read64(data.ctx, read64);
+	addrxlat_ctx_set_cb(data.ctx, &cb);
 
 	cfg = fopen(cfg_file, "r");
 	if (!cfg) {

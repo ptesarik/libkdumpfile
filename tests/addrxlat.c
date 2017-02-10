@@ -325,6 +325,10 @@ main(int argc, char **argv)
 	unsigned long long vaddr;
 	char *endp;
 	addrxlat_ctx_t *ctx;
+	addrxlat_cb_t cb = {
+		.read32 = read32,
+		.read64 = read64
+	};
 	addrxlat_def_t pgt, linear, lookup, memarr, *def;
 	int opt;
 	addrxlat_status status;
@@ -446,10 +450,8 @@ main(int argc, char **argv)
 		rc = TEST_ERR;
 		goto out;
 	}
-
-	addrxlat_ctx_set_cbdata(ctx, ctx);
-	addrxlat_ctx_cb_read32(ctx, read32);
-	addrxlat_ctx_cb_read64(ctx, read64);
+	cb.data = ctx;
+	addrxlat_ctx_set_cb(ctx, &cb);
 
 	rc = do_xlat(ctx, vaddr);
 

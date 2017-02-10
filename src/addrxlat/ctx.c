@@ -75,31 +75,15 @@ addrxlat_ctx_get_err(addrxlat_ctx_t *ctx)
 }
 
 void
-addrxlat_ctx_set_cbdata(addrxlat_ctx_t *ctx, void *data)
+addrxlat_ctx_set_cb(addrxlat_ctx_t *ctx, const addrxlat_cb_t *cb)
 {
-	ctx->priv = data;
+	ctx->cb = *cb;
 }
 
-void *
-addrxlat_ctx_get_cbdata(addrxlat_ctx_t *ctx)
+const addrxlat_cb_t *
+addrxlat_ctx_get_cb(const addrxlat_ctx_t *ctx)
 {
-	return ctx->priv;
-}
-
-addrxlat_sym_fn *
-addrxlat_ctx_cb_sym(addrxlat_ctx_t *ctx, addrxlat_sym_fn *cb)
-{
-	addrxlat_sym_fn *oldval = ctx->cb_sym;
-	ctx->cb_sym = cb;
-	return oldval;
-}
-
-addrxlat_read32_fn *
-addrxlat_ctx_cb_read32(addrxlat_ctx_t *ctx, addrxlat_read32_fn *cb)
-{
-	addrxlat_read32_fn *oldval = ctx->cb_read32;
-	ctx->cb_read32 = cb;
-	return oldval;
+	return &ctx->cb;
 }
 
 /** Read a 32-bit value, making an error message if needed.
@@ -113,20 +97,12 @@ addrxlat_status
 read32(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint32_t *val,
        const char *what)
 {
-	addrxlat_status status = ctx->cb_read32(ctx->priv, addr, val);
+	addrxlat_status status = ctx->cb.read32(ctx->cb.data, addr, val);
 	if (status != addrxlat_ok)
 		return set_error(ctx, status,
 				 "Cannot read the %s value of %s at 0x%"ADDRXLAT_PRIxADDR,
 				 "32-bit", what, addr->addr);
 	return addrxlat_ok;
-}
-
-addrxlat_read64_fn *
-addrxlat_ctx_cb_read64(addrxlat_ctx_t *ctx, addrxlat_read64_fn *cb)
-{
-	addrxlat_read64_fn *oldval = ctx->cb_read64;
-	ctx->cb_read64 = cb;
-	return oldval;
 }
 
 /** Read a 64-bit value, making an error message if needed.
@@ -140,7 +116,7 @@ addrxlat_status
 read64(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint64_t *val,
        const char *what)
 {
-	addrxlat_status status = ctx->cb_read64(ctx->priv, addr, val);
+	addrxlat_status status = ctx->cb.read64(ctx->cb.data, addr, val);
 	if (status != addrxlat_ok)
 		return set_error(ctx, status,
 				 "Cannot read the %s value of %s at 0x%"ADDRXLAT_PRIxADDR,
@@ -165,13 +141,13 @@ get_reg(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 	} info;
 	addrxlat_status status;
 
-	if (!ctx->cb_sym)
+	if (!ctx->cb.sym)
 		return set_error(ctx, addrxlat_notimpl,
 				 "No symbolic information callback");
 
 	info.sym.type = ADDRXLAT_SYM_REG;
 	info.name = name;
-	status = ctx->cb_sym(ctx->priv, (addrxlat_sym_t*)&info);
+	status = ctx->cb.sym(ctx->cb.data, (addrxlat_sym_t*)&info);
 	if (status != addrxlat_ok)
 		return set_error(ctx, status,
 				 "Cannot read register \"%s\"", info.name);
@@ -197,13 +173,13 @@ get_symval(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 	} info;
 	addrxlat_status status;
 
-	if (!ctx->cb_sym)
+	if (!ctx->cb.sym)
 		return set_error(ctx, addrxlat_notimpl,
 				 "No symbolic information callback");
 
 	info.sym.type = ADDRXLAT_SYM_VALUE;
 	info.name = name;
-	status = ctx->cb_sym(ctx->priv, (addrxlat_sym_t*)&info);
+	status = ctx->cb.sym(ctx->cb.data, (addrxlat_sym_t*)&info);
 	if (status != addrxlat_ok)
 		return set_error(ctx, status,
 				 "Cannot resolve \"%s\"", info.name);
@@ -229,13 +205,13 @@ get_sizeof(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *sz)
 	} info;
 	addrxlat_status status;
 
-	if (!ctx->cb_sym)
+	if (!ctx->cb.sym)
 		return set_error(ctx, addrxlat_notimpl,
 				 "No symbolic information callback");
 
 	info.sym.type = ADDRXLAT_SYM_SIZEOF;
 	info.name = name;
-	status = ctx->cb_sym(ctx->priv, (addrxlat_sym_t*)&info);
+	status = ctx->cb.sym(ctx->cb.data, (addrxlat_sym_t*)&info);
 	if (status != addrxlat_ok)
 		return set_error(ctx, status, "Cannot get sizeof(%s)",
 				 info.name);
@@ -264,14 +240,14 @@ get_offsetof(addrxlat_ctx_t *ctx, const char *type, const char *memb,
 	} info;
 	addrxlat_status status;
 
-	if (!ctx->cb_sym)
+	if (!ctx->cb.sym)
 		return set_error(ctx, addrxlat_notimpl,
 				 "No symbolic information callback");
 
 	info.sym.type = ADDRXLAT_SYM_OFFSETOF;
 	info.type = type;
 	info.memb = memb;
-	status = ctx->cb_sym(ctx->priv, (addrxlat_sym_t*)&info);
+	status = ctx->cb.sym(ctx->cb.data, (addrxlat_sym_t*)&info);
 	if (status != addrxlat_ok)
 		return set_error(ctx, status, "Cannot get offsetof(%s, %s)",
 				 info.type, info.memb);

@@ -487,6 +487,12 @@ static int
 os_map(void)
 {
 	struct cbdata data;
+	addrxlat_cb_t cb = {
+		.data = &data,
+		.read32 = read32,
+		.read64 = read64,
+		.sym = get_symdata
+	};
 	addrxlat_osdesc_t desc;
 	const addrxlat_meth_t *meth;
 	addrxlat_status status;
@@ -501,10 +507,7 @@ os_map(void)
 		perror("Cannot allocate addrxlat");
 		return TEST_ERR;
 	}
-	addrxlat_ctx_set_cbdata(data.ctx, &data);
-	addrxlat_ctx_cb_read32(data.ctx, read32);
-	addrxlat_ctx_cb_read64(data.ctx, read64);
-	addrxlat_ctx_cb_sym(data.ctx, get_symdata);
+	addrxlat_ctx_set_cb(data.ctx, &cb);
 
 	data.sys = addrxlat_sys_new();
 	if (!data.sys) {

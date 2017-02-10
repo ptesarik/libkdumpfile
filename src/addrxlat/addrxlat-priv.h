@@ -127,17 +127,8 @@ struct _addrxlat_ctx {
 	/** Reference counter. */
 	unsigned long refcnt;
 
-	/** Callback private data. */
-	void *priv;
-
-	/** Callback for getting symbolic information. */
-	addrxlat_sym_fn *cb_sym;
-
-	/** Callback for reading 32-bit integers. */
-	addrxlat_read32_fn *cb_read32;
-
-	/** Callback for reading 64-bit integers. */
-	addrxlat_read64_fn *cb_read64;
+	/** Callback definitions. */
+	addrxlat_cb_t cb;
 
 	char *err_str;		/**< Error string. */
 	char *err_dyn;		/**< Dynamically allocated error string. */

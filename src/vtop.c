@@ -405,14 +405,17 @@ addrxlat_ctx_t *
 init_addrxlat(kdump_ctx *ctx)
 {
 	addrxlat_ctx_t *addrxlat;
+	addrxlat_cb_t cb = {
+		.data = ctx,
+		.read32 = addrxlat_read32,
+		.read64 = addrxlat_read64
+	};
 
 	addrxlat = addrxlat_ctx_new();
 	if (!addrxlat)
 		return addrxlat;
 
-	addrxlat_ctx_set_cbdata(addrxlat, ctx);
-	addrxlat_ctx_cb_read32(addrxlat, addrxlat_read32);
-	addrxlat_ctx_cb_read64(addrxlat, addrxlat_read64);
+	addrxlat_ctx_set_cb(addrxlat, &cb);
 
 	return addrxlat;
 }

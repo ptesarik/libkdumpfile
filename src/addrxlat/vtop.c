@@ -51,12 +51,12 @@ read_pte(addrxlat_walk_t *state)
 
 	switch(pgt->pte_shift) {
 	case 2:
-		status = ctx->cb_read32(ctx->priv, &state->base, &pte32);
+		status = ctx->cb.read32(ctx->cb.data, &state->base, &pte32);
 		pte = pte32;
 		break;
 
 	case 3:
-		status = ctx->cb_read64(ctx->priv, &state->base, &pte64);
+		status = ctx->cb.read64(ctx->cb.data, &state->base, &pte64);
 		pte = pte64;
 		break;
 

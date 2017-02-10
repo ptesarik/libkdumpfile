@@ -381,23 +381,6 @@ void addrxlat_ctx_clear_err(addrxlat_ctx_t *ctx);
  */
 const char *addrxlat_ctx_get_err(addrxlat_ctx_t *ctx);
 
-/**  Set private callback data.
- * @param ctx  Address translation context.
- * @param data Generic data pointer.
- *
- * Callback data can be used to associate the address translation context
- * with an arbitrary object. The addrxlat library does not interpret the
- * pointer in any way, but it is passed as the first argument to callback
- * functions. It can also be retrieved with @ref addrxlat_ctx_get_cbdata.
- */
-void addrxlat_ctx_set_cbdata(addrxlat_ctx_t *ctx, void *data);
-
-/**  Get private callback data.
- * @param ctx  Address translation context.
- * @returns    Pointer stored previously with @ref addrxlat_ctx_set_cbdata.
- */
-void *addrxlat_ctx_get_cbdata(addrxlat_ctx_t *ctx);
-
 /** Type of symbolic information. */
 typedef enum _addrxlat_sym_type {
 	/** Register value.
@@ -458,14 +441,6 @@ typedef struct _addrxlat_sym {
  */
 typedef addrxlat_status addrxlat_sym_fn(void *data, addrxlat_sym_t *sym);
 
-/** Set the symbolic information callback.
- * @param ctx  Address translation context.
- * @param cb   New callback function.
- * @returns    Previous callback function.
- */
-addrxlat_sym_fn *addrxlat_ctx_cb_sym(
-	addrxlat_ctx_t *ctx, addrxlat_sym_fn *cb);
-
 /** Type of the read callback for 32-bit integers.
  * @param data      Arbitrary user-supplied data.
  * @param[in] addr  Address of the 32-bit integer.
@@ -474,14 +449,6 @@ addrxlat_sym_fn *addrxlat_ctx_cb_sym(
  */
 typedef addrxlat_status addrxlat_read32_fn(
 	void *data, const addrxlat_fulladdr_t *addr, uint32_t *val);
-
-/** Set the read callback for 32-bit integers.
- * @param ctx  Address translation context.
- * @param cb   New callback function.
- * @returns    Previous callback function.
- */
-addrxlat_read32_fn *addrxlat_ctx_cb_read32(
-	addrxlat_ctx_t *ctx, addrxlat_read32_fn *cb);
 
 /** Type of the read callback for 64-bit integers.
  * @param data      Arbitrary user-supplied data.
@@ -492,13 +459,38 @@ addrxlat_read32_fn *addrxlat_ctx_cb_read32(
 typedef addrxlat_status addrxlat_read64_fn(
 	void *data, const addrxlat_fulladdr_t *addr, uint64_t *val);
 
-/** Set the read callback for 64-bit integers.
+/** Callback function pointers and data. */
+typedef struct _addrxlat_cb {
+	/** Arbitrary callback data, passed to callback functions. */
+	void *data;
+
+	/** Symbolic information callback. */
+	addrxlat_sym_fn *sym;
+
+	/** Callback for 32-bit integers. */
+	addrxlat_read32_fn *read32;
+
+	/** Callback for 64-bit integers. */
+	addrxlat_read64_fn *read64;
+} addrxlat_cb_t;
+
+/** Set callback information.
  * @param ctx  Address translation context.
- * @param cb   New callback function.
- * @returns    Previous callback function.
+ * @param cb   New callback settings.
  */
-addrxlat_read64_fn *addrxlat_ctx_cb_read64(
-	addrxlat_ctx_t *ctx, addrxlat_read64_fn *cb);
+void addrxlat_ctx_set_cb(addrxlat_ctx_t *ctx, const addrxlat_cb_t *cb);
+
+/** Get the callback information.
+ * @param ctx  Address translation context.
+ * @returns    Pointer to callback settings.
+ *
+ * Note that this function returns a pointer into context private data.
+ * The location of this data does not change (i.e. when called with the
+ * same translation context, this function always returns the same value).
+ * However, the referenced data may change non-atomically during a call
+ * to @ref addrxlat_ctx_set_cb.
+ */
+const addrxlat_cb_t *addrxlat_ctx_get_cb(const addrxlat_ctx_t *ctx);
 
 /** Data type for a single page table walk. */
 typedef struct _addrxlat_walk {
