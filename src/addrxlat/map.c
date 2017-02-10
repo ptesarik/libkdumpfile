@@ -229,6 +229,8 @@ addrxlat_map_clear(addrxlat_map_t *map)
 	map->n = 0;
 }
 
+DEFINE_INTERNAL(map_dup);
+
 addrxlat_map_t *
 addrxlat_map_dup(const addrxlat_map_t *map)
 {

@@ -471,7 +471,7 @@ set_xen_mach2phys(struct sys_init_data *ctl, addrxlat_addr_t m2p)
 	def.param.memarr.shift = PAGE_SHIFT;
 	def.param.memarr.elemsz = sizeof(uint64_t);
 	def.param.memarr.valsz = sizeof(uint64_t);
-	return addrxlat_meth_set_def(meth, &def);
+	return internal_meth_set_def(meth, &def);
 }
 
 /** Initialize Xen p2m translation.
@@ -509,7 +509,7 @@ set_xen_p2m(struct sys_init_data *ctl)
 
 	range.endoff = paging_max_index(&xen_p2m_pf);
 	range.meth = meth;
-	map = addrxlat_map_set(map, 0, &range);
+	map = internal_map_set(map, 0, &range);
 	if (!map)
 		return set_error(ctl->ctx, addrxlat_nomem,
 				 "Cannot allocate Xen p2m map");
@@ -740,7 +740,7 @@ sys_x86_64(struct sys_init_data *ctl)
 	if (status != addrxlat_ok)
 		return status;
 
-	map = addrxlat_map_dup(ctl->sys->map[ADDRXLAT_SYS_MAP_HW]);
+	map = internal_map_dup(ctl->sys->map[ADDRXLAT_SYS_MAP_HW]);
 	if (!map)
 		return set_error(ctl->ctx, addrxlat_nomem,
 				 "Cannot duplicate hardware mapping");
