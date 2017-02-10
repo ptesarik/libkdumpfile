@@ -75,7 +75,7 @@ read_pte(addrxlat_walk_t *state)
 	return addrxlat_ok;
 }
 
-DEFINE_INTERNAL(walk_init)
+DEFINE_INTERNAL(walk_init);
 
 addrxlat_status
 addrxlat_walk_init(addrxlat_walk_t *state, addrxlat_ctx_t *ctx,
@@ -89,7 +89,7 @@ addrxlat_walk_init(addrxlat_walk_t *state, addrxlat_ctx_t *ctx,
 	return meth->walk_init(state, addr);
 }
 
-DEFINE_INTERNAL(walk_next)
+DEFINE_INTERNAL(walk_next);
 
 addrxlat_status
 addrxlat_walk_next(addrxlat_walk_t *state)
@@ -117,7 +117,7 @@ addrxlat_walk_next(addrxlat_walk_t *state)
 	return meth->walk_step(state);
 }
 
-DEFINE_INTERNAL(walk)
+DEFINE_INTERNAL(walk);
 
 addrxlat_status
 addrxlat_walk(addrxlat_ctx_t *ctx, const addrxlat_meth_t *meth,

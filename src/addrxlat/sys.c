@@ -352,7 +352,7 @@ map_trans[][3] = {
 	},
 };
 
-DEFINE_INTERNAL(by_sys)
+DEFINE_INTERNAL(by_sys);
 
 addrxlat_status
 addrxlat_by_sys(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,

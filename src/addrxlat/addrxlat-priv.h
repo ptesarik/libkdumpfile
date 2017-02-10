@@ -40,13 +40,15 @@
 #define CONCATENATE(a, b)	a ## b
 #define XCONCATENATE(a, b)	CONCATENATE(a, b)
 
+/** Assembler name corresponding to a C identifier. */
+#define ASM_NAME(sym) \
+	XCONCATENATE(__USER_LABEL_PREFIX__, sym)
+
 /* Minimize chance of name clashes (in a static link) */
 #ifndef PIC
-#define INTERNAL_ASM_NAME(sym) \
-	XCONCATENATE(__USER_LABEL_PREFIX__, _addrxlat_priv_ ## sym)
 #define INTERNAL_DECL(type, sym, param)	\
 	type sym param			\
-	__asm__(XSTRINGIFY(INTERNAL_ASM_NAME(sym)))
+	__asm__(XSTRINGIFY(ASM_NAME(_addrxlat_priv_ ## sym)))
 #else
 #define INTERNAL_DECL(type, sym, param)	\
 	type sym param
@@ -54,15 +56,16 @@
 
 #ifndef PIC
 #define INTERNAL_ALIAS(x)		addrxlat_ ## x
-#define _DECLARE_INTERNAL(s, a)
-#define _DEFINE_INTERNAL(s, a)
+#define _DECLARE_INTERNAL(s, a)		\
+	extern typeof(s) (a) __asm__(XSTRINGIFY(ASM_NAME(s)))
+#define _DEFINE_INTERNAL(s, a)		_DECLARE_INTERNAL(s, a)
 #else
 #define INTERNAL_ALIAS(x)		internal_ ## x
 #define _DECLARE_INTERNAL(s, a)		\
-	extern typeof(s) (a);
+	extern typeof(s) (a)
 #define _DEFINE_INTERNAL(s, a)		\
 	extern typeof(s) (a)		\
-	__attribute__((alias(#s)));
+	__attribute__((alias(#s)))
 #endif
 
 /** Internal alias declaration. */
@@ -271,45 +274,21 @@ INTERNAL_DECL(addrxlat_status, sys_set_physmaps,
 
 /* internal aliases */
 
-#define internal_ctx_set_error INTERNAL_ALIAS(ctx_err)
+#define set_error internal_ctx_err
 DECLARE_INTERNAL(ctx_err);
-#define set_error internal_ctx_set_error
 
-#define internal_meth_new INTERNAL_ALIAS(meth_new)
-DECLARE_INTERNAL(meth_new)
-
-#define internal_meth_incref INTERNAL_ALIAS(meth_incref)
-DECLARE_INTERNAL(meth_incref)
-
-#define internal_meth_decref INTERNAL_ALIAS(meth_decref)
-DECLARE_INTERNAL(meth_decref)
-
-#define internal_meth_set_def INTERNAL_ALIAS(meth_set_def)
-DECLARE_INTERNAL(meth_set_def)
-
-#define internal_walk_init INTERNAL_ALIAS(walk_init)
-DECLARE_INTERNAL(walk_init)
-
-#define internal_walk_next INTERNAL_ALIAS(walk_next)
-DECLARE_INTERNAL(walk_next)
-
-#define internal_walk INTERNAL_ALIAS(walk)
-DECLARE_INTERNAL(walk)
-
-#define internal_map_set INTERNAL_ALIAS(map_set)
-DECLARE_INTERNAL(map_set)
-
-#define internal_map_search INTERNAL_ALIAS(map_search)
-DECLARE_INTERNAL(map_search)
-
-#define internal_map_clear INTERNAL_ALIAS(map_clear)
-DECLARE_INTERNAL(map_clear)
-
-#define internal_by_map INTERNAL_ALIAS(by_map)
-DECLARE_INTERNAL(by_map)
-
-#define internal_by_sys INTERNAL_ALIAS(by_sys)
-DECLARE_INTERNAL(by_sys)
+DECLARE_INTERNAL(meth_new);
+DECLARE_INTERNAL(meth_incref);
+DECLARE_INTERNAL(meth_decref);
+DECLARE_INTERNAL(meth_set_def);
+DECLARE_INTERNAL(walk_init);
+DECLARE_INTERNAL(walk_next);
+DECLARE_INTERNAL(walk);
+DECLARE_INTERNAL(map_set);
+DECLARE_INTERNAL(map_search);
+DECLARE_INTERNAL(map_clear);
+DECLARE_INTERNAL(by_map);
+DECLARE_INTERNAL(by_sys);
 
 /* utils */
 

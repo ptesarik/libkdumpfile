@@ -33,7 +33,7 @@
 
 #include "addrxlat-priv.h"
 
-DEFINE_INTERNAL(map_set)
+DEFINE_INTERNAL(map_set);
 
 addrxlat_map_t *
 addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
@@ -174,7 +174,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 	return map;
 }
 
-DEFINE_INTERNAL(map_search)
+DEFINE_INTERNAL(map_search);
 
 addrxlat_meth_t *
 addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
@@ -192,7 +192,7 @@ addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 	return NULL;
 }
 
-DEFINE_INTERNAL(by_map)
+DEFINE_INTERNAL(by_map);
 
 addrxlat_status
 addrxlat_by_map(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
@@ -214,7 +214,7 @@ addrxlat_by_map(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
 	return status;
 }
 
-DEFINE_INTERNAL(map_clear)
+DEFINE_INTERNAL(map_clear);
 
 void
 addrxlat_map_clear(addrxlat_map_t *map)
