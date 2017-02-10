@@ -46,10 +46,13 @@ libkdumpfile_la_SOURCES = \
 	x86_64.c
 
 libkdumpfile_la_LIBADD = addrxlat/libaddrxlat.la
-EXTRA_libkdumpfile_la_DEPENDENCIES = libkdumpfile.map
 
 libkdumpfile_la_LDFLAGS = -version-info 6:0:0
+
+if HAVE_LD_VERSION_SCRIPT
 libkdumpfile_la_LDFLAGS += -Wl,--version-script=$(srcdir)/libkdumpfile.map
+EXTRA_libkdumpfile_la_DEPENDENCIES = libkdumpfile.map
+endif
 
 include_HEADERS = \
 	kdumpfile.h

@@ -34,10 +34,12 @@ libaddrxlat_la_SOURCES = \
 	s390x.c \
 	x86_64.c
 
-EXTRA_libaddrxlat_la_DEPENDENCIES = libaddrxlat.map
-
 libaddrxlat_la_LDFLAGS = -version-info 0:0:0
+
+if HAVE_LD_VERSION_SCRIPT
 libaddrxlat_la_LDFLAGS += -Wl,--version-script=$(srcdir)/libaddrxlat.map
+EXTRA_libaddrxlat_la_DEPENDENCIES = libaddrxlat.map
+endif
 
 include_HEADERS = \
 	addrxlat.h

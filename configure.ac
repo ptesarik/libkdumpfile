@@ -48,6 +48,8 @@ AM_PROG_AR
 
 LT_INIT
 
+check_ldvers
+
 DX_INIT_DOXYGEN([$PACKAGE_NAME],[Doxyfile],[doc])
 
 AC_ARG_ENABLE(internal-doc,
