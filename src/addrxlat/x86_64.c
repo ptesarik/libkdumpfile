@@ -268,7 +268,7 @@ is_mapped(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
  * @param addr   Address to be checked.
  * @returns      Non-zero if the address maps to physical address 0.
  */
-int
+static int
 is_directmap(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	     addrxlat_addr_t addr)
 {
@@ -478,7 +478,7 @@ set_xen_mach2phys(struct sys_init_data *ctl, addrxlat_addr_t m2p)
  * @param ctl  Initialization data.
  * @returns    Error status.
  */
- addrxlat_status
+static addrxlat_status
 set_xen_p2m(struct sys_init_data *ctl)
 {
 	static const addrxlat_paging_form_t xen_p2m_pf = {
