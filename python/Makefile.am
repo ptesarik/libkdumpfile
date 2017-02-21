@@ -26,6 +26,6 @@ _kdumpfile_la_CPPFLAGS = $(PYTHON_CFLAGS) -I$(top_srcdir)/src
 _kdumpfile_la_LDFLAGS = -module -avoid-version -export-symbols kdumpfile.sym
 _kdumpfile_la_LIBADD = $(top_builddir)/src/libkdumpfile.la
 
-EXTRA_kdumpfile_la_DEPENDENCIES = kdumpfile.sym
+EXTRA__kdumpfile_la_DEPENDENCIES = kdumpfile.sym
 
 SUBDIRS = kdumpfile
