@@ -15,14 +15,10 @@ LIBADDRXLAT_0 {
     addrxlat_ctx_set_cb;
     addrxlat_ctx_get_cb;
 
-    addrxlat_walk;
     addrxlat_map_set;
     addrxlat_map_search;
     addrxlat_map_clear;
     addrxlat_map_dup;
-
-    addrxlat_walk_init;
-    addrxlat_walk_next;
 
     addrxlat_sys_new;
     addrxlat_sys_incref;
@@ -35,6 +31,10 @@ LIBADDRXLAT_0 {
 
     addrxlat_by_map;
     addrxlat_by_sys;
+
+    addrxlat_walk_next;
+    addrxlat_walk_meth_start;
+    addrxlat_walk_meth;
 
   local:
     *;

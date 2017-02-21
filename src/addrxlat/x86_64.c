@@ -256,8 +256,12 @@ static int
 is_mapped(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	  addrxlat_addr_t addr)
 {
-	addrxlat_status status =
-		internal_walk(ctx, sys->meth[ADDRXLAT_SYS_METH_PGT], &addr);
+	addrxlat_walk_t walk;
+	addrxlat_status status;
+
+	internal_walk_init(&walk, ctx, sys);
+	status = internal_walk_meth(&walk, sys->meth[ADDRXLAT_SYS_METH_PGT],
+				    addr);
 	clear_error(ctx);
 	return status == addrxlat_ok;
 }
@@ -606,9 +610,9 @@ is_xen_ktext(struct sys_init_data *ctl, addrxlat_addr_t addr)
 	addrxlat_status status;
 	unsigned steps;
 
-	status = internal_walk_init(&walk, ctl->ctx,
-				    ctl->sys->meth[ADDRXLAT_SYS_METH_PGT],
-				    addr);
+	internal_walk_init(&walk, ctl->ctx, ctl->sys);
+	status = internal_walk_meth_start(
+		&walk, ctl->sys->meth[ADDRXLAT_SYS_METH_PGT], addr);
 	for (steps = 0; status == addrxlat_continue; ++steps)
 		status = internal_walk_next(&walk);
 	clear_error(ctl->ctx);

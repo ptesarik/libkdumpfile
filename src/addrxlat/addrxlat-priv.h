@@ -272,15 +272,22 @@ DECLARE_INTERNAL(meth_new);
 DECLARE_INTERNAL(meth_incref);
 DECLARE_INTERNAL(meth_decref);
 DECLARE_INTERNAL(meth_set_def);
-DECLARE_INTERNAL(walk_init);
 DECLARE_INTERNAL(walk_next);
-DECLARE_INTERNAL(walk);
+DECLARE_INTERNAL(walk_meth_start);
+DECLARE_INTERNAL(walk_meth);
 DECLARE_INTERNAL(map_set);
 DECLARE_INTERNAL(map_search);
 DECLARE_INTERNAL(map_clear);
 DECLARE_INTERNAL(map_dup);
 DECLARE_INTERNAL(by_map);
 DECLARE_INTERNAL(by_sys);
+
+static inline void
+internal_walk_init(addrxlat_walk_t *walk, addrxlat_ctx_t *ctx,
+		   const addrxlat_sys_t *sys)
+{
+	return addrxlat_walk_init(walk, ctx, sys);
+}
 
 /* utils */
 

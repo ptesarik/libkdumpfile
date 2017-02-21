@@ -139,20 +139,20 @@ set_error_no_vtop(kdump_ctx *ctx)
 kdump_status
 vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	addrxlat_addr_t addr = vaddr;
+	addrxlat_walk_t walk;
 	addrxlat_status axres;
 	kdump_status res;
 
-	axres = addrxlat_walk(ctx->addrxlat, ctx->shared->vtop_map.pgt,
-			      &addr);
+	addrxlat_walk_init(&walk, ctx->addrxlat, NULL);
+	axres = addrxlat_walk_meth(&walk, ctx->shared->vtop_map.pgt, vaddr);
 	if (axres != addrxlat_ok)
 		return set_error_addrxlat(ctx, axres);
 
-	res = mtop(ctx, addr, paddr);
+	res = mtop(ctx, walk.base.addr, paddr);
 	if (res != kdump_ok)
 		return set_error(ctx, res,
 				 "Cannot translate machine address"
-				 " 0x%"ADDRXLAT_PRIxADDR, addr);
+				 " 0x%"ADDRXLAT_PRIxADDR, walk.base.addr);
 
 	return kdump_ok;
 }
@@ -168,15 +168,16 @@ vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 kdump_status
 vtop_pgt_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	addrxlat_addr_t addr = vaddr;
+	addrxlat_walk_t walk;
 	addrxlat_status axres;
 
-	axres = addrxlat_walk(ctx->addrxlat, ctx->shared->vtop_map_xen.pgt,
-			      &addr);
+	addrxlat_walk_init(&walk, ctx->addrxlat, NULL);
+	axres = addrxlat_walk_meth(&walk, ctx->shared->vtop_map_xen.pgt,
+				   vaddr);
 	if (axres != addrxlat_ok)
 		return set_error_addrxlat(ctx, axres);
 
-	*paddr = addr;
+	*paddr = walk.base.addr;
 	return kdump_ok;
 }
 
@@ -226,19 +227,18 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 kdump_status
 vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 {
-	addrxlat_addr_t addr;
+	addrxlat_walk_t walk;
 	addrxlat_status axres;
 
 	if (kphys_is_machphys(ctx))
 		return vtop(ctx, vaddr, maddr);
 
-	addr = vaddr;
-	axres = addrxlat_walk(ctx->addrxlat, ctx->shared->vtop_map.pgt,
-			      &addr);
+	addrxlat_walk_init(&walk, ctx->addrxlat, NULL);
+	axres = addrxlat_walk_meth(&walk, ctx->shared->vtop_map.pgt, vaddr);
 	if (axres != addrxlat_ok)
 		return set_error_addrxlat(ctx, axres);
 
-	*maddr = addr;
+	*maddr = walk.base.addr;
 	return kdump_ok;
 }
 

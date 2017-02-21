@@ -162,10 +162,12 @@ static int
 is_pae(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *root,
        addrxlat_addr_t direct)
 {
+	addrxlat_walk_t walk;
 	addrxlat_meth_t meth;
 	addrxlat_def_t def;
-	addrxlat_addr_t addr;
 	addrxlat_status status;
+
+	internal_walk_init(&walk, ctx, NULL);
 
 	def.kind = ADDRXLAT_PGT;
 	def.target_as = ADDRXLAT_MACHPHYSADDR;
@@ -173,17 +175,15 @@ is_pae(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *root,
 
 	def.param.pgt.pf = ia32_pf_pae;
 	internal_meth_set_def(&meth, &def);
-	addr = direct;
-	status = internal_walk(ctx, &meth, &addr);
-	if (status == addrxlat_ok && addr == 0)
+	status = internal_walk_meth(&walk, &meth, direct);
+	if (status == addrxlat_ok && walk.base.addr == 0)
 		return 1;
 	clear_error(ctx);
 
 	def.param.pgt.pf = ia32_pf;
 	internal_meth_set_def(&meth, &def);
-	addr = direct;
-	status = internal_walk(ctx, &meth, &addr);
-	if (status == addrxlat_ok && addr == 0)
+	status = internal_walk_meth(&walk, &meth, direct);
+	if (status == addrxlat_ok && walk.base.addr == 0)
 		return 0;
 	clear_error(ctx);
 

@@ -198,6 +198,7 @@ addrxlat_status
 addrxlat_by_map(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
 		const addrxlat_map_t *map)
 {
+	addrxlat_walk_t walk;
 	const addrxlat_meth_t *meth;
 	addrxlat_status status;
 
@@ -208,9 +209,10 @@ addrxlat_by_map(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
 		return set_error(ctx, addrxlat_invalid,
 				 "No translation method defined");
 
-	status = internal_walk(ctx, meth, &paddr->addr);
+	internal_walk_init(&walk, ctx, NULL);
+	status = internal_walk_meth(&walk, meth, paddr->addr);
 	if (status == addrxlat_ok)
-		paddr->as = meth->def.target_as;
+		*paddr = walk.base;
 	return status;
 }
 

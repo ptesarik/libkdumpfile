@@ -75,18 +75,16 @@ read_pte(addrxlat_walk_t *state)
 	return addrxlat_ok;
 }
 
-DEFINE_INTERNAL(walk_init);
+DEFINE_INTERNAL(walk_meth_start);
 
 addrxlat_status
-addrxlat_walk_init(addrxlat_walk_t *state, addrxlat_ctx_t *ctx,
-		   const addrxlat_meth_t *meth, addrxlat_addr_t addr)
+addrxlat_walk_meth_start(addrxlat_walk_t *walk, const addrxlat_meth_t *meth,
+			 addrxlat_addr_t addr)
 {
-	clear_error(ctx);
+	clear_error(walk->ctx);
 
-	state->ctx = ctx;
-	state->meth = meth;
-
-	return meth->walk_init(state, addr);
+	walk->meth = meth;
+	return meth->walk_init(walk, addr);
 }
 
 DEFINE_INTERNAL(walk_next);
@@ -117,23 +115,20 @@ addrxlat_walk_next(addrxlat_walk_t *state)
 	return meth->walk_step(state);
 }
 
-DEFINE_INTERNAL(walk);
+DEFINE_INTERNAL(walk_meth);
 
 addrxlat_status
-addrxlat_walk(addrxlat_ctx_t *ctx, const addrxlat_meth_t *meth,
-	      addrxlat_addr_t *paddr)
+addrxlat_walk_meth(addrxlat_walk_t *walk, const addrxlat_meth_t *meth,
+		   addrxlat_addr_t addr)
 {
-	addrxlat_walk_t walk;
 	addrxlat_status status;
 
-	/* clear_error(ctx) called from internal_walk_init() */
+	/* clear_error(ctx) called from internal_walk_meth_start() */
 
-	status = internal_walk_init(&walk, ctx, meth, *paddr);
+	status = internal_walk_meth_start(walk, meth, addr);
 	while (status == addrxlat_continue)
-		status = internal_walk_next(&walk);
+		status = internal_walk_next(walk);
 
-	if (status == addrxlat_ok)
-		*paddr = walk.base.addr;
 	return status;
 }
 
