@@ -433,7 +433,7 @@ x86_64_init(kdump_ctx *ctx)
 
 	def.kind = ADDRXLAT_PGT;
 	def.target_as = ADDRXLAT_MACHPHYSADDR;
-	def.param.pgt.root.as = ADDRXLAT_NONE;
+	def.param.pgt.root.as = ADDRXLAT_NOADDR;
 	def.param.pgt.pf = x86_64_pf;
 	axres = addrxlat_meth_set_def(ctx->shared->vtop_map.pgt, &def);
 	if (axres != addrxlat_ok)
@@ -663,7 +663,7 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 
 	def.kind = ADDRXLAT_PGT;
 	def.target_as = ADDRXLAT_MACHPHYSADDR;
-	def.param.pgt.root.as = ADDRXLAT_NONE;
+	def.param.pgt.root.as = ADDRXLAT_NOADDR;
 	def.param.pgt.pf = x86_64_pf;
 	axres = addrxlat_meth_set_def(ctx->shared->vtop_map_xen.pgt, &def);
 	if (axres != addrxlat_ok)
