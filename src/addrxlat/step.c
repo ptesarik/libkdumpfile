@@ -51,12 +51,12 @@ read_pte(addrxlat_step_t *step)
 
 	switch(pgt->pte_shift) {
 	case 2:
-		status = ctx->cb.read32(ctx->cb.data, &step->base, &pte32);
+		status = read32(ctx, &step->base, &pte32, "PTE");
 		pte = pte32;
 		break;
 
 	case 3:
-		status = ctx->cb.read64(ctx->cb.data, &step->base, &pte64);
+		status = read64(ctx, &step->base, &pte64, "PTE");
 		pte = pte64;
 		break;
 
@@ -66,13 +66,10 @@ read_pte(addrxlat_step_t *step)
 				 1 << pgt->pte_shift);
 	}
 
-	if (status != addrxlat_ok)
-		return set_error(ctx, status,
-				 "Cannot read PTE at 0x%"ADDRXLAT_PRIxADDR,
-				 step->base.addr);
+	if (status == addrxlat_ok)
+		step->raw_pte = pte;
 
-	step->raw_pte = pte;
-	return addrxlat_ok;
+	return status;
 }
 
 /** Update current step state for huge page.
