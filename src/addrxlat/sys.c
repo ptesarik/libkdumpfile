@@ -358,9 +358,9 @@ addrxlat_status
 addrxlat_by_sys(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
 		addrxlat_addrspace_t goal, const addrxlat_sys_t *sys)
 {
-
 	addrxlat_sys_map_t mapidx;
 	addrxlat_map_t *map;
+	addrxlat_step_t step;
 	addrxlat_status status;
 
 	clear_error(ctx);
@@ -377,11 +377,17 @@ addrxlat_by_sys(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
 	if (mapidx < 0 || !(map = sys->map[mapidx]))
 		return set_error(ctx, addrxlat_nometh, "No way to translate");
 
-	status = internal_by_map(ctx, paddr, map);
+	status = internal_launch_map(&step, ctx, map, paddr->addr);
 	if (status != addrxlat_ok)
 		return status;
-	if (paddr->as != goal)
-		return internal_by_sys(ctx, paddr, goal, sys);
+	step.sys = sys;
 
-	return addrxlat_ok;
+	status = internal_walk(&step);
+	if (status == addrxlat_ok) {
+		*paddr = step.base;
+		if (step.base.as != goal)
+			return addrxlat_by_sys(ctx, paddr, goal, sys);
+	}
+
+	return status;
 }

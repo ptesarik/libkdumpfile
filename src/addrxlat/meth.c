@@ -71,27 +71,27 @@ addrxlat_meth_decref(addrxlat_meth_t *meth)
 	return refcnt;
 }
 
-/** Null walk function.
- * @param walk  Page table walk state.
+/** Null first step function.
+ * @param step  Step state.
  * @param addr  Address to be translated.
  * @returns     Error status.
  *
  * This method does not modify anything and always succeeds.
  */
 static addrxlat_status
-walk_init_none(addrxlat_walk_t *walk, addrxlat_addr_t addr)
+first_step_none(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	return addrxlat_continue;
+	return addrxlat_ok;
 }
 
-/** Null walk function.
- * @param walk  Page table walk state.
+/** Null next step function.
+ * @param walk  Current step state.
  * @returns     Error status.
  *
  * This method does not modify anything and always succeeds.
  */
 static addrxlat_status
-step_none(addrxlat_walk_t *state)
+next_step_none(addrxlat_step_t *state)
 {
 	return addrxlat_continue;
 }
@@ -102,26 +102,26 @@ step_none(addrxlat_walk_t *state)
 static void
 setup_none(addrxlat_meth_t *meth)
 {
-	meth->walk_init = walk_init_none;
-	meth->walk_step = step_none;
+	meth->first_step = first_step_none;
+	meth->next_step = next_step_none;
 }
 
-/** Initialize walk state for linear offset.
+/** Initialize step state for linear offset.
  * @param walk  Page table walk state.
  * @param addr  Address to be translated.
  * @returns     Error status.
  */
 static addrxlat_status
-walk_init_linear(addrxlat_walk_t *walk, addrxlat_addr_t addr)
+first_step_linear(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	const addrxlat_def_linear_t *linear = &walk->meth->def.param.linear;
+	const addrxlat_def_linear_t *linear = &step->meth->def.param.linear;
 
-	walk->base.as = ADDRXLAT_KPHYSADDR;
-	walk->base.addr = -linear->off;
-	walk->level = 1;
-	walk->idx[0] = addr;
+	step->base.as = ADDRXLAT_KPHYSADDR;
+	step->base.addr = -linear->off;
+	step->remain = 1;
+	step->idx[0] = addr;
 
-	return addrxlat_continue;
+	return addrxlat_ok;
 }
 
 /** Set up linear translation.
@@ -130,121 +130,121 @@ walk_init_linear(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 static void
 setup_linear(addrxlat_meth_t *meth)
 {
-	meth->walk_init = walk_init_linear;
-	meth->walk_step = step_none;
+	meth->first_step = first_step_linear;
+	meth->next_step = next_step_none;
 }
 
-/** Initialize walk state for page table walk.
- * @param walk  Page table walk state.
+/** Initialize step state for page table walk.
+ * @param step  Step state.
  * @param addr  Address to be translated.
- * @returns     Always returns success (@c addrxlat_continue)
+ * @returns     Always returns success.
  */
 static addrxlat_status
-walk_init_pgt(addrxlat_walk_t *walk, addrxlat_addr_t addr)
+first_step_pgt(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	const addrxlat_def_pgt_t *pgt = &walk->meth->def.param.pgt;
+	const addrxlat_def_pgt_t *pgt = &step->meth->def.param.pgt;
 	unsigned short i;
 
 	if (pgt->root.as == ADDRXLAT_NOADDR)
-		return set_error(walk->ctx, addrxlat_nodata,
+		return set_error(step->ctx, addrxlat_nodata,
 				 "Page table address not specified");
 
-	walk->base = pgt->root;
-	walk->level = pgt->pf.levels;
+	step->base = pgt->root;
+	step->remain = pgt->pf.levels;
 	for (i = 0; i < pgt->pf.levels; ++i) {
 		unsigned short bits = pgt->pf.bits[i];
 		addrxlat_addr_t mask = bits < sizeof(addrxlat_addr_t) * 8
 			? ((addrxlat_addr_t)1 << bits) - 1
 			: ~(addrxlat_addr_t)0;
-		walk->idx[i] = addr & mask;
+		step->idx[i] = addr & mask;
 		addr >>= bits;
 	}
-	walk->idx[i] = addr;
-	return addrxlat_continue;
+	step->idx[i] = addr;
+	return addrxlat_ok;
 }
 
 /** Check unsigned address overflow.
- * @param walk  Page table walk state.
+ * @param step  Current step state.
  * @returns     Error status.
  *
- * This function is meant to be used as a walk init function.
+ * This function is meant to be used by a first step function.
  * It checks whether the input address is too big when interpreted
  * as an unsigned integer.
  */
 static addrxlat_status
-walk_check_uaddr(addrxlat_walk_t *walk)
+step_check_uaddr(addrxlat_step_t *step)
 {
-	return walk->idx[walk->meth->def.param.pgt.pf.levels]
-		? set_error(walk->ctx, addrxlat_invalid,
+	return step->idx[step->meth->def.param.pgt.pf.levels]
+		? set_error(step->ctx, addrxlat_invalid,
 			    "Virtual address too big")
-		: addrxlat_continue;
+		: addrxlat_ok;
 }
 
-/** Initialize walk state for unsigned address page table walk.
- * @param walk  Page table walk state.
+/** Initialize step state for unsigned address page table walk.
+ * @param step  Step state.
  * @param addr  Address to be translated.
  * @returns     Error status.
  */
 static addrxlat_status
-walk_init_uaddr(addrxlat_walk_t *walk, addrxlat_addr_t addr)
+first_step_uaddr(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
 	addrxlat_status status;
-	status = walk_init_pgt(walk, addr);
-	if (status != addrxlat_continue)
+	status = first_step_pgt(step, addr);
+	if (status != addrxlat_ok)
 		return status;
-	return walk_check_uaddr(walk);
+	return step_check_uaddr(step);
 }
 
 /** Check signed address overflow.
- * @param walk  Page table walk state.
+ * @param step  Current step state.
  * @returns     Error status.
  *
- * This function is meant to be used as a walk init function.
+ * This function is meant to be used by a first step function.
  * It checks whether the input address is too big when interpreted
  * as a signed integer.
  */
 static addrxlat_status
-walk_check_saddr(addrxlat_walk_t *walk)
+step_check_saddr(addrxlat_step_t *step)
 {
-	const addrxlat_paging_form_t *pf = &walk->meth->def.param.pgt.pf;
-	const struct pgt_extra_def *extra = &walk->meth->extra.pgt;
+	const addrxlat_paging_form_t *pf = &step->meth->def.param.pgt.pf;
+	const struct pgt_extra_def *extra = &step->meth->extra.pgt;
 	unsigned short lvl = pf->levels;
 	struct {
 		int bit : 1;
 	} s;
 	addrxlat_addr_t signext;
 
-	s.bit = walk->idx[lvl - 1] >> (pf->bits[lvl - 1] - 1);
+	s.bit = step->idx[lvl - 1] >> (pf->bits[lvl - 1] - 1);
 	signext = s.bit & (extra->pgt_mask[lvl - 1] >> extra->vaddr_bits);
-	return walk->idx[lvl] != signext
-		? set_error(walk->ctx, addrxlat_invalid,
+	return step->idx[lvl] != signext
+		? set_error(step->ctx, addrxlat_invalid,
 			    "Virtual address too big")
-		: addrxlat_continue;
+		: addrxlat_ok;
 }
 
-/** Initialize walk state for signed address page table walk.
- * @param walk  Page table walk state.
+/** Initialize step state for signed address page table walk.
+ * @param step  Step state.
  * @param addr  Address to be translated.
  * @returns     Error status.
  */
 static addrxlat_status
-walk_init_saddr(addrxlat_walk_t *walk, addrxlat_addr_t addr)
+first_step_saddr(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
 	addrxlat_status status;
-	status = walk_init_pgt(walk, addr);
-	if (status != addrxlat_continue)
+	status = first_step_pgt(step, addr);
+	if (status != addrxlat_ok)
 		return status;
-	return walk_check_saddr(walk);
+	return step_check_saddr(step);
 }
 
-/** Page frame number walk function.
- * @param walk  Page table walk state.
+/** Page frame number next step function.
+ * @param step  Current step state.
  * @returns     Error status.
  *
  * This function handles page frame numbers in a table.
  */
 static addrxlat_status
-step_pfn(addrxlat_walk_t *state)
+next_step_pfn(addrxlat_step_t *state)
 {
 	state->base.addr =
 		state->raw_pte << state->meth->def.param.pgt.pf.bits[0];
@@ -265,23 +265,23 @@ setup_pgt(addrxlat_meth_t *meth, const addrxlat_def_t *def)
 	addrxlat_addr_t mask;
 	unsigned short i;
 
-#define SETUP(fmt, init, step, shift)		\
+#define SETUP(fmt, first, next, shift)		\
 	case fmt:				\
-		meth->walk_init = init;		\
-		meth->walk_step = step;		\
+		meth->first_step = first;	\
+		meth->next_step = next;		\
 		extra->pte_shift = shift;	\
 		break
 
 	switch (pf->pte_format) {
-		SETUP(addrxlat_pte_none, walk_init_pgt, step_none, 0);
-		SETUP(addrxlat_pte_pfn32, walk_init_uaddr, step_pfn, 2);
-		SETUP(addrxlat_pte_pfn64, walk_init_uaddr, step_pfn, 3);
-		SETUP(addrxlat_pte_ia32, walk_init_uaddr, pgt_ia32, 2);
-		SETUP(addrxlat_pte_ia32_pae, walk_init_uaddr, pgt_ia32_pae, 3);
-		SETUP(addrxlat_pte_x86_64, walk_init_saddr, pgt_x86_64, 3);
-		SETUP(addrxlat_pte_s390x, walk_init_uaddr, pgt_s390x, 3);
+		SETUP(addrxlat_pte_none, first_step_pgt, next_step_none, 0);
+		SETUP(addrxlat_pte_pfn32, first_step_uaddr, next_step_pfn, 2);
+		SETUP(addrxlat_pte_pfn64, first_step_uaddr, next_step_pfn, 3);
+		SETUP(addrxlat_pte_ia32, first_step_uaddr, pgt_ia32, 2);
+		SETUP(addrxlat_pte_ia32_pae, first_step_uaddr, pgt_ia32_pae, 3);
+		SETUP(addrxlat_pte_x86_64, first_step_saddr, pgt_x86_64, 3);
+		SETUP(addrxlat_pte_s390x, first_step_uaddr, pgt_s390x, 3);
 		SETUP(addrxlat_pte_ppc64_linux_rpn30,
-		      walk_init_pgt, pgt_ppc64_linux_rpn30, 3);
+		      first_step_pgt, pgt_ppc64_linux_rpn30, 3);
 	default:
 		return addrxlat_notimpl;
 	};
@@ -297,30 +297,30 @@ setup_pgt(addrxlat_meth_t *meth, const addrxlat_def_t *def)
 	return addrxlat_ok;
 }
 
-/** Initialize walk state for table lookup.
- * @param walk  Page table walk state.
+/** Initialize step state for table lookup.
+ * @param step  Step state.
  * @param addr  Address to be translated.
  * @returns     Error status.
  */
 static addrxlat_status
-walk_init_lookup(addrxlat_walk_t *walk, addrxlat_addr_t addr)
+first_step_lookup(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	const addrxlat_def_lookup_t *lookup = &walk->meth->def.param.lookup;
+	const addrxlat_def_lookup_t *lookup = &step->meth->def.param.lookup;
 	size_t i;
 
 	for (i = 0; i < lookup->nelem; ++i) {
 		const addrxlat_lookup_elem_t *elem = &lookup->tbl[i];
 		if (elem->orig <= addr &&
 		    addr <= elem->orig + lookup->endoff) {
-			walk->base.as = walk->meth->def.target_as;
-			walk->base.addr = elem->dest;
-			walk->level = 1;
-			walk->idx[0] = addr - elem->orig;
-			return addrxlat_continue;
+			step->base.as = step->meth->def.target_as;
+			step->base.addr = elem->dest;
+			step->remain = 1;
+			step->idx[0] = addr - elem->orig;
+			return addrxlat_ok;
 		}
 	}
 
-	return set_error(walk->ctx, addrxlat_notpresent, "Not mapped");
+	return set_error(step->ctx, addrxlat_notpresent, "Not mapped");
 }
 
 /** Set up table lookup translation.
@@ -329,19 +329,19 @@ walk_init_lookup(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 static void
 setup_lookup(addrxlat_meth_t *meth)
 {
-	meth->walk_init = walk_init_lookup;
-	meth->walk_step = step_none;
+	meth->first_step = first_step_lookup;
+	meth->next_step = next_step_none;
 }
 
-/** Initialize walk state for memory array lookup.
- * @param walk  Page table walk state.
+/** Initialize step state for memory array lookup.
+ * @param step  Step state.
  * @param addr  Address to be translated.
  * @returns     Error status.
  */
 static addrxlat_status
-walk_init_memarr(addrxlat_walk_t *walk, addrxlat_addr_t addr)
+first_step_memarr(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	const addrxlat_def_memarr_t *memarr = &walk->meth->def.param.memarr;
+	const addrxlat_def_memarr_t *memarr = &step->meth->def.param.memarr;
 	addrxlat_fulladdr_t elemaddr = memarr->base;
 	uint64_t val64;
 	uint32_t val32;
@@ -352,30 +352,30 @@ walk_init_memarr(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 	elemaddr.addr += idx * memarr->elemsz;
 	switch (memarr->valsz) {
 	case 4:
-		status = read32(walk->ctx, &elemaddr, &val32,
+		status = read32(step->ctx, &elemaddr, &val32,
 				"memory array element");
 		val =val32;
 		break;
 
 	case 8:
-		status = read64(walk->ctx, &elemaddr, &val64,
+		status = read64(step->ctx, &elemaddr, &val64,
 				"memory array element");
 		val = val64;
 		break;
 
 	default:
-		return set_error(walk->ctx, addrxlat_notimpl,
+		return set_error(step->ctx, addrxlat_notimpl,
 				 "Unsupported value size: %u", memarr->valsz);
 	}
 
 	if (status != addrxlat_ok)
 		return status;
 
-	walk->base.as = ADDRXLAT_KPHYSADDR;
-	walk->base.addr = val << memarr->shift;
-	walk->level = 1;
-	walk->idx[0] = addr & ((1ULL << memarr->shift) - 1);
-	return addrxlat_continue;
+	step->base.as = ADDRXLAT_KPHYSADDR;
+	step->base.addr = val << memarr->shift;
+	step->remain = 1;
+	step->idx[0] = addr & ((1ULL << memarr->shift) - 1);
+	return addrxlat_ok;
 }
 
 /** Set up memory array translation.
@@ -384,8 +384,8 @@ walk_init_memarr(addrxlat_walk_t *walk, addrxlat_addr_t addr)
 static void
 setup_memarr(addrxlat_meth_t *meth)
 {
-	meth->walk_init = walk_init_memarr;
-	meth->walk_step = step_none;
+	meth->first_step = first_step_memarr;
+	meth->next_step = next_step_none;
 }
 
 DEFINE_INTERNAL(meth_set_def);

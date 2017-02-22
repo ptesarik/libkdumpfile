@@ -139,20 +139,24 @@ set_error_no_vtop(kdump_ctx *ctx)
 kdump_status
 vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	addrxlat_walk_t walk;
+	addrxlat_step_t step;
 	addrxlat_status axres;
 	kdump_status res;
 
-	addrxlat_walk_init(&walk, ctx->addrxlat, NULL);
-	axres = addrxlat_walk_meth(&walk, ctx->shared->vtop_map.pgt, vaddr);
+	axres = addrxlat_launch_meth(&step, ctx->addrxlat,
+				     ctx->shared->vtop_map.pgt, vaddr);
 	if (axres != addrxlat_ok)
 		return set_error_addrxlat(ctx, axres);
 
-	res = mtop(ctx, walk.base.addr, paddr);
+	axres = addrxlat_walk(&step);
+	if (axres != addrxlat_ok)
+		return set_error_addrxlat(ctx, axres);
+
+	res = mtop(ctx, step.base.addr, paddr);
 	if (res != kdump_ok)
 		return set_error(ctx, res,
 				 "Cannot translate machine address"
-				 " 0x%"ADDRXLAT_PRIxADDR, walk.base.addr);
+				 " 0x%"ADDRXLAT_PRIxADDR, step.base.addr);
 
 	return kdump_ok;
 }
@@ -168,16 +172,19 @@ vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 kdump_status
 vtop_pgt_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	addrxlat_walk_t walk;
+	addrxlat_step_t step;
 	addrxlat_status axres;
 
-	addrxlat_walk_init(&walk, ctx->addrxlat, NULL);
-	axres = addrxlat_walk_meth(&walk, ctx->shared->vtop_map_xen.pgt,
-				   vaddr);
+	axres = addrxlat_launch_meth(&step, ctx->addrxlat,
+				     ctx->shared->vtop_map_xen.pgt, vaddr);
 	if (axres != addrxlat_ok)
 		return set_error_addrxlat(ctx, axres);
 
-	*paddr = walk.base.addr;
+	axres = addrxlat_walk(&step);
+	if (axres != addrxlat_ok)
+		return set_error_addrxlat(ctx, axres);
+
+	*paddr = step.base.addr;
 	return kdump_ok;
 }
 
@@ -192,12 +199,16 @@ kdump_status
 map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
 	 const struct vtop_map *map)
 {
-	addrxlat_fulladdr_t faddr = { .addr = vaddr, .as = ADDRXLAT_KVADDR };
+	addrxlat_step_t step;
 	addrxlat_status status;
 
-	status = addrxlat_by_map(ctx->addrxlat, &faddr, map->map);
+	status = addrxlat_launch_map(&step, ctx->addrxlat, map->map, vaddr);
+	if (status != addrxlat_ok)
+		return set_error_addrxlat(ctx, status);
+
+	status = addrxlat_walk(&step);
 	if (status == addrxlat_ok)
-		*paddr = faddr.addr;
+		*paddr = step.base.addr;
 	return set_error_addrxlat(ctx, status);
 }
 
@@ -227,18 +238,22 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 kdump_status
 vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 {
-	addrxlat_walk_t walk;
+	addrxlat_step_t step;
 	addrxlat_status axres;
 
 	if (kphys_is_machphys(ctx))
 		return vtop(ctx, vaddr, maddr);
 
-	addrxlat_walk_init(&walk, ctx->addrxlat, NULL);
-	axres = addrxlat_walk_meth(&walk, ctx->shared->vtop_map.pgt, vaddr);
+	axres = addrxlat_launch_meth(&step, ctx->addrxlat,
+				     ctx->shared->vtop_map.pgt, vaddr);
 	if (axres != addrxlat_ok)
 		return set_error_addrxlat(ctx, axres);
 
-	*maddr = walk.base.addr;
+	axres = addrxlat_walk(&step);
+	if (axres != addrxlat_ok)
+		return set_error_addrxlat(ctx, axres);
+
+	*maddr = step.base.addr;
 	return kdump_ok;
 }
 

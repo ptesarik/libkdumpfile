@@ -47,11 +47,11 @@
 #define ROOT_PGT_LEN	2048
 
 /** IBM z/Architecture page table step function.
- * @param state  Page table walk state.
- * @returns      Error status.
+ * @param step  Current step state.
+ * @returns     Error status.
  */
 addrxlat_status
-pgt_s390x(addrxlat_walk_t *state)
+pgt_s390x(addrxlat_step_t *step)
 {
 	static const char pgt_full_name[][16] = {
 		"Page",
@@ -68,45 +68,45 @@ pgt_s390x(addrxlat_walk_t *state)
 		"pgd",
 		"rg1",		/* Invented; does not exist in the wild. */
 	};
-	const addrxlat_paging_form_t *pf = &state->meth->def.param.pgt.pf;
-	const struct pgt_extra_def *pgt = &state->meth->extra.pgt;
+	const addrxlat_paging_form_t *pf = &step->meth->def.param.pgt.pf;
+	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
 
-	if (PTE_I(state->raw_pte))
-		return set_error(state->ctx, addrxlat_notpresent,
+	if (PTE_I(step->raw_pte))
+		return set_error(step->ctx, addrxlat_notpresent,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
-				 pgt_full_name[state->level - 1],
-				 pte_name[state->level - 1],
-				 (unsigned) state->idx[state->level],
-				 state->raw_pte);
+				 pgt_full_name[step->remain - 1],
+				 pte_name[step->remain - 1],
+				 (unsigned) step->idx[step->remain],
+				 step->raw_pte);
 
-	if (state->level >= 2 && PTE_TT(state->raw_pte) != state->level - 2)
-		return set_error(state->ctx, addrxlat_invalid,
+	if (step->remain >= 2 && PTE_TT(step->raw_pte) != step->remain - 2)
+		return set_error(step->ctx, addrxlat_invalid,
 				 "Table type field %u in %s",
-				 (unsigned) PTE_TT(state->raw_pte),
-				 pgt_full_name[state->level]);
+				 (unsigned) PTE_TT(step->raw_pte),
+				 pgt_full_name[step->remain]);
 
-	state->base.addr = state->raw_pte;
+	step->base.addr = step->raw_pte;
 
-	if (state->level >= 2 && state->level <= 3 &&
-	    PTE_FC(state->raw_pte)) {
-		state->base.addr &= pgt->pgt_mask[state->level - 1];
-		return pgt_huge_page(state);
+	if (step->remain >= 2 && step->remain <= 3 &&
+	    PTE_FC(step->raw_pte)) {
+		step->base.addr &= pgt->pgt_mask[step->remain - 1];
+		return pgt_huge_page(step);
 	}
 
-	if (state->level >= 3) {
-		unsigned pgidx = state->idx[state->level - 1] >>
-			(pf->bits[state->level - 1] - pf->bits[0]);
-		if (pgidx < PTE_TF(state->raw_pte) ||
-		    pgidx > PTE_TL(state->raw_pte))
-			return set_error(state->ctx, addrxlat_notpresent,
+	if (step->remain >= 3) {
+		unsigned pgidx = step->idx[step->remain - 1] >>
+			(pf->bits[step->remain - 1] - pf->bits[0]);
+		if (pgidx < PTE_TF(step->raw_pte) ||
+		    pgidx > PTE_TL(step->raw_pte))
+			return set_error(step->ctx, addrxlat_notpresent,
 					 "%s index %u not within %u and %u",
-					 pgt_full_name[state->level-1],
-					 (unsigned) state->idx[state->level-1],
-					 (unsigned) PTE_TF(state->raw_pte),
-					 (unsigned) PTE_TL(state->raw_pte));
+					 pgt_full_name[step->remain-1],
+					 (unsigned) step->idx[step->remain-1],
+					 (unsigned) PTE_TF(step->raw_pte),
+					 (unsigned) PTE_TL(step->raw_pte));
 	}
 
-	state->base.addr &= (state->level == 2 ? PTO_MASK : pgt->pgt_mask[0]);
+	step->base.addr &= (step->remain == 2 ? PTO_MASK : pgt->pgt_mask[0]);
 	return addrxlat_continue;
 }
 

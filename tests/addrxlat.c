@@ -276,18 +276,24 @@ set_memarr(addrxlat_def_memarr_t *ma, const char *spec)
 static int
 do_xlat(addrxlat_ctx_t *ctx, addrxlat_addr_t addr)
 {
-	addrxlat_walk_t walk;
+	addrxlat_step_t step;
 	addrxlat_status status;
 
-	addrxlat_walk_init(&walk, ctx, NULL);
-	status = addrxlat_walk_meth(&walk, xlat, addr);
+	status = addrxlat_launch_meth(&step, ctx, xlat, addr);
+	if (status != addrxlat_ok) {
+		fprintf(stderr, "Cannot launch address translation: %s\n",
+			addrxlat_ctx_get_err(ctx));
+		return TEST_FAIL;
+	}
+
+	status = addrxlat_walk(&step);
 	if (status != addrxlat_ok) {
 		fprintf(stderr, "Address translation failed: %s\n",
 			addrxlat_ctx_get_err(ctx));
 		return TEST_FAIL;
 	}
 
-	printf("0x%"ADDRXLAT_PRIxADDR "\n", walk.base.addr);
+	printf("0x%"ADDRXLAT_PRIxADDR "\n", step.base.addr);
 
 	return TEST_OK;
 }

@@ -59,11 +59,11 @@
 #define VIRTADDR_MAX		UINT32_MAX
 
 /** IA32 page table step function.
- * @param state  Page table walk state.
- * @returns      Error status.
+ * @param step  Current step state.
+ * @returns     Error status.
  */
 addrxlat_status
-pgt_ia32(addrxlat_walk_t *state)
+pgt_ia32(addrxlat_step_t *step)
 {
 	static const char pgt_full_name[][16] = {
 		"Page",
@@ -73,34 +73,34 @@ pgt_ia32(addrxlat_walk_t *state)
 		"pte",
 		"pgd",
 	};
-	const addrxlat_paging_form_t *pf = &state->meth->def.param.pgt.pf;
-	const struct pgt_extra_def *pgt = &state->meth->extra.pgt;
+	const addrxlat_paging_form_t *pf = &step->meth->def.param.pgt.pf;
+	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
 
-	if (!(state->raw_pte & _PAGE_PRESENT))
-		return set_error(state->ctx, addrxlat_notpresent,
+	if (!(step->raw_pte & _PAGE_PRESENT))
+		return set_error(step->ctx, addrxlat_notpresent,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
-				 pgt_full_name[state->level - 1],
-				 pte_name[state->level - 1],
-				 (unsigned) state->idx[state->level],
-				 state->raw_pte);
+				 pgt_full_name[step->remain - 1],
+				 pte_name[step->remain - 1],
+				 (unsigned) step->idx[step->remain],
+				 step->raw_pte);
 
-	if (state->level == 2 && (state->raw_pte & _PAGE_PSE)) {
-		--state->level;
-		state->base.addr = (state->raw_pte & pgt->pgt_mask[1]) |
-			pgd_pse_high(state->raw_pte);
-		state->idx[0] |= state->idx[1] << pf->bits[0];
+	if (step->remain == 2 && (step->raw_pte & _PAGE_PSE)) {
+		--step->remain;
+		step->base.addr = (step->raw_pte & pgt->pgt_mask[1]) |
+			pgd_pse_high(step->raw_pte);
+		step->idx[0] |= step->idx[1] << pf->bits[0];
 	} else
-		state->base.addr = state->raw_pte & pgt->pgt_mask[0];
+		step->base.addr = step->raw_pte & pgt->pgt_mask[0];
 
 	return addrxlat_continue;
 }
 
 /** IA32 PAE page table step function.
- * @param state  Page table walk state.
- * @returns      Error status.
+ * @param step  Current step state.
+ * @returns     Error status.
  */
 addrxlat_status
-pgt_ia32_pae(addrxlat_walk_t *state)
+pgt_ia32_pae(addrxlat_step_t *step)
 {
 	static const char pgt_full_name[][16] = {
 		"Page",
@@ -112,24 +112,24 @@ pgt_ia32_pae(addrxlat_walk_t *state)
 		"pmd",
 		"pgd",
 	};
-	const addrxlat_paging_form_t *pf = &state->meth->def.param.pgt.pf;
-	const struct pgt_extra_def *pgt = &state->meth->extra.pgt;
+	const addrxlat_paging_form_t *pf = &step->meth->def.param.pgt.pf;
+	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
 
-	if (!(state->raw_pte & _PAGE_PRESENT))
-		return set_error(state->ctx, addrxlat_notpresent,
+	if (!(step->raw_pte & _PAGE_PRESENT))
+		return set_error(step->ctx, addrxlat_notpresent,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
-				 pgt_full_name[state->level - 1],
-				 pte_name[state->level - 1],
-				 (unsigned) state->idx[state->level],
-				 state->raw_pte);
+				 pgt_full_name[step->remain - 1],
+				 pte_name[step->remain - 1],
+				 (unsigned) step->idx[step->remain],
+				 step->raw_pte);
 
-	state->base.addr = state->raw_pte & ~PHYSADDR_MASK_PAE;
-	if (state->level == 2 && (state->raw_pte & _PAGE_PSE)) {
-		--state->level;
-		state->base.addr &= pgt->pgt_mask[1];
-		state->idx[0] |= state->idx[1] << pf->bits[0];
+	step->base.addr = step->raw_pte & ~PHYSADDR_MASK_PAE;
+	if (step->remain == 2 && (step->raw_pte & _PAGE_PSE)) {
+		--step->remain;
+		step->base.addr &= pgt->pgt_mask[1];
+		step->idx[0] |= step->idx[1] << pf->bits[0];
 	} else
-		state->base.addr &= pgt->pgt_mask[0];
+		step->base.addr &= pgt->pgt_mask[0];
 
 	return addrxlat_continue;
 }
@@ -162,12 +162,10 @@ static int
 is_pae(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *root,
        addrxlat_addr_t direct)
 {
-	addrxlat_walk_t walk;
+	addrxlat_step_t step;
 	addrxlat_meth_t meth;
 	addrxlat_def_t def;
 	addrxlat_status status;
-
-	internal_walk_init(&walk, ctx, NULL);
 
 	def.kind = ADDRXLAT_PGT;
 	def.target_as = ADDRXLAT_MACHPHYSADDR;
@@ -175,15 +173,21 @@ is_pae(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *root,
 
 	def.param.pgt.pf = ia32_pf_pae;
 	internal_meth_set_def(&meth, &def);
-	status = internal_walk_meth(&walk, &meth, direct);
-	if (status == addrxlat_ok && walk.base.addr == 0)
+	status = internal_launch_meth(&step, ctx, &meth, direct);
+	if (status != addrxlat_ok)
+		return -1;
+	status = internal_walk(&step);
+	if (status == addrxlat_ok && step.base.addr == 0)
 		return 1;
 	clear_error(ctx);
 
 	def.param.pgt.pf = ia32_pf;
 	internal_meth_set_def(&meth, &def);
-	status = internal_walk_meth(&walk, &meth, direct);
-	if (status == addrxlat_ok && walk.base.addr == 0)
+	status = internal_launch_meth(&step, ctx, &meth, direct);
+	if (status != addrxlat_ok)
+		return -1;
+	status = internal_walk(&step);
+	if (status == addrxlat_ok && step.base.addr == 0)
 		return 0;
 	clear_error(ctx);
 

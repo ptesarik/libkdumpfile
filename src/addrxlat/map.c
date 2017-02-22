@@ -192,30 +192,6 @@ addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 	return NULL;
 }
 
-DEFINE_INTERNAL(by_map);
-
-addrxlat_status
-addrxlat_by_map(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
-		const addrxlat_map_t *map)
-{
-	addrxlat_walk_t walk;
-	const addrxlat_meth_t *meth;
-	addrxlat_status status;
-
-	clear_error(ctx);
-
-	meth = internal_map_search(map, paddr->addr);
-	if (!meth)
-		return set_error(ctx, addrxlat_invalid,
-				 "No translation method defined");
-
-	internal_walk_init(&walk, ctx, NULL);
-	status = internal_walk_meth(&walk, meth, paddr->addr);
-	if (status == addrxlat_ok)
-		*paddr = walk.base;
-	return status;
-}
-
 DEFINE_INTERNAL(map_clear);
 
 void
@@ -256,4 +232,22 @@ addrxlat_map_dup(const addrxlat_map_t *map)
 	}
 
 	return ret;
+}
+
+DEFINE_INTERNAL(launch_map);
+
+addrxlat_status
+addrxlat_launch_map(addrxlat_step_t *step, addrxlat_ctx_t *ctx,
+		    const addrxlat_map_t *map, addrxlat_addr_t addr)
+{
+	const addrxlat_meth_t *meth;
+
+	clear_error(ctx);
+
+	meth = internal_map_search(map, addr);
+	if (!meth)
+		return set_error(ctx, addrxlat_invalid,
+				 "No translation method defined");
+
+	return internal_launch_meth(step, ctx, meth, addr);
 }

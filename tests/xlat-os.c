@@ -78,6 +78,7 @@ find_entry(addrxlat_addr_t addr, size_t sz)
 static addrxlat_status
 get_physaddr(struct cbdata *cbd, addrxlat_fulladdr_t *addr)
 {
+	addrxlat_step_t step;
 	addrxlat_status status;
 
 	switch (addr->as) {
@@ -85,25 +86,41 @@ get_physaddr(struct cbdata *cbd, addrxlat_fulladdr_t *addr)
 		break;
 
 	case ADDRXLAT_KPHYSADDR:
-		status = addrxlat_by_map(cbd->ctx, addr,
-					 addrxlat_sys_get_map(
-						 cbd->sys,
-						 ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS));
+		status = addrxlat_launch_map(
+			&step, cbd->ctx,
+			addrxlat_sys_get_map(
+				cbd->sys, ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS),
+			addr->addr);
+		if (status != addrxlat_ok)
+			return addrxlat_ctx_err(cbd->ctx, -read_vtop_failed,
+						"Cannot launch translation of kernel physical addr 0x%"ADDRXLAT_PRIxADDR,
+						addr->addr);
+
+		status = addrxlat_walk(&step);
 		if (status != addrxlat_ok)
 			return addrxlat_ctx_err(cbd->ctx, -read_vtop_failed,
 						"Cannot translate kernel physical addr 0x%"ADDRXLAT_PRIxADDR,
 						addr->addr);
+		*addr = step.base;
 		break;
 
 	case ADDRXLAT_KVADDR:
-		status = addrxlat_by_map(cbd->ctx, addr,
-					 addrxlat_sys_get_map(
-						 cbd->sys,
-						 ADDRXLAT_SYS_MAP_KV_PHYS));
+		status = addrxlat_launch_map(
+			&step, cbd->ctx,
+			addrxlat_sys_get_map(
+				cbd->sys, ADDRXLAT_SYS_MAP_KV_PHYS),
+			addr->addr);
+		if (status != addrxlat_ok)
+			return addrxlat_ctx_err(cbd->ctx, -read_vtop_failed,
+						"Cannot launch translation of virt addr 0x%"ADDRXLAT_PRIxADDR,
+						addr->addr);
+
+		status = addrxlat_walk(&step);
 		if (status != addrxlat_ok)
 			return addrxlat_ctx_err(cbd->ctx, -read_vtop_failed,
 						"Cannot translate virt addr 0x%"ADDRXLAT_PRIxADDR,
 						addr->addr);
+		*addr = step.base;
 		break;
 
 	default:

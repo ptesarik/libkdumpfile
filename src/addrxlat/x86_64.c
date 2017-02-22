@@ -163,11 +163,11 @@ static const struct sys_region linux_layout_2_6_31[] = {
 };
 
 /** AMD64 (Intel 64) page table step function.
- * @param state  Translation state.
- * @returns      Error status.
+ * @param step  Current step state.
+ * @returns     Error status.
  */
 addrxlat_status
-pgt_x86_64(addrxlat_walk_t *state)
+pgt_x86_64(addrxlat_step_t *step)
 {
 	static const char pgt_full_name[][16] = {
 		"Page",
@@ -181,24 +181,24 @@ pgt_x86_64(addrxlat_walk_t *state)
 		"pud",
 		"pgd",
 	};
-	const struct pgt_extra_def *pgt = &state->meth->extra.pgt;
+	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
 
-	if (!(state->raw_pte & _PAGE_PRESENT))
-		return set_error(state->ctx, addrxlat_notpresent,
+	if (!(step->raw_pte & _PAGE_PRESENT))
+		return set_error(step->ctx, addrxlat_notpresent,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
-				 pgt_full_name[state->level - 1],
-				 pte_name[state->level - 1],
-				 (unsigned) state->idx[state->level],
-				 state->raw_pte);
+				 pgt_full_name[step->remain - 1],
+				 pte_name[step->remain - 1],
+				 (unsigned) step->idx[step->remain],
+				 step->raw_pte);
 
-	state->base.addr = state->raw_pte & ~PHYSADDR_MASK;
-	if (state->level >= 2 && state->level <= 3 &&
-	    (state->raw_pte & _PAGE_PSE)) {
-		state->base.addr &= pgt->pgt_mask[state->level - 1];
-		return pgt_huge_page(state);
+	step->base.addr = step->raw_pte & ~PHYSADDR_MASK;
+	if (step->remain >= 2 && step->remain <= 3 &&
+	    (step->raw_pte & _PAGE_PSE)) {
+		step->base.addr &= pgt->pgt_mask[step->remain - 1];
+		return pgt_huge_page(step);
 	}
 
-	state->base.addr &= pgt->pgt_mask[0];
+	step->base.addr &= pgt->pgt_mask[0];
 	return addrxlat_continue;
 }
 
@@ -256,12 +256,17 @@ static int
 is_mapped(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	  addrxlat_addr_t addr)
 {
-	addrxlat_walk_t walk;
+	addrxlat_step_t step;
 	addrxlat_status status;
 
-	internal_walk_init(&walk, ctx, sys);
-	status = internal_walk_meth(&walk, sys->meth[ADDRXLAT_SYS_METH_PGT],
-				    addr);
+	status = internal_launch_meth(&step, ctx,
+				      sys->meth[ADDRXLAT_SYS_METH_PGT], addr);
+
+	if (status == addrxlat_ok) {
+		step.sys = sys;
+		status = internal_walk(&step);
+	}
+
 	clear_error(ctx);
 	return status == addrxlat_ok;
 }
@@ -326,26 +331,30 @@ static addrxlat_status
 set_ktext_offset(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 		 addrxlat_addr_t vaddr)
 {
-	addrxlat_fulladdr_t faddr;
+	addrxlat_step_t step;
 	addrxlat_def_t def;
 	addrxlat_status status;
 
 	if (!is_pgt_usable(sys))
 		return addrxlat_nodata;
 
-	faddr.addr = vaddr;
-	faddr.as = ADDRXLAT_KVADDR;
-	status = internal_by_map(ctx, &faddr, sys->map[ADDRXLAT_SYS_MAP_HW]);
+	status = internal_launch_map(&step, ctx,
+				     sys->map[ADDRXLAT_SYS_MAP_HW], vaddr);
+	if (status != addrxlat_ok)
+		return status;
+	step.sys = sys;
+
+	status = internal_walk(&step);
 	if (status != addrxlat_ok)
 		return status;
 
-	status = internal_by_sys(ctx, &faddr, ADDRXLAT_KPHYSADDR, sys);
+	status = internal_by_sys(ctx, &step.base, ADDRXLAT_KPHYSADDR, sys);
 	if (status != addrxlat_ok)
 		return status;
 
 	def.kind = ADDRXLAT_LINEAR;
 	def.target_as = ADDRXLAT_KPHYSADDR;
-	def.param.linear.off = vaddr - faddr.addr;
+	def.param.linear.off = vaddr - step.base.addr;
 	return internal_meth_set_def(sys->meth[ADDRXLAT_SYS_METH_KTEXT], &def);
 }
 
@@ -606,15 +615,21 @@ map_linux_x86_64(struct sys_init_data *ctl)
 static int
 is_xen_ktext(struct sys_init_data *ctl, addrxlat_addr_t addr)
 {
-	addrxlat_walk_t walk;
+	addrxlat_step_t step;
 	addrxlat_status status;
-	unsigned steps;
+	unsigned steps = 0;
 
-	internal_walk_init(&walk, ctl->ctx, ctl->sys);
-	status = internal_walk_meth_start(
-		&walk, ctl->sys->meth[ADDRXLAT_SYS_METH_PGT], addr);
-	for (steps = 0; status == addrxlat_continue; ++steps)
-		status = internal_walk_next(&walk);
+	status = internal_launch_meth(&step, ctl->ctx,
+				      ctl->sys->meth[ADDRXLAT_SYS_METH_PGT],
+				      addr);
+	if (status == addrxlat_ok) {
+		step.sys = ctl->sys;
+		do {
+			++steps;
+			status = internal_step(&step);
+		} while (status == addrxlat_continue);
+	}
+
 	clear_error(ctl->ctx);
 
 	return status == addrxlat_ok && steps == 4;

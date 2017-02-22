@@ -109,41 +109,41 @@ hugepd_shift(addrxlat_pte_t hpde)
 }
 
 /**  Translate a Linux huge page using its directory entry.
- * @param state  Page table walk state.
- * @returns      Always @c addrxlat_continue.
+ * @param step  Current step state.
+ * @returns     Always @c addrxlat_continue.
  */
 static addrxlat_status
-huge_pd_linux(addrxlat_walk_t *state)
+huge_pd_linux(addrxlat_step_t *step)
 {
-	const addrxlat_paging_form_t *pf = &state->meth->def.param.pgt.pf;
+	const addrxlat_paging_form_t *pf = &step->meth->def.param.pgt.pf;
 	addrxlat_addr_t off;
 	unsigned pdshift;
 	unsigned short i;
 
-	pdshift = hugepd_shift(state->raw_pte);
+	pdshift = hugepd_shift(step->raw_pte);
 	if (!pdshift)
-		return set_error(state->ctx, addrxlat_invalid,
+		return set_error(step->ctx, addrxlat_invalid,
 				 "Invalid hugepd shift");
 
-	state->base.as = ADDRXLAT_KVADDR;
-	state->base.addr = (state->raw_pte & ~HUGEPD_SHIFT_MASK) | PD_HUGE;
+	step->base.as = ADDRXLAT_KVADDR;
+	step->base.addr = (step->raw_pte & ~HUGEPD_SHIFT_MASK) | PD_HUGE;
 
 	/* Calculate the total byte offset below current table. */
 	off = 0;
-	i = state->level;
+	i = step->remain;
 	while (--i) {
-		off |= state->idx[i];
+		off |= step->idx[i];
 		off <<= pf->bits[i - 1];
 	}
 
 	/* Calculate the index in the huge page table. */
-	state->idx[1] = off >> pdshift;
+	step->idx[1] = off >> pdshift;
 
 	/* Update the page byte offset. */
 	off &= ((addrxlat_addr_t)1 << pdshift) - 1;
-	state->idx[0] |= off;
+	step->idx[0] |= off;
 
-	state->level = 2;
+	step->remain = 2;
 	return addrxlat_continue;
 }
 
@@ -157,8 +157,8 @@ is_hugepte_linux(addrxlat_pte_t pte)
 	return (pte & HUGE_PTE_MASK) != 0x0;
 }
 
-/** Update page table walk state for Linux huge page.
- * @param state      Page table walk state.
+/** Update current step state for Linux huge page.
+ * @param state      Current step state.
  * @param rpn_shift  RPN shift.
  * @returns          Always @c addrxlat_continue.
  *
@@ -167,21 +167,21 @@ is_hugepte_linux(addrxlat_pte_t pte)
  * offset and terminates.
  */
 static addrxlat_status
-huge_page_linux(addrxlat_walk_t *state, unsigned rpn_shift)
+huge_page_linux(addrxlat_step_t *step, unsigned rpn_shift)
 {
-	const addrxlat_paging_form_t *pf = &state->meth->def.param.pgt.pf;
+	const addrxlat_paging_form_t *pf = &step->meth->def.param.pgt.pf;
 
-	state->base.addr = (state->raw_pte >> rpn_shift) << pf->bits[0];
-	return pgt_huge_page(state);
+	step->base.addr = (step->raw_pte >> rpn_shift) << pf->bits[0];
+	return pgt_huge_page(step);
 }
 
 /** 64-bit IBM POWER Linux page table step function for RPN shift 30.
- * @param state      Page table walk state.
+ * @param step       Current step state.
  * @param rpn_shift  RPN shift.
  * @returns          Error status.
  */
 static addrxlat_status
-pgt_ppc64_linux(addrxlat_walk_t *state, unsigned rpn_shift)
+pgt_ppc64_linux(addrxlat_step_t *step, unsigned rpn_shift)
 {
 	static const char pte_name[][4] = {
 		"pte",
@@ -189,43 +189,43 @@ pgt_ppc64_linux(addrxlat_walk_t *state, unsigned rpn_shift)
 		"pud",
 		"pgd",
 	};
-	const addrxlat_paging_form_t *pf = &state->meth->def.param.pgt.pf;
-	const struct pgt_extra_def *pgt = &state->meth->extra.pgt;
+	const addrxlat_paging_form_t *pf = &step->meth->def.param.pgt.pf;
+	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
 
-	if (!state->raw_pte)
-		return set_error(state->ctx, addrxlat_notpresent,
+	if (!step->raw_pte)
+		return set_error(step->ctx, addrxlat_notpresent,
 				 "%s[%u] is none",
-				 pte_name[state->level - 1],
-				 (unsigned) state->idx[state->level]);
+				 pte_name[step->remain - 1],
+				 (unsigned) step->idx[step->remain]);
 
-	if (state->level > 1) {
+	if (step->remain > 1) {
 		addrxlat_addr_t table_size;
 
-		if (is_hugepte_linux(state->raw_pte))
-			return huge_page_linux(state, rpn_shift);
+		if (is_hugepte_linux(step->raw_pte))
+			return huge_page_linux(step, rpn_shift);
 
-		if (is_hugepd_linux(state->raw_pte))
-			return huge_pd_linux(state);
+		if (is_hugepd_linux(step->raw_pte))
+			return huge_pd_linux(step);
 
 		table_size = ((addrxlat_addr_t)1 << pgt->pte_shift <<
-			      pf->bits[state->level - 1]);
-		state->base.as = ADDRXLAT_KVADDR;
-		state->base.addr = state->raw_pte & ~(table_size - 1);
+			      pf->bits[step->remain - 1]);
+		step->base.as = ADDRXLAT_KVADDR;
+		step->base.addr = step->raw_pte & ~(table_size - 1);
 	} else
-		state->base.addr =
-			(state->raw_pte >> rpn_shift) << pf->bits[0];
+		step->base.addr =
+			(step->raw_pte >> rpn_shift) << pf->bits[0];
 
 	return addrxlat_continue;
 }
 
 /** 64-bit IBM POWER Linux page table step function with RPN shift 30.
- * @param state  Page table walk state.
- * @returns      Error status.
+ * @param step  Current step state.
+ * @returns     Error status.
  */
 addrxlat_status
-pgt_ppc64_linux_rpn30(addrxlat_walk_t *state)
+pgt_ppc64_linux_rpn30(addrxlat_step_t *step)
 {
-	return pgt_ppc64_linux(state, 30);
+	return pgt_ppc64_linux(step, 30);
 }
 
 /* Linux virtual memory layout */

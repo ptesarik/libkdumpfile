@@ -103,11 +103,11 @@ struct _addrxlat_meth {
 	/** Reference counter. */
 	unsigned long refcnt;
 
-	/** Function to initialize a page table walk. */
-	addrxlat_walk_init_fn *walk_init;
+	/** Function to make the first translation step. */
+	addrxlat_first_step_fn *first_step;
 
-	/** Function to make one step in address translation. */
-	addrxlat_walk_step_fn *walk_step;
+	/** Function to make the next translation step. */
+	addrxlat_next_step_fn *next_step;
 
 	/** Translation definition. */
 	addrxlat_def_t def;
@@ -150,17 +150,17 @@ struct _addrxlat_sys {
 
 /* vtop */
 
-INTERNAL_DECL(addrxlat_status, pgt_huge_page, (addrxlat_walk_t *state));
+INTERNAL_DECL(addrxlat_status, pgt_huge_page, (addrxlat_step_t *state));
 
-INTERNAL_DECL(addrxlat_walk_step_fn, pgt_ia32, );
+INTERNAL_DECL(addrxlat_next_step_fn, pgt_ia32, );
 
-INTERNAL_DECL(addrxlat_walk_step_fn, pgt_ia32_pae, );
+INTERNAL_DECL(addrxlat_next_step_fn, pgt_ia32_pae, );
 
-INTERNAL_DECL(addrxlat_walk_step_fn, pgt_x86_64, );
+INTERNAL_DECL(addrxlat_next_step_fn, pgt_x86_64, );
 
-INTERNAL_DECL(addrxlat_walk_step_fn, pgt_s390x, );
+INTERNAL_DECL(addrxlat_next_step_fn, pgt_s390x, );
 
-INTERNAL_DECL(addrxlat_walk_step_fn, pgt_ppc64_linux_rpn30, );
+INTERNAL_DECL(addrxlat_next_step_fn, pgt_ppc64_linux_rpn30, );
 
 INTERNAL_DECL(addrxlat_addr_t, paging_max_index,
 	      (const addrxlat_paging_form_t *pf));
@@ -272,22 +272,15 @@ DECLARE_INTERNAL(meth_new);
 DECLARE_INTERNAL(meth_incref);
 DECLARE_INTERNAL(meth_decref);
 DECLARE_INTERNAL(meth_set_def);
-DECLARE_INTERNAL(walk_next);
-DECLARE_INTERNAL(walk_meth_start);
-DECLARE_INTERNAL(walk_meth);
 DECLARE_INTERNAL(map_set);
 DECLARE_INTERNAL(map_search);
 DECLARE_INTERNAL(map_clear);
 DECLARE_INTERNAL(map_dup);
-DECLARE_INTERNAL(by_map);
+DECLARE_INTERNAL(launch_meth);
+DECLARE_INTERNAL(launch_map);
+DECLARE_INTERNAL(step);
+DECLARE_INTERNAL(walk);
 DECLARE_INTERNAL(by_sys);
-
-static inline void
-internal_walk_init(addrxlat_walk_t *walk, addrxlat_ctx_t *ctx,
-		   const addrxlat_sys_t *sys)
-{
-	return addrxlat_walk_init(walk, ctx, sys);
-}
 
 /* utils */
 

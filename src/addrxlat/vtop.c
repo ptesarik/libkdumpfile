@@ -31,32 +31,32 @@
 #include "addrxlat-priv.h"
 
 /** Read the raw PTE value.
- * @param state  Page table walk state.
- * @returns      Error status.
+ * @param step  Current step state.
+ * @returns     Error status.
  *
- * On successful return, @c state->raw_pte contains the raw
+ * On successful return, @c step->raw_pte contains the raw
  * PTE value for the current translation step.
  */
 static addrxlat_status
-read_pte(addrxlat_walk_t *state)
+read_pte(addrxlat_step_t *step)
 {
-	addrxlat_ctx_t *ctx = state->ctx;
-	const struct pgt_extra_def *pgt = &state->meth->extra.pgt;
+	addrxlat_ctx_t *ctx = step->ctx;
+	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
 	uint64_t pte64;
 	uint32_t pte32;
 	addrxlat_pte_t pte;
 	addrxlat_status status;
 
-	state->base.addr += state->idx[state->level] << pgt->pte_shift;
+	step->base.addr += step->idx[step->remain] << pgt->pte_shift;
 
 	switch(pgt->pte_shift) {
 	case 2:
-		status = ctx->cb.read32(ctx->cb.data, &state->base, &pte32);
+		status = ctx->cb.read32(ctx->cb.data, &step->base, &pte32);
 		pte = pte32;
 		break;
 
 	case 3:
-		status = ctx->cb.read64(ctx->cb.data, &state->base, &pte64);
+		status = ctx->cb.read64(ctx->cb.data, &step->base, &pte64);
 		pte = pte64;
 		break;
 
@@ -69,88 +69,89 @@ read_pte(addrxlat_walk_t *state)
 	if (status != addrxlat_ok)
 		return set_error(ctx, status,
 				 "Cannot read PTE at 0x%"ADDRXLAT_PRIxADDR,
-				 state->base.addr);
+				 step->base.addr);
 
-	state->raw_pte = pte;
+	step->raw_pte = pte;
 	return addrxlat_ok;
 }
 
-DEFINE_INTERNAL(walk_meth_start);
-
-addrxlat_status
-addrxlat_walk_meth_start(addrxlat_walk_t *walk, const addrxlat_meth_t *meth,
-			 addrxlat_addr_t addr)
-{
-	clear_error(walk->ctx);
-
-	walk->meth = meth;
-	return meth->walk_init(walk, addr);
-}
-
-DEFINE_INTERNAL(walk_next);
-
-addrxlat_status
-addrxlat_walk_next(addrxlat_walk_t *state)
-{
-	const addrxlat_meth_t *meth = state->meth;
-	addrxlat_status status;
-
-	clear_error(state->ctx);
-
-	if (!state->level)
-		return addrxlat_ok;
-
-	--state->level;
-	if (!state->level) {
-		state->base.as = meth->def.target_as;
-		state->base.addr += state->idx[0];
-		return addrxlat_ok;
-	}
-
-	status = read_pte(state);
-	if (status != addrxlat_ok)
-		return status;
-
-	state->base.as = meth->def.target_as;
-	return meth->walk_step(state);
-}
-
-DEFINE_INTERNAL(walk_meth);
-
-addrxlat_status
-addrxlat_walk_meth(addrxlat_walk_t *walk, const addrxlat_meth_t *meth,
-		   addrxlat_addr_t addr)
-{
-	addrxlat_status status;
-
-	/* clear_error(ctx) called from internal_walk_meth_start() */
-
-	status = internal_walk_meth_start(walk, meth, addr);
-	while (status == addrxlat_continue)
-		status = internal_walk_next(walk);
-
-	return status;
-}
-
-/** Update page table walk state for huge page.
- * @param state  Page table walk state.
- * @returns      Always @c addrxlat_continue.
+/** Update current step state for huge page.
+ * @param step  Current step state.
+ * @returns     Always @c addrxlat_continue.
  *
  * This function skips all lower paging levels and updates the state
  * so that the next page table step adds the correct page offset and
  * terminates.
  */
 addrxlat_status
-pgt_huge_page(addrxlat_walk_t *state)
+pgt_huge_page(addrxlat_step_t *step)
 {
-	const addrxlat_def_pgt_t *pgt = &state->meth->def.param.pgt;
+	const addrxlat_def_pgt_t *pgt = &step->meth->def.param.pgt;
 	addrxlat_addr_t off = 0;
 
-	while (state->level > 1) {
-		--state->level;
-		off |= state->idx[state->level];
-		off <<= pgt->pf.bits[state->level - 1];
+	while (step->remain > 1) {
+		--step->remain;
+		off |= step->idx[step->remain];
+		off <<= pgt->pf.bits[step->remain - 1];
 	}
-	state->idx[0] |= off;
+	step->idx[0] |= off;
 	return addrxlat_continue;
+}
+
+DEFINE_INTERNAL(step);
+
+addrxlat_status
+addrxlat_step(addrxlat_step_t *step)
+{
+	const addrxlat_meth_t *meth = step->meth;
+	addrxlat_status status;
+
+	clear_error(step->ctx);
+
+	if (!step->remain)
+		return addrxlat_ok;
+
+	--step->remain;
+	if (!step->remain) {
+		step->base.as = meth->def.target_as;
+		step->base.addr += step->idx[0];
+		return addrxlat_ok;
+	}
+
+	status = read_pte(step);
+	if (status != addrxlat_ok)
+		return status;
+
+	step->base.as = meth->def.target_as;
+	return meth->next_step(step);
+}
+
+DEFINE_INTERNAL(walk);
+
+addrxlat_status
+addrxlat_walk(addrxlat_step_t *step)
+{
+	addrxlat_status status;
+
+	clear_error(step->ctx);
+
+	do {
+		status = internal_step(step);
+	} while (status == addrxlat_continue);
+
+	return status;
+}
+
+DEFINE_INTERNAL(launch_meth);
+
+addrxlat_status
+addrxlat_launch_meth(addrxlat_step_t *step, addrxlat_ctx_t *ctx,
+		     const addrxlat_meth_t *meth, addrxlat_addr_t addr)
+{
+	clear_error(ctx);
+
+	step->ctx = ctx;
+	step->sys = NULL;
+	step->meth = meth;
+	return meth->first_step(step, addr);
 }

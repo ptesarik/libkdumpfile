@@ -555,16 +555,6 @@ void addrxlat_map_clear(addrxlat_map_t *map);
  */
 addrxlat_map_t *addrxlat_map_dup(const addrxlat_map_t *map);
 
-/** Translate an address using a translation map.
- * @param ctx            Address translation context.
- * @param[in,out] paddr  Address.
- * @param[in] map        Translation map.
- * @returns              Error status.
- */
-addrxlat_status addrxlat_by_map(
-	addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
-	const addrxlat_map_t *map);
-
 /** Operating system type. */
 typedef enum _addrxlat_ostype {
 	addrxlat_os_unknown,	/**< Unknown OS. */
@@ -754,26 +744,8 @@ void addrxlat_sys_set_meth(
 addrxlat_meth_t *addrxlat_sys_get_meth(
 	addrxlat_sys_t *sys, addrxlat_sys_meth_t idx);
 
-/** Translate an address using a translation system.
- * @param ctx            Address translation context.
- * @param[in,out] paddr  Address.
- * @param goal           Target address space.
- * @param sys            Translation system.
- * @returns              Error status.
- *
- * This function performs all address translations (possibly repeated)
- * necessary to convert the original address @c orig to the target
- * address space @c goal. On success, it stores the result in @c dest.
- *
- * NB: If there is no way to translate the source address space to
- * target address space, this function returns @ref addrxlat_nometh.
- */
-addrxlat_status addrxlat_by_sys(
-	addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
-	addrxlat_addrspace_t goal, const addrxlat_sys_t *sys);
-
-/** Data type for a single page table walk. */
-typedef struct _addrxlat_walk {
+/** State of the current step in address translation. */
+typedef struct _addrxlat_step {
 	/** Address translation context.
 	 * This is used for memory access and error reporting.
 	 */
@@ -781,15 +753,15 @@ typedef struct _addrxlat_walk {
 
 	/** Translation system.
 	 * If not @c NULL, this system can be used to translate
-	 * addresses during memory accesses.
+	 * addresses for memory access.
 	 */
 	const addrxlat_sys_t *sys;
 
 	/** Translation method used for this particular translation. */
 	const addrxlat_meth_t *meth;
 
-	/** Page table level. */
-	unsigned short level;
+	/** Remaining steps. */
+	unsigned short remain;
 
 	/** On input, base address of the page table.
 	 * On output base address of the lower-level page table or
@@ -809,95 +781,95 @@ typedef struct _addrxlat_walk {
 	 * of the virtual address after all page table bits were used.
 	 */
 	addrxlat_addr_t idx[ADDRXLAT_MAXLEVELS + 1];
-} addrxlat_walk_t;
+} addrxlat_step_t;
 
-/** Type of the function which initializes a page table walk.
- * @param walk  Page table walk state.
+/** Type of function to initialize the first translation step.
+ * @param step  Partially initialized step state.
  * @param addr  Address to be translated.
  * @returns     Error status.
  *
- * This function is called by @ref addrxlat_walk_init to initialize
- * the walk state. Only @c ctx and @c pgt is set by the caller, other
- * fields are left uninitialized.
+ * Only the context fields (@c ctx, @c sys and @c meth) are set by the
+ * caller. The state fields are uninitialized.
  */
-typedef addrxlat_status addrxlat_walk_init_fn(
-	addrxlat_walk_t *walk, addrxlat_addr_t addr);
+typedef addrxlat_status addrxlat_first_step_fn(
+	addrxlat_step_t *step, addrxlat_addr_t addr);
 
-/** Type of the function which moves to the next-level page table.
- * @param walk  Page table walk state.
+/** Type of function to make one translation step.
+ * @param step  Current step state.
  * @returns     Error status.
  *
- * This function is called repeatedly with a non-zero @c walk->level
- * and @c walk->raw_pte already filled from the page table. On each of
- * these subsequent calls, the callback should interpret the PTE value
- * and update @c walk.
+ * This function is called repeatedly with a non-zero @c step->remain.
+ * For page table translation, @c step->raw_pte is already filled from
+ * the page table. The callback function should interpret the PTE value
+ * and update @c step.
  *
  * The function returns:
  *   - @c addrxlat_continue if another step is necessary,
- *   - @c addrxlat_ok if @c walk->base contains the address, or
+ *   - @c addrxlat_ok if @c step->base contains the address, or
  *   - an appropriate error code.
  *
  * Note that page offset is automatically added by the caller if the
- * callback returns @c addrxlat_continue and @c walk->level is 1.
+ * callback returns @c addrxlat_continue and @c step->remain is 1.
  *
- * The callback function is explicitly allowed to modify @c walk->level
- * and/or the indices in @c walk->idx[]. This is needed if some levels
+ * The callback function is explicitly allowed to modify @c step->remain
+ * and/or the indices in @c step->idx[]. This is needed if some levels
  * of paging are skipped (huge pages).
  */
-typedef addrxlat_status addrxlat_walk_step_fn(addrxlat_walk_t *walk);
+typedef addrxlat_status addrxlat_next_step_fn(addrxlat_step_t *step);
 
-/** Initialize page table walk.
- * @param walk  Page table walk state.
+/** Initialize translation step state with a specific method.
+ * @param step  Translation step state.
  * @param ctx   Address translation context.
- * @param sys   Translation system.
- *
- * Prepare the walk state for translation. Since the walk state is
- * part of the library ABI, this can be an inline function.
- * Note that this function cannot fail, because it merely initializes
- * all necessary fields in the (pre-allocated) structure. It's better
- * to use this function than open-coding it in your program, because
- * it is then easier to track API extensions.
- */
-static inline void
-addrxlat_walk_init(addrxlat_walk_t *walk, addrxlat_ctx_t *ctx,
-		   const addrxlat_sys_t *sys)
-{
-	walk->ctx = ctx;
-	walk->sys = sys;
-	walk->meth = NULL;
-	walk->level = 0;
-}
-
-/** Descend one level in page table translation.
- * @param walk  Page table walk state.
- * @returns     Error status.
- */
-addrxlat_status addrxlat_walk_next(addrxlat_walk_t *walk);
-
-/** Start a page table walk using a specific method.
- * @param walk  Page table walk state.
- * @param meth  Translation method to be used.
+ * @param meth  Translation method.
  * @param addr  Address to be translated.
  * @returns     Error status.
- *
- * If an error is returned, this function also sets the error message
- * in @c walk->ctx.
  */
-addrxlat_status addrxlat_walk_meth_start(
-	addrxlat_walk_t *walk, const addrxlat_meth_t *meth,
-	addrxlat_addr_t addr);
+addrxlat_status addrxlat_launch_meth(
+	addrxlat_step_t *step, addrxlat_ctx_t *ctx,
+	const addrxlat_meth_t *meth, addrxlat_addr_t addr);
 
-/** Translate an address using page tables.
- * @param walk   Initialized page table walk state.
- * @param meth   Translation method.
- * @param addr   Address to be translated.
+/** Initialize translation step state using a translation map.
+ * @param step  Translation step state.
+ * @param ctx   Address translation context.
+ * @param map   Translation map.
+ * @param addr  Address to be translated.
+ * @returns     Error status.
+ */
+addrxlat_status addrxlat_launch_map(
+	addrxlat_step_t *step, addrxlat_ctx_t *ctx,
+	const addrxlat_map_t *map, addrxlat_addr_t addr);
+
+/** Perform one translation step.
+ * @param step  Current step state.
+ * @returns     Error status.
+ */
+addrxlat_status addrxlat_step(addrxlat_step_t *step);
+
+/** Perform all remaining translation steps.
+ * @param step   Current step state.
  * @returns      Error status.
  *
- * On successful return, the resulting address is found in @c walk->base.
+ * On successful return, the resulting address is found in @c step->base.
  */
-addrxlat_status addrxlat_walk_meth(
-	addrxlat_walk_t *walk, const addrxlat_meth_t *meth,
-	addrxlat_addr_t addr);
+addrxlat_status addrxlat_walk(addrxlat_step_t *step);
+
+/** Translate an address using a translation system.
+ * @param ctx            Address translation context.
+ * @param[in,out] paddr  Address.
+ * @param goal           Target address space.
+ * @param sys            Translation system.
+ * @returns              Error status.
+ *
+ * This function performs all address translations (possibly repeated)
+ * necessary to convert the original address @c orig to the target
+ * address space @c goal. On success, it stores the result in @c dest.
+ *
+ * NB: If there is no way to translate the source address space to
+ * target address space, this function returns @ref addrxlat_nometh.
+ */
+addrxlat_status addrxlat_by_sys(
+	addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
+	addrxlat_addrspace_t goal, const addrxlat_sys_t *sys);
 
 #ifdef  __cplusplus
 }
