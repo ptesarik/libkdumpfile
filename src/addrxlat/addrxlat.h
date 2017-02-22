@@ -472,7 +472,18 @@ typedef struct _addrxlat_cb {
 
 	/** Callback for 64-bit integers. */
 	addrxlat_read64_fn *read64;
+
+	/** Read capabilities.
+	 * This is a bit mask of address spaces that can be read
+	 * directly by the read callbacks. Bits are enumerated by
+	 * @ref addrxlat_addrspace_t (least significant bit first).
+	 * @sa ADDRXLAT_CAPS
+	 */
+	unsigned long read_caps;
 } addrxlat_cb_t;
+
+/** Translate an enum value into a capability bitmask. */
+#define ADDRXLAT_CAPS(val)	(1UL << (unsigned)(val))
 
 /** Set callback information.
  * @param ctx  Address translation context.

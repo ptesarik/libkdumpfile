@@ -335,7 +335,9 @@ main(int argc, char **argv)
 	addrxlat_ctx_t *ctx;
 	addrxlat_cb_t cb = {
 		.read32 = read32,
-		.read64 = read64
+		.read64 = read64,
+		.read_caps = (ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR) |
+			      ADDRXLAT_CAPS(ADDRXLAT_KVADDR))
 	};
 	addrxlat_def_t pgt, linear, lookup, memarr, *def;
 	int opt;

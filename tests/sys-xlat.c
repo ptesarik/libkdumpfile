@@ -798,79 +798,21 @@ find_entry(addrxlat_addr_t addr, size_t sz)
 }
 
 static addrxlat_status
-get_physaddr(struct cbdata *cbd, addrxlat_fulladdr_t *addr)
-{
-	addrxlat_step_t step;
-	addrxlat_status status;
-
-	switch (addr->as) {
-	case ADDRXLAT_MACHPHYSADDR:
-		break;
-
-	case ADDRXLAT_KPHYSADDR:
-		status = addrxlat_launch_map(
-			&step, cbd->ctx,
-			addrxlat_sys_get_map(
-				cbd->sys, ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS),
-			addr->addr);
-		if (status != addrxlat_ok)
-			return addrxlat_ctx_err(cbd->ctx, -read_vtop_failed,
-						"Cannot launch translation of kernel physical addr 0x%"ADDRXLAT_PRIxADDR,
-						addr->addr);
-
-		status = addrxlat_walk(&step);
-		if (status != addrxlat_ok)
-			return addrxlat_ctx_err(cbd->ctx, -read_vtop_failed,
-						"Cannot translate kernel physical addr 0x%"ADDRXLAT_PRIxADDR,
-						addr->addr);
-		*addr = step.base;
-		break;
-
-	case ADDRXLAT_KVADDR:
-		status = addrxlat_launch_map(
-			&step, cbd->ctx,
-			addrxlat_sys_get_map(
-				cbd->sys, ADDRXLAT_SYS_MAP_KV_PHYS),
-			addr->addr);
-		if (status != addrxlat_ok)
-			return addrxlat_ctx_err(cbd->ctx, -read_vtop_failed,
-						"Cannot launch translation of virt addr 0x%"ADDRXLAT_PRIxADDR,
-						addr->addr);
-
-		status = addrxlat_walk(&step);
-		if (status != addrxlat_ok)
-			return addrxlat_ctx_err(cbd->ctx, -read_vtop_failed,
-						"Cannot translate virt addr 0x%"ADDRXLAT_PRIxADDR,
-						addr->addr);
-		*addr = step.base;
-		break;
-
-	default:
-		return addrxlat_ctx_err(cbd->ctx, -read_unknown_as,
-					"No method to handle address space %u",
-					(unsigned) addr->as);
-	}
-
-	return addrxlat_ok;
-}
-
-static addrxlat_status
 read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 {
 	struct cbdata *cbd = data;
-	addrxlat_fulladdr_t physaddr = *addr;
-	addrxlat_status status;
 	struct entry *ent;
 	uint32_t *p;
 
-	status = get_physaddr(cbd, &physaddr);
-	if (status != addrxlat_ok)
-		return status;
+	if (addr->as != ADDRXLAT_MACHPHYSADDR)
+		return addrxlat_ctx_err(cbd->ctx, addrxlat_invalid,
+					"Unexpected address space: %ld",
+					(long)addr->as);
 
-	ent = find_entry(physaddr.addr, sizeof(uint32_t));
+	ent = find_entry(addr->addr, sizeof(uint32_t));
 	if (!ent)
 		return addrxlat_ctx_err(cbd->ctx, -read_notfound, "No data");
-	p = (uint32_t*)(ent->buf + physaddr.addr - ent->addr);
+	p = (uint32_t*)(ent->buf + addr->addr - ent->addr);
 	*val = *p;
 	return addrxlat_ok;
 }
@@ -879,19 +821,18 @@ static addrxlat_status
 read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 {
 	struct cbdata *cbd = data;
-	addrxlat_fulladdr_t physaddr = *addr;
-	addrxlat_status status;
 	struct entry *ent;
 	uint64_t *p;
 
-	status = get_physaddr(cbd, &physaddr);
-	if (status != addrxlat_ok)
-		return status;
+	if (addr->as != ADDRXLAT_MACHPHYSADDR)
+		return addrxlat_ctx_err(cbd->ctx, addrxlat_invalid,
+					"Unexpected address space: %ld",
+					(long)addr->as);
 
-	ent = find_entry(physaddr.addr, sizeof(uint64_t));
+	ent = find_entry(addr->addr, sizeof(uint64_t));
 	if (!ent)
 		return addrxlat_ctx_err(cbd->ctx, -read_notfound, "No data");
-	p = (uint64_t*)(ent->buf + physaddr.addr - ent->addr);
+	p = (uint64_t*)(ent->buf + addr->addr - ent->addr);
 	*val = *p;
 	return addrxlat_ok;
 }
@@ -1003,7 +944,8 @@ int main(int argc, char *argv[])
 	addrxlat_cb_t cb = {
 		.data = &data,
 		.read32 = read32,
-		.read64 = read64
+		.read64 = read64,
+		.read_caps = ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR)
 	};
 	int c;
 	int i;

@@ -423,7 +423,10 @@ init_addrxlat(kdump_ctx *ctx)
 	addrxlat_cb_t cb = {
 		.data = ctx,
 		.read32 = addrxlat_read32,
-		.read64 = addrxlat_read64
+		.read64 = addrxlat_read64,
+		.read_caps = (ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR) |
+			      ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR) |
+			      ADDRXLAT_CAPS(ADDRXLAT_KVADDR))
 	};
 
 	addrxlat = addrxlat_ctx_new();
