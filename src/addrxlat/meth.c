@@ -349,23 +349,37 @@ static addrxlat_status
 first_step_memarr(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
 	const addrxlat_def_memarr_t *memarr = &step->meth->def.param.memarr;
-	addrxlat_fulladdr_t elemaddr = memarr->base;
+
+	step->base = memarr->base;
+	step->remain = 2;
+	step->idx[0] = addr & ((1ULL << memarr->shift) - 1);
+	step->idx[1] = addr >> memarr->shift;
+	return addrxlat_ok;
+}
+
+/** Memory array next step function.
+ * @param walk  Current step state.
+ * @returns     Error status.
+ */
+static addrxlat_status
+next_step_memarr(addrxlat_step_t *step)
+{
+	const addrxlat_def_memarr_t *memarr = &step->meth->def.param.memarr;
 	uint64_t val64;
 	uint32_t val32;
 	addrxlat_addr_t val;
-	size_t idx = addr >> memarr->shift;
 	addrxlat_status status;
 
-	elemaddr.addr += idx * memarr->elemsz;
+	step->base.addr += step->idx[step->remain] * memarr->elemsz;
 	switch (memarr->valsz) {
 	case 4:
-		status = read32(step, &elemaddr, &val32,
+		status = read32(step, &step->base, &val32,
 				"memory array element");
 		val =val32;
 		break;
 
 	case 8:
-		status = read64(step, &elemaddr, &val64,
+		status = read64(step, &step->base, &val64,
 				"memory array element");
 		val = val64;
 		break;
@@ -378,12 +392,12 @@ first_step_memarr(addrxlat_step_t *step, addrxlat_addr_t addr)
 	if (status != addrxlat_ok)
 		return status;
 
-	step->base.as = ADDRXLAT_KPHYSADDR;
 	step->base.addr = val << memarr->shift;
-	step->remain = 1;
-	step->idx[0] = addr & ((1ULL << memarr->shift) - 1);
-	return addrxlat_ok;
+	step->base.as = step->meth->def.target_as;
+
+	return addrxlat_continue;
 }
+
 
 /** Set up memory array translation.
  * @param meth  Translation method.
@@ -392,7 +406,7 @@ static void
 setup_memarr(addrxlat_meth_t *meth)
 {
 	meth->first_step = first_step_memarr;
-	meth->next_step = next_step_none;
+	meth->next_step = next_step_memarr;
 }
 
 DEFINE_INTERNAL(meth_set_def);
