@@ -41,7 +41,6 @@ list="0xa000000000011234"	# Completely off
 list="$list 0xf00000000000ffff"	# One below the range
 list="$list 0xf000000000030000"	# One above the range
 
-totalrc=0
 for tst in $list; do
     input="${tst%:*}"
     expect="${tst##*:}"
