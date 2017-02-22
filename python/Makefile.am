@@ -23,9 +23,12 @@ pyexec_LTLIBRARIES = _kdumpfile.la
 
 _kdumpfile_la_SOURCES = kdumpfile.c
 _kdumpfile_la_CPPFLAGS = $(PYTHON_CFLAGS) -I$(top_srcdir)/src
-_kdumpfile_la_LDFLAGS = -module -avoid-version -export-symbols kdumpfile.sym
+_kdumpfile_la_LDFLAGS = -module -avoid-version -export-symbols $(srcdir)/kdumpfile.sym
 _kdumpfile_la_LIBADD = $(top_builddir)/src/libkdumpfile.la
 
 EXTRA__kdumpfile_la_DEPENDENCIES = kdumpfile.sym
+
+dist_noinst_DATA = \
+	kdumpfile.sym
 
 SUBDIRS = kdumpfile
