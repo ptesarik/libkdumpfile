@@ -37,7 +37,7 @@
  * On successful return, @c step->raw_pte contains the raw
  * PTE value for the current translation step.
  */
-static addrxlat_status
+addrxlat_status
 read_pte(addrxlat_step_t *step)
 {
 	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
@@ -100,7 +100,6 @@ addrxlat_status
 addrxlat_step(addrxlat_step_t *step)
 {
 	const addrxlat_meth_t *meth = step->meth;
-	addrxlat_status status;
 
 	clear_error(step->ctx);
 
@@ -109,16 +108,11 @@ addrxlat_step(addrxlat_step_t *step)
 
 	--step->remain;
 	if (!step->remain) {
-		step->base.as = meth->def.target_as;
 		step->base.addr += step->idx[0];
+		step->base.as = meth->def.target_as;
 		return addrxlat_ok;
 	}
 
-	status = read_pte(step);
-	if (status != addrxlat_ok)
-		return status;
-
-	step->base.as = meth->def.target_as;
 	return meth->next_step(step);
 }
 

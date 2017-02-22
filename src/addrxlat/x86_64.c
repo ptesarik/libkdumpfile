@@ -182,6 +182,11 @@ pgt_x86_64(addrxlat_step_t *step)
 		"pgd",
 	};
 	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
+	addrxlat_status status;
+
+	status = read_pte(step);
+	if (status != addrxlat_ok)
+		return status;
 
 	if (!(step->raw_pte & _PAGE_PRESENT))
 		return set_error(step->ctx, addrxlat_notpresent,
@@ -192,6 +197,8 @@ pgt_x86_64(addrxlat_step_t *step)
 				 step->raw_pte);
 
 	step->base.addr = step->raw_pte & ~PHYSADDR_MASK;
+	step->base.as = step->meth->def.target_as;
+
 	if (step->remain >= 2 && step->remain <= 3 &&
 	    (step->raw_pte & _PAGE_PSE)) {
 		step->base.addr &= pgt->pgt_mask[step->remain - 1];

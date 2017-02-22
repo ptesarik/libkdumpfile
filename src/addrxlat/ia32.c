@@ -75,6 +75,11 @@ pgt_ia32(addrxlat_step_t *step)
 	};
 	const addrxlat_paging_form_t *pf = &step->meth->def.param.pgt.pf;
 	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
+	addrxlat_status status;
+
+	status = read_pte(step);
+	if (status != addrxlat_ok)
+		return status;
 
 	if (!(step->raw_pte & _PAGE_PRESENT))
 		return set_error(step->ctx, addrxlat_notpresent,
@@ -91,6 +96,7 @@ pgt_ia32(addrxlat_step_t *step)
 		step->idx[0] |= step->idx[1] << pf->bits[0];
 	} else
 		step->base.addr = step->raw_pte & pgt->pgt_mask[0];
+	step->base.as = step->meth->def.target_as;
 
 	return addrxlat_continue;
 }
@@ -114,6 +120,11 @@ pgt_ia32_pae(addrxlat_step_t *step)
 	};
 	const addrxlat_paging_form_t *pf = &step->meth->def.param.pgt.pf;
 	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
+	addrxlat_status status;
+
+	status = read_pte(step);
+	if (status != addrxlat_ok)
+		return status;
 
 	if (!(step->raw_pte & _PAGE_PRESENT))
 		return set_error(step->ctx, addrxlat_notpresent,
@@ -130,6 +141,7 @@ pgt_ia32_pae(addrxlat_step_t *step)
 		step->idx[0] |= step->idx[1] << pf->bits[0];
 	} else
 		step->base.addr &= pgt->pgt_mask[0];
+	step->base.as = step->meth->def.target_as;
 
 	return addrxlat_continue;
 }

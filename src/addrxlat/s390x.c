@@ -70,6 +70,11 @@ pgt_s390x(addrxlat_step_t *step)
 	};
 	const addrxlat_paging_form_t *pf = &step->meth->def.param.pgt.pf;
 	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
+	addrxlat_status status;
+
+	status = read_pte(step);
+	if (status != addrxlat_ok)
+		return status;
 
 	if (PTE_I(step->raw_pte))
 		return set_error(step->ctx, addrxlat_notpresent,
@@ -86,6 +91,7 @@ pgt_s390x(addrxlat_step_t *step)
 				 pgt_full_name[step->remain]);
 
 	step->base.addr = step->raw_pte;
+	step->base.as = step->meth->def.target_as;
 
 	if (step->remain >= 2 && step->remain <= 3 &&
 	    PTE_FC(step->raw_pte)) {

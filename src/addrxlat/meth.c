@@ -244,10 +244,17 @@ first_step_saddr(addrxlat_step_t *step, addrxlat_addr_t addr)
  * This function handles page frame numbers in a table.
  */
 static addrxlat_status
-next_step_pfn(addrxlat_step_t *state)
+next_step_pfn(addrxlat_step_t *step)
 {
-	state->base.addr =
-		state->raw_pte << state->meth->def.param.pgt.pf.bits[0];
+	addrxlat_status status;
+
+	status = read_pte(step);
+	if (status != addrxlat_ok)
+		return status;
+
+	step->base.addr =
+		step->raw_pte << step->meth->def.param.pgt.pf.bits[0];
+	step->base.as = step->meth->def.target_as;
 
 	return addrxlat_continue;
 }

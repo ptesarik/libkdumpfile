@@ -150,6 +150,8 @@ struct _addrxlat_sys {
 
 /* vtop */
 
+INTERNAL_DECL(addrxlat_status, read_pte, (addrxlat_step_t *step));
+
 INTERNAL_DECL(addrxlat_status, pgt_huge_page, (addrxlat_step_t *state));
 
 INTERNAL_DECL(addrxlat_next_step_fn, pgt_ia32, );
