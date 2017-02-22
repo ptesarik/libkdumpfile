@@ -1,5 +1,5 @@
-/** @internal @file src/addrxlat/vtop.c
- * @brief Virtual to physical address translation.
+/** @internal @file src/addrxlat/step.c
+ * @brief Address translation stepping.
  */
 /* Copyright (C) 2016 Petr Tesarik <ptesarik@suse.com>
 

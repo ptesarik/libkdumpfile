@@ -23,14 +23,14 @@ AM_CFLAGS = -fvisibility=hidden
 
 lib_LTLIBRARIES = libaddrxlat.la
 libaddrxlat_la_SOURCES = \
-	meth.c \
 	ctx.c \
-	vtop.c \
 	map.c \
+	meth.c \
 	opt.c \
+	step.c \
 	sys.c \
-	ppc64.c \
 	ia32.c \
+	ppc64.c \
 	s390x.c \
 	x86_64.c
 
