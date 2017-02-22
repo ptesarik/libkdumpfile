@@ -352,13 +352,13 @@ first_step_memarr(addrxlat_step_t *step, addrxlat_addr_t addr)
 	elemaddr.addr += idx * memarr->elemsz;
 	switch (memarr->valsz) {
 	case 4:
-		status = read32(step->ctx, &elemaddr, &val32,
+		status = read32(step, &elemaddr, &val32,
 				"memory array element");
 		val =val32;
 		break;
 
 	case 8:
-		status = read64(step->ctx, &elemaddr, &val64,
+		status = read64(step, &elemaddr, &val64,
 				"memory array element");
 		val = val64;
 		break;

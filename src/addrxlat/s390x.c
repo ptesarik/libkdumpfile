@@ -145,6 +145,8 @@ get_pgtroot(struct sys_init_data *ctl, addrxlat_fulladdr_t *root)
 static addrxlat_status
 determine_pgttype(struct sys_init_data *ctl)
 {
+	addrxlat_step_t step =	/* step state surrogate */
+		{ .ctx = ctl->ctx, .sys = ctl->sys };
 	addrxlat_def_t def;
 	addrxlat_fulladdr_t ptr;
 	uint64_t entry;
@@ -164,7 +166,7 @@ determine_pgttype(struct sys_init_data *ctl)
 
 	ptr = def.param.pgt.root;
 	for (i = 0; i < ROOT_PGT_LEN; ++i) {
-		status = read64(ctl->ctx, &ptr, &entry, "page table");
+		status = read64(&step, &ptr, &entry, "page table");
 		if (status != addrxlat_ok)
 			return status;
 		if (!PTE_I(entry)) {

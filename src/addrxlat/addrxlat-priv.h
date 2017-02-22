@@ -285,11 +285,11 @@ DECLARE_INTERNAL(by_sys);
 /* utils */
 
 INTERNAL_DECL(addrxlat_status, read32,
-	      (addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr,
+	      (addrxlat_step_t *step, const addrxlat_fulladdr_t *addr,
 	       uint32_t *val, const char *what));
 
 INTERNAL_DECL(addrxlat_status, read64,
-	      (addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr,
+	      (addrxlat_step_t *step, const addrxlat_fulladdr_t *addr,
 	       uint64_t *val, const char *what));
 
 INTERNAL_DECL(void, def_choose_pgtroot,

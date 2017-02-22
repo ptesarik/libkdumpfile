@@ -40,7 +40,6 @@
 static addrxlat_status
 read_pte(addrxlat_step_t *step)
 {
-	addrxlat_ctx_t *ctx = step->ctx;
 	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
 	uint64_t pte64;
 	uint32_t pte32;
@@ -51,17 +50,17 @@ read_pte(addrxlat_step_t *step)
 
 	switch(pgt->pte_shift) {
 	case 2:
-		status = read32(ctx, &step->base, &pte32, "PTE");
+		status = read32(step, &step->base, &pte32, "PTE");
 		pte = pte32;
 		break;
 
 	case 3:
-		status = read64(ctx, &step->base, &pte64, "PTE");
+		status = read64(step, &step->base, &pte64, "PTE");
 		pte = pte64;
 		break;
 
 	default:
-		return set_error(ctx, addrxlat_notimpl,
+		return set_error(step->ctx, addrxlat_notimpl,
 				 "Unsupported PTE size: %u",
 				 1 << pgt->pte_shift);
 	}

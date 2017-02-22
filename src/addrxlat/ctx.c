@@ -87,16 +87,17 @@ addrxlat_ctx_get_cb(const addrxlat_ctx_t *ctx)
 }
 
 /** Read a 32-bit value, making an error message if needed.
- * @param     ctx   Address translation context.
+ * @param     step  Current step state.
  * @param[in] addr  Full address of the data.
  * @param[out] val  32-bit data (on successful return).
  * @param     what  Descriptive object name.
  * @returns         Error status.
  */
 addrxlat_status
-read32(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint32_t *val,
+read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
        const char *what)
 {
+	addrxlat_ctx_t *ctx = step->ctx;
 	addrxlat_status status = ctx->cb.read32(ctx->cb.data, addr, val);
 	if (status != addrxlat_ok)
 		return set_error(ctx, status,
@@ -106,16 +107,17 @@ read32(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint32_t *val,
 }
 
 /** Read a 64-bit value, making an error message if needed.
- * @param     ctx   Address translation context.
+ * @param     step  Current step state.
  * @param[in] addr  Full address of the data.
  * @param[out] val  64-bit data (on successful return).
  * @param     what  Descriptive object name.
  * @returns         Error status.
  */
 addrxlat_status
-read64(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint64_t *val,
+read64(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint64_t *val,
        const char *what)
 {
+	addrxlat_ctx_t *ctx = step->ctx;
 	addrxlat_status status = ctx->cb.read64(ctx->cb.data, addr, val);
 	if (status != addrxlat_ok)
 		return set_error(ctx, status,

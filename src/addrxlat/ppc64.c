@@ -253,6 +253,8 @@ static const struct sys_region linux_layout[] = {
 static addrxlat_status
 get_vmemmap_def(struct sys_init_data *ctl, addrxlat_def_t *def)
 {
+	addrxlat_step_t step =	/* step state surrogate */
+		{ .ctx = ctl->ctx, .sys = ctl->sys };
 	addrxlat_addr_t vmemmap_list, elem, first_elem;
 	addrxlat_fulladdr_t readptr;
 	uint64_t data;
@@ -280,14 +282,14 @@ get_vmemmap_def(struct sys_init_data *ctl, addrxlat_def_t *def)
 
 	readptr.as = ADDRXLAT_KVADDR;
 	readptr.addr = vmemmap_list;
-	status = read64(ctl->ctx, &readptr, &data, "vmemmap_list");
+	status = read64(&step, &readptr, &data, "vmemmap_list");
 	if (status != addrxlat_ok)
 		return status;
 	first_elem = data;
 
 	for (cnt = 0, elem = first_elem; elem != 0; ++cnt) {
 		readptr.addr = elem + off_list;
-		status = read64(ctl->ctx, &readptr, &data, "vmemmap list");
+		status = read64(&step, &readptr, &data, "vmemmap list");
 		if (status != addrxlat_ok)
 			return status;
 		elem = data;
@@ -302,19 +304,19 @@ get_vmemmap_def(struct sys_init_data *ctl, addrxlat_def_t *def)
 
 	for (elem = first_elem; elem != 0; ++tblp) {
 		readptr.addr = elem + off_phys;
-		status = read64(ctl->ctx, &readptr, &data, "vmemmap phys");
+		status = read64(&step, &readptr, &data, "vmemmap phys");
 		if (status != addrxlat_ok)
 			goto err_free;
 		tblp->orig = data;
 
 		readptr.addr = elem + off_virt;
-		status = read64(ctl->ctx, &readptr, &data, "vmemmap virt");
+		status = read64(&step, &readptr, &data, "vmemmap virt");
 		if (status != addrxlat_ok)
 			goto err_free;
 		tblp->dest = data;
 
 		readptr.addr = elem + off_list;
-		status = read64(ctl->ctx, &readptr, &data, "vmemmap list");
+		status = read64(&step, &readptr, &data, "vmemmap list");
 		if (status != addrxlat_ok)
 			goto err_free;
 		elem = data;
