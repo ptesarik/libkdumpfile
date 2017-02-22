@@ -97,7 +97,6 @@ addrspace_name(addrxlat_addrspace_t as)
 	case ADDRXLAT_KPHYSADDR:	return "KPHYSADDR";
 	case ADDRXLAT_MACHPHYSADDR:	return "MACHPHYSADDR";
 	case ADDRXLAT_KVADDR:		return "KVADDR";
-	case ADDRXLAT_XENVADDR:		return "XENVADDR";
 	case ADDRXLAT_NOADDR:		return "NOADDR";
 	default:			return "invalid addrspace_t";
 	}

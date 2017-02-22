@@ -78,11 +78,6 @@ strtoas(const char *str, char **endptr)
 			return ADDRXLAT_KVADDR;
 		break;
 
-	case 7:
-		if (!strncasecmp(str, "XENVADDR", 7))
-			return ADDRXLAT_XENVADDR;
-		break;
-
 	case 9:
 		if (!strncasecmp(str, "KPHYSADDR", 9))
 			return ADDRXLAT_KPHYSADDR;

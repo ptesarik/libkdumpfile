@@ -712,7 +712,7 @@ x86_64_vtop_init_xen(kdump_ctx *ctx)
 
 	def.kind = ADDRXLAT_PGT;
 	def.target_as = ADDRXLAT_MACHPHYSADDR;
-	def.param.pgt.root.as = ADDRXLAT_XENVADDR;
+	def.param.pgt.root.as = ADDRXLAT_KVADDR;
 	def.param.pgt.root.addr = pgtroot;
 	addrxlat_meth_set_def(ctx->shared->vtop_map_xen.pgt, &def);
 	return kdump_ok;

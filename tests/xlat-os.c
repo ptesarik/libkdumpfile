@@ -270,10 +270,6 @@ print_addrspace(addrxlat_addrspace_t as)
 		fputs("KVADDR", stdout);
 		break;
 
-	case ADDRXLAT_XENVADDR:
-		fputs("XENVADDR", stdout);
-		break;
-
 	case ADDRXLAT_NOADDR:
 		fputs("NOADDR", stdout);
 		break;

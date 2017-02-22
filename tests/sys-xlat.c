@@ -87,7 +87,6 @@ static const kw_pair_t as_names[] = {
 	{ "KPHYSADDR", ADDRXLAT_KPHYSADDR },
 	{ "MACHPHYSADDR", ADDRXLAT_MACHPHYSADDR },
 	{ "KVADDR", ADDRXLAT_KVADDR },
-	{ "XENVADDR", ADDRXLAT_XENVADDR },
 	{NULL}
 };
 

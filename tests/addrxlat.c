@@ -168,8 +168,6 @@ get_addrspace(const char *p, const char *endp)
 		return ADDRXLAT_MACHPHYSADDR;
 	else if (!strncasecmp(p, "KVADDR:", endp - p))
 		return ADDRXLAT_KVADDR;
-	else if (!strncasecmp(p, "XENVADDR:", endp - p))
-		return ADDRXLAT_XENVADDR;
 	else
 		return ADDRXLAT_NOADDR;
 }

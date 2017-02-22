@@ -130,7 +130,6 @@ typedef enum _addrxlat_addrspace {
 	ADDRXLAT_KPHYSADDR,	/**< Kernel physical address. */
 	ADDRXLAT_MACHPHYSADDR,	/**< Machine physical address. */
 	ADDRXLAT_KVADDR,	/**< Kernel virtual address. */
-	ADDRXLAT_XENVADDR,	/**< Xen virtual address.  */
 
 	ADDRXLAT_NOADDR = -1,	/**< Invalid address. */
 } addrxlat_addrspace_t;
