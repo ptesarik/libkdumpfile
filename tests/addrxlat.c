@@ -348,7 +348,7 @@ main(int argc, char **argv)
 
 	pgt.kind = ADDRXLAT_PGT;
 	pgt.target_as = ADDRXLAT_MACHPHYSADDR;
-	pgt.param.pgt.root.as = ADDRXLAT_NONE;
+	pgt.param.pgt.root.as = ADDRXLAT_NOADDR;
 	pgt.param.pgt.root.addr = 0;
 
 	linear.kind = ADDRXLAT_LINEAR;
