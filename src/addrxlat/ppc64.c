@@ -382,15 +382,13 @@ map_linux_ppc64(struct sys_init_data *ctl)
 	internal_meth_set_def(meth, &def);
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_VMEMMAP];
-	if (meth->def.kind == ADDRXLAT_NONE) {
-		status = get_vmemmap_def(ctl, &def);
-		if (status != addrxlat_ok)
-			return status;
-		def.kind = ADDRXLAT_LOOKUP;
-		def.target_as = ADDRXLAT_KPHYSADDR;
-		def.param.lookup.endoff = pagesize - 1;
-		internal_meth_set_def(meth, &def);
-	}
+	status = get_vmemmap_def(ctl, &def);
+	if (status != addrxlat_ok)
+		return status;
+	def.kind = ADDRXLAT_LOOKUP;
+	def.target_as = ADDRXLAT_KPHYSADDR;
+	def.param.lookup.endoff = pagesize - 1;
+	internal_meth_set_def(meth, &def);
 
 	return addrxlat_ok;
 }
