@@ -294,9 +294,6 @@ INTERNAL_DECL(addrxlat_status, read64,
 	      (addrxlat_step_t *step, const addrxlat_fulladdr_t *addr,
 	       uint64_t *val, const char *what));
 
-INTERNAL_DECL(void, def_choose_pgtroot,
-	      (addrxlat_def_t *def, const addrxlat_meth_t *meth));
-
 INTERNAL_DECL(addrxlat_status, get_reg,
 	      (addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val));
 

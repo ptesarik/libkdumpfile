@@ -374,12 +374,11 @@ map_linux_ppc64(struct sys_init_data *ctl)
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	def.kind = ADDRXLAT_PGT;
 	def.target_as = ADDRXLAT_MACHPHYSADDR;
+	def.param.pgt.root.as = ADDRXLAT_NOADDR;
 	def.param.pgt.pf = ppc64_pf_64k;
-	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT];
-	def_choose_pgtroot(&def, meth);
 	internal_meth_set_def(meth, &def);
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_VMEMMAP];
