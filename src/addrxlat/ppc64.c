@@ -363,6 +363,10 @@ map_linux_ppc64(struct sys_init_data *ctl)
 		return set_error(ctl->ctx, addrxlat_notimpl,
 				 "Unsupported page size: %ld", pagesize);
 
+	status = sys_set_physmaps(ctl, (1ULL << (64 - 30 + 16)) - 1);
+	if (status != addrxlat_ok)
+		return status;
+
 	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, linux_layout);
 	if (status != addrxlat_ok)
 		return status;
@@ -389,7 +393,7 @@ map_linux_ppc64(struct sys_init_data *ctl)
 		internal_meth_set_def(meth, &def);
 	}
 
-	return sys_set_physmaps(ctl, (1ULL << (64 - 30 + 16)) - 1);
+	return addrxlat_ok;
 }
 
 /** Initialize a translation map for a 64-bit IBM POWER OS.
