@@ -56,23 +56,23 @@
 
 #ifndef PIC
 #define INTERNAL_ALIAS(x)		addrxlat_ ## x
-#define _DECLARE_INTERNAL(s, a)		\
+#define _DECLARE_ALIAS(s, a)		\
 	extern typeof(s) (a) __asm__(XSTRINGIFY(ASM_NAME(s)))
-#define _DEFINE_INTERNAL(s, a)		_DECLARE_INTERNAL(s, a)
+#define _DEFINE_ALIAS(s, a)		_DECLARE_ALIAS(s, a)
 #else
 #define INTERNAL_ALIAS(x)		internal_ ## x
-#define _DECLARE_INTERNAL(s, a)		\
+#define _DECLARE_ALIAS(s, a)		\
 	extern typeof(s) (a)
-#define _DEFINE_INTERNAL(s, a)		\
+#define _DEFINE_ALIAS(s, a)		\
 	extern typeof(s) (a)		\
 	__attribute__((alias(#s)))
 #endif
 
 /** Internal alias declaration. */
-#define DECLARE_INTERNAL(x) _DECLARE_INTERNAL(addrxlat_ ## x, internal_ ## x)
+#define DECLARE_ALIAS(x) _DECLARE_ALIAS(addrxlat_ ## x, internal_ ## x)
 
 /** Define an internal alias for a symbol. */
-#define DEFINE_INTERNAL(x) _DEFINE_INTERNAL(addrxlat_ ## x, internal_ ## x)
+#define DEFINE_ALIAS(x) _DEFINE_ALIAS(addrxlat_ ## x, internal_ ## x)
 
 /* General macros */
 
@@ -268,21 +268,21 @@ INTERNAL_DECL(addrxlat_status, sys_set_physmaps,
 /* internal aliases */
 
 #define set_error internal_ctx_err
-DECLARE_INTERNAL(ctx_err);
+DECLARE_ALIAS(ctx_err);
 
-DECLARE_INTERNAL(meth_new);
-DECLARE_INTERNAL(meth_incref);
-DECLARE_INTERNAL(meth_decref);
-DECLARE_INTERNAL(meth_set_def);
-DECLARE_INTERNAL(map_set);
-DECLARE_INTERNAL(map_search);
-DECLARE_INTERNAL(map_clear);
-DECLARE_INTERNAL(map_dup);
-DECLARE_INTERNAL(launch_meth);
-DECLARE_INTERNAL(launch_map);
-DECLARE_INTERNAL(step);
-DECLARE_INTERNAL(walk);
-DECLARE_INTERNAL(by_sys);
+DECLARE_ALIAS(meth_new);
+DECLARE_ALIAS(meth_incref);
+DECLARE_ALIAS(meth_decref);
+DECLARE_ALIAS(meth_set_def);
+DECLARE_ALIAS(map_set);
+DECLARE_ALIAS(map_search);
+DECLARE_ALIAS(map_clear);
+DECLARE_ALIAS(map_dup);
+DECLARE_ALIAS(launch_meth);
+DECLARE_ALIAS(launch_map);
+DECLARE_ALIAS(step);
+DECLARE_ALIAS(walk);
+DECLARE_ALIAS(by_sys);
 
 /* utils */
 

@@ -34,7 +34,7 @@
 
 static void setup_none(addrxlat_meth_t *meth);
 
-DEFINE_INTERNAL(meth_new);
+DEFINE_ALIAS(meth_new);
 
 addrxlat_meth_t *
 addrxlat_meth_new(void)
@@ -48,7 +48,7 @@ addrxlat_meth_new(void)
 	return meth;
 }
 
-DEFINE_INTERNAL(meth_incref);
+DEFINE_ALIAS(meth_incref);
 
 unsigned long
 addrxlat_meth_incref(addrxlat_meth_t *meth)
@@ -56,7 +56,7 @@ addrxlat_meth_incref(addrxlat_meth_t *meth)
 	return ++meth->refcnt;
 }
 
-DEFINE_INTERNAL(meth_decref);
+DEFINE_ALIAS(meth_decref);
 
 unsigned long
 addrxlat_meth_decref(addrxlat_meth_t *meth)
@@ -409,7 +409,7 @@ setup_memarr(addrxlat_meth_t *meth)
 	meth->next_step = next_step_memarr;
 }
 
-DEFINE_INTERNAL(meth_set_def);
+DEFINE_ALIAS(meth_set_def);
 
 addrxlat_status
 addrxlat_meth_set_def(addrxlat_meth_t *meth, const addrxlat_def_t *def)

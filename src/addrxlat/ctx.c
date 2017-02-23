@@ -351,7 +351,7 @@ get_offsetof(addrxlat_ctx_t *ctx, const char *type, const char *memb,
 	return status;
 }
 
-DEFINE_INTERNAL(ctx_err);
+DEFINE_ALIAS(ctx_err);
 
 addrxlat_status
 addrxlat_ctx_err(addrxlat_ctx_t *ctx, addrxlat_status status,

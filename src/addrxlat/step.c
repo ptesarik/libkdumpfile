@@ -94,7 +94,7 @@ pgt_huge_page(addrxlat_step_t *step)
 	return addrxlat_continue;
 }
 
-DEFINE_INTERNAL(step);
+DEFINE_ALIAS(step);
 
 addrxlat_status
 addrxlat_step(addrxlat_step_t *step)
@@ -116,7 +116,7 @@ addrxlat_step(addrxlat_step_t *step)
 	return meth->next_step(step);
 }
 
-DEFINE_INTERNAL(walk);
+DEFINE_ALIAS(walk);
 
 addrxlat_status
 addrxlat_walk(addrxlat_step_t *step)
@@ -132,7 +132,7 @@ addrxlat_walk(addrxlat_step_t *step)
 	return status;
 }
 
-DEFINE_INTERNAL(launch_meth);
+DEFINE_ALIAS(launch_meth);
 
 addrxlat_status
 addrxlat_launch_meth(addrxlat_step_t *step, addrxlat_ctx_t *ctx,
