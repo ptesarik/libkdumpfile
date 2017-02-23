@@ -205,7 +205,7 @@ is_pae(struct sys_init_data *ctl, const addrxlat_fulladdr_t *root,
 	status = internal_launch_meth(&step, ctl->ctx, &meth, direct);
 	if (status != addrxlat_ok)
 		return -1;
-	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_PAE - 1);
+	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_NONPAE - 1);
 	if (status != addrxlat_ok)
 		return status;
 	step.sys = ctl->sys;
