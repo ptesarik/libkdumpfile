@@ -218,9 +218,13 @@ addrxlat_map_dup(const addrxlat_map_t *map)
 	size_t todo;
 
 	ret = malloc(offsetof(addrxlat_map_t, ranges) +
-		     map->n * sizeof(ret->ranges[0]));
+		     (map ? map->n : 1) * sizeof(ret->ranges[0]));
 	if (!ret)
 		return ret;
+	if (!map) {
+		ret->n = 0;
+		return ret;
+	}
 
 	q = map->ranges;
 	r = ret->ranges;
