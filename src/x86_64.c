@@ -286,6 +286,16 @@ x86_64_init(kdump_ctx *ctx)
 }
 
 static kdump_status
+x86_64_late_init(kdump_ctx *ctx)
+{
+	if (!isset_phys_base(ctx) && isset_xen_type(ctx) &&
+	    get_xen_type(ctx) != kdump_xen_none)
+		set_phys_base(ctx, 0);
+
+	return kdump_ok;
+}
+
+static kdump_status
 process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 {
 	struct elf_prstatus *status = data;
@@ -393,6 +403,7 @@ x86_64_cleanup(struct kdump_shared *shared)
 
 const struct arch_ops x86_64_ops = {
 	.init = x86_64_init,
+	.late_init = x86_64_late_init,
 	.process_prstatus = process_x86_64_prstatus,
 	.process_load = x86_64_process_load,
 	.process_xen_prstatus = process_x86_64_xen_prstatus,

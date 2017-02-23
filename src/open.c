@@ -216,6 +216,10 @@ kdump_open_known(kdump_ctx *ctx)
 	set_attr_static_string(ctx, gattr(ctx, GKI_file_format),
 			       ATTR_DEFAULT, ctx->shared->ops->name);
 
+	if (ctx->shared->arch_ops && ctx->shared->arch_ops->late_init &&
+	    (res = ctx->shared->arch_ops->late_init(ctx)) != kdump_ok)
+		return set_error(ctx, res, "Architecture late init failed");
+
 	if (!attr_isset(gattr(ctx, GKI_linux_uts_sysname)))
 		/* If this fails, it is not fatal. */
 		use_kernel_utsname(ctx);

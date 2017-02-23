@@ -261,25 +261,23 @@ struct format_ops {
 };
 
 struct arch_ops {
-	/* Initialize any arch-specific data
-	 */
+	/** Initialize any arch-specific data. */
 	kdump_status (*init)(kdump_ctx *);
 
-	/* Process an NT_PRSTATUS note
-	 */
+	/** Late initialization (after everything else is done). */
+	kdump_status (*late_init)(kdump_ctx* );
+
+	/** Process an NT_PRSTATUS note. */
 	kdump_status (*process_prstatus)(kdump_ctx *, void *, size_t);
 
-	/* Process a LOAD segment
-	 */
+	/** Process a LOAD segment. */
 	kdump_status (*process_load)(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 				     kdump_paddr_t paddr);
 
-	/* Process a Xen .xen_prstatus section
-	 */
+	/** Process a Xen .xen_prstatus section. */
 	kdump_status (*process_xen_prstatus)(kdump_ctx *, void *, size_t);
 
-	/* Clean up any arch-specific data
-	 */
+	/** Clean up any arch-specific data. */
 	void (*cleanup)(struct kdump_shared *);
 };
 
