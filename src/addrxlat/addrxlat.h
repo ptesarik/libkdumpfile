@@ -709,7 +709,7 @@ void addrxlat_sys_set_map(
  * @param idx     Map index.
  * @returns       Associated translation map.
  */
-const addrxlat_map_t *addrxlat_sys_get_map(
+addrxlat_map_t *addrxlat_sys_get_map(
 	const addrxlat_sys_t *sys, addrxlat_sys_map_t idx);
 
 /** Translation system method index.

@@ -134,7 +134,7 @@ addrxlat_sys_set_map(addrxlat_sys_t *sys, addrxlat_sys_map_t idx,
 	sys->map[idx] = map;
 }
 
-const addrxlat_map_t *
+addrxlat_map_t *
 addrxlat_sys_get_map(const addrxlat_sys_t *sys, addrxlat_sys_map_t idx)
 {
 	return sys->map[idx];
