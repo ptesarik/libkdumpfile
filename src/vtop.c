@@ -232,14 +232,88 @@ static addrxlat_status
 addrxlat_sym(void *data, addrxlat_sym_t *sym)
 {
 	kdump_ctx *ctx = (kdump_ctx*) data;
+	const struct attr_data *base;
+	struct attr_data *attr;
+	kdump_status status;
+	addrxlat_status ret;
 
 	switch (sym->type) {
 	case ADDRXLAT_SYM_VALUE:
-		return -get_symbol_val(ctx, sym->args[0], &sym->val);
+		status = get_symbol_val(ctx, sym->args[0], &sym->val);
+		return status == kdump_nodata
+			? addrxlat_nodata
+			: (addrxlat_status) -(int)status;
+
+	case ADDRXLAT_SYM_SIZEOF:
+		base = gattr(ctx, GKI_linux_size);
+		break;
+
+	case ADDRXLAT_SYM_OFFSETOF:
+		base = gattr(ctx, GKI_linux_offset);
+		break;
+
+	case ADDRXLAT_SYM_REG:
+		rwlock_rdlock(&ctx->shared->lock);
+		base = lookup_attr(ctx->shared, "cpu.0.reg");
+		rwlock_unlock(&ctx->shared->lock);
+		if (!base)
+			return addrxlat_ctx_err(ctx->addrxlat, addrxlat_nodata,
+						"No registers");
+		break;
 
 	default:
-		return addrxlat_notimpl;
+		return addrxlat_ctx_err(ctx->addrxlat, addrxlat_notimpl,
+					"Unhandled symbolic type");
 	}
+
+	rwlock_rdlock(&ctx->shared->lock);
+
+	attr = lookup_dir_attr(ctx->shared, base,
+			       sym->args[0], strlen(sym->args[0]));
+	if (!attr) {
+		ret = addrxlat_ctx_err(ctx->addrxlat, addrxlat_nodata,
+				       "Symbol not found");
+		goto out;
+	}
+	if (validate_attr(ctx, attr) != kdump_ok) {
+		ret = addrxlat_ctx_err(ctx->addrxlat, addrxlat_nodata,
+				       "Symbol has no value");
+		goto out;
+	}
+
+	if (sym->type == ADDRXLAT_SYM_OFFSETOF) {
+		attr = lookup_dir_attr(ctx->shared, base,
+				       sym->args[0], strlen(sym->args[1]));
+		if (!attr) {
+			ret = addrxlat_ctx_err(ctx->addrxlat, addrxlat_nodata,
+					       "Field not found");
+			goto out;
+		}
+		if (validate_attr(ctx, attr) != kdump_ok) {
+			ret = addrxlat_ctx_err(ctx->addrxlat, addrxlat_nodata,
+					       "Field has no value");
+			goto out;
+		}
+	}
+
+	ret = addrxlat_ok;
+	switch (attr->template->type) {
+	case kdump_number:
+		sym->val = attr_value(attr)->number;
+		break;
+
+	case kdump_address:
+		sym->val = attr_value(attr)->address;
+		break;
+
+	default:
+		ret = addrxlat_ctx_err(ctx->addrxlat, addrxlat_notimpl,
+				       "Unhandled attribute type");
+	}
+
+ out:
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 kdump_status
