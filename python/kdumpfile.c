@@ -3,6 +3,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#if PY_MAJOR_VERSION >= 3
+#define PyString_FromString(x) PyUnicode_FromString((x))
+#define PyString_Check(x) PyUnicode_Check((x))
+#define PyString_FromFormat(format, ...) PyUnicode_FromFormat(format, __VA_ARGS__)
+#define PyString_AS_STRING PyBytes_AS_STRING
+#define PyString_Concat PyUnicode_Concat
+#endif
+
 typedef struct {
 	PyObject_HEAD
 	kdump_ctx *ctx;
@@ -86,10 +94,11 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 	kdump_attr_ref_t rootref;
 	kdump_status status;
 	PyObject *fo = NULL;
+	PyObject *fd_temp_object;
+
 	int fd;
 
-	if (!PyArg_ParseTupleAndKeywords (args, kw, "O!", keywords,
-				    &PyFile_Type, &fo))
+	if (!PyArg_ParseTupleAndKeywords (args, kw, "O", keywords, &fo))
 		    return NULL;
 
 	self = (kdumpfile_object*) type->tp_alloc (type, 0);
@@ -111,7 +120,11 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 		goto fail;
 	}
 
-	fd = fileno(PyFile_AsFile(fo));
+	fd_temp_object = PyObject_CallMethod(fo, "fileno", NULL);
+	if (!fd_temp_object)
+		goto fail;
+	fd = PyLong_AsLong(fd_temp_object);
+	Py_DECREF(fd_temp_object);
 	status = kdump_set_fd(self->ctx, fd);
 	if (status != kdump_ok) {
 		PyErr_Format(exception_map(status),
@@ -473,7 +486,10 @@ static int
 lookup_attribute(attr_dir_object *self, PyObject *key, kdump_attr_ref_t *ref)
 {
 	PyObject *stringkey;
-	char *keystr;
+#if PY_MAJOR_VERSION >= 3
+	PyObject *bytes;
+#endif
+	char *keystr = NULL;
 	int ret;
 
 	if (!PyString_Check(key)) {
@@ -484,8 +500,14 @@ lookup_attribute(attr_dir_object *self, PyObject *key, kdump_attr_ref_t *ref)
 		stringkey = key;
 
 	ret = -1;
-
+#if PY_MAJOR_VERSION >= 3
+	bytes = PyUnicode_AsASCIIString(stringkey);
+	if (bytes) {
+		keystr = PyBytes_AsString(bytes);
+	}
+#else
 	keystr = PyString_AsString(stringkey);
+#endif
 	if (keystr) {
 		kdump_ctx *ctx = self->kdumpfile->ctx;
 		kdump_status status;
@@ -502,6 +524,10 @@ lookup_attribute(attr_dir_object *self, PyObject *key, kdump_attr_ref_t *ref)
 
 	if (stringkey != key)
 		Py_DECREF(stringkey);
+
+#if PY_MAJOR_VERSION >= 3
+	Py_DECREF(bytes);
+#endif
 
 	return ret;
 }
@@ -604,6 +630,9 @@ object2attr(PyObject *value, kdump_attr_ref_t *ref, kdump_attr_t *attr)
 {
 	unsigned PY_LONG_LONG num;
 	PyObject *conv;
+#if PY_MAJOR_VERSION >= 3
+	PyObject *bytes;
+#endif
 
 	attr->type = value
 		? kdump_attr_ref_type(ref)
@@ -626,10 +655,12 @@ object2attr(PyObject *value, kdump_attr_ref_t *ref, kdump_attr_t *attr)
 			num = PyLong_AsUnsignedLongLong(value);
 			if (PyErr_Occurred())
 				return NULL;
+#if PY_MAJOR_VERSION < 3
 		} else if (PyInt_Check(value)) {
 			num = PyInt_AsLong(value);
 			if (PyErr_Occurred())
 				return NULL;
+#endif
 		} else {
 			PyErr_Format(PyExc_TypeError,
 				     "need an integer, not %.200s",
@@ -649,8 +680,19 @@ object2attr(PyObject *value, kdump_attr_ref_t *ref, kdump_attr_t *attr)
 			if (!conv)
 				return NULL;
 		}
+
+#if PY_MAJOR_VERSION >= 3
+		bytes = PyUnicode_AsASCIIString(conv);
+		if (!bytes)
+			return NULL;
+
+		attr->val.string  = PyBytes_AsString(bytes);
+		if (!attr->val.string)
+			return NULL;
+#else
 		if (! (attr->val.string = PyString_AsString(conv)) )
 			return NULL;
+#endif
 		break;
 
 	default:
@@ -747,6 +789,9 @@ static PyObject *
 attr_dir_getattro(PyObject *_self, PyObject *name)
 {
 	PyObject *ret;
+#if PY_MAJOR_VERSION >= 3
+	PyObject *temp;
+#endif
 
 	ret = PyObject_GenericGetAttr(_self, name);
 	if (ret || !PyErr_ExceptionMatches(PyExc_AttributeError))
@@ -757,9 +802,26 @@ attr_dir_getattro(PyObject *_self, PyObject *name)
 	if (ret || !PyErr_ExceptionMatches(PyExc_KeyError))
 		return ret;
 
+#if PY_MAJOR_VERSION >= 3
+	temp = PyUnicode_AsASCIIString(name);
+	if (!temp)
+		return NULL;
+#endif
+
 	PyErr_Format(PyExc_AttributeError,
 		     "'%.50s' object has no attribute '%.400s'",
-		     Py_TYPE(_self)->tp_name, PyString_AS_STRING(name));
+		     Py_TYPE(_self)->tp_name,
+#if PY_MAJOR_VERSION >= 3
+			 PyString_AS_STRING(temp)
+#else
+		     PyString_AS_STRING(name)
+#endif
+			);
+
+
+#if PY_MAJOR_VERSION >= 3
+	Py_DECREF(temp);
+#endif
 	return NULL;
 }
 
@@ -767,6 +829,9 @@ static int
 attr_dir_setattro(PyObject *_self, PyObject *name, PyObject *value)
 {
 	int ret;
+#if PY_MAJOR_VERSION >= 3
+	PyObject *temp;
+#endif
 
 	ret = PyObject_GenericSetAttr(_self, name, value);
 	if (!ret || !PyErr_ExceptionMatches(PyExc_AttributeError))
@@ -777,9 +842,21 @@ attr_dir_setattro(PyObject *_self, PyObject *name, PyObject *value)
 	if (!ret || !PyErr_ExceptionMatches(PyExc_KeyError))
 		return ret;
 
+#if PY_MAJOR_VERSION >= 3
+	temp = PyUnicode_AsASCIIString(name);
+#endif
 	PyErr_Format(PyExc_AttributeError,
 		     "'%.50s' object has no attribute '%.400s'",
-		     Py_TYPE(_self)->tp_name, PyString_AS_STRING(name));
+		     Py_TYPE(_self)->tp_name,
+#if PY_MAJOR_VERSION >= 3
+			 PyString_AS_STRING(temp)
+#else
+			 PyString_AS_STRING(name)
+#endif
+			);
+#if PY_MAJOR_VERSION >= 3
+	Py_DECREF(temp);
+#endif
 	return -1;
 }
 
@@ -1020,6 +1097,7 @@ attr_dir_clear(PyObject *_self, PyObject *args)
 	return NULL;
 }
 
+#if PY_MAJOR_VERSION < 3
 static PyObject *
 attr_dir_repr(PyObject *_self)
 {
@@ -1111,6 +1189,7 @@ attr_dir_repr(PyObject *_self)
 	Py_XDECREF(colon);
 	return result;
 }
+#endif
 
 static int
 attr_dir_print(PyObject *_self, FILE *fp, int flags)
@@ -1416,7 +1495,11 @@ static PyTypeObject attr_dir_object_type =
 	0,				/* tp_getattr*/
 	0,				/* tp_setattr*/
 	0,				/* tp_compare*/
+#if PY_MAJOR_VERSION < 3
 	attr_dir_repr,			/* tp_repr */
+#else
+	0,
+#endif
 	0,				/* tp_as_number*/
 	&attr_dir_as_sequence,		/* tp_as_sequence*/
 	&attr_dir_as_mapping,		/* tp_as_mapping*/
@@ -1687,8 +1770,26 @@ static const struct constdef kdumpfile_constants[] = {
 	{ NULL, 0 }
 };
 
+#if PY_MAJOR_VERSION >= 3
+static struct PyModuleDef kdumpfile_moddef = {
+        PyModuleDef_HEAD_INIT,
+        "_kdumpfile",     /* m_name */
+        "kdumpfile - interface to libkdumpfile",  /* m_doc */
+        -1,                  /* m_size */
+        NULL,			    /* m_methods */
+        NULL,                /* m_reload */
+        NULL,                /* m_traverse */
+        NULL,                /* m_clear */
+        NULL,                /* m_free */
+};
+#endif
+
 PyMODINIT_FUNC
+#if PY_MAJOR_VERSION >= 3
+PyInit__kdumpfile (void)
+#else
 init_kdumpfile (void)
+#endif
 {
 	PyObject *mod;
 	const struct constdef *cdef;
@@ -1705,11 +1806,16 @@ init_kdumpfile (void)
 	if (PyType_Ready(&attr_iteritem_object_type) < 0)
 		return;
 
+#if PY_MAJOR_VERSION >= 3
+	mod = PyModule_Create(&kdumpfile_moddef);
+	if (!mod)
+		goto fail;
+#else
 	mod = Py_InitModule3("_kdumpfile", NULL,
 			"kdumpfile - interface to libkdumpfile");
 	if (!mod)
 		goto fail;
-
+#endif
 	Py_INCREF((PyObject *)&kdumpfile_object_type);
 	ret = PyModule_AddObject(mod, "kdumpfile",
 				 (PyObject*)&kdumpfile_object_type);
@@ -1733,10 +1839,18 @@ init_kdumpfile (void)
 	ret = lookup_views();
 	if (ret)
 		goto fail;
-
+#if PY_MAJOR_VERSION >= 3
+	return mod;
+#else
 	return;
+#endif
+
 fail:
 	cleanup_exceptions();
 	cleanup_views();
 	Py_XDECREF(mod);
+#if PY_MAJOR_VERSION >= 3
+	return NULL;
+#endif
+
 }
