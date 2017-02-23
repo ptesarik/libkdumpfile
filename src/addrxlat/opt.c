@@ -30,7 +30,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 
 #include "addrxlat-priv.h"
 
@@ -41,12 +40,89 @@
  * be called in a strange locale, and the parsing should not really
  * depend on locale and this function is less overhead then messing around
  * with the C library locale...
+ * Note that this code does not make any assumptions about system
+ * character set, because it checks each character individually. Leave
+ * possible optimizations to the C compiler.
  */
-static int
+static inline int
 is_posix_space(int c)
 {
 	return (c == ' ' || c == '\f' || c == '\n' ||
 		c == '\r' || c == '\t' || c == '\v');
+}
+
+/** Check if a character is a POSIX digit.
+ * @param c  Character to check.
+ *
+ * See @ref is_posix_space for an explanation why the standard call
+ * is not used here.
+ */
+static inline int
+is_posix_digit(int c)
+{
+	return (c == '0' || c == '1' || c == '2' || c == '3' || c == '4' ||
+		c == '5' || c == '6' || c == '7' || c == '8' || c == '9');
+}
+
+/** Check if a character is a POSIX lowercase character.
+ * @param c  Character to check.
+ *
+ * See @ref is_posix_space for an explanation why the standard call
+ * is not used here.
+ */
+static inline int
+is_posix_lower(int c)
+{
+	return (c == 'a' || c == 'b' || c == 'c' || c == 'd' || c == 'e' ||
+		c == 'f' || c == 'g' || c == 'h' || c == 'i' || c == 'j' ||
+		c == 'k' || c == 'l' || c == 'm' || c == 'n' || c == 'o' ||
+		c == 'p' || c == 'q' || c == 'r' || c == 's' || c == 't' ||
+		c == 'u' || c == 'v' || c == 'w' || c == 'x' || c == 'y' ||
+		c == 'z');
+}
+
+/** Check if a character is a POSIX uppercase character.
+ * @param c  Character to check.
+ *
+ * See @ref is_posix_space for an explanation why the standard call
+ * is not used here.
+ */
+static inline int
+is_posix_upper(int c)
+{
+	return (c == 'A' || c == 'B' || c == 'C' || c == 'D' || c == 'E' ||
+		c == 'F' || c == 'G' || c == 'H' || c == 'I' || c == 'J' ||
+		c == 'K' || c == 'L' || c == 'M' || c == 'N' || c == 'O' ||
+		c == 'P' || c == 'Q' || c == 'R' || c == 'S' || c == 'T' ||
+		c == 'U' || c == 'V' || c == 'W' || c == 'X' || c == 'Y' ||
+		c == 'Z');
+}
+
+/** Check if a character is a POSIX alphabetic character.
+ * @param c  Character to check.
+ *
+ * See @ref is_posix_space for an explanation why the standard call
+ * is not used here.
+ */
+static inline int
+is_posix_alpha(int c)
+{
+	return is_posix_upper(c) || is_posix_lower(c);
+}
+
+/** Check if a character is a POSIX alphanumeric character.
+ * @param c  Character to check.
+ *
+ * See @ref is_posix_space for an explanation why the standard call
+ * is not used here.
+ * Note that this code does not make any assumptions about system
+ * character set, because it checks each character individually. Leave
+ * optimization to the C compiler.
+ */
+static inline int
+is_posix_alnum(int c)
+{
+	return is_posix_alpha(c) || is_posix_digit(c);
 }
 
 /** Convert an address space string to its enumeration value.
@@ -64,11 +140,11 @@ strtoas(const char *str, char **endptr)
 {
 	const char *p;
 
-	if (isdigit(*str))
+	if (is_posix_digit(*str))
 		return strtoul(str, endptr, 0);
 
 	p = str;
-	while (isalnum(*p))
+	while (is_posix_alnum(*p))
 		++p;
 	*endptr = (char*)p;	/* Optimistic assumption... */
 
