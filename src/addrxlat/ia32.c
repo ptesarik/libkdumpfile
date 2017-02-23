@@ -220,6 +220,42 @@ is_pae(struct sys_init_data *ctl, const addrxlat_fulladdr_t *root,
 	return -1;
 }
 
+/** Direct mapping, used temporarily to translate swapper_pg_dir */
+static const struct sys_region linux_directmap[] = {
+	{ LINUX_DIRECTMAP, VIRTADDR_MAX,
+	   ADDRXLAT_SYS_METH_DIRECT, SYS_ACT_DIRECT },
+	SYS_REGION_END
+};
+
+/** Determine PAE status resolving root pgt from symbols.
+ * @param ctl  Initialization data.
+ * @returns    PAE status, see @ref is_pae.
+ */
+addrxlat_status
+is_pae_sym(struct sys_init_data *ctl)
+{
+	addrxlat_fulladdr_t rootpgt;
+	addrxlat_status status;
+
+	if (ctl->osdesc->type != addrxlat_os_linux)
+		return -1;
+
+	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS,
+				linux_directmap);
+	if (status != addrxlat_ok)
+		return status;
+
+	if (get_symval(ctl->ctx, "swapper_pg_dir",
+		       &rootpgt.addr) == addrxlat_ok) {
+		rootpgt.as = ADDRXLAT_KVADDR;
+		return is_pae(ctl, &rootpgt, LINUX_DIRECTMAP);
+	}
+
+	clear_error(ctl->ctx);
+
+	return -1;
+}
+
 /** Initialize a translation map for an Intel IA32 (non-pae) OS.
  * @param ctl  Initialization data.
  * @returns    Error status.
@@ -292,7 +328,7 @@ sys_ia32(struct sys_init_data *ctl)
 	if (ctl->popt.val[OPT_pae].set)
 		pae = ctl->popt.val[OPT_pae].num;
 	else if (!rootpgtopt->set)
-		pae = -1;
+		pae = is_pae_sym(ctl);
 	else if (ctl->osdesc->type == addrxlat_os_linux)
 		pae = is_pae(ctl, &rootpgtopt->fulladdr,
 			     LINUX_DIRECTMAP);
