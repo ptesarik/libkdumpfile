@@ -165,13 +165,13 @@ static const addrxlat_paging_form_t ia32_pf_pae = {
 };
 
 /** Check whether a page table hierarchy looks like PAE.
- * @param ctx     Translation context
+ * @param ctl     Initialization data.
  * @param root    Root page table address
  * @param direct  Starting virtual address of direct mapping
  * @returns       Non-zero if PAE, zero if non-PAE, negative on error.
  */
 static int
-is_pae(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *root,
+is_pae(struct sys_init_data *ctl, const addrxlat_fulladdr_t *root,
        addrxlat_addr_t direct)
 {
 	addrxlat_step_t step;
@@ -185,23 +185,37 @@ is_pae(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *root,
 
 	def.param.pgt.pf = ia32_pf_pae;
 	internal_meth_set_def(&meth, &def);
-	status = internal_launch_meth(&step, ctx, &meth, direct);
+	status = internal_launch_meth(&step, ctl->ctx, &meth, direct);
 	if (status != addrxlat_ok)
 		return -1;
+	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_PAE - 1);
+	if (status != addrxlat_ok)
+		return status;
+	step.sys = ctl->sys;
 	status = internal_walk(&step);
 	if (status == addrxlat_ok && step.base.addr == 0)
 		return 1;
-	clear_error(ctx);
+
+	clear_error(ctl->ctx);
+	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS]);
+	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS]);
 
 	def.param.pgt.pf = ia32_pf;
 	internal_meth_set_def(&meth, &def);
-	status = internal_launch_meth(&step, ctx, &meth, direct);
+	status = internal_launch_meth(&step, ctl->ctx, &meth, direct);
 	if (status != addrxlat_ok)
 		return -1;
+	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_PAE - 1);
+	if (status != addrxlat_ok)
+		return status;
+	step.sys = ctl->sys;
 	status = internal_walk(&step);
 	if (status == addrxlat_ok && step.base.addr == 0)
 		return 0;
-	clear_error(ctx);
+
+	clear_error(ctl->ctx);
+	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS]);
+	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS]);
 
 	return -1;
 }
@@ -280,10 +294,10 @@ sys_ia32(struct sys_init_data *ctl)
 	else if (!rootpgtopt->set)
 		pae = -1;
 	else if (ctl->osdesc->type == addrxlat_os_linux)
-		pae = is_pae(ctl->ctx, &rootpgtopt->fulladdr,
+		pae = is_pae(ctl, &rootpgtopt->fulladdr,
 			     LINUX_DIRECTMAP);
 	else if (ctl->osdesc->type == addrxlat_os_xen)
-		pae = is_pae(ctl->ctx, &rootpgtopt->fulladdr,
+		pae = is_pae(ctl, &rootpgtopt->fulladdr,
 			     XEN_DIRECTMAP);
 	else
 		pae = -1;
