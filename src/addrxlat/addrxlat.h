@@ -206,6 +206,31 @@ typedef enum _addrxlat_pte_format {
 	addrxlat_pte_ppc64_linux_rpn30,
 } addrxlat_pte_format_t;
 
+/** Get the pteval shift for a PTE format.
+ * @param fmt  PTE format.
+ * @returns    Log2 value of the PTE size, or -1 if unknown / invalid.
+ */
+static inline int
+addrxlat_pteval_shift(addrxlat_pte_format_t fmt)
+{
+	switch (fmt) {
+	case addrxlat_pte_pfn32:
+	case addrxlat_pte_ia32:
+		return 2;
+
+	case addrxlat_pte_pfn64:
+	case addrxlat_pte_ia32_pae:
+	case addrxlat_pte_x86_64:
+	case addrxlat_pte_s390x:
+	case addrxlat_pte_ppc64_linux_rpn30:
+		return 3;
+
+	case addrxlat_pte_none:
+	default:
+		return -1;
+	}
+}
+
 /** Maximum address translation levels.
  * This is a theoretical limit, with enough reserve for future enhancements.
  * Currently, IBM z/Architecture has up to 5 levels, but only 4 are used

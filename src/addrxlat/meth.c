@@ -272,27 +272,27 @@ setup_pgt(addrxlat_meth_t *meth, const addrxlat_def_t *def)
 	addrxlat_addr_t mask;
 	unsigned short i;
 
-#define SETUP(fmt, first, next, shift)		\
+#define SETUP(fmt, first, next)			\
 	case fmt:				\
 		meth->first_step = first;	\
 		meth->next_step = next;		\
-		extra->pte_shift = shift;	\
 		break
 
 	switch (pf->pte_format) {
-		SETUP(addrxlat_pte_none, first_step_pgt, next_step_none, 0);
-		SETUP(addrxlat_pte_pfn32, first_step_uaddr, next_step_pfn, 2);
-		SETUP(addrxlat_pte_pfn64, first_step_uaddr, next_step_pfn, 3);
-		SETUP(addrxlat_pte_ia32, first_step_uaddr, pgt_ia32, 2);
-		SETUP(addrxlat_pte_ia32_pae, first_step_uaddr, pgt_ia32_pae, 3);
-		SETUP(addrxlat_pte_x86_64, first_step_saddr, pgt_x86_64, 3);
-		SETUP(addrxlat_pte_s390x, first_step_uaddr, pgt_s390x, 3);
+		SETUP(addrxlat_pte_none, first_step_pgt, next_step_none);
+		SETUP(addrxlat_pte_pfn32, first_step_uaddr, next_step_pfn);
+		SETUP(addrxlat_pte_pfn64, first_step_uaddr, next_step_pfn);
+		SETUP(addrxlat_pte_ia32, first_step_uaddr, pgt_ia32);
+		SETUP(addrxlat_pte_ia32_pae, first_step_uaddr, pgt_ia32_pae);
+		SETUP(addrxlat_pte_x86_64, first_step_saddr, pgt_x86_64);
+		SETUP(addrxlat_pte_s390x, first_step_uaddr, pgt_s390x);
 		SETUP(addrxlat_pte_ppc64_linux_rpn30,
-		      first_step_pgt, pgt_ppc64_linux_rpn30, 3);
+		      first_step_pgt, pgt_ppc64_linux_rpn30);
 	default:
 		return addrxlat_notimpl;
 	};
 
+	extra->pte_shift = addrxlat_pteval_shift(pf->pte_format);
 	extra->vaddr_bits = 0;
 	mask = 1;
 	for (i = 0; i < pf->levels; ++i) {
