@@ -126,7 +126,7 @@ devmem_unref_page(kdump_ctx *ctx, struct page_io *pio)
 	--pio->ce->refcnt;
 }
 
-kdump_status
+static kdump_status
 devmem_realloc_caches(kdump_ctx *ctx)
 {
 	struct devmem_priv *dmp = ctx->shared->fmtdata;

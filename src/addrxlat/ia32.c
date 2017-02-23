@@ -231,7 +231,7 @@ static const struct sys_region linux_directmap[] = {
  * @param ctl  Initialization data.
  * @returns    PAE status, see @ref is_pae.
  */
-addrxlat_status
+static addrxlat_status
 is_pae_sym(struct sys_init_data *ctl)
 {
 	addrxlat_fulladdr_t rootpgt;
