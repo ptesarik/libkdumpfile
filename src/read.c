@@ -40,15 +40,18 @@ typedef kdump_status (*read_page_fn)(kdump_ctx *, struct page_io *);
 static kdump_status
 read_kpage_generic(kdump_ctx *ctx, struct page_io *pio)
 {
-	kdump_status res;
+	addrxlat_fulladdr_t faddr;
+	addrxlat_status axres;
 
-	res = ctx->shared->arch_ops->pfn_to_mfn(ctx, pio->pfn, &pio->pfn);
-	if (res != kdump_ok)
-		return res;
+	faddr.addr = pio->pfn << get_page_shift(ctx);
+	faddr.as = ADDRXLAT_KPHYSADDR;
+	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, ADDRXLAT_MACHPHYSADDR,
+				ctx->shared->xlat_linux);
+	if (axres != addrxlat_ok)
+		return set_error_addrxlat(ctx, axres);
 
-	res = ctx->shared->ops->read_page(ctx, pio);
-	return set_error(ctx, res, "Cannot read MFN %llx",
-			 (unsigned long long) pio->pfn);
+	pio->pfn = faddr.addr >> get_page_shift(ctx);
+	return ctx->shared->ops->read_page(ctx, pio);
 }
 
 static inline read_page_fn
@@ -60,8 +63,7 @@ read_kphys_page_fn(kdump_ctx *ctx)
 	if (ctx->shared->ops->read_kpage)
 		return ctx->shared->ops->read_kpage;
 
-	if (ctx->shared->ops->read_page &&
-	    ctx->shared->arch_ops && ctx->shared->arch_ops->pfn_to_mfn)
+	if (ctx->shared->ops->read_page)
 		return read_kpage_generic;
 
 	return NULL;
@@ -70,32 +72,34 @@ read_kphys_page_fn(kdump_ctx *ctx)
 static kdump_status
 read_kvpage_machphys(kdump_ctx *ctx, struct page_io *pio)
 {
-	kdump_vaddr_t vaddr;
-	kdump_maddr_t maddr;
-	kdump_status ret;
+	addrxlat_fulladdr_t faddr;
+	addrxlat_status axres;
 
-	vaddr = pio->pfn << get_page_shift(ctx);
-	ret = vtom(ctx, vaddr, &maddr);
-	if (ret != kdump_ok)
-		return ret;
+	faddr.addr = pio->pfn << get_page_shift(ctx);
+	faddr.as = ADDRXLAT_KVADDR;
+	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, ADDRXLAT_MACHPHYSADDR,
+				ctx->shared->xlat_linux);
+	if (axres != addrxlat_ok)
+		return set_error_addrxlat(ctx, axres);
 
-	pio->pfn = maddr >> get_page_shift(ctx);
+	pio->pfn = faddr.addr >> get_page_shift(ctx);
 	return ctx->shared->ops->read_page(ctx, pio);
 }
 
 static kdump_status
 read_kvpage_kphys(kdump_ctx *ctx, struct page_io *pio)
 {
-	kdump_vaddr_t vaddr;
-	kdump_paddr_t paddr;
-	kdump_status ret;
+	addrxlat_fulladdr_t faddr;
+	addrxlat_status axres;
 
-	vaddr = pio->pfn << get_page_shift(ctx);
-	ret = vtop(ctx, vaddr, &paddr);
-	if (ret != kdump_ok)
-		return ret;
+	faddr.addr = pio->pfn << get_page_shift(ctx);
+	faddr.as = ADDRXLAT_KVADDR;
+	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, ADDRXLAT_KPHYSADDR,
+				ctx->shared->xlat_linux);
+	if (axres != addrxlat_ok)
+		return set_error_addrxlat(ctx, axres);
 
-	pio->pfn = paddr >> get_page_shift(ctx);
+	pio->pfn = faddr.addr >> get_page_shift(ctx);
 	return ctx->shared->ops->read_kpage(ctx, pio);
 }
 
@@ -103,29 +107,34 @@ static kdump_status
 read_kvpage_choose(kdump_ctx *ctx, struct page_io *pio)
 {
 	kdump_vaddr_t vaddr;
-	const addrxlat_meth_t *xlat;
+	const addrxlat_map_t *map;
 
 	vaddr = pio->pfn << get_page_shift(ctx);
-	xlat = addrxlat_map_search(ctx->shared->vtop_map.map, vaddr);
-	if (xlat && addrxlat_meth_get_def(xlat)->kind != ADDRXLAT_PGT)
-		return read_kvpage_kphys(ctx, pio);
-	else
-		return read_kvpage_machphys(ctx, pio);
+	map = addrxlat_sys_get_map(ctx->shared->xlat_linux,
+				   ADDRXLAT_SYS_MAP_KV_PHYS);
+	if (map) {
+		const addrxlat_meth_t *meth = addrxlat_map_search(map, vaddr);
+		if (meth && addrxlat_meth_get_def(meth)->kind != ADDRXLAT_PGT)
+			return read_kvpage_kphys(ctx, pio);
+	}
+
+	return read_kvpage_machphys(ctx, pio);
 }
 
 static kdump_status
 read_xenvpage(kdump_ctx *ctx, struct page_io *pio)
 {
-	kdump_vaddr_t vaddr;
-	kdump_paddr_t paddr;
-	kdump_status ret;
+	addrxlat_fulladdr_t faddr;
+	addrxlat_status axres;
 
-	vaddr = pio->pfn << get_page_shift(ctx);
-	ret = vtop_xen(ctx, vaddr, &paddr);
-	if (ret != kdump_ok)
-		return ret;
+	faddr.addr = pio->pfn << get_page_shift(ctx);
+	faddr.as = ADDRXLAT_KVADDR;
+	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, ADDRXLAT_MACHPHYSADDR,
+				ctx->shared->xlat_xen);
+	if (axres != addrxlat_ok)
+		return set_error_addrxlat(ctx, axres);
 
-	pio->pfn = paddr >> get_page_shift(ctx);
+	pio->pfn = faddr.addr >> get_page_shift(ctx);
 	return ctx->shared->ops->read_page(ctx, pio);
 }
 

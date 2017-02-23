@@ -40,24 +40,9 @@
 
 #define ELF_NGREG 27
 
-/* Maximum virtual address bits (architecture limit) */
-#define VIRTADDR_BITS_MAX	48
-
-#define NONCANONICAL_START	((uint64_t)1<<(VIRTADDR_BITS_MAX-1))
-#define NONCANONICAL_END	(~NONCANONICAL_START)
 #define VIRTADDR_MAX		UINT64_MAX
 
-#define PAGE_SHIFT	12
-#define PAGE_SIZE	((uint64_t)1 << PAGE_SHIFT)
-
-#define PTRS_PER_PAGE	(PAGE_SIZE/sizeof(uint64_t))
-
 #define __START_KERNEL_map	0xffffffff80000000ULL
-
-/* The beginning of kernel text virtual mapping may not be mapped
- * for various reasons. Let's use an offset of 1M to be safe.
- */
-#define KERNEL_map_skip		(1ULL << 20)
 
 /* This constant is not the maximum physical load offset. This is the
  * maximum expected value of the PHYSICAL_START config option, which
@@ -82,146 +67,7 @@
 struct x86_64_data {
 	/** Overridden methods for linux.phys_base attribute. */
 	struct attr_override phys_base_override;
-
-	/** Directmap translation. */
-	addrxlat_meth_t *directmap;
-
-	/** Kernel text translation. */
-	addrxlat_meth_t *ktext;
-
-	/** Xen directmap translation. */
-	addrxlat_meth_t *xen_directmap;
 };
-
-enum xlat_type {
-	PGT,
-	DIRECTMAP,
-	KTEXT,
-};
-
-struct region_def {
-	kdump_vaddr_t first, last;
-	enum xlat_type xlat;
-};
-
-/* Original layout (before 2.6.11) */
-static const struct region_def mm_layout_2_6_0[] = {
-	{  0x0000000000000000,  0x0000007fffffffff, /* user space       */
-	   PGT },
-	/* 0x0000008000000000 - 0x000000ffffffffff     guard hole       */
-	{  0x0000010000000000,  0x000001ffffffffff, /* direct mapping   */
-	   DIRECTMAP },
-	/* 0x0000020000000000 - 0x00007fffffffffff     unused hole      */
-	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
-	/* 0xffff800000000000 - 0xfffffeffffffffff     unused hole      */
-	{  0xffffff0000000000,  0xffffff7fffffffff, /* vmalloc/ioremap  */
-	   PGT },
-	/* 0xffffff8000000000 - 0xffffffff7fffffff     unused hole      */
-	{  0xffffffff80000000,  0xffffffff827fffff, /* kernel text      */
-	   KTEXT },
-	/* 0xffffffff82800000 - 0xffffffff9fffffff     unused hole      */
-	{  0xffffffffa0000000,  0xffffffffafffffff, /* modules          */
-	   PGT },
-	/* 0xffffffffb0000000 - 0xffffffffff5exxxx     unused hole      */
-	{  0xffffffffff5ed000,  0xffffffffffdfffff, /* fixmap/vsyscalls */
-	   PGT },
-	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
-};
-
-/* New layout introduced in 2.6.11 */
-static const struct region_def mm_layout_2_6_11[] = {
-	{  0x0000000000000000,  0x00007fffffffffff, /* user space       */
-	   PGT },
-	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
-	/* 0xffff800000000000 - 0xffff80ffffffffff     guard hole       */
-	{  0xffff810000000000,  0xffffc0ffffffffff, /* direct mapping   */
-	   DIRECTMAP },
-	/* 0xffffc10000000000 - 0xffffc1ffffffffff     guard hole       */
-	{  0xffffc20000000000,  0xffffe1ffffffffff, /* vmalloc/ioremap  */
-	   PGT },
-	{  0xffffe20000000000,  0xffffe2ffffffffff, /* VMEMMAP          */
-	   PGT },				    /*   (2.6.24+ only) */
-	/* 0xffffe30000000000 - 0xffffffff7fffffff     unused hole      */
-	{  0xffffffff80000000,  0xffffffff827fffff, /* kernel text      */
-	   KTEXT },
-	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
-	{  0xffffffff88000000,  0xffffffffffdfffff, /* modules and      */
-	   PGT },				    /*  fixmap/vsyscall */
-	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
-};
-
-static const struct region_def mm_layout_2_6_27[] = {
-	{  0x0000000000000000,  0x00007fffffffffff, /* user space       */
-	   PGT },
-	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
-	/* 0xffff800000000000 - 0xffff80ffffffffff     guard hole       */
-	/* 0xffff810000000000 - 0xffff87ffffffffff     hypervisor area  */
-	{  0xffff880000000000,  0xffffc0ffffffffff, /* direct mapping   */
-	   DIRECTMAP },
-	/* 0xffffc10000000000 - 0xffffc1ffffffffff     guard hole       */
-	{  0xffffc20000000000,  0xffffe1ffffffffff, /* vmalloc/ioremap  */
-	   PGT },
-	{  0xffffe20000000000,  0xffffe2ffffffffff, /* VMEMMAP          */
-	   PGT },
-	/* 0xffffe30000000000 - 0xffffffff7fffffff     unused hole      */
-	{  0xffffffff80000000,  0xffffffff827fffff, /* kernel text      */
-	   KTEXT },
-	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
-	{  0xffffffff88000000,  0xffffffffffdfffff, /* modules and      */
-	   PGT },				    /*  fixmap/vsyscall */
-	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
-};
-
-static const struct region_def mm_layout_2_6_31[] = {
-	{  0x0000000000000000,  0x00007fffffffffff, /* user space       */
-	   PGT },
-	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
-	/* 0xffff800000000000 - 0xffff80ffffffffff     guard hole       */
-	/* 0xffff810000000000 - 0xffff87ffffffffff     hypervisor area  */
-	{  0xffff880000000000,  0xffffc7ffffffffff, /* direct mapping   */
-	   DIRECTMAP },
-	/* 0xffffc80000000000 - 0xffffc8ffffffffff     guard hole       */
-	{  0xffffc90000000000,  0xffffe8ffffffffff, /* vmalloc/ioremap  */
-	   PGT },
-	/* 0xffffe90000000000 - 0xffffe9ffffffffff     guard hole       */
-	{  0xffffea0000000000,  0xffffeaffffffffff, /* VMEMMAP          */
-	   PGT },
-	/* 0xffffeb0000000000 - 0xffffffeeffffffff     unused hole      */
-	{  0xffffff0000000000,  0xffffff7fffffffff, /* %esp fixup stack */
-	   PGT },
-	/* 0xffffff8000000000 - 0xffffffeeffffffff     unused hole      */
-	{  0xffffffef00000000,  0xfffffffeffffffff, /* EFI runtime      */
-	   PGT },				    /*     (3.14+ only) */
-	/* 0xffffffff00000000 - 0xffffffff7fffffff     guard hole       */
-	{  0xffffffff80000000,  0xffffffff827fffff, /* kernel text      */
-	   KTEXT },
-	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
-	{  0xffffffff88000000,  0xffffffffffdfffff, /* modules and      */
-	   PGT },				    /*  fixmap/vsyscall */
-	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
-};
-
-#define LAYOUT_NAME(a, b, c)	mm_layout_ ## a ## _ ## b ## _ ## c
-#define DEF_LAYOUT(a, b, c) \
-	{ KERNEL_VERSION(a, b, c), LAYOUT_NAME(a, b, c),	\
-			ARRAY_SIZE(LAYOUT_NAME(a, b, c)) }
-
-static const struct layout_def {
-	unsigned ver;
-	const struct region_def *regions;
-	unsigned nregions;
-} mm_layouts[] = {
-	DEF_LAYOUT(2, 6, 0),
-	DEF_LAYOUT(2, 6, 11),
-	DEF_LAYOUT(2, 6, 27),
-	DEF_LAYOUT(2, 6, 31),
-};
-
-#define XEN_DIRECTMAP_START	0xffff830000000000ULL
-#define XEN_DIRECTMAP_END_OLD	0xffff83ffffffffffULL
-#define XEN_DIRECTMAP_END_4_0_0	0xffff87ffffffffffULL
-#define XEN_VIRT_SIZE		(1ULL<<30)
-#define MACH2PHYS_VIRT_START	0xffff828000000000ULL
 
 /** @cond TARGET_ABI */
 
@@ -362,37 +208,22 @@ static const struct attr_template reg_names[] = {
 static const struct attr_template tmpl_pid =
 	{ "pid", NULL, kdump_number };
 
-static kdump_status
-add_canonical_regions(kdump_ctx *ctx, struct vtop_map *map)
-{
-	kdump_status res;
-
-	res = set_vtop_xlat_pgt(map, 0, NONCANONICAL_START - 1);
-	if (res != kdump_ok)
-		return set_error(ctx, res,
-				 "Cannot set up default  mapping");
-
-	res = set_vtop_xlat_pgt(map, NONCANONICAL_END + 1, VIRTADDR_MAX);
-	if (res != kdump_ok)
-		return set_error(ctx, res,
-				 "Cannot set up default  mapping");
-
-	return res;
-}
-
 /** Set the kernel text virtual to physical offset.
  * @param archdata   x86-64 arch-specific data.
  * @param phys_base  Kernel physical base address.
  */
 static void
-set_ktext_off(struct x86_64_data *archdata, kdump_addr_t phys_base)
+set_ktext_off(kdump_ctx *ctx, kdump_addr_t phys_base)
 {
+	addrxlat_meth_t *meth;
 	addrxlat_def_t def;
 
+	meth = addrxlat_sys_get_meth(ctx->shared->xlat_linux,
+				     ADDRXLAT_SYS_METH_KTEXT);
 	def.kind = ADDRXLAT_LINEAR;
 	def.target_as = ADDRXLAT_KPHYSADDR;
 	def.param.linear.off = __START_KERNEL_map - phys_base;
-	addrxlat_meth_set_def(archdata->ktext, &def);
+	addrxlat_meth_set_def(meth, &def);
 }
 
 /** Update the physical base offfset.
@@ -409,7 +240,7 @@ update_phys_base(kdump_ctx *ctx, struct attr_data *attr)
 	struct x86_64_data *archdata = ctx->shared->archdata;
 	const struct attr_ops *parent_ops;
 
-	set_ktext_off(archdata, attr_value(attr)->address);
+	set_ktext_off(ctx, attr_value(attr)->address);
 
 	parent_ops = archdata->phys_base_override.template.parent->ops;
 	return (parent_ops && parent_ops->post_set)
@@ -417,27 +248,12 @@ update_phys_base(kdump_ctx *ctx, struct attr_data *attr)
 		: kdump_ok;
 }
 
-static const addrxlat_paging_form_t x86_64_pf = {
-	.pte_format = addrxlat_pte_x86_64,
-	.levels = 5,
-	.bits = { 12, 9, 9, 9, 9 }
-};
-
 static kdump_status
 x86_64_init(kdump_ctx *ctx)
 {
 	struct x86_64_data *archdata;
-	addrxlat_def_t def;
-	addrxlat_status axres;
+	addrxlat_meth_t *ktext;
 	kdump_status ret;
-
-	def.kind = ADDRXLAT_PGT;
-	def.target_as = ADDRXLAT_MACHPHYSADDR;
-	def.param.pgt.root.as = ADDRXLAT_NOADDR;
-	def.param.pgt.pf = x86_64_pf;
-	axres = addrxlat_meth_set_def(ctx->shared->vtop_map.pgt, &def);
-	if (axres != addrxlat_ok)
-		return set_error_addrxlat(ctx, axres);
 
 	archdata = calloc(1, sizeof(struct x86_64_data));
 	if (!archdata)
@@ -445,22 +261,17 @@ x86_64_init(kdump_ctx *ctx)
 				 "Cannot allocate x86_64 private data");
 	ctx->shared->archdata = archdata;
 
-	archdata->ktext = addrxlat_meth_new();
-	if (!archdata->ktext) {
+	ktext = addrxlat_meth_new();
+	if (!ktext) {
 		ret = set_error(ctx, kdump_syserr,
 				"Cannot allocate kernel text mapping");
 		goto err_arch;
 	}
-	set_ktext_off(archdata, get_phys_base(ctx));
+	addrxlat_sys_set_meth(ctx->shared->xlat_linux,
+			      ADDRXLAT_SYS_METH_KTEXT, ktext);
 
-	ret = set_vtop_xlat(&ctx->shared->vtop_map,
-			    __START_KERNEL_map, VIRTADDR_MAX,
-			    archdata->ktext);
-	if (ret != kdump_ok) {
-		set_error(ctx, ret,
-			  "Cannot set up initial kernel mapping");
-		goto err_ktext;
-	}
+	if (isset_phys_base(ctx))
+		set_ktext_off(ctx, get_phys_base(ctx));
 
 	attr_add_override(gattr(ctx, GKI_phys_base),
 			  &archdata->phys_base_override);
@@ -468,254 +279,10 @@ x86_64_init(kdump_ctx *ctx)
 
 	return kdump_ok;
 
- err_ktext:
-	addrxlat_meth_decref(archdata->ktext);
-
  err_arch:
 	free(archdata);
 	ctx->shared->archdata = NULL;
 	return ret;
-}
-
-static kdump_status
-get_pml4(kdump_ctx *ctx)
-{
-	addrxlat_def_t def;
-	kdump_status ret;
-
-	rwlock_unlock(&ctx->shared->lock);
-	ret = get_symbol_val(ctx, "init_level4_pgt", &def.param.pgt.root.addr);
-	rwlock_wrlock(&ctx->shared->lock);
-	if (ret == kdump_ok) {
-		if (def.param.pgt.root.addr < __START_KERNEL_map)
-			return set_error(ctx, kdump_dataerr,
-					 "Wrong page directory address:"
-					 " 0x%"ADDRXLAT_PRIXADDR,
-					 def.param.pgt.root.addr);
-
-		def.param.pgt.root.as = ADDRXLAT_KPHYSADDR;
-		def.param.pgt.root.addr -=
-			__START_KERNEL_map - get_phys_base(ctx);
-	} else if (ret == kdump_nodata) {
-		struct attr_data *attr;
-		clear_error(ctx);
-		attr = lookup_attr(ctx->shared, "cpu.0.reg.cr3");
-		if (!attr || validate_attr(ctx, attr) != kdump_ok)
-			return set_error(ctx, kdump_nodata,
-					 "Cannot find top-level page table");
-		def.param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
-		def.param.pgt.root.addr = attr_value(attr)->number;
-	} else
-		return ret;
-
-	def.kind = ADDRXLAT_PGT;
-	def.target_as = ADDRXLAT_MACHPHYSADDR;
-	def.param.pgt.pf = x86_64_pf;
-	addrxlat_meth_set_def(ctx->shared->vtop_map.pgt, &def);
-	return kdump_ok;
-}
-
-static const struct layout_def*
-layout_by_version(unsigned version_code)
-{
-	unsigned i;
-
-	for (i = 0; i < ARRAY_SIZE(mm_layouts); ++i)
-		if (mm_layouts[i].ver > version_code)
-			break;
-	if (!i)
-		return NULL;
-	return &mm_layouts[i-1];
-}
-
-static const struct layout_def*
-layout_by_pgt(kdump_ctx *ctx)
-{
-	kdump_paddr_t paddr;
-	kdump_status ret;
-
-	/* Only pre-2.6.11 kernels had this direct mapping */
-	ret = vtop_pgt(ctx, 0x0000010000000000, &paddr);
-	if (ret == kdump_ok && paddr == 0)
-		return layout_by_version(KERNEL_VERSION(2, 6, 0));
-	if (ret != kdump_addrxlat)
-		return NULL;
-
-	/* Only kernels between 2.6.11 and 2.6.27 had this direct mapping */
-	ret = vtop_pgt(ctx, 0xffff810000000000, &paddr);
-	if (ret == kdump_ok && paddr == 0)
-		return layout_by_version(KERNEL_VERSION(2, 6, 11));
-	if (ret != kdump_addrxlat)
-		return NULL;
-
-	/* Only 2.6.31+ kernels map VMEMMAP at this address */
-	ret = vtop_pgt(ctx, 0xffffea0000000000, &paddr);
-	if (ret == kdump_ok)
-		return layout_by_version(KERNEL_VERSION(2, 6, 31));
-	if (ret != kdump_addrxlat)
-		return NULL;
-
-	/* Sanity check for 2.6.27+ direct mapping */
-	ret = vtop_pgt(ctx, 0xffff880000000000, &paddr);
-	if (ret == kdump_ok && paddr == 0)
-		return layout_by_version(KERNEL_VERSION(2, 6, 27));
-	if (ret != kdump_addrxlat)
-		return NULL;
-
-	return NULL;
-}
-
-static void
-remove_ktext_xlat(kdump_ctx *ctx, struct vtop_map *map)
-{
-	struct x86_64_data *archdata = ctx->shared->archdata;
-	addrxlat_range_t *rng;
-	for (rng = map->map->ranges;
-	     rng < &map->map->ranges[map->map->n]; ++rng)
-		if (rng->meth == archdata->ktext)
-			rng->meth = map->pgt;
-}
-
-static kdump_status
-x86_64_vtop_init(kdump_ctx *ctx)
-{
-	struct x86_64_data *archdata = ctx->shared->archdata;
-	const struct layout_def *layout = NULL;
-	unsigned i;
-	kdump_status ret;
-
-	ret = get_pml4(ctx);
-	if (ret == kdump_ok)
-		layout = layout_by_pgt(ctx);
-	else if (ret != kdump_nodata)
-		return ret;
-
-	if (!layout)
-		layout = layout_by_version(get_version_code(ctx));
-	if (!layout)
-		return set_error(ctx, kdump_nodata,
-				 "Cannot determine virtual memory layout");
-
-	if (!archdata->directmap)
-		archdata->directmap = addrxlat_meth_new();
-	if (!archdata->directmap)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate directmap");
-
-	flush_vtop_map(&ctx->shared->vtop_map);
-	ret = add_canonical_regions(ctx, &ctx->shared->vtop_map);
-	if (ret != kdump_ok)
-		return ret;
-
-	for (i = 0; i < layout->nregions; ++i) {
-		const struct region_def *def = &layout->regions[i];
-		addrxlat_def_t axdef;
-		addrxlat_meth_t *xlat = NULL;
-
-		switch (def->xlat) {
-		case PGT:
-			xlat = ctx->shared->vtop_map.pgt;
-			break;
-		case DIRECTMAP:
-			xlat = archdata->directmap;
-			axdef.kind = ADDRXLAT_LINEAR;
-			axdef.target_as = ADDRXLAT_KPHYSADDR;
-			axdef.param.linear.off = def->first;
-			addrxlat_meth_set_def(archdata->directmap, &axdef);
-			break;
-		case KTEXT:
-			xlat = archdata->ktext;
-			break;
-		}
-
-		ret = set_vtop_xlat(&ctx->shared->vtop_map,
-				    def->first, def->last, xlat);
-		if (ret != kdump_ok)
-			return set_error(ctx, ret,
-					 "Cannot set up mapping #%d", i);
-	}
-
-	if (!isset_phys_base(ctx)) {
-		kdump_paddr_t phys_base;
-		ret = vtop_pgt(ctx, __START_KERNEL_map + KERNEL_map_skip,
-			       &phys_base);
-		if (ret == kdump_nodata) {
-			clear_error(ctx);
-			remove_ktext_xlat(ctx, &ctx->shared->vtop_map);
-		} else if (ret == kdump_ok)
-			set_phys_base(ctx, phys_base - KERNEL_map_skip);
-		else
-			return set_error(ctx, ret,
-					 "Error getting phys_base");
-	}
-
-	return kdump_ok;
-}
-
-static kdump_status
-x86_64_vtop_init_xen(kdump_ctx *ctx)
-{
-	struct x86_64_data *archdata = ctx->shared->archdata;
-	addrxlat_addr_t pgtroot;
-	addrxlat_def_t def;
-	addrxlat_status axres;
-	kdump_status res;
-
-	def.kind = ADDRXLAT_PGT;
-	def.target_as = ADDRXLAT_MACHPHYSADDR;
-	def.param.pgt.root.as = ADDRXLAT_NOADDR;
-	def.param.pgt.pf = x86_64_pf;
-	axres = addrxlat_meth_set_def(ctx->shared->vtop_map_xen.pgt, &def);
-	if (axres != addrxlat_ok)
-		return set_error_addrxlat(ctx, axres);
-
-	res = add_canonical_regions(ctx, &ctx->shared->vtop_map_xen);
-	if (res != kdump_ok)
-		return res;
-
-	rwlock_unlock(&ctx->shared->lock);
-	res = get_symbol_val_xen(ctx, "pgd_l4", &pgtroot);
-	rwlock_wrlock(&ctx->shared->lock);
-	if (res != kdump_ok)
-		return res;
-
-	if (!archdata->xen_directmap)
-		archdata->xen_directmap = addrxlat_meth_new();
-	if (!archdata->xen_directmap)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate Xen directmap");
-
-	if (pgtroot >= XEN_DIRECTMAP_START) {
-		/* Xen versions before 3.2.0 */
-		def.kind = ADDRXLAT_LINEAR;
-		def.target_as = ADDRXLAT_MACHPHYSADDR;
-		def.param.linear.off = XEN_DIRECTMAP_START;
-		addrxlat_meth_set_def(archdata->xen_directmap, &def);
-		res = set_vtop_xlat(
-			&ctx->shared->vtop_map_xen,
-			XEN_DIRECTMAP_START, XEN_DIRECTMAP_END_OLD,
-			archdata->xen_directmap);
-	} else {
-		def.kind = ADDRXLAT_LINEAR;
-		def.target_as = ADDRXLAT_MACHPHYSADDR;
-		def.param.linear.off = pgtroot & ~((1ULL<<30) - 1);
-		addrxlat_meth_set_def(archdata->xen_directmap, &def);
-		res = set_vtop_xlat(
-			&ctx->shared->vtop_map_xen,
-			def.param.linear.off,
-			def.param.linear.off + XEN_VIRT_SIZE - 1,
-			archdata->xen_directmap);
-	}
-	if (res != kdump_ok)
-		return set_error(ctx, res,
-				 "Cannot set up initial kernel mapping");
-
-	def.kind = ADDRXLAT_PGT;
-	def.target_as = ADDRXLAT_MACHPHYSADDR;
-	def.param.pgt.root.as = ADDRXLAT_KVADDR;
-	def.param.pgt.root.addr = pgtroot;
-	addrxlat_meth_set_def(ctx->shared->vtop_map_xen.pgt, &def);
-	return kdump_ok;
 }
 
 static kdump_status
@@ -820,98 +387,14 @@ x86_64_cleanup(struct kdump_shared *shared)
 
 	attr_remove_override(sgattr(shared, GKI_phys_base),
 			     &archdata->phys_base_override);
-	if (archdata->directmap)
-		addrxlat_meth_decref(archdata->directmap);
-	if (archdata->ktext)
-		addrxlat_meth_decref(archdata->ktext);
-	if (archdata->xen_directmap)
-		addrxlat_meth_decref(archdata->xen_directmap);
 	free(archdata);
 	shared->archdata = NULL;
 }
 
-static kdump_status
-read_pfn(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_pfn_t *pval)
-{
-	uint64_t val;
-	size_t sz;
-	kdump_status res;
-
-	sz = sizeof val;
-	res = readp_locked(ctx, KDUMP_MACHPHYSADDR, maddr, &val, &sz);
-	if (res == kdump_ok)
-		*pval = dump64toh(ctx, val);
-	return res;
-}
-
-static kdump_status
-x86_64_pfn_to_mfn(kdump_ctx *ctx, kdump_pfn_t pfn, kdump_pfn_t *mfn)
-{
-	const struct attr_data *attr;
-	kdump_pfn_t mfn_tbl;
-	kdump_maddr_t maddr;
-	uint64_t idx, l2_idx, l3_idx;
-	kdump_status res;
-
-	attr = gattr(ctx, GKI_xen_p2m_mfn);
-	if (!attr_isset(attr))
-		return kdump_nodata;
-	mfn_tbl = attr_value(attr)->address;
-
-	idx = pfn;
-	l3_idx = idx % PTRS_PER_PAGE;
-	idx /= PTRS_PER_PAGE;
-	l2_idx = idx % PTRS_PER_PAGE;
-	idx /= PTRS_PER_PAGE;
-	if (idx >= PTRS_PER_PAGE)
-		return set_error(ctx, kdump_invalid, "Out-of-bounds PFN");
-
-	maddr = (mfn_tbl << get_page_shift(ctx)) + idx * sizeof(uint64_t);
-	res = read_pfn(ctx, maddr, &mfn_tbl);
-	if (res != kdump_ok)
-		return set_error(ctx, res,
-				 "Cannot read p2m L1 table at 0x%llx",
-				 (unsigned long long) maddr);
-
-	maddr = (mfn_tbl << get_page_shift(ctx)) + l2_idx * sizeof(uint64_t);
-	res = read_pfn(ctx, maddr, &mfn_tbl);
-	if (res != kdump_ok)
-		return set_error(ctx, res,
-				 "Cannot read p2m L2 table at 0x%llx",
-				 (unsigned long long) maddr);
-
-	maddr = (mfn_tbl << get_page_shift(ctx)) + l3_idx * sizeof(uint64_t);
-	res = read_pfn(ctx, maddr, mfn);
-	return set_error(ctx, res,
-			 "Cannot read p2m L3 table at 0x%llx",
-			 (unsigned long long) maddr);
-}
-
-static kdump_status
-x86_64_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
-{
-	kdump_vaddr_t addr;
-	uint64_t tmp;
-	size_t sz;
-	kdump_status ret;
-
-	addr = MACH2PHYS_VIRT_START + sizeof(uint64_t) * mfn;
-	sz = sizeof tmp;
-	ret = readp_locked(ctx, KDUMP_KVADDR, addr, &tmp, &sz);
-	if (ret == kdump_ok)
-		*pfn = tmp;
-
-	return ret;
-}
-
 const struct arch_ops x86_64_ops = {
 	.init = x86_64_init,
-	.vtop_init = x86_64_vtop_init,
-	.vtop_init_xen = x86_64_vtop_init_xen,
 	.process_prstatus = process_x86_64_prstatus,
 	.process_load = x86_64_process_load,
 	.process_xen_prstatus = process_x86_64_xen_prstatus,
-	.pfn_to_mfn = x86_64_pfn_to_mfn,
-	.mfn_to_pfn = x86_64_mfn_to_pfn,
 	.cleanup = x86_64_cleanup,
 };

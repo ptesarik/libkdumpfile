@@ -34,350 +34,156 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #define RGN_ALLOC_INC 32
 
 kdump_status
-set_vtop_xlat(struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
-	      addrxlat_meth_t *xlat)
+kdump_vtop_init(kdump_ctx *ctx)
 {
-	const addrxlat_range_t range = {
-		.endoff = last - first,
-		.meth = xlat,
-	};
-	addrxlat_map_t *newmap;
+	addrxlat_osdesc_t osdesc;
+	addrxlat_status axres;
+	char opts[32];
 
-	newmap = addrxlat_map_set(map->map, first, &range);
-	if (!newmap)
-		return kdump_syserr;
+	clear_error(ctx);
 
-	map->map = newmap;
+	osdesc.type = addrxlat_os_linux;
+	osdesc.ver = get_version_code(ctx);
+	osdesc.arch = get_arch_name(ctx);
+
+	opts[0] = '\0';
+	if (isset_phys_base(ctx))
+		sprintf(opts, "physbase=0x%"ADDRXLAT_PRIxADDR,
+			get_phys_base(ctx));
+	osdesc.opts = opts;
+
+	axres = addrxlat_sys_init(ctx->shared->xlat_linux,
+				  ctx->addrxlat, &osdesc);
+
+	if (axres != addrxlat_ok)
+		return set_error_addrxlat(ctx, axres);
 	return kdump_ok;
 }
 
-kdump_status
-set_vtop_xlat_pgt(struct vtop_map *map,
-		  kdump_vaddr_t first, kdump_vaddr_t last)
+static unsigned long
+xen_version_code(kdump_ctx *ctx)
 {
-	return set_vtop_xlat(map, first, last, map->pgt);
-}
+	struct attr_data *verdir, *ver;
+	unsigned long major, minor;
 
-void
-flush_vtop_map(struct vtop_map *map)
-{
-	if (map->map) {
-		addrxlat_map_clear(map->map);
-		free(map->map);
-		map->map = NULL;
-	}
-}
+	verdir = lookup_attr(ctx->shared, "xen.version");
+	if (!verdir || validate_attr(ctx, verdir) != kdump_ok)
+		return 0UL;
 
-kdump_status
-vtop_init(kdump_ctx *ctx, struct vtop_map *map, size_t init_ops_off)
-{
-	kdump_status (*arch_init)(kdump_ctx *);
-	kdump_status ret;
+	ver = lookup_dir_attr(ctx->shared, verdir, "major", 5);
+	if (!ver || validate_attr(ctx, ver) != kdump_ok)
+		return 0UL;
+	major = attr_value(ver)->number;
 
-	clear_error(ctx);
-	rwlock_wrlock(&ctx->shared->lock);
+	ver = lookup_dir_attr(ctx->shared, verdir, "minor", 5);
+	if (!ver || validate_attr(ctx, ver) != kdump_ok)
+		return 0UL;
+	minor = attr_value(ver)->number;
 
-	if (!ctx->shared->arch_ops) {
-		ret = set_error(ctx, kdump_unsupported,
-				"Unsupported architecture");
-		goto out;
-	}
-
-	arch_init = *(kdump_status (*const *)(kdump_ctx*))
-		((char*)ctx->shared->arch_ops + init_ops_off);
-	if (!arch_init) {
-		ret = set_error(ctx, kdump_unsupported,
-				"No vtop support for this architecture");
-		goto out;
-	}
-
-	ret = arch_init(ctx);
-	if (ret != kdump_ok)
-		goto out;
-
-	ret = kdump_ok;
-
- out:
-	rwlock_unlock(&ctx->shared->lock);
-	return ret;
-}
-
-kdump_status
-kdump_vtop_init(kdump_ctx *ctx)
-{
-	return vtop_init(ctx, &ctx->shared->vtop_map,
-			 offsetof(struct arch_ops, vtop_init));
+	return ADDRXLAT_VER_XEN(major, minor);
 }
 
 kdump_status
 kdump_vtop_init_xen(kdump_ctx *ctx)
 {
-	return vtop_init(ctx, &ctx->shared->vtop_map,
-			 offsetof(struct arch_ops, vtop_init_xen));
-}
-
-static inline kdump_status
-set_error_no_vtop(kdump_ctx *ctx)
-{
-	return set_error(ctx, kdump_unsupported,
-			 "VTOP translation not available");
-}
-
-/**  Virtual-to-physical translation using pagetables.
- * @param ctx         Dump file object.
- * @param[in] vaddr   Virtual address.
- * @param[out] paddr  Physical address.
- * @returns           Error status.
- *
- * Unlike @ref kdump_vtop, this function always uses page tables to
- * do the translation.
- */
-kdump_status
-vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
-{
-	addrxlat_step_t step;
+	addrxlat_osdesc_t osdesc;
 	addrxlat_status axres;
-	kdump_status res;
 
-	axres = addrxlat_launch_meth(&step, ctx->addrxlat,
-				     ctx->shared->vtop_map.pgt, vaddr);
+	clear_error(ctx);
+
+	osdesc.type = addrxlat_os_xen;
+	rwlock_rdlock(&ctx->shared->lock);
+	osdesc.ver = xen_version_code(ctx);
+	rwlock_unlock(&ctx->shared->lock);
+	osdesc.arch = get_arch_name(ctx);
+	osdesc.opts = NULL;
+	axres = addrxlat_sys_init(ctx->shared->xlat_xen,
+				  ctx->addrxlat, &osdesc);
+
 	if (axres != addrxlat_ok)
 		return set_error_addrxlat(ctx, axres);
-
-	axres = addrxlat_walk(&step);
-	if (axres != addrxlat_ok)
-		return set_error_addrxlat(ctx, axres);
-
-	res = mtop(ctx, step.base.addr, paddr);
-	if (res != kdump_ok)
-		return set_error(ctx, res,
-				 "Cannot translate machine address"
-				 " 0x%"ADDRXLAT_PRIxADDR, step.base.addr);
-
 	return kdump_ok;
 }
 
-/**  Xen Virtual-to-physical translation using pagetables.
- * @param ctx         Dump file object.
- * @param[in] vaddr   Xen virtual address.
- * @param[out] paddr  Physical address.
- * @returns           Error status.
- *
- * Same as @ref vtop_pgt, but for Xen hypervisor virtual addresses.
- */
-kdump_status
-vtop_pgt_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
+static kdump_status
+locked_xlat(kdump_ctx *ctx, addrxlat_sys_t **psys,
+	    addrxlat_addr_t src, addrxlat_addrspace_t as,
+	    addrxlat_addr_t *dst, addrxlat_addrspace_t goal)
 {
-	addrxlat_step_t step;
+	addrxlat_fulladdr_t faddr;
 	addrxlat_status axres;
 
-	axres = addrxlat_launch_meth(&step, ctx->addrxlat,
-				     ctx->shared->vtop_map_xen.pgt, vaddr);
+	if (!*psys)
+		return set_error(ctx, kdump_invalid,
+				 "VTOP translation not initialized");
+
+	faddr.addr = src;
+	faddr.as = as;
+	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, goal, *psys);
 	if (axres != addrxlat_ok)
 		return set_error_addrxlat(ctx, axres);
 
-	axres = addrxlat_walk(&step);
-	if (axres != addrxlat_ok)
-		return set_error_addrxlat(ctx, axres);
-
-	*paddr = step.base.addr;
+	*dst = faddr.addr;
 	return kdump_ok;
 }
 
-/**  Perform virtual -> physical address translation using a given mapping.
- * @param      ctx    Dump file object.
- * @param[in]  vaddr  Virtual address.
- * @param[out] paddr  On success, set to translated physical address.
- * @param      map    Translation mapping to be used.
- * @returns           Error status.
- */
-kdump_status
-map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
-	 const struct vtop_map *map)
+static kdump_status
+do_xlat(kdump_ctx *ctx, addrxlat_sys_t **psys,
+	addrxlat_addr_t src, addrxlat_addrspace_t as,
+	addrxlat_addr_t *dst, addrxlat_addrspace_t goal)
 {
-	addrxlat_step_t step;
-	addrxlat_status status;
+	kdump_status ret;
 
-	status = addrxlat_launch_map(&step, ctx->addrxlat, map->map, vaddr);
-	if (status != addrxlat_ok)
-		return set_error_addrxlat(ctx, status);
-
-	status = addrxlat_walk(&step);
-	if (status == addrxlat_ok)
-		*paddr = step.base.addr;
-	return set_error_addrxlat(ctx, status);
+	clear_error(ctx);
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = locked_xlat(ctx, psys, src, as, dst, goal);
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 kdump_status
 kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	kdump_status ret;
-
-	clear_error(ctx);
-	rwlock_rdlock(&ctx->shared->lock);
-
-	ret = vtop(ctx, vaddr, paddr);
-
-	rwlock_unlock(&ctx->shared->lock);
-	return ret;
-}
-
-/**  Internal version of @ref kdump_vtom
- * @param ctx         Dump file object.
- * @param[in] vaddr   Virtual address.
- * @param[out] maddr  Machine address.
- * @returns           Error status.
- *
- * Use this function internally if the shared lock is already held
- * (for reading or writing).
- */
-kdump_status
-vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
-{
-	addrxlat_step_t step;
-	addrxlat_status axres;
-
-	if (kphys_is_machphys(ctx))
-		return vtop(ctx, vaddr, maddr);
-
-	axres = addrxlat_launch_meth(&step, ctx->addrxlat,
-				     ctx->shared->vtop_map.pgt, vaddr);
-	if (axres != addrxlat_ok)
-		return set_error_addrxlat(ctx, axres);
-
-	axres = addrxlat_walk(&step);
-	if (axres != addrxlat_ok)
-		return set_error_addrxlat(ctx, axres);
-
-	*maddr = step.base.addr;
-	return kdump_ok;
+	return do_xlat(ctx, &ctx->shared->xlat_linux,
+		       vaddr, ADDRXLAT_KVADDR,
+		       paddr, ADDRXLAT_KPHYSADDR);
 }
 
 kdump_status
 kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 {
-	kdump_status ret;
-
-	clear_error(ctx);
-	rwlock_rdlock(&ctx->shared->lock);
-	ret = vtom(ctx, vaddr, maddr);
-	rwlock_unlock(&ctx->shared->lock);
-	return ret;
+	return do_xlat(ctx, &ctx->shared->xlat_linux,
+		       vaddr, ADDRXLAT_KVADDR,
+		       maddr, ADDRXLAT_MACHPHYSADDR);
 }
 
 kdump_status
 kdump_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	kdump_status ret;
-
-	clear_error(ctx);
-	rwlock_rdlock(&ctx->shared->lock);
-
-	if (get_xen_type(ctx) != kdump_xen_system) {
-		ret = set_error(ctx, kdump_nodata,
-				"Not a Xen system dump");
-		goto out;
-	}
-
-	ret = vtop_xen(ctx, vaddr, paddr);
-
- out:
-	rwlock_unlock(&ctx->shared->lock);
-	return ret;
+	return do_xlat(ctx, &ctx->shared->xlat_xen,
+		       vaddr, ADDRXLAT_KVADDR,
+		       paddr, ADDRXLAT_MACHPHYSADDR);
 }
 
 kdump_status
 kdump_ptom(kdump_ctx *ctx, kdump_paddr_t paddr, kdump_maddr_t *maddr)
 {
-	kdump_pfn_t mfn, pfn;
-	kdump_status ret;
-
-	clear_error(ctx);
-	rwlock_rdlock(&ctx->shared->lock);
-
-	if (kphys_is_machphys(ctx)) {
-		*maddr = paddr;
-		ret = kdump_ok;
-		goto out;
-	}
-
-	if (!ctx->shared->arch_ops || !ctx->shared->arch_ops->pfn_to_mfn) {
-		ret = set_error(ctx, kdump_unsupported, "Not implemented");
-		goto out;
-	}
-
-	pfn = paddr >> get_page_shift(ctx);
-	ret = ctx->shared->arch_ops->pfn_to_mfn(ctx, pfn, &mfn);
-	if (ret == kdump_ok)
-		*maddr = (mfn << get_page_shift(ctx)) |
-			(paddr & (get_page_size(ctx) - 1));
-
- out:
-	rwlock_unlock(&ctx->shared->lock);
-	return ret;
-}
-
-/**  Internal version of @ref kdump_mtop
- * @param      ctx    Dump file object.
- * @param[in]  maddr  Machine address.
- * @param[out] paddr  Physical address.
- * @returns           Error status.
- *
- * Use this function internally if the shared lock is already held
- * (for reading or writing).
- */
-kdump_status
-mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
-{
-	kdump_pfn_t mfn, pfn;
-	kdump_status ret;
-
-	switch (get_xen_type(ctx)) {
-	case kdump_xen_system:
-		if (!ctx->shared->arch_ops ||
-		    !ctx->shared->arch_ops->mfn_to_pfn)
-			return set_error(ctx, kdump_unsupported,
-					 "Not implemented");
-		mfn = maddr >> get_page_shift(ctx);
-		ret = ctx->shared->arch_ops->mfn_to_pfn(ctx, mfn, &pfn);
-		break;
-
-	case kdump_xen_domain:
-		if (get_xen_xlat(ctx) == kdump_xen_nonauto) {
-			if (!ctx->shared->ops->mfn_to_pfn)
-				return set_error(ctx, kdump_unsupported,
-						 "Not implemented");
-			mfn = maddr >> get_page_shift(ctx);
-			ret = ctx->shared->ops->mfn_to_pfn(ctx, mfn, &pfn);
-			break;
-		}
-		/* else fall-through */
-
-	default:
-		*paddr = maddr;
-		return kdump_ok;
-	}
-
-	if (ret == kdump_ok)
-		*paddr = (pfn << get_page_shift(ctx)) |
-			(maddr & (get_page_size(ctx) - 1));
-	return ret;
+	return do_xlat(ctx, &ctx->shared->xlat_linux,
+		       paddr, ADDRXLAT_KPHYSADDR,
+		       maddr, ADDRXLAT_MACHPHYSADDR);
 }
 
 kdump_status
 kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
 {
-	kdump_status ret;
-
-	clear_error(ctx);
-	rwlock_rdlock(&ctx->shared->lock);
-	ret = mtop(ctx, maddr, paddr);
-	rwlock_unlock(&ctx->shared->lock);
-	return ret;
+	return do_xlat(ctx, &ctx->shared->xlat_linux,
+		       maddr, ADDRXLAT_MACHPHYSADDR,
+		       paddr, ADDRXLAT_KPHYSADDR);
 }
 
 static addrxlat_status
@@ -396,22 +202,45 @@ addrxlat_read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 			 "page table entry", val);
 }
 
+static addrxlat_status
+addrxlat_sym(void *data, addrxlat_sym_t *sym)
+{
+	kdump_ctx *ctx = (kdump_ctx*) data;
+
+	switch (sym->type) {
+	case ADDRXLAT_SYM_VALUE:
+		return -get_symbol_val(ctx, sym->args[0], &sym->val);
+
+	default:
+		return addrxlat_notimpl;
+	}
+}
+
 kdump_status
 init_vtop_maps(kdump_ctx *ctx)
 {
 	struct kdump_shared *shared = ctx->shared;
+	addrxlat_sys_t *xlatsys;
 
-	shared->vtop_map.pgt = addrxlat_meth_new();
-	if (!shared->vtop_map.pgt)
+	xlatsys = addrxlat_sys_new();
+	if (!xlatsys)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot initialize %s page table translation",
+				 "Cannot allocate %s translation system",
 				 "Linux");
 
-	shared->vtop_map_xen.pgt = addrxlat_meth_new();
-	if (!shared->vtop_map_xen.pgt)
+	if (shared->xlat_linux)
+		addrxlat_sys_decref(shared->xlat_linux);
+	shared->xlat_linux = xlatsys;
+
+	xlatsys = addrxlat_sys_new();
+	if (!xlatsys)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot initialize %s page table translation",
+				 "Cannot allocate %s translation system",
 				 "Xen");
+
+	if (shared->xlat_xen)
+		addrxlat_sys_decref(shared->xlat_xen);
+	shared->xlat_xen = xlatsys;
 
 	return kdump_ok;
 }
@@ -426,7 +255,8 @@ init_addrxlat(kdump_ctx *ctx)
 		.read64 = addrxlat_read64,
 		.read_caps = (ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR) |
 			      ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR) |
-			      ADDRXLAT_CAPS(ADDRXLAT_KVADDR))
+			      ADDRXLAT_CAPS(ADDRXLAT_KVADDR)),
+		.sym = addrxlat_sym
 	};
 
 	addrxlat = addrxlat_ctx_new();

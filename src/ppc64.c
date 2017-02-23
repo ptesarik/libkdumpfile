@@ -37,8 +37,6 @@
 #include <stdlib.h>
 #include <elf.h>
 
-#define VIRTADDR_MAX		UINT64_MAX
-
 static const struct attr_template reg_names[] = {
 #define REG(name)	{ #name, NULL, kdump_number }
 	REG(gpr00),
@@ -94,141 +92,6 @@ static const struct attr_template reg_names[] = {
 	REG(rx9),
 };
 
-#define _64K (1<<16)
-
-struct ppc64_data {
-	/** Directmap translation. */
-	addrxlat_meth_t *directmap;
-};
-
-static const addrxlat_paging_form_t ppc64_pf_64k = {
-	.pte_format = addrxlat_pte_ppc64_linux_rpn30,
-	.levels = 4,
-	.bits = { 16, 12, 12, 4 }
-};
-
-static kdump_status
-ppc64_vtop_init(kdump_ctx *ctx)
-{
-	struct ppc64_data *archdata = ctx->shared->archdata;
-	addrxlat_def_t def;
-	kdump_vaddr_t addr, vmal;
-	struct attr_data *base, *attr;
-	char *endp;
-	unsigned long off_vm_struct_addr;
-	size_t sz = get_ptr_size(ctx);
-	size_t pagesize = get_page_size(ctx);
-	addrxlat_status axres;
-	kdump_status res;
-
-	if (pagesize != _64K)
-		return set_error(ctx, kdump_nodata,
-				 "PAGESIZE == %zd", pagesize);
-
-	rwlock_unlock(&ctx->shared->lock);
-	res = get_symbol_val(ctx, "swapper_pg_dir", &def.param.pgt.root.addr);
-	rwlock_wrlock(&ctx->shared->lock);
-	if (res != kdump_ok)
-		return set_error(ctx, res, "Cannot resolve %s",
-				 "swapper_pg_dir");
-	def.kind = ADDRXLAT_PGT;
-	def.target_as = ADDRXLAT_MACHPHYSADDR;
-	def.param.pgt.root.as = ADDRXLAT_KVADDR;
-	def.param.pgt.pf = ppc64_pf_64k;
-	addrxlat_meth_set_def(ctx->shared->vtop_map.pgt, &def);
-
-	rwlock_unlock(&ctx->shared->lock);
-	res = get_symbol_val(ctx, "_stext", &addr);
-	rwlock_wrlock(&ctx->shared->lock);
-	if (res != kdump_ok)
-		return set_error(ctx, res, "Cannot resolve %s",
-				 "_stext");
-	set_phys_base(ctx, addr);
-
-	flush_vtop_map(&ctx->shared->vtop_map);
-
-	archdata->directmap = addrxlat_meth_new();
-	if (!archdata->directmap) {
-		res = set_error(ctx, kdump_syserr,
-				"Cannot allocate directmap");
-		goto err_arch;
-	}
-	def.kind = ADDRXLAT_LINEAR;
-	def.target_as = ADDRXLAT_KPHYSADDR;
-	def.param.linear.off = addr;
-	axres = addrxlat_meth_set_def(archdata->directmap, &def);
-	if (axres != addrxlat_ok)
-		return set_error_addrxlat(ctx, axres);
-
-	res = set_vtop_xlat(&ctx->shared->vtop_map,
-			    addr, addr + 0x1000000000000000,
-			    archdata->directmap);
-	if (res != kdump_ok) {
-		set_error(ctx, res, "Cannot set up directmap");
-		goto err_directmap;
-	}
-
-	rwlock_unlock(&ctx->shared->lock);
-	res = get_symbol_val(ctx, "vmlist", &addr);
-	rwlock_wrlock(&ctx->shared->lock);
-	if (res != kdump_ok)
-		return set_error(ctx, res, "Cannot resolve %s",
-				 "vmlist");
-
-	base = gattr(ctx, GKI_linux_vmcoreinfo_lines);
-	attr = lookup_dir_attr(ctx->shared, base,
-			       "OFFSET(vm_struct.addr)",
-			       sizeof("OFFSET(vm_struct.addr)") - 1);
-	if (!attr || validate_attr(ctx, attr) != kdump_ok)
-		return set_error(ctx, kdump_nodata,
-				 "No OFFSET(vm_struct.addr) in VMCOREINFO");
-	off_vm_struct_addr = strtoul(attr_value(attr)->string, &endp, 10);
-	if (*endp)
-		return set_error(ctx, kdump_dataerr,
-				 "Invalid value of OFFSET(vm_struct.addr)");
-
-	res = readp_locked(ctx, KDUMP_KVADDR, addr, &addr, &sz);
-	if (res != kdump_ok)
-		return set_error(ctx, res, "Cannot read vmlist.addr");
-
-	addr = dump64toh(ctx, addr);
-	addr += off_vm_struct_addr;
-
-	res = readp_locked(ctx, KDUMP_KVADDR, addr, &vmal, &sz);
-	if (res != kdump_ok)
-		return set_error(ctx, res, "Cannot read vmlist.addr");
-
-	vmal = dump64toh(ctx, vmal);
-
-	res = set_vtop_xlat_pgt(&ctx->shared->vtop_map, vmal, VIRTADDR_MAX);
-	if (res != kdump_ok)
-		return set_error(ctx, res, "Cannot set up pagetable mapping");
-
-	return kdump_ok;
-
- err_directmap:
-	addrxlat_meth_decref(archdata->directmap);
-
- err_arch:
-	free(archdata);
-	ctx->shared->archdata = NULL;
-	return res;
-}
-
-static kdump_status
-ppc64_init(kdump_ctx *ctx)
-{
-	struct ppc64_data *archdata;
-
-	archdata = calloc(1, sizeof(struct ppc64_data));
-	if (!archdata)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate ppc64 private data");
-	ctx->shared->archdata = archdata;
-
-	return kdump_ok;
-}
-
 /** @cond TARGET_ABI */
 
 #define ELF_NGREG 49
@@ -283,20 +146,6 @@ process_ppc64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 	return kdump_ok;
 }
 
-static void
-ppc64_cleanup(struct kdump_shared *shared)
-{
-	struct ppc64_data *archdata = shared->archdata;
-
-	if (archdata->directmap)
-		addrxlat_meth_decref(archdata->directmap);
-	free(archdata);
-	shared->archdata = NULL;
-}
-
 const struct arch_ops ppc64_ops = {
-	.init = ppc64_init,
-	.vtop_init = ppc64_vtop_init,
 	.process_prstatus = process_ppc64_prstatus,
-	.cleanup = ppc64_cleanup,
 };

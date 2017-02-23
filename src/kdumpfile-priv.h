@@ -265,22 +265,6 @@ struct arch_ops {
 	 */
 	kdump_status (*init)(kdump_ctx *);
 
-	/** Initialise virtual-to-physical translation.
-	 * @param ctx  Dump file object.
-	 * @returns    Error status.
-	 *
-	 * This method is called with shared data locked for writing.
-	 */
-	kdump_status (*vtop_init)(kdump_ctx *ctx);
-
-	/* Initialise Xen virtual-to-physical translation.
-	 * @param ctx  Dump file object.
-	 * @returns    Error status.
-	 *
-	 * This method is called with shared data locked for writing.
-	 */
-	kdump_status (*vtop_init_xen)(kdump_ctx *ctx);
-
 	/* Process an NT_PRSTATUS note
 	 */
 	kdump_status (*process_prstatus)(kdump_ctx *, void *, size_t);
@@ -293,15 +277,6 @@ struct arch_ops {
 	/* Process a Xen .xen_prstatus section
 	 */
 	kdump_status (*process_xen_prstatus)(kdump_ctx *, void *, size_t);
-
-	/* Translate a physical frame number to a machine frame number */
-	kdump_status (*pfn_to_mfn)(kdump_ctx *, kdump_pfn_t, kdump_pfn_t *);
-
-	/* Translate a machine frame number to physical frame number
-	 *
-	 * This function should be used for Xen system dumps.
-	 */
-	kdump_status (*mfn_to_pfn)(kdump_ctx *, kdump_pfn_t, kdump_pfn_t *);
 
 	/* Clean up any arch-specific data
 	 */
@@ -521,13 +496,6 @@ struct attr_hash {
 	struct attr_data table[ATTR_HASH_SIZE];
 };
 
-/**  Map for virtual-to-physical translation
- */
-struct vtop_map {
-	addrxlat_meth_t *pgt;	/**< page table translation */
-	addrxlat_map_t *map;	/**< address translation map */
-};
-
 struct cache;
 
 /** Number of per-context data slots.
@@ -562,9 +530,9 @@ struct kdump_shared {
 	struct cache *cache;	/**< Page cache. */
 
 	/** Linux address translation. */
-	struct vtop_map vtop_map;
+	addrxlat_sys_t *xlat_linux;
 	/** Xen address translation. */
-	struct vtop_map vtop_map_xen;
+	addrxlat_sys_t *xlat_xen;
 
 	struct attr_hash *attr;	/**< Attribute hash table. */
 
@@ -815,47 +783,6 @@ INTERNAL_DECL(kdump_status, process_arch_notes,
 /* Virtual address space regions */
 INTERNAL_DECL(kdump_status, init_vtop_maps, (kdump_ctx *ctx));
 INTERNAL_DECL(addrxlat_ctx_t *, init_addrxlat, (kdump_ctx *ctx));
-INTERNAL_DECL(kdump_status, set_vtop_xlat,
-	      (struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
-	       addrxlat_meth_t *xlat));
-INTERNAL_DECL(kdump_status, set_vtop_xlat_pgt,
-	      (struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last));
-INTERNAL_DECL(void, flush_vtop_map, (struct vtop_map *map));
-INTERNAL_DECL(kdump_status, vtop_pgt,
-	      (kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr));
-INTERNAL_DECL(kdump_status, vtop_pgt_xen,
-	      (kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr));
-INTERNAL_DECL(kdump_status, map_vtop,
-	      (kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
-	       const struct vtop_map *map));
-INTERNAL_DECL(kdump_status, vtom,
-	      (kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr));
-INTERNAL_DECL(kdump_status, mtop,
-	      (kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr));
-
-/** Translate a Linux kernel virtual address to a physical address.
- * @param      ctx    Dump file object.
- * @param[in]  vaddr  Linux virtual address.
- * @param[out] paddr  On success, set to translated physical address.
- * @returns           Error status.
- */
-static inline kdump_status
-vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
-{
-	return map_vtop(ctx, vaddr, paddr, &ctx->shared->vtop_map);
-}
-
-/** Translate a Xen hypervisor virtual address to a physical address.
- * @param      ctx    Dump file object.
- * @param[in]  vaddr  Xen hypervisor virtual address.
- * @param[out] paddr  On success, set to translated physical address.
- * @returns           Error status.
- */
-static inline kdump_status
-vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
-{
-	return map_vtop(ctx, vaddr, paddr, &ctx->shared->vtop_map_xen);
-}
 
 /* Attribute handling */
 INTERNAL_DECL(extern const struct attr_template, dir_template, );

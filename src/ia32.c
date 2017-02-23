@@ -40,23 +40,6 @@
 
 #define ELF_NGREG 17
 
-/* Maximum virtual address (architecture limit) */
-#define VIRTADDR_MAX		UINT32_MAX
-
-#define __START_KERNEL_map	0xc0000000UL
-
-static const addrxlat_paging_form_t ia32_pf = {
-	.pte_format = addrxlat_pte_ia32,
-	.levels = 3,
-	.bits = { 12, 10, 10 }
-};
-
-static const addrxlat_paging_form_t ia32_pf_pae = {
-	.pte_format = addrxlat_pte_ia32_pae,
-	.levels = 4,
-	.bits = { 12, 9, 9, 4 }
-};
-
 /** @cond TARGET_ABI */
 
 struct elf_siginfo
@@ -111,58 +94,6 @@ static const struct attr_template reg_names[] = {
 static const struct attr_template tmpl_pid =
 	{ "pid", NULL, kdump_number };
 
-struct ia32_data {
-	/** Direcmtap translation */
-	addrxlat_meth_t *directmap;
-
-	int pae_state;		/* <0 .. no, >0 .. yes, 0 .. undetermined */
-};
-
-static kdump_status
-ia32_init(kdump_ctx *ctx)
-{
-	struct ia32_data *archdata;
-	addrxlat_def_t def;
-	kdump_status ret;
-
-	clear_attr(ctx, gattr(ctx, GKI_pteval_size));
-
-	archdata = calloc(1, sizeof(struct ia32_data));
-	if (!archdata)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate ia32 private data");
-	ctx->shared->archdata = archdata;
-
-	archdata->directmap = addrxlat_meth_new();
-	if (!archdata->directmap) {
-		ret = set_error(ctx, kdump_syserr,
-				"Cannot allocate directmap");
-		goto err_arch;
-	}
-	def.kind = ADDRXLAT_LINEAR;
-	def.target_as = ADDRXLAT_KPHYSADDR;
-	def.param.linear.off = __START_KERNEL_map;
-	addrxlat_meth_set_def(archdata->directmap, &def);
-
-	ret = set_vtop_xlat(&ctx->shared->vtop_map,
-			    __START_KERNEL_map, VIRTADDR_MAX,
-			    archdata->directmap);
-	if (ret != kdump_ok) {
-		set_error(ctx, ret, "Cannot set up directmap");
-		goto err_directmap;
-	}
-
-	return kdump_ok;
-
- err_directmap:
-	addrxlat_meth_decref(archdata->directmap);
-
- err_arch:
-	free(archdata);
-	ctx->shared->archdata = NULL;
-	return ret;
-}
-
 static kdump_status
 process_ia32_prstatus(kdump_ctx *ctx, void *data, size_t size)
 {
@@ -199,95 +130,6 @@ process_ia32_prstatus(kdump_ctx *ctx, void *data, size_t size)
 	return kdump_ok;
 }
 
-static kdump_status
-read_pgt(kdump_ctx *ctx)
-{
-	struct ia32_data *archdata = ctx->shared->archdata;
-	addrxlat_def_t def;
-	addrxlat_status axres;
-	kdump_status ret;
-
-	def.kind = ADDRXLAT_PGT;
-	def.target_as = ADDRXLAT_MACHPHYSADDR;
-
-	rwlock_unlock(&ctx->shared->lock);
-	ret = get_symbol_val(ctx, "swapper_pg_dir", &def.param.pgt.root.addr);
-	rwlock_wrlock(&ctx->shared->lock);
-	if (ret != kdump_ok)
-		return ret;
-
-	if (def.param.pgt.root.addr < __START_KERNEL_map)
-		return set_error(ctx, kdump_dataerr,
-				 "Wrong page directory address:"
-				 " 0x%"ADDRXLAT_PRIXADDR,
-				 def.param.pgt.root.addr);
-	def.param.pgt.root.addr -= __START_KERNEL_map;
-	def.param.pgt.root.as = ADDRXLAT_KPHYSADDR;
-
-	if (!archdata->pae_state) {
-		kdump_vaddr_t addr = def.param.pgt.root.addr +
-			3 * sizeof(uint64_t);
-		uint64_t entry;
-		size_t sz = sizeof entry;
-		ret = readp_locked(ctx, KDUMP_KPHYSADDR, addr, &entry, &sz);
-		if (ret != kdump_ok)
-			return ret;
-		archdata->pae_state = entry ? 1 : -1;
-	}
-
-	def.param.pgt.pf = (archdata->pae_state > 0 ? ia32_pf_pae : ia32_pf);
-	axres = addrxlat_meth_set_def(ctx->shared->vtop_map.pgt, &def);
-	if (axres != addrxlat_ok)
-		return set_error_addrxlat(ctx, axres);
-
-	return kdump_ok;
-}
-
-static kdump_status
-ia32_vtop_init(kdump_ctx *ctx)
-{
-	struct ia32_data *archdata = ctx->shared->archdata;
-	struct attr_data *base, *attr;
-	kdump_status ret;
-
-	base = gattr(ctx, GKI_linux_vmcoreinfo_lines);
-	attr = lookup_dir_attr(ctx->shared, base,
-			       "CONFIG_X86_PAE", sizeof("CONFIG_X86_PAE")-1);
-	if (attr && validate_attr(ctx, attr) == kdump_ok &&
-	    !strcmp(attr_value(attr)->string, "y"))
-		archdata->pae_state = 1;
-
-	ret = read_pgt(ctx);
-	if (ret != kdump_ok)
-		return ret;
-
-	set_attr_number(ctx, gattr(ctx, GKI_pteval_size), ATTR_DEFAULT,
-			archdata->pae_state > 0 ? 8 : 4);
-
-	flush_vtop_map(&ctx->shared->vtop_map);
-	ret = set_vtop_xlat_pgt(&ctx->shared->vtop_map,
-				0, VIRTADDR_MAX);
-	if (ret != kdump_ok)
-		return set_error(ctx, ret, "Cannot set up pagetable mapping");
-
-	return kdump_ok;
-}
-
-static void
-ia32_cleanup(struct kdump_shared *shared)
-{
-	struct ia32_data *archdata = shared->archdata;
-
-	if (archdata->directmap)
-		addrxlat_meth_decref(archdata->directmap);
-	free(archdata);
-	shared->archdata = NULL;
-}
-
 const struct arch_ops ia32_ops = {
-	.init = ia32_init,
-	.vtop_init = ia32_vtop_init,
 	.process_prstatus = process_ia32_prstatus,
-	.cleanup = ia32_cleanup,
 };
-

@@ -235,9 +235,6 @@ kdump_open_known(kdump_ctx *ctx)
 
 	setup_version_code(ctx);
 
-	flush_vtop_map(&ctx->shared->vtop_map);
-	flush_vtop_map(&ctx->shared->vtop_map_xen);
-
 	clear_error(ctx);
 	return kdump_ok;
 }
@@ -416,8 +413,10 @@ kdump_free(kdump_ctx *ctx)
 			cache_unref(shared->cache);
 		if (shared->xen_map)
 			free(shared->xen_map);
-		flush_vtop_map(&shared->vtop_map);
-		flush_vtop_map(&shared->vtop_map_xen);
+		if (shared->xlat_linux)
+			addrxlat_sys_decref(shared->xlat_linux);
+		if (shared->xlat_xen)
+			addrxlat_sys_decref(shared->xlat_xen);
 		cleanup_attr(shared);
 		rwlock_destroy(&shared->lock);
 		free(shared);
