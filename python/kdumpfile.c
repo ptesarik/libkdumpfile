@@ -2,6 +2,8 @@
 #include <kdumpfile.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #if PY_MAJOR_VERSION >= 3
 #define PyString_FromString(x) PyUnicode_FromString((x))
@@ -14,7 +16,7 @@
 typedef struct {
 	PyObject_HEAD
 	kdump_ctx *ctx;
-	PyObject *file;
+	int fd;
 	PyObject *cb_get_symbol;
 	PyObject *attr;
 } kdumpfile_object;
@@ -93,13 +95,11 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 	static char *keywords[] = {"file", NULL};
 	kdump_attr_ref_t rootref;
 	kdump_status status;
-	PyObject *fo = NULL;
-	PyObject *fd_temp_object;
+	const char *filepath;
 
-	int fd;
-
-	if (!PyArg_ParseTupleAndKeywords (args, kw, "O", keywords, &fo))
+	if (!PyArg_ParseTupleAndKeywords (args, kw, "s", keywords, &filepath))
 		    return NULL;
+
 
 	self = (kdumpfile_object*) type->tp_alloc (type, 0);
 	if (!self)
@@ -120,20 +120,18 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 		goto fail;
 	}
 
-	fd_temp_object = PyObject_CallMethod(fo, "fileno", NULL);
-	if (!fd_temp_object)
+	self->fd = open (filepath, O_RDWR);
+	if (self->fd < 0) {
+		PyErr_Format(SysErrException, "Couldn't open dump file");
 		goto fail;
-	fd = PyLong_AsLong(fd_temp_object);
-	Py_DECREF(fd_temp_object);
-	status = kdump_set_fd(self->ctx, fd);
+	}
+
+	status = kdump_set_fd(self->ctx, self->fd);
 	if (status != kdump_ok) {
 		PyErr_Format(exception_map(status),
 			     "Cannot open dump: %s", kdump_err_str(self->ctx));
 		goto fail;
 	}
-
-	self->file = fo;
-	Py_INCREF(fo);
 
 	kdump_set_priv(self->ctx, self);
 	self->cb_get_symbol = NULL;
@@ -156,8 +154,8 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 
 fail:
 	Py_XDECREF(self->attr);
-	Py_XDECREF(self->file);
 	Py_XDECREF(self);
+	close(self->fd);
 	return NULL;
 }
 
@@ -171,7 +169,7 @@ kdumpfile_dealloc(PyObject *_self)
 		self->ctx = NULL;
 	}
 
-	if (self->file) Py_XDECREF(self->file);
+	if (self->fd) close(self->fd);
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -451,7 +449,7 @@ static PyTypeObject kdumpfile_object_type =
 	0,                              /* tp_setattro*/ 
 	0,                              /* tp_as_buffer*/ 
 	Py_TPFLAGS_DEFAULT,             /* tp_flags*/ 
-	"kdumpfile",                    /* tp_doc */ 
+	"kdumpfile - native extension", /* tp_doc */
 	0,                              /* tp_traverse */ 
 	0,                              /* tp_clear */ 
 	0,                              /* tp_richcompare */ 
