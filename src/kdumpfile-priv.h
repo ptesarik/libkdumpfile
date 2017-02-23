@@ -613,7 +613,8 @@ struct _kdump_ctx {
 	void *data[PER_CTX_SLOTS];
 
 	char *err_str;		/**< Error string. */
-	char err_buf[ERRBUF];	/**< Buffer for the error string. */
+	char *err_dyn;		/**< Dynamically allocated error string. */
+	char err_buf[ERRBUF];	/**< Fallback buffer for the error string. */
 };
 
 /* Per-context data */

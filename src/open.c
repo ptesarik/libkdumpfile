@@ -422,5 +422,8 @@ kdump_free(kdump_ctx *ctx)
 		rwlock_destroy(&shared->lock);
 		free(shared);
 	}
+
+	if (ctx->err_dyn)
+		free(ctx->err_dyn);
 	free(ctx);
 }
