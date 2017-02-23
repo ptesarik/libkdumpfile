@@ -38,6 +38,29 @@
 
 #define RGN_ALLOC_INC 32
 
+static void
+set_pteval_size(kdump_ctx *ctx)
+{
+	addrxlat_meth_t *meth;
+	const addrxlat_def_t *def;
+
+	meth = addrxlat_sys_get_meth(ctx->shared->xlat_linux,
+				     ADDRXLAT_SYS_METH_PGT);
+	if (!meth)
+		return;
+
+	def = addrxlat_meth_get_def(meth);
+	if (def->kind == ADDRXLAT_PGT) {
+		int shift = addrxlat_pteval_shift(
+			def->param.pgt.pf.pte_format);
+		if (shift >= 0) {
+			struct attr_data *attr = gattr(ctx, GKI_pteval_size);
+			set_attr_number(ctx, attr, ATTR_DEFAULT, 1UL << shift);
+		}
+	}
+	addrxlat_meth_decref(meth);
+}
+
 kdump_status
 kdump_vtop_init(kdump_ctx *ctx)
 {
@@ -62,6 +85,9 @@ kdump_vtop_init(kdump_ctx *ctx)
 
 	if (axres != addrxlat_ok)
 		return set_error_addrxlat(ctx, axres);
+
+	if (!attr_isset(gattr(ctx, GKI_pteval_size)))
+		set_pteval_size(ctx);
 	return kdump_ok;
 }
 

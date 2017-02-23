@@ -130,6 +130,15 @@ process_ia32_prstatus(kdump_ctx *ctx, void *data, size_t size)
 	return kdump_ok;
 }
 
+static kdump_status
+ia32_init(kdump_ctx *ctx)
+{
+	clear_attr(ctx, gattr(ctx, GKI_pteval_size));
+
+	return kdump_ok;
+}
+
 const struct arch_ops ia32_ops = {
+	.init = ia32_init,
 	.process_prstatus = process_ia32_prstatus,
 };
