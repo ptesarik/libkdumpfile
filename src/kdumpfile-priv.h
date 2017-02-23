@@ -44,12 +44,44 @@
 
 #include "addrxlat/addrxlat.h"
 
+#define STRINGIFY(x)	#x
+#define XSTRINGIFY(x)	STRINGIFY(x)
+#define CONCATENATE(a, b)	a ## b
+#define XCONCATENATE(a, b)	CONCATENATE(a, b)
+
+/** Assembler name corresponding to a C identifier. */
+#define ASM_NAME(sym) \
+	XCONCATENATE(__USER_LABEL_PREFIX__, sym)
+
 /* Minimize chance of name clashes (in a static link) */
 #ifndef PIC
-#define INTERNAL_NAME(x)	_libkdump_priv_ ## x
+#define INTERNAL_DECL(type, sym, param)	\
+	type sym param			\
+	__asm__(XSTRINGIFY(ASM_NAME(_libkdump_priv_ ## sym)))
 #else
-#define INTERNAL_NAME(x)	x
+#define INTERNAL_DECL(type, sym, param)	\
+	type sym param
 #endif
+
+#ifndef PIC
+#define INTERNAL_ALIAS(x)		libkdump_ ## x
+#define _DECLARE_ALIAS(s, a)		\
+	extern typeof(s) (a) __asm__(XSTRINGIFY(ASM_NAME(s)))
+#define _DEFINE_ALIAS(s, a)		_DECLARE_ALIAS(s, a)
+#else
+#define INTERNAL_ALIAS(x)		internal_ ## x
+#define _DECLARE_ALIAS(s, a)		\
+	extern typeof(s) (a)
+#define _DEFINE_ALIAS(s, a)		\
+	extern typeof(s) (a)		\
+	__attribute__((alias(#s)))
+#endif
+
+/** Internal alias declaration. */
+#define DECLARE_ALIAS(x) _DECLARE_ALIAS(kdump_ ## x, internal_ ## x)
+
+/** Define an internal alias for a symbol. */
+#define DEFINE_ALIAS(x) _DEFINE_ALIAS(kdump_ ## x, internal_ ## x)
 
 /* Older glibc didn't have the byteorder macros */
 #ifndef be16toh
@@ -586,57 +618,28 @@ struct _kdump_ctx {
 
 /* Per-context data */
 
-#define per_ctx_alloc INTERNAL_NAME(per_ctx_alloc)
-int per_ctx_alloc(struct kdump_shared *shared, size_t sz);
-
-#define per_ctx_free INTERNAL_NAME(per_ctx_free)
-void per_ctx_free(struct kdump_shared *shared, int slot);
+INTERNAL_DECL(int, per_ctx_alloc, (struct kdump_shared *shared, size_t sz));
+INTERNAL_DECL(void, per_ctx_free, (struct kdump_shared *shared, int slot));
 
 /* File formats */
 
-#define elfdump_ops INTERNAL_NAME(elfdump_ops)
-extern const struct format_ops elfdump_ops;
-
-#define qemu_ops INTERNAL_NAME(qemu_ops)
-extern const struct format_ops qemu_ops;
-
-#define libvirt_ops INTERNAL_NAME(libvirt_ops)
-extern const struct format_ops libvirt_ops;
-
-#define xc_save_ops INTERNAL_NAME(xc_save_ops)
-extern const struct format_ops xc_save_ops;
-
-#define xc_core_ops INTERNAL_NAME(xc_core_ops)
-extern const struct format_ops xc_core_ops;
-
-#define diskdump_ops INTERNAL_NAME(diskdump_ops)
-extern const struct format_ops diskdump_ops;
-
-#define lkcd_ops INTERNAL_NAME(lkcd_ops)
-extern const struct format_ops lkcd_ops;
-
-#define mclxcd_ops INTERNAL_NAME(mclxcd_ops)
-extern const struct format_ops mclxcd_ops;
-
-#define s390dump_ops INTERNAL_NAME(s390dump_ops)
-extern const struct format_ops s390dump_ops;
-
-#define devmem_ops INTERNAL_NAME(devmem_ops)
-extern const struct format_ops devmem_ops;
+INTERNAL_DECL(extern const struct format_ops, elfdump_ops, );
+INTERNAL_DECL(extern const struct format_ops, qemu_ops, );
+INTERNAL_DECL(extern const struct format_ops, libvirt_ops, );
+INTERNAL_DECL(extern const struct format_ops, xc_save_ops, );
+INTERNAL_DECL(extern const struct format_ops, xc_core_ops, );
+INTERNAL_DECL(extern const struct format_ops, diskdump_ops, );
+INTERNAL_DECL(extern const struct format_ops, lkcd_ops, );
+INTERNAL_DECL(extern const struct format_ops, mclxcd_ops, );
+INTERNAL_DECL(extern const struct format_ops, s390dump_ops, );
+INTERNAL_DECL(extern const struct format_ops, devmem_ops, );
 
 /* Architectures */
 
-#define ia32_ops INTERNAL_NAME(ia32_ops)
-extern const struct arch_ops ia32_ops;
-
-#define s390x_ops INTERNAL_NAME(s390x_ops)
-extern const struct arch_ops s390x_ops;
-
-#define x86_64_ops INTERNAL_NAME(x86_64_ops)
-extern const struct arch_ops x86_64_ops;
-
-#define ppc64_ops INTERNAL_NAME(ppc64_ops)
-extern const struct arch_ops ppc64_ops;
+INTERNAL_DECL(extern const struct arch_ops, ia32_ops, );
+INTERNAL_DECL(extern const struct arch_ops, s390x_ops, );
+INTERNAL_DECL(extern const struct arch_ops, x86_64_ops, );
+INTERNAL_DECL(extern const struct arch_ops, ppc64_ops, );
 
 /* struct timeval has a different layout on 32-bit and 64-bit */
 struct timeval_32 {
@@ -650,86 +653,65 @@ struct timeval_64 {
 
 /* read */
 
-#define raw_read_page INTERNAL_NAME(raw_read_page)
-kdump_status raw_read_page(kdump_ctx *ctx, kdump_addrspace_t as,
-			   struct page_io *pio);
-
-#define read_string_locked INTERNAL_NAME(read_string_locked)
-kdump_status read_string_locked(kdump_ctx *ctx, kdump_addrspace_t as,
-				kdump_addr_t addr, char **pstr);
-
-#define readp_locked INTERNAL_NAME(readp_locked)
-kdump_status readp_locked(kdump_ctx *ctx, kdump_addrspace_t as,
-			  kdump_addr_t addr, void *buffer, size_t *plength);
-
-#define read_u32 INTERNAL_NAME(read_u32)
-kdump_status read_u32(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
-		      int precious, char *what, uint32_t *result);
-
-#define read_u64 INTERNAL_NAME(read_u64)
-kdump_status read_u64(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
-		      int precious, char *what, uint64_t *result);
+INTERNAL_DECL(kdump_status, raw_read_page,
+	      (kdump_ctx *ctx, kdump_addrspace_t as, struct page_io *pio));
+INTERNAL_DECL(kdump_status, read_string_locked,
+	      (kdump_ctx *ctx, kdump_addrspace_t as,
+	       kdump_addr_t addr, char **pstr));
+INTERNAL_DECL(kdump_status, readp_locked,
+	      (kdump_ctx *ctx, kdump_addrspace_t as,
+	       kdump_addr_t addr, void *buffer, size_t *plength));
+INTERNAL_DECL(kdump_status, read_u32,
+	      (kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+	       int precious, char *what, uint32_t *result));
+INTERNAL_DECL(kdump_status, read_u64,
+	      (kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+	       int precious, char *what, uint64_t *result));
 
 /* utils */
 
-#define set_error INTERNAL_NAME(set_error)
-kdump_status set_error(kdump_ctx *ctx, kdump_status ret,
-		       const char *msgfmt, ...)
+INTERNAL_DECL(kdump_status, set_error,
+	      (kdump_ctx *ctx, kdump_status ret, const char *msgfmt, ...))
 	__attribute__ ((format (printf, 3, 4)));
+INTERNAL_DECL(kdump_status, set_error_addrxlat,
+	      (kdump_ctx *ctx, addrxlat_status status));
 
-#define set_error_addrxlat INTERNAL_NAME(set_error_addrxlat)
-kdump_status set_error_addrxlat(kdump_ctx *ctx, addrxlat_status status);
+INTERNAL_DECL(void *, ctx_malloc,
+	      (size_t size, kdump_ctx *ctx, const char *desc));
 
-#define ctx_malloc INTERNAL_NAME(ctx_malloc)
-void *ctx_malloc(size_t size, kdump_ctx *ctx, const char *desc);
+INTERNAL_DECL(kdump_status, set_uts,
+	      (kdump_ctx *ctx, const struct new_utsname *src));
+INTERNAL_DECL(int, uts_looks_sane, (struct new_utsname *uts));
 
-#define set_uts INTERNAL_NAME(set_uts)
-kdump_status set_uts(kdump_ctx *ctx, const struct new_utsname *src);
+INTERNAL_DECL(int, uncompress_rle,
+	      (unsigned char *dst, size_t *pdstlen,
+	       const unsigned char *src, size_t srclen));
+INTERNAL_DECL(kdump_status, uncompress_page_gzip,
+	      (kdump_ctx *ctx, unsigned char *dst,
+	       unsigned char *src, size_t srclen));
 
-#define uts_looks_sane INTERNAL_NAME(uts_looks_sane)
-int uts_looks_sane(struct new_utsname *uts);
+INTERNAL_DECL(ssize_t, paged_read, (int fd, void *buffer, size_t size));
 
-#define uncompress_rle INTERNAL_NAME(uncompress_rle)
-int uncompress_rle(unsigned char *dst, size_t *pdstlen,
-		   const unsigned char *src, size_t srclen);
+INTERNAL_DECL(uint32_t, cksum32, (void *buffer, size_t size, uint32_t csum));
 
-#define uncompress_page_gzip INTERNAL_NAME(uncompress_page_gzip)
-kdump_status uncompress_page_gzip(kdump_ctx *ctx, unsigned char *dst,
-				  unsigned char *src, size_t srclen);
+INTERNAL_DECL(kdump_status, get_symbol_val,
+	      (kdump_ctx *ctx, const char *name, kdump_addr_t *val));
+INTERNAL_DECL(kdump_status, get_symbol_val_xen,
+	      (kdump_ctx *ctx, const char *name, kdump_addr_t *val));
 
-#define paged_read INTERNAL_NAME(paged_read)
-ssize_t paged_read(int fd, void *buffer, size_t size);
+INTERNAL_DECL(kdump_status, set_cpu_regs64,
+	      (kdump_ctx *ctx, unsigned cpu, const struct attr_template *tmpl,
+	       uint64_t *regs, unsigned num));
+INTERNAL_DECL(kdump_status, set_cpu_regs32,
+	      (kdump_ctx *ctx, unsigned cpu, const struct attr_template *tmpl,
+	       uint32_t *regs, unsigned num));
 
-#define cksum32 INTERNAL_NAME(cksum32)
-uint32_t cksum32(void *buffer, size_t size, uint32_t csum);
-
-#define get_symbol_val INTERNAL_NAME(get_symbol_val)
-kdump_status get_symbol_val(kdump_ctx *ctx, const char *name,
-			    kdump_addr_t *val);
-
-#define get_symbol_val_xen INTERNAL_NAME(get_symbol_val_xen)
-kdump_status get_symbol_val_xen(kdump_ctx *ctx, const char *name,
-				kdump_addr_t *val);
-
-#define set_cpu_regs64 INTERNAL_NAME(set_cpu_regs64)
-kdump_status set_cpu_regs64(kdump_ctx *ctx, unsigned cpu,
-			    const struct attr_template *tmpl,
-			    uint64_t *regs, unsigned num);
-
-#define set_cpu_regs32 INTERNAL_NAME(set_cpu_regs32)
-kdump_status set_cpu_regs32(kdump_ctx *ctx, unsigned cpu,
-			    const struct attr_template *tmpl,
-			    uint32_t *regs, unsigned num);
-
-#define set_file_description INTERNAL_NAME(set_file_description)
-kdump_status set_file_description(kdump_ctx *ctx, const char *name);
+INTERNAL_DECL(kdump_status, set_file_description,
+	      (kdump_ctx *ctx, const char *name));
 
 /* hashing */
-#define string_hash INTERNAL_NAME(string_hash)
-unsigned long string_hash(const char *s);
-
-#define mem_hash INTERNAL_NAME(mem_hash)
-unsigned long mem_hash(const char *s, size_t len);
+INTERNAL_DECL(unsigned long, string_hash, (const char *s));
+INTERNAL_DECL(unsigned long, mem_hash, (const char *s, size_t len));
 
 /**  Partial hash.
  * This structure is used to store the state of the hashing algorithm,
@@ -756,8 +738,8 @@ phash_init(struct phash *hash)
 	hash->idx = 0;
 }
 
-#define phash_update INTERNAL_NAME(phash_update)
-void phash_update(struct phash *ph, const char *s, size_t len);
+INTERNAL_DECL(void, phash_update,
+	      (struct phash *ph, const char *s, size_t len));
 
 #if SIZEOF_LONG == 8
 # define belongtoh(x)	be64toh(x)
@@ -822,52 +804,33 @@ fold_hash(unsigned long hash, unsigned bits)
 
 /* ELF notes */
 
-#define process_notes INTERNAL_NAME(process_notes)
-kdump_status process_notes(kdump_ctx *ctx, void *data, size_t size);
-
-#define process_noarch_notes INTERNAL_NAME(process_noarch_notes)
-kdump_status process_noarch_notes(kdump_ctx *ctx, void *data, size_t size);
-
-#define process_arch_notes INTERNAL_NAME(process_arch_notes)
-kdump_status process_arch_notes(kdump_ctx *ctx, void *data, size_t size);
+INTERNAL_DECL(kdump_status, process_notes,
+	      (kdump_ctx *ctx, void *data, size_t size));
+INTERNAL_DECL(kdump_status, process_noarch_notes,
+	      (kdump_ctx *ctx, void *data, size_t size));
+INTERNAL_DECL(kdump_status, process_arch_notes,
+	      (kdump_ctx *ctx, void *data, size_t size));
 
 /* Virtual address space regions */
-
-#define init_vtop_maps INTERNAL_NAME(init_vtop_maps)
-kdump_status init_vtop_maps(kdump_ctx *ctx);
-
-#define init_addrxlat INTERNAL_NAME(init_addrxlat)
-addrxlat_ctx_t *init_addrxlat(kdump_ctx *ctx);
-
-#define set_vtop_xlat INTERNAL_NAME(set_vtop_xlat)
-kdump_status set_vtop_xlat(struct vtop_map *map,
-			   kdump_vaddr_t first, kdump_vaddr_t last,
-			   addrxlat_meth_t *xlat);
-
-#define set_vtop_pgt INTERNAL_NAME(set_vtop_pgt)
-kdump_status set_vtop_xlat_pgt(
-	struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last);
-
-#define flush_vtop_map INTERNAL_NAME(flush_vtop_map)
-void flush_vtop_map(struct vtop_map *map);
-
-#define vtop_pgt INTERNAL_NAME(vtop_pgt)
-kdump_status vtop_pgt(kdump_ctx *ctx, kdump_vaddr_t vaddr,
-		      kdump_paddr_t *paddr);
-
-#define vtop_pgt_xen INTERNAL_NAME(vtop_pgt_xen)
-kdump_status vtop_pgt_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr,
-			  kdump_paddr_t *paddr);
-
-#define map_vtop INTERNAL_NAME(map_vtop)
-kdump_status map_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
-		      kdump_paddr_t *paddr, const struct vtop_map *map);
-
-#define vtom INTERNAL_NAME(vtom)
-kdump_status vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr);
-
-#define mtop INTERNAL_NAME(mtop)
-kdump_status mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr);
+INTERNAL_DECL(kdump_status, init_vtop_maps, (kdump_ctx *ctx));
+INTERNAL_DECL(addrxlat_ctx_t *, init_addrxlat, (kdump_ctx *ctx));
+INTERNAL_DECL(kdump_status, set_vtop_xlat,
+	      (struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last,
+	       addrxlat_meth_t *xlat));
+INTERNAL_DECL(kdump_status, set_vtop_xlat_pgt,
+	      (struct vtop_map *map, kdump_vaddr_t first, kdump_vaddr_t last));
+INTERNAL_DECL(void, flush_vtop_map, (struct vtop_map *map));
+INTERNAL_DECL(kdump_status, vtop_pgt,
+	      (kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr));
+INTERNAL_DECL(kdump_status, vtop_pgt_xen,
+	      (kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr));
+INTERNAL_DECL(kdump_status, map_vtop,
+	      (kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr,
+	       const struct vtop_map *map));
+INTERNAL_DECL(kdump_status, vtom,
+	      (kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr));
+INTERNAL_DECL(kdump_status, mtop,
+	      (kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr));
 
 /** Translate a Linux kernel virtual address to a physical address.
  * @param      ctx    Dump file object.
@@ -894,33 +857,20 @@ vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 }
 
 /* Attribute handling */
-
-#define dir_template INTERNAL_NAME(dir_template)
-extern const struct attr_template dir_template;
-
-#define alloc_attr_template INTERNAL_NAME(alloc_attr_template)
-struct attr_template *alloc_attr_template(const struct attr_template *tmpl,
-					  const char *key, size_t keylen);
-
-#define new_attr INTERNAL_NAME(new_attr)
-struct attr_data *new_attr(struct kdump_shared *shared,
-			   struct attr_data *parent,
-			   const struct attr_template *tmpl);
-
-#define dealloc_attr INTERNAL_NAME(dealloc_attr)
-void dealloc_attr(struct attr_data *attr);
-
-#define init_attrs INTERNAL_NAME(init_attrs)
-kdump_status init_attrs(kdump_ctx *ctx);
-
-#define lookup_attr INTERNAL_NAME(lookup_attr)
-struct attr_data *lookup_attr(const struct kdump_shared *shared,
-			      const char *key);
-
-#define lookup_dir_attr INTERNAL_NAME(lookup_dir_attr)
-struct attr_data *lookup_dir_attr(const struct kdump_shared *shared,
-				  const struct attr_data *dir,
-				  const char *key, size_t keylen);
+INTERNAL_DECL(extern const struct attr_template, dir_template, );
+INTERNAL_DECL(struct attr_template *, alloc_attr_template,
+	      (const struct attr_template *tmpl,
+	       const char *key, size_t keylen));
+INTERNAL_DECL(struct attr_data *, new_attr,
+	      (struct kdump_shared *shared, struct attr_data *parent,
+	       const struct attr_template *tmpl));
+INTERNAL_DECL(void, dealloc_attr, (struct attr_data *attr));
+INTERNAL_DECL(kdump_status, init_attrs, (kdump_ctx *ctx));
+INTERNAL_DECL(struct attr_data *, lookup_attr,
+	      (const struct kdump_shared *shared, const char *key));
+INTERNAL_DECL(struct attr_data *, lookup_dir_attr,
+	      (const struct kdump_shared *shared, const struct attr_data *dir,
+	       const char *key, size_t keylen));
 
 /**  Attribute data by shared data and global key index.
  * @param shared  Shared data of a dump file object.
@@ -960,48 +910,34 @@ attr_value(const struct attr_data *attr)
 	return attr->flags.indirect ? attr->pval : &attr->val;
 }
 
-#define validate_attr INTERNAL_NAME(validate_attr)
-kdump_status validate_attr(kdump_ctx *ctx, struct attr_data *attr);
-
-#define set_attr INTERNAL_NAME(set_attr)
-kdump_status set_attr(kdump_ctx *ctx, struct attr_data *attr,
-		      struct attr_flags flags, kdump_attr_value_t *pval);
-
-#define set_attr_number INTERNAL_NAME(set_attr_number)
-kdump_status set_attr_number(kdump_ctx *ctx, struct attr_data *attr,
-			     struct attr_flags flags, kdump_num_t num);
-
-#define set_attr_address INTERNAL_NAME(set_attr_address)
-kdump_status set_attr_address(kdump_ctx *ctx, struct attr_data *key,
-			      struct attr_flags flags, kdump_addr_t addr);
-
-#define set_attr_string INTERNAL_NAME(set_attr_string)
-kdump_status set_attr_string(kdump_ctx *ctx, struct attr_data *attr,
-			     struct attr_flags flags, const char *str);
-
-#define set_attr_sized_string INTERNAL_NAME(set_attr_sized_string)
-kdump_status set_attr_sized_string(kdump_ctx *ctx, struct attr_data *attr,
-				   struct attr_flags flags,
-				   const char *str, size_t len);
-
-#define set_attr_static_string INTERNAL_NAME(set_attr_static_string)
-kdump_status set_attr_static_string(kdump_ctx *ctx, struct attr_data *attr,
-				    struct attr_flags flags, const char *str);
-
-#define clear_attr INTERNAL_NAME(clear_attr)
-void clear_attr(kdump_ctx *ctx, struct attr_data *attr);
-
-#define clear_volatile_attrs INTERNAL_NAME(clear_volatile_attrs)
-void clear_volatile_attrs(kdump_ctx *ctx);
-
-#define cleanup_attr INTERNAL_NAME(cleanup_attr)
-void cleanup_attr(struct kdump_shared *shared);
-
-#define create_attr_path INTERNAL_NAME(create_attr_path)
-struct attr_data *create_attr_path(struct kdump_shared *shared,
-				   struct attr_data *dir,
-				   const char *path, size_t pathlen,
-				   const struct attr_template *atmpl);
+INTERNAL_DECL(kdump_status, validate_attr,
+	      (kdump_ctx *ctx, struct attr_data *attr));
+INTERNAL_DECL(kdump_status, set_attr,
+	      (kdump_ctx *ctx, struct attr_data *attr,
+	       struct attr_flags flags, kdump_attr_value_t *pval));
+INTERNAL_DECL(kdump_status, set_attr_number,
+	      (kdump_ctx *ctx, struct attr_data *attr,
+	       struct attr_flags flags, kdump_num_t num));
+INTERNAL_DECL(kdump_status, set_attr_address,
+	      (kdump_ctx *ctx, struct attr_data *key,
+	       struct attr_flags flags, kdump_addr_t addr));
+INTERNAL_DECL(kdump_status, set_attr_string,
+	      (kdump_ctx *ctx, struct attr_data *attr,
+	       struct attr_flags flags, const char *str));
+INTERNAL_DECL(kdump_status, set_attr_sized_string,
+	      (kdump_ctx *ctx, struct attr_data *attr,
+	       struct attr_flags flags,
+	       const char *str, size_t len));
+INTERNAL_DECL(kdump_status, set_attr_static_string,
+	      (kdump_ctx *ctx, struct attr_data *attr,
+	       struct attr_flags flags, const char *str));
+INTERNAL_DECL(void, clear_attr, (kdump_ctx *ctx, struct attr_data *attr));
+INTERNAL_DECL(void, clear_volatile_attrs, (kdump_ctx *ctx));
+INTERNAL_DECL(void, cleanup_attr, (struct kdump_shared *shared));
+INTERNAL_DECL(struct attr_data *, create_attr_path,
+	      (struct kdump_shared *shared,
+	       struct attr_data *dir, const char *path, size_t pathlen,
+	       const struct attr_template *atmpl));
 
 /* Accessor functions for static attributes */
 
@@ -1039,26 +975,13 @@ struct attr_data *create_attr_path(struct kdump_shared *shared,
 #undef ATTR
 
 /* Attribute ops */
-#define file_fd_ops INTERNAL_NAME(file_fd_ops)
-extern const struct attr_ops file_fd_ops;
-
-#define page_size_ops INTERNAL_NAME(page_size_ops)
-extern const struct attr_ops page_size_ops;
-
-#define page_shift_ops INTERNAL_NAME(page_shift_ops)
-extern const struct attr_ops page_shift_ops;
-
-#define cache_size_ops INTERNAL_NAME(cache_size_ops)
-extern const struct attr_ops cache_size_ops;
-
-#define arch_name_ops INTERNAL_NAME(arch_name_ops)
-extern const struct attr_ops arch_name_ops;
-
-#define uts_machine_ops INTERNAL_NAME(uts_machine_ops)
-extern const struct attr_ops uts_machine_ops;
-
-#define vmcoreinfo_raw_ops INTERNAL_NAME(vmcoreinfo_raw_ops)
-extern const struct attr_ops vmcoreinfo_raw_ops;
+INTERNAL_DECL(extern const struct attr_ops, file_fd_ops, );
+INTERNAL_DECL(extern const struct attr_ops, page_size_ops, );
+INTERNAL_DECL(extern const struct attr_ops, page_shift_ops, );
+INTERNAL_DECL(extern const struct attr_ops, cache_size_ops, );
+INTERNAL_DECL(extern const struct attr_ops, arch_name_ops, );
+INTERNAL_DECL(extern const struct attr_ops, uts_machine_ops, );
+INTERNAL_DECL(extern const struct attr_ops, vmcoreinfo_raw_ops, );
 
 /**  Attribute template override.
  *
@@ -1071,13 +994,10 @@ struct attr_override {
 	struct attr_ops ops;	       /**< Modified attribute ops. */
 };
 
-#define attr_add_override INTERNAL_NAME(attr_add_override)
-void attr_add_override(struct attr_data *attr,
-		       struct attr_override *override);
-
-#define attr_remove_override INTERNAL_NAME(attr_remove_override)
-void attr_remove_override(struct attr_data *attr,
-			  struct attr_override *override);
+INTERNAL_DECL(void, attr_add_override,
+	      (struct attr_data *attr, struct attr_override *override));
+INTERNAL_DECL(void, attr_remove_override,
+	      (struct attr_data *attr, struct attr_override *override));
 
 /* Xen */
 
@@ -1137,45 +1057,28 @@ struct cache_entry {
 	void *data;		/**< Pointer to page data. */
 };
 
-#define get_cache_size INTERNAL_NAME(get_cache_size)
-unsigned get_cache_size(kdump_ctx *ctx);
-
-#define cache_alloc INTERNAL_NAME(cache_alloc)
-struct cache *cache_alloc(unsigned n, size_t size);
-
-#define cache_ref INTERNAL_NAME(cache_ref)
-struct cache *cache_ref(struct cache *);
-
-#define cache_unref INTERNAL_NAME(cache_unref)
-void cache_unref(struct cache *);
-
-#define cache_flush INTERNAL_NAME(cache_flush)
-void cache_flush(struct cache *);
-
-#define cache_get_entry INTERNAL_NAME(cache_get_entry)
-struct cache_entry *cache_get_entry(struct cache *, kdump_pfn_t);
-
-#define cache_put_entry INTERNAL_NAME(cache_put_entry)
-void cache_put_entry(struct cache *cache, struct cache_entry *entry);
-
-#define cache_insert INTERNAL_NAME(cache_insert)
-void cache_insert(struct cache *, struct cache_entry *);
-
-#define cache_discard INTERNAL_NAME(cache_discard)
-void cache_discard(struct cache *, struct cache_entry *);
-
-#define cache_make_precious INTERNAL_NAME(cache_make_precious)
-void cache_make_precious(struct cache *cache, struct cache_entry *entry);
+INTERNAL_DECL(unsigned, get_cache_size, (kdump_ctx *ctx));
+INTERNAL_DECL(struct cache *, cache_alloc, (unsigned n, size_t size));
+INTERNAL_DECL(struct cache *, cache_ref, (struct cache *));
+INTERNAL_DECL(void, cache_unref, (struct cache *));
+INTERNAL_DECL(void, cache_flush, (struct cache *));
+INTERNAL_DECL(struct cache_entry *, cache_get_entry,
+	      (struct cache *, kdump_pfn_t));
+INTERNAL_DECL(void, cache_put_entry,
+	      (struct cache *cache, struct cache_entry *entry));
+INTERNAL_DECL(void, cache_insert, (struct cache *, struct cache_entry *));
+INTERNAL_DECL(void, cache_discard, (struct cache *, struct cache_entry *));
+INTERNAL_DECL(void, cache_make_precious,
+	      (struct cache *cache, struct cache_entry *entry));
 
 typedef kdump_status read_cache_fn(
 	kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *entry);
 
-#define def_read_cache INTERNAL_NAME(def_read_cache)
-kdump_status def_read_cache(kdump_ctx *ctx, struct page_io *pio,
-			    read_cache_fn *fn, kdump_pfn_t idx);
-
-#define cache_unref_page INTERNAL_NAME(cache_unref_page)
-void cache_unref_page(kdump_ctx *ctx, struct page_io *pio);
+INTERNAL_DECL(kdump_status, def_read_cache,
+	      (kdump_ctx *ctx, struct page_io *pio,
+	       read_cache_fn *fn, kdump_pfn_t idx));
+INTERNAL_DECL(void, cache_unref_page,
+	      (kdump_ctx *ctx, struct page_io *pio));
 
 static inline
 void unref_page(kdump_ctx *ctx, struct page_io *pio)
@@ -1183,8 +1086,7 @@ void unref_page(kdump_ctx *ctx, struct page_io *pio)
 	ctx->shared->ops->unref_page(ctx, pio);
 }
 
-#define def_realloc_caches INTERNAL_NAME(def_realloc_caches)
-kdump_status def_realloc_caches(kdump_ctx *ctx);
+INTERNAL_DECL(kdump_status, def_realloc_caches, (kdump_ctx *ctx));
 
 /**  Check if a cache entry is valid.
  *
