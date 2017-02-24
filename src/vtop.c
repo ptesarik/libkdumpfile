@@ -66,7 +66,8 @@ kdump_vtop_init(kdump_ctx *ctx)
 {
 	addrxlat_osdesc_t osdesc;
 	addrxlat_status axres;
-	char opts[32];
+	struct attr_data *attr;
+	char opts[80];
 
 	clear_error(ctx);
 
@@ -78,6 +79,17 @@ kdump_vtop_init(kdump_ctx *ctx)
 	if (isset_phys_base(ctx))
 		sprintf(opts, "physbase=0x%"ADDRXLAT_PRIxADDR,
 			get_phys_base(ctx));
+
+	if ((isset_xen_xlat(ctx) && get_xen_xlat(ctx) != kdump_xen_auto) ||
+	    (isset_xen_type(ctx) && get_xen_type(ctx) == kdump_xen_system))
+		strcat(opts, " xen_xlat=1");
+
+	attr = gattr(ctx, GKI_xen_p2m_mfn);
+	if (attr_isset(attr) && validate_attr(ctx, attr) == kdump_ok)
+		sprintf(opts + strlen(opts),
+			" xen_p2m_mfn=0x%"ADDRXLAT_PRIxADDR,
+			attr_value(attr)->number);
+
 	osdesc.opts = opts;
 
 	axres = addrxlat_sys_init(ctx->shared->xlat_linux,
