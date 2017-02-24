@@ -218,6 +218,7 @@ kdump_open_known(kdump_ctx *ctx)
 
 	rwlock_unlock(&ctx->shared->lock);
 	kdump_vtop_init(ctx);
+	clear_error(ctx);
 	rwlock_rdlock(&ctx->shared->lock);
 
 	if (ctx->shared->arch_ops && ctx->shared->arch_ops->late_init &&

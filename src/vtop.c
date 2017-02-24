@@ -71,6 +71,9 @@ kdump_vtop_init(kdump_ctx *ctx)
 
 	clear_error(ctx);
 
+	if (!isset_arch_name(ctx))
+		return set_error(ctx, kdump_nodata, "Unknown architecture");
+
 	osdesc.type = addrxlat_os_linux;
 	osdesc.ver = get_version_code(ctx);
 	osdesc.arch = get_arch_name(ctx);
