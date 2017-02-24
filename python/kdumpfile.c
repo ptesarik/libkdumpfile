@@ -1027,7 +1027,7 @@ attr_dir_repr(PyObject *_self)
 	kdump_ctx *ctx = self->kdumpfile->ctx;
 	kdump_attr_iter_t iter;
 	kdump_status status;
-	PyObject *s, *temp;
+	PyObject *s, *temp, *temp2;
 	PyObject *colon = NULL, *pieces = NULL;
 	PyObject *result = NULL;
 	int res;
@@ -1062,8 +1062,10 @@ attr_dir_repr(PyObject *_self)
 			goto out;
 		}
 		PyString_Concat(&s, colon);
-		PyString_ConcatAndDel(&s, PyObject_Repr(temp));
+		temp2 = PyObject_Repr(temp);
+		PyString_Concat(&s, temp2);
 		Py_DECREF(temp);
+		Py_DECREF(temp2);
 		if (!s)
 			goto out;
 
@@ -1083,7 +1085,7 @@ attr_dir_repr(PyObject *_self)
 	if (!s)
 		goto out;
 	temp = PyList_GET_ITEM(pieces, 0);
-	PyString_ConcatAndDel(&s, temp);
+	PyString_Concat(&s, temp);
 	PyList_SET_ITEM(pieces, 0, s);
 	if (!s)
 		goto out;
@@ -1092,7 +1094,7 @@ attr_dir_repr(PyObject *_self)
 	if (!s)
 		goto out;
 	temp = PyList_GET_ITEM(pieces, PyList_GET_SIZE(pieces) - 1);
-	PyString_ConcatAndDel(&temp, s);
+	PyString_Concat(&temp, s);
 	PyList_SET_ITEM(pieces, PyList_GET_SIZE(pieces) - 1, temp);
 	if (!temp)
 		goto out;
