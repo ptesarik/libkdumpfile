@@ -224,20 +224,46 @@ kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
 		       paddr, ADDRXLAT_KPHYSADDR);
 }
 
+/** Translate kdump status to addrxlat status.
+ * @param ctx     Dump file object.
+ * @param status  libkdumpfile status.
+ */
+static addrxlat_status
+kdump2addrxlat(kdump_ctx *ctx, kdump_status status)
+{
+	addrxlat_status ret;
+
+	if (status == kdump_ok)
+		return addrxlat_ok;
+
+	if (status == kdump_nodata)
+		ret = addrxlat_nodata;
+	else
+		ret = -status;
+
+	addrxlat_ctx_err(ctx->addrxlat, ret, "%s", ctx->err_str);
+	clear_error(ctx);
+	return ret;
+}
+
 static addrxlat_status
 addrxlat_read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 {
 	kdump_ctx *ctx = (kdump_ctx*) data;
-	return -read_u32(ctx, addr->as, addr->addr, 0,
-			 "page table entry", val);
+	kdump_status status;
+
+	status = read_u32(ctx, addr->as, addr->addr, 0, NULL, val);
+	return kdump2addrxlat(ctx, status);
 }
 
 static addrxlat_status
 addrxlat_read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 {
 	kdump_ctx *ctx = (kdump_ctx*) data;
-	return -read_u64(ctx, addr->as, addr->addr, 0,
-			 "page table entry", val);
+	kdump_status status;
+
+	status = read_u64(ctx, addr->as, addr->addr, 0, NULL, val);
+	return kdump2addrxlat(ctx, status);
 }
 
 static addrxlat_status
