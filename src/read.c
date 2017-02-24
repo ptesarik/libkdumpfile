@@ -363,7 +363,8 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
  * @param as        Address space.
  * @param addr      Value address.
  * @param precious  Non-zero if this read should be regarded as precious.
- * @param what      Human-readable description of the read.
+ * @param what      Human-readable description of the read,
+ *                  or @c NULL to turn off error reporting.
  * @param result    Pointer to resulting variable.
  *
  * This function fails if data crosses a page boundary.
@@ -380,9 +381,11 @@ read_u32(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	pio.precious = precious;
 	ret = raw_read_page(ctx, as, &pio);
 	if (ret != kdump_ok)
-		return set_error(ctx, ret,
-				 "Reading %s failed at %llx",
-				 what, (unsigned long long) addr);
+		return what
+			? set_error(ctx, ret,
+				    "Reading %s failed at %llx",
+				    what, (unsigned long long) addr)
+			: ret;
 
 	p = pio.ce->data + (addr & (get_page_size(ctx) - 1));
 	*result = dump32toh(ctx, *p);
@@ -395,7 +398,8 @@ read_u32(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
  * @param as        Address space.
  * @param addr      Value address.
  * @param precious  Non-zero if this read should be regarded as precious.
- * @param what      Human-readable description of the read.
+ * @param what      Human-readable description of the read,
+ *                  or @c NULL to turn off error reporting.
  * @param result    Pointer to resulting variable.
  *
  * This function fails if data crosses a page boundary.
@@ -412,9 +416,11 @@ read_u64(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	pio.precious = precious;
 	ret = raw_read_page(ctx, as, &pio);
 	if (ret != kdump_ok)
-		return set_error(ctx, ret,
-				 "Reading %s failed at %llx",
-				 what, (unsigned long long) addr);
+		return what
+			? set_error(ctx, ret,
+				    "Reading %s failed at %llx",
+				    what, (unsigned long long) addr)
+			: ret;
 
 	p = pio.ce->data + (addr & (get_page_size(ctx) - 1));
 	*result = dump64toh(ctx, *p);
