@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # vim:sw=4 ts=4 et
 
-from _kdumpfile import attr_dir
 
 def issub(sub, other):
     for x in sub:
@@ -82,6 +81,9 @@ the attribute (sub-)hierarchy.
         return list(self)
 
     def __getitem__(self, key):
+        #this import here is needed due to circular dependency
+        #with _kdumpfile
+        from _kdumpfile import attr_dir
         val = self.dir[key]
         if isinstance(val, attr_dir):
             return val.copy()
