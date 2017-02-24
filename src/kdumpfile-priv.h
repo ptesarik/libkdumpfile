@@ -940,10 +940,10 @@ kphys_is_machphys(kdump_ctx *ctx)
 /* Caching */
 
 /** Default cache size.
- * The size is chosen so that it does not do much harm in constrained
- * environments. On a dump with 4K pages, it takes up 256K.
+ * The size is chosen to give some performance boost during crash analysis.
+ * Constrained environments (e.g. kdump kernel) should use a lower value.
  */
-#define DEFAULT_CACHE_SIZE	64
+#define DEFAULT_CACHE_SIZE	1024
 
 /** Number of bits used for cache flags.
  * Cache flags are stored in the high bits of a cached PFN.
