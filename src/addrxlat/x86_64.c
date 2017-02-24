@@ -383,10 +383,17 @@ set_pgt_fallback(addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
 	}
 }
 
-/* The beginning of the kernel text virtual mapping may not be mapped
+/** The beginning of the kernel text virtual mapping may not be mapped
  * for various reasons. Let's use an offset of 16M to be safe.
  */
 #define LINUX_KTEXT_SKIP		(16ULL << 20)
+
+/** Xen kernels are loaded low in memory. The ktext mapping may not go up
+ * to 16M then. Let's use 1M, because Xen kernel should take up at least
+ * 1M of RAM, and this value also covers kernels loaded at 1M (so this code
+ * may be potentially reused for ia32).
+ */
+#define LINUX_KTEXT_SKIP_alt		(1ULL << 20)
 
 /** Set up Linux kernel text translation method.
  * @param ctl     Initialization data.
@@ -395,6 +402,8 @@ set_pgt_fallback(addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
 static addrxlat_status
 linux_ktext_meth(struct sys_init_data *ctl)
 {
+	addrxlat_status status;
+
 	if (ctl->popt.val[OPT_physbase].set) {
 		addrxlat_def_t def;
 
@@ -406,8 +415,17 @@ linux_ktext_meth(struct sys_init_data *ctl)
 			ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT], &def);
 	}
 
-	return set_ktext_offset(ctl->sys, ctl->ctx,
+	status = set_ktext_offset(ctl->sys, ctl->ctx,
 				  __START_KERNEL_map + LINUX_KTEXT_SKIP);
+	if (status == addrxlat_notpresent || status == addrxlat_nodata) {
+		clear_error(ctl->ctx);
+		status = set_ktext_offset(ctl->sys, ctl->ctx,
+					  __START_KERNEL_map +
+					  LINUX_KTEXT_SKIP_alt);
+	}
+	if (status != addrxlat_ok)
+		return set_error(ctl->ctx, status, "Cannot translate ktext");
+	return status;
 }
 
 /** Set up Linux kernel text mapping on x86_64.
@@ -426,7 +444,9 @@ linux_ktext_map(struct sys_init_data *ctl)
 		return status;
 
 	status = linux_ktext_meth(ctl);
-	if (status != addrxlat_ok && status != addrxlat_nodata)
+	if (status != addrxlat_ok &&
+	    status != addrxlat_nodata &&
+	    status != addrxlat_notpresent)
 		return status;
 	clear_error(ctl->ctx);
 
