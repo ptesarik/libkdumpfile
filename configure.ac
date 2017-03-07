@@ -95,22 +95,7 @@ AS_IF([test "x$have_pthread" = xyes],
 AC_SUBST(PTHREAD_LIBS)
 
 dnl check for Python
-AC_ARG_WITH(python,
-	AS_HELP_STRING([--with-python],[support for Python@<:@default=check@:>@]),[], [with_python=check])
-AS_IF([test "x$with_python" != xno],
-	[AM_PATH_PYTHON([2.7.0],
-		[
-		PKG_CHECK_MODULES([PYTHON], [python],
-			[
-			AC_SUBST([PYTHON_CFLAGS])
-			AC_SUBST(PYTHON_LIBS)
-			have_python=yes
-			])
-		],
-		[have_python=no])],
-	[have_python=no]
-)
-AM_CONDITIONAL([BUILD_PYTHON_EXT], test x$have_python = xyes)
+kdump_PYTHON([2.7.0])
 
 AC_CONFIG_FILES([
 	Makefile
