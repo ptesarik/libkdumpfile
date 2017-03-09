@@ -5,6 +5,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#define MOD_NAME	"_kdumpfile"
+#define MOD_DOC		"kdumpfile - interface to libkdumpfile"
+
 #if PY_MAJOR_VERSION >= 3
 #define PyString_FromString(x) PyUnicode_FromString((x))
 #define PyString_Check(x) PyUnicode_Check((x))
@@ -430,7 +433,7 @@ static PyGetSetDef kdumpfile_object_getset[] = {
 static PyTypeObject kdumpfile_object_type = 
 {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	"_kdumpfile.kdumpfile",         /* tp_name*/ 
+	MOD_NAME ".kdumpfile",		/* tp_name*/
 	sizeof (kdumpfile_object),      /* tp_basicsize*/ 
 	0,                              /* tp_itemsize*/ 
 	kdumpfile_dealloc,              /* tp_dealloc*/ 
@@ -1484,7 +1487,7 @@ static PyMethodDef attr_dir_methods[] = {
 static PyTypeObject attr_dir_object_type =
 {
 	PyVarObject_HEAD_INIT (NULL, 0)
-	"_kdumpfile.attr_dir",
+	MOD_NAME ".attr_dir",
 	sizeof(attr_dir_object),	/* tp_basicsize*/
 	sizeof(char),			/* tp_itemsize*/
 	/* methods */
@@ -1664,7 +1667,7 @@ attr_iteritem_next(PyObject *_self)
 
 static PyTypeObject attr_iterkey_object_type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	"_kdumpfile.attr_dir-keyiterator",
+	MOD_NAME ".attr_dir-keyiterator",
 	sizeof(attr_iter_object),	/* tp_basicsize */
 	0,				/* tp_itemsize */
 	/* methods */
@@ -1695,7 +1698,7 @@ static PyTypeObject attr_iterkey_object_type = {
 
 static PyTypeObject attr_itervalue_object_type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	"_kdumpfile.attr_dir-valueiterator",
+	MOD_NAME ".attr_dir-valueiterator",
 	sizeof(attr_iter_object),	/* tp_basicsize */
 	0,				/* tp_itemsize */
 	/* methods */
@@ -1726,7 +1729,7 @@ static PyTypeObject attr_itervalue_object_type = {
 
 static PyTypeObject attr_iteritem_object_type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	"_kdumpfile.attr_dir-itemiterator",
+	MOD_NAME ".attr_dir-itemiterator",
 	sizeof(attr_iter_object),	/* tp_basicsize */
 	0,				/* tp_itemsize */
 	/* methods */
@@ -1771,15 +1774,23 @@ static const struct constdef kdumpfile_constants[] = {
 #if PY_MAJOR_VERSION >= 3
 static struct PyModuleDef kdumpfile_moddef = {
         PyModuleDef_HEAD_INIT,
-        "_kdumpfile",     /* m_name */
-        "kdumpfile - interface to libkdumpfile",  /* m_doc */
+        MOD_NAME,            /* m_name */
+        MOD_DOC,             /* m_doc */
         -1,                  /* m_size */
-        NULL,			    /* m_methods */
+        NULL,                /* m_methods */
         NULL,                /* m_reload */
         NULL,                /* m_traverse */
         NULL,                /* m_clear */
         NULL,                /* m_free */
 };
+#endif
+
+#if PY_MAJOR_VERSION >= 3
+#  define MOD_ERROR_VAL NULL
+#  define MOD_SUCCESS_VAL(val) val
+#else
+#  define MOD_ERROR_VAL
+#  define MOD_SUCCESS_VAL(val)
 #endif
 
 PyMODINIT_FUNC
@@ -1794,26 +1805,24 @@ init_kdumpfile (void)
 	int ret;
 
 	if (PyType_Ready(&kdumpfile_object_type) < 0)
-		return;
+		return MOD_ERROR_VAL;
 	if (PyType_Ready(&attr_dir_object_type) < 0)
-		return;
+		return MOD_ERROR_VAL;
 	if (PyType_Ready(&attr_iterkey_object_type) < 0)
-		return;
+		return MOD_ERROR_VAL;
 	if (PyType_Ready(&attr_itervalue_object_type) < 0)
-		return;
+		return MOD_ERROR_VAL;
 	if (PyType_Ready(&attr_iteritem_object_type) < 0)
-		return;
+		return MOD_ERROR_VAL;
 
 #if PY_MAJOR_VERSION >= 3
 	mod = PyModule_Create(&kdumpfile_moddef);
-	if (!mod)
-		goto fail;
 #else
-	mod = Py_InitModule3("_kdumpfile", NULL,
-			"kdumpfile - interface to libkdumpfile");
+	mod = Py_InitModule3(MOD_NAME, NULL, MOD_DOC);
+#endif
 	if (!mod)
 		goto fail;
-#endif
+
 	Py_INCREF((PyObject *)&kdumpfile_object_type);
 	ret = PyModule_AddObject(mod, "kdumpfile",
 				 (PyObject*)&kdumpfile_object_type);
@@ -1837,18 +1846,12 @@ init_kdumpfile (void)
 	ret = lookup_views();
 	if (ret)
 		goto fail;
-#if PY_MAJOR_VERSION >= 3
-	return mod;
-#else
-	return;
-#endif
+
+	return MOD_SUCCESS_VAL(mod);
 
 fail:
 	cleanup_exceptions();
 	cleanup_views();
 	Py_XDECREF(mod);
-#if PY_MAJOR_VERSION >= 3
-	return NULL;
-#endif
-
+	return MOD_ERROR_VAL;
 }
