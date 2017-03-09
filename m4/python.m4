@@ -6,28 +6,20 @@ AC_ARG_WITH(python,[dnl
 have_python=no
 AS_IF([test "x$withval" != xno],[dnl
   AS_IF([test "x$withval" != xyes],[PYTHON="$withval"])
-  AM_PATH_PYTHON([$1],[dnl
-    case "$PYTHON_VERSION" in
-    2.*) pkgname=python2 ;;
-    3.*) pkgname=python3 ;;
-    *)   pkgname=python  ;;
-    esac
-    PKG_CHECK_MODULES(PYTHON,$pkgname,[dnl
-	AC_SUBST(PYTHON_CFLAGS)
-	AC_SUBST(PYTHON_LIBS)
-	have_python=yes
-    ],[
-	AS_IF([test $pkgname != python],[dnl
-	  PKG_CHECK_MODULES(PYTHON,python,[dnl
-	    AC_SUBST(PYTHON_CFLAGS)
-	    AC_SUBST(PYTHON_LIBS)
-	    have_python=yes
-	  ])
-	])
-    ])
-  ])
+  AM_PATH_PYTHON([$1],[have_python=yes])
 ])
-AS_IF([test "x$have_python" = xno],[dnl
+AS_IF([test "$have_python" = yes],[dnl
+  AC_PATH_PROG(PYTHON_CONFIG,"$PYTHON-config",[])
+  AS_IF([test -n "$PYTHON_CONFIG"],[dnl
+    PYTHON_CFLAGS=`$PYTHON_CONFIG --cflags`
+    PYTHON_LIBS=`$PYTHON_CONFIG --libs`
+    AC_SUBST(PYTHON_CFLAGS)
+    AC_SUBST(PYTHON_LIBS)
+  ],[dnl
+    AC_MSG_ERROR([Python found as $PYTHON, but there is no $PYTHON-config])
+    have_python=no
+  ])
+],[dnl
   AS_IF([test "x$with_python" = xyes],[dnl
     AC_MSG_ERROR([Python support requested but not found])
   ])
