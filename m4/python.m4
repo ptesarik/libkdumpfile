@@ -5,18 +5,29 @@ AC_ARG_WITH(python,[dnl
   [],[withval=check])
 have_python=no
 AS_IF([test "x$withval" != xno],[dnl
-  AS_IF([test "x$withval" != xyes],[PYTHON="$withval"])
+  case "$withval" in
+    yes|check)
+      ;;
+    *)
+      AS_IF([test -x "$withval"],[PYTHON="$withval"],[dnl
+        AC_PATH_PROG(PYTHON,"$withval")
+        AS_IF([test -z "$PYTHON"],[dnl
+          AC_MSG_ERROR([Requested Python interpreter ($withval) not found])
+        ])
+      ])
+      ;;
+  esac
   AM_PATH_PYTHON([$1],[have_python=yes])
 ])
 AS_IF([test "$have_python" = yes],[dnl
-  AC_PATH_PROG(PYTHON_CONFIG,"$PYTHON-config",[])
-  AS_IF([test -n "$PYTHON_CONFIG"],[dnl
+  PYTHON_CONFIG="$PYTHON-config"
+  AS_IF([test -x "$PYTHON_CONFIG"],[dnl
     PYTHON_CFLAGS=`$PYTHON_CONFIG --cflags`
     PYTHON_LIBS=`$PYTHON_CONFIG --libs`
     AC_SUBST(PYTHON_CFLAGS)
     AC_SUBST(PYTHON_LIBS)
   ],[dnl
-    AC_MSG_ERROR([Python found as $PYTHON, but there is no $PYTHON-config])
+    AC_MSG_ERROR([Python found as $PYTHON, but there is no $PYTHON_CONFIG])
     have_python=no
   ])
 ],[dnl
