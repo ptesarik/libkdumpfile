@@ -153,51 +153,6 @@ kdump_vtop_init(kdump_ctx *ctx)
 	return kdump_ok;
 }
 
-static unsigned long
-xen_version_code(kdump_ctx *ctx)
-{
-	struct attr_data *verdir, *ver;
-	unsigned long major, minor;
-
-	verdir = lookup_attr(ctx->shared, "xen.version");
-	if (!verdir || validate_attr(ctx, verdir) != kdump_ok)
-		return 0UL;
-
-	ver = lookup_dir_attr(ctx->shared, verdir, "major", 5);
-	if (!ver || validate_attr(ctx, ver) != kdump_ok)
-		return 0UL;
-	major = attr_value(ver)->number;
-
-	ver = lookup_dir_attr(ctx->shared, verdir, "minor", 5);
-	if (!ver || validate_attr(ctx, ver) != kdump_ok)
-		return 0UL;
-	minor = attr_value(ver)->number;
-
-	return ADDRXLAT_VER_XEN(major, minor);
-}
-
-kdump_status
-kdump_vtop_init_xen(kdump_ctx *ctx)
-{
-	addrxlat_osdesc_t osdesc;
-	addrxlat_status axres;
-
-	clear_error(ctx);
-
-	osdesc.type = addrxlat_os_xen;
-	rwlock_rdlock(&ctx->shared->lock);
-	osdesc.ver = xen_version_code(ctx);
-	rwlock_unlock(&ctx->shared->lock);
-	osdesc.arch = get_arch_name(ctx);
-	osdesc.opts = NULL;
-	axres = addrxlat_sys_init(ctx->shared->xlat_xen,
-				  ctx->addrxlat, &osdesc);
-
-	if (axres != addrxlat_ok)
-		return set_error_addrxlat(ctx, axres);
-	return kdump_ok;
-}
-
 static kdump_status
 locked_xlat(kdump_ctx *ctx, addrxlat_sys_t **psys,
 	    addrxlat_addr_t src, addrxlat_addrspace_t as,
@@ -248,14 +203,6 @@ kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 	return do_xlat(ctx, &ctx->shared->xlat_linux,
 		       vaddr, ADDRXLAT_KVADDR,
 		       maddr, ADDRXLAT_MACHPHYSADDR);
-}
-
-kdump_status
-kdump_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
-{
-	return do_xlat(ctx, &ctx->shared->xlat_xen,
-		       vaddr, ADDRXLAT_KVADDR,
-		       paddr, ADDRXLAT_MACHPHYSADDR);
 }
 
 kdump_status

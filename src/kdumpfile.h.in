@@ -244,16 +244,6 @@ kdump_status kdump_set_fd(kdump_ctx *ctx, int fd);
  */
 kdump_status kdump_vtop_init(kdump_ctx *ctx);
 
-/**  Initialize Xen virtual-to-physical translation.
- * @param ctx  Dump file object.
- * @returns    Error status.
- *
- * Initialize Xen hypervisor virtual-to-physical translation.
- *
- * @sa kdump_vtop_init.
- */
-kdump_status kdump_vtop_init_xen(kdump_ctx *ctx);
-
 /**  Translate a virtual address to a physical address.
  * @param ctx         Dump file object.
  * @param[in] vaddr   Virtual address.
@@ -277,19 +267,6 @@ kdump_status kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
  */
 kdump_status kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr,
 			kdump_maddr_t *maddr);
-
-/**  Translate a Xen virtual address to a physical address.
- * @param ctx         Dump file object.
- * @param[in] vaddr   Virtual address.
- * @param[out] paddr  Physical address.
- * @returns           Error status.
- *
- * Translate a virtual address to a physical address. Note that in this
- * context, physical address is equal to machine address, because the
- * hypervisor itself does not have a second mapping.
- */
-kdump_status kdump_vtop_xen(kdump_ctx *ctx, kdump_vaddr_t vaddr,
-			    kdump_paddr_t *paddr);
 
 /**  Translate a kernel physical address to a Xen machine address.
  * @param ctx         Dump file object.
