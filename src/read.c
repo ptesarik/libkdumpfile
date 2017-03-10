@@ -46,7 +46,7 @@ read_kpage_generic(kdump_ctx *ctx, struct page_io *pio)
 	faddr.addr = pio->pfn << get_page_shift(ctx);
 	faddr.as = ADDRXLAT_KPHYSADDR;
 	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, ADDRXLAT_MACHPHYSADDR,
-				ctx->shared->xlat_linux);
+				ctx->shared->xlat);
 	if (axres != addrxlat_ok)
 		return set_error_addrxlat(ctx, axres);
 
@@ -78,7 +78,7 @@ read_kvpage_machphys(kdump_ctx *ctx, struct page_io *pio)
 	faddr.addr = pio->pfn << get_page_shift(ctx);
 	faddr.as = ADDRXLAT_KVADDR;
 	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, ADDRXLAT_MACHPHYSADDR,
-				ctx->shared->xlat_linux);
+				ctx->shared->xlat);
 	if (axres != addrxlat_ok)
 		return set_error_addrxlat(ctx, axres);
 
@@ -95,7 +95,7 @@ read_kvpage_kphys(kdump_ctx *ctx, struct page_io *pio)
 	faddr.addr = pio->pfn << get_page_shift(ctx);
 	faddr.as = ADDRXLAT_KVADDR;
 	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, ADDRXLAT_KPHYSADDR,
-				ctx->shared->xlat_linux);
+				ctx->shared->xlat);
 	if (axres != addrxlat_ok)
 		return set_error_addrxlat(ctx, axres);
 
@@ -110,7 +110,7 @@ read_kvpage_choose(kdump_ctx *ctx, struct page_io *pio)
 	const addrxlat_map_t *map;
 
 	vaddr = pio->pfn << get_page_shift(ctx);
-	map = addrxlat_sys_get_map(ctx->shared->xlat_linux,
+	map = addrxlat_sys_get_map(ctx->shared->xlat,
 				   ADDRXLAT_SYS_MAP_KV_PHYS);
 	if (map) {
 		const addrxlat_meth_t *meth = addrxlat_map_search(map, vaddr);
@@ -119,23 +119,6 @@ read_kvpage_choose(kdump_ctx *ctx, struct page_io *pio)
 	}
 
 	return read_kvpage_machphys(ctx, pio);
-}
-
-static kdump_status
-read_xenvpage(kdump_ctx *ctx, struct page_io *pio)
-{
-	addrxlat_fulladdr_t faddr;
-	addrxlat_status axres;
-
-	faddr.addr = pio->pfn << get_page_shift(ctx);
-	faddr.as = ADDRXLAT_KVADDR;
-	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, ADDRXLAT_MACHPHYSADDR,
-				ctx->shared->xlat_xen);
-	if (axres != addrxlat_ok)
-		return set_error_addrxlat(ctx, axres);
-
-	pio->pfn = faddr.addr >> get_page_shift(ctx);
-	return ctx->shared->ops->read_page(ctx, pio);
 }
 
 static kdump_status
@@ -165,11 +148,6 @@ setup_readfn(kdump_ctx *ctx, kdump_addrspace_t as, read_page_fn *pfn)
 				fn = read_kvpage_machphys;
 		} else if (ctx->shared->ops->read_kpage)
 			fn = read_kvpage_kphys;
-		break;
-
-	case KDUMP_XENVADDR:
-		if (ctx->shared->ops->read_page)
-			fn = read_xenvpage;
 		break;
 
 	default:

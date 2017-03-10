@@ -1770,7 +1770,6 @@ static const struct constdef kdumpfile_constants[] = {
 	{ "KDUMP_KPHYSADDR", KDUMP_KPHYSADDR },
         { "KDUMP_MACHPHYSADDR", KDUMP_MACHPHYSADDR },
 	{ "KDUMP_KVADDR", KDUMP_KVADDR },
-	{ "KDUMP_XENVADDR", KDUMP_XENVADDR },
 	{ NULL, 0 }
 };
 

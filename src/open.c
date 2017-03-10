@@ -548,10 +548,8 @@ kdump_free(kdump_ctx *ctx)
 			cache_unref(shared->cache);
 		if (shared->xen_map)
 			free(shared->xen_map);
-		if (shared->xlat_linux)
-			addrxlat_sys_decref(shared->xlat_linux);
-		if (shared->xlat_xen)
-			addrxlat_sys_decref(shared->xlat_xen);
+		if (shared->xlat)
+			addrxlat_sys_decref(shared->xlat);
 		cleanup_attr(shared);
 		rwlock_destroy(&shared->lock);
 		free(shared);

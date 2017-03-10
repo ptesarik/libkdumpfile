@@ -44,7 +44,7 @@ set_pteval_size(kdump_ctx *ctx)
 	addrxlat_meth_t *meth;
 	const addrxlat_def_t *def;
 
-	meth = addrxlat_sys_get_meth(ctx->shared->xlat_linux,
+	meth = addrxlat_sys_get_meth(ctx->shared->xlat,
 				     ADDRXLAT_SYS_METH_PGT);
 	if (!meth)
 		return;
@@ -142,7 +142,7 @@ kdump_vtop_init(kdump_ctx *ctx)
 
 	osdesc.opts = opts;
 
-	axres = addrxlat_sys_init(ctx->shared->xlat_linux,
+	axres = addrxlat_sys_init(ctx->shared->xlat,
 				  ctx->addrxlat, &osdesc);
 
 	if (axres != addrxlat_ok)
@@ -192,7 +192,7 @@ do_xlat(kdump_ctx *ctx, addrxlat_sys_t **psys,
 kdump_status
 kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	return do_xlat(ctx, &ctx->shared->xlat_linux,
+	return do_xlat(ctx, &ctx->shared->xlat,
 		       vaddr, ADDRXLAT_KVADDR,
 		       paddr, ADDRXLAT_KPHYSADDR);
 }
@@ -200,7 +200,7 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 kdump_status
 kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 {
-	return do_xlat(ctx, &ctx->shared->xlat_linux,
+	return do_xlat(ctx, &ctx->shared->xlat,
 		       vaddr, ADDRXLAT_KVADDR,
 		       maddr, ADDRXLAT_MACHPHYSADDR);
 }
@@ -208,7 +208,7 @@ kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 kdump_status
 kdump_ptom(kdump_ctx *ctx, kdump_paddr_t paddr, kdump_maddr_t *maddr)
 {
-	return do_xlat(ctx, &ctx->shared->xlat_linux,
+	return do_xlat(ctx, &ctx->shared->xlat,
 		       paddr, ADDRXLAT_KPHYSADDR,
 		       maddr, ADDRXLAT_MACHPHYSADDR);
 }
@@ -216,7 +216,7 @@ kdump_ptom(kdump_ctx *ctx, kdump_paddr_t paddr, kdump_maddr_t *maddr)
 kdump_status
 kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
 {
-	return do_xlat(ctx, &ctx->shared->xlat_linux,
+	return do_xlat(ctx, &ctx->shared->xlat,
 		       maddr, ADDRXLAT_MACHPHYSADDR,
 		       paddr, ADDRXLAT_KPHYSADDR);
 }
@@ -379,22 +379,11 @@ init_vtop_maps(kdump_ctx *ctx)
 	xlatsys = addrxlat_sys_new();
 	if (!xlatsys)
 		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate %s translation system",
-				 "Linux");
+				 "Cannot allocate translation system");
 
-	if (shared->xlat_linux)
-		addrxlat_sys_decref(shared->xlat_linux);
-	shared->xlat_linux = xlatsys;
-
-	xlatsys = addrxlat_sys_new();
-	if (!xlatsys)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate %s translation system",
-				 "Xen");
-
-	if (shared->xlat_xen)
-		addrxlat_sys_decref(shared->xlat_xen);
-	shared->xlat_xen = xlatsys;
+	if (shared->xlat)
+		addrxlat_sys_decref(shared->xlat);
+	shared->xlat = xlatsys;
 
 	return kdump_ok;
 }

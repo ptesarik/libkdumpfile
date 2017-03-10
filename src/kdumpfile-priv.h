@@ -541,10 +541,8 @@ struct kdump_shared {
 	/** OS for address translation. */
 	addrxlat_ostype_t ostype;
 
-	/** Linux address translation. */
-	addrxlat_sys_t *xlat_linux;
-	/** Xen address translation. */
-	addrxlat_sys_t *xlat_xen;
+	/** Address translation system. */
+	addrxlat_sys_t *xlat;
 
 	struct attr_hash *attr;	/**< Attribute hash table. */
 
