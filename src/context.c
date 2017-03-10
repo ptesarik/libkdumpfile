@@ -194,18 +194,6 @@ kdump_num_cpus(kdump_ctx *ctx)
 	return ret;
 }
 
-const char *
-kdump_vmcoreinfo(kdump_ctx *ctx)
-{
-	return get_string_attr(ctx, gattr(ctx, GKI_linux_vmcoreinfo_raw));
-}
-
-const char *
-kdump_vmcoreinfo_xen(kdump_ctx *ctx)
-{
-	return get_string_attr(ctx, gattr(ctx, GKI_xen_vmcoreinfo_raw));
-}
-
 kdump_get_symbol_val_fn *
 kdump_cb_get_symbol_val(kdump_ctx *ctx, kdump_get_symbol_val_fn *cb)
 {

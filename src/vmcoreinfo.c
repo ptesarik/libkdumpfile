@@ -236,35 +236,56 @@ const struct attr_ops vmcoreinfo_raw_ops = {
 	.pre_clear = vmcoreinfo_raw_clear_hook,
 };
 
-static const char*
-vmcoreinfo_row(kdump_ctx *ctx, const char *key, const struct attr_data *base)
+const char *
+kdump_vmcoreinfo(kdump_ctx *ctx)
 {
+	static const struct ostype_attr_map raw_map[] = {
+		{ addrxlat_os_linux, GKI_linux_vmcoreinfo_raw },
+		{ addrxlat_os_xen, GKI_xen_vmcoreinfo_raw },
+		{ addrxlat_os_unknown }
+	};
+
 	struct attr_data *attr;
-	const char *ret = NULL;
+	const char *ret;
 
 	clear_error(ctx);
 	rwlock_rdlock(&ctx->shared->lock);
 
-	attr = lookup_dir_attr(ctx->shared, base, key, strlen(key));
-	if (attr && validate_attr(ctx, attr) == kdump_ok)
-		ret = attr_value(attr)->string;
+	attr = ostype_attr(ctx->shared, raw_map);
+	ret = (attr && validate_attr(ctx, attr) == kdump_ok &&
+	       attr->template->type == kdump_string)
+		? attr_value(attr)->string
+		: NULL;
 
-	rwlock_unlock(&ctx->shared->lock);
+	rwlock_rdlock(&ctx->shared->lock);
 	return ret;
 }
 
 const char *
 kdump_vmcoreinfo_row(kdump_ctx *ctx, const char *key)
 {
-	return vmcoreinfo_row(ctx, key,
-			      gattr(ctx, GKI_linux_vmcoreinfo_lines));
-}
+	static const struct ostype_attr_map lines_map[] = {
+		{ addrxlat_os_linux, GKI_linux_vmcoreinfo_lines },
+		{ addrxlat_os_xen, GKI_xen_vmcoreinfo_lines },
+		{ addrxlat_os_unknown }
+	};
 
-const char *
-kdump_vmcoreinfo_row_xen(kdump_ctx *ctx, const char *key)
-{
-	return vmcoreinfo_row(ctx, key,
-			      gattr(ctx, GKI_xen_vmcoreinfo_lines));
+	const struct attr_data *base;
+	struct attr_data *attr;
+	const char *ret = NULL;
+
+	clear_error(ctx);
+	rwlock_rdlock(&ctx->shared->lock);
+
+	base = ostype_attr(ctx->shared, lines_map);
+	if (base) {
+		attr = lookup_dir_attr(ctx->shared, base, key, strlen(key));
+		if (attr && validate_attr(ctx, attr) == kdump_ok)
+			ret = attr_value(attr)->string;
+	}
+
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
 }
 
 kdump_status

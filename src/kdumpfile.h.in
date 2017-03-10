@@ -738,28 +738,12 @@ unsigned kdump_num_cpus(kdump_ctx *ctx);
  */
 const char *kdump_vmcoreinfo(kdump_ctx *ctx);
 
-/**  Get VMCOREINFO_XEN raw data.
- * @param ctx  Dump file object.
- * @returns    VMCOREINFO_XEN data, or @c NULL.
- *
- * The output string is always NUL-terminated, but if there was a NUL
- * byte inside VMCOREINFO_XEN, there is no way to know the full length.
- */
-const char *kdump_vmcoreinfo_xen(kdump_ctx *ctx);
-
 /**  Get a VMCOREINFO row.
  * @param ctx      Dump file object.
  * @param[in] key  Name of the VMCOREINFO variable.
  * @returns        Value of the key, or @c NULL if not found.
  */
 const char *kdump_vmcoreinfo_row(kdump_ctx *ctx, const char *key);
-
-/**  Get a VMCOREINFO_XEN row.
- * @param ctx      Dump file object.
- * @param[in] key  Name of the VMCOREINFO_XEN variable.
- * @returns        Value of the key, or @c NULL if not found.
- */
-const char *kdump_vmcoreinfo_row_xen(kdump_ctx *ctx, const char *key);
 
 /**  Get VMCOREINFO symbol value.
  * @param ctx            Dump file object.
