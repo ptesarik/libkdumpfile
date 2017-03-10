@@ -461,12 +461,13 @@ linux_ktext_map(struct sys_init_data *ctl)
 	return addrxlat_ok;
 }
 
-/** Get Linux page table root address using symbolic information.
+/** Get page table root address using symbolic information.
  * @param ctl  Initialization data.
+ * @param sym  Symbol name of the page table.
  * @returns    Error status.
  */
 static addrxlat_status
-get_linux_pgtroot(struct sys_init_data *ctl)
+get_sym_pgtroot(struct sys_init_data *ctl, const char *sym)
 {
 	addrxlat_meth_t *meth;
 	addrxlat_addr_t addr;
@@ -482,7 +483,7 @@ get_linux_pgtroot(struct sys_init_data *ctl)
 	}
 	clear_error(ctl->ctx);
 
-	if (get_symval(ctl->ctx, "init_level4_pgt", &addr) == addrxlat_ok) {
+	if (get_symval(ctl->ctx, sym, &addr) == addrxlat_ok) {
 		meth->def.param.pgt.root.as = ADDRXLAT_KVADDR;
 		meth->def.param.pgt.root.addr = addr;
 		return addrxlat_ok;
@@ -568,7 +569,7 @@ map_linux_x86_64(struct sys_init_data *ctl)
 	const struct sys_region *layout;
 	addrxlat_status status;
 
-	get_linux_pgtroot(ctl);
+	get_sym_pgtroot(ctl, "init_level4_pgt");
 
 	if (ctl->popt.val[OPT_xen_xlat].set &&
 	    ctl->popt.val[OPT_xen_xlat].num) {
@@ -662,6 +663,53 @@ is_xen_ktext(struct sys_init_data *ctl, addrxlat_addr_t addr)
 	return status == addrxlat_ok && steps == 4;
 }
 
+/** Initialize temporary mapping to make the page table usable.
+ * @param ctl  Initialization data.
+ * @returns    Error status.
+ */
+static addrxlat_status
+setup_xen_pgt(struct sys_init_data *ctl)
+{
+	struct sys_region layout[2];
+	addrxlat_meth_t *meth;
+	addrxlat_def_t def;
+	addrxlat_addr_t pgt;
+	addrxlat_status status;
+
+	status = get_sym_pgtroot(ctl, "pgd_l4");
+	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	if (meth->def.param.pgt.root.as != ADDRXLAT_KVADDR)
+		return status;	/* either unset or physical */
+
+	def.kind = ADDRXLAT_LINEAR;
+	def.target_as = ADDRXLAT_KPHYSADDR;
+
+	pgt = meth->def.param.pgt.root.addr;
+	if (pgt >= XEN_DIRECTMAP) {
+		def.param.linear.off = XEN_DIRECTMAP;
+	} else if (ctl->popt.val[OPT_physbase].set) {
+		addrxlat_addr_t xen_virt_start = pgt & ~(XEN_TEXT_SIZE - 1);
+		def.param.linear.off = xen_virt_start -
+			ctl->popt.val[OPT_physbase].num;
+	} else
+		return addrxlat_nodata;
+
+	/* Temporary linear mapping just for the page table */
+	layout[0].first = pgt;
+	layout[0].last = pgt + (1ULL << PAGE_SHIFT) - 1;
+	layout[0].meth = ADDRXLAT_SYS_METH_KTEXT;
+	layout[0].act = SYS_ACT_NONE;
+
+	layout[1].meth = ADDRXLAT_SYS_METH_NUM;
+
+	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, layout);
+	if (status != addrxlat_ok)
+		return status;
+
+	return internal_meth_set_def(
+		ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT], &def);
+}
+
 /** Initialize a translation map for Xen on x86_64.
  * @param ctl  Initialization data.
  * @returns    Error status.
@@ -682,7 +730,10 @@ map_xen_x86_64(struct sys_init_data *ctl)
 
 	layout[2].meth = ADDRXLAT_SYS_METH_NUM;
 
-	if (is_directmap(ctl->sys, ctl->ctx, XEN_DIRECTMAP)) {
+	setup_xen_pgt(ctl);
+
+	if (is_pgt_usable(ctl->sys) &&
+	    is_directmap(ctl->sys, ctl->ctx, XEN_DIRECTMAP)) {
 		if (is_xen_ktext(ctl, XEN_TEXT_4_4))
 			layout[1].first = XEN_TEXT_4_4;
 		else if (is_xen_ktext(ctl, XEN_TEXT_4_3))
@@ -700,7 +751,8 @@ map_xen_x86_64(struct sys_init_data *ctl)
 				XEN_DIRECTMAP + XEN_DIRECTMAP_SIZE_1T - 1;
 			layout[1].meth = ADDRXLAT_SYS_METH_NUM;
 		}
-	} else if (is_directmap(ctl->sys, ctl->ctx, XEN_DIRECTMAP_BIGMEM)) {
+	} else if (is_pgt_usable(ctl->sys) &&
+		   is_directmap(ctl->sys, ctl->ctx, XEN_DIRECTMAP_BIGMEM)) {
 		layout[0].first = XEN_DIRECTMAP_BIGMEM;
 		layout[0].last =
 			XEN_DIRECTMAP_BIGMEM + XEN_DIRECTMAP_SIZE_3_5T - 1;
