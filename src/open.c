@@ -485,6 +485,11 @@ ostype_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 		break;
 	}
 
+	if (!isset_arch_name(ctx))
+		return kdump_ok;
+
+	/* Only arch-specific stuff follows. */
+
 	rwlock_unlock(&ctx->shared->lock);
 	status = kdump_vtop_init(ctx);
 	rwlock_rdlock(&ctx->shared->lock);
