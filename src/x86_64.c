@@ -288,7 +288,8 @@ x86_64_init(kdump_ctx *ctx)
 static kdump_status
 x86_64_late_init(kdump_ctx *ctx)
 {
-	if (!isset_phys_base(ctx) && isset_xen_type(ctx) &&
+	if (ctx->shared->ostype == addrxlat_os_linux &&
+	    !isset_phys_base(ctx) && isset_xen_type(ctx) &&
 	    get_xen_type(ctx) != kdump_xen_none)
 		set_phys_base(ctx, 0);
 
