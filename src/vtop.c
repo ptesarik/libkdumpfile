@@ -108,24 +108,11 @@ get_version_code(kdump_ctx *ctx)
 	return attr_value(attr)->number;
 }
 
-kdump_status
-kdump_vtop_init(kdump_ctx *ctx)
+static void
+set_linux_opts(kdump_ctx *ctx, char *opts)
 {
-	addrxlat_osdesc_t osdesc;
-	addrxlat_status axres;
 	struct attr_data *attr;
-	char opts[80];
 
-	clear_error(ctx);
-
-	if (!isset_arch_name(ctx))
-		return set_error(ctx, kdump_nodata, "Unknown architecture");
-
-	osdesc.type = ctx->shared->ostype;
-	osdesc.ver = get_version_code(ctx);
-	osdesc.arch = get_arch_name(ctx);
-
-	opts[0] = '\0';
 	if (isset_phys_base(ctx))
 		sprintf(opts, "physbase=0x%"ADDRXLAT_PRIxADDR,
 			get_phys_base(ctx));
@@ -139,7 +126,40 @@ kdump_vtop_init(kdump_ctx *ctx)
 		sprintf(opts + strlen(opts),
 			" xen_p2m_mfn=0x%"ADDRXLAT_PRIxADDR,
 			attr_value(attr)->number);
+}
 
+static void
+set_xen_opts(kdump_ctx *ctx, char *opts)
+{
+	struct attr_data *attr;
+
+	attr = gattr(ctx, GKI_xen_phys_start);
+	if (validate_attr(ctx, attr) == kdump_ok)
+		sprintf(opts, "physbase=0x%"ADDRXLAT_PRIxADDR,
+			attr_value(attr)->address);
+}
+
+kdump_status
+kdump_vtop_init(kdump_ctx *ctx)
+{
+	addrxlat_osdesc_t osdesc;
+	addrxlat_status axres;
+	char opts[80];
+
+	clear_error(ctx);
+
+	if (!isset_arch_name(ctx))
+		return set_error(ctx, kdump_nodata, "Unknown architecture");
+
+	osdesc.type = ctx->shared->ostype;
+	osdesc.ver = get_version_code(ctx);
+	osdesc.arch = get_arch_name(ctx);
+
+	opts[0] = '\0';
+	if (ctx->shared->ostype == addrxlat_os_linux)
+		set_linux_opts(ctx, opts);
+	else if (ctx->shared->ostype == addrxlat_os_xen)
+		set_xen_opts(ctx, opts);
 	osdesc.opts = opts;
 
 	axres = addrxlat_sys_init(ctx->shared->xlat,
