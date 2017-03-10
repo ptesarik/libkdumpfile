@@ -319,6 +319,17 @@ addrxlat_read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 static addrxlat_status
 addrxlat_sym(void *data, addrxlat_sym_t *sym)
 {
+	static const struct ostype_attr_map sizeof_map[] = {
+		{ addrxlat_os_linux, GKI_linux_size },
+		{ addrxlat_os_xen, GKI_xen_size },
+		{ addrxlat_os_unknown }
+	};
+	static const struct ostype_attr_map offsetof_map[] = {
+		{ addrxlat_os_linux, GKI_linux_offset },
+		{ addrxlat_os_xen, GKI_xen_offset },
+		{ addrxlat_os_unknown }
+	};
+
 	kdump_ctx *ctx = (kdump_ctx*) data;
 	const struct attr_data *base;
 	struct attr_data *attr;
@@ -333,11 +344,19 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 			: (addrxlat_status) -(int)status;
 
 	case ADDRXLAT_SYM_SIZEOF:
-		base = gattr(ctx, GKI_linux_size);
+		base = ostype_attr(ctx->shared, sizeof_map);
+		if (!base)
+			return addrxlat_ctx_err(
+				ctx->addrxlat, addrxlat_notimpl,
+				"Unsupported OS");
 		break;
 
 	case ADDRXLAT_SYM_OFFSETOF:
-		base = gattr(ctx, GKI_linux_offset);
+		base = ostype_attr(ctx->shared, offsetof_map);
+		if (!base)
+			return addrxlat_ctx_err(
+				ctx->addrxlat, addrxlat_notimpl,
+				"Unsupported OS");
 		break;
 
 	case ADDRXLAT_SYM_REG:

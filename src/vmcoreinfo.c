@@ -267,15 +267,28 @@ kdump_vmcoreinfo_row_xen(kdump_ctx *ctx, const char *key)
 			      gattr(ctx, GKI_xen_vmcoreinfo_lines));
 }
 
-static kdump_status
-vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname, kdump_addr_t *symvalue,
-		  const struct attr_data *base)
+kdump_status
+kdump_vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname,
+			kdump_addr_t *symvalue)
 {
+	static const struct ostype_attr_map symbol_map[] = {
+		{ addrxlat_os_linux, GKI_linux_symbol },
+		{ addrxlat_os_xen, GKI_xen_symbol },
+		{ addrxlat_os_unknown }
+	};
+
+	const struct attr_data *base;
 	struct attr_data *attr;
 	kdump_status ret;
 
 	clear_error(ctx);
 	rwlock_rdlock(&ctx->shared->lock);
+
+	base = ostype_attr(ctx->shared, symbol_map);
+	if (!base) {
+		ret = set_error(ctx, kdump_unsupported, "Unsupported OS");
+		goto out;
+	}
 
 	attr = lookup_dir_attr(ctx->shared, base, symname, strlen(symname));
 	if (!attr) {
@@ -293,20 +306,4 @@ vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname, kdump_addr_t *symvalue,
  out:
 	rwlock_unlock(&ctx->shared->lock);
 	return ret;
-}
-
-kdump_status
-kdump_vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname,
-			kdump_addr_t *symvalue)
-{
-	return vmcoreinfo_symbol(ctx, symname, symvalue,
-				 gattr(ctx, GKI_linux_symbol));
-}
-
-kdump_status
-kdump_vmcoreinfo_symbol_xen(kdump_ctx *ctx, const char *symname,
-			    kdump_addr_t *symvalue)
-{
-	return vmcoreinfo_symbol(ctx, symname, symvalue,
-				 gattr(ctx, GKI_xen_symbol));
 }

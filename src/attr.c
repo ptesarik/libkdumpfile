@@ -1103,3 +1103,21 @@ kdump_attr_iter_end(kdump_ctx *ctx, kdump_attr_iter_t *iter)
 {
 	clear_error(ctx);
 }
+
+/**  Use a map to choose an attribute by current OS type.
+ * @param shared  Shared data of a dump file object.
+ * @param map     OS type -> global attribute index.
+ * @returns       Attribute, or @c NULL if OS type not found.
+ */
+struct attr_data *
+ostype_attr(const struct kdump_shared *shared,
+	    const struct ostype_attr_map *map)
+{
+	while (map->ostype != addrxlat_os_unknown) {
+		if (map->ostype == shared->ostype)
+			return sgattr(shared, map->attrkey);
+		++map;
+	}
+
+	return NULL;
+}

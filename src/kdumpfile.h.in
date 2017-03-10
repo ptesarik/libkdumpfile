@@ -773,18 +773,6 @@ const char *kdump_vmcoreinfo_row_xen(kdump_ctx *ctx, const char *key);
 kdump_status kdump_vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname,
 				     kdump_addr_t *symvalue);
 
-/**  Get VMCOREINFO_XEN symbol value.
- * @param ctx            Dump file object.
- * @param[in] symname    Xen hypervisor symbol name.
- * @param[out] symvalue  Value of the symbol.
- * @returns              Error status.
- *
- * Get the content of SYMBOL(@c symname) row and parse it as a hexadecimal
- * value.
- */
-kdump_status kdump_vmcoreinfo_symbol_xen(kdump_ctx *ctx, const char *symname,
-					 kdump_addr_t *symvalue);
-
 /**  Type for the get_symbol_val callback function.
  * @param ctx      Dump file object of the caller.
  * @param[in] name Name of the symbol.
@@ -803,16 +791,6 @@ typedef kdump_status kdump_get_symbol_val_fn(
  */
 kdump_get_symbol_val_fn *
 kdump_cb_get_symbol_val(kdump_ctx *ctx, kdump_get_symbol_val_fn *cb);
-
-/**  Set the get_symbol_val_xen callback
- * @param ctx  Dump file object.
- * @param cb   New callback function.
- * @return the Previous callback function.
- *
- * This callback is used for symbols in the Xen hypervisor.
- */
-kdump_get_symbol_val_fn *
-kdump_cb_get_symbol_val_xen(kdump_ctx *ctx, kdump_get_symbol_val_fn *cb);
 
 /**  Set pointer to user private data.
  * @param ctx  Dump file object.

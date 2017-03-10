@@ -712,22 +712,6 @@ get_symbol_val(kdump_ctx *ctx, const char *name, kdump_addr_t *val)
 	return set_error(ctx, ret, "Cannot resolve \"%s\"", name);
 }
 
-/**  Get a Xen symbol value.
- * @param      ctx   Dump object.
- * @param      name  Xen symbol name.
- * @param[out] val   Symbol value, returned on sucess.
- * @returns          Error status.
- *
- * This function must be called without holding any locks, see
- * @ref get_symbol_val for explanation.
- */
-kdump_status
-get_symbol_val_xen(kdump_ctx *ctx, const char *name, kdump_addr_t *val)
-{
-	kdump_status ret = ctx->cb_get_symbol_val_xen(ctx, name, val);
-	return set_error(ctx, ret, "Cannot resolve \"%s\"", name);
-}
-
 kdump_status
 set_cpu_regs64(kdump_ctx *ctx, unsigned cpu,
 	       const struct attr_template *tmpl, uint64_t *regs, unsigned num)

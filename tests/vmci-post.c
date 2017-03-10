@@ -136,6 +136,15 @@ check(kdump_ctx *ctx)
 	int rc, tmprc;
 
 	attr.type = kdump_string;
+	attr.val.string = "linux";
+	status = kdump_set_attr(ctx, "addrxlat.ostype", &attr);
+	if (status != kdump_ok) {
+		fprintf(stderr, "Cannot set ostype: %s\n",
+			kdump_err_str(ctx));
+		return TEST_ERR;
+	}
+
+	attr.type = kdump_string;
 	attr.val.string = vmcore;
 	status = kdump_set_attr(ctx, "linux.vmcoreinfo.raw", &attr);
 	if (status != kdump_ok) {

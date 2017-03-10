@@ -494,6 +494,17 @@ struct attr_hash {
 	struct attr_data table[ATTR_HASH_SIZE];
 };
 
+/** OS type to attribute key mapping.
+ */
+struct ostype_attr_map {
+	addrxlat_ostype_t ostype;   /**< OS type */
+	enum global_keyidx attrkey; /**< Corresponding attribute key */
+};
+
+INTERNAL_DECL(struct attr_data *, ostype_attr,
+	      (const struct kdump_shared *shared,
+	       const struct ostype_attr_map *map));
+
 struct cache;
 
 /** Number of per-context data slots.
@@ -576,7 +587,6 @@ struct _kdump_ctx {
 
 	/* callbacks */
 	kdump_get_symbol_val_fn *cb_get_symbol_val;
-	kdump_get_symbol_val_fn *cb_get_symbol_val_xen;
 
 	/** Per-context data. */
 	void *data[PER_CTX_SLOTS];
@@ -665,8 +675,6 @@ INTERNAL_DECL(ssize_t, paged_read, (int fd, void *buffer, size_t size));
 INTERNAL_DECL(uint32_t, cksum32, (void *buffer, size_t size, uint32_t csum));
 
 INTERNAL_DECL(kdump_status, get_symbol_val,
-	      (kdump_ctx *ctx, const char *name, kdump_addr_t *val));
-INTERNAL_DECL(kdump_status, get_symbol_val_xen,
 	      (kdump_ctx *ctx, const char *name, kdump_addr_t *val));
 
 INTERNAL_DECL(kdump_status, set_cpu_regs64,

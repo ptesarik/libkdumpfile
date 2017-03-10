@@ -99,7 +99,6 @@ kdump_init(kdump_ctx *ctx)
 			ATTR_PERSIST, DEFAULT_CACHE_SIZE);
 
 	ctx->cb_get_symbol_val = kdump_vmcoreinfo_symbol;
-	ctx->cb_get_symbol_val_xen = kdump_vmcoreinfo_symbol_xen;
 
 	status = init_vtop_maps(ctx);
 	if (status != kdump_ok)
@@ -143,7 +142,6 @@ kdump_clone(kdump_ctx *ctx, const kdump_ctx *orig)
 
 	ctx->priv = orig->priv;
 	ctx->cb_get_symbol_val = orig->cb_get_symbol_val;
-	ctx->cb_get_symbol_val_xen = orig->cb_get_symbol_val_xen;
 	return kdump_ok;
 }
 
