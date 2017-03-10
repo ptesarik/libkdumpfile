@@ -61,6 +61,53 @@ set_pteval_size(kdump_ctx *ctx)
 	addrxlat_meth_decref(meth);
 }
 
+static unsigned long
+get_version_code(kdump_ctx *ctx)
+{
+	static const char attrname[] = "version_code";
+	struct attr_data *attr;
+	const char *ostype;
+	kdump_status status;
+
+	/* Get OS type name */
+	attr = gattr(ctx, GKI_ostype);
+	status = validate_attr(ctx, attr);
+	if (status != kdump_ok)
+		return set_error(ctx, status, "Cannot get OS type");
+	if (!attr_isset(attr))
+		return 0UL;
+	ostype = attr_value(attr)->string;
+
+	/* Get OS directory attribute */
+	attr = lookup_attr(ctx->shared, ostype);
+	if (!attr || attr->template->type != kdump_directory)
+		return set_error(ctx, kdump_unsupported,
+				 "Unknown operating system type: %s", ostype);
+	status = validate_attr(ctx, attr);
+	if (status != kdump_ok)
+		return set_error(ctx, status, "Cannot get %s.%s",
+				 ostype, attrname);
+
+	/* Get version_code in the OS directory. */
+	attr = lookup_dir_attr(
+		ctx->shared, attr, attrname, sizeof(attrname) - 1);
+	if (!attr)
+		return 0UL;
+	status = validate_attr(ctx, attr);
+	if (status != kdump_ok)
+		return set_error(ctx, status, "Cannot get %s.%s",
+				 ostype, attrname);
+	if (!attr_isset(attr))
+		return 0UL;
+
+	if (attr->template->type != kdump_number)
+		status = set_error(ctx, kdump_invalid,
+				   "Attribute %s.%s is not a number",
+				   ostype, attrname);
+
+	return attr_value(attr)->number;
+}
+
 kdump_status
 kdump_vtop_init(kdump_ctx *ctx)
 {
@@ -74,7 +121,7 @@ kdump_vtop_init(kdump_ctx *ctx)
 	if (!isset_arch_name(ctx))
 		return set_error(ctx, kdump_nodata, "Unknown architecture");
 
-	osdesc.type = addrxlat_os_linux;
+	osdesc.type = ctx->shared->ostype;
 	osdesc.ver = get_version_code(ctx);
 	osdesc.arch = get_arch_name(ctx);
 

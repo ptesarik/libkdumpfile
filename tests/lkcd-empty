@@ -50,7 +50,6 @@ arch.page_size = number: $page_size
 arch.pteval_size = $pteval_spec
 
 linux = directory:
-linux.version_code = number: 0x030405
 linux.uts = directory:
 linux.uts.sysname = string: $sysname
 linux.uts.nodename = string: $node

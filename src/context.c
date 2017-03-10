@@ -185,16 +185,6 @@ kdump_domainname(kdump_ctx *ctx)
 }
 
 unsigned
-kdump_version_code(kdump_ctx *ctx)
-{
-	unsigned ret;
-	rwlock_rdlock(&ctx->shared->lock);
-	ret = get_version_code(ctx);
-	rwlock_unlock(&ctx->shared->lock);
-	return ret;
-}
-
-unsigned
 kdump_num_cpus(kdump_ctx *ctx)
 {
 	unsigned ret;

@@ -242,9 +242,12 @@ PyDoc_STRVAR(vtop_init__doc__,
 static PyObject *kdumpfile_vtop_init(PyObject *_self, PyObject *args)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
+	kdump_attr_t attr;
 	kdump_status status;
 
-	status = kdump_vtop_init(self->ctx);
+	attr.type = kdump_string;
+	attr.val.string = "linux";
+	status = kdump_set_attr(self->ctx, "addrxlat.ostype", &attr);
 	if (status != kdump_ok) {
 		PyErr_SetString(exception_map(status),
 				kdump_err_str(self->ctx));

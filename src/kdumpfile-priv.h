@@ -527,6 +527,9 @@ struct kdump_shared {
 
 	struct cache *cache;	/**< Page cache. */
 
+	/** OS for address translation. */
+	addrxlat_ostype_t ostype;
+
 	/** Linux address translation. */
 	addrxlat_sys_t *xlat_linux;
 	/** Xen address translation. */
@@ -906,6 +909,7 @@ INTERNAL_DECL(extern const struct attr_ops, page_size_ops, );
 INTERNAL_DECL(extern const struct attr_ops, page_shift_ops, );
 INTERNAL_DECL(extern const struct attr_ops, cache_size_ops, );
 INTERNAL_DECL(extern const struct attr_ops, arch_name_ops, );
+INTERNAL_DECL(extern const struct attr_ops, ostype_ops, );
 INTERNAL_DECL(extern const struct attr_ops, uts_machine_ops, );
 INTERNAL_DECL(extern const struct attr_ops, vmcoreinfo_raw_ops, );
 

@@ -51,9 +51,6 @@ ATTR(file, "fd", file_fd, number, int, .ops = &file_fd_ops)
 /* physical base */
 ATTR(linux, "phys_base", phys_base, address, kdump_addr_t)
 
-/* version as produced by KERNEL_VERSION() */
-ATTR(linux, "version_code", version_code, number, unsigned)
-
 /* Xen dump type */
 ATTR(xen, "type", xen_type, number, kdump_xen_type_t)
 

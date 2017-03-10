@@ -26,10 +26,14 @@ ATTR(root, "arch", dir_arch, directory, struct attr_data *)
 ATTR(root, "cache", dir_cache, directory, struct attr_data *)
 ATTR(root, "cpu", dir_cpu, directory, struct attr_data *)
 ATTR(root, "file", dir_file, directory, struct attr_data *)
-ATTR(root, "linux", dir_linux, directory, struct attr_data *)
 
 /* arch */
 ATTR(arch, "pteval_size", pteval_size, number, size_t)
+
+/* address translation */
+ATTR(root, "addrxlat", dir_addrxlat, directory, struct attr_data *)
+ATTR(addrxlat, "opts", addrxlat_opts, string, const char *)
+ATTR(addrxlat, "ostype", ostype, string, const char *, .ops = &ostype_ops)
 
 /* cache */
 ATTR(cache, "size", cache_size, number, unsigned, .ops = &cache_size_ops)
@@ -39,6 +43,10 @@ ATTR(cache, "misses", cache_misses, number, unsigned long)
 /* format name */
 ATTR(file, "format", file_format, string, const char *)
 ATTR(file, "description", file_description, string, const char *)
+
+/* Linux */
+ATTR(root, "linux", dir_linux, directory, struct attr_data *)
+ATTR(linux, "version_code", linux_version_code, number, unsigned)
 
 /* utsname */
 ATTR(linux, "uts", dir_linux_uts, directory, struct attr_data *)
@@ -71,6 +79,7 @@ ATTR(xen_version, "major", xen_ver_major, number, unsigned long)
 ATTR(xen_version, "minor", xen_ver_minor, number, unsigned long)
 ATTR(xen_version, "extra", xen_ver_extra, string, const char *)
 ATTR(xen_version, "extra_addr", xen_ver_extra_addr, address, kdump_vaddr_t)
+ATTR(xen, "version_code", xen_version_code, number, unsigned)
 
 /* Xen vmcoreinfo */
 ATTR(xen, "vmcoreinfo", dir_xen_vmcoreinfo, directory, struct attr_data *)

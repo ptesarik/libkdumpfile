@@ -38,8 +38,6 @@
 #include <linux/version.h>
 
 static kdump_status kdump_open_known(kdump_ctx *pctx);
-static kdump_status use_kernel_utsname(kdump_ctx *ctx);
-static kdump_status setup_version_code(kdump_ctx *ctx);
 
 static const struct format_ops *formats[] = {
 	&elfdump_ops,
@@ -210,41 +208,8 @@ set_fd(kdump_ctx *ctx, void *buf)
 static kdump_status
 kdump_open_known(kdump_ctx *ctx)
 {
-	const struct attr_data *attr;
-	kdump_status res;
-
 	set_attr_static_string(ctx, gattr(ctx, GKI_file_format),
 			       ATTR_DEFAULT, ctx->shared->ops->name);
-
-	rwlock_unlock(&ctx->shared->lock);
-	kdump_vtop_init(ctx);
-	clear_error(ctx);
-	rwlock_rdlock(&ctx->shared->lock);
-
-	if (ctx->shared->arch_ops && ctx->shared->arch_ops->late_init &&
-	    (res = ctx->shared->arch_ops->late_init(ctx)) != kdump_ok)
-		return set_error(ctx, res, "Architecture late init failed");
-
-	if (!attr_isset(gattr(ctx, GKI_linux_uts_sysname)))
-		/* If this fails, it is not fatal. */
-		use_kernel_utsname(ctx);
-
-	/* If this fails, it is not fatal. */
-	attr = gattr(ctx, GKI_xen_ver_extra_addr);
-	if (attr_isset(attr)) {
-		char *extra;
-		res = read_string_locked(ctx, KDUMP_MACHPHYSADDR,
-					 attr_value(attr)->address, &extra);
-		if (res == kdump_ok) {
-			set_attr_string(ctx, gattr(ctx, GKI_xen_ver_extra),
-					ATTR_DEFAULT, extra);
-			free(extra);
-		}
-	}
-
-	setup_version_code(ctx);
-
-	clear_error(ctx);
 	return kdump_ok;
 }
 
@@ -318,12 +283,15 @@ uts_name_from_init_uts_ns(kdump_ctx *ctx, kdump_vaddr_t *uts_name)
 }
 
 static kdump_status
-use_kernel_utsname(kdump_ctx *ctx)
+update_linux_utsname(kdump_ctx *ctx)
 {
 	kdump_vaddr_t uts_name;
 	struct new_utsname uts;
 	size_t rd;
 	kdump_status ret;
+
+	if (attr_isset(gattr(ctx, GKI_linux_uts_sysname)))
+		return kdump_ok;
 
 	rwlock_unlock(&ctx->shared->lock);
 	ret = get_symbol_val(ctx, "system_utsname", &uts_name);
@@ -350,48 +318,199 @@ use_kernel_utsname(kdump_ctx *ctx)
 	return kdump_ok;
 }
 
+/** Initialize Linux version code from kernel release string.
+ * @param ctx      Dump file object.
+ * @returns        Error status.
+ *
+ * If the release string is not set, version code is left unchanged,
+ * and this function succeeds. This behaviour may have to change if
+ * the function is used from other contexts than the ostype post hook.
+ */
 static kdump_status
-setup_version_code(kdump_ctx *ctx)
+linux_version_code(kdump_ctx *ctx)
 {
-	const struct attr_data *rel;
+	struct attr_data *rel;
 	const char *p;
 	char *endp;
 	long a, b, c;
+	kdump_attr_value_t val;
+	kdump_status status;
 
 	rel = gattr(ctx, GKI_linux_uts_release);
+	status = validate_attr(ctx, rel);
+	if (status != kdump_ok)
+		return set_error(ctx, status, "Cannot get Linux release");
 	if (!attr_isset(rel))
-		return set_error(ctx, kdump_nodata,
-				 "Cannot get kernel release");
+		return kdump_ok; /* Missing data => ignore */
 
 	p = attr_value(rel)->string;
 	a = strtoul(p, &endp, 10);
 	if (endp == p || *endp != '.')
-		return set_error(ctx, kdump_dataerr,
-				 "Invalid kernel version: %s",
-				 attr_value(rel)->string);
+		goto err;
 
 	b = c = 0L;
 	if (*endp) {
 		p = endp + 1;
 		b = strtoul(p, &endp, 10);
 		if (endp == p || *endp != '.')
-			return set_error(ctx, kdump_dataerr,
-					 "Invalid kernel version: %s",
-					 attr_value(rel)->string);
+			goto err;
 
 		if (*endp) {
 			p = endp + 1;
 			c = strtoul(p, &endp, 10);
 			if (endp == p)
-				return set_error(ctx, kdump_dataerr,
-						 "Invalid kernel version: %s",
-						 attr_value(rel)->string);
+				goto err;
 		}
 	}
 
-	set_version_code(ctx, KERNEL_VERSION(a, b, c));
+	val.number = KERNEL_VERSION(a, b, c);
+	return set_attr(ctx, gattr(ctx, GKI_linux_version_code),
+			ATTR_DEFAULT, &val);
+
+ err:
+	return set_error(ctx, kdump_dataerr, "Invalid kernel version: %s",
+			 attr_value(rel)->string);
+}
+
+/** Read the Xen extra version string.
+ * @param ctx      Dump file object.
+ * @returns        Error status.
+ */
+static kdump_status
+update_xen_extra_ver(kdump_ctx *ctx)
+{
+	static const char desc[] = "Xen extra version";
+	struct attr_data *attr;
+	char *extra;
+	kdump_status status;
+
+	attr = gattr(ctx, GKI_xen_ver_extra_addr);
+	status = validate_attr(ctx, attr);
+	if (status != kdump_ok)
+		return set_error(ctx, status, "Cannot locate %s", desc);
+	if (!attr_isset(attr))
+		return kdump_ok;
+
+	status = read_string_locked(ctx, KDUMP_MACHPHYSADDR,
+				    attr_value(attr)->address, &extra);
+	if (status != kdump_ok)
+		return set_error(ctx, status, "Cannot read %s", desc);
+
+	status = set_attr_string(ctx, gattr(ctx, GKI_xen_ver_extra),
+				 ATTR_DEFAULT, extra);
+	free(extra);
+	if (status != kdump_ok)
+		return set_error(ctx, status, "Cannot set %s", desc);
+
 	return kdump_ok;
 }
+
+/** Initialize Xen version code from Xen major/minor strings.
+ * @param ctx      Dump file object.
+ * @returns        Error status.
+ *
+ * If the version strings are not set, version code is left unchanged,
+ * and this function succeeds. This behaviour may have to change if
+ * the function is used from other contexts than the ostype post hook.
+ */
+static kdump_status
+xen_version_code(kdump_ctx *ctx)
+{
+	struct attr_data *ver;
+	unsigned long major, minor;
+	kdump_attr_value_t val;
+	kdump_status status;
+
+	ver = gattr(ctx, GKI_xen_ver_major);
+	status = validate_attr(ctx, ver);
+	if (status != kdump_ok)
+		return set_error(ctx, status, "Cannot get Xen major");
+	if (!attr_isset(ver))
+		return kdump_ok; /* Missing data => ignore */
+	major = attr_value(ver)->number;
+
+	ver = gattr(ctx, GKI_xen_ver_minor);
+	status = validate_attr(ctx, ver);
+	if (status != kdump_ok)
+		return set_error(ctx, status, "Cannot get Xen minor");
+	if (!attr_isset(ver))
+		return kdump_ok; /* Missing data => ignore */
+	minor = attr_value(ver)->number;
+
+	val.number = ADDRXLAT_VER_XEN(major, minor);
+	return set_attr(ctx, gattr(ctx, GKI_xen_version_code),
+			ATTR_DEFAULT, &val);
+}
+
+static kdump_status
+ostype_pre_hook(kdump_ctx *ctx, struct attr_data *attr,
+		kdump_attr_value_t *val)
+{
+	if (!(strcmp(val->string, "linux")))
+		ctx->shared->ostype = addrxlat_os_linux;
+	else if (!strcmp(val->string, "xen"))
+		ctx->shared->ostype = addrxlat_os_xen;
+	else
+		return set_error(ctx, kdump_unsupported,
+				 "Unsupported OS type");
+
+	return kdump_ok;
+}
+
+static kdump_status
+ostype_post_hook(kdump_ctx *ctx, struct attr_data *attr)
+{
+	kdump_status status;
+
+	switch (ctx->shared->ostype) {
+	case addrxlat_os_linux:
+		status = update_linux_utsname(ctx);
+		if (status != kdump_ok)
+			return status;
+		status = linux_version_code(ctx);
+		if (status != kdump_ok)
+			return status;
+		break;
+
+	case addrxlat_os_xen:
+		status = update_xen_extra_ver(ctx);
+		if (status != kdump_ok)
+			return status;
+		status = xen_version_code(ctx);
+		if (status != kdump_ok)
+			return status;
+		break;
+
+	default:
+		break;
+	}
+
+	rwlock_unlock(&ctx->shared->lock);
+	status = kdump_vtop_init(ctx);
+	rwlock_rdlock(&ctx->shared->lock);
+	if (status != kdump_ok)
+		return set_error(ctx, status,
+				 "Cannot initialize address translation");
+
+	if (ctx->shared->arch_ops && ctx->shared->arch_ops->late_init &&
+	    (status = ctx->shared->arch_ops->late_init(ctx)) != kdump_ok)
+		return set_error(ctx, status,
+				 "Architecture late init failed");
+
+	return kdump_ok;
+}
+
+static void
+ostype_clear_hook(kdump_ctx *ctx, struct attr_data *attr)
+{
+	ctx->shared->ostype = addrxlat_os_unknown;
+}
+
+const struct attr_ops ostype_ops = {
+	.pre_set = ostype_pre_hook,
+	.post_set = ostype_post_hook,
+	.pre_clear = ostype_clear_hook,
+};
 
 void
 kdump_free(kdump_ctx *ctx)
