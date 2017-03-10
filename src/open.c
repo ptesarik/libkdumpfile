@@ -299,6 +299,10 @@ update_linux_utsname(kdump_ctx *ctx)
 	if (ret == kdump_nodata) {
 		clear_error(ctx);
 		ret = uts_name_from_init_uts_ns(ctx, &uts_name);
+		if (ret == kdump_nodata) {
+			clear_error(ctx);
+			return kdump_ok;
+		}
 	}
 	if (ret != kdump_ok)
 		return ret;
