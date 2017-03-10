@@ -338,10 +338,10 @@ linux_version_code(kdump_ctx *ctx)
 
 	rel = gattr(ctx, GKI_linux_uts_release);
 	status = validate_attr(ctx, rel);
+	if (status == kdump_nodata)
+		return kdump_ok; /* Missing data => ignore */
 	if (status != kdump_ok)
 		return set_error(ctx, status, "Cannot get Linux release");
-	if (!attr_isset(rel))
-		return kdump_ok; /* Missing data => ignore */
 
 	p = attr_value(rel)->string;
 	a = strtoul(p, &endp, 10);
@@ -386,10 +386,10 @@ update_xen_extra_ver(kdump_ctx *ctx)
 
 	attr = gattr(ctx, GKI_xen_ver_extra_addr);
 	status = validate_attr(ctx, attr);
+	if (status == kdump_nodata)
+		return kdump_ok;
 	if (status != kdump_ok)
 		return set_error(ctx, status, "Cannot locate %s", desc);
-	if (!attr_isset(attr))
-		return kdump_ok;
 
 	status = read_string_locked(ctx, KDUMP_MACHPHYSADDR,
 				    attr_value(attr)->address, &extra);
@@ -423,18 +423,18 @@ xen_version_code(kdump_ctx *ctx)
 
 	ver = gattr(ctx, GKI_xen_ver_major);
 	status = validate_attr(ctx, ver);
+	if (status == kdump_nodata)
+		return kdump_ok; /* Missing data => ignore */
 	if (status != kdump_ok)
 		return set_error(ctx, status, "Cannot get Xen major");
-	if (!attr_isset(ver))
-		return kdump_ok; /* Missing data => ignore */
 	major = attr_value(ver)->number;
 
 	ver = gattr(ctx, GKI_xen_ver_minor);
 	status = validate_attr(ctx, ver);
+	if (status == kdump_nodata)
+		return kdump_ok; /* Missing data => ignore */
 	if (status != kdump_ok)
 		return set_error(ctx, status, "Cannot get Xen minor");
-	if (!attr_isset(ver))
-		return kdump_ok; /* Missing data => ignore */
 	minor = attr_value(ver)->number;
 
 	val.number = ADDRXLAT_VER_XEN(major, minor);

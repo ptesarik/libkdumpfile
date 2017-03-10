@@ -765,6 +765,11 @@ set_attr_static_string(kdump_ctx *ctx, struct attr_data *attr,
  * @param ctx   Dump file object.
  * @param attr  Attribute data.
  * @returns     Error status.
+ *
+ * This can be safely used with unset attributes. If an attribute
+ * has no value, then this function returns @ref kdump_nodata but
+ * does not set any error message, so callers can clear the error
+ * simply by ignoring the return value.
  */
 kdump_status
 validate_attr(kdump_ctx *ctx, struct attr_data *attr)

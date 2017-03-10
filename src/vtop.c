@@ -72,10 +72,10 @@ get_version_code(kdump_ctx *ctx)
 	/* Get OS type name */
 	attr = gattr(ctx, GKI_ostype);
 	status = validate_attr(ctx, attr);
+	if (status == kdump_nodata)
+		return 0UL;
 	if (status != kdump_ok)
 		return set_error(ctx, status, "Cannot get OS type");
-	if (!attr_isset(attr))
-		return 0UL;
 	ostype = attr_value(attr)->string;
 
 	/* Get OS directory attribute */
@@ -94,11 +94,11 @@ get_version_code(kdump_ctx *ctx)
 	if (!attr)
 		return 0UL;
 	status = validate_attr(ctx, attr);
+	if (status == kdump_nodata)
+		return 0UL;
 	if (status != kdump_ok)
 		return set_error(ctx, status, "Cannot get %s.%s",
 				 ostype, attrname);
-	if (!attr_isset(attr))
-		return 0UL;
 
 	if (attr->template->type != kdump_number)
 		status = set_error(ctx, kdump_invalid,
@@ -135,7 +135,7 @@ kdump_vtop_init(kdump_ctx *ctx)
 		strcat(opts, " xen_xlat=1");
 
 	attr = gattr(ctx, GKI_xen_p2m_mfn);
-	if (attr_isset(attr) && validate_attr(ctx, attr) == kdump_ok)
+	if (validate_attr(ctx, attr) == kdump_ok)
 		sprintf(opts + strlen(opts),
 			" xen_p2m_mfn=0x%"ADDRXLAT_PRIxADDR,
 			attr_value(attr)->number);
