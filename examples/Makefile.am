@@ -25,4 +25,4 @@ LIBS = $(top_builddir)/src/libkdumpfile.la
 dumpattr_SOURCES = \
 	dumpattr.c
 
-bin_PROGRAMS = dumpattr
+bin_PROGRAMS = dumpattr listxendoms
