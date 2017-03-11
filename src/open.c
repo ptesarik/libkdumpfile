@@ -266,7 +266,7 @@ uts_name_from_init_uts_ns(kdump_ctx *ctx, kdump_vaddr_t *uts_name)
 		return ret;
 
 	rd = sizeof buf;
-	ret = readp_locked(ctx, KDUMP_KVADDR, init_uts_ns, buf, &rd);
+	ret = read_locked(ctx, KDUMP_KVADDR, init_uts_ns, buf, &rd);
 	if (ret != kdump_ok)
 		return ret;
 
@@ -306,7 +306,7 @@ update_linux_utsname(kdump_ctx *ctx)
 		return ret;
 
 	rd = sizeof uts;
-	ret = readp_locked(ctx, KDUMP_KVADDR, uts_name,
+	ret = read_locked(ctx, KDUMP_KVADDR, uts_name,
 			   (unsigned char*)&uts, &rd);
 	if (ret != kdump_ok)
 		return ret;

@@ -74,8 +74,7 @@ dump_data(kdump_ctx *ctx, unsigned long long addr, unsigned long long len)
 		remain = sz;
 		while (remain) {
 			sz = remain;
-			res = kdump_readp(ctx, KDUMP_KPHYSADDR, addr,
-					  buf, &sz);
+			res = kdump_read(ctx, KDUMP_KPHYSADDR, addr, buf, &sz);
 			dump_buffer(addr, buf, sz);
 			addr += sz;
 			remain -= sz;

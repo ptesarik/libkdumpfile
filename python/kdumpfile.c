@@ -204,8 +204,8 @@ static PyObject *kdumpfile_read (PyObject *_self, PyObject *args, PyObject *kw)
 		return NULL;
 
 	r = size;
-	status = kdump_readp(self->ctx, addrspace, addr,
-			     PyByteArray_AS_STRING(obj), &r);
+	status = kdump_read(self->ctx, addrspace, addr,
+			    PyByteArray_AS_STRING(obj), &r);
 	if (status != kdump_ok) {
 		Py_XDECREF(obj);
 		PyErr_Format(exception_map(status), kdump_err_str(self->ctx));

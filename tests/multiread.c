@@ -64,8 +64,8 @@ run_reads(void *arg)
 	sz = sizeof buf;
 	for (i = 0; i < niter; ++i) {
 		pfn = base_pfn + lrand48() % npages;
-		res = kdump_readp(ctx, KDUMP_MACHPHYSADDR, pfn << page_shift,
-				  &buf, &sz);
+		res = kdump_read(ctx, KDUMP_MACHPHYSADDR, pfn << page_shift,
+				 &buf, &sz);
 		if (res != kdump_ok) {
 			fprintf(stderr, "Read failed at 0x%llx\n",
 				(unsigned long long) pfn << page_shift);

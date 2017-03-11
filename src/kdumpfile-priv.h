@@ -636,7 +636,7 @@ INTERNAL_DECL(kdump_status, raw_read_page,
 INTERNAL_DECL(kdump_status, read_string_locked,
 	      (kdump_ctx *ctx, kdump_addrspace_t as,
 	       kdump_addr_t addr, char **pstr));
-INTERNAL_DECL(kdump_status, readp_locked,
+INTERNAL_DECL(kdump_status, read_locked,
 	      (kdump_ctx *ctx, kdump_addrspace_t as,
 	       kdump_addr_t addr, void *buffer, size_t *plength));
 INTERNAL_DECL(kdump_status, read_u32,

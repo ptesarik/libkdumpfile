@@ -78,7 +78,7 @@ get_vmcoreinfo(kdump_ctx *ctx)
 	if (!info)
 		return kdump_syserr;
 
-	ret = readp_locked(ctx, KDUMP_KPHYSADDR, addr, info, &length);
+	ret = read_locked(ctx, KDUMP_KPHYSADDR, addr, info, &length);
 	if (ret == kdump_ok)
 		ret = process_notes(ctx, info, length);
 

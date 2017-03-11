@@ -14,7 +14,7 @@ read_ptr(kdump_ctx *ctx, kdump_vaddr_t addr)
 	uint64_t ptr;
 	size_t sz = sizeof ptr;
 
-	if (kdump_readp(ctx, KDUMP_KVADDR, addr, &ptr, &sz) != kdump_ok) {
+	if (kdump_read(ctx, KDUMP_KVADDR, addr, &ptr, &sz) != kdump_ok) {
 		fprintf(stderr, "read failed at 0x%llx: %s\n",
 			(unsigned long long) addr, kdump_err_str(ctx));
 		return 0;
@@ -50,8 +50,8 @@ print_xen_domains(kdump_ctx *ctx)
 	domain -= off_next;
 	while ( (domain = read_ptr(ctx, domain + off_next)) ) {
 		sz = sizeof id;
-		status = kdump_readp(ctx, KDUMP_KVADDR, domain + off_id,
-				     &id, &sz);
+		status = kdump_read(ctx, KDUMP_KVADDR, domain + off_id,
+				    &id, &sz);
 		if (status != kdump_ok)
 			return status;
 
