@@ -103,16 +103,6 @@ kdump_pageshift(kdump_ctx *ctx)
 	return ret;
 }
 
-kdump_paddr_t
-kdump_phys_base(kdump_ctx *ctx)
-{
-	kdump_paddr_t ret;
-	rwlock_rdlock(&ctx->shared->lock);
-	ret = get_phys_base(ctx);
-	rwlock_unlock(&ctx->shared->lock);
-	return ret;
-}
-
 static const char *
 get_string_attr(kdump_ctx *ctx, struct attr_data *attr)
 {
@@ -146,42 +136,6 @@ const char *
 kdump_format(kdump_ctx *ctx)
 {
 	return get_string_attr(ctx, gattr(ctx, GKI_file_format));
-}
-
-const char *
-kdump_sysname(kdump_ctx *ctx)
-{
-	return get_string_attr(ctx, gattr(ctx, GKI_linux_uts_sysname));
-}
-
-const char *
-kdump_nodename(kdump_ctx *ctx)
-{
-	return get_string_attr(ctx, gattr(ctx, GKI_linux_uts_nodename));
-}
-
-const char *
-kdump_release(kdump_ctx *ctx)
-{
-	return get_string_attr(ctx, gattr(ctx, GKI_linux_uts_release));
-}
-
-const char *
-kdump_version(kdump_ctx *ctx)
-{
-	return get_string_attr(ctx, gattr(ctx, GKI_linux_uts_version));
-}
-
-const char *
-kdump_machine(kdump_ctx *ctx)
-{
-	return get_string_attr(ctx, gattr(ctx, GKI_linux_uts_machine));
-}
-
-const char *
-kdump_domainname(kdump_ctx *ctx)
-{
-	return get_string_attr(ctx, gattr(ctx, GKI_linux_uts_domainname));
 }
 
 unsigned

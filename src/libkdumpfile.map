@@ -36,13 +36,6 @@ LIBKDUMPFILE_0 {
     kdump_xen_type;
     kdump_pagesize;
     kdump_pageshift;
-    kdump_phys_base;
-    kdump_sysname;
-    kdump_nodename;
-    kdump_release;
-    kdump_version;
-    kdump_machine;
-    kdump_domainname;
     kdump_num_cpus;
     kdump_vmcoreinfo;
     kdump_vmcoreinfo_row;

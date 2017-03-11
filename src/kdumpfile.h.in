@@ -643,49 +643,6 @@ size_t kdump_pagesize(kdump_ctx *ctx);
  */
 unsigned kdump_pageshift(kdump_ctx *ctx);
 
-/**  Get target kernel physical base.
- * @param ctx  Dump file object.
- * @returns     Physical address where the kernel is loaded.
- */
-kdump_paddr_t kdump_phys_base(kdump_ctx *ctx);
-
-/**  Get target system name.
- * @param ctx  Dump file object.
- * @returns    System name (always @c "Linux"), or @c NULL.
- */
-const char *kdump_sysname(kdump_ctx *ctx);
-
-/** Get target node name.
- * @param ctx  Dump file object.
- * @returns    Node name from @c utsname, or @c NULL.
- */
-const char *kdump_nodename(kdump_ctx *ctx);
-
-/** Get target kernel release.
- * @param ctx  Dump file object.
- * @returns    Kernel release from @c utsname, or @c NULL.
- */
-const char *kdump_release(kdump_ctx *ctx);
-
-/** Get target kernel version.
- * @param ctx  Dump file object.
- * @returns    Kernel version from @c utsname, or @c NULL.
- */
-const char *kdump_version(kdump_ctx *ctx);
-
-/**  Get target machine name.
- * @param ctx  Dump file object.
- * @returns    Machine name from @c utsname, or @c NULL.
- * @sa kdump_arch_name
- */
-const char *kdump_machine(kdump_ctx *ctx);
-
-/**  Get target domain name.
- * @param ctx  Dump file object.
- * @returns    Domain name from utsname, or @c NULL.
- */
-const char *kdump_domainname(kdump_ctx *ctx);
-
 /**  Get kernel version code.
  * @param ctx  Dump file object.
  * @returns    Kernel version code.
