@@ -535,10 +535,12 @@ cleanup_attr(struct kdump_shared *shared)
 	shared->attr = NULL;
 }
 
-/**  Initialize statically allocated attributes
+/**  Initialize global attributes
+ * @param shared  Shared data of a dump file object.
+ * @returns       Global attribute array, or @c NULL on allocation failure.
  */
-kdump_status
-init_attrs(kdump_ctx *ctx)
+struct attr_data **
+init_attrs(struct kdump_shared *shared)
 {
 	enum global_keyidx i;
 
@@ -546,21 +548,19 @@ init_attrs(kdump_ctx *ctx)
 		const struct attr_template *tmpl = &global_keys[i];
 		struct attr_data *attr, *parent;
 
-		parent = ctx->shared->global_attrs[tmpl->parent - global_keys];
-		attr = new_attr(ctx->shared, parent, tmpl);
+		parent = shared->global_attrs[tmpl->parent - global_keys];
+		attr = new_attr(shared, parent, tmpl);
 		if (!attr)
-			return set_error(ctx, kdump_syserr,
-					 "Cannot initialize attribute %s",
-					 tmpl->key);
-		ctx->shared->global_attrs[i] = attr;
+			return NULL;
+		shared->global_attrs[i] = attr;
 
 		if (i >= GKI_static_first && i <= GKI_static_last) {
 			attr->flags.indirect = 1;
-			attr->pval = static_attr_value(ctx->shared, i);
+			attr->pval = static_attr_value(shared, i);
 		}
 	}
 
-	return kdump_ok;
+	return shared->global_attrs;
 }
 
 /**  Check whether an attribute has a given value.

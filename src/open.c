@@ -91,8 +91,7 @@ kdump_init(kdump_ctx *ctx)
 	ctx->shared = shared;
 	list_add(&ctx->list, &shared->ctx);
 
-	status = init_attrs(ctx);
-	if (status != kdump_ok)
+	if (!init_attrs(ctx->shared))
 		goto err_lock;
 
 	set_attr_number(ctx, gattr(ctx, GKI_cache_size),

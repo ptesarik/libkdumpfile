@@ -800,7 +800,7 @@ INTERNAL_DECL(struct attr_data *, new_attr,
 	      (struct kdump_shared *shared, struct attr_data *parent,
 	       const struct attr_template *tmpl));
 INTERNAL_DECL(void, dealloc_attr, (struct attr_data *attr));
-INTERNAL_DECL(kdump_status, init_attrs, (kdump_ctx *ctx));
+INTERNAL_DECL(struct attr_data **, init_attrs, (struct kdump_shared *shared));
 INTERNAL_DECL(struct attr_data *, lookup_attr,
 	      (const struct kdump_shared *shared, const char *key));
 INTERNAL_DECL(struct attr_data *, lookup_dir_attr,
