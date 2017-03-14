@@ -108,18 +108,10 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 	if (!self)
 		return NULL;
 
-	self->ctx = kdump_alloc();
+	self->ctx = kdump_new();
 	if (!self->ctx) {
 		PyErr_SetString(PyExc_MemoryError,
 				"Couldn't allocate kdump context");
-		goto fail;
-	}
-
-	status = kdump_init(self->ctx);
-	if (status != kdump_ok) {
-		PyErr_Format(SysErrException,
-			     "Couldn't initialize kdump context: %s",
-			     kdump_err_str(self->ctx));
 		goto fail;
 	}
 

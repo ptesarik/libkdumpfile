@@ -390,24 +390,6 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 	return ret;
 }
 
-kdump_status
-init_vtop_maps(kdump_ctx *ctx)
-{
-	struct kdump_shared *shared = ctx->shared;
-	addrxlat_sys_t *xlatsys;
-
-	xlatsys = addrxlat_sys_new();
-	if (!xlatsys)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot allocate translation system");
-
-	if (shared->xlat)
-		addrxlat_sys_decref(shared->xlat);
-	shared->xlat = xlatsys;
-
-	return kdump_ok;
-}
-
 addrxlat_ctx_t *
 init_addrxlat(kdump_ctx *ctx)
 {

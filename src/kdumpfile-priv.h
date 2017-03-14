@@ -788,7 +788,6 @@ INTERNAL_DECL(kdump_status, process_arch_notes,
 	      (kdump_ctx *ctx, void *data, size_t size));
 
 /* Virtual address space regions */
-INTERNAL_DECL(kdump_status, init_vtop_maps, (kdump_ctx *ctx));
 INTERNAL_DECL(addrxlat_ctx_t *, init_addrxlat, (kdump_ctx *ctx));
 
 /* Attribute handling */

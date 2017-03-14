@@ -37,6 +37,112 @@
 #include <stdio.h>
 #include <errno.h>
 
+static kdump_ctx *
+alloc_ctx(void)
+{
+	kdump_ctx *ctx;
+
+	ctx = calloc(1, sizeof (kdump_ctx));
+	if (!ctx)
+		return ctx;
+	ctx->cb_get_symbol_val = kdump_vmcoreinfo_symbol;
+
+	ctx->addrxlat = init_addrxlat(ctx);
+	if (!ctx->addrxlat) {
+		free(ctx);
+		return NULL;
+	}
+
+	return ctx;
+}
+
+static struct kdump_shared *
+alloc_shared(void)
+{
+	struct kdump_shared *shared;
+
+	shared = calloc(1, sizeof *shared);
+	if (!shared)
+		return shared;
+	list_init(&shared->ctx);
+
+	if (rwlock_init(&shared->lock, NULL))
+		goto err1;
+
+	shared->xlat = addrxlat_sys_new();
+	if (!shared->xlat)
+		goto err2;
+
+	if (!init_attrs(shared))
+		goto err3;
+
+	return shared;
+
+ err3:	addrxlat_sys_decref(shared->xlat);
+ err2:	rwlock_destroy(&shared->lock);
+ err1:	free(shared);
+	return NULL;
+}
+
+kdump_ctx *
+kdump_new(void)
+{
+	kdump_ctx *ctx;
+
+	ctx = alloc_ctx();
+	if (!ctx)
+		return NULL;
+
+	ctx->shared = alloc_shared();
+	if (!ctx->shared) {
+		addrxlat_ctx_decref(ctx->addrxlat);
+		free(ctx);
+		return NULL;
+	}
+	list_add(&ctx->list, &ctx->shared->ctx);
+
+	set_attr_number(ctx, gattr(ctx, GKI_cache_size),
+			ATTR_PERSIST, DEFAULT_CACHE_SIZE);
+
+	return ctx;
+}
+
+kdump_ctx *
+kdump_clone(const kdump_ctx *orig)
+{
+	kdump_ctx *ctx;
+	int slot;
+
+	ctx = alloc_ctx();
+	if (!ctx)
+		return ctx;
+
+	rwlock_rdlock(&orig->shared->lock);
+	for (slot = 0; slot < PER_CTX_SLOTS; ++slot) {
+		size_t sz = orig->shared->per_ctx_size[slot];
+		if (!sz)
+			continue;
+		if (! (ctx->data[slot] = malloc(sz)) ) {
+			while (slot-- > 0)
+				if (orig->shared->per_ctx_size[slot])
+					free(ctx->data[slot]);
+			addrxlat_ctx_decref(ctx->addrxlat);
+			free(ctx);
+			return NULL;
+		}
+	}
+	rwlock_unlock(&orig->shared->lock);
+
+	rwlock_wrlock(&orig->shared->lock);
+	ctx->shared = orig->shared;
+	list_add(&ctx->list, &orig->shared->ctx);
+	rwlock_unlock(&orig->shared->lock);
+
+	ctx->priv = orig->priv;
+	ctx->cb_get_symbol_val = orig->cb_get_symbol_val;
+	return ctx;
+}
+
 const char *
 kdump_err_str(kdump_ctx *ctx)
 {
