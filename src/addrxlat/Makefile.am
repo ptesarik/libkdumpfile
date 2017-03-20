@@ -19,6 +19,7 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
+AM_CPPFLAGS = -I$(top_builddir)/include
 AM_CFLAGS = -fvisibility=hidden
 
 lib_LTLIBRARIES = libaddrxlat.la
@@ -40,9 +41,6 @@ if HAVE_LD_VERSION_SCRIPT
 libaddrxlat_la_LDFLAGS += -Wl,--version-script=$(srcdir)/libaddrxlat.map
 EXTRA_libaddrxlat_la_DEPENDENCIES = libaddrxlat.map
 endif
-
-nodist_pkginclude_HEADERS = \
-	addrxlat.h
 
 noinst_HEADERS = \
 	addrxlat-priv.h

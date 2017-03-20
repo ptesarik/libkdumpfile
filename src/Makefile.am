@@ -21,6 +21,7 @@
 
 SUBDIRS = addrxlat
 
+AM_CPPFLAGS = -I$(top_builddir)/include
 AM_CFLAGS = -fvisibility=hidden
 
 lib_LTLIBRARIES = libkdumpfile.la
@@ -53,9 +54,6 @@ if HAVE_LD_VERSION_SCRIPT
 libkdumpfile_la_LDFLAGS += -Wl,--version-script=$(srcdir)/libkdumpfile.map
 EXTRA_libkdumpfile_la_DEPENDENCIES = libkdumpfile.map
 endif
-
-nodist_pkginclude_HEADERS = \
-	kdumpfile.h
 
 noinst_HEADERS = \
 	kdumpfile-priv.h \

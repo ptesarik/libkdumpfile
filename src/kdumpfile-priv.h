@@ -34,7 +34,7 @@
 #include "config.h"
 
 #pragma GCC visibility push(default)
-#include "kdumpfile.h"
+#include <kdumpfile.h>
 #pragma GCC visibility pop
 
 #include "list.h"
@@ -42,7 +42,7 @@
 
 #include <endian.h>
 
-#include "addrxlat/addrxlat.h"
+#include <addrxlat.h>
 
 #define STRINGIFY(x)	#x
 #define XSTRINGIFY(x)	STRINGIFY(x)

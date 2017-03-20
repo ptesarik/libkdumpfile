@@ -21,7 +21,7 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = src tests examples
+SUBDIRS = include src tests examples
 if BUILD_PYTHON_EXT
 SUBDIRS += python
 endif

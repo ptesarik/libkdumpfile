@@ -98,14 +98,15 @@ kdump_PYTHON([2.7.0])
 AC_CONFIG_FILES([
 	Makefile
 	examples/Makefile
+	include/Makefile
 	src/Makefile
 	src/addrxlat/Makefile
 	python/Makefile
 	python/kdumpfile/Makefile
 	tests/Makefile
 	libkdumpfile.pc
-	src/kdumpfile.h
-	src/addrxlat/addrxlat.h
+	include/kdumpfile.h
+	include/addrxlat.h
 ])
 
 AC_OUTPUT

@@ -18,7 +18,7 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-AM_CPPFLAGS = -I$(top_builddir)/src -I$(top_builddir)/src/addrxlat
+AM_CPPFLAGS = -I$(top_builddir)/include
 LDADD = libtestutil.a
 
 libtestutil_a_SOURCES = \

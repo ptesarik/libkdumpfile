@@ -1,7 +1,7 @@
 ## Process this file with automake to create Makefile.in
-## Configure input file for libkdumpfile.
+## Automake input file for libaddrxlat.
 ##
-## Copyright (C) 2015 Ales Novak <alnovak@suse.cz>
+## Copyright (C) 2017 Petr Tesarik <ptesarik@suse.com>
 ##
 ## This file is part of libkdumpfile.
 ##
@@ -19,18 +19,6 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-AM_CPPFLAGS = -I$(top_builddir)/include
-
-pyexec_LTLIBRARIES = _kdumpfile.la
-
-_kdumpfile_la_SOURCES = kdumpfile.c
-_kdumpfile_la_CFLAGS = $(PYTHON_CFLAGS) -I$(top_srcdir)/src
-_kdumpfile_la_LDFLAGS = -module -avoid-version -export-symbols $(srcdir)/kdumpfile.sym
-_kdumpfile_la_LIBADD = $(PYTHON_LIBS) $(top_builddir)/src/libkdumpfile.la
-
-EXTRA__kdumpfile_la_DEPENDENCIES = kdumpfile.sym
-
-dist_noinst_DATA = \
-	kdumpfile.sym
-
-SUBDIRS = kdumpfile
+nodist_pkginclude_HEADERS = \
+	addrxlat.h	\
+	kdumpfile.h
