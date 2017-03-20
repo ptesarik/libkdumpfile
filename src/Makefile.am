@@ -54,7 +54,7 @@ libkdumpfile_la_LDFLAGS += -Wl,--version-script=$(srcdir)/libkdumpfile.map
 EXTRA_libkdumpfile_la_DEPENDENCIES = libkdumpfile.map
 endif
 
-nodist_include_HEADERS = \
+nodist_pkginclude_HEADERS = \
 	kdumpfile.h
 
 noinst_HEADERS = \
