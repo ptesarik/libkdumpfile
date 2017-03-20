@@ -36,11 +36,25 @@
 #include <inttypes.h>
 
 /** Major version (1st number in the release tag). */
-#define LIBADDRXLAT_VER_MAJOR	0
+#define ADDRXLAT_VER_MAJOR	@PACKAGE_VER_MAJOR@
 /** Minor version (2nd number in the release tag). */
-#define LIBADDRXLAT_VER_MINOR	2
+#define ADDRXLAT_VER_MINOR	@PACKAGE_VER_MINOR@
 /** Micro version (3rd number in the release tag). */
-#define LIBADDRXLAT_VER_MICRO	0
+#define ADDRXLAT_VER_MICRO	@PACKAGE_VER_MICRO@
+
+/** Make a single-number version from three digits of the release tag. */
+#define ADDRXLAT_MKVER(major,minor,micro)	\
+	(((major) << 16) | ((minor) << 8) | ((micro)))
+
+/** Version as a single number */
+#define ADDRXLAT_VERSION		\
+	ADDRXLAT_MKVER(			\
+		ADDRXLAT_VER_MAJOR,	\
+		ADDRXLAT_VER_MINOR,	\
+		ADDRXLAT_VER_MICRO)
+
+/** Version as a string constant */
+#define ADDRXLAT_VERSION_STRING "@PACKAGE_VERSION@"
 
 #ifdef  __cplusplus
 extern "C" {

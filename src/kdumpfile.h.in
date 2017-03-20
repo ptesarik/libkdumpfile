@@ -36,20 +36,25 @@
 #include <unistd.h>
 
 /** Major version (1st number in the release tag). */
-#define KDUMPFILE_VER_MAJOR	@KDUMPFILE_VER_MAJOR@
+#define KDUMPFILE_VER_MAJOR	@PACKAGE_VER_MAJOR@
 /** Minor version (2nd number in the release tag). */
-#define KDUMPFILE_VER_MINOR	@KDUMPFILE_VER_MINOR@
+#define KDUMPFILE_VER_MINOR	@PACKAGE_VER_MINOR@
 /** Micro version (3rd number in the release tag). */
-#define KDUMPFILE_VER_MICRO	@KDUMPFILE_VER_MICRO@
+#define KDUMPFILE_VER_MICRO	@PACKAGE_VER_MICRO@
+
+/** Make a single-number version from three digits of the release tag. */
+#define KDUMPFILE_MKVER(major,minor,micro)	\
+	(((major) << 16) | ((minor) << 8) | ((micro)))
 
 /** Version as a single number */
-#define KDUMPFILE_VERSION	\
-	((KDUMPFILE_VER_MAJOR << 16) |		\
-	 (KDUMPFILE_VER_MINOR << 8) |		\
-	 (KDUMPFILE_VER_MICRO))
+#define KDUMPFILE_VERSION		\
+	KDUMPFILE_MKVER(		\
+		KDUMPFILE_VER_MAJOR,	\
+		KDUMPFILE_VER_MINOR,	\
+		KDUMPFILE_VER_MICRO)
 
 /** Version as a string constant */
-#define KDUMPFILE_VERSION_STRING "@KDUMPFILE_VERSION@"
+#define KDUMPFILE_VERSION_STRING "@PACKAGE_VERSION@"
 
 #ifdef  __cplusplus
 extern "C" {

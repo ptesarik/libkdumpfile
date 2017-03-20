@@ -19,6 +19,8 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
+AM_CPPFLAGS = -I$(top_builddir)/src
+
 pyexec_LTLIBRARIES = _kdumpfile.la
 
 _kdumpfile_la_SOURCES = kdumpfile.c

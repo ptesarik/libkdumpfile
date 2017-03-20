@@ -41,7 +41,7 @@ libaddrxlat_la_LDFLAGS += -Wl,--version-script=$(srcdir)/libaddrxlat.map
 EXTRA_libaddrxlat_la_DEPENDENCIES = libaddrxlat.map
 endif
 
-include_HEADERS = \
+nodist_include_HEADERS = \
 	addrxlat.h
 
 noinst_HEADERS = \

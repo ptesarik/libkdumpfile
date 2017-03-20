@@ -33,15 +33,13 @@ AC_CONFIG_HEADER([config.h])
 
 AM_INIT_AUTOMAKE([foreign dist-bzip2 -Wall])
 
-KDUMPFILE_VER_MAJOR=pkg_major_version
-KDUMPFILE_VER_MINOR=pkg_minor_version
-KDUMPFILE_VER_MICRO=pkg_micro_version
-KDUMPFILE_VERSION=pkg_version
+PACKAGE_VER_MAJOR=pkg_major_version
+PACKAGE_VER_MINOR=pkg_minor_version
+PACKAGE_VER_MICRO=pkg_micro_version
 
-AC_SUBST(KDUMPFILE_VER_MAJOR)
-AC_SUBST(KDUMPFILE_VER_MINOR)
-AC_SUBST(KDUMPFILE_VER_MICRO)
-AC_SUBST(KDUMPFILE_VERSION)
+AC_SUBST(PACKAGE_VER_MAJOR)
+AC_SUBST(PACKAGE_VER_MINOR)
+AC_SUBST(PACKAGE_VER_MICRO)
 
 AC_PROG_CC
 AM_PROG_AR
@@ -107,6 +105,7 @@ AC_CONFIG_FILES([
 	tests/Makefile
 	libkdumpfile.pc
 	src/kdumpfile.h
+	src/addrxlat/addrxlat.h
 ])
 
 AC_OUTPUT
