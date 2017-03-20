@@ -22,7 +22,10 @@
 SUBDIRS = addrxlat
 
 AM_CPPFLAGS = -I$(top_builddir)/include
-AM_CFLAGS = -fvisibility=hidden
+AM_CFLAGS = -fvisibility=hidden \
+	$(ZLIB_CFLAGS)	\
+	$(LZO_CFLAGS)	\
+	$(SNAPPY_CFLAGS)
 
 lib_LTLIBRARIES = libkdumpfile.la
 libkdumpfile_la_SOURCES = \
@@ -46,7 +49,11 @@ libkdumpfile_la_SOURCES = \
 	ppc64.c \
 	x86_64.c
 
-libkdumpfile_la_LIBADD = addrxlat/libaddrxlat.la
+libkdumpfile_la_LIBADD = \
+	addrxlat/libaddrxlat.la	\
+	$(ZLIB_LIBS)	\
+	$(LZO_LIBS)	\
+	$(SNAPPY_LIBS)
 
 libkdumpfile_la_LDFLAGS = -version-info 6:0:0
 

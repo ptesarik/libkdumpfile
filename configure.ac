@@ -60,9 +60,6 @@ AS_IF([test "x$enable_internal_doc" != xno],
 
 AC_CHECK_SIZEOF(long)
 
-AC_SUBST(REQUIRES_PRIVATE)
-AC_SUBST(LIBS_PRIVATE)
-
 dnl This makes sure pkg.m4 is available.
 m4_pattern_forbid([^_?PKG_[A-Z_]+$],[*** pkg.m4 missing, please install pkg-config])
 

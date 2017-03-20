@@ -56,8 +56,24 @@ clearattr_LDADD = \
 err_addrxlat_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
 
 mkdiskdump_SOURCES = mkdiskdump.c
+mkdiskdump_CFLAGS = \
+	$(ZLIB_CFLAGS) \
+	$(LZO_CFLAGS) \
+	$(SNAPPY_CFLAGS)
+mkdiskdump_LDADD = \
+	$(LDADD) \
+	$(ZLIB_LIBS) \
+	$(LZO_LIBS) \
+	$(SNAPPY_LIBS)
+
 mkelf_SOURCES = mkelf.c
+
 mklkcd_SOURCES = mklkcd.c
+mklkcd_CFLAGS = \
+	$(ZLIB_CFLAGS)
+mklkcd_LDADD = \
+	$(LDADD) \
+	$(ZLIB_LIBS)
 
 dumpdata_SOURCES = dumpdata.c
 dumpdata_LDADD = $(top_builddir)/src/libkdumpfile.la
