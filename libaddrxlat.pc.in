@@ -3,13 +3,13 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: libkdumpfile
-Description: Kernel coredump file access
+Name: libaddrxlat
+Description: Address space translation
 URL: https://github.com/ptesarik/libkdumpfile
 Version: @PACKAGE_VERSION@
 
 Requires:
-Requires.private: libaddrxlat @REQUIRES_PRIVATE@
-Libs: -L${libdir} -lkdumpfile
+Requires.private: @REQUIRES_PRIVATE@
+Libs: -L${libdir} -laddrxlat
 Libs.private: @LIBS_PRIVATE@
 Cflags: -I${includedir}

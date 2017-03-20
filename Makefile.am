@@ -36,6 +36,8 @@ dist_noinst_DATA = \
 	threads.md
 
 pkgconfigdir=$(libdir)/pkgconfig
-pkgconfig_DATA=libkdumpfile.pc
+pkgconfig_DATA = \
+	libaddrxlat.pc	\
+	libkdumpfile.pc
 
 @DX_RULES@

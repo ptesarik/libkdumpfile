@@ -104,6 +104,7 @@ AC_CONFIG_FILES([
 	python/Makefile
 	python/kdumpfile/Makefile
 	tests/Makefile
+	libaddrxlat.pc
 	libkdumpfile.pc
 	include/kdumpfile.h
 	include/addrxlat.h
