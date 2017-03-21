@@ -138,6 +138,8 @@ set_error_addrxlat(kdump_ctx *ctx, addrxlat_status status)
 		return kdump_ok;
 	else if (status < 0)
 		return -status;
+	else if (status == addrxlat_nodata)
+		ret = kdump_nodata;
 	else
 		ret = kdump_addrxlat;
 
