@@ -61,19 +61,22 @@ set_pteval_size(kdump_ctx *ctx)
 	addrxlat_meth_decref(meth);
 }
 
-static unsigned long
-get_version_code(kdump_ctx *ctx)
+static kdump_status
+get_version_code(kdump_ctx *ctx, unsigned long *pver)
 {
 	static const char attrname[] = "version_code";
 	struct attr_data *attr;
 	const char *ostype;
 	kdump_status status;
 
+	/* Default to unknown version */
+	*pver = 0UL;
+
 	/* Get OS type name */
 	attr = gattr(ctx, GKI_ostype);
 	status = validate_attr(ctx, attr);
 	if (status == kdump_nodata)
-		return 0UL;
+		return kdump_ok;
 	if (status != kdump_ok)
 		return set_error(ctx, status, "Cannot get OS type");
 	ostype = attr_value(attr)->string;
@@ -84,6 +87,8 @@ get_version_code(kdump_ctx *ctx)
 		return set_error(ctx, kdump_unsupported,
 				 "Unknown operating system type: %s", ostype);
 	status = validate_attr(ctx, attr);
+	if (status == kdump_nodata)
+		return kdump_ok;
 	if (status != kdump_ok)
 		return set_error(ctx, status, "Cannot get %s.%s",
 				 ostype, attrname);
@@ -92,10 +97,10 @@ get_version_code(kdump_ctx *ctx)
 	attr = lookup_dir_attr(
 		ctx->shared, attr, attrname, sizeof(attrname) - 1);
 	if (!attr)
-		return 0UL;
+		return kdump_ok;
 	status = validate_attr(ctx, attr);
 	if (status == kdump_nodata)
-		return 0UL;
+		return kdump_ok;
 	if (status != kdump_ok)
 		return set_error(ctx, status, "Cannot get %s.%s",
 				 ostype, attrname);
@@ -105,7 +110,8 @@ get_version_code(kdump_ctx *ctx)
 				   "Attribute %s.%s is not a number",
 				   ostype, attrname);
 
-	return attr_value(attr)->number;
+	 *pver = attr_value(attr)->number;
+	 return kdump_ok;
 }
 
 static void
@@ -145,6 +151,7 @@ kdump_vtop_init(kdump_ctx *ctx)
 	addrxlat_osdesc_t osdesc;
 	addrxlat_status axres;
 	char opts[80];
+	kdump_status status;
 
 	clear_error(ctx);
 
@@ -152,8 +159,12 @@ kdump_vtop_init(kdump_ctx *ctx)
 		return set_error(ctx, kdump_nodata, "Unknown architecture");
 
 	osdesc.type = ctx->shared->ostype;
-	osdesc.ver = get_version_code(ctx);
 	osdesc.arch = get_arch_name(ctx);
+
+	status = get_version_code(ctx, &osdesc.ver);
+	if (status != kdump_ok)
+		return status;
+	clear_error(ctx);
 
 	opts[0] = '\0';
 	if (ctx->shared->ostype == addrxlat_os_linux)
