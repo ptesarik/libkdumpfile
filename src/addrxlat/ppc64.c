@@ -383,6 +383,11 @@ map_linux_ppc64(struct sys_init_data *ctl)
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_VMEMMAP];
 	status = get_vmemmap_def(ctl, &def);
+	if (status == addrxlat_nodata) {
+		/* ignore (VMEMMAP addresses will be unresolvable) */
+		clear_error(ctl->ctx);
+		return addrxlat_ok;
+	}
 	if (status != addrxlat_ok)
 		return status;
 	def.kind = ADDRXLAT_LOOKUP;
