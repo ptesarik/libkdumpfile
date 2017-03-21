@@ -219,6 +219,16 @@ const char *kdump_err_str(kdump_ctx *ctx);
  */
 addrxlat_ctx_t *kdump_get_addrxlat_ctx(const kdump_ctx *ctx);
 
+/**  Get the associated address translation system.
+ * @param ctx  Dump file object.
+ * @returns    Associated address translation system.
+ *
+ * This function grabs a new reference to the address translation system.
+ * You should call addrxlat_sys_decref on the returned object when you
+ * no longer need it.
+ */
+addrxlat_sys_t *kdump_get_addrxlat_sys(const kdump_ctx *ctx);
+
 /**  Associate a dump file object with a file descriptor.
  * @param ctx     Dump file object.
  * @param[in] fd  Open file descriptor.
