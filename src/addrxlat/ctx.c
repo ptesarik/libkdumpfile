@@ -69,7 +69,7 @@ void addrxlat_ctx_clear_err(addrxlat_ctx_t *ctx)
 }
 
 const char *
-addrxlat_ctx_get_err(addrxlat_ctx_t *ctx)
+addrxlat_ctx_get_err(const addrxlat_ctx_t *ctx)
 {
 	return ctx->err_str;
 }

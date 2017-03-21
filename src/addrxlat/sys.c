@@ -152,7 +152,7 @@ addrxlat_sys_set_meth(addrxlat_sys_t *sys,
 }
 
 addrxlat_meth_t *
-addrxlat_sys_get_meth(addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
+addrxlat_sys_get_meth(const addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
 {
 	if (sys->meth[idx])
 		internal_meth_incref(sys->meth[idx]);

@@ -417,7 +417,7 @@ void addrxlat_ctx_clear_err(addrxlat_ctx_t *ctx);
  * reset by calling this function, but it is reset by calling any
  * library function that returns @ref addrxlat_status.
  */
-const char *addrxlat_ctx_get_err(addrxlat_ctx_t *ctx);
+const char *addrxlat_ctx_get_err(const addrxlat_ctx_t *ctx);
 
 /** Type of symbolic information. */
 typedef enum _addrxlat_sym_type {
@@ -791,7 +791,7 @@ void addrxlat_sys_set_meth(
  * @returns       Associated translation method.
  */
 addrxlat_meth_t *addrxlat_sys_get_meth(
-	addrxlat_sys_t *sys, addrxlat_sys_meth_t idx);
+	const addrxlat_sys_t *sys, addrxlat_sys_meth_t idx);
 
 /** State of the current step in address translation. */
 typedef struct _addrxlat_step {
