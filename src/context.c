@@ -149,6 +149,19 @@ kdump_err_str(kdump_ctx *ctx)
 	return ctx->err_str;
 }
 
+addrxlat_ctx_t *
+kdump_get_addrxlat_ctx(const kdump_ctx *ctx)
+{
+	addrxlat_ctx_t *ret;
+
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = ctx->addrxlat;
+	addrxlat_ctx_incref(ret);
+	rwlock_unlock(&ctx->shared->lock);
+
+	return ret;
+}
+
 kdump_byte_order_t
 kdump_byte_order(kdump_ctx *ctx)
 {

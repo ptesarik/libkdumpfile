@@ -35,6 +35,8 @@
 #include <stdint.h>
 #include <unistd.h>
 
+#include "addrxlat.h"
+
 /** Major version (1st number in the release tag). */
 #define KDUMPFILE_VER_MAJOR	@PACKAGE_VER_MAJOR@
 /** Minor version (2nd number in the release tag). */
@@ -206,6 +208,16 @@ void kdump_free(kdump_ctx *ctx);
  * library function that returns @ref kdump_status.
  */
 const char *kdump_err_str(kdump_ctx *ctx);
+
+/**  Get the associated address translation context.
+ * @param ctx  Dump file object.
+ * @returns    Associated address translation context.
+ *
+ * This function grabs a new reference to the address translation context.
+ * You should call addrxlat_ctx_decref on the returned object when you
+ * no longer need it.
+ */
+addrxlat_ctx_t *kdump_get_addrxlat_ctx(const kdump_ctx *ctx);
 
 /**  Associate a dump file object with a file descriptor.
  * @param ctx     Dump file object.

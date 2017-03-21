@@ -4,6 +4,7 @@ LIBKDUMPFILE_0 {
     kdump_clone;
     kdump_free;
     kdump_err_str;
+    kdump_get_addrxlat_ctx;
     kdump_set_fd;
     kdump_vtop_init;
     kdump_vtop;
