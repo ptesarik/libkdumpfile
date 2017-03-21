@@ -62,14 +62,6 @@
 extern "C" {
 #endif
 
-/**  Type of a physical or virtual address.
- *
- * This type is large enough to hold any possible address type on any
- * architecture supported by `libkdumpfile`. Note that this type may
- * be larger than the actual address in the target.
- */
-typedef uint_fast64_t kdump_addr_t;
-
 /**  Type of a generic number.
  *
  * This type is large enough to hold register value on any architecture
@@ -78,9 +70,17 @@ typedef uint_fast64_t kdump_addr_t;
  */
 typedef uint_fast64_t kdump_num_t;
 
-/**  Maximum value represented by kdump_addr_t.
+/**  Type of a physical or virtual address.
+ *
+ * This type is large enough to hold any possible address type on any
+ * architecture supported by `libkdumpfile`. Note that this type may
+ * be larger than the actual address in the target.
  */
-#define KDUMP_ADDR_MAX	(~(kdump_addr_t)0)
+typedef addrxlat_addr_t kdump_addr_t;
+
+/**  Maximum value represented by @ref kdump_addr_t.
+ */
+#define KDUMP_ADDR_MAX	ADDRXLAT_ADDR_MAX
 
 /**  Type of a physical address.
  *
