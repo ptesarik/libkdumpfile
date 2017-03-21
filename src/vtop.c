@@ -305,7 +305,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 
 	switch (sym->type) {
 	case ADDRXLAT_SYM_VALUE:
-		status = get_symbol_val(ctx, sym->args[0], &sym->val);
+		status = ctx->cb_get_symbol_val(ctx, sym->args[0], &sym->val);
 		return status == kdump_nodata
 			? addrxlat_nodata
 			: (addrxlat_status) -(int)status;
