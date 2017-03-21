@@ -352,6 +352,15 @@ ostype_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 {
 	kdump_status status;
 
+	if (isset_arch_name(ctx)) {
+		rwlock_unlock(&ctx->shared->lock);
+		status = kdump_vtop_init(ctx);
+		rwlock_rdlock(&ctx->shared->lock);
+		if (status != kdump_ok)
+			return set_error(ctx, status,
+					 "Cannot initialize address translation");
+	}
+
 	switch (ctx->shared->ostype) {
 	case addrxlat_os_linux:
 		status = update_linux_utsname(ctx);
@@ -374,18 +383,6 @@ ostype_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 	default:
 		break;
 	}
-
-	if (!isset_arch_name(ctx))
-		return kdump_ok;
-
-	/* Only arch-specific stuff follows. */
-
-	rwlock_unlock(&ctx->shared->lock);
-	status = kdump_vtop_init(ctx);
-	rwlock_rdlock(&ctx->shared->lock);
-	if (status != kdump_ok)
-		return set_error(ctx, status,
-				 "Cannot initialize address translation");
 
 	if (ctx->shared->arch_ops && ctx->shared->arch_ops->late_init &&
 	    (status = ctx->shared->arch_ops->late_init(ctx)) != kdump_ok)
