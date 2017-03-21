@@ -361,7 +361,7 @@ set_ktext_offset(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 
 	def.kind = ADDRXLAT_LINEAR;
 	def.target_as = ADDRXLAT_KPHYSADDR;
-	def.param.linear.off = vaddr - step.base.addr;
+	def.param.linear.off = step.base.addr - vaddr;
 	return internal_meth_set_def(sys->meth[ADDRXLAT_SYS_METH_KTEXT], &def);
 }
 
@@ -409,8 +409,8 @@ linux_ktext_meth(struct sys_init_data *ctl)
 
 		def.kind = ADDRXLAT_LINEAR;
 		def.target_as = ADDRXLAT_KPHYSADDR;
-		def.param.linear.off = __START_KERNEL_map -
-			ctl->popt.val[OPT_physbase].num;
+		def.param.linear.off = ctl->popt.val[OPT_physbase].num -
+			__START_KERNEL_map;
 		return internal_meth_set_def(
 			ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT], &def);
 	}
@@ -686,11 +686,11 @@ setup_xen_pgt(struct sys_init_data *ctl)
 
 	pgt = meth->def.param.pgt.root.addr;
 	if (pgt >= XEN_DIRECTMAP) {
-		def.param.linear.off = XEN_DIRECTMAP;
+		def.param.linear.off = -XEN_DIRECTMAP;
 	} else if (ctl->popt.val[OPT_physbase].set) {
 		addrxlat_addr_t xen_virt_start = pgt & ~(XEN_TEXT_SIZE - 1);
-		def.param.linear.off = xen_virt_start -
-			ctl->popt.val[OPT_physbase].num;
+		def.param.linear.off = ctl->popt.val[OPT_physbase].num -
+			xen_virt_start;
 	} else
 		return addrxlat_nodata;
 

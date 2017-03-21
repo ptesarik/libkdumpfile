@@ -6,7 +6,7 @@
 
 @direct: LINEAR
   target_as=KPHYSADDR
-  off=0x10000000000
+  off=0xffffff0000000000
 
 @ktext: PGT
   target_as=MACHPHYSADDR
@@ -16,7 +16,7 @@
 
 @rdirect: LINEAR
   target_as=KVADDR
-  off=0xffffff0000000000
+  off=0x10000000000
 
 @machphys_kphys: LINEAR
   target_as=KPHYSADDR

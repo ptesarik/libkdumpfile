@@ -222,7 +222,7 @@ set_ktext_off(kdump_ctx *ctx, kdump_addr_t phys_base)
 				     ADDRXLAT_SYS_METH_KTEXT);
 	def.kind = ADDRXLAT_LINEAR;
 	def.target_as = ADDRXLAT_KPHYSADDR;
-	def.param.linear.off = __START_KERNEL_map - phys_base;
+	def.param.linear.off = phys_base - __START_KERNEL_map;
 	addrxlat_meth_set_def(meth, &def);
 }
 

@@ -6,15 +6,15 @@
 
 @direct: LINEAR
   target_as=KPHYSADDR
-  off=0xffff880000000000
+  off=0x780000000000
 
 @ktext: LINEAR
   target_as=KPHYSADDR
-  off=0xffffffff80000000
+  off=0x80000000
 
 @rdirect: LINEAR
   target_as=KVADDR
-  off=0x780000000000
+  off=0xffff880000000000
 
 @machphys_kphys: LINEAR
   target_as=KPHYSADDR

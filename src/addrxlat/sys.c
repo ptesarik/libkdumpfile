@@ -200,7 +200,7 @@ act_direct(struct sys_init_data *ctl,
 
 	def.kind = ADDRXLAT_LINEAR;
 	def.target_as = ADDRXLAT_KPHYSADDR;
-	def.param.linear.off = region->first;
+	def.param.linear.off = -region->first;
 	internal_meth_set_def(meth, &def);
 
 	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_RDIRECT);
@@ -208,7 +208,7 @@ act_direct(struct sys_init_data *ctl,
 		return status;
 
 	def.target_as = ADDRXLAT_KVADDR;
-	def.param.linear.off = -region->first;
+	def.param.linear.off = region->first;
 	internal_meth_set_def(ctl->sys->meth[ADDRXLAT_SYS_METH_RDIRECT], &def);
 
 	return sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KPHYS_DIRECT, layout);

@@ -117,7 +117,7 @@ first_step_linear(addrxlat_step_t *step, addrxlat_addr_t addr)
 	const addrxlat_def_linear_t *linear = &step->meth->def.param.linear;
 
 	step->base.as = step->meth->def.target_as;
-	step->base.addr = -linear->off;
+	step->base.addr = linear->off;
 	step->remain = 1;
 	step->idx[0] = addr;
 
