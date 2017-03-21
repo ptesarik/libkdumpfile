@@ -361,6 +361,11 @@ ostype_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 					 "Cannot initialize address translation");
 	}
 
+	if (ctx->shared->arch_ops && ctx->shared->arch_ops->late_init &&
+	    (status = ctx->shared->arch_ops->late_init(ctx)) != kdump_ok)
+		return set_error(ctx, status,
+				 "Architecture late init failed");
+
 	switch (ctx->shared->ostype) {
 	case addrxlat_os_linux:
 		status = update_linux_utsname(ctx);
@@ -383,11 +388,6 @@ ostype_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 	default:
 		break;
 	}
-
-	if (ctx->shared->arch_ops && ctx->shared->arch_ops->late_init &&
-	    (status = ctx->shared->arch_ops->late_init(ctx)) != kdump_ok)
-		return set_error(ctx, status,
-				 "Architecture late init failed");
 
 	return kdump_ok;
 }
