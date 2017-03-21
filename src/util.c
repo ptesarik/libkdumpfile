@@ -130,21 +130,48 @@ set_error(kdump_ctx *ctx, kdump_status status, const char *msgfmt, ...)
  * @returns       Error status (libkdumpfile).
  */
 kdump_status
-set_error_addrxlat(kdump_ctx *ctx, addrxlat_status status)
+addrxlat2kdump(kdump_ctx *ctx, addrxlat_status status)
 {
 	kdump_status ret;
 
 	if (status == addrxlat_ok)
 		return kdump_ok;
-	else if (status < 0)
-		return -status;
+
+	if (status < 0)
+		ret = -status;
 	else if (status == addrxlat_nodata)
 		ret = kdump_nodata;
 	else
 		ret = kdump_addrxlat;
 
-	return set_error(ctx, ret, "%s", addrxlat_ctx_get_err(ctx->addrxlat));
+	set_error(ctx, ret, "%s", addrxlat_ctx_get_err(ctx->addrxlat));
+	addrxlat_ctx_clear_err(ctx->addrxlat);
+	return ret;
 }
+
+/** Translate a @c kdump_status to addrxlat error status.
+ * @param ctx     Dump file object.
+ * @param status  libkdumpfile status.
+ * @returns       Error status (addrxlat).
+ */
+addrxlat_status
+kdump2addrxlat(kdump_ctx *ctx, kdump_status status)
+{
+	addrxlat_status ret;
+
+	if (status == kdump_ok)
+		return addrxlat_ok;
+
+	if (status == kdump_nodata)
+		ret = addrxlat_nodata;
+	else
+		ret = -status;
+
+	addrxlat_ctx_err(ctx->addrxlat, ret, "%s", ctx->err_str);
+	clear_error(ctx);
+	return ret;
+}
+
 
 void *
 ctx_malloc(size_t size, kdump_ctx *ctx, const char *desc)

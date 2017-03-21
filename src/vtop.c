@@ -177,7 +177,7 @@ kdump_vtop_init(kdump_ctx *ctx)
 				  ctx->addrxlat, &osdesc);
 
 	if (axres != addrxlat_ok)
-		return set_error_addrxlat(ctx, axres);
+		return addrxlat2kdump(ctx, axres);
 
 	if (!attr_isset(gattr(ctx, GKI_pteval_size)))
 		set_pteval_size(ctx);
@@ -200,7 +200,7 @@ locked_xlat(kdump_ctx *ctx, addrxlat_sys_t **psys,
 	faddr.as = as;
 	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, goal, *psys);
 	if (axres != addrxlat_ok)
-		return set_error_addrxlat(ctx, axres);
+		return addrxlat2kdump(ctx, axres);
 
 	*dst = faddr.addr;
 	return kdump_ok;
@@ -250,28 +250,6 @@ kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
 	return do_xlat(ctx, &ctx->shared->xlat,
 		       maddr, ADDRXLAT_MACHPHYSADDR,
 		       paddr, ADDRXLAT_KPHYSADDR);
-}
-
-/** Translate kdump status to addrxlat status.
- * @param ctx     Dump file object.
- * @param status  libkdumpfile status.
- */
-static addrxlat_status
-kdump2addrxlat(kdump_ctx *ctx, kdump_status status)
-{
-	addrxlat_status ret;
-
-	if (status == kdump_ok)
-		return addrxlat_ok;
-
-	if (status == kdump_nodata)
-		ret = addrxlat_nodata;
-	else
-		ret = -status;
-
-	addrxlat_ctx_err(ctx->addrxlat, ret, "%s", ctx->err_str);
-	clear_error(ctx);
-	return ret;
 }
 
 static addrxlat_status

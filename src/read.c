@@ -48,7 +48,7 @@ read_kpage_generic(kdump_ctx *ctx, struct page_io *pio)
 	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, ADDRXLAT_MACHPHYSADDR,
 				ctx->shared->xlat);
 	if (axres != addrxlat_ok)
-		return set_error_addrxlat(ctx, axres);
+		return addrxlat2kdump(ctx, axres);
 
 	pio->pfn = faddr.addr >> get_page_shift(ctx);
 	return ctx->shared->ops->read_page(ctx, pio);
@@ -80,7 +80,7 @@ read_kvpage_machphys(kdump_ctx *ctx, struct page_io *pio)
 	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, ADDRXLAT_MACHPHYSADDR,
 				ctx->shared->xlat);
 	if (axres != addrxlat_ok)
-		return set_error_addrxlat(ctx, axres);
+		return addrxlat2kdump(ctx, axres);
 
 	pio->pfn = faddr.addr >> get_page_shift(ctx);
 	return ctx->shared->ops->read_page(ctx, pio);
@@ -97,7 +97,7 @@ read_kvpage_kphys(kdump_ctx *ctx, struct page_io *pio)
 	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, ADDRXLAT_KPHYSADDR,
 				ctx->shared->xlat);
 	if (axres != addrxlat_ok)
-		return set_error_addrxlat(ctx, axres);
+		return addrxlat2kdump(ctx, axres);
 
 	pio->pfn = faddr.addr >> get_page_shift(ctx);
 	return ctx->shared->ops->read_kpage(ctx, pio);

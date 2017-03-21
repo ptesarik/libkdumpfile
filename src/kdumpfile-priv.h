@@ -651,8 +651,11 @@ INTERNAL_DECL(kdump_status, read_u64,
 INTERNAL_DECL(kdump_status, set_error,
 	      (kdump_ctx *ctx, kdump_status ret, const char *msgfmt, ...))
 	__attribute__ ((format (printf, 3, 4)));
-INTERNAL_DECL(kdump_status, set_error_addrxlat,
+
+INTERNAL_DECL(kdump_status, addrxlat2kdump,
 	      (kdump_ctx *ctx, addrxlat_status status));
+INTERNAL_DECL(addrxlat_status, kdump2addrxlat,
+	      (kdump_ctx *ctx, kdump_status status));
 
 INTERNAL_DECL(void *, ctx_malloc,
 	      (size_t size, kdump_ctx *ctx, const char *desc));
