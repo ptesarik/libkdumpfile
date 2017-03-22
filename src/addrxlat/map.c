@@ -237,21 +237,3 @@ addrxlat_map_dup(const addrxlat_map_t *map)
 
 	return ret;
 }
-
-DEFINE_ALIAS(launch_map);
-
-addrxlat_status
-addrxlat_launch_map(addrxlat_step_t *step, addrxlat_ctx_t *ctx,
-		    const addrxlat_map_t *map, addrxlat_addr_t addr)
-{
-	const addrxlat_meth_t *meth;
-
-	clear_error(ctx);
-
-	meth = internal_map_search(map, addr);
-	if (!meth)
-		return set_error(ctx, addrxlat_invalid,
-				 "No translation method defined");
-
-	return internal_launch_meth(step, ctx, meth, addr);
-}

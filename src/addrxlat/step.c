@@ -94,6 +94,31 @@ pgt_huge_page(addrxlat_step_t *step)
 	return addrxlat_continue;
 }
 
+DEFINE_ALIAS(launch);
+
+addrxlat_status
+addrxlat_launch(addrxlat_step_t *step, addrxlat_addr_t addr)
+{
+	clear_error(step->ctx);
+	return step->meth->first_step(step, addr);
+}
+
+DEFINE_ALIAS(launch_map);
+
+addrxlat_status
+addrxlat_launch_map(addrxlat_step_t *step, addrxlat_addr_t addr,
+		    const addrxlat_map_t *map)
+{
+	clear_error(step->ctx);
+
+	step->meth = internal_map_search(map, addr);
+	if (!step->meth)
+		return set_error(step->ctx, addrxlat_nometh,
+				 "No translation method defined");
+
+	return step->meth->first_step(step, addr);
+}
+
 DEFINE_ALIAS(step);
 
 addrxlat_status
@@ -130,18 +155,4 @@ addrxlat_walk(addrxlat_step_t *step)
 	} while (status == addrxlat_continue);
 
 	return status;
-}
-
-DEFINE_ALIAS(launch_meth);
-
-addrxlat_status
-addrxlat_launch_meth(addrxlat_step_t *step, addrxlat_ctx_t *ctx,
-		     const addrxlat_meth_t *meth, addrxlat_addr_t addr)
-{
-	clear_error(ctx);
-
-	step->ctx = ctx;
-	step->sys = NULL;
-	step->meth = meth;
-	return meth->first_step(step, addr);
 }

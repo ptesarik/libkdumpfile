@@ -278,7 +278,7 @@ DECLARE_ALIAS(map_set);
 DECLARE_ALIAS(map_search);
 DECLARE_ALIAS(map_clear);
 DECLARE_ALIAS(map_dup);
-DECLARE_ALIAS(launch_meth);
+DECLARE_ALIAS(launch);
 DECLARE_ALIAS(launch_map);
 DECLARE_ALIAS(step);
 DECLARE_ALIAS(walk);

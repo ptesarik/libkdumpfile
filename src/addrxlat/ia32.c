@@ -185,13 +185,15 @@ is_pae(struct sys_init_data *ctl, const addrxlat_fulladdr_t *root,
 
 	def.param.pgt.pf = ia32_pf_pae;
 	internal_meth_set_def(&meth, &def);
-	status = internal_launch_meth(&step, ctl->ctx, &meth, direct);
+	step.ctx = ctl->ctx;
+	step.sys = ctl->sys;
+	step.meth = &meth;
+	status = internal_launch(&step, direct);
 	if (status != addrxlat_ok)
 		return -1;
 	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_PAE - 1);
 	if (status != addrxlat_ok)
 		return status;
-	step.sys = ctl->sys;
 	status = internal_walk(&step);
 	if (status == addrxlat_ok && step.base.addr == 0)
 		return 1;
@@ -202,13 +204,15 @@ is_pae(struct sys_init_data *ctl, const addrxlat_fulladdr_t *root,
 
 	def.param.pgt.pf = ia32_pf;
 	internal_meth_set_def(&meth, &def);
-	status = internal_launch_meth(&step, ctl->ctx, &meth, direct);
+	step.ctx = ctl->ctx;
+	step.sys = ctl->sys;
+	step.meth = &meth;
+	status = internal_launch(&step, direct);
 	if (status != addrxlat_ok)
 		return -1;
 	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_NONPAE - 1);
 	if (status != addrxlat_ok)
 		return status;
-	step.sys = ctl->sys;
 	status = internal_walk(&step);
 	if (status == addrxlat_ok && step.base.addr == 0)
 		return 0;

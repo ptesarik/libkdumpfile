@@ -796,31 +796,47 @@ addrxlat_meth_t *addrxlat_sys_get_meth(
 /** State of the current step in address translation. */
 typedef struct _addrxlat_step {
 	/** Address translation context.
-	 * This is used for memory access and error reporting.
+	 * The context is used for memory access and error reporting.
+	 * This field must be initialized for @ref addrxlat_launch.
 	 */
 	addrxlat_ctx_t *ctx;
 
 	/** Translation system.
 	 * If not @c NULL, this system can be used to translate
 	 * addresses for memory access.
+	 * This field must be initialized for @ref addrxlat_launch
+	 * (it may be @c NULL, but not an undefined value).
 	 */
 	const addrxlat_sys_t *sys;
 
-	/** Translation method used for this particular translation. */
+	/** Translation method used for this particular translation.
+	 * This field must be initialized for @ref addrxlat_launch.
+	 */
 	const addrxlat_meth_t *meth;
 
-	/** Remaining steps. */
+	/** Remaining steps.
+	 * This field is set on a successful return from @ref addrxlat_launch.
+	 * The value is then modified by @ref addrxlat_step. Translation is
+	 * complete when it reaches zero.
+	 * Note: Although this value is usually decremented by one in every
+	 * translation step, it may be changed to any value in any step
+	 * (e.g. on a huge page), so always check if the value has become
+	 * zero after each call to @ref addrxlat_step.
+	 */
 	unsigned short remain;
 
 	/** On input, base address of the page table.
 	 * On output base address of the lower-level page table or
 	 * the target physical address.
+	 * This field is set on a successful return from @ref addrxlat_launch.
 	 */
 	addrxlat_fulladdr_t base;
 
 	/** Raw PTE value.
 	 * This value is stored on output, but it may be also used
 	 * as input for the next step.
+	 * This field is set on a successful return from @ref addrxlat_step
+	 * if it is meaningful for the translation method.
 	 */
 	addrxlat_pte_t raw_pte;
 
@@ -866,27 +882,31 @@ typedef addrxlat_status addrxlat_first_step_fn(
  */
 typedef addrxlat_status addrxlat_next_step_fn(addrxlat_step_t *step);
 
-/** Initialize translation step state with a specific method.
- * @param step  Translation step state.
- * @param ctx   Address translation context.
- * @param meth  Translation method.
+/** Make the first translation step (launch a translation).
+ * @param step  (Initialized) translation step state.
  * @param addr  Address to be translated.
  * @returns     Error status.
+ *
+ * See @ref addrxlat_step_t for information on which fields in @step must
+ * be initialized prior to calling this function.
  */
-addrxlat_status addrxlat_launch_meth(
-	addrxlat_step_t *step, addrxlat_ctx_t *ctx,
-	const addrxlat_meth_t *meth, addrxlat_addr_t addr);
+addrxlat_status addrxlat_launch(addrxlat_step_t *step, addrxlat_addr_t addr);
 
-/** Initialize translation step state using a translation map.
- * @param step  Translation step state.
- * @param ctx   Address translation context.
- * @param map   Translation map.
+/** Launch the translation using a translation map.
+ * @param step  (Semi-initialized) translation step state.
  * @param addr  Address to be translated.
+ * @param map   Translation map.
  * @returns     Error status.
+ *
+ * This function uses an address translation map to determine the translation
+ * method for the given address, fills this method into the step state and
+ * calls @ref addrxlat_launch.
+ * Except for @c meth, all other fields in @c step must be initialized just
+ * like with @ref addrxlat_launch.
  */
 addrxlat_status addrxlat_launch_map(
-	addrxlat_step_t *step, addrxlat_ctx_t *ctx,
-	const addrxlat_map_t *map, addrxlat_addr_t addr);
+	addrxlat_step_t *step, addrxlat_addr_t addr,
+	const addrxlat_map_t *map);
 
 /** Perform one translation step.
  * @param step  Current step state.

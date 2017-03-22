@@ -266,13 +266,13 @@ is_mapped(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	addrxlat_step_t step;
 	addrxlat_status status;
 
-	status = internal_launch_meth(&step, ctx,
-				      sys->meth[ADDRXLAT_SYS_METH_PGT], addr);
+	step.ctx = ctx;
+	step.sys = sys;
+	step.meth = sys->meth[ADDRXLAT_SYS_METH_PGT];
+	status = internal_launch(&step, addr);
 
-	if (status == addrxlat_ok) {
-		step.sys = sys;
+	if (status == addrxlat_ok)
 		status = internal_walk(&step);
-	}
 
 	clear_error(ctx);
 	return status == addrxlat_ok;
@@ -345,11 +345,12 @@ set_ktext_offset(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	if (!is_pgt_usable(sys))
 		return addrxlat_nodata;
 
-	status = internal_launch_map(&step, ctx,
-				     sys->map[ADDRXLAT_SYS_MAP_HW], vaddr);
+	step.ctx = ctx;
+	step.sys = sys;
+	status = internal_launch_map(&step, vaddr,
+				     sys->map[ADDRXLAT_SYS_MAP_HW]);
 	if (status != addrxlat_ok)
 		return status;
-	step.sys = sys;
 
 	status = internal_walk(&step);
 	if (status != addrxlat_ok)
@@ -647,11 +648,11 @@ is_xen_ktext(struct sys_init_data *ctl, addrxlat_addr_t addr)
 	addrxlat_status status;
 	unsigned steps = 0;
 
-	status = internal_launch_meth(&step, ctl->ctx,
-				      ctl->sys->meth[ADDRXLAT_SYS_METH_PGT],
-				      addr);
+	step.ctx = ctl->ctx;
+	step.sys = ctl->sys;
+	step.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	status = internal_launch(&step, addr);
 	if (status == addrxlat_ok) {
-		step.sys = ctl->sys;
 		do {
 			++steps;
 			status = internal_step(&step);

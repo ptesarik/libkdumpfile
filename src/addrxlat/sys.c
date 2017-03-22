@@ -377,10 +377,11 @@ addrxlat_by_sys(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
 	if (mapidx < 0 || !(map = sys->map[mapidx]))
 		return set_error(ctx, addrxlat_nometh, "No way to translate");
 
-	status = internal_launch_map(&step, ctx, map, paddr->addr);
+	step.ctx = ctx;
+	step.sys = sys;
+	status = internal_launch_map(&step, paddr->addr, map);
 	if (status != addrxlat_ok)
 		return status;
-	step.sys = sys;
 
 	status = internal_walk(&step);
 	if (status == addrxlat_ok) {

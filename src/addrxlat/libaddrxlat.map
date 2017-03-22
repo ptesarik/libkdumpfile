@@ -29,7 +29,7 @@ LIBADDRXLAT_0 {
     addrxlat_sys_set_meth;
     addrxlat_sys_get_meth;
 
-    addrxlat_launch_meth;
+    addrxlat_launch;
     addrxlat_launch_map;
     addrxlat_step;
     addrxlat_walk;

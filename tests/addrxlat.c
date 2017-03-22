@@ -277,7 +277,10 @@ do_xlat(addrxlat_ctx_t *ctx, addrxlat_addr_t addr)
 	addrxlat_step_t step;
 	addrxlat_status status;
 
-	status = addrxlat_launch_meth(&step, ctx, xlat, addr);
+	step.ctx = ctx;
+	step.sys = NULL;
+	step.meth = xlat;
+	status = addrxlat_launch(&step, addr);
 	if (status != addrxlat_ok) {
 		fprintf(stderr, "Cannot launch address translation: %s\n",
 			addrxlat_ctx_get_err(ctx));
