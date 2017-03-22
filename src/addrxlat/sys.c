@@ -358,6 +358,7 @@ addrxlat_status
 addrxlat_by_sys(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
 		addrxlat_addrspace_t goal, const addrxlat_sys_t *sys)
 {
+	struct inflight inflight, *pif;
 	addrxlat_sys_map_t mapidx;
 	addrxlat_map_t *map;
 	addrxlat_step_t step;
@@ -377,18 +378,32 @@ addrxlat_by_sys(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
 	if (mapidx < 0 || !(map = sys->map[mapidx]))
 		return set_error(ctx, addrxlat_nometh, "No way to translate");
 
+	inflight.faddr = *paddr;
+	inflight.goal = goal;
+	for (pif = ctx->inflight; pif; pif = pif->next)
+		if (pif->faddr.addr == inflight.faddr.addr &&
+		    pif->faddr.as == inflight.faddr.as &&
+		    pif->goal == inflight.goal)
+			return set_error(ctx, addrxlat_nometh,
+					 "Infinite recursion loop");
+	inflight.next = ctx->inflight;
+	ctx->inflight = &inflight;
+
 	step.ctx = ctx;
 	step.sys = sys;
 	status = internal_launch_map(&step, paddr->addr, map);
-	if (status != addrxlat_ok)
+	if (status != addrxlat_ok) {
+		ctx->inflight = inflight.next;
 		return status;
+	}
 
 	status = internal_walk(&step);
 	if (status == addrxlat_ok) {
 		*paddr = step.base;
 		if (step.base.as != goal)
-			return addrxlat_by_sys(ctx, paddr, goal, sys);
+			status = internal_by_sys(ctx, paddr, goal, sys);
 	}
 
+	ctx->inflight = inflight.next;
 	return status;
 }

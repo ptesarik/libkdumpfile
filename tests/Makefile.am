@@ -81,6 +81,8 @@ dumpdata_LDADD = $(top_builddir)/src/libkdumpfile.la
 multiread_SOURCES = multiread.c
 multiread_LDADD = $(top_builddir)/src/libkdumpfile.la
 
+nometh_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
+
 privptr_SOURCES = privptr.c
 privptr_LDADD = $(top_builddir)/src/libkdumpfile.la
 
@@ -115,6 +117,7 @@ check_PROGRAMS = \
 	mkelf \
 	mklkcd \
 	multiread \
+	nometh \
 	privptr \
 	subattr \
 	sys-xlat \
@@ -350,6 +353,7 @@ TESTS = $(test_scripts) \
 	attriter \
 	clearattr \
 	err-addrxlat \
+	nometh \
 	privptr \
 	subattr \
 	thread-errstr \

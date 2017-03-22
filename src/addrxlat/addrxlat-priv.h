@@ -118,6 +118,19 @@ struct _addrxlat_meth {
 	} extra;
 };
 
+/**  In-flight translation.
+ * This is used to detect infinite recursion.
+ * @sa addrxlat_by_sys
+ */
+struct inflight {
+	/** Full address to be translated. */
+	addrxlat_fulladdr_t faddr;
+	/** Target address space. */
+	addrxlat_addrspace_t goal;
+	/** Next translation in the chain. */
+	struct inflight *next;
+};
+
 /**  Representation of address translation.
  *
  * This structure contains all internal state needed to perform address
@@ -129,6 +142,9 @@ struct _addrxlat_ctx {
 
 	/** Callback definitions. */
 	addrxlat_cb_t cb;
+
+	/** In-flight translations. */
+	struct inflight *inflight;
 
 	char *err_str;		/**< Error string. */
 	char *err_dyn;		/**< Dynamically allocated error string. */
