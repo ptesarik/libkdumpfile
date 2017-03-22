@@ -228,31 +228,6 @@ linux_layout_by_ver(unsigned version_code)
 	return NULL;
 }
 
-/** Check whether the PGT translation method is usable.
- * @param sys    Translation system object.
- * @returns      Non-zero if PGT can be used, zero otherwise.
- */
-static addrxlat_status
-is_pgt_usable(addrxlat_sys_t *sys)
-{
-	const addrxlat_meth_t *meth, *pgtmeth;
-
-	pgtmeth = sys->meth[ADDRXLAT_SYS_METH_PGT];
-	switch (pgtmeth->def.param.pgt.root.as) {
-	case ADDRXLAT_MACHPHYSADDR:
-	case ADDRXLAT_KPHYSADDR:
-		return 1;
-
-	case ADDRXLAT_KVADDR:
-		meth = internal_map_search(sys->map[ADDRXLAT_SYS_MAP_KV_PHYS],
-					   pgtmeth->def.param.pgt.root.addr);
-		return meth != pgtmeth;
-
-	default:
-		return 0;
-	}
-}
-
 /** Check whether a virtual address is mapped to a physical address.
  * @param sys    Translation system object.
  * @param ctx    Address translation context.
@@ -306,9 +281,6 @@ is_directmap(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 static const struct sys_region *
 linux_layout_by_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx)
 {
-	if (!is_pgt_usable(sys))
-		return NULL;
-
 	/* Only pre-2.6.11 kernels had this direct mapping */
 	if (is_directmap(sys, ctx, 0x0000010000000000))
 		return linux_layout_2_6_0;
@@ -341,9 +313,6 @@ set_ktext_offset(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	addrxlat_step_t step;
 	addrxlat_def_t def;
 	addrxlat_status status;
-
-	if (!is_pgt_usable(sys))
-		return addrxlat_nodata;
 
 	step.ctx = ctx;
 	step.sys = sys;
@@ -731,8 +700,7 @@ map_xen_x86_64(struct sys_init_data *ctl)
 
 	setup_xen_pgt(ctl);
 
-	if (is_pgt_usable(ctl->sys) &&
-	    is_directmap(ctl->sys, ctl->ctx, XEN_DIRECTMAP)) {
+	if (is_directmap(ctl->sys, ctl->ctx, XEN_DIRECTMAP)) {
 		if (is_xen_ktext(ctl, XEN_TEXT_4_4))
 			layout[1].first = XEN_TEXT_4_4;
 		else if (is_xen_ktext(ctl, XEN_TEXT_4_3))
@@ -750,8 +718,7 @@ map_xen_x86_64(struct sys_init_data *ctl)
 				XEN_DIRECTMAP + XEN_DIRECTMAP_SIZE_1T - 1;
 			layout[1].meth = ADDRXLAT_SYS_METH_NUM;
 		}
-	} else if (is_pgt_usable(ctl->sys) &&
-		   is_directmap(ctl->sys, ctl->ctx, XEN_DIRECTMAP_BIGMEM)) {
+	} else if (is_directmap(ctl->sys, ctl->ctx, XEN_DIRECTMAP_BIGMEM)) {
 		layout[0].first = XEN_DIRECTMAP_BIGMEM;
 		layout[0].last =
 			XEN_DIRECTMAP_BIGMEM + XEN_DIRECTMAP_SIZE_3_5T - 1;
