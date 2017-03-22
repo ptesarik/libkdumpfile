@@ -113,7 +113,7 @@ pgt_s390x(addrxlat_step_t *step)
 	}
 
 	step->base.addr &= (step->remain == 2 ? PTO_MASK : pgt->pgt_mask[0]);
-	return addrxlat_continue;
+	return addrxlat_ok;
 }
 
 /** Determine OS-specific page table root.

@@ -93,7 +93,7 @@ first_step_none(addrxlat_step_t *step, addrxlat_addr_t addr)
 static addrxlat_status
 next_step_none(addrxlat_step_t *state)
 {
-	return addrxlat_continue;
+	return addrxlat_ok;
 }
 
 /** Set up null translation.
@@ -249,14 +249,13 @@ next_step_pfn(addrxlat_step_t *step)
 	addrxlat_status status;
 
 	status = read_pte(step);
-	if (status != addrxlat_ok)
-		return status;
+	if (status == addrxlat_ok) {
+		step->base.addr =
+			step->raw_pte << step->meth->def.param.pgt.pf.bits[0];
+		step->base.as = step->meth->def.target_as;
+	}
 
-	step->base.addr =
-		step->raw_pte << step->meth->def.param.pgt.pf.bits[0];
-	step->base.as = step->meth->def.target_as;
-
-	return addrxlat_continue;
+	return status;
 }
 
 /** Set up page table translation.
@@ -389,13 +388,12 @@ next_step_memarr(addrxlat_step_t *step)
 				 "Unsupported value size: %u", memarr->valsz);
 	}
 
-	if (status != addrxlat_ok)
-		return status;
+	if (status == addrxlat_ok) {
+		step->base.addr = val << memarr->shift;
+		step->base.as = step->meth->def.target_as;
+	}
 
-	step->base.addr = val << memarr->shift;
-	step->base.as = step->meth->def.target_as;
-
-	return addrxlat_continue;
+	return status;
 }
 
 

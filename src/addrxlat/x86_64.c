@@ -206,7 +206,7 @@ pgt_x86_64(addrxlat_step_t *step)
 	}
 
 	step->base.addr &= pgt->pgt_mask[0];
-	return addrxlat_continue;
+	return addrxlat_ok;
 }
 
 /** Get Linux virtual memory layout by kernel version.
@@ -652,11 +652,9 @@ is_xen_ktext(struct sys_init_data *ctl, addrxlat_addr_t addr)
 	step.sys = ctl->sys;
 	step.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	status = internal_launch(&step, addr);
-	if (status == addrxlat_ok) {
-		do {
-			++steps;
-			status = internal_step(&step);
-		} while (status == addrxlat_continue);
+	while (status == addrxlat_ok && step.remain) {
+		++steps;
+		status = internal_step(&step);
 	}
 
 	clear_error(ctl->ctx);

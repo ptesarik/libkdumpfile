@@ -98,7 +98,7 @@ pgt_ia32(addrxlat_step_t *step)
 		step->base.addr = step->raw_pte & pgt->pgt_mask[0];
 	step->base.as = step->meth->def.target_as;
 
-	return addrxlat_continue;
+	return addrxlat_ok;
 }
 
 /** IA32 PAE page table step function.
@@ -143,7 +143,7 @@ pgt_ia32_pae(addrxlat_step_t *step)
 		step->base.addr &= pgt->pgt_mask[0];
 	step->base.as = step->meth->def.target_as;
 
-	return addrxlat_continue;
+	return addrxlat_ok;
 }
 
 /** Starting virtual address of Linux direct mapping */

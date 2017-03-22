@@ -110,7 +110,7 @@ hugepd_shift(addrxlat_pte_t hpde)
 
 /**  Translate a Linux huge page using its directory entry.
  * @param step  Current step state.
- * @returns     Always @c addrxlat_continue.
+ * @returns     Error status.
  */
 static addrxlat_status
 huge_pd_linux(addrxlat_step_t *step)
@@ -144,7 +144,7 @@ huge_pd_linux(addrxlat_step_t *step)
 	step->idx[0] |= off;
 
 	step->remain = 2;
-	return addrxlat_continue;
+	return addrxlat_ok;
 }
 
 /**  Check whether a Linux page table entry is huge.
@@ -160,7 +160,7 @@ is_hugepte_linux(addrxlat_pte_t pte)
 /** Update current step state for Linux huge page.
  * @param state      Current step state.
  * @param rpn_shift  RPN shift.
- * @returns          Always @c addrxlat_continue.
+ * @returns          Always @c addrxlat_ok.
  *
  * This function skips all lower paging levels and updates the state
  * so that the next page table translation step adds the correct page
@@ -223,7 +223,7 @@ pgt_ppc64_linux(addrxlat_step_t *step, unsigned rpn_shift)
 		step->base.as = step->meth->def.target_as;
 	}
 
-	return addrxlat_continue;
+	return addrxlat_ok;
 }
 
 /** 64-bit IBM POWER Linux page table step function with RPN shift 30.

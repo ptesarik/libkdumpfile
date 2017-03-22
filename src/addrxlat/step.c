@@ -73,7 +73,7 @@ read_pte(addrxlat_step_t *step)
 
 /** Update current step state for huge page.
  * @param step  Current step state.
- * @returns     Always @c addrxlat_continue.
+ * @returns     Always @c addrxlat_ok.
  *
  * This function skips all lower paging levels and updates the state
  * so that the next page table step adds the correct page offset and
@@ -91,7 +91,7 @@ pgt_huge_page(addrxlat_step_t *step)
 		off <<= pgt->pf.bits[step->remain - 1];
 	}
 	step->idx[0] |= off;
-	return addrxlat_continue;
+	return addrxlat_ok;
 }
 
 DEFINE_ALIAS(launch);
@@ -150,9 +150,11 @@ addrxlat_walk(addrxlat_step_t *step)
 
 	clear_error(step->ctx);
 
-	do {
+	while (step->remain) {
 		status = internal_step(step);
-	} while (status == addrxlat_continue);
+		if (status != addrxlat_ok)
+			break;
+	}
 
 	return status;
 }

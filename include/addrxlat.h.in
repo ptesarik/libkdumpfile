@@ -68,7 +68,6 @@ extern "C" {
 typedef enum _addrxlat_status {
 	addrxlat_ok = 0,		/**< Success. */
 	addrxlat_notimpl,		/**< Unimplemented feature. */
-	addrxlat_continue,		/**< Repeat the last step. */
 	addrxlat_notpresent,		/**< Page not present. */
 	addrxlat_invalid,		/**< Invalid address. */
 	addrxlat_nomem,			/**< Memory allocation failure. */
@@ -868,13 +867,9 @@ typedef addrxlat_status addrxlat_first_step_fn(
  * the page table. The callback function should interpret the PTE value
  * and update @c step.
  *
- * The function returns:
- *   - @c addrxlat_continue if another step is necessary,
- *   - @c addrxlat_ok if @c step->base contains the address, or
- *   - an appropriate error code.
- *
- * Note that page offset is automatically added by the caller if the
- * callback returns @c addrxlat_continue and @c step->remain is 1.
+ * Note that page offset is automatically added by @ref addrxlat_step
+ * when @c step->remain is 1. The callback function is never called to
+ * do this final step.
  *
  * The callback function is explicitly allowed to modify @c step->remain
  * and/or the indices in @c step->idx[]. This is needed if some levels
