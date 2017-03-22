@@ -168,11 +168,13 @@ static const addrxlat_paging_form_t ia32_pf_pae = {
  * @param ctl     Initialization data.
  * @param root    Root page table address
  * @param direct  Starting virtual address of direct mapping
- * @returns       Non-zero if PAE, zero if non-PAE, negative on error.
+ * @returns       Error status.
+ *
+ * On successful return, this function sets @c OPT_pae accordingly.
  */
-static int
-is_pae(struct sys_init_data *ctl, const addrxlat_fulladdr_t *root,
-       addrxlat_addr_t direct)
+static addrxlat_status
+check_pae(struct sys_init_data *ctl, const addrxlat_fulladdr_t *root,
+	  addrxlat_addr_t direct)
 {
 	addrxlat_step_t step;
 	addrxlat_meth_t meth;
@@ -190,13 +192,17 @@ is_pae(struct sys_init_data *ctl, const addrxlat_fulladdr_t *root,
 	step.meth = &meth;
 	status = internal_launch(&step, direct);
 	if (status != addrxlat_ok)
-		return -1;
+		return set_error(ctl->ctx, status,
+				 "Cannot launch %s translation", "PAE");
 	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_PAE - 1);
 	if (status != addrxlat_ok)
-		return status;
+		return set_error(ctl->ctx, status,
+				 "Cannot set up physical mappings");
 	status = internal_walk(&step);
-	if (status == addrxlat_ok && step.base.addr == 0)
-		return 1;
+	if (status == addrxlat_ok && step.base.addr == 0) {
+		ctl->popt.val[OPT_pae].num = 1;
+		return addrxlat_ok;
+	}
 
 	clear_error(ctl->ctx);
 	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS]);
@@ -209,19 +215,25 @@ is_pae(struct sys_init_data *ctl, const addrxlat_fulladdr_t *root,
 	step.meth = &meth;
 	status = internal_launch(&step, direct);
 	if (status != addrxlat_ok)
-		return -1;
+		return set_error(ctl->ctx, status,
+				 "Cannot launch %s translation", "non-PAE");
 	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_NONPAE - 1);
 	if (status != addrxlat_ok)
-		return status;
+		return set_error(ctl->ctx, status,
+				 "Cannot set up physical mappings");
 	status = internal_walk(&step);
-	if (status == addrxlat_ok && step.base.addr == 0)
-		return 0;
+	if (status == addrxlat_ok && step.base.addr == 0) {
+		ctl->popt.val[OPT_pae].num = 0;
+		return addrxlat_ok;
+	}
 
 	clear_error(ctl->ctx);
 	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS]);
 	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS]);
 
-	return -1;
+	return set_error(ctl->ctx, addrxlat_notimpl,
+			 "Neither %s nor %s directmap found",
+			 "PAE", "non-PAE");
 }
 
 /** Direct mapping, used temporarily to translate swapper_pg_dir */
@@ -233,31 +245,29 @@ static const struct sys_region linux_directmap[] = {
 
 /** Determine PAE status resolving root pgt from symbols.
  * @param ctl  Initialization data.
- * @returns    PAE status, see @ref is_pae.
+ * @returns    PAE status, see @ref check_pae.
  */
 static addrxlat_status
-is_pae_sym(struct sys_init_data *ctl)
+check_pae_sym(struct sys_init_data *ctl)
 {
 	addrxlat_fulladdr_t rootpgt;
 	addrxlat_status status;
 
 	if (ctl->osdesc->type != addrxlat_os_linux)
-		return -1;
+		return set_error(ctl->ctx, addrxlat_notimpl,
+				 "Unsupported OS");
 
 	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS,
 				linux_directmap);
 	if (status != addrxlat_ok)
+		return set_error(ctl->ctx, status, "Cannot set up directmap");
+
+	status = get_symval(ctl->ctx, "swapper_pg_dir", &rootpgt.addr);
+	if (status != addrxlat_ok)
 		return status;
 
-	if (get_symval(ctl->ctx, "swapper_pg_dir",
-		       &rootpgt.addr) == addrxlat_ok) {
-		rootpgt.as = ADDRXLAT_KVADDR;
-		return is_pae(ctl, &rootpgt, LINUX_DIRECTMAP);
-	}
-
-	clear_error(ctl->ctx);
-
-	return -1;
+	rootpgt.as = ADDRXLAT_KVADDR;
+	return check_pae(ctl, &rootpgt, LINUX_DIRECTMAP);
 }
 
 /** Initialize a translation map for an Intel IA32 (non-pae) OS.
@@ -323,27 +333,27 @@ sys_ia32(struct sys_init_data *ctl)
 {
 	addrxlat_range_t range;
 	addrxlat_map_t *newmap;
-	long pae;
 	struct optval *rootpgtopt;
 	addrxlat_status status;
 
 	rootpgtopt = &ctl->popt.val[OPT_rootpgt];
 
-	if (ctl->popt.val[OPT_pae].set)
-		pae = ctl->popt.val[OPT_pae].num;
-	else if (!rootpgtopt->set)
-		pae = is_pae_sym(ctl);
-	else if (ctl->osdesc->type == addrxlat_os_linux)
-		pae = is_pae(ctl, &rootpgtopt->fulladdr,
-			     LINUX_DIRECTMAP);
-	else if (ctl->osdesc->type == addrxlat_os_xen)
-		pae = is_pae(ctl, &rootpgtopt->fulladdr,
-			     XEN_DIRECTMAP);
-	else
-		pae = -1;
+	status = addrxlat_ok;
+	if (!ctl->popt.val[OPT_pae].set) {
+		if (!rootpgtopt->set)
+			status = check_pae_sym(ctl);
+		else if (ctl->osdesc->type == addrxlat_os_linux)
+			status = check_pae(ctl, &rootpgtopt->fulladdr,
+					   LINUX_DIRECTMAP);
+		else if (ctl->osdesc->type == addrxlat_os_xen)
+			status = check_pae(ctl, &rootpgtopt->fulladdr,
+					   XEN_DIRECTMAP);
+		else
+			status = addrxlat_notimpl;
+	}
 
-	if (pae < 0)
-		return set_error(ctl->ctx, addrxlat_notimpl,
+	if (status != addrxlat_ok)
+		return set_error(ctl->ctx, status,
 				 "Cannot determine PAE state");
 
 	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_PGT);
@@ -365,7 +375,7 @@ sys_ia32(struct sys_init_data *ctl)
 				 "Cannot duplicate hardware mapping");
 	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
 
-	return pae
+	return ctl->popt.val[OPT_pae].num
 		? sys_ia32_pae(ctl)
 		: sys_ia32_nonpae(ctl);
 }
