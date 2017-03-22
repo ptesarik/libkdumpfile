@@ -168,15 +168,19 @@ read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
 	if (!(ctx->cb.read_caps & ADDRXLAT_CAPS(addr->as))) {
 		status = translate(step, addr, &xaddr);
 		if (status != addrxlat_ok)
-			goto err_nometh;
+			goto err;
 		addr = &xaddr;
 	}
 
 	status = ctx->cb.read32(ctx->cb.data, addr, val);
 	if (status != addrxlat_ok)
-		return set_error(ctx, status, read_err_fmt, 32, what,
-				 addrspace_name(addr->as), addr->addr);
+		goto err;
+
 	return addrxlat_ok;
+
+  err:
+	return set_error(ctx, status, read_err_fmt, 32, what,
+			 addrspace_name(addr->as), addr->addr);
 
   err_nometh:
 	return set_error(ctx, addrxlat_nometh, read_nometh_fmt, 32,
@@ -204,15 +208,19 @@ read64(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint64_t *val,
 	if (!(ctx->cb.read_caps & ADDRXLAT_CAPS(addr->as))) {
 		status = translate(step, addr, &xaddr);
 		if (status != addrxlat_ok)
-			goto err_nometh;
+			goto err;
 		addr = &xaddr;
 	}
 
 	status = ctx->cb.read64(ctx->cb.data, addr, val);
 	if (status != addrxlat_ok)
-		return set_error(ctx, status, read_err_fmt, 64, what,
-				 addrspace_name(addr->as), addr->addr);
+		goto err;
+
 	return addrxlat_ok;
+
+  err:
+	return set_error(ctx, status, read_err_fmt, 64, what,
+			 addrspace_name(addr->as), addr->addr);
 
   err_nometh:
 	return set_error(ctx, addrxlat_nometh, read_nometh_fmt, 64,
