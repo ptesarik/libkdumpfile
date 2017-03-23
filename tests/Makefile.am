@@ -99,6 +99,7 @@ vmci_lines_post_LDADD = $(top_builddir)/src/libkdumpfile.la
 vmci_post_LDADD = $(top_builddir)/src/libkdumpfile.la
 vtop_LDADD = $(top_builddir)/src/libkdumpfile.la
 xlatmap_LDADD = $(top_builddir)/src/libkdumpfile.la -ldl
+xlatop_LDADD = $(top_builddir)/src/libkdumpfile.la
 
 xlat_os_SOURCES = xlat-os.c
 xlat_os_LDADD = \
@@ -127,6 +128,7 @@ check_PROGRAMS = \
 	vmci-post \
 	vtop \
 	xlatmap \
+	xlatop \
 	xlat-os
 
 test_scripts = \
@@ -359,7 +361,8 @@ TESTS = $(test_scripts) \
 	thread-errstr \
 	vmci-cleanup \
 	vmci-lines-post \
-	vmci-post
+	vmci-post \
+	xlatop
 
 clean-local:
 	-rm -rf out

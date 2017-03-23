@@ -35,6 +35,7 @@ LIBADDRXLAT_0 {
     addrxlat_walk;
 
     addrxlat_by_sys;
+    addrxlat_op;
 
   local:
     *;

@@ -935,6 +935,45 @@ addrxlat_status addrxlat_by_sys(
 	addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
 	addrxlat_addrspace_t goal, const addrxlat_sys_t *sys);
 
+/** Type of the @ref addrxlat_op callback.
+ * @param data      Arbitrary user-supplied data.
+ * @param[in] addr  Translated address.
+ * @returns         Error status.
+ */
+typedef addrxlat_status addrxlat_op_fn(void *data,
+				       const addrxlat_fulladdr_t *addr);
+
+/** Callback function pointers and data. */
+typedef struct _addrxlat_op_ctl {
+	/** Address translation context. */
+	addrxlat_ctx_t *ctx;
+
+	/** Address translation system. */
+	const addrxlat_sys_t *sys;
+
+	/** Arbitrary callback data, passed to callback functions. */
+	void *data;
+
+	/** Operation callback. */
+	addrxlat_op_fn *op;
+
+	/** Operation capabilities.
+	 * This is a bit mask of address spaces that can be processed
+	 * by the operation callback. Bits are enumerated by
+	 * @ref addrxlat_addrspace_t (least significant bit first).
+	 * @sa ADDRXLAT_CAPS
+	 */
+	unsigned long caps;
+} addrxlat_op_ctl_t;
+
+/** Perform a generic operation on a translated address.
+ * @param ctl   Control structure.
+ * @param addr  Address (in any address space).
+ * @returns     Error status.
+ */
+addrxlat_status addrxlat_op(const addrxlat_op_ctl_t *ctl,
+			    const addrxlat_fulladdr_t *addr);
+
 #ifdef  __cplusplus
 }
 #endif

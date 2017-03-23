@@ -333,6 +333,137 @@ sys_set_physmaps(struct sys_init_data *ctl, addrxlat_addr_t maxaddr)
 	return sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS, layout);
 }
 
+#define MAX_ALT_NUM	2
+struct xlat_alt {
+	unsigned num;
+	addrxlat_sys_map_t map[MAX_ALT_NUM];
+};
+#define ALT(num, ...)		{ (num), { __VA_ARGS__ } }
+
+struct xlat_chain {
+	unsigned len;
+	struct xlat_alt alt[];
+};
+#define CHAIN(len, ...)		{ (len), { __VA_ARGS__ } }
+
+/** Virtual to any physical (stop after first item for machphys). */
+static const struct xlat_chain kv2phys =
+	CHAIN(2,
+	      ALT(2,
+		  ADDRXLAT_SYS_MAP_KV_PHYS,
+		  ADDRXLAT_SYS_MAP_HW),
+	      ALT(2,
+		  ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS,
+		  ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS));
+
+/** Kernel physical to machine physical. */
+static const struct xlat_chain kphys2machphys =
+	CHAIN(1, ALT(1, ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS));
+
+/** Kernel physical to virtual using directmap. */
+static const struct xlat_chain kphys2direct =
+	CHAIN(1, ALT(1, ADDRXLAT_SYS_MAP_KPHYS_DIRECT));
+
+/** Kernel physical to any other. */
+static const struct xlat_chain kphys2any =
+	CHAIN(1, ALT(2,
+		     ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS,
+		     ADDRXLAT_SYS_MAP_KPHYS_DIRECT));
+
+/** Machine physical to kernel physical or virtual using directmap. */
+static const struct xlat_chain machphys2direct =
+	CHAIN(2,
+	      ALT(1, ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS),
+	      ALT(1, ADDRXLAT_SYS_MAP_KPHYS_DIRECT));
+
+/** Which address space is expected as input to each map? */
+static const addrxlat_addrspace_t map_expect_as[ADDRXLAT_SYS_MAP_NUM] =
+{
+	[ADDRXLAT_SYS_MAP_HW] = ADDRXLAT_KVADDR,
+	[ADDRXLAT_SYS_MAP_KV_PHYS] = ADDRXLAT_KVADDR,
+	[ADDRXLAT_SYS_MAP_KPHYS_DIRECT] = ADDRXLAT_KPHYSADDR,
+	[ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS] = ADDRXLAT_MACHPHYSADDR,
+	[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS] = ADDRXLAT_KPHYSADDR,
+};
+
+addrxlat_status
+addrxlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
+{
+	const struct xlat_chain *chain;
+	unsigned i, j;
+	addrxlat_step_t step;
+	addrxlat_status status;
+
+	clear_error(ctl->ctx);
+
+	if (ctl->caps & ADDRXLAT_CAPS(paddr->as))
+		return ctl->op(ctl->data, paddr);
+
+	/* Check that some translation is possible. */
+	if ((ctl->caps & (ADDRXLAT_CAPS(ADDRXLAT_KVADDR) |
+			  ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR) |
+			  ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR))) == 0)
+		return set_error(ctl->ctx, addrxlat_nometh,
+				 "No suitable capabilities");
+
+	switch (paddr->as) {
+	case ADDRXLAT_KVADDR:
+		chain = &kv2phys;
+		break;
+
+	case ADDRXLAT_KPHYSADDR:
+		chain = (ctl->caps & ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR)
+			 ? (ctl->caps & ADDRXLAT_CAPS(ADDRXLAT_KVADDR)
+			    ? &kphys2any
+			    : &kphys2machphys)
+			 : &kphys2direct);
+		break;
+
+	case ADDRXLAT_MACHPHYSADDR:
+		chain = &machphys2direct;
+		break;
+
+	default:
+		return set_error(ctl->ctx, addrxlat_notimpl,
+				 "Unrecognized address space");
+	}
+
+	step.ctx = ctl->ctx;
+	step.sys = ctl->sys;
+
+	for (i = 0; i < chain->len; ++i) {
+		const struct xlat_alt *alt = &chain->alt[i];
+
+		for (j = 0; j < alt->num; ++j) {
+			addrxlat_sys_map_t mapidx = alt->map[j];
+			addrxlat_map_t *map;
+
+			if (paddr->as != map_expect_as[mapidx])
+				continue;
+
+			map = ctl->sys->map[mapidx];
+			if (!map)
+				continue;
+
+			status = internal_launch_map(&step, paddr->addr, map);
+			if (status == addrxlat_ok)
+				status = internal_walk(&step);
+
+			if (status == addrxlat_ok) {
+				paddr = &step.base;
+				if (ctl->caps & ADDRXLAT_CAPS(paddr->as))
+					return ctl->op(ctl->data, paddr);
+				break;
+			} else if (status == addrxlat_nometh)
+				clear_error(ctl->ctx);
+			else
+				return status;
+		}
+	}
+
+	return set_error(ctl->ctx, addrxlat_nometh, "No way to translate");
+}
+
 #define DSTMAP(dst, mapidx) \
 	[(ADDRXLAT_ ## dst)] = (ADDRXLAT_SYS_MAP_ ## mapidx) + 1
 
