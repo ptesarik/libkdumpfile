@@ -102,43 +102,6 @@ addrspace_name(addrxlat_addrspace_t as)
 	}
 }
 
-/** Translate an address to something that the read callback can handle.
- * @param      step   Current step state.
- * @param[in]  addr   Full address of the data.
- * @param[out] xaddr  Translated address.
- * @returns         Error status.
- */
-static addrxlat_status
-translate(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr,
-	  addrxlat_fulladdr_t *xaddr)
-{
-	addrxlat_cb_t *cb = &step->ctx->cb;
-	addrxlat_addrspace_t goal;
-
-	if (!step->sys)
-		return addrxlat_nometh;
-
-	/* Prefer machine physical addresses, because they can be used
-	 * to access all memory on any architecture.
-	 */
-	if (cb->read_caps & ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR))
-		goal = ADDRXLAT_MACHPHYSADDR;
-	/* Kernel physical addresses are almost just as good, because
-	 * they can access all memory visible to the kernel.
-	 */
-	else if (cb->read_caps & ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR))
-		goal = ADDRXLAT_KPHYSADDR;
-	/* Else use kernel virtual addresses. */
-	else if (cb->read_caps & ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR))
-		goal = ADDRXLAT_KVADDR;
-	else
-		return set_error(step->ctx, addrxlat_nometh,
-				 "Dummy read callback");
-
-	*xaddr = *addr;
-	return internal_by_sys(step->ctx, xaddr, goal, step->sys);
-}
-
 /** Common format string for missing read callback/capability. */
 static const char read_nometh_fmt[] =
 	"No method to read %d-bit %s";
@@ -146,6 +109,18 @@ static const char read_nometh_fmt[] =
 /** Common format string for read callback failures. */
 static const char read_err_fmt[] =
 	"Cannot read the %d-bit value of %s at %s:0x%"ADDRXLAT_PRIxADDR;
+
+struct read_param {
+	addrxlat_ctx_t *ctx;
+	void *val;
+};
+
+static addrxlat_status
+read32_op(void *data, const addrxlat_fulladdr_t *addr)
+{
+	const struct read_param *param = data;
+	return param->ctx->cb.read32(param->ctx->cb.data, addr, param->val);
+}
 
 /** Read a 32-bit value, making an error message if needed.
  * @param     step  Current step state.
@@ -159,32 +134,34 @@ read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
        const char *what)
 {
 	addrxlat_ctx_t *ctx = step->ctx;
-	addrxlat_fulladdr_t xaddr;
+	addrxlat_op_ctl_t ctl;
+	struct read_param param;
 	addrxlat_status status;
 
 	if (!ctx->cb.read32)
-		goto err_nometh;
+		return set_error(ctx, addrxlat_nometh, read_nometh_fmt, 32,
+				 addrspace_name(addr->as));
 
-	if (!(ctx->cb.read_caps & ADDRXLAT_CAPS(addr->as))) {
-		status = translate(step, addr, &xaddr);
-		if (status != addrxlat_ok)
-			goto err;
-		addr = &xaddr;
-	}
-
-	status = ctx->cb.read32(ctx->cb.data, addr, val);
+	param.ctx = ctx;
+	param.val = val;
+	ctl.ctx = ctx;
+	ctl.sys = step->sys;
+	ctl.op = read32_op;
+	ctl.data = &param;
+	ctl.caps = step->ctx->cb.read_caps;
+	status = xlat_op(&ctl, addr);
 	if (status != addrxlat_ok)
-		goto err;
+		return set_error(ctx, status, read_err_fmt, 32, what,
+				 addrspace_name(addr->as), addr->addr);
 
 	return addrxlat_ok;
+}
 
-  err:
-	return set_error(ctx, status, read_err_fmt, 32, what,
-			 addrspace_name(addr->as), addr->addr);
-
-  err_nometh:
-	return set_error(ctx, addrxlat_nometh, read_nometh_fmt, 32,
-			 addrspace_name(addr->as));
+static addrxlat_status
+read64_op(void *data, const addrxlat_fulladdr_t *addr)
+{
+	const struct read_param *param = data;
+	return param->ctx->cb.read64(param->ctx->cb.data, addr, param->val);
 }
 
 /** Read a 64-bit value, making an error message if needed.
@@ -199,32 +176,27 @@ read64(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint64_t *val,
        const char *what)
 {
 	addrxlat_ctx_t *ctx = step->ctx;
-	addrxlat_fulladdr_t xaddr;
+	addrxlat_op_ctl_t ctl;
+	struct read_param param;
 	addrxlat_status status;
 
 	if (!ctx->cb.read64)
-		goto err_nometh;
+		return set_error(ctx, addrxlat_nometh, read_nometh_fmt, 64,
+				 addrspace_name(addr->as));
 
-	if (!(ctx->cb.read_caps & ADDRXLAT_CAPS(addr->as))) {
-		status = translate(step, addr, &xaddr);
-		if (status != addrxlat_ok)
-			goto err;
-		addr = &xaddr;
-	}
-
-	status = ctx->cb.read64(ctx->cb.data, addr, val);
+	param.ctx = ctx;
+	param.val = val;
+	ctl.ctx = ctx;
+	ctl.sys = step->sys;
+	ctl.op = read64_op;
+	ctl.data = &param;
+	ctl.caps = step->ctx->cb.read_caps;
+	status = xlat_op(&ctl, addr);
 	if (status != addrxlat_ok)
-		goto err;
+		return set_error(ctx, status, read_err_fmt, 64, what,
+				 addrspace_name(addr->as), addr->addr);
 
 	return addrxlat_ok;
-
-  err:
-	return set_error(ctx, status, read_err_fmt, 64, what,
-			 addrspace_name(addr->as), addr->addr);
-
-  err_nometh:
-	return set_error(ctx, addrxlat_nometh, read_nometh_fmt, 64,
-			 addrspace_name(addr->as));
 }
 
 /** Get register value.

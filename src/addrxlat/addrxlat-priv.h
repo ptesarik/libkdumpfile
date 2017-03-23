@@ -290,6 +290,11 @@ DECLARE_ALIAS(step);
 DECLARE_ALIAS(walk);
 DECLARE_ALIAS(by_sys);
 
+/* near alias */
+INTERNAL_DECL(addrxlat_status, xlat_op,
+	      (const addrxlat_op_ctl_t *ctl,
+	       const addrxlat_fulladdr_t *paddr));
+
 /* utils */
 
 INTERNAL_DECL(addrxlat_status, read32,

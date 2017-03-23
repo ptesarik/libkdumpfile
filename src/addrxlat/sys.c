@@ -443,14 +443,19 @@ do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
 	return set_error(ctl->ctx, addrxlat_nometh, "No way to translate");
 }
 
+/** A version of @ref addrxlat_op for internal use.
+ * @param ctl   Control structure.
+ * @param addr  Address (in any address space).
+ * @returns     Error status.
+ *
+ * This version does not clear errors.
+ */
 addrxlat_status
-addrxlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
+xlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
 {
 	struct inflight inflight, *pif;
 	const struct xlat_chain *chain;
 	addrxlat_status status;
-
-	clear_error(ctl->ctx);
 
 	if (ctl->caps & ADDRXLAT_CAPS(paddr->as))
 		return ctl->op(ctl->data, paddr);
@@ -503,6 +508,13 @@ addrxlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
 
 	ctl->ctx->inflight = inflight.next;
 	return status;
+}
+
+addrxlat_status
+addrxlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
+{
+	clear_error(ctl->ctx);
+	return xlat_op(ctl, paddr);
 }
 
 static addrxlat_status
