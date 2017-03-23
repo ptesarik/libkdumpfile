@@ -222,6 +222,8 @@ devmem_probe(kdump_ctx *ctx, void *hdr)
 
 	get_vmcoreinfo(ctx);
 
+	set_addrspace_caps(ctx->shared, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
+
 	return kdump_ok;
 }
 

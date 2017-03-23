@@ -709,7 +709,12 @@ open_common(kdump_ctx *ctx)
 			return set_error(ctx, kdump_unsupported,
 					 "Missing Xen P2M mapping");
 		ctx->shared->ops = &xc_core_elf_ops;
-	}
+		set_addrspace_caps(ctx->shared,
+				   ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR) |
+				   ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
+	} else
+		set_addrspace_caps(ctx->shared,
+				   ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
 
 	return kdump_ok;
 }

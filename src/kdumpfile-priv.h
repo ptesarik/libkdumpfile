@@ -543,6 +543,7 @@ struct kdump_shared {
 
 	/** Address translation system. */
 	addrxlat_sys_t *xlat;
+	unsigned long xlat_caps; /**< Address space capabilities. */
 
 	struct attr_hash *attr;	/**< Attribute hash table. */
 
@@ -645,6 +646,9 @@ INTERNAL_DECL(kdump_status, read_u32,
 INTERNAL_DECL(kdump_status, read_u64,
 	      (kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	       int precious, char *what, uint64_t *result));
+INTERNAL_DECL(void, set_addrspace_caps,
+	      (struct kdump_shared *shared, unsigned long caps));
+
 
 /* utils */
 

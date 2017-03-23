@@ -391,3 +391,21 @@ read_u64(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	unref_page(ctx, &pio);
 	return kdump_ok;
 }
+
+/**  Set read address spaces.
+ * @param shared  Dump file shared data.
+ * @param caps    Addrxlat capabilities.
+ */
+void
+set_addrspace_caps(struct kdump_shared *shared, unsigned long caps)
+{
+	kdump_ctx *ctx;
+
+	shared->xlat_caps = caps;
+	list_for_each_entry(ctx, &shared->ctx, list) {
+		addrxlat_ctx_t *addrxlat = ctx->addrxlat;
+		addrxlat_cb_t cb = *addrxlat_ctx_get_cb(addrxlat);
+		cb.read_caps = caps;
+		addrxlat_ctx_set_cb(addrxlat, &cb);
+	}
+}

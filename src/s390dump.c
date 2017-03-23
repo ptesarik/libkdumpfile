@@ -161,7 +161,7 @@ s390_probe(kdump_ctx *ctx, void *hdr)
 
 	ret = set_page_size(ctx, dump32toh(ctx, dh->h1.page_size));
 	if (ret != kdump_ok)
-		goto out;
+		goto err;
 
 	switch (dump32toh(ctx, dh->h1.arch)) {
 	case S390_ARCH_32BIT:
@@ -176,12 +176,14 @@ s390_probe(kdump_ctx *ctx, void *hdr)
 		ret = set_error(ctx, kdump_unsupported,
 				"Unsupported dump architecture: %lu",
 				(unsigned long) dump32toh(ctx, dh->h1.arch));
+		goto err;
 	}
 
- out:
-	if (ret != kdump_ok)
-		s390_cleanup(ctx->shared);
+	set_addrspace_caps(ctx->shared, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
+	return kdump_ok;
 
+ err:
+	s390_cleanup(ctx->shared);
 	return ret;
 }
 

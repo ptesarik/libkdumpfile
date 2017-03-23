@@ -780,6 +780,8 @@ open_common(kdump_ctx *ctx, void *hdr)
 			goto err_cleanup;
 	}
 
+	set_addrspace_caps(ctx->shared, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
+
 	return ret;
 
  err_cleanup:

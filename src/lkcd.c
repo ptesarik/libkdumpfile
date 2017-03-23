@@ -973,6 +973,8 @@ open_common(kdump_ctx *ctx, void *hdr)
 	if (ret != kdump_ok)
 		goto err_free;
 
+	set_addrspace_caps(ctx->shared, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
+
 	return kdump_ok;
 
   err_free:
