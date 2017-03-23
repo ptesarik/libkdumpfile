@@ -464,24 +464,13 @@ addrxlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
 	return set_error(ctl->ctx, addrxlat_nometh, "No way to translate");
 }
 
-#define DSTMAP(dst, mapidx) \
-	[(ADDRXLAT_ ## dst)] = (ADDRXLAT_SYS_MAP_ ## mapidx) + 1
-
-static const addrxlat_sys_map_t
-map_trans[][3] = {
-	[ADDRXLAT_KPHYSADDR] = {
-		DSTMAP(MACHPHYSADDR, KPHYS_MACHPHYS),
-		DSTMAP(KVADDR, KPHYS_DIRECT),
-	},
-	[ADDRXLAT_MACHPHYSADDR] = {
-		DSTMAP(KPHYSADDR, MACHPHYS_KPHYS),
-		DSTMAP(KVADDR, MACHPHYS_KPHYS),
-	},
-	[ADDRXLAT_KVADDR] = {
-		DSTMAP(KPHYSADDR, KV_PHYS),
-		DSTMAP(MACHPHYSADDR, KV_PHYS),
-	},
-};
+static addrxlat_status
+storeaddr(void *data, const addrxlat_fulladdr_t *paddr)
+{
+	addrxlat_fulladdr_t *dstaddr = data;
+	*dstaddr = *paddr;
+	return addrxlat_ok;
+}
 
 DEFINE_ALIAS(by_sys);
 
@@ -490,24 +479,13 @@ addrxlat_by_sys(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
 		addrxlat_addrspace_t goal, const addrxlat_sys_t *sys)
 {
 	struct inflight inflight, *pif;
-	addrxlat_sys_map_t mapidx;
-	addrxlat_map_t *map;
-	addrxlat_step_t step;
+	addrxlat_op_ctl_t opctl;
 	addrxlat_status status;
 
 	clear_error(ctx);
 
 	if (paddr->as == goal)
 		return addrxlat_ok;
-
-	if (paddr->as >= ARRAY_SIZE(map_trans) ||
-	    goal >= ARRAY_SIZE(map_trans[0]))
-		return set_error(ctx, addrxlat_notimpl,
-				 "Unrecognized address space");
-
-	mapidx = map_trans[paddr->as][goal] - 1;
-	if (mapidx < 0 || !(map = sys->map[mapidx]))
-		return set_error(ctx, addrxlat_nometh, "No way to translate");
 
 	inflight.faddr = *paddr;
 	inflight.goal = goal;
@@ -520,20 +498,12 @@ addrxlat_by_sys(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
 	inflight.next = ctx->inflight;
 	ctx->inflight = &inflight;
 
-	step.ctx = ctx;
-	step.sys = sys;
-	status = internal_launch_map(&step, paddr->addr, map);
-	if (status != addrxlat_ok) {
-		ctx->inflight = inflight.next;
-		return status;
-	}
-
-	status = internal_walk(&step);
-	if (status == addrxlat_ok) {
-		*paddr = step.base;
-		if (step.base.as != goal)
-			status = internal_by_sys(ctx, paddr, goal, sys);
-	}
+	opctl.ctx = ctx;
+	opctl.sys = sys;
+	opctl.op = storeaddr;
+	opctl.data = paddr;
+	opctl.caps = ADDRXLAT_CAPS(goal);
+	status = addrxlat_op(&opctl, paddr);
 
 	ctx->inflight = inflight.next;
 	return status;
