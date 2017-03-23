@@ -424,6 +424,7 @@ do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
 			if (!map)
 				continue;
 
+			clear_error(ctl->ctx);
 			status = internal_launch_map(&step, paddr->addr, map);
 			if (status == addrxlat_ok)
 				status = internal_walk(&step);
@@ -433,14 +434,14 @@ do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
 				if (ctl->caps & ADDRXLAT_CAPS(paddr->as))
 					return ctl->op(ctl->data, paddr);
 				break;
-			} else if (status == addrxlat_nometh)
-				clear_error(ctl->ctx);
-			else
+			} else if (status != addrxlat_nometh)
 				return status;
 		}
 	}
 
-	return set_error(ctl->ctx, addrxlat_nometh, "No way to translate");
+	return ctl->ctx->err_str == NULL
+		? set_error(ctl->ctx, addrxlat_nometh, "No way to translate")
+		: addrxlat_nometh;
 }
 
 /** A version of @ref addrxlat_op for internal use.

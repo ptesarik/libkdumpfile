@@ -108,7 +108,7 @@ static const char read_nometh_fmt[] =
 
 /** Common format string for read callback failures. */
 static const char read_err_fmt[] =
-	"Cannot read the %d-bit value of %s at %s:0x%"ADDRXLAT_PRIxADDR;
+	"Cannot read %d-bit %s at %s:0x%"ADDRXLAT_PRIxADDR;
 
 struct read_param {
 	addrxlat_ctx_t *ctx;
