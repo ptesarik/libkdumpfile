@@ -462,6 +462,10 @@ addrxlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
 		return set_error(ctl->ctx, addrxlat_nometh,
 				 "No suitable capabilities");
 
+	if (!ctl->sys)
+		return set_error(ctl->ctx, addrxlat_nometh,
+				 "No translation system");
+
 	switch (paddr->as) {
 	case ADDRXLAT_KVADDR:
 		chain = &kv2phys;
