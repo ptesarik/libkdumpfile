@@ -386,47 +386,26 @@ static const addrxlat_addrspace_t map_expect_as[ADDRXLAT_SYS_MAP_NUM] =
 	[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS] = ADDRXLAT_KPHYSADDR,
 };
 
-addrxlat_status
-addrxlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
-{
+/**  In-flight translation.
+ * This is used to detect infinite recursion.
+ * @sa addrxlat_by_sys
+ */
+struct inflight {
+	/** Full address to be translated. */
+	addrxlat_fulladdr_t faddr;
+	/** Corresponding translation chain. */
 	const struct xlat_chain *chain;
+	/** Next translation in the chain. */
+	struct inflight *next;
+};
+
+static addrxlat_status
+do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
+      const struct xlat_chain *chain)
+{
 	unsigned i, j;
 	addrxlat_step_t step;
 	addrxlat_status status;
-
-	clear_error(ctl->ctx);
-
-	if (ctl->caps & ADDRXLAT_CAPS(paddr->as))
-		return ctl->op(ctl->data, paddr);
-
-	/* Check that some translation is possible. */
-	if ((ctl->caps & (ADDRXLAT_CAPS(ADDRXLAT_KVADDR) |
-			  ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR) |
-			  ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR))) == 0)
-		return set_error(ctl->ctx, addrxlat_nometh,
-				 "No suitable capabilities");
-
-	switch (paddr->as) {
-	case ADDRXLAT_KVADDR:
-		chain = &kv2phys;
-		break;
-
-	case ADDRXLAT_KPHYSADDR:
-		chain = (ctl->caps & ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR)
-			 ? (ctl->caps & ADDRXLAT_CAPS(ADDRXLAT_KVADDR)
-			    ? &kphys2any
-			    : &kphys2machphys)
-			 : &kphys2direct);
-		break;
-
-	case ADDRXLAT_MACHPHYSADDR:
-		chain = &machphys2direct;
-		break;
-
-	default:
-		return set_error(ctl->ctx, addrxlat_notimpl,
-				 "Unrecognized address space");
-	}
 
 	step.ctx = ctl->ctx;
 	step.sys = ctl->sys;
@@ -464,6 +443,64 @@ addrxlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
 	return set_error(ctl->ctx, addrxlat_nometh, "No way to translate");
 }
 
+addrxlat_status
+addrxlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
+{
+	struct inflight inflight, *pif;
+	const struct xlat_chain *chain;
+	addrxlat_status status;
+
+	clear_error(ctl->ctx);
+
+	if (ctl->caps & ADDRXLAT_CAPS(paddr->as))
+		return ctl->op(ctl->data, paddr);
+
+	/* Check that some translation is possible. */
+	if ((ctl->caps & (ADDRXLAT_CAPS(ADDRXLAT_KVADDR) |
+			  ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR) |
+			  ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR))) == 0)
+		return set_error(ctl->ctx, addrxlat_nometh,
+				 "No suitable capabilities");
+
+	switch (paddr->as) {
+	case ADDRXLAT_KVADDR:
+		chain = &kv2phys;
+		break;
+
+	case ADDRXLAT_KPHYSADDR:
+		chain = (ctl->caps & ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR)
+			 ? (ctl->caps & ADDRXLAT_CAPS(ADDRXLAT_KVADDR)
+			    ? &kphys2any
+			    : &kphys2machphys)
+			 : &kphys2direct);
+		break;
+
+	case ADDRXLAT_MACHPHYSADDR:
+		chain = &machphys2direct;
+		break;
+
+	default:
+		return set_error(ctl->ctx, addrxlat_notimpl,
+				 "Unrecognized address space");
+	}
+
+	inflight.faddr = *paddr;
+	inflight.chain = chain;
+	for (pif = ctl->ctx->inflight; pif; pif = pif->next)
+		if (pif->faddr.addr == inflight.faddr.addr &&
+		    pif->faddr.as == inflight.faddr.as &&
+		    pif->chain == inflight.chain)
+			return set_error(ctl->ctx, addrxlat_nometh,
+					 "Infinite recursion loop");
+	inflight.next = ctl->ctx->inflight;
+	ctl->ctx->inflight = &inflight;
+
+	status = do_op(ctl, paddr, chain);
+
+	ctl->ctx->inflight = inflight.next;
+	return status;
+}
+
 static addrxlat_status
 storeaddr(void *data, const addrxlat_fulladdr_t *paddr)
 {
@@ -478,33 +515,12 @@ addrxlat_status
 addrxlat_by_sys(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
 		addrxlat_addrspace_t goal, const addrxlat_sys_t *sys)
 {
-	struct inflight inflight, *pif;
 	addrxlat_op_ctl_t opctl;
-	addrxlat_status status;
-
-	clear_error(ctx);
-
-	if (paddr->as == goal)
-		return addrxlat_ok;
-
-	inflight.faddr = *paddr;
-	inflight.goal = goal;
-	for (pif = ctx->inflight; pif; pif = pif->next)
-		if (pif->faddr.addr == inflight.faddr.addr &&
-		    pif->faddr.as == inflight.faddr.as &&
-		    pif->goal == inflight.goal)
-			return set_error(ctx, addrxlat_nometh,
-					 "Infinite recursion loop");
-	inflight.next = ctx->inflight;
-	ctx->inflight = &inflight;
 
 	opctl.ctx = ctx;
 	opctl.sys = sys;
 	opctl.op = storeaddr;
 	opctl.data = paddr;
 	opctl.caps = ADDRXLAT_CAPS(goal);
-	status = addrxlat_op(&opctl, paddr);
-
-	ctx->inflight = inflight.next;
-	return status;
+	return addrxlat_op(&opctl, paddr);
 }
