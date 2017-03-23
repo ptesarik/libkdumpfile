@@ -951,11 +951,11 @@ typedef struct _addrxlat_op_ctl {
 	/** Address translation system. */
 	const addrxlat_sys_t *sys;
 
-	/** Arbitrary callback data, passed to callback functions. */
-	void *data;
-
 	/** Operation callback. */
 	addrxlat_op_fn *op;
+
+	/** Arbitrary callback data, passed to callback functions. */
+	void *data;
 
 	/** Operation capabilities.
 	 * This is a bit mask of address spaces that can be processed
