@@ -448,7 +448,8 @@ do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
  * @param addr  Address (in any address space).
  * @returns     Error status.
  *
- * This version does not clear errors.
+ * This version does not clear errors and, more importantly, does not
+ * reset recursion detection.
  */
 addrxlat_status
 xlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
@@ -513,8 +514,16 @@ xlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
 addrxlat_status
 addrxlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
 {
+	struct inflight *inflight;
+	addrxlat_status status;
+
 	clear_error(ctl->ctx);
-	return xlat_op(ctl, paddr);
+
+	inflight = ctl->ctx->inflight;
+	ctl->ctx->inflight = NULL;
+	status = xlat_op(ctl, paddr);
+	ctl->ctx->inflight = inflight;
+	return status;
 }
 
 static addrxlat_status
