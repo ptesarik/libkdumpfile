@@ -415,6 +415,7 @@ linux_ktext_map(struct sys_init_data *ctl)
 
 	status = linux_ktext_meth(ctl);
 	if (status != addrxlat_ok &&
+	    status != addrxlat_nometh &&
 	    status != addrxlat_nodata &&
 	    status != addrxlat_notpresent)
 		return status;
