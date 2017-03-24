@@ -116,7 +116,7 @@ s390_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 static kdump_status
 s390_read_page(kdump_ctx *ctx, struct page_io *pio)
 {
-	kdump_pfn_t pfn = pio->addr >> get_page_shift(ctx);
+	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
 	if (pfn >= get_max_pfn(ctx))
 		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 

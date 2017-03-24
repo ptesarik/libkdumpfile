@@ -176,7 +176,7 @@ struct cache_entry;
  * and the format-specific I/O methods.
  */
 struct page_io {
-	kdump_addr_t addr;	/**< Address of page under I/O. */
+	addrxlat_fulladdr_t addr; /**< Address of page under I/O. */
 	struct cache *cache;	/**< Referenced cache. */
 	struct cache_entry *ce;	/**< Buffer cache entry. */
 	int precious;		/**< Is this page precious? */
@@ -210,28 +210,19 @@ struct format_ops {
 	 */
 	kdump_status (*probe)(kdump_ctx *ctx, void *hdr);
 
-	/* Read a (machine physical) page from the dump file.
-	 * Input:
-	 *   ctx->fd         core dump file descriptor open for reading
-	 * Return:
-	 *   kdump_ok        buffer is filled with page data
-	 *   kdump_nodata    data for the given page is not present
-	 */
-	kdump_status (*read_page)(kdump_ctx *ctx, struct page_io *pio);
-
-	/* Read a kernel physical page from the dump file.
+	/* Read a page from the dump file.
 	 * Input:
 	 *   ctx->fd         core dump file descriptor open for reading
 	 * Return:
 	 *   kdump_ok        buffer is filled with page data
 	 *   kdump_nodata    data for the given page is not present
 	 *
-	 * If a format handler has an efficient way to read a kernel physical
-	 * page, it can set this method. Otherwise, the generic code will
-	 * fall back to first translating KPHYSADDR to MACHPHYSADDR and
-	 * use @ref read_page.
+	 * Note: The requested address space is specified in @c pio.
+	 * It is always an address space specified by @c xlat_caps.
+	 * Since most file formats will specify only one, their read_page
+	 * method does not have to care.
 	 */
-	kdump_status (*read_kpage)(kdump_ctx *ctx, struct page_io *pio);
+	kdump_status (*read_page)(kdump_ctx *ctx, struct page_io *pio);
 
 	/** Drop a reference to a page.
 	 * @param ctx  Dump file object.

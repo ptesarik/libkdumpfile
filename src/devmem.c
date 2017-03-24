@@ -91,7 +91,7 @@ devmem_read_page(kdump_ctx *ctx, struct page_io *pio)
 {
 	struct devmem_priv *dmp = ctx->shared->fmtdata;
 	struct cache_entry *ce;
-	kdump_pfn_t pfn = pio->addr >> get_page_shift(ctx);
+	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
 	ssize_t rd;
 	unsigned i;
 
@@ -109,7 +109,8 @@ devmem_read_page(kdump_ctx *ctx, struct page_io *pio)
 	++ce->refcnt;
 
 	ce->pfn = pfn;
-	rd = pread(get_file_fd(ctx), ce->data, get_page_size(ctx), pio->addr);
+	rd = pread(get_file_fd(ctx), ce->data, get_page_size(ctx),
+		   pio->addr.addr);
 	if (rd != get_page_size(ctx)) {
 		--ce->refcnt;
 		return set_error(ctx, read_error(rd),

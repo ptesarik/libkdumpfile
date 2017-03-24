@@ -35,150 +35,50 @@
 #include <string.h>
 #include <stdlib.h>
 
-typedef kdump_status (*read_page_fn)(kdump_ctx *, struct page_io *);
-
-static kdump_status
-read_kpage_generic(kdump_ctx *ctx, struct page_io *pio)
+static addrxlat_status
+xlat_pio_op(void *data, const addrxlat_fulladdr_t *addr)
 {
-	addrxlat_fulladdr_t faddr;
-	addrxlat_status axres;
-
-	faddr.addr = pio->addr;
-	faddr.as = ADDRXLAT_KPHYSADDR;
-	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, ADDRXLAT_MACHPHYSADDR,
-				ctx->shared->xlat);
-	if (axres != addrxlat_ok)
-		return addrxlat2kdump(ctx, axres);
-
-	pio->addr = faddr.addr;
-	return ctx->shared->ops->read_page(ctx, pio);
+	struct page_io *pio = data;
+	pio->addr = *addr;
+	return addrxlat_ok;
 }
 
-static inline read_page_fn
-read_kphys_page_fn(kdump_ctx *ctx)
+/**  Tranlate the address for page I/O.
+ * @param ctx  Dump file object.
+ * @param pio  Page I/O control.
+ *
+ * This function translates the page I/O address to an address space that
+ * is included in @c xlat_caps. The resulting page I/O object can be
+ * directly passed to a @c read_page method.
+ */
+kdump_status
+xlat_pio(kdump_ctx *ctx, struct page_io *pio)
 {
-	if (kphys_is_machphys(ctx))
-		return ctx->shared->ops->read_page;
+	addrxlat_op_ctl_t ctl;
 
-	if (ctx->shared->ops->read_kpage)
-		return ctx->shared->ops->read_kpage;
-
-	if (ctx->shared->ops->read_page)
-		return read_kpage_generic;
-
-	return NULL;
-}
-
-static kdump_status
-read_kvpage_machphys(kdump_ctx *ctx, struct page_io *pio)
-{
-	addrxlat_fulladdr_t faddr;
-	addrxlat_status axres;
-
-	faddr.addr = pio->addr;
-	faddr.as = ADDRXLAT_KVADDR;
-	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, ADDRXLAT_MACHPHYSADDR,
-				ctx->shared->xlat);
-	if (axres != addrxlat_ok)
-		return addrxlat2kdump(ctx, axres);
-
-	pio->addr = faddr.addr;
-	return ctx->shared->ops->read_page(ctx, pio);
-}
-
-static kdump_status
-read_kvpage_kphys(kdump_ctx *ctx, struct page_io *pio)
-{
-	addrxlat_fulladdr_t faddr;
-	addrxlat_status axres;
-
-	faddr.addr = pio->addr;
-	faddr.as = ADDRXLAT_KVADDR;
-	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, ADDRXLAT_KPHYSADDR,
-				ctx->shared->xlat);
-	if (axres != addrxlat_ok)
-		return addrxlat2kdump(ctx, axres);
-
-	pio->addr = faddr.addr;
-	return ctx->shared->ops->read_kpage(ctx, pio);
-}
-
-static kdump_status
-read_kvpage_choose(kdump_ctx *ctx, struct page_io *pio)
-{
-	kdump_vaddr_t vaddr;
-	const addrxlat_map_t *map;
-
-	vaddr = pio->addr;
-	map = addrxlat_sys_get_map(ctx->shared->xlat,
-				   ADDRXLAT_SYS_MAP_KV_PHYS);
-	if (map) {
-		const addrxlat_meth_t *meth = addrxlat_map_search(map, vaddr);
-		if (meth && addrxlat_meth_get_def(meth)->kind != ADDRXLAT_PGT)
-			return read_kvpage_kphys(ctx, pio);
-	}
-
-	return read_kvpage_machphys(ctx, pio);
-}
-
-static kdump_status
-setup_readfn(kdump_ctx *ctx, kdump_addrspace_t as, read_page_fn *pfn)
-{
-	read_page_fn fn;
-
-	if (!ctx->shared->ops)
-		return set_error(ctx, kdump_invalid,
-				 "File format not initialized");
-
-	fn = NULL;
-	switch (as) {
-	case KDUMP_KPHYSADDR:
-		fn = read_kphys_page_fn(ctx);
-		break;
-
-	case KDUMP_MACHPHYSADDR:
-		fn = ctx->shared->ops->read_page;
-		break;
-
-	case KDUMP_KVADDR:
-		if (ctx->shared->ops->read_page) {
-			if (ctx->shared->ops->read_kpage)
-				fn = read_kvpage_choose;
-			else
-				fn = read_kvpage_machphys;
-		} else if (ctx->shared->ops->read_kpage)
-			fn = read_kvpage_kphys;
-		break;
-
-	default:
-		return set_error(ctx, kdump_invalid,
-				 "Invalid address space");
-	}
-
-	if (!fn)
-		return set_error(ctx, kdump_invalid,
-				 "Read function not available");
-
-	*pfn = fn;
-	return kdump_ok;
+	ctl.ctx = ctx->addrxlat;
+	ctl.sys = ctx->shared->xlat;
+	ctl.op = xlat_pio_op;
+	ctl.data = pio;
+	ctl.caps = ctx->shared->xlat_caps;
+	return addrxlat2kdump(ctx, addrxlat_op(&ctl, &pio->addr));
 }
 
 /**  Raw interface to read_page().
  * @param ctx  Dump file object.
- * @param as   Address space.
  * @param pio  Page I/O control.
  */
 static kdump_status
-raw_read_page(kdump_ctx *ctx, kdump_addrspace_t as, struct page_io *pio)
+raw_read_page(kdump_ctx *ctx, struct page_io *pio)
 {
-	read_page_fn readfn;
-	kdump_status ret;
+	kdump_status status;
 
-	ret = setup_readfn(ctx, as, &readfn);
-	if (ret != kdump_ok)
-		return ret;
+	status = xlat_pio(ctx, pio);
+	if (status != kdump_ok)
+		return set_error(ctx, status,
+				 "Cannot get page I/O address");
 
-	return readfn(ctx, pio);
+	return ctx->shared->ops->read_page(ctx, pio);
 }
 
 /**  Internal version of @ref kdump_read
@@ -198,22 +98,19 @@ kdump_status
 read_locked(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	    void *buffer, size_t *plength)
 {
-	read_page_fn readfn;
 	struct page_io pio;
 	size_t remain;
 	kdump_status ret;
 
-	ret = setup_readfn(ctx, as, &readfn);
-	if (ret != kdump_ok)
-		return ret;
-
+	ret = kdump_ok;
 	pio.precious = 0;
 	remain = *plength;
 	while (remain) {
 		size_t off, partlen;
 
-		pio.addr = page_align(ctx, addr);
-		ret = readfn(ctx, &pio);
+		pio.addr.as = as;
+		pio.addr.addr = page_align(ctx, addr);
+		ret = raw_read_page(ctx, &pio);
 		if (ret != kdump_ok)
 			break;
 
@@ -261,22 +158,18 @@ kdump_status
 read_string_locked(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		   char **pstr)
 {
-	read_page_fn readfn;
 	struct page_io pio;
 	char *str = NULL, *newstr, *endp;
 	size_t length = 0, newlength;
 	kdump_status ret;
 
-	ret = setup_readfn(ctx, as, &readfn);
-	if (ret != kdump_ok)
-		return ret;
-
 	pio.precious = 0;
 	do {
 		size_t off, partlen;
 
-		pio.addr = page_align(ctx, addr);
-		ret = readfn(ctx, &pio);
+		pio.addr.as = as;
+		pio.addr.addr = page_align(ctx, addr);
+		ret = raw_read_page(ctx, &pio);
 		if (ret != kdump_ok)
 			return ret;
 
@@ -341,9 +234,10 @@ read_u32(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	uint32_t *p;
 	kdump_status ret;
 
-	pio.addr = page_align(ctx, addr);
+	pio.addr.addr = page_align(ctx, addr);
+	pio.addr.as = as;
 	pio.precious = precious;
-	ret = raw_read_page(ctx, as, &pio);
+	ret = raw_read_page(ctx, &pio);
 	if (ret != kdump_ok)
 		return what
 			? set_error(ctx, ret,
@@ -376,9 +270,10 @@ read_u64(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	uint64_t *p;
 	kdump_status ret;
 
-	pio.addr = page_align(ctx, addr);
+	pio.addr.addr = page_align(ctx, addr);
+	pio.addr.as = as;
 	pio.precious = precious;
-	ret = raw_read_page(ctx, as, &pio);
+	ret = raw_read_page(ctx, &pio);
 	if (ret != kdump_ok)
 		return what
 			? set_error(ctx, ret,
