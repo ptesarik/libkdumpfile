@@ -168,7 +168,7 @@ setup_readfn(kdump_ctx *ctx, kdump_addrspace_t as, read_page_fn *pfn)
  * @param as   Address space.
  * @param pio  Page I/O control.
  */
-kdump_status
+static kdump_status
 raw_read_page(kdump_ctx *ctx, kdump_addrspace_t as, struct page_io *pio)
 {
 	read_page_fn readfn;

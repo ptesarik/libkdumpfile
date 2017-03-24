@@ -632,8 +632,6 @@ struct timeval_64 {
 
 /* read */
 
-INTERNAL_DECL(kdump_status, raw_read_page,
-	      (kdump_ctx *ctx, kdump_addrspace_t as, struct page_io *pio));
 INTERNAL_DECL(kdump_status, read_string_locked,
 	      (kdump_ctx *ctx, kdump_addrspace_t as,
 	       kdump_addr_t addr, char **pstr));
