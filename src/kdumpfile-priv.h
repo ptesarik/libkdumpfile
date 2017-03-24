@@ -176,7 +176,7 @@ struct cache_entry;
  * and the format-specific I/O methods.
  */
 struct page_io {
-	kdump_pfn_t pfn;	/**< PFN under I/O. */
+	kdump_addr_t addr;	/**< Address of page under I/O. */
 	struct cache *cache;	/**< Referenced cache. */
 	struct cache_entry *ce;	/**< Buffer cache entry. */
 	int precious;		/**< Is this page precious? */
@@ -1070,6 +1070,12 @@ dump64toh(kdump_ctx *ctx, uint64_t x)
 	return get_byte_order(ctx) == kdump_big_endian
 		? be64toh(x)
 		: le64toh(x);
+}
+
+static inline kdump_addr_t
+page_align(kdump_ctx *ctx, kdump_addr_t addr)
+{
+	return addr & (-get_page_size(ctx));
 }
 
 static inline void

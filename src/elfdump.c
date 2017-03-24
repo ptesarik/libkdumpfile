@@ -196,7 +196,8 @@ elf_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 static kdump_status
 elf_read_page(kdump_ctx *ctx, struct page_io *pio)
 {
-	return def_read_cache(ctx, pio, elf_read_cache, pio->pfn);
+	kdump_pfn_t pfn = pio->addr >> get_page_shift(ctx);
+	return def_read_cache(ctx, pio, elf_read_cache, pfn);
 }
 
 static void
@@ -267,9 +268,10 @@ xc_read_cache(kdump_ctx *ctx, kdump_pfn_t idx, struct cache_entry *ce)
 static kdump_status
 xc_read_kpage(kdump_ctx *ctx, struct page_io *pio)
 {
+	kdump_pfn_t pfn = pio->addr >> get_page_shift(ctx);
 	unsigned long idx;
 
-	idx = pfn_to_idx(ctx, pio->pfn);
+	idx = pfn_to_idx(ctx, pfn);
 	if (idx == ~0UL)
 		return set_error(ctx, kdump_nodata, "Page not found");
 
@@ -313,9 +315,10 @@ xc_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 static kdump_status
 xc_read_page(kdump_ctx *ctx, struct page_io *pio)
 {
+	kdump_pfn_t mfn = pio->addr >> get_page_shift(ctx);
 	unsigned long idx;
 
-	idx = mfn_to_idx(ctx, pio->pfn);
+	idx = mfn_to_idx(ctx, mfn);
 	if (idx == ~0UL)
 		return set_error(ctx, kdump_nodata, "Page not found");
 

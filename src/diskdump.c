@@ -325,10 +325,12 @@ diskdump_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 static kdump_status
 diskdump_read_page(kdump_ctx *ctx, struct page_io *pio)
 {
-	if (pio->pfn >= get_max_pfn(ctx))
+	kdump_pfn_t pfn = pio->addr >> get_page_shift(ctx);
+
+	if (pfn >= get_max_pfn(ctx))
 		return set_error(ctx, kdump_nodata, "Out-of-bounds PFN");
 
-	return def_read_cache(ctx, pio, diskdump_read_cache, pio->pfn);
+	return def_read_cache(ctx, pio, diskdump_read_cache, pfn);
 }
 
 /** Reallocate buffer for compressed data.

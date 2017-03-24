@@ -803,7 +803,8 @@ lkcd_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 static kdump_status
 lkcd_read_page(kdump_ctx *ctx, struct page_io *pio)
 {
-	return def_read_cache(ctx, pio, lkcd_read_cache, pio->pfn);
+	kdump_pfn_t pfn = pio->addr >> get_page_shift(ctx);
+	return def_read_cache(ctx, pio, lkcd_read_cache, pfn);
 }
 
 /** Reallocate buffer for compressed data.

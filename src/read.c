@@ -43,14 +43,14 @@ read_kpage_generic(kdump_ctx *ctx, struct page_io *pio)
 	addrxlat_fulladdr_t faddr;
 	addrxlat_status axres;
 
-	faddr.addr = pio->pfn << get_page_shift(ctx);
+	faddr.addr = pio->addr;
 	faddr.as = ADDRXLAT_KPHYSADDR;
 	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, ADDRXLAT_MACHPHYSADDR,
 				ctx->shared->xlat);
 	if (axres != addrxlat_ok)
 		return addrxlat2kdump(ctx, axres);
 
-	pio->pfn = faddr.addr >> get_page_shift(ctx);
+	pio->addr = faddr.addr;
 	return ctx->shared->ops->read_page(ctx, pio);
 }
 
@@ -75,14 +75,14 @@ read_kvpage_machphys(kdump_ctx *ctx, struct page_io *pio)
 	addrxlat_fulladdr_t faddr;
 	addrxlat_status axres;
 
-	faddr.addr = pio->pfn << get_page_shift(ctx);
+	faddr.addr = pio->addr;
 	faddr.as = ADDRXLAT_KVADDR;
 	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, ADDRXLAT_MACHPHYSADDR,
 				ctx->shared->xlat);
 	if (axres != addrxlat_ok)
 		return addrxlat2kdump(ctx, axres);
 
-	pio->pfn = faddr.addr >> get_page_shift(ctx);
+	pio->addr = faddr.addr;
 	return ctx->shared->ops->read_page(ctx, pio);
 }
 
@@ -92,14 +92,14 @@ read_kvpage_kphys(kdump_ctx *ctx, struct page_io *pio)
 	addrxlat_fulladdr_t faddr;
 	addrxlat_status axres;
 
-	faddr.addr = pio->pfn << get_page_shift(ctx);
+	faddr.addr = pio->addr;
 	faddr.as = ADDRXLAT_KVADDR;
 	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, ADDRXLAT_KPHYSADDR,
 				ctx->shared->xlat);
 	if (axres != addrxlat_ok)
 		return addrxlat2kdump(ctx, axres);
 
-	pio->pfn = faddr.addr >> get_page_shift(ctx);
+	pio->addr = faddr.addr;
 	return ctx->shared->ops->read_kpage(ctx, pio);
 }
 
@@ -109,7 +109,7 @@ read_kvpage_choose(kdump_ctx *ctx, struct page_io *pio)
 	kdump_vaddr_t vaddr;
 	const addrxlat_map_t *map;
 
-	vaddr = pio->pfn << get_page_shift(ctx);
+	vaddr = pio->addr;
 	map = addrxlat_sys_get_map(ctx->shared->xlat,
 				   ADDRXLAT_SYS_MAP_KV_PHYS);
 	if (map) {
@@ -212,7 +212,7 @@ read_locked(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	while (remain) {
 		size_t off, partlen;
 
-		pio.pfn = addr >> get_page_shift(ctx);
+		pio.addr = page_align(ctx, addr);
 		ret = readfn(ctx, &pio);
 		if (ret != kdump_ok)
 			break;
@@ -275,7 +275,7 @@ read_string_locked(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	do {
 		size_t off, partlen;
 
-		pio.pfn = addr >> get_page_shift(ctx);
+		pio.addr = page_align(ctx, addr);
 		ret = readfn(ctx, &pio);
 		if (ret != kdump_ok)
 			return ret;
@@ -341,7 +341,7 @@ read_u32(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	uint32_t *p;
 	kdump_status ret;
 
-	pio.pfn = addr >> get_page_shift(ctx);
+	pio.addr = page_align(ctx, addr);
 	pio.precious = precious;
 	ret = raw_read_page(ctx, as, &pio);
 	if (ret != kdump_ok)
@@ -376,7 +376,7 @@ read_u64(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	uint64_t *p;
 	kdump_status ret;
 
-	pio.pfn = addr >> get_page_shift(ctx);
+	pio.addr = page_align(ctx, addr);
 	pio.precious = precious;
 	ret = raw_read_page(ctx, as, &pio);
 	if (ret != kdump_ok)
