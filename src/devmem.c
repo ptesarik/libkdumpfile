@@ -238,7 +238,7 @@ devmem_cleanup(struct kdump_shared *shared)
 		free(dmp->ce);
 	}
 
-	free(shared);
+	free(dmp);
 	shared->fmtdata = NULL;
 }
 
