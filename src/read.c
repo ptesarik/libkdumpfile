@@ -56,8 +56,8 @@ xlat_pio(kdump_ctx *ctx, struct page_io *pio)
 {
 	addrxlat_op_ctl_t ctl;
 
-	ctl.ctx = ctx->addrxlat;
-	ctl.sys = ctx->shared->xlat;
+	ctl.ctx = ctx->xlatctx;
+	ctl.sys = ctx->shared->xlatsys;
 	ctl.op = xlat_pio_op;
 	ctl.data = pio;
 	ctl.caps = ctx->shared->xlat_caps;
@@ -298,9 +298,9 @@ set_addrspace_caps(struct kdump_shared *shared, unsigned long caps)
 
 	shared->xlat_caps = caps;
 	list_for_each_entry(ctx, &shared->ctx, list) {
-		addrxlat_ctx_t *addrxlat = ctx->addrxlat;
-		addrxlat_cb_t cb = *addrxlat_ctx_get_cb(addrxlat);
+		addrxlat_ctx_t *xlatctx = ctx->xlatctx;
+		addrxlat_cb_t cb = *addrxlat_ctx_get_cb(xlatctx);
 		cb.read_caps = caps;
-		addrxlat_ctx_set_cb(addrxlat, &cb);
+		addrxlat_ctx_set_cb(xlatctx, &cb);
 	}
 }

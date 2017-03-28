@@ -529,12 +529,9 @@ struct kdump_shared {
 
 	struct cache *cache;	/**< Page cache. */
 
-	/** OS for address translation. */
-	addrxlat_ostype_t ostype;
-
-	/** Address translation system. */
-	addrxlat_sys_t *xlat;
-	unsigned long xlat_caps; /**< Address space capabilities. */
+	addrxlat_ostype_t ostype; /**< OS for address translation. */
+	addrxlat_sys_t *xlatsys;  /**< Address translation system. */
+	unsigned long xlat_caps;  /**< Address space capabilities. */
 
 	struct attr_hash *attr;	/**< Attribute hash table. */
 
@@ -573,7 +570,7 @@ struct _kdump_ctx {
 	void *priv;		/**< User private data. */
 
 	/** Address translation context. */
-	addrxlat_ctx_t *addrxlat;
+	addrxlat_ctx_t *xlatctx;
 
 	/* callbacks */
 	kdump_get_symbol_val_fn *cb_get_symbol_val;

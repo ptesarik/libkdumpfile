@@ -221,7 +221,7 @@ set_ktext_off(kdump_ctx *ctx, kdump_addr_t phys_base)
 	addrxlat_meth_t *meth;
 	addrxlat_def_t def;
 
-	meth = addrxlat_sys_get_meth(ctx->shared->xlat,
+	meth = addrxlat_sys_get_meth(ctx->shared->xlatsys,
 				     ADDRXLAT_SYS_METH_KTEXT);
 	def.kind = ADDRXLAT_LINEAR;
 	def.target_as = ADDRXLAT_KPHYSADDR;
@@ -270,7 +270,7 @@ x86_64_init(kdump_ctx *ctx)
 				"Cannot allocate kernel text mapping");
 		goto err_arch;
 	}
-	addrxlat_sys_set_meth(ctx->shared->xlat,
+	addrxlat_sys_set_meth(ctx->shared->xlatsys,
 			      ADDRXLAT_SYS_METH_KTEXT, ktext);
 
 	if (isset_phys_base(ctx))

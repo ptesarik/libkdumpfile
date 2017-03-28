@@ -144,8 +144,8 @@ addrxlat2kdump(kdump_ctx *ctx, addrxlat_status status)
 	else
 		ret = kdump_addrxlat;
 
-	set_error(ctx, ret, "%s", addrxlat_ctx_get_err(ctx->addrxlat));
-	addrxlat_ctx_clear_err(ctx->addrxlat);
+	set_error(ctx, ret, "%s", addrxlat_ctx_get_err(ctx->xlatctx));
+	addrxlat_ctx_clear_err(ctx->xlatctx);
 	return ret;
 }
 
@@ -167,7 +167,7 @@ kdump2addrxlat(kdump_ctx *ctx, kdump_status status)
 	else
 		ret = -status;
 
-	addrxlat_ctx_err(ctx->addrxlat, ret, "%s", ctx->err_str);
+	addrxlat_ctx_err(ctx->xlatctx, ret, "%s", ctx->err_str);
 	clear_error(ctx);
 	return ret;
 }

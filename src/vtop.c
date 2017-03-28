@@ -44,7 +44,7 @@ set_pteval_size(kdump_ctx *ctx)
 	addrxlat_meth_t *meth;
 	const addrxlat_def_t *def;
 
-	meth = addrxlat_sys_get_meth(ctx->shared->xlat,
+	meth = addrxlat_sys_get_meth(ctx->shared->xlatsys,
 				     ADDRXLAT_SYS_METH_PGT);
 	if (!meth)
 		return;
@@ -150,7 +150,6 @@ vtop_init_locked(kdump_ctx *ctx)
 {
 	kdump_status status;
 	addrxlat_osdesc_t osdesc;
-	addrxlat_sys_t *axsys;
 	addrxlat_status axres;
 	char opts[80];
 
@@ -169,13 +168,9 @@ vtop_init_locked(kdump_ctx *ctx)
 		set_xen_opts(ctx, opts);
 	osdesc.opts = opts;
 
-	axsys = ctx->shared->xlat;
-	addrxlat_sys_incref(axsys);
 	rwlock_unlock(&ctx->shared->lock);
-
-	axres = addrxlat_sys_init(axsys, ctx->addrxlat, &osdesc);
-
-	addrxlat_sys_decref(axsys);
+	axres = addrxlat_sys_init(ctx->shared->xlatsys,
+				  ctx->xlatctx, &osdesc);
 	rwlock_rdlock(&ctx->shared->lock);
 
 	if (axres != addrxlat_ok)
@@ -216,7 +211,7 @@ locked_xlat(kdump_ctx *ctx, addrxlat_sys_t **psys,
 
 	faddr.addr = src;
 	faddr.as = as;
-	axres = addrxlat_by_sys(ctx->addrxlat, &faddr, goal, *psys);
+	axres = addrxlat_by_sys(ctx->xlatctx, &faddr, goal, *psys);
 	if (axres != addrxlat_ok)
 		return addrxlat2kdump(ctx, axres);
 
@@ -241,7 +236,7 @@ do_xlat(kdump_ctx *ctx, addrxlat_sys_t **psys,
 kdump_status
 kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
-	return do_xlat(ctx, &ctx->shared->xlat,
+	return do_xlat(ctx, &ctx->shared->xlatsys,
 		       vaddr, ADDRXLAT_KVADDR,
 		       paddr, ADDRXLAT_KPHYSADDR);
 }
@@ -249,7 +244,7 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 kdump_status
 kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 {
-	return do_xlat(ctx, &ctx->shared->xlat,
+	return do_xlat(ctx, &ctx->shared->xlatsys,
 		       vaddr, ADDRXLAT_KVADDR,
 		       maddr, ADDRXLAT_MACHPHYSADDR);
 }
@@ -257,7 +252,7 @@ kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 kdump_status
 kdump_ptom(kdump_ctx *ctx, kdump_paddr_t paddr, kdump_maddr_t *maddr)
 {
-	return do_xlat(ctx, &ctx->shared->xlat,
+	return do_xlat(ctx, &ctx->shared->xlatsys,
 		       paddr, ADDRXLAT_KPHYSADDR,
 		       maddr, ADDRXLAT_MACHPHYSADDR);
 }
@@ -265,7 +260,7 @@ kdump_ptom(kdump_ctx *ctx, kdump_paddr_t paddr, kdump_maddr_t *maddr)
 kdump_status
 kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
 {
-	return do_xlat(ctx, &ctx->shared->xlat,
+	return do_xlat(ctx, &ctx->shared->xlatsys,
 		       maddr, ADDRXLAT_MACHPHYSADDR,
 		       paddr, ADDRXLAT_KPHYSADDR);
 }
@@ -321,7 +316,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 		base = ostype_attr(ctx->shared, sizeof_map);
 		if (!base)
 			return addrxlat_ctx_err(
-				ctx->addrxlat, addrxlat_notimpl,
+				ctx->xlatctx, addrxlat_notimpl,
 				"Unsupported OS");
 		break;
 
@@ -329,7 +324,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 		base = ostype_attr(ctx->shared, offsetof_map);
 		if (!base)
 			return addrxlat_ctx_err(
-				ctx->addrxlat, addrxlat_notimpl,
+				ctx->xlatctx, addrxlat_notimpl,
 				"Unsupported OS");
 		break;
 
@@ -338,12 +333,12 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 		base = lookup_attr(ctx->shared, "cpu.0.reg");
 		rwlock_unlock(&ctx->shared->lock);
 		if (!base)
-			return addrxlat_ctx_err(ctx->addrxlat, addrxlat_nodata,
+			return addrxlat_ctx_err(ctx->xlatctx, addrxlat_nodata,
 						"No registers");
 		break;
 
 	default:
-		return addrxlat_ctx_err(ctx->addrxlat, addrxlat_notimpl,
+		return addrxlat_ctx_err(ctx->xlatctx, addrxlat_notimpl,
 					"Unhandled symbolic type");
 	}
 
@@ -352,12 +347,12 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 	attr = lookup_dir_attr(ctx->shared, base,
 			       sym->args[0], strlen(sym->args[0]));
 	if (!attr) {
-		ret = addrxlat_ctx_err(ctx->addrxlat, addrxlat_nodata,
+		ret = addrxlat_ctx_err(ctx->xlatctx, addrxlat_nodata,
 				       "Symbol not found");
 		goto out;
 	}
 	if (validate_attr(ctx, attr) != kdump_ok) {
-		ret = addrxlat_ctx_err(ctx->addrxlat, addrxlat_nodata,
+		ret = addrxlat_ctx_err(ctx->xlatctx, addrxlat_nodata,
 				       "Symbol has no value");
 		goto out;
 	}
@@ -366,12 +361,12 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 		attr = lookup_dir_attr(ctx->shared, base,
 				       sym->args[0], strlen(sym->args[1]));
 		if (!attr) {
-			ret = addrxlat_ctx_err(ctx->addrxlat, addrxlat_nodata,
+			ret = addrxlat_ctx_err(ctx->xlatctx, addrxlat_nodata,
 					       "Field not found");
 			goto out;
 		}
 		if (validate_attr(ctx, attr) != kdump_ok) {
-			ret = addrxlat_ctx_err(ctx->addrxlat, addrxlat_nodata,
+			ret = addrxlat_ctx_err(ctx->xlatctx, addrxlat_nodata,
 					       "Field has no value");
 			goto out;
 		}
@@ -388,7 +383,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 		break;
 
 	default:
-		ret = addrxlat_ctx_err(ctx->addrxlat, addrxlat_notimpl,
+		ret = addrxlat_ctx_err(ctx->xlatctx, addrxlat_notimpl,
 				       "Unhandled attribute type");
 	}
 

@@ -47,8 +47,8 @@ alloc_ctx(void)
 		return ctx;
 	ctx->cb_get_symbol_val = kdump_vmcoreinfo_symbol;
 
-	ctx->addrxlat = init_addrxlat(ctx);
-	if (!ctx->addrxlat) {
+	ctx->xlatctx = init_addrxlat(ctx);
+	if (!ctx->xlatctx) {
 		free(ctx);
 		return NULL;
 	}
@@ -69,8 +69,8 @@ alloc_shared(void)
 	if (rwlock_init(&shared->lock, NULL))
 		goto err1;
 
-	shared->xlat = addrxlat_sys_new();
-	if (!shared->xlat)
+	shared->xlatsys = addrxlat_sys_new();
+	if (!shared->xlatsys)
 		goto err2;
 
 	if (!init_attrs(shared))
@@ -78,7 +78,7 @@ alloc_shared(void)
 
 	return shared;
 
- err3:	addrxlat_sys_decref(shared->xlat);
+ err3:	addrxlat_sys_decref(shared->xlatsys);
  err2:	rwlock_destroy(&shared->lock);
  err1:	free(shared);
 	return NULL;
@@ -95,7 +95,7 @@ kdump_new(void)
 
 	ctx->shared = alloc_shared();
 	if (!ctx->shared) {
-		addrxlat_ctx_decref(ctx->addrxlat);
+		addrxlat_ctx_decref(ctx->xlatctx);
 		free(ctx);
 		return NULL;
 	}
@@ -126,7 +126,7 @@ kdump_clone(const kdump_ctx *orig)
 			while (slot-- > 0)
 				if (orig->shared->per_ctx_size[slot])
 					free(ctx->data[slot]);
-			addrxlat_ctx_decref(ctx->addrxlat);
+			addrxlat_ctx_decref(ctx->xlatctx);
 			free(ctx);
 			return NULL;
 		}
@@ -155,7 +155,7 @@ kdump_get_addrxlat_ctx(const kdump_ctx *ctx)
 	addrxlat_ctx_t *ret;
 
 	rwlock_rdlock(&ctx->shared->lock);
-	ret = ctx->addrxlat;
+	ret = ctx->xlatctx;
 	addrxlat_ctx_incref(ret);
 	rwlock_unlock(&ctx->shared->lock);
 
@@ -168,7 +168,7 @@ kdump_get_addrxlat_sys(const kdump_ctx *ctx)
 	addrxlat_sys_t *ret;
 
 	rwlock_rdlock(&ctx->shared->lock);
-	ret = ctx->shared->xlat;
+	ret = ctx->shared->xlatsys;
 	addrxlat_sys_incref(ret);
 	rwlock_unlock(&ctx->shared->lock);
 

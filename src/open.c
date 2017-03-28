@@ -415,7 +415,7 @@ kdump_free(kdump_ctx *ctx)
 		if (shared->per_ctx_size[slot])
 			free(ctx->data[slot]);
 
-	addrxlat_ctx_decref(ctx->addrxlat);
+	addrxlat_ctx_decref(ctx->xlatctx);
 
 	list_del(&ctx->list);
 	isempty = list_empty(&shared->ctx);
@@ -431,8 +431,8 @@ kdump_free(kdump_ctx *ctx)
 			cache_unref(shared->cache);
 		if (shared->xen_map)
 			free(shared->xen_map);
-		if (shared->xlat)
-			addrxlat_sys_decref(shared->xlat);
+		if (shared->xlatsys)
+			addrxlat_sys_decref(shared->xlatsys);
 		cleanup_attr(shared);
 		rwlock_destroy(&shared->lock);
 		free(shared);
