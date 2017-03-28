@@ -208,6 +208,7 @@ process_lowcore_info(kdump_ctx *ctx)
 static kdump_status
 s390x_init(kdump_ctx *ctx)
 {
+	vtop_init_locked(ctx);
 	process_lowcore_info(ctx);
 	clear_error(ctx);
 
