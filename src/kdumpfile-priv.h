@@ -1063,6 +1063,24 @@ dump64toh(kdump_ctx *ctx, uint64_t x)
 		: le64toh(x);
 }
 
+/** Check if a character is a POSIX white space.
+ * @param c  Character to check.
+ *
+ * We are not using @c isspace here, because the library function may
+ * be called in a strange locale, and the parsing should not really
+ * depend on locale and this function is less overhead then messing around
+ * with the C library locale...
+ * Note that this code does not make any assumptions about system
+ * character set, because it checks each character individually. Leave
+ * possible optimizations to the C compiler.
+ */
+static inline int
+is_posix_space(int c)
+{
+	return (c == ' ' || c == '\f' || c == '\n' ||
+		c == '\r' || c == '\t' || c == '\v');
+}
+
 static inline kdump_addr_t
 page_align(kdump_ctx *ctx, kdump_addr_t addr)
 {
