@@ -36,6 +36,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <endian.h>
@@ -58,8 +59,10 @@ get_vmcoreinfo(kdump_ctx *ctx)
 
 	f = fopen(FN_VMCOREINFO, "r");
 	if (!f)
-		return set_error(ctx, kdump_syserr,
-				 "Cannot open %s", FN_VMCOREINFO);
+		return errno == ENOENT
+			? kdump_ok
+			: set_error(ctx, kdump_syserr,
+				    "Cannot open %s", FN_VMCOREINFO);
 
 	if (fscanf(f, "%llx %zx", &addr, &length) == 2)
 		ret = kdump_ok;
