@@ -78,7 +78,7 @@ get_vmcoreinfo(kdump_ctx *ctx)
 	if (!info)
 		return kdump_syserr;
 
-	ret = read_locked(ctx, KDUMP_KPHYSADDR, addr, info, &length);
+	ret = read_locked(ctx, KDUMP_MACHPHYSADDR, addr, info, &length);
 	if (ret == kdump_ok)
 		ret = process_notes(ctx, info, length);
 
@@ -221,9 +221,9 @@ devmem_probe(kdump_ctx *ctx, void *hdr)
 	if (ret != kdump_ok)
 		return ret;
 
-	get_vmcoreinfo(ctx);
-
 	set_addrspace_caps(ctx->shared, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
+
+	get_vmcoreinfo(ctx);
 
 	return kdump_ok;
 }
