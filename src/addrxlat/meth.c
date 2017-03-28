@@ -76,22 +76,24 @@ addrxlat_meth_decref(addrxlat_meth_t *meth)
  * @param addr  Address to be translated.
  * @returns     Error status.
  *
- * This method does not modify anything and always succeeds.
+ * This method does not modify anything and always fails with
+ * @ref addrxlat_nometh.
  */
 static addrxlat_status
 first_step_none(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	return addrxlat_ok;
+	return set_error(step->ctx, addrxlat_nometh,
+			 "Null translation method");
 }
 
-/** Null next step function.
+/** Identity next step function.
  * @param walk  Current step state.
  * @returns     Error status.
  *
  * This method does not modify anything and always succeeds.
  */
 static addrxlat_status
-next_step_none(addrxlat_step_t *state)
+next_step_ident(addrxlat_step_t *state)
 {
 	return addrxlat_ok;
 }
@@ -103,7 +105,7 @@ static void
 setup_none(addrxlat_meth_t *meth)
 {
 	meth->first_step = first_step_none;
-	meth->next_step = next_step_none;
+	meth->next_step = next_step_ident;
 }
 
 /** Initialize step state for linear offset.
@@ -131,7 +133,7 @@ static void
 setup_linear(addrxlat_meth_t *meth)
 {
 	meth->first_step = first_step_linear;
-	meth->next_step = next_step_none;
+	meth->next_step = next_step_ident;
 }
 
 /** Initialize step state for page table walk.
@@ -278,7 +280,7 @@ setup_pgt(addrxlat_meth_t *meth, const addrxlat_def_t *def)
 		break
 
 	switch (pf->pte_format) {
-		SETUP(addrxlat_pte_none, first_step_pgt, next_step_none);
+		SETUP(addrxlat_pte_none, first_step_pgt, next_step_ident);
 		SETUP(addrxlat_pte_pfn32, first_step_uaddr, next_step_pfn);
 		SETUP(addrxlat_pte_pfn64, first_step_uaddr, next_step_pfn);
 		SETUP(addrxlat_pte_ia32, first_step_uaddr, pgt_ia32);
@@ -336,7 +338,7 @@ static void
 setup_lookup(addrxlat_meth_t *meth)
 {
 	meth->first_step = first_step_lookup;
-	meth->next_step = next_step_none;
+	meth->next_step = next_step_ident;
 }
 
 /** Initialize step state for memory array lookup.
