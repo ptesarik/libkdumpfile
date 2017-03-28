@@ -62,6 +62,9 @@
  */
 #define MAX_PHYSICAL_START	0x0000000008000000ULL
 
+/** Minimum Linux kernel text alignment. */
+#define LINUX_TEXT_ALIGN	0x200000ULL
+
 /**  Private data for the x86_64 arch-specific methods.
  */
 struct x86_64_data {
@@ -286,12 +289,63 @@ x86_64_init(kdump_ctx *ctx)
 }
 
 static kdump_status
+calc_linux_phys_base(kdump_ctx *ctx, kdump_paddr_t paddr)
+{
+	kdump_addr_t stext;
+	kdump_status status;
+
+	rwlock_unlock(&ctx->shared->lock);
+	status = get_symbol_val(ctx, "_text", &stext);
+	if (status == kdump_nodata) {
+		clear_error(ctx);
+		status = get_symbol_val(ctx, "_stext", &stext);
+	}
+	rwlock_rdlock(&ctx->shared->lock);
+
+	if (status != kdump_ok)
+		return set_error(ctx, status,
+				 "Cannot get kernel text start address");
+	stext &= -(kdump_addr_t)LINUX_TEXT_ALIGN;
+	set_phys_base(ctx, paddr - (stext - __START_KERNEL_map));
+	return kdump_ok;
+}
+
+static kdump_status
+set_linux_phys_base(kdump_ctx *ctx)
+{
+	kdump_paddr_t paddr;
+
+	if (ctx->shared->ops == &devmem_ops) {
+		kdump_status status = linux_iomem_kcode(ctx, &paddr);
+		if (status == kdump_ok)
+			status = calc_linux_phys_base(ctx, paddr);
+		if (status != kdump_nodata)
+			return status;
+		clear_error(ctx);
+	}
+
+	if (isset_xen_type(ctx) &&
+	    get_xen_type(ctx) != kdump_xen_none)
+		return set_phys_base(ctx, 0);
+
+	return kdump_nodata;
+}
+
+static kdump_status
 x86_64_late_init(kdump_ctx *ctx)
 {
 	if (ctx->shared->ostype == addrxlat_os_linux &&
-	    !isset_phys_base(ctx) && isset_xen_type(ctx) &&
-	    get_xen_type(ctx) != kdump_xen_none)
-		set_phys_base(ctx, 0);
+	    !isset_phys_base(ctx) &&
+	    set_linux_phys_base(ctx) == kdump_ok) {
+		kdump_status status;
+
+		rwlock_unlock(&ctx->shared->lock);
+		status = kdump_vtop_init(ctx);
+		rwlock_rdlock(&ctx->shared->lock);
+		if (status != kdump_ok)
+			return set_error(ctx, status,
+					 "Cannot initialize address translation");
+	}
 
 	return kdump_ok;
 }

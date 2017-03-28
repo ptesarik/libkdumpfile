@@ -89,6 +89,73 @@ get_vmcoreinfo(kdump_ctx *ctx)
 	return ret;
 }
 
+#define FN_IOMEM	"/proc/iomem"
+
+static kdump_status
+check_kcode(kdump_ctx *ctx, char *line, kdump_paddr_t *paddr)
+{
+	unsigned long long start;
+	char *p, *q;
+
+	p = strchr(line, ':');
+	if (!p)
+		return kdump_nokey;
+	++p;
+	while (is_posix_space(*p))
+		++p;
+
+	q = line + strlen(line) - 1;
+	while (is_posix_space(*q))
+		*q-- = '\0';
+	if (strcmp(p, "Kernel code"))
+		return kdump_nokey;
+
+	p = line;
+	while (is_posix_space(*p))
+		++p;
+	start = strtoull(line, &p, 16);
+	while (is_posix_space(*p))
+		++p;
+	if (p == line || *p != '-')
+		return set_error(ctx, kdump_dataerr,
+				 "Invalid iomem format: %s", line);
+
+	*paddr = start;
+	return kdump_ok;
+}
+
+kdump_status
+linux_iomem_kcode(kdump_ctx *ctx, kdump_paddr_t *paddr)
+{
+	FILE *f;
+	char *line;
+	size_t linealloc;
+	kdump_status ret;
+
+	f = fopen(FN_IOMEM, "r");
+	if (!f)
+		return errno == ENOENT
+			? kdump_nodata
+			: set_error(ctx, kdump_syserr,
+				    "Cannot open %s", FN_VMCOREINFO);
+
+	line = NULL;
+	linealloc = 0;
+	do {
+		ssize_t linelen = getline(&line, &linealloc, f);
+		if (linelen < 0)
+			break;
+	} while ((ret = check_kcode(ctx, line, paddr)) == kdump_nokey);
+
+	if (ferror(f))
+		ret = set_error(ctx, kdump_syserr,
+				"Error reading %s", FN_IOMEM);
+	if (line)
+		free(line);
+	fclose(f);
+	return ret;
+}
+
 static kdump_status
 devmem_read_page(kdump_ctx *ctx, struct page_io *pio)
 {

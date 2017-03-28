@@ -604,6 +604,9 @@ INTERNAL_DECL(extern const struct format_ops, mclxcd_ops, );
 INTERNAL_DECL(extern const struct format_ops, s390dump_ops, );
 INTERNAL_DECL(extern const struct format_ops, devmem_ops, );
 
+INTERNAL_DECL(kdump_status, linux_iomem_kcode,
+	      (kdump_ctx *ctx, kdump_paddr_t *paddr));
+
 /* Architectures */
 
 INTERNAL_DECL(extern const struct arch_ops, ia32_ops, );
