@@ -946,6 +946,8 @@ open_common(kdump_ctx *ctx, void *hdr)
 	lkcdp->max_pfn_override.ops.validate = lkcd_max_pfn_validate;
 	set_max_pfn(ctx, 0);
 
+	set_addrspace_caps(ctx->shared, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
+
 	switch(lkcdp->version) {
 	case LKCD_DUMP_V1:
 		ret = init_v1(ctx, hdr);
@@ -973,8 +975,6 @@ open_common(kdump_ctx *ctx, void *hdr)
 
 	if (ret != kdump_ok)
 		goto err_free;
-
-	set_addrspace_caps(ctx->shared, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
 
 	return kdump_ok;
 

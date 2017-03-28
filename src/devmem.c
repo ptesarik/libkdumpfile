@@ -256,6 +256,19 @@ devmem_probe(kdump_ctx *ctx, void *hdr)
 	dmp->ce = NULL;
 	ctx->shared->fmtdata = dmp;
 
+	set_file_description(ctx, "Live memory source");
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+	set_byte_order(ctx, kdump_little_endian);
+#else
+	set_byte_order(ctx, kdump_big_endian);
+#endif
+
+	ret = set_page_size(ctx, sysconf(_SC_PAGESIZE));
+	if (ret != kdump_ok)
+		return ret;
+
+	set_addrspace_caps(ctx->shared, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
+
 #if defined(__x86_64__)
 	ret = set_arch_name(ctx, KDUMP_ARCH_X86_64);
 #elif defined(__i386__)
@@ -279,19 +292,6 @@ devmem_probe(kdump_ctx *ctx, void *hdr)
 #endif
 	if (ret != kdump_ok)
 		return ret;
-
-	set_file_description(ctx, "Live memory source");
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-	set_byte_order(ctx, kdump_little_endian);
-#else
-	set_byte_order(ctx, kdump_big_endian);
-#endif
-
-	ret = set_page_size(ctx, sysconf(_SC_PAGESIZE));
-	if (ret != kdump_ok)
-		return ret;
-
-	set_addrspace_caps(ctx->shared, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
 
 	get_vmcoreinfo(ctx);
 

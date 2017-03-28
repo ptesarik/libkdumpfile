@@ -704,9 +704,7 @@ open_common(kdump_ctx *ctx)
 		set_addrspace_caps(ctx->shared,
 				   ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR) |
 				   ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
-	} else
-		set_addrspace_caps(ctx->shared,
-				   ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
+	}
 
 	return kdump_ok;
 }
@@ -729,6 +727,9 @@ elf_probe(kdump_ctx *ctx, void *hdr)
 		return set_error(ctx, kdump_syserr,
 				 "Cannot allocate ELF dump private data");
 	ctx->shared->fmtdata = edp;
+
+	set_addrspace_caps(ctx->shared,
+			   ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
 
 	switch (eheader[EI_DATA]) {
 	case ELFDATA2LSB:

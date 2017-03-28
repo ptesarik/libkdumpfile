@@ -758,6 +758,8 @@ open_common(kdump_ctx *ctx, void *hdr)
 
 	ctx->shared->fmtdata = ddp;
 
+	set_addrspace_caps(ctx->shared, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
+
 	if (uts_looks_sane(&dh32->utsname))
 		set_uts(ctx, &dh32->utsname);
 	else if (uts_looks_sane(&dh64->utsname))
@@ -781,8 +783,6 @@ open_common(kdump_ctx *ctx, void *hdr)
 		if (ret != kdump_ok)
 			goto err_cleanup;
 	}
-
-	set_addrspace_caps(ctx->shared, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
 
 	return ret;
 

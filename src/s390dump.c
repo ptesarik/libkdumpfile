@@ -164,6 +164,8 @@ s390_probe(kdump_ctx *ctx, void *hdr)
 	if (ret != kdump_ok)
 		goto err;
 
+	set_addrspace_caps(ctx->shared, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
+
 	switch (dump32toh(ctx, dh->h1.arch)) {
 	case S390_ARCH_32BIT:
 		set_arch_name(ctx, "s390");
@@ -180,7 +182,6 @@ s390_probe(kdump_ctx *ctx, void *hdr)
 		goto err;
 	}
 
-	set_addrspace_caps(ctx->shared, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
 	return kdump_ok;
 
  err:
