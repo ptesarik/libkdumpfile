@@ -371,14 +371,19 @@ map_linux_ppc64(struct sys_init_data *ctl)
 	if (status != addrxlat_ok)
 		return status;
 
-	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT];
 	def.kind = ADDRXLAT_PGT;
 	def.target_as = ADDRXLAT_MACHPHYSADDR;
 	def.param.pgt.root.as = ADDRXLAT_NOADDR;
 	def.param.pgt.pf = ppc64_pf_64k;
 	internal_meth_set_def(meth, &def);
 
-	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT];
+	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	if (get_symval(ctl->ctx, "swapper_pg_dir",
+		       &def.param.pgt.root.addr) == addrxlat_ok)
+		def.param.pgt.root.as = ADDRXLAT_KVADDR;
+	else
+		clear_error(ctl->ctx);
 	internal_meth_set_def(meth, &def);
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_VMEMMAP];
