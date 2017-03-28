@@ -337,11 +337,7 @@ x86_64_late_init(kdump_ctx *ctx)
 	if (ctx->shared->ostype == addrxlat_os_linux &&
 	    !isset_phys_base(ctx) &&
 	    set_linux_phys_base(ctx) == kdump_ok) {
-		kdump_status status;
-
-		rwlock_unlock(&ctx->shared->lock);
-		status = kdump_vtop_init(ctx);
-		rwlock_rdlock(&ctx->shared->lock);
+		kdump_status status = vtop_init_locked(ctx);
 		if (status != kdump_ok)
 			return set_error(ctx, status,
 					 "Cannot initialize address translation");

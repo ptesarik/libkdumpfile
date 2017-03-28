@@ -353,9 +353,7 @@ ostype_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 	kdump_status status;
 
 	if (isset_arch_name(ctx)) {
-		rwlock_unlock(&ctx->shared->lock);
-		status = kdump_vtop_init(ctx);
-		rwlock_rdlock(&ctx->shared->lock);
+		status = vtop_init_locked(ctx);
 		if (status != kdump_ok)
 			return set_error(ctx, status,
 					 "Cannot initialize address translation");

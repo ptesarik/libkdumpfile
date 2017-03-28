@@ -789,6 +789,8 @@ INTERNAL_DECL(kdump_status, process_arch_notes,
 /* Virtual address space regions */
 INTERNAL_DECL(addrxlat_ctx_t *, init_addrxlat, (kdump_ctx *ctx));
 
+INTERNAL_DECL(kdump_status, vtop_init_locked, (kdump_ctx *ctx));
+
 /* Attribute handling */
 INTERNAL_DECL(extern const struct attr_template, dir_template, );
 INTERNAL_DECL(struct attr_template *, alloc_attr_template,

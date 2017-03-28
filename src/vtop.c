@@ -146,17 +146,13 @@ set_xen_opts(kdump_ctx *ctx, char *opts)
 }
 
 kdump_status
-kdump_vtop_init(kdump_ctx *ctx)
+vtop_init_locked(kdump_ctx *ctx)
 {
+	kdump_status status;
 	addrxlat_osdesc_t osdesc;
+	addrxlat_sys_t *axsys;
 	addrxlat_status axres;
 	char opts[80];
-	kdump_status status;
-
-	clear_error(ctx);
-
-	if (!isset_arch_name(ctx))
-		return set_error(ctx, kdump_nodata, "Unknown architecture");
 
 	osdesc.type = ctx->shared->ostype;
 	osdesc.arch = get_arch_name(ctx);
@@ -173,8 +169,14 @@ kdump_vtop_init(kdump_ctx *ctx)
 		set_xen_opts(ctx, opts);
 	osdesc.opts = opts;
 
-	axres = addrxlat_sys_init(ctx->shared->xlat,
-				  ctx->addrxlat, &osdesc);
+	axsys = ctx->shared->xlat;
+	addrxlat_sys_incref(axsys);
+	rwlock_unlock(&ctx->shared->lock);
+
+	axres = addrxlat_sys_init(axsys, ctx->addrxlat, &osdesc);
+
+	addrxlat_sys_decref(axsys);
+	rwlock_rdlock(&ctx->shared->lock);
 
 	if (axres != addrxlat_ok)
 		return addrxlat2kdump(ctx, axres);
@@ -182,6 +184,22 @@ kdump_vtop_init(kdump_ctx *ctx)
 	if (!attr_isset(gattr(ctx, GKI_pteval_size)))
 		set_pteval_size(ctx);
 	return kdump_ok;
+}
+
+kdump_status
+kdump_vtop_init(kdump_ctx *ctx)
+{
+	kdump_status status;
+
+	clear_error(ctx);
+
+	if (!isset_arch_name(ctx))
+		return set_error(ctx, kdump_nodata, "Unknown architecture");
+
+	rwlock_rdlock(&ctx->shared->lock);
+	status = vtop_init_locked(ctx);
+	rwlock_unlock(&ctx->shared->lock);
+	return status;
 }
 
 static kdump_status
