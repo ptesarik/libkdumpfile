@@ -75,8 +75,10 @@ cb_get_symbol(kdump_ctx_t *ctx, const char *name, kdump_addr_t *addr)
 
 	self = (kdumpfile_object*)kdump_get_priv(ctx);
 	ret = PyObject_CallFunction(self->cb_get_symbol, "s", name);
-	if (!ret)
+	if (!ret) {
+		PyErr_Clear();
 		return kdump_nodata;
+	}
 
 	status = kdump_ok;
 	if (!PyLong_Check(ret)) {
