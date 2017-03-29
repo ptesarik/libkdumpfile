@@ -37,7 +37,7 @@
 #include "testutil.h"
 
 static int
-vtop(kdump_ctx *ctx, unsigned long long vaddr)
+vtop(kdump_ctx_t *ctx, unsigned long long vaddr)
 {
 	kdump_paddr_t paddr;
 	kdump_status res;
@@ -64,7 +64,7 @@ vtop(kdump_ctx *ctx, unsigned long long vaddr)
 static int
 vtop_fd(int fd, unsigned long long vaddr)
 {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	kdump_status res;
 	int rc;
 

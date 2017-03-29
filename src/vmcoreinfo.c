@@ -59,7 +59,7 @@ dealloc_vmcoreinfo(struct attr_data *dir)
 }
 
 static kdump_status
-add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
+add_parsed_row(kdump_ctx_t *ctx, struct attr_data *dir,
 	       const char *key, size_t keylen,
 	       const char *val, size_t vallen)
 {
@@ -91,7 +91,7 @@ add_parsed_row(kdump_ctx *ctx, struct attr_data *dir,
 }
 
 static kdump_status
-lines_post_hook(kdump_ctx *ctx, struct attr_data *lineattr)
+lines_post_hook(kdump_ctx_t *ctx, struct attr_data *lineattr)
 {
 	char *key, *type, *sym, *p;
 	size_t keylen;
@@ -193,7 +193,7 @@ static const struct attr_ops vmcoreinfo_lines_ops = {
 };
 
 static kdump_status
-vmcoreinfo_raw_post_hook(kdump_ctx *ctx, struct attr_data *rawattr)
+vmcoreinfo_raw_post_hook(kdump_ctx_t *ctx, struct attr_data *rawattr)
 {
 	const char *p, *endp, *val;
 	size_t len;
@@ -226,7 +226,7 @@ vmcoreinfo_raw_post_hook(kdump_ctx *ctx, struct attr_data *rawattr)
 }
 
 static void
-vmcoreinfo_raw_clear_hook(kdump_ctx *ctx, struct attr_data *rawattr)
+vmcoreinfo_raw_clear_hook(kdump_ctx_t *ctx, struct attr_data *rawattr)
 {
 	dealloc_vmcoreinfo(rawattr->parent);
 }
@@ -237,7 +237,7 @@ const struct attr_ops vmcoreinfo_raw_ops = {
 };
 
 const char *
-kdump_vmcoreinfo(kdump_ctx *ctx)
+kdump_vmcoreinfo(kdump_ctx_t *ctx)
 {
 	static const struct ostype_attr_map raw_map[] = {
 		{ addrxlat_os_linux, GKI_linux_vmcoreinfo_raw },
@@ -262,7 +262,7 @@ kdump_vmcoreinfo(kdump_ctx *ctx)
 }
 
 const char *
-kdump_vmcoreinfo_row(kdump_ctx *ctx, const char *key)
+kdump_vmcoreinfo_row(kdump_ctx_t *ctx, const char *key)
 {
 	static const struct ostype_attr_map lines_map[] = {
 		{ addrxlat_os_linux, GKI_linux_vmcoreinfo_lines },
@@ -289,7 +289,7 @@ kdump_vmcoreinfo_row(kdump_ctx *ctx, const char *key)
 }
 
 kdump_status
-kdump_vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname,
+kdump_vmcoreinfo_symbol(kdump_ctx_t *ctx, const char *symname,
 			kdump_addr_t *symvalue)
 {
 	static const struct ostype_attr_map symbol_map[] = {

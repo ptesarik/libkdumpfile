@@ -815,7 +815,7 @@ cache_unref(struct cache *cache)
  * @returns    Error status.
  */
 kdump_status
-def_read_cache(kdump_ctx *ctx, struct page_io *pio,
+def_read_cache(kdump_ctx_t *ctx, struct page_io *pio,
 	       read_cache_fn *fn, kdump_pfn_t idx)
 {
 	struct cache_entry *entry;
@@ -850,7 +850,7 @@ def_read_cache(kdump_ctx *ctx, struct page_io *pio,
  * @param pio  Page I/O control.
  */
 void
-cache_unref_page(kdump_ctx *ctx, struct page_io *pio)
+cache_unref_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	put_entry(pio->cache, pio->ce);
 	cache_unref(pio->cache);
@@ -864,7 +864,7 @@ cache_unref_page(kdump_ctx *ctx, struct page_io *pio)
  * @ref DEFAULT_CACHE_SIZE.
  */
 unsigned
-get_cache_size(kdump_ctx *ctx)
+get_cache_size(kdump_ctx_t *ctx)
 {
 	struct attr_data *attr = gattr(ctx, GKI_cache_size);
 	return validate_attr(ctx, attr) == kdump_ok
@@ -881,7 +881,7 @@ get_cache_size(kdump_ctx *ctx)
  * bytes each.
  */
 kdump_status
-def_realloc_caches(kdump_ctx *ctx)
+def_realloc_caches(kdump_ctx_t *ctx)
 {
 	unsigned cache_size = get_cache_size(ctx);
 	struct cache *cache;
@@ -905,7 +905,7 @@ def_realloc_caches(kdump_ctx *ctx)
 }
 
 static kdump_status
-cache_size_pre_hook(kdump_ctx *ctx, struct attr_data *attr,
+cache_size_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
 		    kdump_attr_value_t *val)
 {
 	if (val->number > UINT_MAX)
@@ -915,7 +915,7 @@ cache_size_pre_hook(kdump_ctx *ctx, struct attr_data *attr,
 }
 
 static kdump_status
-cache_size_post_hook(kdump_ctx *ctx, struct attr_data *attr)
+cache_size_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	return ctx->shared->ops && ctx->shared->ops->realloc_caches
 		? ctx->shared->ops->realloc_caches(ctx)

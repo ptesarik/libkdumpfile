@@ -9,11 +9,11 @@
 
 #include <kdumpfile.h>
 
-static int list_attr_recursive(kdump_ctx *, kdump_attr_ref_t *, int);
-static int show_attr(kdump_ctx *, kdump_attr_ref_t *, int, const char *);
+static int list_attr_recursive(kdump_ctx_t *, kdump_attr_ref_t *, int);
+static int show_attr(kdump_ctx_t *, kdump_attr_ref_t *, int, const char *);
 
 static int
-list_attr_recursive(kdump_ctx *ctx, kdump_attr_ref_t *dir, int indent)
+list_attr_recursive(kdump_ctx_t *ctx, kdump_attr_ref_t *dir, int indent)
 {
 	kdump_attr_iter_t it;
 	kdump_status status;
@@ -46,7 +46,7 @@ list_attr_recursive(kdump_ctx *ctx, kdump_attr_ref_t *dir, int indent)
 }
 
 static int
-show_attr(kdump_ctx *ctx, kdump_attr_ref_t *ref, int indent, const char *key)
+show_attr(kdump_ctx_t *ctx, kdump_attr_ref_t *ref, int indent, const char *key)
 {
 	kdump_attr_t attr;
 	kdump_status status;
@@ -100,7 +100,7 @@ main(int argc, char **argv)
 	}
 
 	kdump_status res;
-	kdump_ctx *ctx = kdump_new();
+	kdump_ctx_t *ctx = kdump_new();
 
 	if (!ctx) {
 		perror("Cannot allocate kdump context");

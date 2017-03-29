@@ -216,7 +216,7 @@ print_map(const addrxlat_map_t *map)
 }
 
 static int
-dump_addrxlat(kdump_ctx *ctx)
+dump_addrxlat(kdump_ctx_t *ctx)
 {
 	addrxlat_sys_t *sys;
 	const addrxlat_meth_t *meth;
@@ -282,7 +282,7 @@ dump_addrxlat(kdump_ctx *ctx)
 int
 main(int argc, char **argv)
 {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	int fd;
 	kdump_attr_t attr;
 	kdump_status status;

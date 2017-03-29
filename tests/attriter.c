@@ -54,7 +54,7 @@ static const struct attrdef attrs[] = {
 int
 main(int argc, char **argv)
 {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	kdump_attr_iter_t it;
 	kdump_attr_t attr;
 	unsigned seen[ARRAY_SIZE(attrs)];

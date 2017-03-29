@@ -18,7 +18,7 @@
 
 typedef struct {
 	PyObject_HEAD
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	int fd;
 	PyObject *cb_get_symbol;
 	PyObject *attr;
@@ -67,7 +67,7 @@ exception_map(kdump_status status)
 }
 
 static kdump_status
-cb_get_symbol(kdump_ctx *ctx, const char *name, kdump_addr_t *addr)
+cb_get_symbol(kdump_ctx_t *ctx, const char *name, kdump_addr_t *addr)
 {
 	kdumpfile_object *self = (kdumpfile_object*)kdump_get_priv(ctx);
 	PyObject *ret;
@@ -505,7 +505,7 @@ lookup_attribute(attr_dir_object *self, PyObject *key, kdump_attr_ref_t *ref)
 	keystr = PyString_AsString(stringkey);
 #endif
 	if (keystr) {
-		kdump_ctx *ctx = self->kdumpfile->ctx;
+		kdump_ctx_t *ctx = self->kdumpfile->ctx;
 		kdump_status status;
 
 		status = kdump_sub_attr_ref(ctx, &self->baseref, keystr, ref);
@@ -569,7 +569,7 @@ static Py_ssize_t
 attr_dir_length(PyObject *_self)
 {
 	attr_dir_object *self = (attr_dir_object*)_self;
-	kdump_ctx *ctx = self->kdumpfile->ctx;
+	kdump_ctx_t *ctx = self->kdumpfile->ctx;
 	kdump_attr_iter_t iter;
 	kdump_status status;
 	Py_ssize_t len = 0;
@@ -599,7 +599,7 @@ static PyObject *
 attr_dir_subscript(PyObject *_self, PyObject *key)
 {
 	attr_dir_object *self = (attr_dir_object*)_self;
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	kdump_attr_t attr;
 	kdump_attr_ref_t ref;
 	kdump_status status;
@@ -704,7 +704,7 @@ static int
 set_attribute(attr_dir_object *self, kdump_attr_ref_t *ref, PyObject *value)
 {
 	PyObject *conv;
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	kdump_attr_t attr;
 	kdump_status status;
 
@@ -864,7 +864,7 @@ attr_dir_get(PyObject *_self, PyObject *args)
 {
 	attr_dir_object *self = (attr_dir_object*)_self;
 	PyObject *key, *failobj;
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	kdump_attr_ref_t ref;
 	kdump_attr_t attr;
 	kdump_status status;
@@ -904,7 +904,7 @@ dict_setdefault(PyObject *_self, PyObject *args)
 	attr_dir_object *self = (attr_dir_object*)_self;
 	PyObject *key, *failobj;
 	PyObject *val = NULL;
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	kdump_attr_ref_t ref;
 	kdump_attr_t attr;
 	kdump_status status;
@@ -1064,7 +1064,7 @@ static PyObject *
 attr_dir_clear(PyObject *_self, PyObject *args)
 {
 	attr_dir_object *self = (attr_dir_object*)_self;
-	kdump_ctx *ctx = self->kdumpfile->ctx;
+	kdump_ctx_t *ctx = self->kdumpfile->ctx;
 	kdump_attr_iter_t iter;
 	kdump_attr_t attr;
 	kdump_status status;
@@ -1098,7 +1098,7 @@ static PyObject *
 attr_dir_repr(PyObject *_self)
 {
 	attr_dir_object *self = (attr_dir_object*)_self;
-	kdump_ctx *ctx = self->kdumpfile->ctx;
+	kdump_ctx_t *ctx = self->kdumpfile->ctx;
 	kdump_attr_iter_t iter;
 	kdump_status status;
 	PyObject *s, *temp, *temp2;
@@ -1191,7 +1191,7 @@ static int
 attr_dir_print(PyObject *_self, FILE *fp, int flags)
 {
 	attr_dir_object *self = (attr_dir_object*)_self;
-	kdump_ctx *ctx = self->kdumpfile->ctx;
+	kdump_ctx_t *ctx = self->kdumpfile->ctx;
 	kdump_attr_iter_t iter;
 	kdump_status status;
 	PyObject *s, *temp;
@@ -1528,7 +1528,7 @@ static PyObject *
 attr_iter_new(attr_dir_object *attr_dir, PyTypeObject *itertype)
 {
 	attr_iter_object *self;
-	kdump_ctx *ctx = attr_dir->kdumpfile->ctx;
+	kdump_ctx_t *ctx = attr_dir->kdumpfile->ctx;
 	kdump_status status;
 
 	self = PyObject_GC_New(attr_iter_object, itertype);
@@ -1553,7 +1553,7 @@ static void
 attr_iter_dealloc(PyObject *_self)
 {
 	attr_iter_object *self = (attr_iter_object*)_self;
-	kdump_ctx *ctx = self->kdumpfile->ctx;
+	kdump_ctx_t *ctx = self->kdumpfile->ctx;
 
 	kdump_attr_iter_end(ctx, &self->iter);
 	PyObject_GC_UnTrack(self);
@@ -1573,7 +1573,7 @@ attr_iter_traverse(PyObject *_self, visitproc visit, void *arg)
 static PyObject *
 attr_iter_advance(attr_iter_object *self, PyObject *ret)
 {
-	kdump_ctx *ctx = self->kdumpfile->ctx;
+	kdump_ctx_t *ctx = self->kdumpfile->ctx;
 	kdump_status status;
 
 	status = kdump_attr_iter_next(ctx, &self->iter);
@@ -1601,7 +1601,7 @@ static PyObject *
 attr_itervalue_next(PyObject *_self)
 {
 	attr_iter_object *self = (attr_iter_object*)_self;
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	kdump_attr_t attr;
 	kdump_status status;
 	PyObject *value;
@@ -1624,7 +1624,7 @@ static PyObject *
 attr_iteritem_next(PyObject *_self)
 {
 	attr_iter_object *self = (attr_iter_object*)_self;
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	kdump_attr_t attr;
 	kdump_status status;
 	PyObject *key, *value, *result;

@@ -171,7 +171,7 @@ struct disk_dump_priv {
 };
 
 struct setup_data {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	off_t note_off;
 	size_t note_sz;
 };
@@ -191,7 +191,7 @@ struct setup_data {
 static void diskdump_cleanup(struct kdump_shared *shared);
 
 static kdump_status
-add_pfn_rgn(kdump_ctx *ctx, const struct pfn_rgn *rgn)
+add_pfn_rgn(kdump_ctx_t *ctx, const struct pfn_rgn *rgn)
 {
 	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 
@@ -229,7 +229,7 @@ pfn_to_pdpos(struct disk_dump_priv *ddp, unsigned long pfn)
 }
 
 static kdump_status
-diskdump_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
+diskdump_read_cache(kdump_ctx_t *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 {
 	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	struct page_desc pd;
@@ -323,7 +323,7 @@ diskdump_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 }
 
 static kdump_status
-diskdump_read_page(kdump_ctx *ctx, struct page_io *pio)
+diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
 
@@ -343,7 +343,7 @@ diskdump_read_page(kdump_ctx *ctx, struct page_io *pio)
  * compressed pages.
  */
 static kdump_status
-diskdump_realloc_compressed(kdump_ctx *ctx, struct attr_data *attr)
+diskdump_realloc_compressed(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	const struct attr_ops *parent_ops;
 	struct disk_dump_priv *ddp;
@@ -366,7 +366,7 @@ diskdump_realloc_compressed(kdump_ctx *ctx, struct attr_data *attr)
 }
 
 static kdump_status
-read_vmcoreinfo(kdump_ctx *ctx, off_t off, size_t size)
+read_vmcoreinfo(kdump_ctx_t *ctx, off_t off, size_t size)
 {
 	void *info;
 	ssize_t rd;
@@ -396,7 +396,7 @@ read_vmcoreinfo(kdump_ctx *ctx, off_t off, size_t size)
 
 /* This function also sets architecture */
 static kdump_status
-read_notes(kdump_ctx *ctx, off_t off, size_t size)
+read_notes(kdump_ctx_t *ctx, off_t off, size_t size)
 {
 	void *notes;
 	ssize_t rd;
@@ -479,7 +479,7 @@ skip_set(unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
 }
 
 static kdump_status
-read_bitmap(kdump_ctx *ctx, int32_t sub_hdr_size,
+read_bitmap(kdump_ctx_t *ctx, int32_t sub_hdr_size,
 	    int32_t bitmap_blocks)
 {
 	off_t off = (1 + sub_hdr_size) * get_page_size(ctx);
@@ -541,7 +541,7 @@ read_bitmap(kdump_ctx *ctx, int32_t sub_hdr_size,
 }
 
 static kdump_status
-try_header(kdump_ctx *ctx, int32_t block_size,
+try_header(kdump_ctx_t *ctx, int32_t block_size,
 	   uint32_t bitmap_blocks, uint32_t max_mapnr)
 {
 	uint64_t maxcovered;
@@ -575,7 +575,7 @@ try_header(kdump_ctx *ctx, int32_t block_size,
 static kdump_status
 read_sub_hdr_32(struct setup_data *sdp, int32_t header_version)
 {
-	kdump_ctx *ctx = sdp->ctx;
+	kdump_ctx_t *ctx = sdp->ctx;
 	struct kdump_sub_header_32 subhdr;
 	ssize_t rd;
 	kdump_status ret = kdump_ok;
@@ -614,7 +614,7 @@ static kdump_status
 do_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh,
 	     kdump_byte_order_t byte_order)
 {
-	kdump_ctx *ctx = sdp->ctx;
+	kdump_ctx_t *ctx = sdp->ctx;
 	kdump_status ret;
 
 	set_byte_order(ctx, byte_order);
@@ -631,7 +631,7 @@ do_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh,
 static kdump_status
 try_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh)
 {
-	kdump_ctx *ctx = sdp->ctx;
+	kdump_ctx_t *ctx = sdp->ctx;
 	kdump_status ret;
 
 	ret = try_header(ctx, le32toh(dh->block_size),
@@ -656,7 +656,7 @@ try_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh)
 static kdump_status
 read_sub_hdr_64(struct setup_data *sdp, int32_t header_version)
 {
-	kdump_ctx *ctx = sdp->ctx;
+	kdump_ctx_t *ctx = sdp->ctx;
 	struct kdump_sub_header_64 subhdr;
 	ssize_t rd;
 	kdump_status ret = kdump_ok;
@@ -695,7 +695,7 @@ static kdump_status
 do_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh,
 	     kdump_byte_order_t byte_order)
 {
-	kdump_ctx *ctx = sdp->ctx;
+	kdump_ctx_t *ctx = sdp->ctx;
 	kdump_status ret;
 
 	set_byte_order(ctx, byte_order);
@@ -712,7 +712,7 @@ do_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh,
 static kdump_status
 try_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh)
 {
-	kdump_ctx *ctx = sdp->ctx;
+	kdump_ctx_t *ctx = sdp->ctx;
 	kdump_status ret;
 
 	ret = try_header(ctx, le32toh(dh->block_size),
@@ -735,7 +735,7 @@ try_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh)
 }
 
 static kdump_status
-open_common(kdump_ctx *ctx, void *hdr)
+open_common(kdump_ctx_t *ctx, void *hdr)
 {
 	struct disk_dump_header_32 *dh32 = hdr;
 	struct disk_dump_header_64 *dh64 = hdr;
@@ -792,7 +792,7 @@ open_common(kdump_ctx *ctx, void *hdr)
 }
 
 static kdump_status
-diskdump_probe(kdump_ctx *ctx, void *hdr)
+diskdump_probe(kdump_ctx_t *ctx, void *hdr)
 {
 	static const char magic_diskdump[] =
 		{ 'D', 'I', 'S', 'K', 'D', 'U', 'M', 'P' };

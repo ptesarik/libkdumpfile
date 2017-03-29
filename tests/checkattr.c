@@ -40,7 +40,7 @@
 #include "testutil.h"
 
 static int
-check_noattr(kdump_ctx *ctx, char *key)
+check_noattr(kdump_ctx_t *ctx, char *key)
 {
 	kdump_attr_t attr;
 	kdump_status res;
@@ -61,7 +61,7 @@ check_noattr(kdump_ctx *ctx, char *key)
 }
 
 static int
-check_attr(kdump_ctx *ctx, char *key, const kdump_attr_t *expect, int chkval)
+check_attr(kdump_ctx_t *ctx, char *key, const kdump_attr_t *expect, int chkval)
 {
 	kdump_attr_t attr;
 
@@ -133,7 +133,7 @@ check_attr(kdump_ctx *ctx, char *key, const kdump_attr_t *expect, int chkval)
 }
 
 static int
-check_attr_val(kdump_ctx *ctx, char *key, char *val)
+check_attr_val(kdump_ctx_t *ctx, char *key, char *val)
 {
 	char *sep, *p;
 	unsigned long long number;
@@ -199,7 +199,7 @@ check_attr_val(kdump_ctx *ctx, char *key, char *val)
 }
 
 static int
-check_attrs(FILE *parm, kdump_ctx *ctx)
+check_attrs(FILE *parm, kdump_ctx_t *ctx)
 {
 	char *line, *key, *val;
 	size_t linesz;
@@ -240,7 +240,7 @@ check_attrs(FILE *parm, kdump_ctx *ctx)
 static int
 check_attrs_fd(FILE *parm, int dumpfd)
 {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	kdump_status res;
 	int rc;
 

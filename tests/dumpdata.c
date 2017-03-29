@@ -58,7 +58,7 @@ dump_buffer(unsigned long long addr, unsigned char *buf, size_t len)
 }
 
 static int
-dump_data(kdump_ctx *ctx, unsigned long long addr, unsigned long long len)
+dump_data(kdump_ctx_t *ctx, unsigned long long addr, unsigned long long len)
 {
 	unsigned char buf[CHUNKSZ];
 	size_t sz, remain;
@@ -106,7 +106,7 @@ dump_data(kdump_ctx *ctx, unsigned long long addr, unsigned long long len)
 static int
 dump_data_fd(int fd, unsigned long long addr, unsigned long long len)
 {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	kdump_status res;
 	int rc;
 

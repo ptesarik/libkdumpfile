@@ -70,7 +70,7 @@ struct os_info {
 /** @endcond */
 
 static kdump_status
-read_os_info_from_lowcore(kdump_ctx *ctx)
+read_os_info_from_lowcore(kdump_ctx_t *ctx)
 {
 	unsigned char os_info_buf[PAGE_SIZE];
 	struct os_info *os_info;
@@ -151,7 +151,7 @@ read_os_info_from_lowcore(kdump_ctx *ctx)
 }
 
 static kdump_status
-read_vmcoreinfo_from_lowcore(kdump_ctx *ctx)
+read_vmcoreinfo_from_lowcore(kdump_ctx_t *ctx)
 {
 	uint64_t addr;
 	Elf64_Nhdr hdr;
@@ -193,7 +193,7 @@ read_vmcoreinfo_from_lowcore(kdump_ctx *ctx)
 }
 
 static kdump_status
-process_lowcore_info(kdump_ctx *ctx)
+process_lowcore_info(kdump_ctx_t *ctx)
 {
 	kdump_status ret;
 
@@ -206,7 +206,7 @@ process_lowcore_info(kdump_ctx *ctx)
 }
 
 static kdump_status
-s390x_init(kdump_ctx *ctx)
+s390x_init(kdump_ctx_t *ctx)
 {
 	vtop_init_locked(ctx);
 	process_lowcore_info(ctx);

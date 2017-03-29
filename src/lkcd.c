@@ -342,7 +342,7 @@ struct lkcd_priv {
 static void lkcd_cleanup(struct kdump_shared *shared);
 
 static struct pfn_block **
-get_pfn_slot(kdump_ctx *ctx, kdump_pfn_t pfn)
+get_pfn_slot(kdump_ctx_t *ctx, kdump_pfn_t pfn)
 {
 	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 	struct pfn_block **l2;
@@ -380,7 +380,7 @@ get_pfn_slot(kdump_ctx *ctx, kdump_pfn_t pfn)
 }
 
 static struct pfn_block *
-alloc_pfn_block(kdump_ctx *ctx, kdump_pfn_t pfn)
+alloc_pfn_block(kdump_ctx_t *ctx, kdump_pfn_t pfn)
 {
 	struct pfn_block **pprev, *block;
 
@@ -430,13 +430,13 @@ realloc_pfn_offs(struct pfn_block *block, unsigned short alloc)
 }
 
 static kdump_status
-error_pfn_offs(kdump_ctx *ctx, kdump_status res)
+error_pfn_offs(kdump_ctx_t *ctx, kdump_status res)
 {
 	return set_error(ctx, res, "Cannot allocate PFN block offs");
 }
 
 static kdump_status
-alloc_tail_pfn_block(kdump_ctx *ctx, struct pfn_block *block,
+alloc_tail_pfn_block(kdump_ctx_t *ctx, struct pfn_block *block,
 		     unsigned short idx, unsigned short nextidx)
 {
 	struct pfn_block *next;
@@ -469,7 +469,7 @@ alloc_tail_pfn_block(kdump_ctx *ctx, struct pfn_block *block,
 }
 
 static kdump_status
-split_pfn_block(kdump_ctx *ctx, struct pfn_block *block, unsigned short idx)
+split_pfn_block(kdump_ctx_t *ctx, struct pfn_block *block, unsigned short idx)
 {
 	unsigned short nextidx;
 	kdump_status res;
@@ -490,7 +490,7 @@ split_pfn_block(kdump_ctx *ctx, struct pfn_block *block, unsigned short idx)
 }
 
 static struct pfn_block *
-lookup_pfn_block(kdump_ctx *ctx, kdump_pfn_t pfn, unsigned short tolerance)
+lookup_pfn_block(kdump_ctx_t *ctx, kdump_pfn_t pfn, unsigned short tolerance)
 {
 	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 	struct pfn_block **l2, *block;
@@ -542,7 +542,7 @@ idx_fits_block(unsigned idx, struct pfn_block *block)
 }
 
 static kdump_status
-read_page_desc(kdump_ctx *ctx, struct dump_page *dp, off_t off)
+read_page_desc(kdump_ctx_t *ctx, struct dump_page *dp, off_t off)
 {
 	ssize_t rd = pread(get_file_fd(ctx), dp, sizeof *dp, off);
 	if (rd != sizeof *dp)
@@ -557,7 +557,7 @@ read_page_desc(kdump_ctx *ctx, struct dump_page *dp, off_t off)
 }
 
 static kdump_status
-error_dup(kdump_ctx *ctx, off_t off, struct pfn_block *block, kdump_pfn_t pfn)
+error_dup(kdump_ctx_t *ctx, off_t off, struct pfn_block *block, kdump_pfn_t pfn)
 {
 	off_t prevoff = block->filepos;
 	unsigned idx = pfn_idx3(pfn);
@@ -571,7 +571,7 @@ error_dup(kdump_ctx *ctx, off_t off, struct pfn_block *block, kdump_pfn_t pfn)
 }
 
 static kdump_status
-search_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
+search_page_desc(kdump_ctx_t *ctx, kdump_pfn_t pfn,
 		 struct dump_page *dp, off_t *dataoff)
 {
 	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
@@ -663,7 +663,7 @@ idx_is_gap(struct pfn_block *block, unsigned idx)
 }
 
 static kdump_status
-get_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
+get_page_desc(kdump_ctx_t *ctx, kdump_pfn_t pfn,
 	      struct dump_page *dp, off_t *dataoff)
 {
 	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
@@ -690,7 +690,7 @@ get_page_desc(kdump_ctx *ctx, kdump_pfn_t pfn,
 }
 
 static kdump_status
-lkcd_max_pfn_validate(kdump_ctx *ctx, struct attr_data *attr)
+lkcd_max_pfn_validate(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 	attr_validate_fn *parent_validate;
@@ -732,7 +732,7 @@ lkcd_max_pfn_validate(kdump_ctx *ctx, struct attr_data *attr)
 }
 
 static kdump_status
-lkcd_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
+lkcd_read_cache(kdump_ctx_t *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 {
 	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 	struct dump_page dp;
@@ -801,7 +801,7 @@ lkcd_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 }
 
 static kdump_status
-lkcd_read_page(kdump_ctx *ctx, struct page_io *pio)
+lkcd_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
 	return def_read_cache(ctx, pio, lkcd_read_cache, pfn);
@@ -817,7 +817,7 @@ lkcd_read_page(kdump_ctx *ctx, struct page_io *pio)
  * compressed pages.
  */
 static kdump_status
-lkcd_realloc_compressed(kdump_ctx *ctx, struct attr_data *attr)
+lkcd_realloc_compressed(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	const struct attr_ops *parent_ops;
 	struct lkcd_priv *lkcdp;
@@ -846,7 +846,7 @@ base_version(uint32_t version)
 }
 
 static kdump_status
-init_v1(kdump_ctx *ctx, void *hdr)
+init_v1(kdump_ctx_t *ctx, void *hdr)
 {
 	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 	struct dump_header_v1_32 *dh32 = hdr;
@@ -863,7 +863,7 @@ init_v1(kdump_ctx *ctx, void *hdr)
 }
 
 static kdump_status
-init_v2(kdump_ctx *ctx, void *hdr)
+init_v2(kdump_ctx_t *ctx, void *hdr)
 {
 	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 	struct dump_header_v2_32 *dh32 = hdr;
@@ -886,7 +886,7 @@ init_v2(kdump_ctx *ctx, void *hdr)
 }
 
 static kdump_status
-init_v8(kdump_ctx *ctx, void *hdr)
+init_v8(kdump_ctx_t *ctx, void *hdr)
 {
 	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 	struct dump_header_v8 *dh = hdr;
@@ -903,7 +903,7 @@ init_v8(kdump_ctx *ctx, void *hdr)
 }
 
 static kdump_status
-open_common(kdump_ctx *ctx, void *hdr)
+open_common(kdump_ctx_t *ctx, void *hdr)
 {
 	struct dump_header_common *dh = hdr;
 	struct lkcd_priv *lkcdp;
@@ -984,7 +984,7 @@ open_common(kdump_ctx *ctx, void *hdr)
 }
 
 static kdump_status
-lkcd_probe(kdump_ctx *ctx, void *hdr)
+lkcd_probe(kdump_ctx_t *ctx, void *hdr)
 {
 	static const char magic_le[] =
 		{ 0xed, 0x23, 0x8f, 0x61, 0x73, 0x01, 0x19, 0xa8 };

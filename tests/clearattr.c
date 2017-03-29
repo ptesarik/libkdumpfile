@@ -38,7 +38,7 @@
 int
 main(int argc, char **argv)
 {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	kdump_attr_t attr;
 	kdump_status status;
 

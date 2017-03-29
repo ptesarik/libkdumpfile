@@ -9,7 +9,7 @@
 #include <kdumpfile.h>
 
 static kdump_vaddr_t
-read_ptr(kdump_ctx *ctx, kdump_vaddr_t addr)
+read_ptr(kdump_ctx_t *ctx, kdump_vaddr_t addr)
 {
 	uint64_t ptr;
 	size_t sz = sizeof ptr;
@@ -23,7 +23,7 @@ read_ptr(kdump_ctx *ctx, kdump_vaddr_t addr)
 }
 
 static kdump_status
-print_xen_domains(kdump_ctx *ctx)
+print_xen_domains(kdump_ctx_t *ctx)
 {
 	kdump_addr_t domain;
 	uint64_t id;
@@ -65,7 +65,7 @@ print_xen_domains(kdump_ctx *ctx)
 int
 main(int argc, char **argv)
 {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	int fd;
 	kdump_attr_t attr;
 	kdump_status status;

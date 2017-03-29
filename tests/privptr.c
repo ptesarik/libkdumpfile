@@ -36,7 +36,7 @@ static char test_string[] = "Hello, world!";
 
 int main(int argc, char **argv)
 {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	char *priv;
 
 	ctx = kdump_new();

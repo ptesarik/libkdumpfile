@@ -39,7 +39,7 @@
 #define RGN_ALLOC_INC 32
 
 static void
-set_pteval_size(kdump_ctx *ctx)
+set_pteval_size(kdump_ctx_t *ctx)
 {
 	addrxlat_meth_t *meth;
 	const addrxlat_def_t *def;
@@ -62,7 +62,7 @@ set_pteval_size(kdump_ctx *ctx)
 }
 
 static kdump_status
-get_version_code(kdump_ctx *ctx, unsigned long *pver)
+get_version_code(kdump_ctx_t *ctx, unsigned long *pver)
 {
 	static const char attrname[] = "version_code";
 	struct attr_data *attr;
@@ -115,7 +115,7 @@ get_version_code(kdump_ctx *ctx, unsigned long *pver)
 }
 
 static void
-set_linux_opts(kdump_ctx *ctx, char *opts)
+set_linux_opts(kdump_ctx_t *ctx, char *opts)
 {
 	struct attr_data *attr;
 
@@ -135,7 +135,7 @@ set_linux_opts(kdump_ctx *ctx, char *opts)
 }
 
 static void
-set_xen_opts(kdump_ctx *ctx, char *opts)
+set_xen_opts(kdump_ctx_t *ctx, char *opts)
 {
 	struct attr_data *attr;
 
@@ -146,7 +146,7 @@ set_xen_opts(kdump_ctx *ctx, char *opts)
 }
 
 kdump_status
-vtop_init_locked(kdump_ctx *ctx)
+vtop_init_locked(kdump_ctx_t *ctx)
 {
 	kdump_status status;
 	addrxlat_osdesc_t osdesc;
@@ -182,7 +182,7 @@ vtop_init_locked(kdump_ctx *ctx)
 }
 
 kdump_status
-kdump_vtop_init(kdump_ctx *ctx)
+kdump_vtop_init(kdump_ctx_t *ctx)
 {
 	kdump_status status;
 
@@ -198,7 +198,7 @@ kdump_vtop_init(kdump_ctx *ctx)
 }
 
 static kdump_status
-locked_xlat(kdump_ctx *ctx, addrxlat_sys_t **psys,
+locked_xlat(kdump_ctx_t *ctx, addrxlat_sys_t **psys,
 	    addrxlat_addr_t src, addrxlat_addrspace_t as,
 	    addrxlat_addr_t *dst, addrxlat_addrspace_t goal)
 {
@@ -220,7 +220,7 @@ locked_xlat(kdump_ctx *ctx, addrxlat_sys_t **psys,
 }
 
 static kdump_status
-do_xlat(kdump_ctx *ctx, addrxlat_sys_t **psys,
+do_xlat(kdump_ctx_t *ctx, addrxlat_sys_t **psys,
 	addrxlat_addr_t src, addrxlat_addrspace_t as,
 	addrxlat_addr_t *dst, addrxlat_addrspace_t goal)
 {
@@ -234,7 +234,7 @@ do_xlat(kdump_ctx *ctx, addrxlat_sys_t **psys,
 }
 
 kdump_status
-kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
+kdump_vtop(kdump_ctx_t *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 {
 	return do_xlat(ctx, &ctx->shared->xlatsys,
 		       vaddr, ADDRXLAT_KVADDR,
@@ -242,7 +242,7 @@ kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t *paddr)
 }
 
 kdump_status
-kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
+kdump_vtom(kdump_ctx_t *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 {
 	return do_xlat(ctx, &ctx->shared->xlatsys,
 		       vaddr, ADDRXLAT_KVADDR,
@@ -250,7 +250,7 @@ kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_maddr_t *maddr)
 }
 
 kdump_status
-kdump_ptom(kdump_ctx *ctx, kdump_paddr_t paddr, kdump_maddr_t *maddr)
+kdump_ptom(kdump_ctx_t *ctx, kdump_paddr_t paddr, kdump_maddr_t *maddr)
 {
 	return do_xlat(ctx, &ctx->shared->xlatsys,
 		       paddr, ADDRXLAT_KPHYSADDR,
@@ -258,7 +258,7 @@ kdump_ptom(kdump_ctx *ctx, kdump_paddr_t paddr, kdump_maddr_t *maddr)
 }
 
 kdump_status
-kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
+kdump_mtop(kdump_ctx_t *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
 {
 	return do_xlat(ctx, &ctx->shared->xlatsys,
 		       maddr, ADDRXLAT_MACHPHYSADDR,
@@ -268,7 +268,7 @@ kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr, kdump_paddr_t *paddr)
 static addrxlat_status
 addrxlat_read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 {
-	kdump_ctx *ctx = (kdump_ctx*) data;
+	kdump_ctx_t *ctx = (kdump_ctx_t*) data;
 	kdump_status status;
 
 	status = read_u32(ctx, addr->as, addr->addr, 0, NULL, val);
@@ -278,7 +278,7 @@ addrxlat_read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 static addrxlat_status
 addrxlat_read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 {
-	kdump_ctx *ctx = (kdump_ctx*) data;
+	kdump_ctx_t *ctx = (kdump_ctx_t*) data;
 	kdump_status status;
 
 	status = read_u64(ctx, addr->as, addr->addr, 0, NULL, val);
@@ -299,7 +299,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 		{ addrxlat_os_unknown }
 	};
 
-	kdump_ctx *ctx = (kdump_ctx*) data;
+	kdump_ctx_t *ctx = (kdump_ctx_t*) data;
 	const struct attr_data *base;
 	struct attr_data *attr;
 	kdump_status status;
@@ -393,7 +393,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 }
 
 addrxlat_ctx_t *
-init_addrxlat(kdump_ctx *ctx)
+init_addrxlat(kdump_ctx_t *ctx)
 {
 	addrxlat_ctx_t *addrxlat;
 	addrxlat_cb_t cb = {

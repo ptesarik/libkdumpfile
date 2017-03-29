@@ -6,7 +6,7 @@
  *
  * @param dir    Directory identifier (without the dir_ prefix).
  * @param key    Key name (a constant C string).
- * @param field  Field name inside kdump_ctx.
+ * @param field  Field name inside @ref kdump_ctx_t.
  * @param type   Attribute type (kdump_attr_type).
  * @param ctype  Suggested C type for the attribute.
  *

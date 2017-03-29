@@ -316,7 +316,7 @@ alloc_attr(struct kdump_shared *shared, struct attr_data *parent,
  * children.
  */
 static void
-clear_single_attr(kdump_ctx *ctx, struct attr_data *attr)
+clear_single_attr(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	const struct attr_ops *ops = attr->template->ops;
 	if (ops && ops->pre_clear)
@@ -334,7 +334,7 @@ clear_single_attr(kdump_ctx *ctx, struct attr_data *attr)
  * @param attr  Attribute to be cleared.
  */
 void
-clear_attr(kdump_ctx *ctx, struct attr_data *attr)
+clear_attr(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	struct attr_data *child;
 
@@ -354,7 +354,7 @@ clear_attr(kdump_ctx *ctx, struct attr_data *attr)
  * attribute which contains at least one persistent attribute.
  */
 static unsigned
-clear_volatile(kdump_ctx *ctx, struct attr_data *attr)
+clear_volatile(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	struct attr_data *child;
 	unsigned persist;
@@ -373,7 +373,7 @@ clear_volatile(kdump_ctx *ctx, struct attr_data *attr)
  * @param ctx   Dump file object.
  */
 void
-clear_volatile_attrs(kdump_ctx *ctx)
+clear_volatile_attrs(kdump_ctx_t *ctx)
 {
 	clear_volatile(ctx, gattr(ctx, GKI_dir_root));
 }
@@ -614,7 +614,7 @@ attr_has_value(struct attr_data *attr, kdump_attr_value_t newval)
  * of @p attr, leave @c flags.indirect clear.
  */
 kdump_status
-set_attr(kdump_ctx *ctx, struct attr_data *attr,
+set_attr(kdump_ctx_t *ctx, struct attr_data *attr,
 	 struct attr_flags flags, kdump_attr_value_t *pval)
 {
 	int skiphooks = attr_has_value(attr, *pval);
@@ -665,7 +665,7 @@ set_attr(kdump_ctx *ctx, struct attr_data *attr,
  * @returns        Error status.
  */
 kdump_status
-set_attr_number(kdump_ctx *ctx, struct attr_data *attr,
+set_attr_number(kdump_ctx_t *ctx, struct attr_data *attr,
 		struct attr_flags flags, kdump_num_t num)
 {
 	kdump_attr_value_t val;
@@ -682,7 +682,7 @@ set_attr_number(kdump_ctx *ctx, struct attr_data *attr,
  * @returns        Error status.
  */
 kdump_status
-set_attr_address(kdump_ctx *ctx, struct attr_data *attr,
+set_attr_address(kdump_ctx_t *ctx, struct attr_data *attr,
 		 struct attr_flags flags, kdump_addr_t addr)
 {
 	kdump_attr_value_t val;
@@ -699,7 +699,7 @@ set_attr_address(kdump_ctx *ctx, struct attr_data *attr,
  * @returns        Error status.
  */
 kdump_status
-set_attr_string(kdump_ctx *ctx, struct attr_data *attr,
+set_attr_string(kdump_ctx_t *ctx, struct attr_data *attr,
 		struct attr_flags flags, const char *str)
 {
 	char *dynstr = strdup(str);
@@ -723,7 +723,7 @@ set_attr_string(kdump_ctx *ctx, struct attr_data *attr,
  * @returns        Error status.
  */
 kdump_status
-set_attr_sized_string(kdump_ctx *ctx, struct attr_data *attr,
+set_attr_sized_string(kdump_ctx_t *ctx, struct attr_data *attr,
 		      struct attr_flags flags, const char *str, size_t len)
 {
 	size_t dynlen;
@@ -752,7 +752,7 @@ set_attr_sized_string(kdump_ctx *ctx, struct attr_data *attr,
  * @returns        Error status.
  */
 kdump_status
-set_attr_static_string(kdump_ctx *ctx, struct attr_data *attr,
+set_attr_static_string(kdump_ctx_t *ctx, struct attr_data *attr,
 		       struct attr_flags flags, const char *str)
 {
 	kdump_attr_value_t val;
@@ -772,7 +772,7 @@ set_attr_static_string(kdump_ctx *ctx, struct attr_data *attr,
  * simply by ignoring the return value.
  */
 kdump_status
-validate_attr(kdump_ctx *ctx, struct attr_data *attr)
+validate_attr(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	if (!attr_isset(attr))
 		return kdump_nodata;
@@ -823,7 +823,7 @@ attr_remove_override(struct attr_data *attr, struct attr_override *override)
 }
 
 kdump_status
-kdump_get_attr(kdump_ctx *ctx, const char *key, kdump_attr_t *valp)
+kdump_get_attr(kdump_ctx_t *ctx, const char *key, kdump_attr_t *valp)
 {
 	struct attr_data *d;
 	kdump_status ret;
@@ -856,7 +856,7 @@ kdump_get_attr(kdump_ctx *ctx, const char *key, kdump_attr_t *valp)
  * @param valp  New value for the attribute.
  */
 static kdump_status
-check_set_attr(kdump_ctx *ctx, struct attr_data *attr,
+check_set_attr(kdump_ctx_t *ctx, struct attr_data *attr,
 	       const kdump_attr_t *valp)
 {
 	kdump_attr_value_t val;
@@ -878,7 +878,7 @@ check_set_attr(kdump_ctx *ctx, struct attr_data *attr,
 }
 
 kdump_status
-kdump_set_attr(kdump_ctx *ctx, const char *key,
+kdump_set_attr(kdump_ctx_t *ctx, const char *key,
 	       const kdump_attr_t *valp)
 {
 	struct attr_data *d;
@@ -921,7 +921,7 @@ ref_attr(const kdump_attr_ref_t *ref)
 }
 
 kdump_status
-kdump_attr_ref(kdump_ctx *ctx, const char *key, kdump_attr_ref_t *ref)
+kdump_attr_ref(kdump_ctx_t *ctx, const char *key, kdump_attr_ref_t *ref)
 {
 	struct attr_data *d;
 
@@ -938,7 +938,7 @@ kdump_attr_ref(kdump_ctx *ctx, const char *key, kdump_attr_ref_t *ref)
 }
 
 kdump_status
-kdump_sub_attr_ref(kdump_ctx *ctx, const kdump_attr_ref_t *base,
+kdump_sub_attr_ref(kdump_ctx_t *ctx, const kdump_attr_ref_t *base,
 		   const char *subkey, kdump_attr_ref_t *ref)
 {
 	struct attr_data *dir, *attr;
@@ -957,7 +957,7 @@ kdump_sub_attr_ref(kdump_ctx *ctx, const kdump_attr_ref_t *base,
 }
 
 void
-kdump_attr_unref(kdump_ctx *ctx, kdump_attr_ref_t *ref)
+kdump_attr_unref(kdump_ctx_t *ctx, kdump_attr_ref_t *ref)
 {
 	clear_error(ctx);
 }
@@ -975,7 +975,7 @@ kdump_attr_ref_isset(kdump_attr_ref_t *ref)
 }
 
 kdump_status
-kdump_attr_ref_get(kdump_ctx *ctx, const kdump_attr_ref_t *ref,
+kdump_attr_ref_get(kdump_ctx_t *ctx, const kdump_attr_ref_t *ref,
 		   kdump_attr_t *valp)
 {
 	struct attr_data *d = ref_attr(ref);
@@ -999,7 +999,7 @@ kdump_attr_ref_get(kdump_ctx *ctx, const kdump_attr_ref_t *ref,
 }
 
 kdump_status
-kdump_attr_ref_set(kdump_ctx *ctx, kdump_attr_ref_t *ref,
+kdump_attr_ref_set(kdump_ctx_t *ctx, kdump_attr_ref_t *ref,
 		   const kdump_attr_t *valp)
 {
 	kdump_status ret;
@@ -1035,7 +1035,7 @@ set_iter_pos(kdump_attr_iter_t *iter, struct attr_data *attr)
  * pointer as argument.
  */
 static kdump_status
-attr_iter_start(kdump_ctx *ctx, const struct attr_data *attr,
+attr_iter_start(kdump_ctx_t *ctx, const struct attr_data *attr,
 		kdump_attr_iter_t *iter)
 {
 	if (!attr_isset(attr))
@@ -1048,7 +1048,7 @@ attr_iter_start(kdump_ctx *ctx, const struct attr_data *attr,
 }
 
 kdump_status
-kdump_attr_iter_start(kdump_ctx *ctx, const char *path,
+kdump_attr_iter_start(kdump_ctx_t *ctx, const char *path,
 		      kdump_attr_iter_t *iter)
 {
 	struct attr_data *d;
@@ -1068,7 +1068,7 @@ kdump_attr_iter_start(kdump_ctx *ctx, const char *path,
 }
 
 kdump_status
-kdump_attr_ref_iter_start(kdump_ctx *ctx, const kdump_attr_ref_t *ref,
+kdump_attr_ref_iter_start(kdump_ctx_t *ctx, const kdump_attr_ref_t *ref,
 			  kdump_attr_iter_t *iter)
 {
 	kdump_status ret;
@@ -1080,7 +1080,7 @@ kdump_attr_ref_iter_start(kdump_ctx *ctx, const kdump_attr_ref_t *ref,
 }
 
 kdump_status
-kdump_attr_iter_next(kdump_ctx *ctx, kdump_attr_iter_t *iter)
+kdump_attr_iter_next(kdump_ctx_t *ctx, kdump_attr_iter_t *iter)
 {
 	struct attr_data *d;
 	kdump_status ret;
@@ -1099,7 +1099,7 @@ kdump_attr_iter_next(kdump_ctx *ctx, kdump_attr_iter_t *iter)
 }
 
 void
-kdump_attr_iter_end(kdump_ctx *ctx, kdump_attr_iter_t *iter)
+kdump_attr_iter_end(kdump_ctx_t *ctx, kdump_attr_iter_t *iter)
 {
 	clear_error(ctx);
 }

@@ -51,7 +51,7 @@ static pthread_cond_t state_cond = PTHREAD_COND_INITIALIZER;
 static void *
 get_nokey(void *arg)
 {
-	kdump_ctx *ctx = arg;
+	kdump_ctx_t *ctx = arg;
 	kdump_attr_t attr;
 	kdump_status res;
 	char *err, *ret;
@@ -92,7 +92,7 @@ get_nokey(void *arg)
 static void *
 get_novalue(void *arg)
 {
-	kdump_ctx *ctx = arg;
+	kdump_ctx_t *ctx = arg;
 	kdump_attr_t attr;
 	kdump_status res;
 	char *err, *ret;
@@ -131,11 +131,11 @@ get_novalue(void *arg)
 }
 
 static int
-run_threads(kdump_ctx *ctx)
+run_threads(kdump_ctx_t *ctx)
 {
 	struct {
 		pthread_t id;
-		kdump_ctx *ctx;
+		kdump_ctx_t *ctx;
 	} tinfo[2];
 	pthread_attr_t attr;
 	unsigned i;
@@ -189,7 +189,7 @@ run_threads(kdump_ctx *ctx)
 int
 main(int argc, char **argv)
 {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	int rc;
 
 	ctx = kdump_new();

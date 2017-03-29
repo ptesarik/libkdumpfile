@@ -96,7 +96,7 @@ struct s390dump_priv {
 static void s390_cleanup(struct kdump_shared *shared);
 
 static kdump_status
-s390_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
+s390_read_cache(kdump_ctx_t *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 {
 	struct s390dump_priv *sdp = ctx->shared->fmtdata;
 	kdump_paddr_t addr = pfn << get_page_shift(ctx);
@@ -114,7 +114,7 @@ s390_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 }
 
 static kdump_status
-s390_read_page(kdump_ctx *ctx, struct page_io *pio)
+s390_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
 	if (pfn >= get_max_pfn(ctx))
@@ -124,7 +124,7 @@ s390_read_page(kdump_ctx *ctx, struct page_io *pio)
 }
 
 static kdump_status
-s390_probe(kdump_ctx *ctx, void *hdr)
+s390_probe(kdump_ctx_t *ctx, void *hdr)
 {
 	struct dump_header *dh = hdr;
 	struct s390dump_priv *sdp;

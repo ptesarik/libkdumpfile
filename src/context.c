@@ -1,5 +1,5 @@
 /** @internal @file src/context.c
- * @brief Functions that provide access to kdump_ctx contents.
+ * @brief Functions that provide access to kdump_ctx_t contents.
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
 
@@ -37,12 +37,12 @@
 #include <stdio.h>
 #include <errno.h>
 
-static kdump_ctx *
+static kdump_ctx_t *
 alloc_ctx(void)
 {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 
-	ctx = calloc(1, sizeof (kdump_ctx));
+	ctx = calloc(1, sizeof (kdump_ctx_t));
 	if (!ctx)
 		return ctx;
 	ctx->cb_get_symbol_val = kdump_vmcoreinfo_symbol;
@@ -84,10 +84,10 @@ alloc_shared(void)
 	return NULL;
 }
 
-kdump_ctx *
+kdump_ctx_t *
 kdump_new(void)
 {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 
 	ctx = alloc_ctx();
 	if (!ctx)
@@ -107,10 +107,10 @@ kdump_new(void)
 	return ctx;
 }
 
-kdump_ctx *
-kdump_clone(const kdump_ctx *orig)
+kdump_ctx_t *
+kdump_clone(const kdump_ctx_t *orig)
 {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	int slot;
 
 	ctx = alloc_ctx();
@@ -144,13 +144,13 @@ kdump_clone(const kdump_ctx *orig)
 }
 
 const char *
-kdump_err_str(kdump_ctx *ctx)
+kdump_err_str(kdump_ctx_t *ctx)
 {
 	return ctx->err_str;
 }
 
 addrxlat_ctx_t *
-kdump_get_addrxlat_ctx(const kdump_ctx *ctx)
+kdump_get_addrxlat_ctx(const kdump_ctx_t *ctx)
 {
 	addrxlat_ctx_t *ret;
 
@@ -163,7 +163,7 @@ kdump_get_addrxlat_ctx(const kdump_ctx *ctx)
 }
 
 addrxlat_sys_t *
-kdump_get_addrxlat_sys(const kdump_ctx *ctx)
+kdump_get_addrxlat_sys(const kdump_ctx_t *ctx)
 {
 	addrxlat_sys_t *ret;
 
@@ -176,7 +176,7 @@ kdump_get_addrxlat_sys(const kdump_ctx *ctx)
 }
 
 kdump_byte_order_t
-kdump_byte_order(kdump_ctx *ctx)
+kdump_byte_order(kdump_ctx_t *ctx)
 {
 	kdump_byte_order_t ret;
 	rwlock_rdlock(&ctx->shared->lock);
@@ -186,7 +186,7 @@ kdump_byte_order(kdump_ctx *ctx)
 }
 
 size_t
-kdump_ptr_size(kdump_ctx *ctx)
+kdump_ptr_size(kdump_ctx_t *ctx)
 {
 	size_t ret;
 	rwlock_rdlock(&ctx->shared->lock);
@@ -196,7 +196,7 @@ kdump_ptr_size(kdump_ctx *ctx)
 }
 
 const char *
-kdump_arch_name(kdump_ctx *ctx)
+kdump_arch_name(kdump_ctx_t *ctx)
 {
 	const char *ret;
 	rwlock_rdlock(&ctx->shared->lock);
@@ -206,7 +206,7 @@ kdump_arch_name(kdump_ctx *ctx)
 }
 
 kdump_xen_type_t
-kdump_xen_type(kdump_ctx *ctx)
+kdump_xen_type(kdump_ctx_t *ctx)
 {
 	kdump_xen_type_t ret;
 	rwlock_rdlock(&ctx->shared->lock);
@@ -216,7 +216,7 @@ kdump_xen_type(kdump_ctx *ctx)
 }
 
 size_t
-kdump_pagesize(kdump_ctx *ctx)
+kdump_pagesize(kdump_ctx_t *ctx)
 {
 	size_t ret;
 	rwlock_rdlock(&ctx->shared->lock);
@@ -226,7 +226,7 @@ kdump_pagesize(kdump_ctx *ctx)
 }
 
 unsigned
-kdump_pageshift(kdump_ctx *ctx)
+kdump_pageshift(kdump_ctx_t *ctx)
 {
 	unsigned ret;
 	rwlock_rdlock(&ctx->shared->lock);
@@ -236,7 +236,7 @@ kdump_pageshift(kdump_ctx *ctx)
 }
 
 static const char *
-get_string_attr(kdump_ctx *ctx, struct attr_data *attr)
+get_string_attr(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	const char *ret;
 
@@ -250,7 +250,7 @@ get_string_attr(kdump_ctx *ctx, struct attr_data *attr)
 }
 
 const char *
-kdump_get_string_attr(kdump_ctx *ctx, const char *key)
+kdump_get_string_attr(kdump_ctx_t *ctx, const char *key)
 {
 	struct attr_data *attr;
 	const char *ret = NULL;
@@ -265,13 +265,13 @@ kdump_get_string_attr(kdump_ctx *ctx, const char *key)
 }
 
 const char *
-kdump_format(kdump_ctx *ctx)
+kdump_format(kdump_ctx_t *ctx)
 {
 	return get_string_attr(ctx, gattr(ctx, GKI_file_format));
 }
 
 unsigned
-kdump_num_cpus(kdump_ctx *ctx)
+kdump_num_cpus(kdump_ctx_t *ctx)
 {
 	unsigned ret;
 	rwlock_rdlock(&ctx->shared->lock);
@@ -281,7 +281,7 @@ kdump_num_cpus(kdump_ctx *ctx)
 }
 
 kdump_get_symbol_val_fn *
-kdump_cb_get_symbol_val(kdump_ctx *ctx, kdump_get_symbol_val_fn *cb)
+kdump_cb_get_symbol_val(kdump_ctx_t *ctx, kdump_get_symbol_val_fn *cb)
 {
 	kdump_get_symbol_val_fn *ret = ctx->cb_get_symbol_val;
 	ctx->cb_get_symbol_val = cb ?: kdump_vmcoreinfo_symbol;
@@ -289,13 +289,13 @@ kdump_cb_get_symbol_val(kdump_ctx *ctx, kdump_get_symbol_val_fn *cb)
 }
 
 void
-kdump_set_priv(kdump_ctx *ctx, void *data)
+kdump_set_priv(kdump_ctx_t *ctx, void *data)
 {
 	ctx->priv = data;
 }
 
 void *
-kdump_get_priv(kdump_ctx *ctx)
+kdump_get_priv(kdump_ctx_t *ctx)
 {
 	return ctx->priv;
 }
@@ -312,7 +312,7 @@ kdump_get_priv(kdump_ctx *ctx)
 int
 per_ctx_alloc(struct kdump_shared *shared, size_t sz)
 {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	int slot;
 
 	/* Allocate a slot. */
@@ -330,7 +330,7 @@ per_ctx_alloc(struct kdump_shared *shared, size_t sz)
 		if (! (ctx->data[slot] = malloc(sz)) ) {
 			while (ctx->list.prev != &shared->ctx) {
 				ctx = list_entry(ctx->list.prev,
-						 kdump_ctx, list);
+						 kdump_ctx_t, list);
 				free(ctx->data[slot]);
 			}
 			shared->per_ctx_size[slot] = 0;
@@ -347,7 +347,7 @@ per_ctx_alloc(struct kdump_shared *shared, size_t sz)
 void
 per_ctx_free(struct kdump_shared *shared, int slot)
 {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 
 	list_for_each_entry(ctx, &shared->ctx, list)
 		free(ctx->data[slot]);

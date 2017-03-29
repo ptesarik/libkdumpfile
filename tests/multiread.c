@@ -47,7 +47,7 @@ static unsigned long niter = DEFITER;
 static void *
 run_reads(void *arg)
 {
-	kdump_ctx *ctx = arg;
+	kdump_ctx_t *ctx = arg;
 	kdump_attr_t attr;
 	unsigned page_shift;
 	unsigned long pfn;
@@ -77,11 +77,11 @@ run_reads(void *arg)
 }
 
 static int
-run_threads(kdump_ctx *ctx, unsigned long nthreads, unsigned long cache_size)
+run_threads(kdump_ctx_t *ctx, unsigned long nthreads, unsigned long cache_size)
 {
 	struct {
 		pthread_t id;
-		kdump_ctx *ctx;
+		kdump_ctx_t *ctx;
 	} tinfo[nthreads];
 	pthread_attr_t attr;
 	kdump_attr_t val;
@@ -144,7 +144,7 @@ run_threads(kdump_ctx *ctx, unsigned long nthreads, unsigned long cache_size)
 static int
 run_threads_fd(int fd, unsigned long nthreads, unsigned long cache_size)
 {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	kdump_status res;
 	int rc;
 

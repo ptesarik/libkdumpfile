@@ -52,7 +52,7 @@ xlat_pio_op(void *data, const addrxlat_fulladdr_t *addr)
  * directly passed to a @c read_page method.
  */
 kdump_status
-xlat_pio(kdump_ctx *ctx, struct page_io *pio)
+xlat_pio(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	addrxlat_op_ctl_t ctl;
 
@@ -69,7 +69,7 @@ xlat_pio(kdump_ctx *ctx, struct page_io *pio)
  * @param pio  Page I/O control.
  */
 static kdump_status
-raw_read_page(kdump_ctx *ctx, struct page_io *pio)
+raw_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	kdump_status status;
 
@@ -95,7 +95,7 @@ raw_read_page(kdump_ctx *ctx, struct page_io *pio)
  * @sa kdump_read
  */
 kdump_status
-read_locked(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+read_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	    void *buffer, size_t *plength)
 {
 	struct page_io pio;
@@ -130,7 +130,7 @@ read_locked(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 }
 
 kdump_status
-kdump_read(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+kdump_read(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	    void *buffer, size_t *plength)
 {
 	kdump_status ret;
@@ -155,7 +155,7 @@ kdump_read(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
  * @sa kdump_read_string
  */
 kdump_status
-read_string_locked(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+read_string_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		   char **pstr)
 {
 	struct page_io pio;
@@ -203,7 +203,7 @@ read_string_locked(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 }
 
 kdump_status
-kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+kdump_read_string(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		  char **pstr)
 {
 	kdump_status ret;
@@ -227,7 +227,7 @@ kdump_read_string(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
  * This function fails if data crosses a page boundary.
  */
 kdump_status
-read_u32(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+read_u32(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	 int precious, char *what, uint32_t *result)
 {
 	struct page_io pio;
@@ -263,7 +263,7 @@ read_u32(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
  * This function fails if data crosses a page boundary.
  */
 kdump_status
-read_u64(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+read_u64(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	 int precious, char *what, uint64_t *result)
 {
 	struct page_io pio;
@@ -294,7 +294,7 @@ read_u64(kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 void
 set_addrspace_caps(struct kdump_shared *shared, unsigned long caps)
 {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 
 	shared->xlat_caps = caps;
 	list_for_each_entry(ctx, &shared->ctx, list) {

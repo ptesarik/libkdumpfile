@@ -126,7 +126,7 @@ struct elf_prstatus
 /** @endcond */
 
 static kdump_status
-process_ppc64_prstatus(kdump_ctx *ctx, void *data, size_t size)
+process_ppc64_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
 {
 	struct elf_prstatus *status = data;
 	kdump_status res;

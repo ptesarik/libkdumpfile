@@ -49,7 +49,7 @@ struct devmem_priv {
 };
 
 static kdump_status
-get_vmcoreinfo(kdump_ctx *ctx)
+get_vmcoreinfo(kdump_ctx_t *ctx)
 {
 	FILE *f;
 	unsigned long long addr;
@@ -92,7 +92,7 @@ get_vmcoreinfo(kdump_ctx *ctx)
 #define FN_IOMEM	"/proc/iomem"
 
 static kdump_status
-check_kcode(kdump_ctx *ctx, char *line, kdump_paddr_t *paddr)
+check_kcode(kdump_ctx_t *ctx, char *line, kdump_paddr_t *paddr)
 {
 	unsigned long long start;
 	char *p, *q;
@@ -125,7 +125,7 @@ check_kcode(kdump_ctx *ctx, char *line, kdump_paddr_t *paddr)
 }
 
 kdump_status
-linux_iomem_kcode(kdump_ctx *ctx, kdump_paddr_t *paddr)
+linux_iomem_kcode(kdump_ctx_t *ctx, kdump_paddr_t *paddr)
 {
 	FILE *f;
 	char *line;
@@ -157,7 +157,7 @@ linux_iomem_kcode(kdump_ctx *ctx, kdump_paddr_t *paddr)
 }
 
 static kdump_status
-devmem_read_page(kdump_ctx *ctx, struct page_io *pio)
+devmem_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	struct devmem_priv *dmp = ctx->shared->fmtdata;
 	struct cache_entry *ce;
@@ -192,13 +192,13 @@ devmem_read_page(kdump_ctx *ctx, struct page_io *pio)
 }
 
 static void
-devmem_unref_page(kdump_ctx *ctx, struct page_io *pio)
+devmem_unref_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	--pio->ce->refcnt;
 }
 
 static kdump_status
-devmem_realloc_caches(kdump_ctx *ctx)
+devmem_realloc_caches(kdump_ctx_t *ctx)
 {
 	struct devmem_priv *dmp = ctx->shared->fmtdata;
 	unsigned cache_size = get_cache_size(ctx);
@@ -235,7 +235,7 @@ devmem_realloc_caches(kdump_ctx *ctx)
 }
 
 static kdump_status
-devmem_probe(kdump_ctx *ctx, void *hdr)
+devmem_probe(kdump_ctx_t *ctx, void *hdr)
 {
 	struct devmem_priv *dmp;
 	struct stat st;

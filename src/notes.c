@@ -132,16 +132,16 @@ struct xen_dumpcore_elfnote_xen_version_64 {
 	uint64_t pagesize;
 };
 
-typedef kdump_status do_note_fn(kdump_ctx *ctx, Elf32_Word type,
+typedef kdump_status do_note_fn(kdump_ctx_t *ctx, Elf32_Word type,
 				const char *name, size_t namesz,
 				void *desc, size_t descsz);
 
-/* These fields in kdump_ctx must be initialised:
+/* These fields in kdump_ctx_t must be initialised:
  *
  *   arch_ops
  */
 static kdump_status
-process_core_note(kdump_ctx *ctx, uint32_t type,
+process_core_note(kdump_ctx_t *ctx, uint32_t type,
 		  void *desc, size_t descsz)
 {
 	if (type == NT_PRSTATUS) {
@@ -153,13 +153,13 @@ process_core_note(kdump_ctx *ctx, uint32_t type,
 	return kdump_ok;
 }
 
-/* These fields in kdump_ctx must be initialised:
+/* These fields in kdump_ctx_t must be initialised:
  *
  *   endian
  *   ptr_size
  */
 static kdump_status
-process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
+process_xen_crash_info(kdump_ctx_t *ctx, void *data, size_t len)
 {
 	size_t ptr_size = get_ptr_size(ctx);
 	unsigned words = len / ptr_size;
@@ -241,7 +241,7 @@ process_xen_crash_info(kdump_ctx *ctx, void *data, size_t len)
 }
 
 static kdump_status
-process_xen_dumpcore_version(kdump_ctx *ctx, void *data, size_t len)
+process_xen_dumpcore_version(kdump_ctx_t *ctx, void *data, size_t len)
 {
 	size_t ptr_size = get_ptr_size(ctx);
 	unsigned long major, minor;
@@ -284,13 +284,13 @@ process_xen_dumpcore_version(kdump_ctx *ctx, void *data, size_t len)
 	return kdump_ok;
 }
 
-/* These fields in kdump_ctx must be initialised:
+/* These fields in kdump_ctx_t must be initialised:
  *
  *   endian
  *   ptr_size
  */
 static kdump_status
-process_xen_note(kdump_ctx *ctx, uint32_t type,
+process_xen_note(kdump_ctx_t *ctx, uint32_t type,
 		 void *desc, size_t descsz)
 {
 	kdump_status ret = kdump_ok;
@@ -303,12 +303,12 @@ process_xen_note(kdump_ctx *ctx, uint32_t type,
 	return ret;
 }
 
-/* These fields in kdump_ctx must be initialised:
+/* These fields in kdump_ctx_t must be initialised:
  *
  *   endian
  */
 static kdump_status
-process_xc_xen_note(kdump_ctx *ctx, uint32_t type,
+process_xc_xen_note(kdump_ctx_t *ctx, uint32_t type,
 		    void *desc, size_t descsz)
 {
 	if (type == XEN_ELFNOTE_DUMPCORE_HEADER) {
@@ -345,7 +345,7 @@ note_equal(const char *name, const char *notename, size_t notenamesz)
  * @param what  Description for error messages.
  */
 static kdump_status
-set_vmcoreinfo(kdump_ctx *ctx, enum global_keyidx key,
+set_vmcoreinfo(kdump_ctx_t *ctx, enum global_keyidx key,
 	       void *data, size_t sz, const char *what)
 {
 	kdump_status res;
@@ -358,7 +358,7 @@ set_vmcoreinfo(kdump_ctx *ctx, enum global_keyidx key,
 }
 
 static kdump_status
-do_noarch_note(kdump_ctx *ctx, Elf32_Word type,
+do_noarch_note(kdump_ctx_t *ctx, Elf32_Word type,
 	       const char *name, size_t namesz, void *desc, size_t descsz)
 {
 	if (note_equal("VMCOREINFO", name, namesz))
@@ -371,7 +371,7 @@ do_noarch_note(kdump_ctx *ctx, Elf32_Word type,
 	return kdump_ok;
 }
 
-/* These fields from kdump_ctx must be initialised:
+/* These fields from kdump_ctx_t must be initialised:
  *
  *   endian
  *   ptr_size
@@ -379,7 +379,7 @@ do_noarch_note(kdump_ctx *ctx, Elf32_Word type,
  *
  */
 static kdump_status
-do_arch_note(kdump_ctx *ctx, Elf32_Word type,
+do_arch_note(kdump_ctx_t *ctx, Elf32_Word type,
 	     const char *name, size_t namesz, void *desc, size_t descsz)
 {
 	if (note_equal("CORE", name, namesz))
@@ -393,7 +393,7 @@ do_arch_note(kdump_ctx *ctx, Elf32_Word type,
 }
 
 static kdump_status
-do_any_note(kdump_ctx *ctx, Elf32_Word type,
+do_any_note(kdump_ctx_t *ctx, Elf32_Word type,
 	    const char *name, size_t namesz, void *desc, size_t descsz)
 {
 	kdump_status ret;
@@ -407,7 +407,7 @@ do_any_note(kdump_ctx *ctx, Elf32_Word type,
 #define roundup_size(sz)	(((size_t)(sz)+3) & ~(size_t)3)
 
 static kdump_status
-do_notes(kdump_ctx *ctx, void *data, size_t size, do_note_fn *do_note)
+do_notes(kdump_ctx_t *ctx, void *data, size_t size, do_note_fn *do_note)
 {
 	Elf32_Nhdr *hdr = data;
 	kdump_status ret = kdump_ok;
@@ -438,19 +438,19 @@ do_notes(kdump_ctx *ctx, void *data, size_t size, do_note_fn *do_note)
 }
 
 kdump_status
-process_noarch_notes(kdump_ctx *ctx, void *data, size_t size)
+process_noarch_notes(kdump_ctx_t *ctx, void *data, size_t size)
 {
 	return do_notes(ctx, data, size, do_noarch_note);
 }
 
 kdump_status
-process_arch_notes(kdump_ctx *ctx, void *data, size_t size)
+process_arch_notes(kdump_ctx_t *ctx, void *data, size_t size)
 {
 	return do_notes(ctx, data, size, do_arch_note);
 }
 
 kdump_status
-process_notes(kdump_ctx *ctx, void *data, size_t size)
+process_notes(kdump_ctx_t *ctx, void *data, size_t size)
 {
 	return do_notes(ctx, data, size, do_any_note);
 }

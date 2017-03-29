@@ -43,7 +43,7 @@
 #endif
 
 kdump_status
-set_error(kdump_ctx *ctx, kdump_status status, const char *msgfmt, ...)
+set_error(kdump_ctx_t *ctx, kdump_status status, const char *msgfmt, ...)
 {
 	static const char failure[] = "(bad format string)";
 	static const char delim[] = { ':', ' ' };
@@ -130,7 +130,7 @@ set_error(kdump_ctx *ctx, kdump_status status, const char *msgfmt, ...)
  * @returns       Error status (libkdumpfile).
  */
 kdump_status
-addrxlat2kdump(kdump_ctx *ctx, addrxlat_status status)
+addrxlat2kdump(kdump_ctx_t *ctx, addrxlat_status status)
 {
 	kdump_status ret;
 
@@ -155,7 +155,7 @@ addrxlat2kdump(kdump_ctx *ctx, addrxlat_status status)
  * @returns       Error status (addrxlat).
  */
 addrxlat_status
-kdump2addrxlat(kdump_ctx *ctx, kdump_status status)
+kdump2addrxlat(kdump_ctx_t *ctx, kdump_status status)
 {
 	addrxlat_status ret;
 
@@ -174,7 +174,7 @@ kdump2addrxlat(kdump_ctx *ctx, kdump_status status)
 
 
 void *
-ctx_malloc(size_t size, kdump_ctx *ctx, const char *desc)
+ctx_malloc(size_t size, kdump_ctx_t *ctx, const char *desc)
 {
 	void *ret = malloc(size);
 	if (!ret)
@@ -394,7 +394,7 @@ arch_index(const char *name)
  *   - cache has been allocated
  */
 static kdump_status
-do_arch_init(kdump_ctx *ctx)
+do_arch_init(kdump_ctx_t *ctx)
 {
 	ctx->shared->arch_init_done = 1;
 	ctx->shared->arch_ops = arch_ops(ctx->shared->arch);
@@ -405,7 +405,7 @@ do_arch_init(kdump_ctx *ctx)
 }
 
 static kdump_status
-arch_name_post_hook(kdump_ctx *ctx, struct attr_data *attr)
+arch_name_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	ctx->shared->arch = arch_index(attr_value(attr)->string);
 
@@ -439,7 +439,7 @@ const struct attr_ops arch_name_ops = {
 
 
 static kdump_status
-uts_machine_post_hook(kdump_ctx *ctx, struct attr_data *attr)
+uts_machine_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	const char *arch;
 
@@ -457,7 +457,7 @@ const struct attr_ops uts_machine_ops = {
 };
 
 static kdump_status
-page_size_pre_hook(kdump_ctx *ctx, struct attr_data *attr,
+page_size_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
 		   kdump_attr_value_t *newval)
 {
 	size_t page_size = newval->number;
@@ -471,7 +471,7 @@ page_size_pre_hook(kdump_ctx *ctx, struct attr_data *attr,
 }
 
 static kdump_status
-page_size_post_hook(kdump_ctx *ctx, struct attr_data *attr)
+page_size_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	kdump_status res;
 
@@ -496,7 +496,7 @@ const struct attr_ops page_size_ops = {
 };
 
 static kdump_status
-page_shift_post_hook(kdump_ctx *ctx, struct attr_data *attr)
+page_shift_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	return set_page_size(ctx, (size_t)1 << attr_value(attr)->number);
 }
@@ -509,7 +509,7 @@ const struct attr_ops page_shift_ops = {
  * but let's make sure that it is present in the destination.
  */
 static kdump_status
-set_uts_string(kdump_ctx *ctx, struct attr_data *attr, const char *src)
+set_uts_string(kdump_ctx_t *ctx, struct attr_data *attr, const char *src)
 {
 	char str[NEW_UTS_LEN + 1];
 
@@ -520,7 +520,7 @@ set_uts_string(kdump_ctx *ctx, struct attr_data *attr, const char *src)
 }
 
 kdump_status
-set_uts(kdump_ctx *ctx, const struct new_utsname *src)
+set_uts(kdump_ctx_t *ctx, const struct new_utsname *src)
 {
 	static const struct {
 		unsigned idx, off;
@@ -608,7 +608,7 @@ uncompress_rle(unsigned char *dst, size_t *pdstlen,
 
 #if USE_ZLIB
 static kdump_status
-set_zlib_error(kdump_ctx *ctx, const char *what,
+set_zlib_error(kdump_ctx_t *ctx, const char *what,
 	       const z_stream *zstream, int err)
 {
 	if (err == Z_ERRNO)
@@ -630,7 +630,7 @@ set_zlib_error(kdump_ctx *ctx, const char *what,
  * @param srclen  Length of source data.
  */
 kdump_status
-uncompress_page_gzip(kdump_ctx *ctx, unsigned char *dst,
+uncompress_page_gzip(kdump_ctx_t *ctx, unsigned char *dst,
 		     unsigned char *src, size_t srclen)
 {
 #if USE_ZLIB
@@ -735,14 +735,14 @@ cksum32(void *buffer, size_t size, uint32_t csum)
  * be called without holding any locks.
  */
 kdump_status
-get_symbol_val(kdump_ctx *ctx, const char *name, kdump_addr_t *val)
+get_symbol_val(kdump_ctx_t *ctx, const char *name, kdump_addr_t *val)
 {
 	kdump_status ret = ctx->cb_get_symbol_val(ctx, name, val);
 	return set_error(ctx, ret, "Cannot resolve \"%s\"", name);
 }
 
 kdump_status
-set_cpu_regs64(kdump_ctx *ctx, unsigned cpu,
+set_cpu_regs64(kdump_ctx_t *ctx, unsigned cpu,
 	       const struct attr_template *tmpl, uint64_t *regs, unsigned num)
 {
 	char cpukey[20 + sizeof(".reg")];
@@ -776,7 +776,7 @@ set_cpu_regs64(kdump_ctx *ctx, unsigned cpu,
 }
 
 kdump_status
-set_cpu_regs32(kdump_ctx *ctx, unsigned cpu,
+set_cpu_regs32(kdump_ctx_t *ctx, unsigned cpu,
 	       const struct attr_template *tmpl, uint32_t *regs, unsigned num)
 {
 	char cpukey[20 + sizeof(".reg")];
@@ -815,7 +815,7 @@ set_cpu_regs32(kdump_ctx *ctx, unsigned cpu,
  * @returns     Error status.
  */
 kdump_status
-set_file_description(kdump_ctx *ctx, const char *name)
+set_file_description(kdump_ctx_t *ctx, const char *name)
 {
 	return set_attr_static_string(ctx, gattr(ctx, GKI_file_description),
 				      ATTR_DEFAULT, name);

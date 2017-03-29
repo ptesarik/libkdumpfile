@@ -136,7 +136,7 @@ find_closest_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
 }
 
 static kdump_status
-elf_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
+elf_read_cache(kdump_ctx_t *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	struct load_segment *pls;
@@ -194,14 +194,14 @@ elf_read_cache(kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 }
 
 static kdump_status
-elf_read_page(kdump_ctx *ctx, struct page_io *pio)
+elf_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
 	return def_read_cache(ctx, pio, elf_read_cache, pfn);
 }
 
 static void
-get_max_pfn_xen_auto(kdump_ctx *ctx)
+get_max_pfn_xen_auto(kdump_ctx_t *ctx)
 {
 	uint64_t *p;
 	unsigned long i;
@@ -215,7 +215,7 @@ get_max_pfn_xen_auto(kdump_ctx *ctx)
 }
 
 static void
-get_max_pfn_xen_nonauto(kdump_ctx *ctx)
+get_max_pfn_xen_nonauto(kdump_ctx_t *ctx)
 {
 	struct xen_p2m *p;
 	unsigned long i;
@@ -230,7 +230,7 @@ get_max_pfn_xen_nonauto(kdump_ctx *ctx)
 }
 
 static unsigned long
-pfn_to_idx(kdump_ctx *ctx, kdump_pfn_t pfn)
+pfn_to_idx(kdump_ctx_t *ctx, kdump_pfn_t pfn)
 {
 	unsigned long i;
 
@@ -250,7 +250,7 @@ pfn_to_idx(kdump_ctx *ctx, kdump_pfn_t pfn)
 }
 
 static kdump_status
-xc_read_cache(kdump_ctx *ctx, kdump_pfn_t idx, struct cache_entry *ce)
+xc_read_cache(kdump_ctx_t *ctx, kdump_pfn_t idx, struct cache_entry *ce)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	off_t offset;
@@ -266,7 +266,7 @@ xc_read_cache(kdump_ctx *ctx, kdump_pfn_t idx, struct cache_entry *ce)
 }
 
 static unsigned long
-mfn_to_idx(kdump_ctx *ctx, kdump_pfn_t mfn)
+mfn_to_idx(kdump_ctx_t *ctx, kdump_pfn_t mfn)
 {
 	unsigned long i;
 
@@ -281,7 +281,7 @@ mfn_to_idx(kdump_ctx *ctx, kdump_pfn_t mfn)
 }
 
 static kdump_status
-xc_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
+xc_mfn_to_pfn(kdump_ctx_t *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 {
 	struct xen_p2m *p = ctx->shared->xen_map;
 	unsigned long i;
@@ -300,7 +300,7 @@ xc_mfn_to_pfn(kdump_ctx *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 }
 
 static kdump_status
-xc_read_page(kdump_ctx *ctx, struct page_io *pio)
+xc_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
 	unsigned long idx;
@@ -315,7 +315,7 @@ xc_read_page(kdump_ctx *ctx, struct page_io *pio)
 }
 
 static kdump_status
-init_segments(kdump_ctx *ctx, unsigned phnum)
+init_segments(kdump_ctx_t *ctx, unsigned phnum)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 
@@ -335,7 +335,7 @@ init_segments(kdump_ctx *ctx, unsigned phnum)
 }
 
 static kdump_status
-init_sections(kdump_ctx *ctx, unsigned snum)
+init_sections(kdump_ctx_t *ctx, unsigned snum)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 
@@ -382,7 +382,7 @@ store_sect(struct elfdump_priv *edp, off_t offset,
 }
 
 static void *
-read_elf_sect(kdump_ctx *ctx, struct section *sect)
+read_elf_sect(kdump_ctx_t *ctx, struct section *sect)
 {
 	void *buf;
 
@@ -399,7 +399,7 @@ read_elf_sect(kdump_ctx *ctx, struct section *sect)
 }
 
 static kdump_status
-init_strtab(kdump_ctx *ctx, unsigned strtabidx)
+init_strtab(kdump_ctx_t *ctx, unsigned strtabidx)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	struct section *ps;
@@ -427,7 +427,7 @@ strtab_entry(struct elfdump_priv *edp, unsigned index)
 }
 
 static kdump_status
-init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
+init_elf32(kdump_ctx_t *ctx, Elf32_Ehdr *ehdr)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	Elf32_Phdr prog;
@@ -496,7 +496,7 @@ init_elf32(kdump_ctx *ctx, Elf32_Ehdr *ehdr)
 }
 
 static kdump_status
-init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
+init_elf64(kdump_ctx_t *ctx, Elf64_Ehdr *ehdr)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	Elf64_Phdr prog;
@@ -566,7 +566,7 @@ init_elf64(kdump_ctx *ctx, Elf64_Ehdr *ehdr)
 }
 
 static kdump_status
-process_elf_notes(kdump_ctx *ctx, void *notes)
+process_elf_notes(kdump_ctx_t *ctx, void *notes)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	void *p;
@@ -614,7 +614,7 @@ process_elf_notes(kdump_ctx *ctx, void *notes)
 }
 
 static kdump_status
-open_common(kdump_ctx *ctx)
+open_common(kdump_ctx_t *ctx)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	size_t notesz;
@@ -710,7 +710,7 @@ open_common(kdump_ctx *ctx)
 }
 
 static kdump_status
-elf_probe(kdump_ctx *ctx, void *hdr)
+elf_probe(kdump_ctx_t *ctx, void *hdr)
 {
 	unsigned char *eheader = hdr;
 	Elf32_Ehdr *elf32 = hdr;

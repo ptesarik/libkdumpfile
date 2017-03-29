@@ -39,7 +39,7 @@ static const char vmcore2[] =
 	"DIR.SUB=test2\n";
 
 static int
-check(kdump_ctx *ctx)
+check(kdump_ctx_t *ctx)
 {
 	unsigned cnt;
 	kdump_attr_t attr;
@@ -121,7 +121,7 @@ check(kdump_ctx *ctx)
 int
 main(int argc, char **argv)
 {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	int rc;
 
 	ctx = kdump_new();

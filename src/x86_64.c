@@ -216,7 +216,7 @@ static const struct attr_template tmpl_pid =
  * @param phys_base  Kernel physical base address.
  */
 static void
-set_ktext_off(kdump_ctx *ctx, kdump_addr_t phys_base)
+set_ktext_off(kdump_ctx_t *ctx, kdump_addr_t phys_base)
 {
 	addrxlat_meth_t *meth;
 	addrxlat_def_t def;
@@ -238,7 +238,7 @@ set_ktext_off(kdump_ctx *ctx, kdump_addr_t phys_base)
  * to update the total kernel text offset.
  */
 static kdump_status
-update_phys_base(kdump_ctx *ctx, struct attr_data *attr)
+update_phys_base(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	struct x86_64_data *archdata = ctx->shared->archdata;
 	const struct attr_ops *parent_ops;
@@ -252,7 +252,7 @@ update_phys_base(kdump_ctx *ctx, struct attr_data *attr)
 }
 
 static kdump_status
-x86_64_init(kdump_ctx *ctx)
+x86_64_init(kdump_ctx_t *ctx)
 {
 	struct x86_64_data *archdata;
 	addrxlat_meth_t *ktext;
@@ -289,7 +289,7 @@ x86_64_init(kdump_ctx *ctx)
 }
 
 static kdump_status
-calc_linux_phys_base(kdump_ctx *ctx, kdump_paddr_t paddr)
+calc_linux_phys_base(kdump_ctx_t *ctx, kdump_paddr_t paddr)
 {
 	kdump_addr_t stext;
 	kdump_status status;
@@ -311,7 +311,7 @@ calc_linux_phys_base(kdump_ctx *ctx, kdump_paddr_t paddr)
 }
 
 static kdump_status
-set_linux_phys_base(kdump_ctx *ctx)
+set_linux_phys_base(kdump_ctx_t *ctx)
 {
 	kdump_paddr_t paddr;
 
@@ -332,7 +332,7 @@ set_linux_phys_base(kdump_ctx *ctx)
 }
 
 static kdump_status
-x86_64_late_init(kdump_ctx *ctx)
+x86_64_late_init(kdump_ctx_t *ctx)
 {
 	if (ctx->shared->ostype == addrxlat_os_linux &&
 	    !isset_phys_base(ctx) &&
@@ -347,7 +347,7 @@ x86_64_late_init(kdump_ctx *ctx)
 }
 
 static kdump_status
-process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
+process_x86_64_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
 {
 	struct elf_prstatus *status = data;
 	char cpukey[sizeof("cpu.") + 20];
@@ -388,7 +388,7 @@ process_x86_64_prstatus(kdump_ctx *ctx, void *data, size_t size)
 	(xen_reg_idx(end) - xen_reg_idx(start) + 1)
 
 static kdump_status
-process_x86_64_xen_prstatus(kdump_ctx *ctx, void *data, size_t size)
+process_x86_64_xen_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
 {
 	unsigned cpu = 0;
 	kdump_status res;
@@ -429,7 +429,7 @@ process_x86_64_xen_prstatus(kdump_ctx *ctx, void *data, size_t size)
 }
 
 static kdump_status
-x86_64_process_load(kdump_ctx *ctx, kdump_vaddr_t vaddr, kdump_paddr_t paddr)
+x86_64_process_load(kdump_ctx_t *ctx, kdump_vaddr_t vaddr, kdump_paddr_t paddr)
 {
 	if (!isset_phys_base(ctx) &&
 	    vaddr >= __START_KERNEL_map &&

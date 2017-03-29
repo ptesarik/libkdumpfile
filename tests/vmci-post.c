@@ -73,7 +73,7 @@ static const char vmcore[] =
 	"";
 
 static int
-check_string(kdump_ctx *ctx, const char *attrpath, const char *expect)
+check_string(kdump_ctx_t *ctx, const char *attrpath, const char *expect)
 {
 	kdump_attr_t attr;
 	kdump_status status;
@@ -100,7 +100,7 @@ check_string(kdump_ctx *ctx, const char *attrpath, const char *expect)
 }
 
 static int
-check_number(kdump_ctx *ctx, const char *attrpath, long long expect)
+check_number(kdump_ctx_t *ctx, const char *attrpath, long long expect)
 {
 	kdump_attr_t attr;
 	kdump_status status;
@@ -128,7 +128,7 @@ check_number(kdump_ctx *ctx, const char *attrpath, long long expect)
 }
 
 static int
-check(kdump_ctx *ctx)
+check(kdump_ctx_t *ctx)
 {
 	kdump_attr_t attr;
 	kdump_addr_t symval;
@@ -258,7 +258,7 @@ check(kdump_ctx *ctx)
 int
 main(int argc, char **argv)
 {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	int rc;
 
 	ctx = kdump_new();

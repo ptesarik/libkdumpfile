@@ -37,7 +37,7 @@
 #include <unistd.h>
 #include <linux/version.h>
 
-static kdump_status kdump_open_known(kdump_ctx *pctx);
+static kdump_status kdump_open_known(kdump_ctx_t *pctx);
 
 static const struct format_ops *formats[] = {
 	&elfdump_ops,
@@ -60,7 +60,7 @@ static const struct format_ops *formats[] = {
  * Probe the given file for known file formats and initialize it for use.
  */
 static kdump_status
-set_fd(kdump_ctx *ctx, void *buf)
+set_fd(kdump_ctx_t *ctx, void *buf)
 {
 	ssize_t rd;
 	kdump_status ret;
@@ -92,7 +92,7 @@ set_fd(kdump_ctx *ctx, void *buf)
 }
 
 static kdump_status
-kdump_open_known(kdump_ctx *ctx)
+kdump_open_known(kdump_ctx_t *ctx)
 {
 	set_attr_static_string(ctx, gattr(ctx, GKI_file_format),
 			       ATTR_DEFAULT, ctx->shared->ops->name);
@@ -100,7 +100,7 @@ kdump_open_known(kdump_ctx *ctx)
 }
 
 static kdump_status
-file_fd_post_hook(kdump_ctx *ctx, struct attr_data *attr)
+file_fd_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	void *buffer;
 	kdump_status ret;
@@ -120,7 +120,7 @@ const struct attr_ops file_fd_ops = {
 };
 
 kdump_status
-kdump_set_fd(kdump_ctx *ctx, int fd)
+kdump_set_fd(kdump_ctx_t *ctx, int fd)
 {
 	kdump_attr_value_t val;
 	kdump_status ret;
@@ -139,7 +139,7 @@ kdump_set_fd(kdump_ctx *ctx, int fd)
  * signature.
  */
 static kdump_status
-uts_name_from_init_uts_ns(kdump_ctx *ctx, kdump_vaddr_t *uts_name)
+uts_name_from_init_uts_ns(kdump_ctx_t *ctx, kdump_vaddr_t *uts_name)
 {
 	kdump_vaddr_t init_uts_ns;
 	char buf[2 * NEW_UTS_LEN + sizeof(UTS_SYSNAME)];
@@ -169,7 +169,7 @@ uts_name_from_init_uts_ns(kdump_ctx *ctx, kdump_vaddr_t *uts_name)
 }
 
 static kdump_status
-update_linux_utsname(kdump_ctx *ctx)
+update_linux_utsname(kdump_ctx_t *ctx)
 {
 	kdump_vaddr_t uts_name;
 	struct new_utsname uts;
@@ -217,7 +217,7 @@ update_linux_utsname(kdump_ctx *ctx)
  * the function is used from other contexts than the ostype post hook.
  */
 static kdump_status
-linux_version_code(kdump_ctx *ctx)
+linux_version_code(kdump_ctx_t *ctx)
 {
 	struct attr_data *rel;
 	const char *p;
@@ -267,7 +267,7 @@ linux_version_code(kdump_ctx *ctx)
  * @returns        Error status.
  */
 static kdump_status
-update_xen_extra_ver(kdump_ctx *ctx)
+update_xen_extra_ver(kdump_ctx_t *ctx)
 {
 	static const char desc[] = "Xen extra version";
 	struct attr_data *attr;
@@ -304,7 +304,7 @@ update_xen_extra_ver(kdump_ctx *ctx)
  * the function is used from other contexts than the ostype post hook.
  */
 static kdump_status
-xen_version_code(kdump_ctx *ctx)
+xen_version_code(kdump_ctx_t *ctx)
 {
 	struct attr_data *ver;
 	unsigned long major, minor;
@@ -333,7 +333,7 @@ xen_version_code(kdump_ctx *ctx)
 }
 
 static kdump_status
-ostype_pre_hook(kdump_ctx *ctx, struct attr_data *attr,
+ostype_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
 		kdump_attr_value_t *val)
 {
 	if (!(strcmp(val->string, "linux")))
@@ -348,7 +348,7 @@ ostype_pre_hook(kdump_ctx *ctx, struct attr_data *attr,
 }
 
 static kdump_status
-ostype_post_hook(kdump_ctx *ctx, struct attr_data *attr)
+ostype_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	kdump_status status;
 
@@ -391,7 +391,7 @@ ostype_post_hook(kdump_ctx *ctx, struct attr_data *attr)
 }
 
 static void
-ostype_clear_hook(kdump_ctx *ctx, struct attr_data *attr)
+ostype_clear_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	ctx->shared->ostype = addrxlat_os_unknown;
 }
@@ -403,7 +403,7 @@ const struct attr_ops ostype_ops = {
 };
 
 void
-kdump_free(kdump_ctx *ctx)
+kdump_free(kdump_ctx_t *ctx)
 {
 	struct kdump_shared *shared = ctx->shared;
 	int slot;

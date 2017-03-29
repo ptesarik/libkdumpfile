@@ -35,7 +35,7 @@
 #include <string.h>
 
 static kdump_status
-qemu_probe(kdump_ctx *ctx, void *hdr)
+qemu_probe(kdump_ctx_t *ctx, void *hdr)
 {
 	static const char magic[] =
 		{ 'Q', 'E', 'V', 'M' };
@@ -54,7 +54,7 @@ const struct format_ops qemu_ops = {
 };
 
 static kdump_status
-libvirt_probe(kdump_ctx *ctx, void *hdr)
+libvirt_probe(kdump_ctx_t *ctx, void *hdr)
 {
 	static const char magic[] =
 		{ 'L', 'i', 'b', 'v' };
@@ -73,7 +73,7 @@ const struct format_ops libvirt_ops = {
 };
 
 static kdump_status
-xc_save_probe(kdump_ctx *ctx, void *hdr)
+xc_save_probe(kdump_ctx_t *ctx, void *hdr)
 {
 	static const char magic[] =
 		{ 'L', 'i', 'n', 'u', 'x', 'G', 'u', 'e',
@@ -93,7 +93,7 @@ const struct format_ops xc_save_ops = {
 };
 
 static kdump_status
-xc_core_probe(kdump_ctx *ctx, void *hdr)
+xc_core_probe(kdump_ctx_t *ctx, void *hdr)
 {
 	static const char magic[] =
 		{ 0xeb, 0x0f, 0xf0 };
@@ -120,7 +120,7 @@ const struct format_ops xc_core_ops = {
 };
 
 static kdump_status
-mclxcd_probe(kdump_ctx *ctx, void *hdr)
+mclxcd_probe(kdump_ctx_t *ctx, void *hdr)
 {
 	static const char magic[] =
 		{ 0xdd, 0xcc, 0x8b, 0x9a };

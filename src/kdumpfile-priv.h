@@ -208,7 +208,7 @@ struct format_ops {
 	 *   kdump_noprobe   cannot be handled by these ops
 	 *   or any other kdump_* error status
 	 */
-	kdump_status (*probe)(kdump_ctx *ctx, void *hdr);
+	kdump_status (*probe)(kdump_ctx_t *ctx, void *hdr);
 
 	/* Read a page from the dump file.
 	 * Input:
@@ -222,13 +222,13 @@ struct format_ops {
 	 * Since most file formats will specify only one, their read_page
 	 * method does not have to care.
 	 */
-	kdump_status (*read_page)(kdump_ctx *ctx, struct page_io *pio);
+	kdump_status (*read_page)(kdump_ctx_t *ctx, struct page_io *pio);
 
 	/** Drop a reference to a page.
 	 * @param ctx  Dump file object.
 	 * @param pio  Page I/O control.
 	 */
-	void (*unref_page)(kdump_ctx *ctx, struct page_io *pio);
+	void (*unref_page)(kdump_ctx_t *ctx, struct page_io *pio);
 
 	/* Translate a machine frame number to physical frame number.
 	 *   ctx->fmtdata    initialized in probe()
@@ -238,13 +238,13 @@ struct format_ops {
 	 *
 	 * This function should be used for single domain dumps.
 	 */
-	kdump_status (*mfn_to_pfn)(kdump_ctx *, kdump_pfn_t, kdump_pfn_t *);
+	kdump_status (*mfn_to_pfn)(kdump_ctx_t *, kdump_pfn_t, kdump_pfn_t *);
 
 	/** Reallocate any format-specific caches.
 	 * @param ctx  Dump file object.
 	 * @returns    Status (@ref kdump_ok on success).
 	 */
-	kdump_status (*realloc_caches)(kdump_ctx *ctx);
+	kdump_status (*realloc_caches)(kdump_ctx_t *ctx);
 
 	/* Clean up all private data.
 	 */
@@ -253,20 +253,20 @@ struct format_ops {
 
 struct arch_ops {
 	/** Initialize any arch-specific data. */
-	kdump_status (*init)(kdump_ctx *);
+	kdump_status (*init)(kdump_ctx_t *);
 
 	/** Late initialization (after everything else is done). */
-	kdump_status (*late_init)(kdump_ctx* );
+	kdump_status (*late_init)(kdump_ctx_t *);
 
 	/** Process an NT_PRSTATUS note. */
-	kdump_status (*process_prstatus)(kdump_ctx *, void *, size_t);
+	kdump_status (*process_prstatus)(kdump_ctx_t *, void *, size_t);
 
 	/** Process a LOAD segment. */
-	kdump_status (*process_load)(kdump_ctx *ctx, kdump_vaddr_t vaddr,
+	kdump_status (*process_load)(kdump_ctx_t *ctx, kdump_vaddr_t vaddr,
 				     kdump_paddr_t paddr);
 
 	/** Process a Xen .xen_prstatus section. */
-	kdump_status (*process_xen_prstatus)(kdump_ctx *, void *, size_t);
+	kdump_status (*process_xen_prstatus)(kdump_ctx_t *, void *, size_t);
 
 	/** Clean up any arch-specific data. */
 	void (*cleanup)(struct kdump_shared *);
@@ -319,7 +319,7 @@ struct attr_data;
  * as a result of calling @ref set_attr.
  */
 typedef kdump_status attr_pre_set_fn(
-	kdump_ctx *ctx, struct attr_data *attr, kdump_attr_value_t *val);
+	kdump_ctx_t *ctx, struct attr_data *attr, kdump_attr_value_t *val);
 
 /**  Type for late attribute hooks.
  * @param ctx      Dump file object.
@@ -334,7 +334,7 @@ typedef kdump_status attr_pre_set_fn(
  * as a result of calling @ref set_attr.
  */
 typedef kdump_status attr_post_set_fn(
-	kdump_ctx *ctx, struct attr_data *attr);
+	kdump_ctx_t *ctx, struct attr_data *attr);
 
 /**  Type for clear attribute hooks.
  * @param ctx      Dump file object.
@@ -343,7 +343,7 @@ typedef kdump_status attr_post_set_fn(
  * This function is called before clearing an attribute's value.
  */
 typedef void attr_pre_clear_fn(
-	kdump_ctx *ctx, struct attr_data *attr);
+	kdump_ctx_t *ctx, struct attr_data *attr);
 
 /**  Type for attribute validation hooks.
  * @param ctx      Dump file object.
@@ -357,7 +357,7 @@ typedef void attr_pre_clear_fn(
  * needs considerable resources).
  */
 typedef kdump_status attr_validate_fn(
-	kdump_ctx *ctx, struct attr_data *attr);
+	kdump_ctx_t *ctx, struct attr_data *attr);
 
 /**  Attribute ops
  */
@@ -506,13 +506,13 @@ struct cache;
 /**  Shared state of the dump file object.
  *
  * This structure describes the data portion of the dump file object,
- * which can be shared by many @ref kdump_ctx objects.
+ * which can be shared by many @ref kdump_ctx_t objects.
  */
 struct kdump_shared {
 	rwlock_t lock;		/**< Guard accesses to shared data. */
 
-	/** List of all refererring @c kdump_ctx structures.
-	 * Each @c kdump_ctx that holds a reference to this shared data
+	/** List of all refererring @c kdump_ctx_t structures.
+	 * Each @c kdump_ctx_t that holds a reference to this shared data
 	 * must be added to this list.
 	 */
 	struct list_head ctx;
@@ -602,7 +602,7 @@ INTERNAL_DECL(extern const struct format_ops, s390dump_ops, );
 INTERNAL_DECL(extern const struct format_ops, devmem_ops, );
 
 INTERNAL_DECL(kdump_status, linux_iomem_kcode,
-	      (kdump_ctx *ctx, kdump_paddr_t *paddr));
+	      (kdump_ctx_t *ctx, kdump_paddr_t *paddr));
 
 /* Architectures */
 
@@ -624,16 +624,16 @@ struct timeval_64 {
 /* read */
 
 INTERNAL_DECL(kdump_status, read_string_locked,
-	      (kdump_ctx *ctx, kdump_addrspace_t as,
+	      (kdump_ctx_t *ctx, kdump_addrspace_t as,
 	       kdump_addr_t addr, char **pstr));
 INTERNAL_DECL(kdump_status, read_locked,
-	      (kdump_ctx *ctx, kdump_addrspace_t as,
+	      (kdump_ctx_t *ctx, kdump_addrspace_t as,
 	       kdump_addr_t addr, void *buffer, size_t *plength));
 INTERNAL_DECL(kdump_status, read_u32,
-	      (kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+	      (kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	       int precious, char *what, uint32_t *result));
 INTERNAL_DECL(kdump_status, read_u64,
-	      (kdump_ctx *ctx, kdump_addrspace_t as, kdump_addr_t addr,
+	      (kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	       int precious, char *what, uint64_t *result));
 INTERNAL_DECL(void, set_addrspace_caps,
 	      (struct kdump_shared *shared, unsigned long caps));
@@ -642,26 +642,26 @@ INTERNAL_DECL(void, set_addrspace_caps,
 /* utils */
 
 INTERNAL_DECL(kdump_status, set_error,
-	      (kdump_ctx *ctx, kdump_status ret, const char *msgfmt, ...))
+	      (kdump_ctx_t *ctx, kdump_status ret, const char *msgfmt, ...))
 	__attribute__ ((format (printf, 3, 4)));
 
 INTERNAL_DECL(kdump_status, addrxlat2kdump,
-	      (kdump_ctx *ctx, addrxlat_status status));
+	      (kdump_ctx_t *ctx, addrxlat_status status));
 INTERNAL_DECL(addrxlat_status, kdump2addrxlat,
-	      (kdump_ctx *ctx, kdump_status status));
+	      (kdump_ctx_t *ctx, kdump_status status));
 
 INTERNAL_DECL(void *, ctx_malloc,
-	      (size_t size, kdump_ctx *ctx, const char *desc));
+	      (size_t size, kdump_ctx_t *ctx, const char *desc));
 
 INTERNAL_DECL(kdump_status, set_uts,
-	      (kdump_ctx *ctx, const struct new_utsname *src));
+	      (kdump_ctx_t *ctx, const struct new_utsname *src));
 INTERNAL_DECL(int, uts_looks_sane, (struct new_utsname *uts));
 
 INTERNAL_DECL(int, uncompress_rle,
 	      (unsigned char *dst, size_t *pdstlen,
 	       const unsigned char *src, size_t srclen));
 INTERNAL_DECL(kdump_status, uncompress_page_gzip,
-	      (kdump_ctx *ctx, unsigned char *dst,
+	      (kdump_ctx_t *ctx, unsigned char *dst,
 	       unsigned char *src, size_t srclen));
 
 INTERNAL_DECL(ssize_t, paged_read, (int fd, void *buffer, size_t size));
@@ -669,17 +669,19 @@ INTERNAL_DECL(ssize_t, paged_read, (int fd, void *buffer, size_t size));
 INTERNAL_DECL(uint32_t, cksum32, (void *buffer, size_t size, uint32_t csum));
 
 INTERNAL_DECL(kdump_status, get_symbol_val,
-	      (kdump_ctx *ctx, const char *name, kdump_addr_t *val));
+	      (kdump_ctx_t *ctx, const char *name, kdump_addr_t *val));
 
 INTERNAL_DECL(kdump_status, set_cpu_regs64,
-	      (kdump_ctx *ctx, unsigned cpu, const struct attr_template *tmpl,
+	      (kdump_ctx_t *ctx, unsigned cpu,
+	       const struct attr_template *tmpl,
 	       uint64_t *regs, unsigned num));
 INTERNAL_DECL(kdump_status, set_cpu_regs32,
-	      (kdump_ctx *ctx, unsigned cpu, const struct attr_template *tmpl,
+	      (kdump_ctx_t *ctx, unsigned cpu,
+	       const struct attr_template *tmpl,
 	       uint32_t *regs, unsigned num));
 
 INTERNAL_DECL(kdump_status, set_file_description,
-	      (kdump_ctx *ctx, const char *name));
+	      (kdump_ctx_t *ctx, const char *name));
 
 /* hashing */
 INTERNAL_DECL(unsigned long, string_hash, (const char *s));
@@ -777,16 +779,16 @@ fold_hash(unsigned long hash, unsigned bits)
 /* ELF notes */
 
 INTERNAL_DECL(kdump_status, process_notes,
-	      (kdump_ctx *ctx, void *data, size_t size));
+	      (kdump_ctx_t *ctx, void *data, size_t size));
 INTERNAL_DECL(kdump_status, process_noarch_notes,
-	      (kdump_ctx *ctx, void *data, size_t size));
+	      (kdump_ctx_t *ctx, void *data, size_t size));
 INTERNAL_DECL(kdump_status, process_arch_notes,
-	      (kdump_ctx *ctx, void *data, size_t size));
+	      (kdump_ctx_t *ctx, void *data, size_t size));
 
 /* Virtual address space regions */
-INTERNAL_DECL(addrxlat_ctx_t *, init_addrxlat, (kdump_ctx *ctx));
+INTERNAL_DECL(addrxlat_ctx_t *, init_addrxlat, (kdump_ctx_t *ctx));
 
-INTERNAL_DECL(kdump_status, vtop_init_locked, (kdump_ctx *ctx));
+INTERNAL_DECL(kdump_status, vtop_init_locked, (kdump_ctx_t *ctx));
 
 /* Attribute handling */
 INTERNAL_DECL(extern const struct attr_template, dir_template, );
@@ -821,7 +823,7 @@ sgattr(const struct kdump_shared *shared, enum global_keyidx idx)
  * @returns    Attribute data.
  */
 static inline struct attr_data *
-gattr(const kdump_ctx *ctx, enum global_keyidx idx)
+gattr(const kdump_ctx_t *ctx, enum global_keyidx idx)
 {
 	return sgattr(ctx->shared, idx);
 }
@@ -843,28 +845,28 @@ attr_value(const struct attr_data *attr)
 }
 
 INTERNAL_DECL(kdump_status, validate_attr,
-	      (kdump_ctx *ctx, struct attr_data *attr));
+	      (kdump_ctx_t *ctx, struct attr_data *attr));
 INTERNAL_DECL(kdump_status, set_attr,
-	      (kdump_ctx *ctx, struct attr_data *attr,
+	      (kdump_ctx_t *ctx, struct attr_data *attr,
 	       struct attr_flags flags, kdump_attr_value_t *pval));
 INTERNAL_DECL(kdump_status, set_attr_number,
-	      (kdump_ctx *ctx, struct attr_data *attr,
+	      (kdump_ctx_t *ctx, struct attr_data *attr,
 	       struct attr_flags flags, kdump_num_t num));
 INTERNAL_DECL(kdump_status, set_attr_address,
-	      (kdump_ctx *ctx, struct attr_data *key,
+	      (kdump_ctx_t *ctx, struct attr_data *key,
 	       struct attr_flags flags, kdump_addr_t addr));
 INTERNAL_DECL(kdump_status, set_attr_string,
-	      (kdump_ctx *ctx, struct attr_data *attr,
+	      (kdump_ctx_t *ctx, struct attr_data *attr,
 	       struct attr_flags flags, const char *str));
 INTERNAL_DECL(kdump_status, set_attr_sized_string,
-	      (kdump_ctx *ctx, struct attr_data *attr,
+	      (kdump_ctx_t *ctx, struct attr_data *attr,
 	       struct attr_flags flags,
 	       const char *str, size_t len));
 INTERNAL_DECL(kdump_status, set_attr_static_string,
-	      (kdump_ctx *ctx, struct attr_data *attr,
+	      (kdump_ctx_t *ctx, struct attr_data *attr,
 	       struct attr_flags flags, const char *str));
-INTERNAL_DECL(void, clear_attr, (kdump_ctx *ctx, struct attr_data *attr));
-INTERNAL_DECL(void, clear_volatile_attrs, (kdump_ctx *ctx));
+INTERNAL_DECL(void, clear_attr, (kdump_ctx_t *ctx, struct attr_data *attr));
+INTERNAL_DECL(void, clear_volatile_attrs, (kdump_ctx_t *ctx));
 INTERNAL_DECL(void, cleanup_attr, (struct kdump_shared *shared));
 INTERNAL_DECL(struct attr_data *, create_attr_path,
 	      (struct kdump_shared *shared,
@@ -875,13 +877,13 @@ INTERNAL_DECL(struct attr_data *, create_attr_path,
 
 #define DEFINE_GET_ACCESSOR(name, type, ctype)			\
 	static inline ctype					\
-	get_ ## name(kdump_ctx *ctx)				\
+	get_ ## name(kdump_ctx_t *ctx)				\
 	{							\
 		return ctx->shared->name.type;			\
 	}
 #define DEFINE_SET_ACCESSOR(name, type, ctype)			\
 	static inline kdump_status				\
-	set_ ## name(kdump_ctx *ctx, ctype newval)		\
+	set_ ## name(kdump_ctx_t *ctx, ctype newval)		\
 	{							\
 		struct attr_data *d = gattr(ctx, GKI_ ## name);	\
 		kdump_attr_value_t val;				\
@@ -890,7 +892,7 @@ INTERNAL_DECL(struct attr_data *, create_attr_path,
 	}
 #define DEFINE_ISSET_ACCESSOR(name)				\
 	static inline int					\
-	isset_ ## name(kdump_ctx *ctx)				\
+	isset_ ## name(kdump_ctx_t *ctx)				\
 	{							\
 		struct attr_data *d = gattr(ctx, GKI_ ## name);	\
 		return attr_isset(d);				\
@@ -937,7 +939,7 @@ INTERNAL_DECL(void, attr_remove_override,
 /**  Check if kernel physical address space is equal to machine physical one.
  */
 static inline int
-kphys_is_machphys(kdump_ctx *ctx)
+kphys_is_machphys(kdump_ctx_t *ctx)
 {
 	return get_xen_type(ctx) == kdump_xen_none ||
 		(get_xen_type(ctx) == kdump_xen_domain &&
@@ -990,7 +992,7 @@ struct cache_entry {
 	void *data;		/**< Pointer to page data. */
 };
 
-INTERNAL_DECL(unsigned, get_cache_size, (kdump_ctx *ctx));
+INTERNAL_DECL(unsigned, get_cache_size, (kdump_ctx_t *ctx));
 INTERNAL_DECL(struct cache *, cache_alloc, (unsigned n, size_t size));
 INTERNAL_DECL(struct cache *, cache_ref, (struct cache *));
 INTERNAL_DECL(void, cache_unref, (struct cache *));
@@ -1005,21 +1007,21 @@ INTERNAL_DECL(void, cache_make_precious,
 	      (struct cache *cache, struct cache_entry *entry));
 
 typedef kdump_status read_cache_fn(
-	kdump_ctx *ctx, kdump_pfn_t pfn, struct cache_entry *entry);
+	kdump_ctx_t *ctx, kdump_pfn_t pfn, struct cache_entry *entry);
 
 INTERNAL_DECL(kdump_status, def_read_cache,
-	      (kdump_ctx *ctx, struct page_io *pio,
+	      (kdump_ctx_t *ctx, struct page_io *pio,
 	       read_cache_fn *fn, kdump_pfn_t idx));
 INTERNAL_DECL(void, cache_unref_page,
-	      (kdump_ctx *ctx, struct page_io *pio));
+	      (kdump_ctx_t *ctx, struct page_io *pio));
 
 static inline
-void unref_page(kdump_ctx *ctx, struct page_io *pio)
+void unref_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	ctx->shared->ops->unref_page(ctx, pio);
 }
 
-INTERNAL_DECL(kdump_status, def_realloc_caches, (kdump_ctx *ctx));
+INTERNAL_DECL(kdump_status, def_realloc_caches, (kdump_ctx_t *ctx));
 
 /**  Check if a cache entry is valid.
  *
@@ -1042,7 +1044,7 @@ bitcount(unsigned x)
 }
 
 static inline uint16_t
-dump16toh(kdump_ctx *ctx, uint16_t x)
+dump16toh(kdump_ctx_t *ctx, uint16_t x)
 {
 	return get_byte_order(ctx) == kdump_big_endian
 		? be16toh(x)
@@ -1050,7 +1052,7 @@ dump16toh(kdump_ctx *ctx, uint16_t x)
 }
 
 static inline uint32_t
-dump32toh(kdump_ctx *ctx, uint32_t x)
+dump32toh(kdump_ctx_t *ctx, uint32_t x)
 {
 	return get_byte_order(ctx) == kdump_big_endian
 		? be32toh(x)
@@ -1058,7 +1060,7 @@ dump32toh(kdump_ctx *ctx, uint32_t x)
 }
 
 static inline uint64_t
-dump64toh(kdump_ctx *ctx, uint64_t x)
+dump64toh(kdump_ctx_t *ctx, uint64_t x)
 {
 	return get_byte_order(ctx) == kdump_big_endian
 		? be64toh(x)
@@ -1084,13 +1086,13 @@ is_posix_space(int c)
 }
 
 static inline kdump_addr_t
-page_align(kdump_ctx *ctx, kdump_addr_t addr)
+page_align(kdump_ctx_t *ctx, kdump_addr_t addr)
 {
 	return addr & (-get_page_size(ctx));
 }
 
 static inline void
-clear_error(kdump_ctx *ctx)
+clear_error(kdump_ctx_t *ctx)
 {
 	ctx->err_str = NULL;
 }

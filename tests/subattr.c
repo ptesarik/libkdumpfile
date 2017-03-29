@@ -40,7 +40,7 @@
 int
 main(int argc, char **argv)
 {
-	kdump_ctx *ctx;
+	kdump_ctx_t *ctx;
 	kdump_attr_t attr;
 	kdump_attr_ref_t ref, subref;
 	kdump_status status;

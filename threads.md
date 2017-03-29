@@ -6,7 +6,7 @@ must be compiled with pthread support. This is done by default,
 unless you explicitly pass `--without-pthread` as an option to
 `./configure`.
 
-All internal state is stored in the context variable ([kdump_ctx])
+All internal state is stored in the context variable ([kdump_ctx_t])
 or other data structures referenced through the context. In other
 words, it is always safe to access different dump files from
 different threads.  In fact, this is safe even if the library was
@@ -14,7 +14,7 @@ not compiled with pthread support.
 
 Accessing the same dump file from different threads requires
 additional care. Most importantly, a dump file context
-([kdump_ctx]) must not be accessed by more than one thread
+([kdump_ctx_t]) must not be accessed by more than one thread
 simultaneously. This does not mean the context is bound to a
 single thread. For example, you can create a context in one thread
 and then pass it to another thread. But you can't use the same
@@ -53,7 +53,7 @@ Instead, the read attempt fails immediately with a specific error
 status: [kdump_busy]. Retrying the read may be successful, but
 this error indicates that the cache size should be increased.
 
-[kdump_ctx]: @ref kdump_ctx
+[kdump_ctx_t]: @ref kdump_ctx_t
 [kdump_clone]: @ref kdump_clone
 [kdump_err_str]: @ref kdump_err_str
 [kdump_get_priv]: @ref kdump_get_priv

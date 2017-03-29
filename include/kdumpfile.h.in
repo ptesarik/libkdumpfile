@@ -109,7 +109,7 @@ typedef kdump_addr_t kdump_maddr_t;
  * It is an opaque type, so it can be modified and/or extended without
  * breaking binary compatibility with existing programs.
  */
-typedef struct _kdump_ctx kdump_ctx;
+typedef struct _kdump_ctx kdump_ctx_t;
 
 /**  Status code.
  *
@@ -162,11 +162,11 @@ typedef enum _kdump_xen_xlat {
 /**  Initialize a new dump file object.
  * @returns    New initialized object, or @c NULL on failure.
  *
- * Use this function to create a new @ref kdump_ctx. When the object
+ * Use this function to create a new @ref kdump_ctx_t. When the object
  * is no longer needed, you should free all resources with
  * @ref kdump_free.
  */
-kdump_ctx *kdump_new(void);
+kdump_ctx_t *kdump_new(void);
 
 /**  Clone a dump file object.
  * @param orig  Original dump file object.
@@ -186,7 +186,7 @@ kdump_ctx *kdump_new(void);
  *
  * @sa @ref threads
  */
-kdump_ctx *kdump_clone(const kdump_ctx *orig);
+kdump_ctx_t *kdump_clone(const kdump_ctx_t *orig);
 
 /**  Free a dump file object.
  * @param ctx  Object to be freed.
@@ -196,7 +196,7 @@ kdump_ctx *kdump_clone(const kdump_ctx *orig);
  *
  * The object must not be used after calling this function.
  */
-void kdump_free(kdump_ctx *ctx);
+void kdump_free(kdump_ctx_t *ctx);
 
 /**  Get a detailed error string.
  * @param ctx  Dump file object.
@@ -207,7 +207,7 @@ void kdump_free(kdump_ctx *ctx);
  * reset by calling this function, but it is reset by calling any
  * library function that returns @ref kdump_status.
  */
-const char *kdump_err_str(kdump_ctx *ctx);
+const char *kdump_err_str(kdump_ctx_t *ctx);
 
 /**  Get the associated address translation context.
  * @param ctx  Dump file object.
@@ -217,7 +217,7 @@ const char *kdump_err_str(kdump_ctx *ctx);
  * You should call addrxlat_ctx_decref on the returned object when you
  * no longer need it.
  */
-addrxlat_ctx_t *kdump_get_addrxlat_ctx(const kdump_ctx *ctx);
+addrxlat_ctx_t *kdump_get_addrxlat_ctx(const kdump_ctx_t *ctx);
 
 /**  Get the associated address translation system.
  * @param ctx  Dump file object.
@@ -227,14 +227,14 @@ addrxlat_ctx_t *kdump_get_addrxlat_ctx(const kdump_ctx *ctx);
  * You should call addrxlat_sys_decref on the returned object when you
  * no longer need it.
  */
-addrxlat_sys_t *kdump_get_addrxlat_sys(const kdump_ctx *ctx);
+addrxlat_sys_t *kdump_get_addrxlat_sys(const kdump_ctx_t *ctx);
 
 /**  Associate a dump file object with a file descriptor.
  * @param ctx     Dump file object.
  * @param[in] fd  Open file descriptor.
  * @returns       Error status.
  */
-kdump_status kdump_set_fd(kdump_ctx *ctx, int fd);
+kdump_status kdump_set_fd(kdump_ctx_t *ctx, int fd);
 
 /**  Initialize virtual-to-physical translation.
  * @param ctx  Dump file object.
@@ -249,7 +249,7 @@ kdump_status kdump_set_fd(kdump_ctx *ctx, int fd);
  * However, some library users do not need address translation, or they can
  * implement a fallback mechanism if it is unavailable.
  */
-kdump_status kdump_vtop_init(kdump_ctx *ctx);
+kdump_status kdump_vtop_init(kdump_ctx_t *ctx);
 
 /**  Translate a virtual address to a physical address.
  * @param ctx         Dump file object.
@@ -259,7 +259,7 @@ kdump_status kdump_vtop_init(kdump_ctx *ctx);
  *
  * Translate a virtual address to a physical address.
  */
-kdump_status kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
+kdump_status kdump_vtop(kdump_ctx_t *ctx, kdump_vaddr_t vaddr,
 			kdump_paddr_t *paddr);
 
 /**  Translate a virtual address to a machine address.
@@ -272,7 +272,7 @@ kdump_status kdump_vtop(kdump_ctx *ctx, kdump_vaddr_t vaddr,
  * a Xen dump or it has an auto-translated physmap, this function is
  * equivallent to @ref kdump_vtop.
  */
-kdump_status kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr,
+kdump_status kdump_vtom(kdump_ctx_t *ctx, kdump_vaddr_t vaddr,
 			kdump_maddr_t *maddr);
 
 /**  Translate a kernel physical address to a Xen machine address.
@@ -285,7 +285,7 @@ kdump_status kdump_vtom(kdump_ctx *ctx, kdump_vaddr_t vaddr,
  * If not running under Xen, these two addresses are equal, and this
  * function simply copies @c maddr to @c paddr.
  */
-kdump_status kdump_ptom(kdump_ctx *ctx, kdump_paddr_t paddr,
+kdump_status kdump_ptom(kdump_ctx_t *ctx, kdump_paddr_t paddr,
 			kdump_maddr_t *maddr);
 
 /**  Translate a Xen machine address to a physical address.
@@ -296,7 +296,7 @@ kdump_status kdump_ptom(kdump_ctx *ctx, kdump_paddr_t paddr,
  *
  * Translate a Xen machine address to a physical address.
  */
-kdump_status kdump_mtop(kdump_ctx *ctx, kdump_maddr_t maddr,
+kdump_status kdump_mtop(kdump_ctx_t *ctx, kdump_maddr_t maddr,
 			kdump_paddr_t *paddr);
 
 /**  Address spaces used by kdump_read()
@@ -336,7 +336,7 @@ typedef enum _kdump_addrspace {
  * In particular, if some pages were filtered out, @c kdump_read may return
  * @ref kdump_nodata when it reaches the filtered out page.
  */
-kdump_status kdump_read(kdump_ctx *ctx,
+kdump_status kdump_read(kdump_ctx_t *ctx,
 			 kdump_addrspace_t as, kdump_addr_t addr,
 			 void *buffer, size_t *plength);
 
@@ -353,7 +353,7 @@ kdump_status kdump_read(kdump_ctx *ctx,
  * This function is usually more efficient than implementing the same
  * thing with @ref kdump_read.
  */
-kdump_status kdump_read_string(kdump_ctx *ctx,
+kdump_status kdump_read_string(kdump_ctx_t *ctx,
 			       kdump_addrspace_t as, kdump_addr_t addr,
 			       char **pstr);
 
@@ -424,7 +424,7 @@ typedef struct _kdump_attr_iter {
  * @param valp New attribute value.
  * @returns    Error status.
  */
-kdump_status kdump_set_attr(kdump_ctx *ctx, const char *key,
+kdump_status kdump_set_attr(kdump_ctx_t *ctx, const char *key,
 			    const kdump_attr_t *valp);
 
 /**  Get a dump file attribute.
@@ -433,7 +433,7 @@ kdump_status kdump_set_attr(kdump_ctx *ctx, const char *key,
  * @param valp Value (filled on successful return).
  * @returns    Error status.
  */
-kdump_status kdump_get_attr(kdump_ctx *ctx, const char *key,
+kdump_status kdump_get_attr(kdump_ctx_t *ctx, const char *key,
 			    kdump_attr_t *valp);
 
 /** Get a string attribute.
@@ -443,7 +443,7 @@ kdump_status kdump_get_attr(kdump_ctx *ctx, const char *key,
  * @returns    The attribute value, @c NULL if not found or if the
  *             attribute is not a string.
  */
-const char *kdump_get_string_attr(kdump_ctx *ctx, const char *key);
+const char *kdump_get_string_attr(kdump_ctx_t *ctx, const char *key);
 
 /** Get a reference to an attribute
  * @param      ctx  Dump file object.
@@ -455,7 +455,7 @@ const char *kdump_get_string_attr(kdump_ctx *ctx, const char *key);
  * valid until the reference is dropped using @ref kdump_attr_unref,
  * or the whole dump file object is destroyed.
  */
-kdump_status kdump_attr_ref(kdump_ctx *ctx, const char *key,
+kdump_status kdump_attr_ref(kdump_ctx_t *ctx, const char *key,
 			    kdump_attr_ref_t *ref);
 
 /** Get a reference to a subordinate attribute
@@ -465,14 +465,14 @@ kdump_status kdump_attr_ref(kdump_ctx *ctx, const char *key,
  * @param[out] ref     Attribute reference (initialized on successful return).
  * @returns    Error status.
  */
-kdump_status kdump_sub_attr_ref(kdump_ctx *ctx, const kdump_attr_ref_t *base,
+kdump_status kdump_sub_attr_ref(kdump_ctx_t *ctx, const kdump_attr_ref_t *base,
 				const char *subkey, kdump_attr_ref_t *ref);
 
 /**  Drop a reference to an attribute.
  * @param ctx   Dump file object.
  * @param ref   Attribute reference.
  */
-void kdump_attr_unref(kdump_ctx *ctx, kdump_attr_ref_t *ref);
+void kdump_attr_unref(kdump_ctx_t *ctx, kdump_attr_ref_t *ref);
 
 /**  Get the type of an attribute by reference.
  * @param ref  Attribute reference.
@@ -494,7 +494,7 @@ int kdump_attr_ref_isset(kdump_attr_ref_t *ref);
  * This works just like @ref kdump_get_attr, except that the attribute
  * is denoted by a reference rather than by its key path.
  */
-kdump_status kdump_attr_ref_get(kdump_ctx *ctx, const kdump_attr_ref_t *ref,
+kdump_status kdump_attr_ref_get(kdump_ctx_t *ctx, const kdump_attr_ref_t *ref,
 				kdump_attr_t *valp);
 
 /**  Set attribute data by reference.
@@ -505,7 +505,7 @@ kdump_status kdump_attr_ref_get(kdump_ctx *ctx, const kdump_attr_ref_t *ref,
  * This works just like @ref kdump_set_attr, except that the attribute
  * is denoted by a reference rather than by its key path.
  */
-kdump_status kdump_attr_ref_set(kdump_ctx *ctx, kdump_attr_ref_t *ref,
+kdump_status kdump_attr_ref_set(kdump_ctx_t *ctx, kdump_attr_ref_t *ref,
 				const kdump_attr_t *valp);
 
 /**  Get an attribute iterator.
@@ -518,7 +518,7 @@ kdump_status kdump_attr_ref_set(kdump_ctx *ctx, kdump_attr_ref_t *ref,
  * attribute directory is empty, this function sets the @c key field
  * of @p iter to @c NULL and returns @ref kdump_ok.
  */
-kdump_status kdump_attr_iter_start(kdump_ctx *ctx, const char *path,
+kdump_status kdump_attr_iter_start(kdump_ctx_t *ctx, const char *path,
 				   kdump_attr_iter_t *iter);
 
 /**  Get an attribute iterator by reference.
@@ -530,7 +530,7 @@ kdump_status kdump_attr_iter_start(kdump_ctx *ctx, const char *path,
  * This works just like @ref kdump_attr_iter_start, but use an
  * attribute reference rather than its key path.
  */
-kdump_status kdump_attr_ref_iter_start(kdump_ctx *ctx,
+kdump_status kdump_attr_ref_iter_start(kdump_ctx_t *ctx,
 				       const kdump_attr_ref_t *ref,
 				       kdump_attr_iter_t *iter);
 
@@ -544,7 +544,7 @@ kdump_status kdump_attr_ref_iter_start(kdump_ctx *ctx,
  * If you try to advance past end of iteration, this function returns
  * @ref kdump_invalid.
  */
-kdump_status kdump_attr_iter_next(kdump_ctx *ctx, kdump_attr_iter_t *iter);
+kdump_status kdump_attr_iter_next(kdump_ctx_t *ctx, kdump_attr_iter_t *iter);
 
 /**  De-initialize an attribute iterator.
  * @param ctx   Dump file object.
@@ -553,7 +553,7 @@ kdump_status kdump_attr_iter_next(kdump_ctx *ctx, kdump_attr_iter_t *iter);
  *
  * This function must be called when an iterator is no longer needed.
  */
-void kdump_attr_iter_end(kdump_ctx *ctx, kdump_attr_iter_t *iter);
+void kdump_attr_iter_end(kdump_ctx_t *ctx, kdump_attr_iter_t *iter);
 
 /**  Get target dump format.
  * @param ctx  Dump file object.
@@ -563,7 +563,7 @@ void kdump_attr_iter_end(kdump_ctx *ctx, kdump_attr_iter_t *iter);
  * machine-parsed. In fact, some format handlers create the string
  * dynamically, e.g. LKCD files will include the version in the string.
  */
-const char *kdump_format(kdump_ctx *ctx);
+const char *kdump_format(kdump_ctx_t *ctx);
 
 /**  Get target byte order.
  * @param ctx  Dump file object.
@@ -573,7 +573,7 @@ const char *kdump_format(kdump_ctx *ctx);
  *
  * @sa kdump_byte_order_t
  */
-kdump_byte_order_t kdump_byte_order(kdump_ctx *ctx);
+kdump_byte_order_t kdump_byte_order(kdump_ctx_t *ctx);
 
 /**  Get target pointer size.
  * @param ctx  Dump file object.
@@ -583,7 +583,7 @@ kdump_byte_order_t kdump_byte_order(kdump_ctx *ctx);
  * and target register size. The Linux kernel actually makes heavy use of
  * these assumptions, so they are unlikely to change soon.
  */
-size_t kdump_ptr_size(kdump_ctx *ctx);
+size_t kdump_ptr_size(kdump_ctx_t *ctx);
 
 /** @name Canonical Architecture Names
  * @{
@@ -618,25 +618,25 @@ size_t kdump_ptr_size(kdump_ctx *ctx);
  * Note: this function may return @c NULL if the target architecture
  *       was not detected for some reason.
  */
-const char *kdump_arch_name(kdump_ctx *ctx);
+const char *kdump_arch_name(kdump_ctx_t *ctx);
 
 /**  Get the type of a Xen dump file.
  * @param ctx  Dump file object.
  * @returns    Type of the dump (@sa kdump_xen_type_t)
  */
-kdump_xen_type_t kdump_xen_type(kdump_ctx *ctx);
+kdump_xen_type_t kdump_xen_type(kdump_ctx_t *ctx);
 
 /**  Get target page size.
  * @param ctx  Dump file object.
  * @returns     Target page size (in bytes).
  */
-size_t kdump_pagesize(kdump_ctx *ctx);
+size_t kdump_pagesize(kdump_ctx_t *ctx);
 
 /**  Get target page shift.
  * @param ctx  Dump file object.
  * @returns     Target page shift (in bits).
  */
-unsigned kdump_pageshift(kdump_ctx *ctx);
+unsigned kdump_pageshift(kdump_ctx_t *ctx);
 
 /**  Get kernel version code.
  * @param ctx  Dump file object.
@@ -646,7 +646,7 @@ unsigned kdump_pageshift(kdump_ctx *ctx);
  * digits of the kernel version.
  * See the @c KERNEL_VERSION macro in <linux/version.h>.
  */
-unsigned kdump_version_code (kdump_ctx *ctx);
+unsigned kdump_version_code (kdump_ctx_t *ctx);
 
 /**  Get number of CPUs.
  * @param ctx  Dump file object.
@@ -655,7 +655,7 @@ unsigned kdump_version_code (kdump_ctx *ctx);
  * The number is not the number of CPUs in the system, but rather the
  * number of CPUs with known register values.
  */
-unsigned kdump_num_cpus(kdump_ctx *ctx);
+unsigned kdump_num_cpus(kdump_ctx_t *ctx);
 
 /**  Get VMCOREINFO raw data.
  * @param ctx  Dump file object.
@@ -664,14 +664,14 @@ unsigned kdump_num_cpus(kdump_ctx *ctx);
  * The output string is always NUL-terminated, but if there was a NUL
  * byte inside VMCOREINFO, there is no way to know the full length.
  */
-const char *kdump_vmcoreinfo(kdump_ctx *ctx);
+const char *kdump_vmcoreinfo(kdump_ctx_t *ctx);
 
 /**  Get a VMCOREINFO row.
  * @param ctx      Dump file object.
  * @param[in] key  Name of the VMCOREINFO variable.
  * @returns        Value of the key, or @c NULL if not found.
  */
-const char *kdump_vmcoreinfo_row(kdump_ctx *ctx, const char *key);
+const char *kdump_vmcoreinfo_row(kdump_ctx_t *ctx, const char *key);
 
 /**  Get VMCOREINFO symbol value.
  * @param ctx            Dump file object.
@@ -682,7 +682,7 @@ const char *kdump_vmcoreinfo_row(kdump_ctx *ctx, const char *key);
  * Get the content of SYMBOL(@c symname) row and parse it as a hexadecimal
  * value.
  */
-kdump_status kdump_vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname,
+kdump_status kdump_vmcoreinfo_symbol(kdump_ctx_t *ctx, const char *symname,
 				     kdump_addr_t *symvalue);
 
 /**  Type for the get_symbol_val callback function.
@@ -694,7 +694,7 @@ kdump_status kdump_vmcoreinfo_symbol(kdump_ctx *ctx, const char *symname,
  * This type is used for @ref kdump_cb_get_symbol_val.
  */
 typedef kdump_status kdump_get_symbol_val_fn(
-	kdump_ctx *ctx, const char *name, kdump_addr_t *val);
+	kdump_ctx_t *ctx, const char *name, kdump_addr_t *val);
 
 /**  Set the get_symbol_val callback
  * @param ctx  Dump file object.
@@ -702,7 +702,7 @@ typedef kdump_status kdump_get_symbol_val_fn(
  * @return the Previous callback function.
  */
 kdump_get_symbol_val_fn *
-kdump_cb_get_symbol_val(kdump_ctx *ctx, kdump_get_symbol_val_fn *cb);
+kdump_cb_get_symbol_val(kdump_ctx_t *ctx, kdump_get_symbol_val_fn *cb);
 
 /**  Set pointer to user private data.
  * @param ctx  Dump file object.
@@ -710,18 +710,18 @@ kdump_cb_get_symbol_val(kdump_ctx *ctx, kdump_get_symbol_val_fn *cb);
  *
  * A private pointer can be used to associate the dump file object with
  * arbitrary data. The libkdumpfile library does not use the pointer in
- * any way, but it can be retrieved later from a @ref kdump_ctx pointer
+ * any way, but it can be retrieved later from a @ref kdump_ctx_t pointer
  * with @ref kdump_get_priv.
  */
 void
-kdump_set_priv(kdump_ctx *ctx, void *data);
+kdump_set_priv(kdump_ctx_t *ctx, void *data);
 
 /**  Get pointer to user private data.
  * @param ctx  Dump file object.
  * @returns    The data pointer stored previously with @ref kdump_set_priv.
  */
 void *
-kdump_get_priv(kdump_ctx *ctx);
+kdump_get_priv(kdump_ctx_t *ctx);
 
 #ifdef  __cplusplus
 }

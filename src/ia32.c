@@ -95,7 +95,7 @@ static const struct attr_template tmpl_pid =
 	{ "pid", NULL, kdump_number };
 
 static kdump_status
-process_ia32_prstatus(kdump_ctx *ctx, void *data, size_t size)
+process_ia32_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
 {
 	struct elf_prstatus *status = data;
 	char cpukey[sizeof("cpu.") + 20];
@@ -131,7 +131,7 @@ process_ia32_prstatus(kdump_ctx *ctx, void *data, size_t size)
 }
 
 static kdump_status
-ia32_init(kdump_ctx *ctx)
+ia32_init(kdump_ctx_t *ctx)
 {
 	clear_attr(ctx, gattr(ctx, GKI_pteval_size));
 
