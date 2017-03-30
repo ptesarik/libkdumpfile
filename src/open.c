@@ -364,8 +364,7 @@ ostype_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 		status = linux_version_code(ctx);
 		if (status != kdump_ok)
 			return status;
-		break;
-
+		/* fall through */
 	case addrxlat_os_xen:
 		status = update_xen_extra_ver(ctx);
 		if (status != kdump_ok)
