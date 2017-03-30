@@ -375,7 +375,12 @@ sys_ia32(struct sys_init_data *ctl)
 				 "Cannot duplicate hardware mapping");
 	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
 
-	return ctl->popt.val[OPT_pae].num
+	status = ctl->popt.val[OPT_pae].num
 		? sys_ia32_pae(ctl)
 		: sys_ia32_nonpae(ctl);
+
+	if (status == addrxlat_ok && ctl->osdesc->type == addrxlat_os_linux)
+		sys_sym_pgtroot(ctl, "cr3", "swapper_pg_dir");
+
+	return status;
 }
