@@ -892,14 +892,14 @@ def_realloc_caches(kdump_ctx_t *ctx)
 				 "Cannot allocate cache (%u * %zu bytes)",
 				 cache_size, get_page_size(ctx));
 
-	if (ctx->shared->cache)
-		cache_unref(ctx->shared->cache);
-	ctx->shared->cache = cache;
-
 	set_attr(ctx, gattr(ctx, GKI_cache_hits),
 		 ATTR_INDIRECT, &cache->hits);
 	set_attr(ctx, gattr(ctx, GKI_cache_misses),
 		 ATTR_INDIRECT, &cache->misses);
+
+	if (ctx->shared->cache)
+		cache_unref(ctx->shared->cache);
+	ctx->shared->cache = cache;
 
 	return kdump_ok;
 }
