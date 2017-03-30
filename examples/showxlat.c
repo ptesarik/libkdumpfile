@@ -287,8 +287,8 @@ main(int argc, char **argv)
 	kdump_attr_t attr;
 	kdump_status status;
 
-	if (argc != 3) {
-		fprintf(stderr, "Usage: %s <dumpfile> <ostype>\n", argv[0]);
+	if (argc < 2 || argc > 3) {
+		fprintf(stderr, "Usage: %s <dumpfile> [<ostype>]\n", argv[0]);
 		return 1;
 	}
 
@@ -312,8 +312,11 @@ main(int argc, char **argv)
 		return 2;
 	}
 
-	attr.type = kdump_string;
-	attr.val.string = argv[2];
+	if (argv[2]) {
+		attr.type = kdump_string;
+		attr.val.string = argv[2];
+	} else
+		attr.type = kdump_nil;
 	status = kdump_set_attr(ctx, "addrxlat.ostype", &attr);
 	if (status != kdump_ok) {
 		fprintf(stderr, "Cannot set ostype: %s\n",

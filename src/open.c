@@ -96,6 +96,12 @@ kdump_open_known(kdump_ctx_t *ctx)
 {
 	set_attr_static_string(ctx, gattr(ctx, GKI_file_format),
 			       ATTR_DEFAULT, ctx->shared->ops->name);
+
+	if (isset_arch_name(ctx)) {
+		vtop_init_locked(ctx);
+		clear_error(ctx);
+	}
+
 	return kdump_ok;
 }
 
@@ -394,6 +400,10 @@ static void
 ostype_clear_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	ctx->shared->ostype = addrxlat_os_unknown;
+	if (isset_arch_name(ctx)) {
+		vtop_init_locked(ctx);
+		clear_error(ctx);
+	}
 }
 
 const struct attr_ops ostype_ops = {
