@@ -236,54 +236,6 @@ addrxlat_sys_t *kdump_get_addrxlat_sys(const kdump_ctx_t *ctx);
  */
 kdump_status kdump_set_fd(kdump_ctx_t *ctx, int fd);
 
-/**  Translate a virtual address to a physical address.
- * @param ctx         Dump file object.
- * @param[in] vaddr   Virtual address.
- * @param[out] paddr  Physical address.
- * @returns           Error status.
- *
- * Translate a virtual address to a physical address.
- */
-kdump_status kdump_vtop(kdump_ctx_t *ctx, kdump_vaddr_t vaddr,
-			kdump_paddr_t *paddr);
-
-/**  Translate a virtual address to a machine address.
- * @param ctx         Dump file object.
- * @param[in] vaddr   Virtual address.
- * @param[out] maddr  Machine address.
- * @returns           Error status.
- *
- * Translate a virtual address to a machine address. If the dump is not
- * a Xen dump or it has an auto-translated physmap, this function is
- * equivallent to @ref kdump_vtop.
- */
-kdump_status kdump_vtom(kdump_ctx_t *ctx, kdump_vaddr_t vaddr,
-			kdump_maddr_t *maddr);
-
-/**  Translate a kernel physical address to a Xen machine address.
- * @param ctx         Dump file object.
- * @param[in] paddr  Physical address.
- * @param[out] maddr  Machine address.
- * @returns           Error status.
- *
- * Translate a kernel physical address to a machine physical address.
- * If not running under Xen, these two addresses are equal, and this
- * function simply copies @c maddr to @c paddr.
- */
-kdump_status kdump_ptom(kdump_ctx_t *ctx, kdump_paddr_t paddr,
-			kdump_maddr_t *maddr);
-
-/**  Translate a Xen machine address to a physical address.
- * @param ctx         Dump file object.
- * @param[in] maddr   Machine address.
- * @param[out] paddr  Physical address.
- * @returns           Error status.
- *
- * Translate a Xen machine address to a physical address.
- */
-kdump_status kdump_mtop(kdump_ctx_t *ctx, kdump_maddr_t maddr,
-			kdump_paddr_t *paddr);
-
 /**  Address spaces used by kdump_read()
  *
  * When passing an address to kdump_read(), this type is used to

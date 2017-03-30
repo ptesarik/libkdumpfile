@@ -1,5 +1,6 @@
 #include <Python.h>
 #include <kdumpfile.h>
+#include <addrxlat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -259,20 +260,29 @@ kdumpfile_vtop(PyObject *_self, PyObject *args)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
 	unsigned PY_LONG_LONG vaddr;
-	kdump_paddr_t paddr;
-	kdump_status status;
+	addrxlat_fulladdr_t faddr;
+	addrxlat_ctx_t *axctx;
+	addrxlat_sys_t *axsys;
+	addrxlat_status axstatus;
 
 	if (!PyArg_ParseTuple(args, "K:vtop", &vaddr))
 		return NULL;
 
-	status = kdump_vtop(self->ctx, vaddr, &paddr);
-	if (status != kdump_ok) {
-		PyErr_SetString(exception_map(status),
-				kdump_err_str(self->ctx));
+	axctx = kdump_get_addrxlat_ctx(self->ctx);
+	axsys = kdump_get_addrxlat_sys(self->ctx);
+	faddr.addr = vaddr;
+	faddr.as = ADDRXLAT_KVADDR;
+	axstatus = addrxlat_by_sys(axctx, &faddr, ADDRXLAT_KPHYSADDR, axsys);
+	addrxlat_sys_decref(axsys);
+	if (axstatus != addrxlat_ok) {
+		PyErr_SetString(AddressTranslationException,
+				addrxlat_ctx_get_err(axctx));
+		addrxlat_ctx_decref(axctx);
 		return NULL;
 	}
 
-	return PyLong_FromUnsignedLongLong(paddr);
+	addrxlat_ctx_decref(axctx);
+	return PyLong_FromUnsignedLongLong(faddr.addr);
 }
 
 static PyMethodDef kdumpfile_object_methods[] = {

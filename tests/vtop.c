@@ -33,23 +33,33 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <kdumpfile.h>
+#include <addrxlat.h>
 
 #include "testutil.h"
 
 static int
 vtop(kdump_ctx_t *ctx, unsigned long long vaddr)
 {
-	kdump_paddr_t paddr;
-	kdump_status res;
+	addrxlat_fulladdr_t faddr;
+	addrxlat_ctx_t *axctx;
+	addrxlat_sys_t *axsys;
+	addrxlat_status axstatus;
 
-	res = kdump_vtop(ctx, vaddr, &paddr);
-	if (res != kdump_ok) {
+	axctx = kdump_get_addrxlat_ctx(ctx);
+	axsys = kdump_get_addrxlat_sys(ctx);
+	faddr.addr = vaddr;
+	faddr.as = ADDRXLAT_KVADDR;
+	axstatus = addrxlat_by_sys(axctx, &faddr, ADDRXLAT_KPHYSADDR, axsys);
+	addrxlat_sys_decref(axsys);
+	if (axstatus != addrxlat_ok) {
 		fprintf(stderr, "VTOP translation failed: %s\n",
-			kdump_err_str(ctx));
+			addrxlat_ctx_get_err(axctx));
+		addrxlat_ctx_decref(axctx);
 		return TEST_FAIL;
 	}
+	addrxlat_ctx_decref(axctx);
 
-	printf("0x%llx\n", (unsigned long long)paddr);
+	printf("0x%"ADDRXLAT_PRIxADDR"\n", faddr.addr);
 
 	return TEST_OK;
 }
