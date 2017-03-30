@@ -175,80 +175,6 @@ kdump_get_addrxlat_sys(const kdump_ctx_t *ctx)
 	return ret;
 }
 
-kdump_byte_order_t
-kdump_byte_order(kdump_ctx_t *ctx)
-{
-	kdump_byte_order_t ret;
-	rwlock_rdlock(&ctx->shared->lock);
-	ret = get_byte_order(ctx);
-	rwlock_unlock(&ctx->shared->lock);
-	return ret;
-}
-
-size_t
-kdump_ptr_size(kdump_ctx_t *ctx)
-{
-	size_t ret;
-	rwlock_rdlock(&ctx->shared->lock);
-	ret = get_ptr_size(ctx);
-	rwlock_unlock(&ctx->shared->lock);
-	return ret;
-}
-
-const char *
-kdump_arch_name(kdump_ctx_t *ctx)
-{
-	const char *ret;
-	rwlock_rdlock(&ctx->shared->lock);
-	ret = get_arch_name(ctx);
-	rwlock_unlock(&ctx->shared->lock);
-	return ret;
-}
-
-kdump_xen_type_t
-kdump_xen_type(kdump_ctx_t *ctx)
-{
-	kdump_xen_type_t ret;
-	rwlock_rdlock(&ctx->shared->lock);
-	ret = get_xen_type(ctx);
-	rwlock_unlock(&ctx->shared->lock);
-	return ret;
-}
-
-size_t
-kdump_pagesize(kdump_ctx_t *ctx)
-{
-	size_t ret;
-	rwlock_rdlock(&ctx->shared->lock);
-	ret = get_page_size(ctx);
-	rwlock_unlock(&ctx->shared->lock);
-	return ret;
-}
-
-unsigned
-kdump_pageshift(kdump_ctx_t *ctx)
-{
-	unsigned ret;
-	rwlock_rdlock(&ctx->shared->lock);
-	ret = get_page_shift(ctx);
-	rwlock_unlock(&ctx->shared->lock);
-	return ret;
-}
-
-static const char *
-get_string_attr(kdump_ctx_t *ctx, struct attr_data *attr)
-{
-	const char *ret;
-
-	rwlock_rdlock(&ctx->shared->lock);
-	ret = (validate_attr(ctx, attr) == kdump_ok &&
-	       attr->template->type == kdump_string)
-		? attr_value(attr)->string
-		: NULL;
-	rwlock_unlock(&ctx->shared->lock);
-	return ret;
-}
-
 const char *
 kdump_get_string_attr(kdump_ctx_t *ctx, const char *key)
 {
@@ -260,22 +186,6 @@ kdump_get_string_attr(kdump_ctx_t *ctx, const char *key)
 	if (attr && validate_attr(ctx, attr) == kdump_ok &&
 	    attr->template->type == kdump_string)
 		ret = attr_value(attr)->string;
-	rwlock_unlock(&ctx->shared->lock);
-	return ret;
-}
-
-const char *
-kdump_format(kdump_ctx_t *ctx)
-{
-	return get_string_attr(ctx, gattr(ctx, GKI_file_format));
-}
-
-unsigned
-kdump_num_cpus(kdump_ctx_t *ctx)
-{
-	unsigned ret;
-	rwlock_rdlock(&ctx->shared->lock);
-	ret = get_num_cpus(ctx);
 	rwlock_unlock(&ctx->shared->lock);
 	return ret;
 }

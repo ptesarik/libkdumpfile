@@ -6,9 +6,13 @@ LIBKDUMPFILE_0 {
     kdump_err_str;
     kdump_get_addrxlat_ctx;
     kdump_get_addrxlat_sys;
-    kdump_set_fd;
+    kdump_cb_get_symbol_val;
+    kdump_set_priv;
+    kdump_get_priv;
+
     kdump_read;
     kdump_read_string;
+
     kdump_set_attr;
     kdump_get_attr;
     kdump_get_string_attr;
@@ -23,20 +27,10 @@ LIBKDUMPFILE_0 {
     kdump_attr_ref_iter_start;
     kdump_attr_iter_next;
     kdump_attr_iter_end;
-    kdump_format;
-    kdump_byte_order;
-    kdump_ptr_size;
-    kdump_arch_name;
-    kdump_xen_type;
-    kdump_pagesize;
-    kdump_pageshift;
-    kdump_num_cpus;
+
     kdump_vmcoreinfo;
     kdump_vmcoreinfo_row;
     kdump_vmcoreinfo_symbol;
-    kdump_cb_get_symbol_val;
-    kdump_set_priv;
-    kdump_get_priv;
 
   local:
     *;

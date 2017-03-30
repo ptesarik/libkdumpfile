@@ -124,7 +124,8 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 		goto fail;
 	}
 
-	status = kdump_set_fd(self->ctx, self->fd);
+	status = kdump_set_number_attr(self->ctx, KDUMP_ATTR_FILE_FD,
+				       self->fd);
 	if (status != kdump_ok) {
 		PyErr_Format(exception_map(status),
 			     "Cannot open dump: %s", kdump_err_str(self->ctx));
@@ -237,12 +238,9 @@ PyDoc_STRVAR(vtop_init__doc__,
 static PyObject *kdumpfile_vtop_init(PyObject *_self, PyObject *args)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
-	kdump_attr_t attr;
 	kdump_status status;
 
-	attr.type = kdump_string;
-	attr.val.string = "linux";
-	status = kdump_set_attr(self->ctx, "addrxlat.ostype", &attr);
+	status = kdump_set_string_attr(self->ctx, KDUMP_ATTR_OSTYPE, "linux");
 	if (status != kdump_ok) {
 		PyErr_SetString(exception_map(status),
 				kdump_err_str(self->ctx));

@@ -87,22 +87,27 @@ main(int argc, char **argv)
 		return -1;
 	}
 
-	status = kdump_set_fd(ctx, fd);
+	status = kdump_set_number_attr(ctx, KDUMP_ATTR_FILE_FD, fd);
 	if (status != kdump_ok) {
-		fprintf(stderr, "kdump_set_fd failed: %s\n",
+		fprintf(stderr, "File initialization failed: %s\n",
 			kdump_err_str(ctx));
 		kdump_free(ctx);
 		return 2;
 	}
 
-	if (kdump_xen_type(ctx) != kdump_xen_system) {
+	status = kdump_get_attr(ctx, KDUMP_ATTR_XEN_TYPE, &attr);
+	if (status == kdump_nodata ||
+	    (status == kdump_ok && attr.val.number != kdump_xen_system)) {
 		fputs("Not a Xen system dump\n", stderr);
 		return 1;
+	} else if (status != kdump_ok) {
+		fprintf(stderr, "Cannot get Xen type: %s\n",
+			kdump_err_str(ctx));
+		kdump_free(ctx);
+		return 2;
 	}
 
-	attr.type = kdump_string;
-	attr.val.string = "xen";
-	status = kdump_set_attr(ctx, "addrxlat.ostype", &attr);
+	status = kdump_set_string_attr(ctx, KDUMP_ATTR_OSTYPE, "xen");
 	if (status != kdump_ok) {
 		fprintf(stderr, "Cannot set ostype: %s\n",
 			kdump_err_str(ctx));

@@ -250,7 +250,7 @@ check_attrs_fd(FILE *parm, int dumpfd)
 		return TEST_ERR;
 	}
 
-	res = kdump_set_fd(ctx, dumpfd);
+	res = kdump_set_number_attr(ctx, KDUMP_ATTR_FILE_FD, dumpfd);
 	if (res != kdump_ok) {
 		fprintf(stderr, "Cannot open dump: %s\n", kdump_err_str(ctx));
 		rc = TEST_ERR;

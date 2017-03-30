@@ -304,9 +304,9 @@ main(int argc, char **argv)
 		return -1;
 	}
 
-	status = kdump_set_fd(ctx, fd);
+	status = kdump_set_number_attr(ctx, KDUMP_ATTR_FILE_FD, fd);
 	if (status != kdump_ok) {
-		fprintf(stderr, "kdump_set_fd failed: %s\n",
+		fprintf(stderr, "File initialization failed: %s\n",
 			kdump_err_str(ctx));
 		kdump_free(ctx);
 		return 2;

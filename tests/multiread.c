@@ -154,7 +154,7 @@ run_threads_fd(int fd, unsigned long nthreads, unsigned long cache_size)
 		return TEST_ERR;
 	}
 
-	res = kdump_set_fd(ctx, fd);
+	res = kdump_set_number_attr(ctx, KDUMP_ATTR_FILE_FD, fd);
 	if (res != kdump_ok) {
 		fprintf(stderr, "Cannot open dump: %s\n", kdump_err_str(ctx));
 		rc = TEST_ERR;

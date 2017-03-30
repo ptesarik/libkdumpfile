@@ -125,20 +125,6 @@ const struct attr_ops file_fd_ops = {
 	.post_set = file_fd_post_hook,
 };
 
-kdump_status
-kdump_set_fd(kdump_ctx_t *ctx, int fd)
-{
-	kdump_attr_value_t val;
-	kdump_status ret;
-
-	clear_error(ctx);
-	rwlock_wrlock(&ctx->shared->lock);
-	val.number = fd;
-	ret = set_attr(ctx, gattr(ctx, GKI_file_fd), ATTR_PERSIST, &val);
-	rwlock_unlock(&ctx->shared->lock);
-	return ret;
-}
-
 /* struct new_utsname is inside struct uts_namespace, preceded by a struct
  * kref, but the offset is not stored in VMCOREINFO. So, search some sane
  * amount of memory for UTS_SYSNAME, which can be used as kind of a magic
