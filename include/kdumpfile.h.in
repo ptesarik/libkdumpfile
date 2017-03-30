@@ -236,21 +236,6 @@ addrxlat_sys_t *kdump_get_addrxlat_sys(const kdump_ctx_t *ctx);
  */
 kdump_status kdump_set_fd(kdump_ctx_t *ctx, int fd);
 
-/**  Initialize virtual-to-physical translation.
- * @param ctx  Dump file object.
- * @returns    Error status.
- *
- * Perform any extra initialization that is needed for full
- * virtual-to-physical address translation. Using the @ref KDUMP_KVADDR
- * flag does not work until this function is called.
- *
- * The reason this initialization is not done as part of @ref kdump_set_fd
- * is that it usually requires additional resources (and time), and may fail.
- * However, some library users do not need address translation, or they can
- * implement a fallback mechanism if it is unavailable.
- */
-kdump_status kdump_vtop_init(kdump_ctx_t *ctx);
-
 /**  Translate a virtual address to a physical address.
  * @param ctx         Dump file object.
  * @param[in] vaddr   Virtual address.

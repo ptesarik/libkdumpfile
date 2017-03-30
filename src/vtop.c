@@ -146,7 +146,7 @@ set_xen_opts(kdump_ctx_t *ctx, char *opts)
 }
 
 kdump_status
-vtop_init_locked(kdump_ctx_t *ctx)
+vtop_init(kdump_ctx_t *ctx)
 {
 	kdump_status status;
 	addrxlat_osdesc_t osdesc;
@@ -179,22 +179,6 @@ vtop_init_locked(kdump_ctx_t *ctx)
 	if (!attr_isset(gattr(ctx, GKI_pteval_size)))
 		set_pteval_size(ctx);
 	return kdump_ok;
-}
-
-kdump_status
-kdump_vtop_init(kdump_ctx_t *ctx)
-{
-	kdump_status status;
-
-	clear_error(ctx);
-
-	if (!isset_arch_name(ctx))
-		return set_error(ctx, kdump_nodata, "Unknown architecture");
-
-	rwlock_rdlock(&ctx->shared->lock);
-	status = vtop_init_locked(ctx);
-	rwlock_unlock(&ctx->shared->lock);
-	return status;
 }
 
 static kdump_status

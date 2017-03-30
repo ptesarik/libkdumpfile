@@ -98,7 +98,7 @@ kdump_open_known(kdump_ctx_t *ctx)
 			       ATTR_DEFAULT, ctx->shared->ops->name);
 
 	if (isset_arch_name(ctx)) {
-		vtop_init_locked(ctx);
+		vtop_init(ctx);
 		clear_error(ctx);
 	}
 
@@ -359,7 +359,7 @@ ostype_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 	kdump_status status;
 
 	if (isset_arch_name(ctx)) {
-		status = vtop_init_locked(ctx);
+		status = vtop_init(ctx);
 		if (status != kdump_ok)
 			return set_error(ctx, status,
 					 "Cannot initialize address translation");
@@ -401,7 +401,7 @@ ostype_clear_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	ctx->shared->ostype = addrxlat_os_unknown;
 	if (isset_arch_name(ctx)) {
-		vtop_init_locked(ctx);
+		vtop_init(ctx);
 		clear_error(ctx);
 	}
 }

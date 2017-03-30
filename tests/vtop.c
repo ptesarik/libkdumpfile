@@ -42,13 +42,6 @@ vtop(kdump_ctx_t *ctx, unsigned long long vaddr)
 	kdump_paddr_t paddr;
 	kdump_status res;
 
-	res = kdump_vtop_init(ctx);
-	if (res != kdump_ok) {
-		fprintf(stderr, "Cannot initialize vtop: %s\n",
-			kdump_err_str(ctx));
-		return TEST_FAIL;
-	}
-
 	res = kdump_vtop(ctx, vaddr, &paddr);
 	if (res != kdump_ok) {
 		fprintf(stderr, "VTOP translation failed: %s\n",

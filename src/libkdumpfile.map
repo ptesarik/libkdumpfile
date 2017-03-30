@@ -7,7 +7,6 @@ LIBKDUMPFILE_0 {
     kdump_get_addrxlat_ctx;
     kdump_get_addrxlat_sys;
     kdump_set_fd;
-    kdump_vtop_init;
     kdump_vtop;
     kdump_vtom;
     kdump_ptom;
