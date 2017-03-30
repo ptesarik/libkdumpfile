@@ -333,6 +333,39 @@ sys_set_physmaps(struct sys_init_data *ctl, addrxlat_addr_t maxaddr)
 	return sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS, layout);
 }
 
+/** Get page table root address using symbolic information.
+ * @param ctl  Initialization data.
+ * @param reg  Page table register name.
+ * @param sym  Symbol name of the page table.
+ * @returns    Error status.
+ */
+addrxlat_status
+sys_sym_pgtroot(struct sys_init_data *ctl, const char *reg, const char *sym)
+{
+	addrxlat_meth_t *meth;
+	addrxlat_addr_t addr;
+
+	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	if (meth->def.param.pgt.root.as != ADDRXLAT_NOADDR)
+		return addrxlat_ok;
+
+	if (reg && get_reg(ctl->ctx, "cr3", &addr) == addrxlat_ok) {
+		meth->def.param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
+		meth->def.param.pgt.root.addr = addr;
+		return addrxlat_ok;
+	}
+	clear_error(ctl->ctx);
+
+	if (sym && get_symval(ctl->ctx, sym, &addr) == addrxlat_ok) {
+		meth->def.param.pgt.root.as = ADDRXLAT_KVADDR;
+		meth->def.param.pgt.root.addr = addr;
+		return addrxlat_ok;
+	}
+	clear_error(ctl->ctx);
+
+	return addrxlat_nodata;
+}
+
 #define MAX_ALT_NUM	2
 struct xlat_alt {
 	unsigned num;

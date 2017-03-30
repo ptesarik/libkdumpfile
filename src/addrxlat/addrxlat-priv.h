@@ -271,6 +271,9 @@ INTERNAL_DECL(addrxlat_status, sys_set_layout,
 INTERNAL_DECL(addrxlat_status, sys_set_physmaps,
 	      (struct sys_init_data *ctl, addrxlat_addr_t maxaddr));
 
+INTERNAL_DECL(addrxlat_status, sys_sym_pgtroot,
+	      (struct sys_init_data *ctl, const char *reg, const char *sym));
+
 /* internal aliases */
 
 #define set_error internal_ctx_err

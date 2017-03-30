@@ -432,38 +432,6 @@ linux_ktext_map(struct sys_init_data *ctl)
 	return addrxlat_ok;
 }
 
-/** Get page table root address using symbolic information.
- * @param ctl  Initialization data.
- * @param sym  Symbol name of the page table.
- * @returns    Error status.
- */
-static addrxlat_status
-get_sym_pgtroot(struct sys_init_data *ctl, const char *sym)
-{
-	addrxlat_meth_t *meth;
-	addrxlat_addr_t addr;
-
-	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
-	if (meth->def.param.pgt.root.as != ADDRXLAT_NOADDR)
-		return addrxlat_ok;
-
-	if (get_reg(ctl->ctx, "cr3", &addr) == addrxlat_ok) {
-		meth->def.param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
-		meth->def.param.pgt.root.addr = addr;
-		return addrxlat_ok;
-	}
-	clear_error(ctl->ctx);
-
-	if (get_symval(ctl->ctx, sym, &addr) == addrxlat_ok) {
-		meth->def.param.pgt.root.as = ADDRXLAT_KVADDR;
-		meth->def.param.pgt.root.addr = addr;
-		return addrxlat_ok;
-	}
-	clear_error(ctl->ctx);
-
-	return addrxlat_nodata;
-}
-
 /** Initialize a translation map for Linux on x86_64.
  * @param ctl  Initialization data.
  * @param m2p  Virtual address of the machine-to-physical array.
@@ -540,7 +508,7 @@ map_linux_x86_64(struct sys_init_data *ctl)
 	const struct sys_region *layout;
 	addrxlat_status status;
 
-	get_sym_pgtroot(ctl, "init_level4_pgt");
+	sys_sym_pgtroot(ctl, "cr3", "init_level4_pgt");
 
 	if (ctl->popt.val[OPT_xen_xlat].set &&
 	    ctl->popt.val[OPT_xen_xlat].num) {
@@ -645,7 +613,7 @@ setup_xen_pgt(struct sys_init_data *ctl)
 	addrxlat_addr_t pgt;
 	addrxlat_status status;
 
-	status = get_sym_pgtroot(ctl, "pgd_l4");
+	status = sys_sym_pgtroot(ctl, "cr3", "pgd_l4");
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	if (meth->def.param.pgt.root.as != ADDRXLAT_KVADDR)
 		return status;	/* either unset or physical */
