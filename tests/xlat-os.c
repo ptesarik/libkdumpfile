@@ -194,7 +194,7 @@ get_symdata(void *data, addrxlat_sym_t *sym)
 		}
 	}
 
-	return addrxlat_notpresent;
+	return addrxlat_nodata;
 }
 
 static unsigned long long ostype;

@@ -30,6 +30,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "addrxlat-priv.h"
 
@@ -312,6 +313,145 @@ sys_ia32_pae(struct sys_init_data *ctl)
 	return addrxlat_ok;
 }
 
+/** Try to get vmalloc_start from vmap_area_list.
+ * @param ctl   Initialization data.
+ * @param addr  VMALLOC start address; set on successful return.
+ * @returns     Error status.
+ */
+static addrxlat_status
+try_vmap_area_list(struct sys_init_data *ctl, addrxlat_addr_t *addr)
+{
+	addrxlat_fulladdr_t vmap_area_list;
+	addrxlat_addr_t va_start, va_list, list_next;
+	uint32_t val;
+	addrxlat_step_t dummystep;
+	addrxlat_status status;
+
+	status = get_symval(ctl->ctx, "vmap_area_list", &vmap_area_list.addr);
+	if (status != addrxlat_ok)
+		return status;
+	vmap_area_list.as = ADDRXLAT_KVADDR;
+
+	status = get_offsetof(ctl->ctx, "vmap_area", "va_start", &va_start);
+	if (status != addrxlat_ok)
+		return status;
+
+	status = get_offsetof(ctl->ctx, "vmap_area", "list", &va_list);
+	if (status != addrxlat_ok)
+		return status;
+
+	status = get_offsetof(ctl->ctx, "list_head", "next", &list_next);
+	if (status != addrxlat_ok)
+		return status;
+
+	dummystep.ctx = ctl->ctx;
+	dummystep.sys = ctl->sys;
+
+	vmap_area_list.addr += list_next;
+	status = read32(&dummystep, &vmap_area_list, &val,
+			"vmap_area_list node");
+	if (status != addrxlat_ok)
+		return status;
+
+	vmap_area_list.addr = val - va_list + va_start;
+	status = read32(&dummystep, &vmap_area_list, &val,
+			"vmap_area start address");
+	if (status != addrxlat_ok)
+		return status;
+
+	*addr = val;
+	return addrxlat_ok;
+}
+
+/** Try to get vmalloc_start from vmlist.
+ * @param ctl   Initialization data.
+ * @param addr  VMALLOC start address; set on successful return.
+ * @returns     Error status.
+ */
+static addrxlat_status
+try_vmlist(struct sys_init_data *ctl, addrxlat_addr_t *addr)
+{
+	addrxlat_fulladdr_t vmlist;
+	addrxlat_addr_t vm_addr;
+	uint32_t val;
+	addrxlat_step_t dummystep;
+	addrxlat_status status;
+
+	status = get_symval(ctl->ctx, "vmlist", &vmlist.addr);
+	if (status != addrxlat_ok)
+		return status;
+	vmlist.as = ADDRXLAT_KVADDR;
+
+	status = get_offsetof(ctl->ctx, "vm_struct", "addr", &vm_addr);
+	if (status != addrxlat_ok)
+		return status;
+
+	dummystep.ctx = ctl->ctx;
+	dummystep.sys = ctl->sys;
+
+	status = read32(&dummystep, &vmlist, &val, "vmlist");
+	if (status != addrxlat_ok)
+		return status;
+
+	vmlist.addr = val + vm_addr;
+	status = read32(&dummystep, &vmlist, &val, "vmlist address");
+	if (status != addrxlat_ok)
+		return status;
+
+	*addr = val;
+	return addrxlat_ok;
+}
+
+/** Adjust Linux directmap limits on IA32.
+ * @param ctl   Initialization data.
+ * @param vtop  Virtual-to-physical mapping; updated on successful return.
+ * @returns     Error status.
+ */
+static addrxlat_status
+set_linux_directmap(struct sys_init_data *ctl, addrxlat_map_t **vtop)
+{
+	addrxlat_addr_t vmalloc_start;
+	addrxlat_range_t range;
+	addrxlat_map_t *map;
+	addrxlat_status status;
+
+	status = try_vmap_area_list(ctl, &vmalloc_start);
+	if (status == addrxlat_nodata) {
+		clear_error(ctl->ctx);
+		status = try_vmlist(ctl, &vmalloc_start);
+		if (status == addrxlat_nodata) {
+			clear_error(ctl->ctx);
+			return addrxlat_ok;
+		}
+	}
+	if (status != addrxlat_ok)
+		return set_error(ctl->ctx, status,
+				 "Cannot determine VMALLOC start");
+	if (vmalloc_start <= LINUX_DIRECTMAP)
+		return set_error(ctl->ctx, addrxlat_invalid,
+				 "Invalid VMALLOC start: %"ADDRXLAT_PRIxADDR,
+				 vmalloc_start);
+
+	range.meth = NULL;
+	range.endoff = ADDRXLAT_ADDR_MAX - (vmalloc_start - LINUX_DIRECTMAP);
+	map = ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_DIRECT];
+	map = addrxlat_map_set(map, vmalloc_start - LINUX_DIRECTMAP, &range);
+	if (!map)
+		return set_error(ctl->ctx, addrxlat_nomem,
+				 "Cannot update reverse directmap");
+	ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_DIRECT] = map;
+
+	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_DIRECT];
+	range.endoff = vmalloc_start - 1 - LINUX_DIRECTMAP;
+	map = addrxlat_map_set(*vtop, LINUX_DIRECTMAP, &range);
+	if (!map)
+		return set_error(ctl->ctx, addrxlat_nomem,
+				 "Cannot set up directmap");
+
+	*vtop = map;
+	return addrxlat_ok;
+}
+
 /** Direct mapping, used temporarily to translate swapper_pg_dir */
 static const struct sys_region linux_directmap[] = {
 	{ LINUX_DIRECTMAP, VIRTADDR_MAX,
@@ -372,10 +512,23 @@ sys_ia32(struct sys_init_data *ctl)
 				 "Cannot set up hardware mapping");
 	ctl->sys->map[ADDRXLAT_SYS_MAP_HW] = newmap;
 
-	newmap = internal_map_dup(ctl->sys->map[ADDRXLAT_SYS_MAP_HW]);
+	newmap = internal_map_set(NULL, 0, &range);
 	if (!newmap)
 		return set_error(ctl->ctx, addrxlat_nomem,
-				 "Cannot duplicate hardware mapping");
+				 "Cannot set up virt-to-phys mapping");
+
+	if (ctl->osdesc->type == addrxlat_os_linux)  {
+		status = set_linux_directmap(ctl, &newmap);
+		if (status != addrxlat_ok) {
+			internal_map_clear(newmap);
+			free(newmap);
+			return status;
+		}
+	}
+	if (ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS]) {
+		internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS]);
+		free(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS]);
+	}
 	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
 
 	status = ctl->popt.val[OPT_pae].num
