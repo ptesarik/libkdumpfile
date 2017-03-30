@@ -4,6 +4,14 @@
   pte_format=ia32
   bits=12,10,10
 
+@direct: LINEAR
+  target_as=KPHYSADDR
+  off=0xffffffff40000000
+
+@rdirect: LINEAR
+  target_as=KVADDR
+  off=0xc0000000
+
 @machphys_kphys: LINEAR
   target_as=KPHYSADDR
   off=0x0
@@ -21,6 +29,8 @@ KV -> PHYS:
 100000000-ffffffffffffffff: NONE
 
 KPHYS -> DIRECT:
+0-3fffffff: @rdirect
+40000000-ffffffffffffffff: NONE
 
 MACHPHYS -> KPHYS:
 0-ffffffff: @machphys_kphys
