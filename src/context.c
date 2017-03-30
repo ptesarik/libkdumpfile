@@ -175,21 +175,6 @@ kdump_get_addrxlat_sys(const kdump_ctx_t *ctx)
 	return ret;
 }
 
-const char *
-kdump_get_string_attr(kdump_ctx_t *ctx, const char *key)
-{
-	struct attr_data *attr;
-	const char *ret = NULL;
-
-	rwlock_rdlock(&ctx->shared->lock);
-	attr = lookup_attr(ctx->shared, key);
-	if (attr && validate_attr(ctx, attr) == kdump_ok &&
-	    attr->template->type == kdump_string)
-		ret = attr_value(attr)->string;
-	rwlock_unlock(&ctx->shared->lock);
-	return ret;
-}
-
 kdump_get_symbol_val_fn *
 kdump_cb_get_symbol_val(kdump_ctx_t *ctx, kdump_get_symbol_val_fn *cb)
 {

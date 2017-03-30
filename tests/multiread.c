@@ -48,18 +48,16 @@ static void *
 run_reads(void *arg)
 {
 	kdump_ctx_t *ctx = arg;
-	kdump_attr_t attr;
-	unsigned page_shift;
+	kdump_num_t page_shift;
 	unsigned long pfn;
 	char buf[1];
 	size_t sz;
 	unsigned i;
 	kdump_status res;
 
-	res = kdump_get_attr(ctx, "arch.page_shift", &attr);
+	res = kdump_get_number_attr(ctx, KDUMP_ATTR_PAGE_SHIFT, &page_shift);
 	if (res != kdump_ok)
 		return (void*) kdump_err_str(ctx);
-	page_shift = attr.val.number;
 
 	sz = sizeof buf;
 	for (i = 0; i < niter; ++i) {

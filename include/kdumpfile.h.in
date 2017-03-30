@@ -409,18 +409,83 @@ kdump_set_string_attr(kdump_ctx_t *ctx, const char *key, const char *str)
  * @param key  Attribute key.
  * @param valp Value (filled on successful return).
  * @returns    Error status.
+ *
+ * Note that the caller does not hold a reference to the attribute, so
+ * it is not generally safe to use this function in a multi-threaded
+ * program, or across another library call which modifies the attribute
+ * (explicitly or implicitly).
  */
 kdump_status kdump_get_attr(kdump_ctx_t *ctx, const char *key,
 			    kdump_attr_t *valp);
 
+/** Get a numeric attribute.
+ *
+ * @param ctx       Dump file object.
+ * @param key       Attribute key.
+ * @param num[out]  Filled with the attribute value on successful return.
+ * @returns         Error status.
+ */
+static inline kdump_status
+kdump_get_number_attr(kdump_ctx_t *ctx, const char *key, kdump_num_t *num)
+{
+	kdump_attr_t attr;
+	kdump_status ret = kdump_get_attr(ctx, key, &attr);
+	if (ret == kdump_ok) {
+		if (attr.type == kdump_number)
+			*num = attr.val.number;
+		else
+			ret = kdump_invalid;
+	}
+	return ret;
+}
+
+/** Get an address attribute.
+ *
+ * @param ctx        Dump file object.
+ * @param key        Attribute key.
+ * @param addr[out]  Filled with the attribute value on successful return.
+ * @returns          Error status.
+ *
+ * Note that the caller does not hold a reference to the string. See
+ * the description of @ref kdump_get_attr for limitations.
+ */
+static inline kdump_status
+kdump_get_address_attr(kdump_ctx_t *ctx, const char *key, kdump_addr_t *addr)
+{
+	kdump_attr_t attr;
+	kdump_status ret = kdump_get_attr(ctx, key, &attr);
+	if (ret == kdump_ok) {
+		if (attr.type == kdump_address)
+			*addr = attr.val.address;
+		else
+			ret = kdump_invalid;
+	}
+	return ret;
+}
+
 /** Get a string attribute.
  *
- * @param ctx  Dump file object.
- * @param key  Attribute key.
- * @returns    The attribute value, @c NULL if not found or if the
- *             attribute is not a string.
+ * @param ctx       Dump file object.
+ * @param key       Attribute key.
+ * @param str[out]  Filled with the attribute value on successful return.
+ * @returns         Error status.
+ *
+ * Note that the caller does not hold a reference to the string. See
+ * the description of @ref kdump_get_attr for limitations.
  */
-const char *kdump_get_string_attr(kdump_ctx_t *ctx, const char *key);
+static inline kdump_status
+kdump_get_string_attr(kdump_ctx_t *ctx, const char *key, const char **str)
+{
+	kdump_attr_t attr;
+	kdump_status ret = kdump_get_attr(ctx, key, &attr);
+	if (ret == kdump_ok) {
+		if (attr.type == kdump_string)
+			*str = attr.val.string;
+		else
+			ret = kdump_invalid;
+	}
+	return ret;
+}
 
 /** Get a reference to an attribute
  * @param      ctx  Dump file object.

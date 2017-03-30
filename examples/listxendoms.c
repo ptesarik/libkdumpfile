@@ -27,21 +27,18 @@ print_xen_domains(kdump_ctx_t *ctx)
 {
 	kdump_addr_t domain;
 	uint64_t id;
-	size_t sz, off_id, off_next;
-	kdump_attr_t attr;
+	kdump_num_t off_id, off_next;
 	kdump_status status;
 
-	status = kdump_get_attr(
-		ctx, "xen.vmcoreinfo.OFFSET.domain.domain_id", &attr);
+	status = kdump_get_number_attr(
+		ctx, "xen.vmcoreinfo.OFFSET.domain.domain_id", &off_id);
 	if (status != kdump_ok)
 		return status;
-	off_id = attr.val.number;
 
-	status = kdump_get_attr(
-		ctx, "xen.vmcoreinfo.OFFSET.domain.next_in_list", &attr);
+	status = kdump_get_number_attr(
+		ctx, "xen.vmcoreinfo.OFFSET.domain.next_in_list", &off_next);
 	if (status != kdump_ok)
 		return status;
-	off_next = attr.val.number;
 
 	status = kdump_vmcoreinfo_symbol(ctx, "domain_list", &domain);
 	if (status != kdump_ok)
@@ -49,7 +46,7 @@ print_xen_domains(kdump_ctx_t *ctx)
 
 	domain -= off_next;
 	while ( (domain = read_ptr(ctx, domain + off_next)) ) {
-		sz = sizeof id;
+		size_t sz = sizeof id;
 		status = kdump_read(ctx, KDUMP_KVADDR, domain + off_id,
 				    &id, &sz);
 		if (status != kdump_ok)
