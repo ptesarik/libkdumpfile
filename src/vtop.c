@@ -274,8 +274,8 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 	}
 
 	if (sym->type == ADDRXLAT_SYM_OFFSETOF) {
-		attr = lookup_dir_attr(ctx->shared, base,
-				       sym->args[0], strlen(sym->args[1]));
+		attr = lookup_dir_attr(ctx->shared, attr,
+				       sym->args[1], strlen(sym->args[1]));
 		if (!attr) {
 			ret = addrxlat_ctx_err(ctx->xlatctx, addrxlat_nodata,
 					       "Field not found");
