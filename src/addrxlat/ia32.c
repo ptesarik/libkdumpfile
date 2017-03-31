@@ -512,12 +512,21 @@ sys_ia32(struct sys_init_data *ctl)
 				 "Cannot set up hardware mapping");
 	ctl->sys->map[ADDRXLAT_SYS_MAP_HW] = newmap;
 
+	status = ctl->popt.val[OPT_pae].num
+		? sys_ia32_pae(ctl)
+		: sys_ia32_nonpae(ctl);
+
+	if (status != addrxlat_ok)
+		return status;
+
 	newmap = internal_map_set(NULL, 0, &range);
 	if (!newmap)
 		return set_error(ctl->ctx, addrxlat_nomem,
 				 "Cannot set up virt-to-phys mapping");
 
 	if (ctl->osdesc->type == addrxlat_os_linux)  {
+		sys_sym_pgtroot(ctl, "cr3", "swapper_pg_dir");
+
 		status = set_linux_directmap(ctl, &newmap);
 		if (status != addrxlat_ok) {
 			internal_map_clear(newmap);
@@ -530,13 +539,6 @@ sys_ia32(struct sys_init_data *ctl)
 		free(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS]);
 	}
 	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
-
-	status = ctl->popt.val[OPT_pae].num
-		? sys_ia32_pae(ctl)
-		: sys_ia32_nonpae(ctl);
-
-	if (status == addrxlat_ok && ctl->osdesc->type == addrxlat_os_linux)
-		sys_sym_pgtroot(ctl, "cr3", "swapper_pg_dir");
 
 	return status;
 }
