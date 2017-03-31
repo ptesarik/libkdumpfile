@@ -114,35 +114,96 @@ get_version_code(kdump_ctx_t *ctx, unsigned long *pver)
 	 return kdump_ok;
 }
 
-static void
-set_linux_opts(kdump_ctx_t *ctx, char *opts)
+#define MAX_OPTS	8
+struct opts {
+	unsigned n;
+	char *str[MAX_OPTS];
+};
+
+static char *
+join_opts(const struct opts *opts)
 {
-	struct attr_data *attr;
+	size_t len;
+	unsigned i;
+	char *ret, *p;
 
-	if (isset_phys_base(ctx))
-		sprintf(opts, "physbase=0x%"ADDRXLAT_PRIxADDR,
-			get_phys_base(ctx));
-
-	if ((isset_xen_xlat(ctx) && get_xen_xlat(ctx) != kdump_xen_auto) ||
-	    (isset_xen_type(ctx) && get_xen_type(ctx) == kdump_xen_system))
-		strcat(opts, " xen_xlat=1");
-
-	attr = gattr(ctx, GKI_xen_p2m_mfn);
-	if (validate_attr(ctx, attr) == kdump_ok)
-		sprintf(opts + strlen(opts),
-			" xen_p2m_mfn=0x%"ADDRXLAT_PRIxADDR,
-			attr_value(attr)->number);
+	for (len = 0, i = 0; i < opts->n; ++i)
+		len += strlen(opts->str[i]) + 1;
+	ret = malloc(len);
+	if (!ret)
+		return ret;
+	for (p = ret, i = 0; i < opts->n; ++i) {
+		p = stpcpy(p, opts->str[i]);
+		*p++ = ' ';
+	}
+	p[-1] = '\0';
+	return ret;
 }
 
 static void
-set_xen_opts(kdump_ctx_t *ctx, char *opts)
+free_opts(struct opts *opts)
+{
+	while (opts->n)
+		free(opts->str[--opts->n]);
+}
+
+static kdump_status
+set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 {
 	struct attr_data *attr;
+	int len;
+
+	if (isset_phys_base(ctx)) {
+		len = asprintf(&opts->str[opts->n],
+			       "physbase=0x%"ADDRXLAT_PRIxADDR,
+			       get_phys_base(ctx));
+		if (len < 0)
+			return set_error(ctx, kdump_syserr,
+					 "Cannot make %s option", "physbase");
+		++opts->n;
+	}
+
+	if ((isset_xen_xlat(ctx) && get_xen_xlat(ctx) != kdump_xen_auto) ||
+	    (isset_xen_type(ctx) && get_xen_type(ctx) == kdump_xen_system)) {
+		if (! (opts->str[opts->n] = strdup("xen_xlat=1")) )
+			return set_error(ctx, kdump_syserr,
+					 "Cannot make %s option", "xen_xlat");
+		++opts->n;
+	}
+
+	attr = gattr(ctx, GKI_xen_p2m_mfn);
+	if (validate_attr(ctx, attr) == kdump_ok) {
+		len = asprintf(&opts->str[opts->n],
+			"xen_p2m_mfn=0x%"ADDRXLAT_PRIxADDR,
+			attr_value(attr)->number);
+		if (len < 0)
+			return set_error(ctx, kdump_syserr,
+					 "Cannot make %s option",
+					 "xen_p2m_mfn");
+		++opts->n;
+	}
+
+	return kdump_ok;
+}
+
+static kdump_status
+set_xen_opts(kdump_ctx_t *ctx, struct opts *opts)
+{
+	struct attr_data *attr;
+	int len;
 
 	attr = gattr(ctx, GKI_xen_phys_start);
-	if (validate_attr(ctx, attr) == kdump_ok)
-		sprintf(opts, "physbase=0x%"ADDRXLAT_PRIxADDR,
-			attr_value(attr)->address);
+	if (validate_attr(ctx, attr) == kdump_ok) {
+		len = asprintf(&opts->str[opts->n],
+			       "physbase=0x%"ADDRXLAT_PRIxADDR,
+			       attr_value(attr)->address);
+		if (len < 0)
+			return set_error(ctx, kdump_syserr,
+					 "Cannot make %s option", "physbase");
+		++opts->n;
+	}
+
+	return kdump_ok;
 }
 
 kdump_status
@@ -151,7 +212,7 @@ vtop_init(kdump_ctx_t *ctx)
 	kdump_status status;
 	addrxlat_osdesc_t osdesc;
 	addrxlat_status axres;
-	char opts[80];
+	struct opts opts;
 
 	osdesc.type = ctx->shared->ostype;
 	osdesc.arch = get_arch_name(ctx);
@@ -161,18 +222,32 @@ vtop_init(kdump_ctx_t *ctx)
 		return status;
 	clear_error(ctx);
 
-	opts[0] = '\0';
+	opts.n = 0;
 	if (ctx->shared->ostype == addrxlat_os_linux)
-		set_linux_opts(ctx, opts);
+		status = set_linux_opts(ctx, &opts);
 	else if (ctx->shared->ostype == addrxlat_os_xen)
-		set_xen_opts(ctx, opts);
-	osdesc.opts = opts;
+		status = set_xen_opts(ctx, &opts);
+	if (status != kdump_ok) {
+		free_opts(&opts);
+		return status;
+	}
+	if (opts.n) {
+		osdesc.opts = join_opts(&opts);
+		free_opts(&opts);
+		if (!osdesc.opts)
+			return set_error(ctx, kdump_syserr,
+					 "Cannot allocate addrxlat options");
+	} else
+		osdesc.opts = NULL;
 
 	rwlock_unlock(&ctx->shared->lock);
+
 	axres = addrxlat_sys_init(ctx->shared->xlatsys,
 				  ctx->xlatctx, &osdesc);
-	rwlock_rdlock(&ctx->shared->lock);
+	if (osdesc.opts)
+		free((void*)osdesc.opts);
 
+	rwlock_rdlock(&ctx->shared->lock);
 	if (axres != addrxlat_ok)
 		return addrxlat2kdump(ctx, axres);
 
