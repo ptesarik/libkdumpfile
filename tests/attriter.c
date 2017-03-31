@@ -75,7 +75,7 @@ main(int argc, char **argv)
 		return TEST_FAIL;
 	} else if (res != kdump_nokey) {
 		fprintf(stderr, "Unexpected error for %s: %s\n",
-			NOPATH, kdump_err_str(ctx));
+			NOPATH, kdump_get_err(ctx));
 		return TEST_FAIL;
 	}
 
@@ -91,7 +91,7 @@ main(int argc, char **argv)
 		res = kdump_set_attr(ctx, key, &attr);
 		if (res != kdump_ok) {
 			fprintf(stderr, "Cannot set %s: %s\n",
-				key, kdump_err_str(ctx));
+				key, kdump_get_err(ctx));
 			return TEST_FAIL;
 		}
 	}
@@ -99,7 +99,7 @@ main(int argc, char **argv)
 	res = kdump_attr_iter_start(ctx, ATTRPATH, &it);
 	if (res != kdump_ok) {
 		fprintf(stderr, "Cannot start iteration: %s\n",
-			kdump_err_str(ctx));
+			kdump_get_err(ctx));
 		return TEST_FAIL;
 	}
 
@@ -124,7 +124,7 @@ main(int argc, char **argv)
 			res = kdump_attr_ref_get(ctx, &it.pos, &attr);
 			if (res != kdump_ok) {
 				fprintf(stderr, "Cannot get value of %s: %s\n",
-					it.key, kdump_err_str(ctx));
+					it.key, kdump_get_err(ctx));
 				rc = TEST_FAIL;
 			}
 
@@ -144,7 +144,7 @@ main(int argc, char **argv)
 		res = kdump_attr_iter_next(ctx, &it);
 		if (res != kdump_ok) {
 			fprintf(stderr, "Cannot advance iterator: %s\n",
-				kdump_err_str(ctx));
+				kdump_get_err(ctx));
 			rc = TEST_FAIL;
 			break;
 		}
@@ -156,7 +156,7 @@ main(int argc, char **argv)
 		rc = TEST_FAIL;
 	} else if (res != kdump_invalid) {
 		fprintf(stderr, "Unexpected error advancing past end: %s\n",
-			kdump_err_str(ctx));
+			kdump_get_err(ctx));
 		rc = TEST_FAIL;
 	}
 

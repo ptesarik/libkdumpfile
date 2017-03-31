@@ -79,7 +79,7 @@ vtop_fd(int fd, unsigned long long vaddr)
 
 	res = kdump_set_number_attr(ctx, KDUMP_ATTR_FILE_FD, fd);
 	if (res != kdump_ok) {
-		fprintf(stderr, "Cannot open dump: %s\n", kdump_err_str(ctx));
+		fprintf(stderr, "Cannot open dump: %s\n", kdump_get_err(ctx));
 		rc = TEST_ERR;
 	} else
 		rc = vtop(ctx, vaddr);

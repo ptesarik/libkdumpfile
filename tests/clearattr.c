@@ -53,7 +53,7 @@ main(int argc, char **argv)
 	status = kdump_set_attr(ctx, ATTRPATH, &attr);
 	if (status != kdump_ok) {
 		fprintf(stderr, "Cannot set %s: %s\n",
-			ATTRPATH, kdump_err_str(ctx));
+			ATTRPATH, kdump_get_err(ctx));
 		return TEST_FAIL;
 	}
 
@@ -61,7 +61,7 @@ main(int argc, char **argv)
 	status = kdump_get_attr(ctx, ATTRPATH, &attr);
 	if (status != kdump_ok) {
 		fprintf(stderr, "Cannot get %s: %s\n",
-			ATTRPATH, kdump_err_str(ctx));
+			ATTRPATH, kdump_get_err(ctx));
 		return TEST_FAIL;
 	}
 	printf("%s = %s\n", ATTRPATH, attr.val.string);
@@ -70,7 +70,7 @@ main(int argc, char **argv)
 	status = kdump_set_attr(ctx, ATTRPATH, &attr);
 	if (status != kdump_ok) {
 		fprintf(stderr, "Cannot clear %s: %s\n",
-			ATTRPATH, kdump_err_str(ctx));
+			ATTRPATH, kdump_get_err(ctx));
 		return TEST_FAIL;
 	}
 
@@ -81,7 +81,7 @@ main(int argc, char **argv)
 		return TEST_FAIL;
 	} else if (status != kdump_nodata) {
 		fprintf(stderr, "Unexpected error on getting %s: %s\n",
-			ATTRPATH, kdump_err_str(ctx));
+			ATTRPATH, kdump_get_err(ctx));
 		return TEST_FAIL;
 	}
 

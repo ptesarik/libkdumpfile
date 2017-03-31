@@ -128,7 +128,7 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 				       self->fd);
 	if (status != kdump_ok) {
 		PyErr_Format(exception_map(status),
-			     "Cannot open dump: %s", kdump_err_str(self->ctx));
+			     "Cannot open dump: %s", kdump_get_err(self->ctx));
 		goto fail;
 	}
 
@@ -139,7 +139,7 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 	if (status != kdump_ok) {
 		PyErr_Format(exception_map(status),
 			     "Cannot reference root attribute: %s",
-			     kdump_err_str(self->ctx));
+			     kdump_get_err(self->ctx));
 		goto fail;
 	}
 
@@ -204,7 +204,7 @@ static PyObject *kdumpfile_read (PyObject *_self, PyObject *args, PyObject *kw)
 			    PyByteArray_AS_STRING(obj), &r);
 	if (status != kdump_ok) {
 		Py_XDECREF(obj);
-		PyErr_Format(exception_map(status), kdump_err_str(self->ctx));
+		PyErr_Format(exception_map(status), kdump_get_err(self->ctx));
 		return NULL;
 	}
 
@@ -243,7 +243,7 @@ static PyObject *kdumpfile_vtop_init(PyObject *_self, PyObject *args)
 	status = kdump_set_string_attr(self->ctx, KDUMP_ATTR_OSTYPE, "linux");
 	if (status != kdump_ok) {
 		PyErr_SetString(exception_map(status),
-				kdump_err_str(self->ctx));
+				kdump_get_err(self->ctx));
 		return NULL;
 	}
 
@@ -525,7 +525,7 @@ lookup_attribute(attr_dir_object *self, PyObject *key, kdump_attr_ref_t *ref)
 			ret = 0;
 		else
 			PyErr_SetString(exception_map(status),
-					kdump_err_str(ctx));
+					kdump_get_err(ctx));
 	}
 
 	if (stringkey != key)
@@ -601,7 +601,7 @@ attr_dir_length(PyObject *_self)
 	return len;
 
  err:
-	PyErr_Format(exception_map(status), kdump_err_str(ctx));
+	PyErr_Format(exception_map(status), kdump_get_err(ctx));
 	return -1;
 }
 
@@ -625,7 +625,7 @@ attr_dir_subscript(PyObject *_self, PyObject *key)
 	if (status == kdump_nodata)
 		PyErr_SetObject(PyExc_KeyError, key);
 	else
-		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
+		PyErr_SetString(exception_map(status), kdump_get_err(ctx));
 
 	kdump_attr_unref(ctx, &ref);
 	return NULL;
@@ -727,7 +727,7 @@ set_attribute(attr_dir_object *self, kdump_attr_ref_t *ref, PyObject *value)
 	if (conv != value)
 		Py_XDECREF(conv);
 	if (status != kdump_ok) {
-		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
+		PyErr_SetString(exception_map(status), kdump_get_err(ctx));
 		return -1;
 	}
 
@@ -896,7 +896,7 @@ attr_dir_get(PyObject *_self, PyObject *args)
 		return attr_new(self->kdumpfile, &ref, &attr);
 
 	if (status != kdump_nodata) {
-		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
+		PyErr_SetString(exception_map(status), kdump_get_err(ctx));
 		return NULL;
 	}
 
@@ -935,7 +935,7 @@ dict_setdefault(PyObject *_self, PyObject *args)
 			? failobj
 			: NULL;
 	else {
-		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
+		PyErr_SetString(exception_map(status), kdump_get_err(ctx));
 		val = NULL;
 	}
 	kdump_attr_unref(ctx, &ref);
@@ -1099,7 +1099,7 @@ attr_dir_clear(PyObject *_self, PyObject *args)
  err:
 	kdump_attr_iter_end(ctx, &iter);
  err_noiter:
-	PyErr_Format(exception_map(status), kdump_err_str(ctx));
+	PyErr_Format(exception_map(status), kdump_get_err(ctx));
 	return NULL;
 }
 
@@ -1118,7 +1118,7 @@ attr_dir_repr(PyObject *_self)
 
 	status = kdump_attr_ref_iter_start(ctx, &self->baseref, &iter);
 	if (status != kdump_ok) {
-		PyErr_Format(exception_map(status), kdump_err_str(ctx));
+		PyErr_Format(exception_map(status), kdump_get_err(ctx));
 		return NULL;
 	}
 
@@ -1160,7 +1160,7 @@ attr_dir_repr(PyObject *_self)
 
 		status = kdump_attr_iter_next(ctx, &iter);
 		if (status != kdump_ok) {
-			PyErr_Format(exception_map(status), kdump_err_str(ctx));
+			PyErr_Format(exception_map(status), kdump_get_err(ctx));
 			goto out;
 		}
 	}
@@ -1209,7 +1209,7 @@ attr_dir_print(PyObject *_self, FILE *fp, int flags)
 
 	status = kdump_attr_ref_iter_start(ctx, &self->baseref, &iter);
 	if (status != kdump_ok) {
-		PyErr_Format(exception_map(status), kdump_err_str(ctx));
+		PyErr_Format(exception_map(status), kdump_get_err(ctx));
 		return -1;
 	}
 
@@ -1242,7 +1242,7 @@ attr_dir_print(PyObject *_self, FILE *fp, int flags)
 
 		status = kdump_attr_iter_next(ctx, &iter);
 		if (status != kdump_ok) {
-			PyErr_Format(exception_map(status), kdump_err_str(ctx));
+			PyErr_Format(exception_map(status), kdump_get_err(ctx));
 			goto err;
 		}
 
@@ -1548,7 +1548,7 @@ attr_iter_new(attr_dir_object *attr_dir, PyTypeObject *itertype)
 	status = kdump_attr_ref_iter_start(ctx, &attr_dir->baseref,
 					   &self->iter);
 	if (status != kdump_ok) {
-		PyErr_Format(exception_map(status), kdump_err_str(ctx));
+		PyErr_Format(exception_map(status), kdump_get_err(ctx));
 		Py_DECREF(self);
 		return NULL;
 	}
@@ -1588,7 +1588,7 @@ attr_iter_advance(attr_iter_object *self, PyObject *ret)
 
 	status = kdump_attr_iter_next(ctx, &self->iter);
 	if (status != kdump_ok) {
-		PyErr_Format(exception_map(status), kdump_err_str(ctx));
+		PyErr_Format(exception_map(status), kdump_get_err(ctx));
 		Py_XDECREF(ret);
 		ret = NULL;
 	}
@@ -1622,7 +1622,7 @@ attr_itervalue_next(PyObject *_self)
 	ctx = self->kdumpfile->ctx;
 	status = kdump_attr_ref_get(ctx, &self->iter.pos, &attr);
 	if (status != kdump_ok) {
-		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
+		PyErr_SetString(exception_map(status), kdump_get_err(ctx));
 		return NULL;
 	}
 
@@ -1645,7 +1645,7 @@ attr_iteritem_next(PyObject *_self)
 	ctx = self->kdumpfile->ctx;
 	status = kdump_attr_ref_get(ctx, &self->iter.pos, &attr);
 	if (status != kdump_ok) {
-		PyErr_SetString(exception_map(status), kdump_err_str(ctx));
+		PyErr_SetString(exception_map(status), kdump_get_err(ctx));
 		return NULL;
 	}
 

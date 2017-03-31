@@ -3,7 +3,7 @@ LIBKDUMPFILE_0 {
     kdump_new;
     kdump_clone;
     kdump_free;
-    kdump_err_str;
+    kdump_get_err;
     kdump_get_addrxlat_ctx;
     kdump_get_addrxlat_sys;
     kdump_cb_get_symbol_val;

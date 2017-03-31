@@ -29,7 +29,7 @@ change is also visible through all other contexts cloned from the
 same base (directly or indirectly). Only the following data bits
 are *not* shared:
 
-- error string ([kdump_err_str])
+- error string ([kdump_get_err])
 - private data ([kdump_get_priv], [kdump_set_priv])
 - callbacks
 
@@ -55,7 +55,7 @@ this error indicates that the cache size should be increased.
 
 [kdump_ctx_t]: @ref kdump_ctx_t
 [kdump_clone]: @ref kdump_clone
-[kdump_err_str]: @ref kdump_err_str
+[kdump_get_err]: @ref kdump_get_err
 [kdump_get_priv]: @ref kdump_get_priv
 [kdump_set_priv]: @ref kdump_set_priv
 [kdump_busy]: @ref kdump_busy

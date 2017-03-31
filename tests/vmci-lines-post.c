@@ -88,7 +88,7 @@ check_string(kdump_ctx_t *ctx, const char *attrpath, const char *expect)
 	status = kdump_get_attr(ctx, attrpath, &attr);
 	if (status != kdump_ok) {
 		fprintf(stderr, "%s: Cannot get value: %s\n",
-			attrpath, kdump_err_str(ctx));
+			attrpath, kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 	if (attr.type != kdump_string) {
@@ -115,7 +115,7 @@ check_number(kdump_ctx_t *ctx, const char *attrpath, long long expect)
 	status = kdump_get_attr(ctx, attrpath, &attr);
 	if (status != kdump_ok) {
 		fprintf(stderr, "%s: Cannot get value: %s\n",
-			attrpath, kdump_err_str(ctx));
+			attrpath, kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 	if (attr.type != kdump_number) {
@@ -147,7 +147,7 @@ check(kdump_ctx_t *ctx)
 	status = kdump_set_attr(ctx, "addrxlat.ostype", &attr);
 	if (status != kdump_ok) {
 		fprintf(stderr, "Cannot set ostype: %s\n",
-			kdump_err_str(ctx));
+			kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 
@@ -156,7 +156,7 @@ check(kdump_ctx_t *ctx)
 	status = kdump_set_attr(ctx, "linux.vmcoreinfo.raw", &attr);
 	if (status != kdump_ok) {
 		fprintf(stderr, "Cannot set vmcoreinfo: %s\n",
-			kdump_err_str(ctx));
+			kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 
@@ -168,7 +168,7 @@ check(kdump_ctx_t *ctx)
 	status = kdump_set_attr(ctx, ATTR_LINES ".OSRELEASE", &attr);
 	if (status != kdump_ok) {
 		fprintf(stderr, "Cannot modify %s: %s\n",
-			ATTR_LINES ".OSRELEASE", kdump_err_str(ctx));
+			ATTR_LINES ".OSRELEASE", kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 	tmprc = check_string(ctx, ATTR_OSRELEASE, ALT_OSRELEASE);
@@ -181,7 +181,7 @@ check(kdump_ctx_t *ctx)
 	status = kdump_set_attr(ctx, ATTR_LINES ".PAGESIZE", &attr);
 	if (status != kdump_ok) {
 		fprintf(stderr, "Cannot modify %s: %s\n",
-			ATTR_LINES ".PAGESIZE", kdump_err_str(ctx));
+			ATTR_LINES ".PAGESIZE", kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 	tmprc = check_number(ctx, ATTR_PAGESIZE, ALT_PAGESIZE);
@@ -196,13 +196,13 @@ check(kdump_ctx_t *ctx)
 	if (status != kdump_ok) {
 		fprintf(stderr, "Cannot modify %s: %s\n",
 			ATTR_LINES ".SYMBOL(" SYM_NAME ")",
-			kdump_err_str(ctx));
+			kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 	status = kdump_vmcoreinfo_symbol(ctx, SYM_NAME, &symval);
 	if (status != kdump_ok) {
 		fprintf(stderr, "%s: Cannot get value: %s\n",
-			SYM_NAME, kdump_err_str(ctx));
+			SYM_NAME, kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 	if (symval != ALT_SYM_VALUE) {
@@ -220,7 +220,7 @@ check(kdump_ctx_t *ctx)
 	if (status != kdump_ok) {
 		fprintf(stderr, "Cannot modify %s: %s\n",
 			ATTR_LINES ".LENGTH(" LEN_NAME ")",
-			kdump_err_str(ctx));
+			kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 	tmprc = check_number(ctx, ATTR_LEN, ALT_LEN_VALUE);
@@ -235,7 +235,7 @@ check(kdump_ctx_t *ctx)
 	if (status != kdump_ok) {
 		fprintf(stderr, "Cannot modify %s: %s\n",
 			ATTR_LINES ".NUMBER(" NUM_NAME ")",
-			kdump_err_str(ctx));
+			kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 	tmprc = check_number(ctx, ATTR_NUM, ALT_NUM_VALUE);
@@ -250,7 +250,7 @@ check(kdump_ctx_t *ctx)
 	if (status != kdump_ok) {
 		fprintf(stderr, "Cannot modify %s: %s\n",
 			ATTR_LINES ".OFFSET(" OFF_NAME ")",
-			kdump_err_str(ctx));
+			kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 	tmprc = check_number(ctx, ATTR_OFF, ALT_OFF_VALUE);
@@ -265,7 +265,7 @@ check(kdump_ctx_t *ctx)
 	if (status != kdump_ok) {
 		fprintf(stderr, "Cannot modify %s: %s\n",
 			ATTR_LINES ".SIZE(" SIZE_NAME ")",
-			kdump_err_str(ctx));
+			kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 	tmprc = check_number(ctx, ATTR_SIZE, ALT_SIZE_VALUE);

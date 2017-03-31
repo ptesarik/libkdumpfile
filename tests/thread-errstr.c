@@ -62,9 +62,9 @@ get_nokey(void *arg)
 	if (res == kdump_ok)
 		return (void*) "non.existent is a valid key?!";
 	else if (res != kdump_nokey)
-		return (void*) kdump_err_str(ctx);
+		return (void*) kdump_get_err(ctx);
 
-	err = strdup(kdump_err_str(ctx));
+	err = strdup(kdump_get_err(ctx));
 	if (!err)
 		return (void*) "Cannot copy error string";
 
@@ -74,9 +74,9 @@ get_nokey(void *arg)
 		pthread_cond_wait(&state_cond, &attr_mutex);
 
 	ret = NULL;
-	if (strcmp(err, kdump_err_str(ctx))) {
+	if (strcmp(err, kdump_get_err(ctx))) {
 		fprintf(stderr, "nokey: '%s' != '%s'\n",
-			err, kdump_err_str(ctx));
+			err, kdump_get_err(ctx));
 		ret = "kdump_nokey error string has changed";
 	}
 
@@ -106,9 +106,9 @@ get_novalue(void *arg)
 	if (res == kdump_ok)
 		return (void*) "xen.type has a value?!";
 	else if (res != kdump_nodata)
-		return (void*) kdump_err_str(ctx);
+		return (void*) kdump_get_err(ctx);
 
-	err = strdup(kdump_err_str(ctx));
+	err = strdup(kdump_get_err(ctx));
 	if (!err)
 		return (void*) "Cannot copy error string";
 
@@ -118,9 +118,9 @@ get_novalue(void *arg)
 		pthread_cond_wait(&state_cond, &attr_mutex);
 
 	ret = NULL;
-	if (strcmp(err, kdump_err_str(ctx))) {
+	if (strcmp(err, kdump_get_err(ctx))) {
 		fprintf(stderr, "nodata: '%s' != '%s'\n",
-			err, kdump_err_str(ctx));
+			err, kdump_get_err(ctx));
 		ret = "kdump_nodata error string has changed";
 	}
 

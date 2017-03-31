@@ -81,7 +81,7 @@ check_string(kdump_ctx_t *ctx, const char *attrpath, const char *expect)
 	status = kdump_get_attr(ctx, attrpath, &attr);
 	if (status != kdump_ok) {
 		fprintf(stderr, "%s: Cannot get value: %s\n",
-			attrpath, kdump_err_str(ctx));
+			attrpath, kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 	if (attr.type != kdump_string) {
@@ -108,7 +108,7 @@ check_number(kdump_ctx_t *ctx, const char *attrpath, long long expect)
 	status = kdump_get_attr(ctx, attrpath, &attr);
 	if (status != kdump_ok) {
 		fprintf(stderr, "%s: Cannot get value: %s\n",
-			attrpath, kdump_err_str(ctx));
+			attrpath, kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 	if (attr.type != kdump_number) {
@@ -140,7 +140,7 @@ check(kdump_ctx_t *ctx)
 	status = kdump_set_attr(ctx, "addrxlat.ostype", &attr);
 	if (status != kdump_ok) {
 		fprintf(stderr, "Cannot set ostype: %s\n",
-			kdump_err_str(ctx));
+			kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 
@@ -149,7 +149,7 @@ check(kdump_ctx_t *ctx)
 	status = kdump_set_attr(ctx, "linux.vmcoreinfo.raw", &attr);
 	if (status != kdump_ok) {
 		fprintf(stderr, "Cannot set vmcoreinfo: %s\n",
-			kdump_err_str(ctx));
+			kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 
@@ -218,7 +218,7 @@ check(kdump_ctx_t *ctx)
 	status = kdump_vmcoreinfo_symbol(ctx, SYM_NAME, &symval);
 	if (status != kdump_ok) {
 		fprintf(stderr, "%s: Cannot get value: %s\n",
-			SYM_NAME, kdump_err_str(ctx));
+			SYM_NAME, kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 	if (symval != SYM_VALUE) {

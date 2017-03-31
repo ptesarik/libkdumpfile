@@ -57,14 +57,14 @@ main(int argc, char **argv)
 	status = kdump_set_attr(ctx, ATTRPATH, &attr);
 	if (status != kdump_ok) {
 		fprintf(stderr, "Cannot set %s: %s\n",
-			ATTRPATH, kdump_err_str(ctx));
+			ATTRPATH, kdump_get_err(ctx));
 		return TEST_FAIL;
 	}
 
 	status = kdump_attr_ref(ctx, "linux", &ref);
 	if (status != kdump_ok) {
 		fprintf(stderr, "kdump_attr_ref failed: %s\n",
-			kdump_err_str(ctx));
+			kdump_get_err(ctx));
 		return TEST_FAIL;
 	}
 
@@ -82,7 +82,7 @@ main(int argc, char **argv)
 		kdump_attr_unref(ctx, &subref);
 	} else {
 		fprintf(stderr, "kdump_sub_attr_ref failed for %s: %s\n",
-			ATTRDIR, kdump_err_str(ctx));
+			ATTRDIR, kdump_get_err(ctx));
 		rc = TEST_FAIL;
 	}
 
@@ -102,7 +102,7 @@ main(int argc, char **argv)
 		kdump_attr_unref(ctx, &subref);
 	} else {
 		fprintf(stderr, "kdump_sub_attr_ref failed for %s: %s\n",
-			ATTRPATH, kdump_err_str(ctx));
+			ATTRPATH, kdump_get_err(ctx));
 		rc = TEST_FAIL;
 	}
 

@@ -114,7 +114,7 @@ typedef struct _kdump_ctx kdump_ctx_t;
 /**  Status code.
  *
  * Return type of all (almost) library functions that may fail. It
- * provides a very rough description of the error. See @ref kdump_err_str
+ * provides a very rough description of the error. See @ref kdump_get_err
  * if you want a human-readable error description.
  */
 typedef enum _kdump_status {
@@ -181,7 +181,7 @@ kdump_ctx_t *kdump_new(void);
  * The following fields are *not* shared:
  * - private data (see @ref kdump_set_priv, @ref kdump_get_priv),
  * - callbacks (see @ref kdump_cb_get_symbol_val).
- * - error string (see @ref kdump_err_str),
+ * - error string (see @ref kdump_get_err),
  *
  * Private data and callbacks are initialized to their values from the
  * @p orig context here.
@@ -209,7 +209,7 @@ void kdump_free(kdump_ctx_t *ctx);
  * reset by calling this function, but it is reset by calling any
  * library function that returns @ref kdump_status.
  */
-const char *kdump_err_str(kdump_ctx_t *ctx);
+const char *kdump_get_err(kdump_ctx_t *ctx);
 
 /**  Get the associated address translation context.
  * @param ctx  Dump file object.
