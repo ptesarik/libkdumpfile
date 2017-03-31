@@ -759,6 +759,12 @@ kdump_set_priv(kdump_ctx_t *ctx, void *data);
 void *
 kdump_get_priv(kdump_ctx_t *ctx);
 
+/**  Return the string describing a given error status.
+ * @param status  Error status
+ * @returns       Description of the error.
+ */
+const char *kdump_strerror(kdump_status status);
+
 #ifdef  __cplusplus
 }
 #endif

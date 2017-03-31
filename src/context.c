@@ -248,3 +248,32 @@ per_ctx_free(struct kdump_shared *shared, int slot)
 		free(ctx->data[slot]);
 	shared->per_ctx_size[slot] = 0;
 }
+
+const char *
+kdump_strerror(kdump_status status)
+{
+	switch (status) {
+	case kdump_ok:
+		return "Success";
+	case kdump_syserr:
+		return "OS error, see @c errno";
+	case kdump_unsupported:
+		return "Unsupported file format";
+	case kdump_nodata:
+		return "Data is not stored in the dump file";
+	case kdump_dataerr:
+		return "Corrupted file data";
+	case kdump_invalid:
+		return "Invalid value";
+	case kdump_nokey:
+		return "No such attribute key";
+	case kdump_eof:
+		return "Unexpected EOF";
+	case kdump_busy:
+		return "Too many pending requests";
+	case kdump_addrxlat:
+		return "Address translation error";
+	default:
+		return "Unknown error";
+	}
+}

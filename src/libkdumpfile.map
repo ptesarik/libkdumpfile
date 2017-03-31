@@ -31,6 +31,8 @@ LIBKDUMPFILE_0 {
     kdump_vmcoreinfo_row;
     kdump_vmcoreinfo_symbol;
 
+    kdump_strerror;
+
   local:
     *;
 };
