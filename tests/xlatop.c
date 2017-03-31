@@ -335,7 +335,7 @@ make_linear_map(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys,
 	status = addrxlat_meth_set_def(range.meth, &def);
 	if (status != addrxlat_ok) {
 		fprintf(stderr, "Cannot set up translation map: %s",
-			addrxlat_ctx_get_err(ctx));
+			addrxlat_strerror(status));
 	}
 
 	map = addrxlat_sys_get_map(sys, mapidx);

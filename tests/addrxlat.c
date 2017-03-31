@@ -450,7 +450,8 @@ main(int argc, char **argv)
 
 	status = addrxlat_meth_set_def(xlat, def);
 	if (status != addrxlat_ok) {
-		fprintf(stderr, "Cannot set up address translation\n");
+		fprintf(stderr, "Cannot set up address translation: %s\n",
+			addrxlat_strerror(status));
 		rc = TEST_ERR;
 		goto out;
 	}

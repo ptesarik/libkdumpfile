@@ -653,7 +653,8 @@ cfg_block(enum cfg_state state, addrxlat_sys_t *sys,
 
 		status = addrxlat_meth_set_def(meth, def);
 		if (status != addrxlat_ok) {
-			fprintf(stderr, "Cannot define translation\n");
+			fprintf(stderr, "Cannot define translation: %s\n",
+				addrxlat_strerror(status));
 			addrxlat_meth_decref(meth);
 			return TEST_ERR;
 		}

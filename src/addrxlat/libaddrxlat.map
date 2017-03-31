@@ -37,6 +37,8 @@ LIBADDRXLAT_0 {
     addrxlat_by_sys;
     addrxlat_op;
 
+    addrxlat_strerror;
+
   local:
     *;
 };

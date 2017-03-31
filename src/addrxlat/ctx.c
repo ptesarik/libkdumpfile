@@ -415,3 +415,18 @@ addrxlat_ctx_err(addrxlat_ctx_t *ctx, addrxlat_status status,
 	ctx->err_str = msg - msglen;
 	return status;
 }
+
+const char *
+addrxlat_strerror(addrxlat_status status)
+{
+	switch (status) {
+	case addrxlat_ok:         return "Success";                   break;
+	case addrxlat_notimpl:    return "Unimplemented feature";     break;
+	case addrxlat_notpresent: return "Page not present";          break;
+	case addrxlat_invalid:    return "Invalid address";           break;
+	case addrxlat_nomem:      return "Memory allocation failure"; break;
+	case addrxlat_nodata:     return "Uninitialized data";        break;
+	case addrxlat_nometh:     return "No translation method";     break;
+	default:                  return "Unknown error";             break;
+	}
+}

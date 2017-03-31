@@ -418,6 +418,12 @@ void addrxlat_ctx_clear_err(addrxlat_ctx_t *ctx);
  */
 const char *addrxlat_ctx_get_err(const addrxlat_ctx_t *ctx);
 
+/**  Return the string describing a given error status.
+ * @param status  Error status
+ * @returns       Description of the error.
+ */
+const char *addrxlat_strerror(addrxlat_status status);
+
 /** Type of symbolic information. */
 typedef enum _addrxlat_sym_type {
 	/** Register value.
