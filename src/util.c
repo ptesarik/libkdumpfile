@@ -42,8 +42,16 @@
 # include <zlib.h>
 #endif
 
+void
+kdump_clear_err(kdump_ctx_t *ctx)
+{
+	clear_error(ctx);
+}
+
+DEFINE_ALIAS(err);
+
 kdump_status
-set_error(kdump_ctx_t *ctx, kdump_status status, const char *msgfmt, ...)
+kdump_err(kdump_ctx_t *ctx, kdump_status status, const char *msgfmt, ...)
 {
 	static const char failure[] = "(bad format string)";
 	static const char delim[] = { ':', ' ' };

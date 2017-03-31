@@ -200,6 +200,25 @@ kdump_ctx_t *kdump_clone(const kdump_ctx_t *orig);
  */
 void kdump_free(kdump_ctx_t *ctx);
 
+/** Prepend an error message.
+ * @param ctx     Dump file object.
+ * @param status  Error status.
+ * @param msgfmt  Message format string (@c printf style).
+ * @returns       The error status which was passed as argument.
+ *
+ * This function prepends the new error message to the existing
+ * content of the error buffer, resulting in a kind of error
+ * backtrace.
+ */
+kdump_status kdump_err(
+	kdump_ctx_t *ctx, kdump_status status, const char *msgfmt, ...)
+	__attribute__ ((format (printf, 3, 4)));
+
+/** Clear the error message.
+ * @param ctx  Dump file object.
+ */
+void kdump_clear_err(kdump_ctx_t *ctx);
+
 /**  Get a detailed error string.
  * @param ctx  Dump file object.
  * @returns    Error string, or @c NULL if there was no error.

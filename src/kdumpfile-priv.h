@@ -1091,6 +1091,9 @@ page_align(kdump_ctx_t *ctx, kdump_addr_t addr)
 	return addr & (-get_page_size(ctx));
 }
 
+#define set_error internal_err
+DECLARE_ALIAS(err);
+
 static inline void
 clear_error(kdump_ctx_t *ctx)
 {
