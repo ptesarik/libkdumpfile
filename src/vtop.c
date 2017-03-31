@@ -148,10 +148,44 @@ free_opts(struct opts *opts)
 }
 
 static kdump_status
+set_x86_pae_opt(kdump_ctx_t *ctx, struct opts *opts)
+{
+	static const char config_pae[] = "CONFIG_X86_PAE";
+	struct attr_data *attr;
+	const char *pae_state;
+	int len;
+
+	pae_state = NULL;
+	attr = gattr(ctx, GKI_linux_vmcoreinfo_lines);
+	if (attr_isset(attr))
+		pae_state = "no";
+	attr = lookup_dir_attr(ctx->shared, attr,
+			       config_pae, sizeof(config_pae) - 1);
+	if (attr && validate_attr(ctx, attr) == kdump_ok &&
+	    !strcmp(attr_value(attr)->string, "y"))
+		pae_state = "yes";
+	if (pae_state) {
+		len = asprintf(&opts->str[opts->n], "pae=%s", pae_state);
+		if (len < 0)
+			return set_error(ctx, kdump_syserr,
+					 "Cannot make %s option", "pae");
+		++opts->n;
+	}
+
+	return kdump_ok;
+}
+
+static kdump_status
 set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 {
 	struct attr_data *attr;
 	int len;
+
+	if (ctx->shared->arch == ARCH_IA32) {
+		kdump_status status = set_x86_pae_opt(ctx, opts);
+		if (status != kdump_ok)
+			return status;
+	}
 
 	if (isset_phys_base(ctx)) {
 		len = asprintf(&opts->str[opts->n],
