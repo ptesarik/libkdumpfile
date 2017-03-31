@@ -571,8 +571,8 @@ storeaddr(void *data, const addrxlat_fulladdr_t *paddr)
 DEFINE_ALIAS(by_sys);
 
 addrxlat_status
-addrxlat_by_sys(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
-		addrxlat_addrspace_t goal, const addrxlat_sys_t *sys)
+addrxlat_by_sys(addrxlat_ctx_t *ctx, const addrxlat_sys_t *sys,
+		addrxlat_fulladdr_t *paddr, addrxlat_addrspace_t goal)
 {
 	addrxlat_op_ctl_t opctl;
 

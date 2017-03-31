@@ -922,7 +922,7 @@ translate(struct cbdata *cbd, char *spec)
 	if (res != TEST_OK)
 		return res;
 
-	status = addrxlat_by_sys(cbd->ctx, &addr, goal, cbd->sys);
+	status = addrxlat_by_sys(cbd->ctx, cbd->sys, &addr, goal);
 	if (status == addrxlat_nometh) {
 		printf("%s -> NOMETH\n", spec);
 	} else if (status != addrxlat_ok) {

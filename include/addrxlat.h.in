@@ -925,9 +925,9 @@ addrxlat_status addrxlat_walk(addrxlat_step_t *step);
 
 /** Translate an address using a translation system.
  * @param ctx            Address translation context.
+ * @param sys            Translation system.
  * @param[in,out] paddr  Address.
  * @param goal           Target address space.
- * @param sys            Translation system.
  * @returns              Error status.
  *
  * This function performs all address translations (possibly repeated)
@@ -938,8 +938,8 @@ addrxlat_status addrxlat_walk(addrxlat_step_t *step);
  * target address space, this function returns @ref addrxlat_nometh.
  */
 addrxlat_status addrxlat_by_sys(
-	addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *paddr,
-	addrxlat_addrspace_t goal, const addrxlat_sys_t *sys);
+	addrxlat_ctx_t *ctx, const addrxlat_sys_t *sys,
+	addrxlat_fulladdr_t *paddr, addrxlat_addrspace_t goal);
 
 /** Type of the @ref addrxlat_op callback.
  * @param data      Arbitrary user-supplied data.

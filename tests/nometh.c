@@ -117,7 +117,7 @@ main(int argc, char **argv)
 	fputs("Infinite recursion: ", stdout);
 	faddr.addr = 0x123456;
 	faddr.as = ADDRXLAT_KVADDR;
-	status = addrxlat_by_sys(ctx, &faddr, ADDRXLAT_MACHPHYSADDR, sys);
+	status = addrxlat_by_sys(ctx, sys, &faddr, ADDRXLAT_MACHPHYSADDR);
 	if (status == addrxlat_ok) {
 		puts("FAIL");
 		fputs("Unexpected success??\n", stderr);
@@ -135,7 +135,7 @@ main(int argc, char **argv)
 	addrxlat_ctx_set_cb(ctx, &cb);
 	faddr.addr = 0x123456;
 	faddr.as = ADDRXLAT_KVADDR;
-	status = addrxlat_by_sys(ctx, &faddr, ADDRXLAT_MACHPHYSADDR, sys);
+	status = addrxlat_by_sys(ctx, sys, &faddr, ADDRXLAT_MACHPHYSADDR);
 	if (status == addrxlat_ok) {
 		puts("FAIL");
 		fputs("Unexpected success??\n", stderr);
@@ -153,7 +153,7 @@ main(int argc, char **argv)
 	addrxlat_ctx_set_cb(ctx, &cb);
 	faddr.addr = 0x123456;
 	faddr.as = ADDRXLAT_KVADDR;
-	status = addrxlat_by_sys(ctx, &faddr, ADDRXLAT_MACHPHYSADDR, sys);
+	status = addrxlat_by_sys(ctx, sys, &faddr, ADDRXLAT_MACHPHYSADDR);
 	if (status == addrxlat_ok) {
 		puts("FAIL");
 		fputs("Unexpected success??\n", stderr);
