@@ -406,7 +406,6 @@ static addrxlat_status
 linux_ktext_map(struct sys_init_data *ctl)
 {
 	addrxlat_range_t range;
-	addrxlat_map_t *newmap;
 	addrxlat_status status;
 
 	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_KTEXT);
@@ -423,12 +422,11 @@ linux_ktext_map(struct sys_init_data *ctl)
 
 	range.endoff = __END_KERNEL_map - __START_KERNEL_map;
 	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT];
-	newmap = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS],
+	status = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS],
 				  __START_KERNEL_map, &range);
-	if (!newmap)
-		return set_error(ctl->ctx, addrxlat_nomem,
+	if (status != addrxlat_ok)
+		return set_error(ctl->ctx, status,
 				 "Cannot set up Linux kernel text mapping");
-	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
 	return addrxlat_ok;
 }
 
@@ -472,6 +470,7 @@ set_xen_p2m(struct sys_init_data *ctl)
 	addrxlat_meth_t *meth;
 	addrxlat_def_t def;
 	addrxlat_range_t range;
+	addrxlat_status status;
 
 	map = ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS];
 	internal_map_clear(map);
@@ -489,11 +488,10 @@ set_xen_p2m(struct sys_init_data *ctl)
 
 	range.endoff = paging_max_index(&xen_p2m_pf);
 	range.meth = meth;
-	map = internal_map_set(map, 0, &range);
-	if (!map)
-		return set_error(ctl->ctx, addrxlat_nomem,
+	status = internal_map_set(map, 0, &range);
+	if (status != addrxlat_ok)
+		return set_error(ctl->ctx, status,
 				 "Cannot allocate Xen p2m map");
-	ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS] = map;
 
 	return addrxlat_ok;
 }

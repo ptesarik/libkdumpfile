@@ -121,6 +121,23 @@ struct _addrxlat_meth {
 /**  In-flight translation. */
 struct inflight;
 
+/**  Internal definition of an address translation map.
+ * Note that the start address does not have to be stored in the
+ * structure. The first range in a map starts at address 0, and
+ * each following range starts right after the previous one (i.e.
+ * at @c endoff + 1).
+ */
+struct _addrxlat_map {
+	/** Reference counter. */
+	unsigned long refcnt;
+
+	/** Number of elements in @c ranges. */
+	size_t n;
+
+	/** Actual range definitions. */
+	addrxlat_range_t *ranges;
+};
+
 /**  Representation of address translation.
  *
  * This structure contains all internal state needed to perform address
@@ -283,6 +300,9 @@ DECLARE_ALIAS(meth_new);
 DECLARE_ALIAS(meth_incref);
 DECLARE_ALIAS(meth_decref);
 DECLARE_ALIAS(meth_set_def);
+DECLARE_ALIAS(map_new);
+DECLARE_ALIAS(map_incref);
+DECLARE_ALIAS(map_decref);
 DECLARE_ALIAS(map_set);
 DECLARE_ALIAS(map_search);
 DECLARE_ALIAS(map_clear);

@@ -556,29 +556,56 @@ typedef struct _addrxlat_range {
 	addrxlat_meth_t *meth;
 } addrxlat_range_t;
 
-/**  Address translation map.
- * Note that the start address does not have to be stored in the
- * structure. The first range in a map starts at address 0, and
- * each following range starts right after the previous one (i.e.
- * at @c endoff + 1).
- */
-typedef struct _addrxlat_map {
-	/** Number of elements in @c ranges. */
-	size_t n;
+/**  Address translation map. */
+typedef struct _addrxlat_map addrxlat_map_t;
 
-	/** Actual range definitions. */
-	addrxlat_range_t ranges[];
-} addrxlat_map_t;
+/** Allocate and initialize a new address translation map.
+ * @returns    New initialized map, or @c NULL on failure.
+ *
+ * This call can fail if and only if memory allocation fails.
+ * The reference count of the newly created object is one.
+ */
+addrxlat_map_t *addrxlat_map_new(void);
+
+/** Increment translation map reference counter.
+ * @param map    Translation map.
+ * @returns      New reference count.
+ */
+unsigned long addrxlat_map_incref(addrxlat_map_t *map);
+
+/** Decrement translation map reference counter.
+ * @param map    Translation map.
+ * @returns      New reference count.
+ *
+ * If the new reference count is zero, the underlying object is freed
+ * and its address must not be used afterwards.
+ */
+unsigned long addrxlat_map_decref(addrxlat_map_t *map);
+
+/** Get translation map length.
+ * @param map   Address translation map.
+ * @returns     Number of elements in the map.
+ */
+size_t addrxlat_map_len(const addrxlat_map_t *map);
+
+/** Get the ranges in a translation map.
+ * @param map   Address translation map.
+ * @returns     Poiner to the array of ranges.
+ *
+ * The first range in a map starts at address 0, and each following range
+ * starts right after the previous one (i.e. at @c endoff + 1).
+ */
+const addrxlat_range_t *addrxlat_map_ranges(const addrxlat_map_t *map);
 
 /** Set map translation for an address range.
  * @param map    Address translation map.
  * @param addr   Range start address.
  * @param range  Translation range definition.
- * @returns      Updated map, or @c NULL on allocation error.
+ * @returns      Error status.
  *
  * If this function fails, the original @c map is left untouched.
  */
-addrxlat_map_t *
+addrxlat_status
 addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 		 const addrxlat_range_t *range);
 

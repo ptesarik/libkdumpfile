@@ -408,11 +408,10 @@ try_vmlist(struct sys_init_data *ctl, addrxlat_addr_t *addr)
  * @returns     Error status.
  */
 static addrxlat_status
-set_linux_directmap(struct sys_init_data *ctl, addrxlat_map_t **vtop)
+set_linux_directmap(struct sys_init_data *ctl, addrxlat_map_t *vtop)
 {
 	addrxlat_addr_t vmalloc_start;
 	addrxlat_range_t range;
-	addrxlat_map_t *map;
 	addrxlat_status status;
 
 	status = try_vmap_area_list(ctl, &vmalloc_start);
@@ -434,21 +433,19 @@ set_linux_directmap(struct sys_init_data *ctl, addrxlat_map_t **vtop)
 
 	range.meth = NULL;
 	range.endoff = ADDRXLAT_ADDR_MAX - (vmalloc_start - LINUX_DIRECTMAP);
-	map = ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_DIRECT];
-	map = addrxlat_map_set(map, vmalloc_start - LINUX_DIRECTMAP, &range);
-	if (!map)
-		return set_error(ctl->ctx, addrxlat_nomem,
+	status = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_DIRECT],
+				  vmalloc_start - LINUX_DIRECTMAP, &range);
+	if (status != addrxlat_ok)
+		return set_error(ctl->ctx, status,
 				 "Cannot update reverse directmap");
-	ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_DIRECT] = map;
 
 	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_DIRECT];
 	range.endoff = vmalloc_start - 1 - LINUX_DIRECTMAP;
-	map = addrxlat_map_set(*vtop, LINUX_DIRECTMAP, &range);
-	if (!map)
-		return set_error(ctl->ctx, addrxlat_nomem,
+	status = internal_map_set(vtop, LINUX_DIRECTMAP, &range);
+	if (status != addrxlat_ok)
+		return set_error(ctl->ctx, status,
 				 "Cannot set up directmap");
 
-	*vtop = map;
 	return addrxlat_ok;
 }
 
@@ -505,12 +502,15 @@ sys_ia32(struct sys_init_data *ctl)
 
 	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	range.endoff = VIRTADDR_MAX;
-	newmap = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_HW],
-				  0, &range);
+	newmap = internal_map_new();
 	if (!newmap)
 		return set_error(ctl->ctx, addrxlat_nomem,
 				 "Cannot set up hardware mapping");
 	ctl->sys->map[ADDRXLAT_SYS_MAP_HW] = newmap;
+	status = internal_map_set(newmap, 0, &range);
+	if (status != addrxlat_ok)
+		return set_error(ctl->ctx, status,
+				 "Cannot set up hardware mapping");
 
 	status = ctl->popt.val[OPT_pae].num
 		? sys_ia32_pae(ctl)
@@ -519,25 +519,28 @@ sys_ia32(struct sys_init_data *ctl)
 	if (status != addrxlat_ok)
 		return status;
 
-	newmap = internal_map_set(NULL, 0, &range);
+	newmap = internal_map_new();
 	if (!newmap)
 		return set_error(ctl->ctx, addrxlat_nomem,
 				 "Cannot set up virt-to-phys mapping");
+	status = internal_map_set(newmap, 0, &range);
+	if (status != addrxlat_ok) {
+		internal_map_decref(newmap);
+		return set_error(ctl->ctx, status,
+				 "Cannot set up virt-to-phys mapping");
+	}
 
 	if (ctl->osdesc->type == addrxlat_os_linux)  {
 		sys_sym_pgtroot(ctl, "cr3", "swapper_pg_dir");
 
-		status = set_linux_directmap(ctl, &newmap);
+		status = set_linux_directmap(ctl, newmap);
 		if (status != addrxlat_ok) {
-			internal_map_clear(newmap);
-			free(newmap);
+			internal_map_decref(newmap);
 			return status;
 		}
 	}
-	if (ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS]) {
-		internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS]);
-		free(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS]);
-	}
+	if (ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS])
+		internal_map_decref(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS]);
 	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
 
 	return status;

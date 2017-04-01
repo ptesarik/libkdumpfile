@@ -52,14 +52,19 @@ get_meth_idx(const addrxlat_meth_t *meth)
 static void
 printmap(const addrxlat_map_t *map)
 {
-	addrxlat_addr_t addr = 0;
-	size_t i;
+	addrxlat_addr_t addr;
+	const addrxlat_range_t *range;
+	size_t i, n;
 
-	for (i = 0; i < map->n; ++i) {
+	n = addrxlat_map_len(map);
+	addr = 0;
+	range = addrxlat_map_ranges(map);
+	for (i = 0; i < n; ++i) {
 		printf("0x%"ADDRXLAT_PRIxADDR "-0x%"ADDRXLAT_PRIxADDR ":%u\n",
-		       addr, addr + map->ranges[i].endoff,
-		       get_meth_idx(map->ranges[i].meth));
-		addr += map->ranges[i].endoff + 1;
+		       addr, addr + range->endoff,
+		       get_meth_idx(range->meth));
+		addr += range->endoff + 1;
+		++range;
 	}
 }
 
@@ -69,12 +74,17 @@ main(int argc, char **argv)
 	addrxlat_map_t *map;
 	addrxlat_range_t range;
 	addrxlat_addr_t addr;
+	addrxlat_status status;
 	unsigned long methidx;
 	char *endp;
 	int i;
 	int ret;
 
-	map = NULL;
+	map = addrxlat_map_new();
+	if (!map) {
+		perror("Cannot allocate map");
+		return TEST_ERR;
+	}
 	nmeth = 0;
 	for (i = 1; i < argc; ++i) {
 		addr = strtoull(argv[i], &endp, 0);
@@ -117,9 +127,10 @@ main(int argc, char **argv)
 		}
 
 		range.meth = meths[methidx];
-		map = addrxlat_map_set(map, addr, &range);
-		if (!map) {
-			perror("Cannot add range");
+		status = addrxlat_map_set(map, addr, &range);
+		if (status != addrxlat_ok) {
+			fprintf(stderr, "Cannot add range: %s\n",
+				addrxlat_strerror(status));
 			return TEST_ERR;
 		}
 	}

@@ -15,6 +15,11 @@ LIBADDRXLAT_0 {
     addrxlat_ctx_set_cb;
     addrxlat_ctx_get_cb;
 
+    addrxlat_map_new;
+    addrxlat_map_incref;
+    addrxlat_map_decref;
+    addrxlat_map_len;
+    addrxlat_map_ranges;
     addrxlat_map_set;
     addrxlat_map_search;
     addrxlat_map_clear;

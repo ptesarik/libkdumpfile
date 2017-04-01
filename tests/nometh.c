@@ -63,9 +63,15 @@ setup_pgt(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 	}
 
 	range.endoff = 0xffffffff;
-	map = addrxlat_map_set(NULL, 0, &range);
+	map = addrxlat_map_new();
 	if (!map) {
 		perror("Cannot allocate translation map");
+		return TEST_ERR;
+	}
+	status = addrxlat_map_set(map, 0, &range);
+	if (status != addrxlat_ok) {
+		fprintf(stderr, "Cannot add translation map range: %s\n",
+			addrxlat_strerror(status));
 		return TEST_ERR;
 	}
 	addrxlat_sys_set_map(sys, ADDRXLAT_SYS_MAP_KV_PHYS, map);

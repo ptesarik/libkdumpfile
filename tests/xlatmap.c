@@ -66,61 +66,64 @@ static void* (*orig_realloc)(void *ptr, size_t size);
 void *
 realloc(void *ptr, size_t size)
 {
-	addrxlat_map_t *oldmap, *newmap;
+	addrxlat_range_t *oldranges, *newranges;
 	size_t oldn, newn, i;
 
-	if (ptr != curmap)
+	if (ptr != addrxlat_map_ranges(curmap))
 		return orig_realloc(ptr, size);
 
-	oldmap = ptr;
+	oldranges = ptr;
 	if (size) {
-		newmap = malloc(size);
-		if (!newmap)
-			return newmap;
+		newranges = malloc(size);
+		if (!newranges)
+			return newranges;
 
-		oldn = oldmap ? oldmap->n : 0;
-		newn = ((size - offsetof(addrxlat_map_t, ranges)) /
-			sizeof(newmap->ranges[0]));
+		oldn = addrxlat_map_len(curmap);
+		newn = size / sizeof(*newranges);
 		if (newn > oldn) {
-			if (oldmap)
-				memcpy(newmap, oldmap,
-				       offsetof(addrxlat_map_t, ranges) +
-				       oldn * sizeof(oldmap->ranges[0]));
+			if (oldranges)
+				memcpy(newranges, oldranges,
+				       oldn * sizeof(*oldranges));
 			for (i = oldn; i < newn; ++i)
-				newmap->ranges[i].meth = canary;
+				newranges[i].meth = canary;
 		} else
-			memcpy(newmap, oldmap, size);
+			memcpy(newranges, oldranges, size);
 	} else
-		newmap = NULL;
+		newranges = NULL;
 
-	free(oldmap);
-	curmap = newmap;
-	return newmap;
+	free(oldranges);
+	return newranges;
 }
 
 static void
 printmap(const addrxlat_map_t *map)
 {
-	size_t i, j;
-	addrxlat_addr_t addr = 0;
-	for (i = 0; i < map->n; ++i) {
+	size_t i, j, n;
+	addrxlat_addr_t addr;
+	const addrxlat_range_t *range;
+
+	n = addrxlat_map_len(map);
+	addr = 0;
+	range = addrxlat_map_ranges(map);
+	for (i = 0; i < n; ++i) {
 		printf("%"ADDRXLAT_PRIxADDR"-%"ADDRXLAT_PRIxADDR": ",
-		       addr, addr + map->ranges[i].endoff);
-		if (!map->ranges[i].meth)
+		       addr, addr + range->endoff);
+		if (!range->meth)
 			printf("NULL\n");
-		else if (map->ranges[i].meth == canary)
+		else if (range->meth == canary)
 			printf("CANARY\n");
 		else {
 			for (j = 0; j < NMETHS; ++j)
-				if (map->ranges[i].meth == meth[j]) {
+				if (range->meth == meth[j]) {
 					printf("#%zu\n", j);
 					break;
 				}
 			if (j >= NMETHS)
-				printf("UNKNOWN: %p\n", map->ranges[i].meth);
+				printf("UNKNOWN: %p\n", range->meth);
 		}
 
-		addr += map->ranges[i].endoff + 1;
+		addr += range->endoff + 1;
+		++range;
 	}
 }
 
@@ -153,15 +156,25 @@ static void
 map_set(addrxlat_map_t **pmap, addrxlat_addr_t addr,
 	const addrxlat_range_t *range)
 {
-	addrxlat_map_t *newmap;
+	addrxlat_status status;
+
+	if (!*pmap) {
+		addrxlat_map_t *newmap = addrxlat_map_new();
+		if (!newmap) {
+			perror("Cannot allocate map");
+			exit(TEST_ERR);
+		}
+		*pmap =	newmap;
+	}
+
 	curmap = *pmap;
-	newmap = addrxlat_map_set(curmap, addr, range);
+	status = addrxlat_map_set(curmap, addr, range);
 	curmap = NULL;
-	if (!newmap) {
-		perror("Cannot reallocate map");
+	if (status != addrxlat_ok) {
+		fprintf(stderr, "Cannot update map: %s\n",
+			addrxlat_strerror(status));
 		exit(TEST_ERR);
 	}
-	*pmap = newmap;
 	check_canary();
 }
 
@@ -400,8 +413,9 @@ main(int argc, char **argv)
 	map_set(&map[13], 0x20000, &range);
 	check_meth_ref(0, ++ref[0]);
 	/* remove the last element, keeping a known value at [n+1] */
-	map[13]->ranges[2].endoff += map[13]->ranges[3].endoff + 1;
-	--map[13]->n;
+	range.endoff = ADDRXLAT_ADDR_MAX - 0x30000;
+	map_set(&map[13], 0x30000, &range);
+	check_meth_ref(0, ref[0]);
 	range.endoff = 0xffff;
 	range.meth = NULL;
 	map_set(&map[13], ADDRXLAT_ADDR_MAX - range.endoff, &range);

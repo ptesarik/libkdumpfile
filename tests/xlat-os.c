@@ -421,19 +421,23 @@ print_xlat(const addrxlat_meth_t *meth)
 static void
 print_map(const addrxlat_map_t *map)
 {
-	addrxlat_addr_t addr = 0;
-	unsigned i;
+	addrxlat_addr_t addr;
+	const addrxlat_range_t *range;
+	size_t i, n;
 
 	if (!map)
 		return;
 
-	for (i = 0; i < map->n; ++i) {
-		const addrxlat_range_t *range = &map->ranges[i];
+	n = addrxlat_map_len(map);
+	addr = 0;
+	range = addrxlat_map_ranges(map);
+	for (i = 0; i < n; ++i) {
 		printf("%"ADDRXLAT_PRIxADDR"-%"ADDRXLAT_PRIxADDR": ",
 			addr, addr + range->endoff);
 		print_xlat(range->meth);
 
 		addr += range->endoff + 1;
+		++range;
 	}
 }
 

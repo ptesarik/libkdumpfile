@@ -295,20 +295,17 @@ unmap(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys,
 {
 	addrxlat_range_t range;
 	addrxlat_map_t *map;
+	addrxlat_status status;
 
 	map = addrxlat_sys_get_map(sys, mapidx);
-	if (map && !(map = addrxlat_map_dup(map))) {
-		perror("Cannot duplicate translation map");
-		return TEST_ERR;
-	}
 	range.endoff = endoff;
 	range.meth = NULL;
-	map = addrxlat_map_set(map, addr, &range);
-	if (!map) {
-		perror("Cannot allocate virt-to-phys map");
+	status = addrxlat_map_set(map, addr, &range);
+	if (status != addrxlat_ok) {
+		fprintf(stderr, "Cannot allocate virt-to-phys map: %s\n",
+			addrxlat_strerror(status));
 		return TEST_ERR;
 	}
-	addrxlat_sys_set_map(sys, mapidx, map);
 
 	return TEST_OK;
 }
@@ -339,17 +336,21 @@ make_linear_map(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys,
 	}
 
 	map = addrxlat_sys_get_map(sys, mapidx);
-	if (map && !(map = addrxlat_map_dup(map))) {
-		perror("Cannot duplicate translation map");
-		return TEST_ERR;
+	if (!map) {
+		map = addrxlat_map_new();
+		if (!map) {
+			perror("Cannot allocate virt-to-phys map");
+			return TEST_ERR;
+		}
+		addrxlat_sys_set_map(sys, mapidx, map);
 	}
 	range.endoff = endoff;
-	map = addrxlat_map_set(map, addr, &range);
-	if (!map) {
-		perror("Cannot allocate virt-to-phys map");
+	status = addrxlat_map_set(map, addr, &range);
+	if (status != addrxlat_ok) {
+		fprintf(stderr, "Cannot update virt-to-phys map: %s\n",
+			addrxlat_strerror(status));
 		return TEST_ERR;
 	}
-	addrxlat_sys_set_map(sys, mapidx, map);
 
 	return TEST_OK;
 }

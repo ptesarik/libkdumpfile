@@ -33,9 +33,55 @@
 
 #include "addrxlat-priv.h"
 
-DEFINE_ALIAS(map_set);
+DEFINE_ALIAS(map_new);
 
 addrxlat_map_t *
+addrxlat_map_new(void)
+{
+	addrxlat_map_t *ret;
+
+	ret = calloc(1, sizeof(addrxlat_map_t));
+	if (ret)
+		ret->refcnt = 1;
+	return ret;
+}
+
+DEFINE_ALIAS(map_incref);
+
+unsigned long
+addrxlat_map_incref(addrxlat_map_t *map)
+{
+	return ++map->refcnt;
+}
+
+DEFINE_ALIAS(map_decref);
+
+unsigned long
+addrxlat_map_decref(addrxlat_map_t *map)
+{
+	unsigned long refcnt = --map->refcnt;
+	if (!refcnt) {
+		internal_map_clear(map);
+		free(map);
+	}
+	return refcnt;
+}
+
+size_t
+addrxlat_map_len(const addrxlat_map_t *map)
+{
+	return map->n;
+}
+
+const addrxlat_range_t *
+addrxlat_map_ranges(const addrxlat_map_t *map)
+{
+	return map->ranges;
+}
+
+DEFINE_ALIAS(map_set);
+
+addrxlat_status
 addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 		 const addrxlat_range_t *range)
 {
@@ -51,7 +97,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 
 	extend = 0;
 	raddr = 0;
-	if (map && map->n) {
+	if (map->n) {
 		delta = 2;
 		left = map->n;
 
@@ -116,24 +162,23 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 	/* (re-)allocate if growing */
 	if (delta > 0) {
 		size_t newn = delta + (map ? map->n : 0);
-		addrxlat_map_t *newmap =
-			realloc(map, offsetof(addrxlat_map_t, ranges) +
-				newn * sizeof(newmap->ranges[0]));
-		if (!newmap)
-			return newmap;
+		addrxlat_range_t *newranges =
+			realloc(map->ranges, newn * sizeof(newranges[0]));
+		if (!newranges)
+			return addrxlat_nomem;
 
 		if (!first) {
-			newmap->n = 1;
-			first = last = newmap->ranges;
+			map->n = 1;
+			first = last = newranges;
 			first->endoff = ADDRXLAT_ADDR_MAX;
 			first->meth = NULL;
 			++left;
 			--delta;
 		} else {
-			first = &newmap->ranges[first - map->ranges];
-			last = &newmap->ranges[last - map->ranges];
+			first = &newranges[first - map->ranges];
+			last = &newranges[last - map->ranges];
 		}
-		map = newmap;
+		map->ranges = newranges;
 	}
 
 	/* drop references to overlapped regions */
@@ -171,7 +216,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 
 	first->endoff = range->endoff + extend;
 	first->meth = range->meth;
-	return map;
+	return addrxlat_ok;
 }
 
 DEFINE_ALIAS(map_search);
@@ -217,13 +262,14 @@ addrxlat_map_dup(const addrxlat_map_t *map)
 	addrxlat_map_t *ret;
 	size_t todo;
 
-	ret = malloc(offsetof(addrxlat_map_t, ranges) +
-		     (map ? map->n : 1) * sizeof(ret->ranges[0]));
-	if (!ret)
+	ret = internal_map_new();
+	if (!ret || !map)
 		return ret;
-	if (!map) {
-		ret->n = 0;
-		return ret;
+
+	ret->ranges = malloc(map->n * sizeof(ret->ranges[0]));
+	if (!ret->ranges) {
+		internal_map_decref(ret);
+		return NULL;
 	}
 
 	q = map->ranges;

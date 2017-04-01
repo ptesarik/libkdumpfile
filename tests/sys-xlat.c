@@ -563,13 +563,13 @@ get_sys_meth(addrxlat_sys_t *sys, addrxlat_sys_meth_t methidx)
 	return meth;
 }
 
- int
+static int
 add_map_entry(const char *spec, addrxlat_sys_t *sys, addrxlat_map_t **map)
 {
 	const char *p, *endp;
 	unsigned long long beg, end;
 	addrxlat_range_t range;
-	addrxlat_map_t *newmap;
+	addrxlat_status status;
 
 	p = spec;
 	beg = strtoull(p, (char**)&endp, 16);
@@ -623,12 +623,20 @@ add_map_entry(const char *spec, addrxlat_sys_t *sys, addrxlat_map_t **map)
 	}
 
 	range.endoff = end - beg;
-	newmap = addrxlat_map_set(*map, beg, &range);
-	if (!newmap) {
-		perror("Cannot add map entry");
+	if (!*map) {
+		addrxlat_map_t *newmap = addrxlat_map_new();
+		if (!newmap) {
+			perror("Cannot allocate translation map");
+			return TEST_ERR;
+		}
+		*map = newmap;
+	}
+	status = addrxlat_map_set(*map, beg, &range);
+	if (status != addrxlat_ok) {
+		fprintf(stderr, "Cannot add map entry: %s\n",
+			addrxlat_strerror(status));
 		return TEST_ERR;
 	}
-	*map = newmap;
 
 	return TEST_OK;
 }

@@ -61,8 +61,7 @@ sys_cleanup(addrxlat_sys_t *sys)
 
 	for (i = 0; i < ADDRXLAT_SYS_MAP_NUM; ++i)
 		if (sys->map[i]) {
-			internal_map_clear(sys->map[i]);
-			free(sys->map[i]);
+			internal_map_decref(sys->map[i]);
 			sys->map[i] = NULL;
 		}
 
@@ -127,16 +126,18 @@ void
 addrxlat_sys_set_map(addrxlat_sys_t *sys, addrxlat_sys_map_t idx,
 		      addrxlat_map_t *map)
 {
-	if (sys->map[idx]) {
-		internal_map_clear(sys->map[idx]);
-		free(sys->map[idx]);
-	}
+	if (sys->map[idx])
+		internal_map_decref(sys->map[idx]);
 	sys->map[idx] = map;
+	if (map)
+		internal_map_incref(map);
 }
 
 addrxlat_map_t *
 addrxlat_sys_get_map(const addrxlat_sys_t *sys, addrxlat_sys_map_t idx)
 {
+	if (sys->map[idx])
+		internal_map_incref(sys->map[idx]);
 	return sys->map[idx];
 }
 
@@ -259,7 +260,15 @@ sys_set_layout(struct sys_init_data *ctl, addrxlat_sys_map_t idx,
 	       const struct sys_region layout[])
 {
 	const struct sys_region *region;
-	addrxlat_map_t *newmap;
+	addrxlat_map_t *map = ctl->sys->map[idx];
+
+	if (!map) {
+		map = internal_map_new();
+		if (!map)
+			return set_error(ctl->ctx, addrxlat_nomem,
+					 "Cannot allocate translation map");
+		ctl->sys->map[idx] = map;
+	}
 
 	for (region = layout; region->meth != ADDRXLAT_SYS_METH_NUM;
 	     ++region) {
@@ -292,16 +301,14 @@ sys_set_layout(struct sys_init_data *ctl, addrxlat_sys_map_t idx,
 			break;
 		}
 
-		newmap = internal_map_set(ctl->sys->map[idx],
-					  region->first, &range);
-		if (!newmap)
-			return set_error(ctl->ctx, addrxlat_nomem,
+		status = internal_map_set(map, region->first, &range);
+		if (status != addrxlat_ok)
+			return set_error(ctl->ctx, status,
 					 "Cannot set up mapping for"
 					 " 0x%"ADDRXLAT_PRIxADDR
 					 "-0x%"ADDRXLAT_PRIxADDR,
 					 region->first,
 					 region->last);
-		ctl->sys->map[idx] = newmap;
 	}
 
 	return addrxlat_ok;
