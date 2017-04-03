@@ -200,9 +200,9 @@ unsigned long addrxlat_meth_incref(addrxlat_meth_t *meth);
 unsigned long addrxlat_meth_decref(addrxlat_meth_t *meth);
 
 /** Parameters of linear translation. */
-typedef struct _addrxlat_def_linear {
+typedef struct _addrxlat_param_linear {
 	addrxlat_off_t off;	/**< Address offset. */
-} addrxlat_def_linear_t;
+} addrxlat_param_linear_t;
 
 /** Page table entry format.
  */
@@ -270,10 +270,10 @@ typedef struct _addrxlat_paging_form {
 } addrxlat_paging_form_t;
 
 /** Parameters of page table translation. */
-typedef struct _addrxlat_def_pgt {
+typedef struct _addrxlat_param_pgt {
 	addrxlat_fulladdr_t root;  /**< Root page table address. */
 	addrxlat_paging_form_t pf; /**< Paging form. */
-} addrxlat_def_pgt_t;
+} addrxlat_param_pgt_t;
 
 /** Lookup table element.
  * This defines address mapping for a single object.
@@ -285,7 +285,7 @@ typedef struct _addrxlat_lookup_elem {
 } addrxlat_lookup_elem_t;
 
 /** Parameters of table lookup translation. */
-typedef struct _addrxlat_def_lookup {
+typedef struct _addrxlat_param_lookup {
 	/** Max address offset inside each object.
 	 * This is in fact object size - 1. However, specifying the end
 	 * offset gives maximum flexibility (from 1-byte objects to the
@@ -301,10 +301,10 @@ typedef struct _addrxlat_def_lookup {
 	 * is freed when the method reference count becomes zero.
 	 */
 	const addrxlat_lookup_elem_t *tbl;
-} addrxlat_def_lookup_t;
+} addrxlat_param_lookup_t;
 
 /** Parameters of memory array translation. */
-typedef struct _addrxlat_def_memarr {
+typedef struct _addrxlat_param_memarr {
 	/** Base address of the translation array. */
 	addrxlat_fulladdr_t base;
 
@@ -322,18 +322,18 @@ typedef struct _addrxlat_def_memarr {
 
 	/** Size of the value. */
 	unsigned valsz;
-} addrxlat_def_memarr_t;
+} addrxlat_param_memarr_t;
 
 /** Parameters of the translation method. */
-typedef union _addrxlat_def_param {
-	addrxlat_def_linear_t linear; /**< For @ref ADDRXLAT_LINEAR. */
-	addrxlat_def_pgt_t pgt;	      /**< For @ref ADDRXLAT_PGT. */
-	addrxlat_def_lookup_t lookup; /**< For @ref ADDRXLAT_LOOKUP.  */
-	addrxlat_def_memarr_t memarr; /**< For @ref ADDRXLAT_MEMARR. */
-} addrxlat_def_param_t;
+typedef union _addrxlat_param {
+	addrxlat_param_linear_t linear; /**< For @ref ADDRXLAT_LINEAR. */
+	addrxlat_param_pgt_t pgt;	/**< For @ref ADDRXLAT_PGT. */
+	addrxlat_param_lookup_t lookup; /**< For @ref ADDRXLAT_LOOKUP.  */
+	addrxlat_param_memarr_t memarr; /**< For @ref ADDRXLAT_MEMARR. */
+} addrxlat_param_t;
 
-/** Address translation definition. */
-typedef struct _addrxlat_def {
+/** Address translation description. */
+typedef struct _addrxlat_desc {
 	/** Kind of translation method. */
 	addrxlat_kind_t kind;
 
@@ -341,26 +341,26 @@ typedef struct _addrxlat_def {
 	addrxlat_addrspace_t target_as;
 
 	/** Additional parameters. */
-	addrxlat_def_param_t param;
-} addrxlat_def_t;
+	addrxlat_param_t param;
+} addrxlat_desc_t;
 
-/** Set up a translation definition.
+/** Set up a translation description.
  * @param meth  Translation method.
- * @param def   Translation definition.
+ * @param desc  Translation description.
  * @returns     Error status.
  */
-addrxlat_status addrxlat_meth_set_def(addrxlat_meth_t *meth,
-				      const addrxlat_def_t *def);
+addrxlat_status addrxlat_meth_set_desc(addrxlat_meth_t *meth,
+				      const addrxlat_desc_t *desc);
 
-/** Get the translation definition.
+/** Get the translation description.
  * @param meth  Translation method.
- * @returns     Translation definition.
+ * @returns     Translation description.
  *
  * The returned pointer is valid as long as you hold a reference to
  * the translation object. It does not change by subsequent calls to
- * @ref addrxlat_meth_set_def (but the referenced value does).
+ * @ref addrxlat_meth_set_desc (but the referenced value does).
  */
-const addrxlat_def_t *addrxlat_meth_get_def(const addrxlat_meth_t *meth);
+const addrxlat_desc_t *addrxlat_meth_get_desc(const addrxlat_meth_t *meth);
 
 typedef struct _addrxlat_ctx addrxlat_ctx_t;
 

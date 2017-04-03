@@ -109,8 +109,8 @@ struct _addrxlat_meth {
 	/** Function to make the next translation step. */
 	addrxlat_next_step_fn *next_step;
 
-	/** Translation definition. */
-	addrxlat_def_t def;
+	/** Translation description. */
+	addrxlat_desc_t desc;
 
 	/** Extra kind-specific fields. */
 	union {
@@ -299,7 +299,7 @@ DECLARE_ALIAS(ctx_err);
 DECLARE_ALIAS(meth_new);
 DECLARE_ALIAS(meth_incref);
 DECLARE_ALIAS(meth_decref);
-DECLARE_ALIAS(meth_set_def);
+DECLARE_ALIAS(meth_set_desc);
 DECLARE_ALIAS(map_new);
 DECLARE_ALIAS(map_incref);
 DECLARE_ALIAS(map_decref);

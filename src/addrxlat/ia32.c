@@ -74,7 +74,7 @@ pgt_ia32(addrxlat_step_t *step)
 		"pte",
 		"pgd",
 	};
-	const addrxlat_paging_form_t *pf = &step->meth->def.param.pgt.pf;
+	const addrxlat_paging_form_t *pf = &step->meth->desc.param.pgt.pf;
 	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
 	addrxlat_status status;
 
@@ -97,7 +97,7 @@ pgt_ia32(addrxlat_step_t *step)
 		step->idx[0] |= step->idx[1] << pf->bits[0];
 	} else
 		step->base.addr = step->raw_pte & pgt->pgt_mask[0];
-	step->base.as = step->meth->def.target_as;
+	step->base.as = step->meth->desc.target_as;
 
 	return ADDRXLAT_OK;
 }
@@ -119,7 +119,7 @@ pgt_ia32_pae(addrxlat_step_t *step)
 		"pmd",
 		"pgd",
 	};
-	const addrxlat_paging_form_t *pf = &step->meth->def.param.pgt.pf;
+	const addrxlat_paging_form_t *pf = &step->meth->desc.param.pgt.pf;
 	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
 	addrxlat_status status;
 
@@ -142,7 +142,7 @@ pgt_ia32_pae(addrxlat_step_t *step)
 		step->idx[0] |= step->idx[1] << pf->bits[0];
 	} else
 		step->base.addr &= pgt->pgt_mask[0];
-	step->base.as = step->meth->def.target_as;
+	step->base.as = step->meth->desc.target_as;
 
 	return ADDRXLAT_OK;
 }
@@ -179,15 +179,15 @@ check_pae(struct sys_init_data *ctl, const addrxlat_fulladdr_t *root,
 {
 	addrxlat_step_t step;
 	addrxlat_meth_t meth;
-	addrxlat_def_t def;
+	addrxlat_desc_t desc;
 	addrxlat_status status;
 
-	def.kind = ADDRXLAT_PGT;
-	def.target_as = ADDRXLAT_MACHPHYSADDR;
-	def.param.pgt.root = *root;
+	desc.kind = ADDRXLAT_PGT;
+	desc.target_as = ADDRXLAT_MACHPHYSADDR;
+	desc.param.pgt.root = *root;
 
-	def.param.pgt.pf = ia32_pf_pae;
-	internal_meth_set_def(&meth, &def);
+	desc.param.pgt.pf = ia32_pf_pae;
+	internal_meth_set_desc(&meth, &desc);
 	step.ctx = ctl->ctx;
 	step.sys = ctl->sys;
 	step.meth = &meth;
@@ -209,8 +209,8 @@ check_pae(struct sys_init_data *ctl, const addrxlat_fulladdr_t *root,
 	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS]);
 	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS]);
 
-	def.param.pgt.pf = ia32_pf;
-	internal_meth_set_def(&meth, &def);
+	desc.param.pgt.pf = ia32_pf;
+	internal_meth_set_desc(&meth, &desc);
 	step.ctx = ctl->ctx;
 	step.sys = ctl->sys;
 	step.meth = &meth;
@@ -267,7 +267,7 @@ static addrxlat_status
 sys_ia32_nonpae(struct sys_init_data *ctl)
 {
 	addrxlat_meth_t *meth;
-	addrxlat_def_t def;
+	addrxlat_desc_t desc;
 	addrxlat_status status;
 
 	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_NONPAE - 1);
@@ -275,14 +275,14 @@ sys_ia32_nonpae(struct sys_init_data *ctl)
 		return status;
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
-	def.kind = ADDRXLAT_PGT;
-	def.target_as = ADDRXLAT_MACHPHYSADDR;
+	desc.kind = ADDRXLAT_PGT;
+	desc.target_as = ADDRXLAT_MACHPHYSADDR;
 	if (ctl->popt.val[OPT_rootpgt].set)
-		def.param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
+		desc.param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
 	else
-		def.param.pgt.root.as = ADDRXLAT_NOADDR;
-	def.param.pgt.pf = ia32_pf;
-	internal_meth_set_def(meth, &def);
+		desc.param.pgt.root.as = ADDRXLAT_NOADDR;
+	desc.param.pgt.pf = ia32_pf;
+	internal_meth_set_desc(meth, &desc);
 	return ADDRXLAT_OK;
 }
 
@@ -294,7 +294,7 @@ static addrxlat_status
 sys_ia32_pae(struct sys_init_data *ctl)
 {
 	addrxlat_meth_t *meth;
-	addrxlat_def_t def;
+	addrxlat_desc_t desc;
 	addrxlat_status status;
 
 	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_PAE - 1);
@@ -302,14 +302,14 @@ sys_ia32_pae(struct sys_init_data *ctl)
 		return status;
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
-	def.kind = ADDRXLAT_PGT;
-	def.target_as = ADDRXLAT_MACHPHYSADDR;
+	desc.kind = ADDRXLAT_PGT;
+	desc.target_as = ADDRXLAT_MACHPHYSADDR;
 	if (ctl->popt.val[OPT_rootpgt].set)
-		def.param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
+		desc.param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
 	else
-		def.param.pgt.root.as = ADDRXLAT_NOADDR;
-	def.param.pgt.pf = ia32_pf_pae;
-	internal_meth_set_def(meth, &def);
+		desc.param.pgt.root.as = ADDRXLAT_NOADDR;
+	desc.param.pgt.pf = ia32_pf_pae;
+	internal_meth_set_desc(meth, &desc);
 	return ADDRXLAT_OK;
 }
 

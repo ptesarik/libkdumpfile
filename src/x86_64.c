@@ -219,14 +219,14 @@ static void
 set_ktext_off(kdump_ctx_t *ctx, kdump_addr_t phys_base)
 {
 	addrxlat_meth_t *meth;
-	addrxlat_def_t def;
+	addrxlat_desc_t desc;
 
 	meth = addrxlat_sys_get_meth(ctx->shared->xlatsys,
 				     ADDRXLAT_SYS_METH_KTEXT);
-	def.kind = ADDRXLAT_LINEAR;
-	def.target_as = ADDRXLAT_KPHYSADDR;
-	def.param.linear.off = phys_base - __START_KERNEL_map;
-	addrxlat_meth_set_def(meth, &def);
+	desc.kind = ADDRXLAT_LINEAR;
+	desc.target_as = ADDRXLAT_KPHYSADDR;
+	desc.param.linear.off = phys_base - __START_KERNEL_map;
+	addrxlat_meth_set_desc(meth, &desc);
 }
 
 /** Update the physical base offfset.

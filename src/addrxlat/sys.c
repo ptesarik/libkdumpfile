@@ -196,21 +196,22 @@ act_direct(struct sys_init_data *ctl,
 		  ADDRXLAT_SYS_METH_RDIRECT },
 		SYS_REGION_END
 	};
-	addrxlat_def_t def;
+	addrxlat_desc_t desc;
 	addrxlat_status status;
 
-	def.kind = ADDRXLAT_LINEAR;
-	def.target_as = ADDRXLAT_KPHYSADDR;
-	def.param.linear.off = -region->first;
-	internal_meth_set_def(meth, &def);
+	desc.kind = ADDRXLAT_LINEAR;
+	desc.target_as = ADDRXLAT_KPHYSADDR;
+	desc.param.linear.off = -region->first;
+	internal_meth_set_desc(meth, &desc);
 
 	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_RDIRECT);
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	def.target_as = ADDRXLAT_KVADDR;
-	def.param.linear.off = region->first;
-	internal_meth_set_def(ctl->sys->meth[ADDRXLAT_SYS_METH_RDIRECT], &def);
+	desc.target_as = ADDRXLAT_KVADDR;
+	desc.param.linear.off = region->first;
+	internal_meth_set_desc(
+		ctl->sys->meth[ADDRXLAT_SYS_METH_RDIRECT], &desc);
 
 	return sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KPHYS_DIRECT, layout);
 }
@@ -225,11 +226,11 @@ act_direct(struct sys_init_data *ctl,
 static void
 act_ident_kphys(addrxlat_meth_t *meth)
 {
-	addrxlat_def_t def;
-	def.kind = ADDRXLAT_LINEAR;
-	def.target_as = ADDRXLAT_KPHYSADDR;
-	def.param.linear.off = 0;
-	internal_meth_set_def(meth, &def);
+	addrxlat_desc_t desc;
+	desc.kind = ADDRXLAT_LINEAR;
+	desc.target_as = ADDRXLAT_KPHYSADDR;
+	desc.param.linear.off = 0;
+	internal_meth_set_desc(meth, &desc);
 }
 
 /** Action function for @ref SYS_ACT_IDENT_MACHPHYS.
@@ -242,11 +243,11 @@ act_ident_kphys(addrxlat_meth_t *meth)
 static void
 act_ident_machphys(addrxlat_meth_t *meth)
 {
-	addrxlat_def_t def;
-	def.kind = ADDRXLAT_LINEAR;
-	def.target_as = ADDRXLAT_MACHPHYSADDR;
-	def.param.linear.off = 0;
-	internal_meth_set_def(meth, &def);
+	addrxlat_desc_t desc;
+	desc.kind = ADDRXLAT_LINEAR;
+	desc.target_as = ADDRXLAT_MACHPHYSADDR;
+	desc.param.linear.off = 0;
+	internal_meth_set_desc(meth, &desc);
 }
 
 /** Set memory map layout.
@@ -353,19 +354,19 @@ sys_sym_pgtroot(struct sys_init_data *ctl, const char *reg, const char *sym)
 	addrxlat_addr_t addr;
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
-	if (meth->def.param.pgt.root.as != ADDRXLAT_NOADDR)
+	if (meth->desc.param.pgt.root.as != ADDRXLAT_NOADDR)
 		return ADDRXLAT_OK;
 
 	if (reg && get_reg(ctl->ctx, "cr3", &addr) == ADDRXLAT_OK) {
-		meth->def.param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
-		meth->def.param.pgt.root.addr = addr;
+		meth->desc.param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
+		meth->desc.param.pgt.root.addr = addr;
 		return ADDRXLAT_OK;
 	}
 	clear_error(ctl->ctx);
 
 	if (sym && get_symval(ctl->ctx, sym, &addr) == ADDRXLAT_OK) {
-		meth->def.param.pgt.root.as = ADDRXLAT_KVADDR;
-		meth->def.param.pgt.root.addr = addr;
+		meth->desc.param.pgt.root.as = ADDRXLAT_KVADDR;
+		meth->desc.param.pgt.root.addr = addr;
 		return ADDRXLAT_OK;
 	}
 	clear_error(ctl->ctx);

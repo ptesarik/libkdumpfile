@@ -318,7 +318,7 @@ make_linear_map(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys,
 {
 	addrxlat_range_t range;
 	addrxlat_map_t *map;
-	addrxlat_def_t def;
+	addrxlat_desc_t desc;
 	addrxlat_status status;
 
 	range.meth = addrxlat_meth_new();
@@ -326,10 +326,10 @@ make_linear_map(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys,
 		fputs("Cannot allocate translation map", stderr);
 		return TEST_ERR;
 	}
-	def.kind = ADDRXLAT_LINEAR;
-	def.target_as = target_as;
-	def.param.linear.off = off;
-	status = addrxlat_meth_set_def(range.meth, &def);
+	desc.kind = ADDRXLAT_LINEAR;
+	desc.target_as = target_as;
+	desc.param.linear.off = off;
+	status = addrxlat_meth_set_desc(range.meth, &desc);
 	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot set up translation map: %s",
 			addrxlat_strerror(status));

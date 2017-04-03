@@ -227,7 +227,7 @@ set_lookup(addrxlat_addr_t *endoff, const char *spec)
 }
 
 static int
-set_memarr(addrxlat_def_memarr_t *ma, const char *spec)
+set_memarr(addrxlat_param_memarr_t *ma, const char *spec)
 {
 	char *endp;
 
@@ -340,14 +340,14 @@ main(int argc, char **argv)
 		.read_caps = (ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR) |
 			      ADDRXLAT_CAPS(ADDRXLAT_KVADDR))
 	};
-	addrxlat_def_t pgt, linear, lookup, memarr, *def;
+	addrxlat_desc_t pgt, linear, lookup, memarr, *desc;
 	int opt;
 	addrxlat_status status;
 	unsigned long refcnt;
 	int rc;
 
 	ctx = NULL;
-	def = NULL;
+	desc = NULL;
 
 	pgt.kind = ADDRXLAT_PGT;
 	pgt.target_as = ADDRXLAT_MACHPHYSADDR;
@@ -370,15 +370,15 @@ main(int argc, char **argv)
 				  opts, NULL)) != -1) {
 		switch (opt) {
 		case 'f':
-			def = &pgt;
-			rc = set_paging_form(&def->param.pgt.pf, optarg);
+			desc = &pgt;
+			rc = set_paging_form(&desc->param.pgt.pf, optarg);
 			if (rc != TEST_OK)
 				return rc;
 			break;
 
 		case 'r':
-			def = &pgt;
-			rc = set_root(&def->param.pgt.root, optarg);
+			desc = &pgt;
+			rc = set_root(&desc->param.pgt.root, optarg);
 			if (rc != TEST_OK)
 				return rc;
 			break;
@@ -390,26 +390,26 @@ main(int argc, char **argv)
 			break;
 
 		case 'l':
-			def = &linear;
-			rc = set_linear(&def->param.linear.off, optarg);
+			desc = &linear;
+			rc = set_linear(&desc->param.linear.off, optarg);
 			if (rc != TEST_OK)
 				return rc;
 			break;
 
 		case 'm':
-			def = &memarr;
-			rc = set_memarr(&def->param.memarr, optarg);
+			desc = &memarr;
+			rc = set_memarr(&desc->param.memarr, optarg);
 			if (rc != TEST_OK)
 				return rc;
 			break;
 
 		case 'p':
-			def = &pgt;
+			desc = &pgt;
 			break;
 
 		case 't':
-			def = &lookup;
-			rc = set_lookup(&def->param.lookup.endoff, optarg);
+			desc = &lookup;
+			rc = set_lookup(&desc->param.lookup.endoff, optarg);
 			if (rc != TEST_OK)
 				return rc;
 			break;
@@ -422,7 +422,7 @@ main(int argc, char **argv)
 		}
 	}
 
-	if (def == NULL) {
+	if (desc == NULL) {
 		fputs("No translation method specified\n", stderr);
 		return TEST_ERR;
 	}
@@ -448,7 +448,7 @@ main(int argc, char **argv)
 	lookup.param.lookup.nelem = nentries;
 	lookup.param.lookup.tbl = entries;
 
-	status = addrxlat_meth_set_def(xlat, def);
+	status = addrxlat_meth_set_desc(xlat, desc);
 	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot set up address translation: %s\n",
 			addrxlat_strerror(status));

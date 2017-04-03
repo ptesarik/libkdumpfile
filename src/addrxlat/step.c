@@ -82,7 +82,7 @@ read_pte(addrxlat_step_t *step)
 addrxlat_status
 pgt_huge_page(addrxlat_step_t *step)
 {
-	const addrxlat_def_pgt_t *pgt = &step->meth->def.param.pgt;
+	const addrxlat_param_pgt_t *pgt = &step->meth->desc.param.pgt;
 	addrxlat_addr_t off = 0;
 
 	while (step->remain > 1) {
@@ -134,7 +134,7 @@ addrxlat_step(addrxlat_step_t *step)
 	--step->remain;
 	if (!step->remain) {
 		step->base.addr += step->idx[0];
-		step->base.as = meth->def.target_as;
+		step->base.as = meth->desc.target_as;
 		return ADDRXLAT_OK;
 	}
 

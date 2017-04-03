@@ -295,12 +295,12 @@ parse_pgt_bits(const char *spec, addrxlat_paging_form_t *pf)
 }
 
 static int
-add_lookup_entry(const char *spec, addrxlat_def_t *def)
+add_lookup_entry(const char *spec, addrxlat_desc_t *desc)
 {
 	const char *p, *endp;
 	addrxlat_lookup_elem_t elem;
 	addrxlat_lookup_elem_t *newtbl;
-	size_t n = def->param.lookup.nelem;
+	size_t n = desc->param.lookup.nelem;
 
 	p = spec;
 	elem.orig = strtoull(p, (char**)&endp, 16);
@@ -326,7 +326,7 @@ add_lookup_entry(const char *spec, addrxlat_def_t *def)
 		return TEST_ERR;
 	}
 
-	newtbl = realloc((addrxlat_lookup_elem_t*)def->param.lookup.tbl,
+	newtbl = realloc((addrxlat_lookup_elem_t*)desc->param.lookup.tbl,
 			 (n + 1) * sizeof newtbl[0]);
 	if (!newtbl) {
 		perror("Cannot add lookup entry");
@@ -334,20 +334,20 @@ add_lookup_entry(const char *spec, addrxlat_def_t *def)
 	}
 
 	newtbl[n] = elem;
-	def->param.lookup.tbl = newtbl;
-	++def->param.lookup.nelem;
+	desc->param.lookup.tbl = newtbl;
+	++desc->param.lookup.nelem;
 
 	return TEST_OK;
 }
 
 static int
 parse_meth_header(const char *spec, addrxlat_sys_meth_t *idx,
-		  addrxlat_def_t *def)
+		  addrxlat_desc_t *desc)
 {
 	const char *p, *endp;
 	long i;
 
-	memset(def, 0, sizeof *def);
+	memset(desc, 0, sizeof *desc);
 
 	p = spec;
 	while (*p && *p != ':' && !isspace(*p))
@@ -375,7 +375,7 @@ parse_meth_header(const char *spec, addrxlat_sys_meth_t *idx,
 	i = match_keyword_verb("method kind", p, endp - p, kind_names);
 	if (i == NOTFOUND)
 		return TEST_ERR;
-	def->kind = i;
+	desc->kind = i;
 
 	if (*endp) {
 		fprintf(stderr, "Garbage after method specification: %s\n",
@@ -387,21 +387,21 @@ parse_meth_header(const char *spec, addrxlat_sys_meth_t *idx,
 }
 
 static int
-parse_meth_param(const char *spec, addrxlat_def_t *def)
+parse_meth_param(const char *spec, addrxlat_desc_t *desc)
 {
 	const char *p, *endp;
 	long i;
 	int res;
 
 	p = strchr(spec, '=');
-	if (p == NULL && def->kind == ADDRXLAT_LOOKUP) {
+	if (p == NULL && desc->kind == ADDRXLAT_LOOKUP) {
 		p = strstr(spec, "->");
 		if (p == NULL) {
 			fprintf(stderr, "Method parameter syntax error: %s\n",
 				spec);
 			return TEST_ERR;
 		}
-		return add_lookup_entry(spec, def);
+		return add_lookup_entry(spec, desc);
 	}
 
 	endp = p;
@@ -409,7 +409,7 @@ parse_meth_param(const char *spec, addrxlat_def_t *def)
 	       --endp;
 
 	i = NOTFOUND;
-	switch (def->kind) {
+	switch (desc->kind) {
 	case ADDRXLAT_NONE:
 		break;
 
@@ -444,15 +444,15 @@ parse_meth_param(const char *spec, addrxlat_def_t *def)
 	res = TEST_ERR;
 	switch (i) {
 	case param_kind:
-		res = parse_kind(p, &def->kind);
+		res = parse_kind(p, &desc->kind);
 		break;
 
 	case param_target_as:
-		res = parse_addrspace(p, &def->target_as);
+		res = parse_addrspace(p, &desc->target_as);
 		break;
 
 	case linear_off:
-		def->param.linear.off = strtoull(p, (char**)&endp, 0);
+		desc->param.linear.off = strtoull(p, (char**)&endp, 0);
 		if (endp != p && !*endp)
 			res = TEST_OK;
 		else
@@ -460,19 +460,19 @@ parse_meth_param(const char *spec, addrxlat_def_t *def)
 		break;
 
 	case pgt_root:
-		res = parse_fulladdr(p, &def->param.pgt.root);
+		res = parse_fulladdr(p, &desc->param.pgt.root);
 		break;
 
 	case pgt_pte_format:
-		res = parse_pte_format(p, &def->param.pgt.pf.pte_format);
+		res = parse_pte_format(p, &desc->param.pgt.pf.pte_format);
 		break;
 
 	case pgt_bits:
-		res = parse_pgt_bits(p, &def->param.pgt.pf);
+		res = parse_pgt_bits(p, &desc->param.pgt.pf);
 		break;
 
 	case lookup_endoff:
-		def->param.lookup.endoff = strtoull(p, (char**)&endp, 0);
+		desc->param.lookup.endoff = strtoull(p, (char**)&endp, 0);
 		if (endp != p && !*endp)
 			res = TEST_OK;
 		else
@@ -480,7 +480,7 @@ parse_meth_param(const char *spec, addrxlat_def_t *def)
 		break;
 
 	case lookup_nelem:
-		def->param.lookup.nelem = strtoull(p, (char**)&endp, 0);
+		desc->param.lookup.nelem = strtoull(p, (char**)&endp, 0);
 		if (endp != p && !*endp)
 			res = TEST_OK;
 		else
@@ -488,11 +488,11 @@ parse_meth_param(const char *spec, addrxlat_def_t *def)
 		break;
 
 	case memarr_base:
-		res = parse_fulladdr(p, &def->param.memarr.base);
+		res = parse_fulladdr(p, &desc->param.memarr.base);
 		break;
 
 	case memarr_shift:
-		def->param.memarr.shift = strtoull(p, (char**)&endp, 0);
+		desc->param.memarr.shift = strtoull(p, (char**)&endp, 0);
 		if (endp != p && !*endp)
 			res = TEST_OK;
 		else
@@ -500,7 +500,7 @@ parse_meth_param(const char *spec, addrxlat_def_t *def)
 		break;
 
 	case memarr_elemsz:
-		def->param.memarr.elemsz = strtoull(p, (char**)&endp, 0);
+		desc->param.memarr.elemsz = strtoull(p, (char**)&endp, 0);
 		if (endp != p && !*endp)
 			res = TEST_OK;
 		else
@@ -508,7 +508,7 @@ parse_meth_param(const char *spec, addrxlat_def_t *def)
 		break;
 
 	case memarr_valsz:
-		def->param.memarr.valsz = strtoull(p, (char**)&endp, 0);
+		desc->param.memarr.valsz = strtoull(p, (char**)&endp, 0);
 		if (endp != p && !*endp)
 			res = TEST_OK;
 		else
@@ -649,7 +649,7 @@ enum cfg_state {
 
 static int
 cfg_block(enum cfg_state state, addrxlat_sys_t *sys,
-	  addrxlat_sys_meth_t methidx, addrxlat_def_t *def,
+	  addrxlat_sys_meth_t methidx, addrxlat_desc_t *desc,
 	  addrxlat_sys_map_t mapidx, addrxlat_map_t *map)
 {
 	addrxlat_status status;
@@ -659,7 +659,7 @@ cfg_block(enum cfg_state state, addrxlat_sys_t *sys,
 		if (!meth)
 			return TEST_ERR;
 
-		status = addrxlat_meth_set_def(meth, def);
+		status = addrxlat_meth_set_desc(meth, desc);
 		if (status != ADDRXLAT_OK) {
 			fprintf(stderr, "Cannot define translation: %s\n",
 				addrxlat_strerror(status));
@@ -685,7 +685,7 @@ read_config(FILE *f)
 	enum cfg_state state = cfg_init;
 	addrxlat_sys_meth_t methidx = ADDRXLAT_SYS_METH_NUM;
 	addrxlat_sys_map_t mapidx = ADDRXLAT_SYS_MAP_NUM;
-	addrxlat_def_t def = { .kind = ADDRXLAT_NONE };
+	addrxlat_desc_t desc = { .kind = ADDRXLAT_NONE };
 	addrxlat_map_t *map = NULL;
 	addrxlat_sys_t *sys;
 	int res;
@@ -713,7 +713,7 @@ read_config(FILE *f)
 
 		/* blank line ends current block */
 		if (!*p) {
-			res = cfg_block(state, sys, methidx, &def,
+			res = cfg_block(state, sys, methidx, &desc,
 					mapidx, map);
 			if (res != TEST_OK)
 				return NULL;
@@ -725,7 +725,7 @@ read_config(FILE *f)
 		switch (state) {
 		case cfg_init:
 			if (*p == '@') {
-				res = parse_meth_header(p + 1, &methidx, &def);
+				res = parse_meth_header(p + 1, &methidx, &desc);
 				if (res != TEST_OK)
 					return NULL;
 				state = cfg_meth;
@@ -742,7 +742,7 @@ read_config(FILE *f)
 			break;
 
 		case cfg_meth:
-			res = parse_meth_param(p, &def);
+			res = parse_meth_param(p, &desc);
 			if (res != TEST_OK)
 				return NULL;
 			break;
@@ -763,7 +763,7 @@ read_config(FILE *f)
 		return NULL;
 	}
 
-	res = cfg_block(state, sys, methidx, &def, mapidx, map);
+	res = cfg_block(state, sys, methidx, &desc, mapidx, map);
 	if (res != TEST_OK)
 		return NULL;
 

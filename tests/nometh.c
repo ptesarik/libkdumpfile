@@ -39,7 +39,7 @@ setup_pgt(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 {
 	addrxlat_range_t range;
 	addrxlat_map_t *map;
-	addrxlat_def_t def;
+	addrxlat_desc_t desc;
 	addrxlat_status status;
 
 	range.meth = addrxlat_meth_new();
@@ -47,15 +47,15 @@ setup_pgt(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 		fputs("Cannot allocate translation map", stderr);
 		return TEST_ERR;
 	}
-	def.kind = ADDRXLAT_PGT;
-	def.target_as = ADDRXLAT_MACHPHYSADDR;
-	def.param.pgt.root.addr = 0xf000;
-	def.param.pgt.root.as = ADDRXLAT_KVADDR;
-	def.param.pgt.pf.pte_format = ADDRXLAT_PTE_PFN64;
-	def.param.pgt.pf.levels = 2;
-	def.param.pgt.pf.bits[0] = 12;
-	def.param.pgt.pf.bits[1] = 9;
-	status = addrxlat_meth_set_def(range.meth, &def);
+	desc.kind = ADDRXLAT_PGT;
+	desc.target_as = ADDRXLAT_MACHPHYSADDR;
+	desc.param.pgt.root.addr = 0xf000;
+	desc.param.pgt.root.as = ADDRXLAT_KVADDR;
+	desc.param.pgt.pf.pte_format = ADDRXLAT_PTE_PFN64;
+	desc.param.pgt.pf.levels = 2;
+	desc.param.pgt.pf.bits[0] = 12;
+	desc.param.pgt.pf.bits[1] = 9;
+	status = addrxlat_meth_set_desc(range.meth, &desc);
 	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot set up translation map: %s",
 			addrxlat_strerror(status));

@@ -280,10 +280,10 @@ print_addrspace(addrxlat_addrspace_t as)
 }
 
 static void
-print_target_as(const addrxlat_def_t *def)
+print_target_as(const addrxlat_desc_t *desc)
 {
 	fputs("  target_as=", stdout);
-	print_addrspace(def->target_as);
+	print_addrspace(desc->target_as);
 	putchar('\n');
 }
 
@@ -296,16 +296,16 @@ print_fulladdr(const addrxlat_fulladdr_t *addr)
 }
 
 static void
-print_linear(const addrxlat_def_t *def)
+print_linear(const addrxlat_desc_t *desc)
 {
 	puts("LINEAR");
-	print_target_as(def);
+	print_target_as(desc);
 	printf("  off=0x%"PRIxFAST64"\n",
-	       (uint_fast64_t) def->param.linear.off);
+	       (uint_fast64_t) desc->param.linear.off);
 }
 
 static void
-print_pgt(const addrxlat_def_t *def)
+print_pgt(const addrxlat_desc_t *desc)
 {
 	static const char *pte_formats[] = {
 		[ADDRXLAT_PTE_NONE] = "none",
@@ -318,13 +318,13 @@ print_pgt(const addrxlat_def_t *def)
 		[ADDRXLAT_PTE_PPC64_LINUX_RPN30] = "ppc64_linux_rpn30",
 	};
 
-	const addrxlat_paging_form_t *pf = &def->param.pgt.pf;
+	const addrxlat_paging_form_t *pf = &desc->param.pgt.pf;
 	unsigned i;
 
 	puts("PGT");
-	print_target_as(def);
+	print_target_as(desc);
 	fputs("  root=", stdout);
-	print_fulladdr(&def->param.pgt.root);
+	print_fulladdr(&desc->param.pgt.root);
 	putchar('\n');
 	fputs("  pte_format=", stdout);
 	if (pf->pte_format < ARRAY_SIZE(pte_formats) &&
@@ -339,14 +339,14 @@ print_pgt(const addrxlat_def_t *def)
 }
 
 static void
-print_lookup(const addrxlat_def_t *def)
+print_lookup(const addrxlat_desc_t *desc)
 {
-	const addrxlat_lookup_elem_t *p = def->param.lookup.tbl;
-	size_t n = def->param.lookup.nelem;
+	const addrxlat_lookup_elem_t *p = desc->param.lookup.tbl;
+	size_t n = desc->param.lookup.nelem;
 
 	puts("LOOKUP");
-	print_target_as(def);
-	printf("  endoff=0x%"ADDRXLAT_PRIxADDR"\n", def->param.lookup.endoff);
+	print_target_as(desc);
+	printf("  endoff=0x%"ADDRXLAT_PRIxADDR"\n", desc->param.lookup.endoff);
 	while (n--) {
 		printf("  %"ADDRXLAT_PRIxADDR" -> %"ADDRXLAT_PRIxADDR"\n",
 		       p->orig, p->dest);
@@ -355,42 +355,42 @@ print_lookup(const addrxlat_def_t *def)
 }
 
 static void
-print_memarr(const addrxlat_def_t *def)
+print_memarr(const addrxlat_desc_t *desc)
 {
 	puts("MEMARR");
-	print_target_as(def);
+	print_target_as(desc);
 	fputs("  base=", stdout);
-	print_fulladdr(&def->param.memarr.base);
+	print_fulladdr(&desc->param.memarr.base);
 	putchar('\n');
-	printf("  shift=%u\n", def->param.memarr.shift);
-	printf("  elemsz=%u\n", def->param.memarr.elemsz);
-	printf("  valsz=%u\n", def->param.memarr.valsz);
+	printf("  shift=%u\n", desc->param.memarr.shift);
+	printf("  elemsz=%u\n", desc->param.memarr.elemsz);
+	printf("  valsz=%u\n", desc->param.memarr.valsz);
 }
 
 static void
 print_meth(const addrxlat_meth_t *meth)
 {
-	const addrxlat_def_t *def = addrxlat_meth_get_def(meth);
+	const addrxlat_desc_t *desc = addrxlat_meth_get_desc(meth);
 
-	switch (def->kind) {
+	switch (desc->kind) {
 	case ADDRXLAT_NONE:
 		puts("NONE");
 		break;
 
 	case ADDRXLAT_LINEAR:
-		print_linear(def);
+		print_linear(desc);
 		break;
 
 	case ADDRXLAT_PGT:
-		print_pgt(def);
+		print_pgt(desc);
 		break;
 
 	case ADDRXLAT_LOOKUP:
-		print_lookup(def);
+		print_lookup(desc);
 		break;
 
 	case ADDRXLAT_MEMARR:
-		print_memarr(def);
+		print_memarr(desc);
 		break;
 	}
 }

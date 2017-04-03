@@ -197,7 +197,7 @@ pgt_x86_64(addrxlat_step_t *step)
 				 step->raw_pte);
 
 	step->base.addr = step->raw_pte & ~PHYSADDR_MASK;
-	step->base.as = step->meth->def.target_as;
+	step->base.as = step->meth->desc.target_as;
 
 	if (step->remain >= 2 && step->remain <= 3 &&
 	    (step->raw_pte & _PAGE_PSE)) {
@@ -311,7 +311,7 @@ set_ktext_offset(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 		 addrxlat_addr_t vaddr)
 {
 	addrxlat_step_t step;
-	addrxlat_def_t def;
+	addrxlat_desc_t desc;
 	addrxlat_status status;
 
 	step.ctx = ctx;
@@ -329,10 +329,11 @@ set_ktext_offset(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	def.kind = ADDRXLAT_LINEAR;
-	def.target_as = ADDRXLAT_KPHYSADDR;
-	def.param.linear.off = step.base.addr - vaddr;
-	return internal_meth_set_def(sys->meth[ADDRXLAT_SYS_METH_KTEXT], &def);
+	desc.kind = ADDRXLAT_LINEAR;
+	desc.target_as = ADDRXLAT_KPHYSADDR;
+	desc.param.linear.off = step.base.addr - vaddr;
+	return internal_meth_set_desc(
+		sys->meth[ADDRXLAT_SYS_METH_KTEXT], &desc);
 }
 
 /** Fall back to page table mapping if needed.
@@ -347,9 +348,9 @@ set_pgt_fallback(addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
 {
 	addrxlat_meth_t *meth = sys->meth[idx];
 
-	if (meth->def.kind == ADDRXLAT_NONE) {
+	if (meth->desc.kind == ADDRXLAT_NONE) {
 		addrxlat_meth_t *fallback = sys->meth[ADDRXLAT_SYS_METH_PGT];
-		internal_meth_set_def(meth, &fallback->def);
+		internal_meth_set_desc(meth, &fallback->desc);
 	}
 }
 
@@ -375,14 +376,14 @@ linux_ktext_meth(struct sys_init_data *ctl)
 	addrxlat_status status;
 
 	if (ctl->popt.val[OPT_physbase].set) {
-		addrxlat_def_t def;
+		addrxlat_desc_t desc;
 
-		def.kind = ADDRXLAT_LINEAR;
-		def.target_as = ADDRXLAT_KPHYSADDR;
-		def.param.linear.off = ctl->popt.val[OPT_physbase].num -
+		desc.kind = ADDRXLAT_LINEAR;
+		desc.target_as = ADDRXLAT_KPHYSADDR;
+		desc.param.linear.off = ctl->popt.val[OPT_physbase].num -
 			__START_KERNEL_map;
-		return internal_meth_set_def(
-			ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT], &def);
+		return internal_meth_set_desc(
+			ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT], &desc);
 	}
 
 	status = set_ktext_offset(ctl->sys, ctl->ctx,
@@ -439,17 +440,17 @@ static addrxlat_status
 set_xen_mach2phys(struct sys_init_data *ctl, addrxlat_addr_t m2p)
 {
 	addrxlat_meth_t *meth;
-	addrxlat_def_t def;
+	addrxlat_desc_t desc;
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_MACHPHYS_KPHYS];
-	def.kind = ADDRXLAT_MEMARR;
-	def.target_as = ADDRXLAT_KPHYSADDR;
-	def.param.memarr.base.as = ADDRXLAT_KVADDR;
-	def.param.memarr.base.addr = m2p;
-	def.param.memarr.shift = PAGE_SHIFT;
-	def.param.memarr.elemsz = sizeof(uint64_t);
-	def.param.memarr.valsz = sizeof(uint64_t);
-	return internal_meth_set_def(meth, &def);
+	desc.kind = ADDRXLAT_MEMARR;
+	desc.target_as = ADDRXLAT_KPHYSADDR;
+	desc.param.memarr.base.as = ADDRXLAT_KVADDR;
+	desc.param.memarr.base.addr = m2p;
+	desc.param.memarr.shift = PAGE_SHIFT;
+	desc.param.memarr.elemsz = sizeof(uint64_t);
+	desc.param.memarr.valsz = sizeof(uint64_t);
+	return internal_meth_set_desc(meth, &desc);
 }
 
 /** Initialize Xen p2m translation.
@@ -468,7 +469,7 @@ set_xen_p2m(struct sys_init_data *ctl)
 	addrxlat_addr_t p2m_maddr;
 	addrxlat_map_t *map;
 	addrxlat_meth_t *meth;
-	addrxlat_def_t def;
+	addrxlat_desc_t desc;
 	addrxlat_range_t range;
 	addrxlat_status status;
 
@@ -479,12 +480,12 @@ set_xen_p2m(struct sys_init_data *ctl)
 	p2m_maddr = ctl->popt.val[OPT_xen_p2m_mfn].num << PAGE_SHIFT;
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_KPHYS_MACHPHYS];
-	def.kind = ADDRXLAT_PGT;
-	def.target_as = ADDRXLAT_MACHPHYSADDR;
-	def.param.pgt.root.addr = p2m_maddr;
-	def.param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
-	def.param.pgt.pf = xen_p2m_pf;
-	internal_meth_set_def(meth, &def);
+	desc.kind = ADDRXLAT_PGT;
+	desc.target_as = ADDRXLAT_MACHPHYSADDR;
+	desc.param.pgt.root.addr = p2m_maddr;
+	desc.param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
+	desc.param.pgt.pf = xen_p2m_pf;
+	internal_meth_set_desc(meth, &desc);
 
 	range.endoff = paging_max_index(&xen_p2m_pf);
 	range.meth = meth;
@@ -607,24 +608,24 @@ setup_xen_pgt(struct sys_init_data *ctl)
 {
 	struct sys_region layout[2];
 	addrxlat_meth_t *meth;
-	addrxlat_def_t def;
+	addrxlat_desc_t desc;
 	addrxlat_addr_t pgt;
 	addrxlat_status status;
 
 	status = sys_sym_pgtroot(ctl, "cr3", "pgd_l4");
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
-	if (meth->def.param.pgt.root.as != ADDRXLAT_KVADDR)
+	if (meth->desc.param.pgt.root.as != ADDRXLAT_KVADDR)
 		return status;	/* either unset or physical */
 
-	def.kind = ADDRXLAT_LINEAR;
-	def.target_as = ADDRXLAT_KPHYSADDR;
+	desc.kind = ADDRXLAT_LINEAR;
+	desc.target_as = ADDRXLAT_KPHYSADDR;
 
-	pgt = meth->def.param.pgt.root.addr;
+	pgt = meth->desc.param.pgt.root.addr;
 	if (pgt >= XEN_DIRECTMAP) {
-		def.param.linear.off = -XEN_DIRECTMAP;
+		desc.param.linear.off = -XEN_DIRECTMAP;
 	} else if (ctl->popt.val[OPT_physbase].set) {
 		addrxlat_addr_t xen_virt_start = pgt & ~(XEN_TEXT_SIZE - 1);
-		def.param.linear.off = ctl->popt.val[OPT_physbase].num -
+		desc.param.linear.off = ctl->popt.val[OPT_physbase].num -
 			xen_virt_start;
 	} else
 		return ADDRXLAT_NODATA;
@@ -641,8 +642,8 @@ setup_xen_pgt(struct sys_init_data *ctl)
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	return internal_meth_set_def(
-		ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT], &def);
+	return internal_meth_set_desc(
+		ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT], &desc);
 }
 
 /** Initialize a translation map for Xen on x86_64.
@@ -750,7 +751,7 @@ sys_x86_64(struct sys_init_data *ctl)
 	};
 	addrxlat_map_t *map;
 	addrxlat_meth_t *meth;
-	addrxlat_def_t def;
+	addrxlat_desc_t desc;
 	addrxlat_status status;
 
 	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_PGT);
@@ -758,14 +759,14 @@ sys_x86_64(struct sys_init_data *ctl)
 		return status;
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
-	def.kind = ADDRXLAT_PGT;
-	def.target_as = ADDRXLAT_MACHPHYSADDR;
+	desc.kind = ADDRXLAT_PGT;
+	desc.target_as = ADDRXLAT_MACHPHYSADDR;
 	if (ctl->popt.val[OPT_rootpgt].set)
-		def.param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
+		desc.param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
 	else
-		def.param.pgt.root.as = ADDRXLAT_NOADDR;
-	def.param.pgt.pf = x86_64_pf;
-	internal_meth_set_def(meth, &def);
+		desc.param.pgt.root.as = ADDRXLAT_NOADDR;
+	desc.param.pgt.pf = x86_64_pf;
+	internal_meth_set_desc(meth, &desc);
 
 	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_HW, layout_generic);
 	if (status != ADDRXLAT_OK)

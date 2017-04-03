@@ -68,7 +68,7 @@ pgt_s390x(addrxlat_step_t *step)
 		"pgd",
 		"rg1",		/* Invented; does not exist in the wild. */
 	};
-	const addrxlat_paging_form_t *pf = &step->meth->def.param.pgt.pf;
+	const addrxlat_paging_form_t *pf = &step->meth->desc.param.pgt.pf;
 	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
 	addrxlat_status status;
 
@@ -91,7 +91,7 @@ pgt_s390x(addrxlat_step_t *step)
 				 pgt_full_name[step->remain]);
 
 	step->base.addr = step->raw_pte;
-	step->base.as = step->meth->def.target_as;
+	step->base.as = step->meth->desc.target_as;
 
 	if (step->remain >= 2 && step->remain <= 3 &&
 	    PTE_FC(step->raw_pte)) {
@@ -153,24 +153,24 @@ determine_pgttype(struct sys_init_data *ctl)
 {
 	addrxlat_step_t step =	/* step state surrogate */
 		{ .ctx = ctl->ctx, .sys = ctl->sys };
-	addrxlat_def_t def;
+	addrxlat_desc_t desc;
 	addrxlat_fulladdr_t ptr;
 	uint64_t entry;
 	unsigned i;
 	addrxlat_status status;
 
 	if (ctl->popt.val[OPT_rootpgt].set)
-		def.param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
+		desc.param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
 	else
-		def.param.pgt.root.as = ADDRXLAT_NOADDR;
+		desc.param.pgt.root.as = ADDRXLAT_NOADDR;
 
-	if (def.param.pgt.root.as == ADDRXLAT_NOADDR) {
-		status = get_pgtroot(ctl, &def.param.pgt.root);
+	if (desc.param.pgt.root.as == ADDRXLAT_NOADDR) {
+		status = get_pgtroot(ctl, &desc.param.pgt.root);
 		if (status != ADDRXLAT_OK)
 			return status;
 	}
 
-	ptr = def.param.pgt.root;
+	ptr = desc.param.pgt.root;
 	for (i = 0; i < ROOT_PGT_LEN; ++i) {
 		status = read64(&step, &ptr, &entry, "page table");
 		if (status != ADDRXLAT_OK)
@@ -183,11 +183,11 @@ determine_pgttype(struct sys_init_data *ctl)
 			addrxlat_meth_t *pgtmeth =
 				ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 
-			def.kind = ADDRXLAT_PGT;
-			def.target_as = ADDRXLAT_MACHPHYSADDR;
-			def.param.pgt.pf = pf;
-			def.param.pgt.pf.levels = PTE_TT(entry) + 3;
-			return internal_meth_set_def(pgtmeth, &def);
+			desc.kind = ADDRXLAT_PGT;
+			desc.target_as = ADDRXLAT_MACHPHYSADDR;
+			desc.param.pgt.pf = pf;
+			desc.param.pgt.pf.levels = PTE_TT(entry) + 3;
+			return internal_meth_set_desc(pgtmeth, &desc);
 		}
 		ptr.addr += sizeof(uint64_t);
 	}
@@ -220,7 +220,7 @@ sys_s390x(struct sys_init_data *ctl)
 		return status;
 
 	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
-	range.endoff = paging_max_index(&range.meth->def.param.pgt.pf);
+	range.endoff = paging_max_index(&range.meth->desc.param.pgt.pf);
 	newmap = internal_map_new();
 	if (!newmap)
 		return set_error(ctl->ctx, ADDRXLAT_NOMEM,

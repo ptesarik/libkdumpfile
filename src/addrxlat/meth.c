@@ -42,7 +42,7 @@ addrxlat_meth_new(void)
 	addrxlat_meth_t *meth = calloc(1, sizeof(addrxlat_meth_t));
 	if (meth) {
 		meth->refcnt = 1;
-		meth->def.kind = ADDRXLAT_NONE;
+		meth->desc.kind = ADDRXLAT_NONE;
 		setup_none(meth);
 	}
 	return meth;
@@ -63,9 +63,9 @@ addrxlat_meth_decref(addrxlat_meth_t *meth)
 {
 	unsigned long refcnt = --meth->refcnt;
 	if (!refcnt) {
-		if (meth->def.kind == ADDRXLAT_LOOKUP &&
-		    meth->def.param.lookup.tbl != NULL)
-			free((void*)meth->def.param.lookup.tbl);
+		if (meth->desc.kind == ADDRXLAT_LOOKUP &&
+		    meth->desc.param.lookup.tbl != NULL)
+			free((void*)meth->desc.param.lookup.tbl);
 		free(meth);
 	}
 	return refcnt;
@@ -116,9 +116,9 @@ setup_none(addrxlat_meth_t *meth)
 static addrxlat_status
 first_step_linear(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	const addrxlat_def_linear_t *linear = &step->meth->def.param.linear;
+	const addrxlat_param_linear_t *linear = &step->meth->desc.param.linear;
 
-	step->base.as = step->meth->def.target_as;
+	step->base.as = step->meth->desc.target_as;
 	step->base.addr = linear->off;
 	step->remain = 1;
 	step->idx[0] = addr;
@@ -144,7 +144,7 @@ setup_linear(addrxlat_meth_t *meth)
 static addrxlat_status
 first_step_pgt(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	const addrxlat_def_pgt_t *pgt = &step->meth->def.param.pgt;
+	const addrxlat_param_pgt_t *pgt = &step->meth->desc.param.pgt;
 	unsigned short i;
 
 	if (pgt->root.as == ADDRXLAT_NOADDR)
@@ -176,7 +176,7 @@ first_step_pgt(addrxlat_step_t *step, addrxlat_addr_t addr)
 static addrxlat_status
 step_check_uaddr(addrxlat_step_t *step)
 {
-	return step->idx[step->meth->def.param.pgt.pf.levels]
+	return step->idx[step->meth->desc.param.pgt.pf.levels]
 		? set_error(step->ctx, ADDRXLAT_INVALID,
 			    "Virtual address too big")
 		: ADDRXLAT_OK;
@@ -208,7 +208,7 @@ first_step_uaddr(addrxlat_step_t *step, addrxlat_addr_t addr)
 static addrxlat_status
 step_check_saddr(addrxlat_step_t *step)
 {
-	const addrxlat_paging_form_t *pf = &step->meth->def.param.pgt.pf;
+	const addrxlat_paging_form_t *pf = &step->meth->desc.param.pgt.pf;
 	const struct pgt_extra_def *extra = &step->meth->extra.pgt;
 	unsigned short lvl = pf->levels;
 	struct {
@@ -253,8 +253,8 @@ next_step_pfn(addrxlat_step_t *step)
 	status = read_pte(step);
 	if (status == ADDRXLAT_OK) {
 		step->base.addr =
-			step->raw_pte << step->meth->def.param.pgt.pf.bits[0];
-		step->base.as = step->meth->def.target_as;
+			step->raw_pte << step->meth->desc.param.pgt.pf.bits[0];
+		step->base.as = step->meth->desc.target_as;
 	}
 
 	return status;
@@ -262,13 +262,13 @@ next_step_pfn(addrxlat_step_t *step)
 
 /** Set up page table translation.
  * @param meth  Translation method.
- * @param def   Translation definition.
+ * @param desc  Translation description.
  * @returns     Error status.
  */
 static addrxlat_status
-setup_pgt(addrxlat_meth_t *meth, const addrxlat_def_t *def)
+setup_pgt(addrxlat_meth_t *meth, const addrxlat_desc_t *desc)
 {
-	const addrxlat_paging_form_t *pf = &def->param.pgt.pf;
+	const addrxlat_paging_form_t *pf = &desc->param.pgt.pf;
 	struct pgt_extra_def *extra = &meth->extra.pgt;
 	addrxlat_addr_t mask;
 	unsigned short i;
@@ -313,14 +313,14 @@ setup_pgt(addrxlat_meth_t *meth, const addrxlat_def_t *def)
 static addrxlat_status
 first_step_lookup(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	const addrxlat_def_lookup_t *lookup = &step->meth->def.param.lookup;
+	const addrxlat_param_lookup_t *lookup = &step->meth->desc.param.lookup;
 	size_t i;
 
 	for (i = 0; i < lookup->nelem; ++i) {
 		const addrxlat_lookup_elem_t *elem = &lookup->tbl[i];
 		if (elem->orig <= addr &&
 		    addr <= elem->orig + lookup->endoff) {
-			step->base.as = step->meth->def.target_as;
+			step->base.as = step->meth->desc.target_as;
 			step->base.addr = elem->dest;
 			step->remain = 1;
 			step->idx[0] = addr - elem->orig;
@@ -349,7 +349,7 @@ setup_lookup(addrxlat_meth_t *meth)
 static addrxlat_status
 first_step_memarr(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	const addrxlat_def_memarr_t *memarr = &step->meth->def.param.memarr;
+	const addrxlat_param_memarr_t *memarr = &step->meth->desc.param.memarr;
 
 	step->base = memarr->base;
 	step->remain = 2;
@@ -365,7 +365,7 @@ first_step_memarr(addrxlat_step_t *step, addrxlat_addr_t addr)
 static addrxlat_status
 next_step_memarr(addrxlat_step_t *step)
 {
-	const addrxlat_def_memarr_t *memarr = &step->meth->def.param.memarr;
+	const addrxlat_param_memarr_t *memarr = &step->meth->desc.param.memarr;
 	uint64_t val64;
 	uint32_t val32;
 	addrxlat_addr_t val;
@@ -392,7 +392,7 @@ next_step_memarr(addrxlat_step_t *step)
 
 	if (status == ADDRXLAT_OK) {
 		step->base.addr = val << memarr->shift;
-		step->base.as = step->meth->def.target_as;
+		step->base.as = step->meth->desc.target_as;
 	}
 
 	return status;
@@ -409,14 +409,14 @@ setup_memarr(addrxlat_meth_t *meth)
 	meth->next_step = next_step_memarr;
 }
 
-DEFINE_ALIAS(meth_set_def);
+DEFINE_ALIAS(meth_set_desc);
 
 addrxlat_status
-addrxlat_meth_set_def(addrxlat_meth_t *meth, const addrxlat_def_t *def)
+addrxlat_meth_set_desc(addrxlat_meth_t *meth, const addrxlat_desc_t *desc)
 {
 	addrxlat_status status;
 
-	switch (def->kind) {
+	switch (desc->kind) {
 	case ADDRXLAT_NONE:
 		setup_none(meth);
 		break;
@@ -426,7 +426,7 @@ addrxlat_meth_set_def(addrxlat_meth_t *meth, const addrxlat_def_t *def)
 		break;
 
 	case ADDRXLAT_PGT:
-		status = setup_pgt(meth, def);
+		status = setup_pgt(meth, desc);
 		if (status != ADDRXLAT_OK)
 			return status;
 		break;
@@ -443,14 +443,14 @@ addrxlat_meth_set_def(addrxlat_meth_t *meth, const addrxlat_def_t *def)
 		return ADDRXLAT_NOTIMPL;
 	}
 
-	meth->def = *def;
+	meth->desc = *desc;
 	return ADDRXLAT_OK;
 }
 
-const addrxlat_def_t *
-addrxlat_meth_get_def(const addrxlat_meth_t *meth)
+const addrxlat_desc_t *
+addrxlat_meth_get_desc(const addrxlat_meth_t *meth)
 {
-	return &meth->def;
+	return &meth->desc;
 }
 
 /* Calculate the maximum index into the page table hierarchy.
