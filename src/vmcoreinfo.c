@@ -45,11 +45,11 @@ dealloc_vmcoreinfo(struct attr_data *dir)
 {
 	struct attr_data *child, *child2;
 
-	if (dir->template->type != kdump_directory)
+	if (dir->template->type != KDUMP_DIRECTORY)
 		return;
 
 	for (child = dir->dir; child; child = child->next) {
-		if (child->template->type != kdump_directory)
+		if (child->template->type != KDUMP_DIRECTORY)
 			continue;
 
 		for (child2 = child->dir; child2; child2 = child2->next)
@@ -64,7 +64,7 @@ add_parsed_row(kdump_ctx_t *ctx, struct attr_data *dir,
 	       const char *val, size_t vallen)
 {
 	static const struct attr_template lines_tmpl = {
-		.type = kdump_string,
+		.type = KDUMP_STRING,
 		.ops = &vmcoreinfo_lines_ops,
 	};
 
@@ -163,7 +163,7 @@ lines_post_hook(kdump_ctx_t *ctx, struct attr_data *lineattr)
 		if (*p)
 			/* invalid format -> ignore */
 			return KDUMP_OK;
-		tmpl.type = kdump_address;
+		tmpl.type = KDUMP_ADDRESS;
 	} else if (!strcmp(type, "LENGTH") ||
 		   !strcmp(type, "NUMBER") ||
 		   !strcmp(type, "OFFSET") ||
@@ -172,7 +172,7 @@ lines_post_hook(kdump_ctx_t *ctx, struct attr_data *lineattr)
 		if (*p)
 			/* invalid format -> ignore */
 			return KDUMP_OK;
-		tmpl.type = kdump_number;
+		tmpl.type = KDUMP_NUMBER;
 	} else
 		return KDUMP_OK;
 
@@ -182,7 +182,7 @@ lines_post_hook(kdump_ctx_t *ctx, struct attr_data *lineattr)
 		return set_error(ctx, KDUMP_SYSERR,
 				 "Cannot set VMCOREINFO '%s'", key);
 	return set_error(ctx,
-			 (tmpl.type == kdump_number)
+			 (tmpl.type == KDUMP_NUMBER)
 			 ? set_attr_number(ctx, attr, ATTR_DEFAULT, num)
 			 : set_attr_address(ctx, attr, ATTR_DEFAULT, num),
 			 "Cannot set VMCOREINFO '%s'", key);
@@ -253,7 +253,7 @@ kdump_vmcoreinfo(kdump_ctx_t *ctx)
 
 	attr = ostype_attr(ctx->shared, raw_map);
 	ret = (attr && validate_attr(ctx, attr) == KDUMP_OK &&
-	       attr->template->type == kdump_string)
+	       attr->template->type == KDUMP_STRING)
 		? attr_value(attr)->string
 		: NULL;
 

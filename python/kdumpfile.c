@@ -214,17 +214,17 @@ static PyObject *kdumpfile_read (PyObject *_self, PyObject *args, PyObject *kw)
 static PyObject *
 attr_new(kdumpfile_object *kdumpfile, kdump_attr_ref_t *ref, kdump_attr_t *attr)
 {
-	if (attr->type != kdump_directory)
+	if (attr->type != KDUMP_DIRECTORY)
 		kdump_attr_unref(kdumpfile->ctx, ref);
 
 	switch (attr->type) {
-		case kdump_number:
+		case KDUMP_NUMBER:
 			return PyLong_FromUnsignedLong(attr->val.number);
-		case kdump_address:
+		case KDUMP_ADDRESS:
 			return PyLong_FromUnsignedLong(attr->val.address);
-		case kdump_string:
+		case KDUMP_STRING:
 			return PyString_FromString(attr->val.string);
-		case kdump_directory:
+		case KDUMP_DIRECTORY:
 			return attr_dir_new(kdumpfile, ref);
 		default:
 			PyErr_SetString(PyExc_RuntimeError, "Unhandled attr type");
@@ -642,21 +642,21 @@ object2attr(PyObject *value, kdump_attr_ref_t *ref, kdump_attr_t *attr)
 
 	attr->type = value
 		? kdump_attr_ref_type(ref)
-		: kdump_nil;
+		: KDUMP_NIL;
 
 	conv = value;
 	switch (attr->type) {
-	case kdump_nil:		/* used for deletions */
+	case KDUMP_NIL:		/* used for deletions */
 		break;
 
-	case kdump_directory:
+	case KDUMP_DIRECTORY:
 		/* TODO: We may want to enforce a specific type or even
 		 * a specific value for directory instantiation.
 		 */
 		break;
 
-	case kdump_number:
-	case kdump_address:
+	case KDUMP_NUMBER:
+	case KDUMP_ADDRESS:
 		if (PyLong_Check(value)) {
 			num = PyLong_AsUnsignedLongLong(value);
 			if (PyErr_Occurred())
@@ -674,13 +674,13 @@ object2attr(PyObject *value, kdump_attr_ref_t *ref, kdump_attr_t *attr)
 			return NULL;
 		}
 
-		if (attr->type == kdump_number)
+		if (attr->type == KDUMP_NUMBER)
 			attr->val.number = num;
 		else
 			attr->val.address = num;
 		break;
 
-	case kdump_string:
+	case KDUMP_STRING:
 		if (!PyString_Check(value)) {
 			conv = PyObject_Str(value);
 			if (!conv)
@@ -1083,7 +1083,7 @@ attr_dir_clear(PyObject *_self, PyObject *args)
 	if (status != KDUMP_OK)
 		goto err_noiter;
 
-	attr.type = kdump_nil;
+	attr.type = KDUMP_NIL;
 	while (iter.key) {
 		status = kdump_attr_ref_set(ctx, &iter.pos, &attr);
 		if (status != KDUMP_OK)

@@ -311,19 +311,19 @@ kdump_status kdump_read_string(kdump_ctx_t *ctx,
 /**  Dump file attribute value type.
  */
 typedef enum _kdump_attr_type {
-	kdump_nil,		/**< No type; used for deletions. */
-	kdump_directory,	/**< Attribute directory. */
-	kdump_number,		/**< General number. */
-	kdump_address,		/**< Address or symbol value. */
-	kdump_string,		/**< String attribute. */
+	KDUMP_NIL,		/**< No type; used for deletions. */
+	KDUMP_DIRECTORY,	/**< Attribute directory. */
+	KDUMP_NUMBER,		/**< General number. */
+	KDUMP_ADDRESS,		/**< Address or symbol value. */
+	KDUMP_STRING,		/**< String attribute. */
 } kdump_attr_type_t;
 
 /**  Dump file attribute value.
  */
 typedef union _kdump_attr_value {
-	kdump_num_t number;	/**< Valid if type is @ref kdump_number. */
-	kdump_addr_t address;	/**< Valid if type is @ref kdump_address.  */
-	const char *string;	/**< Valid if type is @ref kdump_string. */
+	kdump_num_t number;	/**< Valid if type is @ref KDUMP_NUMBER. */
+	kdump_addr_t address;	/**< Valid if type is @ref KDUMP_ADDRESS.  */
+	const char *string;	/**< Valid if type is @ref KDUMP_STRING. */
 } kdump_attr_value_t;
 
 /**  Dump file attribute: type + value.
@@ -388,7 +388,7 @@ static inline kdump_status
 kdump_set_number_attr(kdump_ctx_t *ctx, const char *key, kdump_num_t num)
 {
 	kdump_attr_t attr;
-	attr.type = kdump_number;
+	attr.type = KDUMP_NUMBER;
 	attr.val.number = num;
 	return kdump_set_attr(ctx, key, &attr);
 }
@@ -403,7 +403,7 @@ static inline kdump_status
 kdump_set_address_attr(kdump_ctx_t *ctx, const char *key, kdump_addr_t addr)
 {
 	kdump_attr_t attr;
-	attr.type = kdump_address;
+	attr.type = KDUMP_ADDRESS;
 	attr.val.address = addr;
 	return kdump_set_attr(ctx, key, &attr);
 }
@@ -418,7 +418,7 @@ static inline kdump_status
 kdump_set_string_attr(kdump_ctx_t *ctx, const char *key, const char *str)
 {
 	kdump_attr_t attr;
-	attr.type = kdump_string;
+	attr.type = KDUMP_STRING;
 	attr.val.string = str;
 	return kdump_set_attr(ctx, key, &attr);
 }
@@ -450,7 +450,7 @@ kdump_get_number_attr(kdump_ctx_t *ctx, const char *key, kdump_num_t *num)
 	kdump_attr_t attr;
 	kdump_status ret = kdump_get_attr(ctx, key, &attr);
 	if (ret == KDUMP_OK) {
-		if (attr.type == kdump_number)
+		if (attr.type == KDUMP_NUMBER)
 			*num = attr.val.number;
 		else
 			ret = KDUMP_INVALID;
@@ -474,7 +474,7 @@ kdump_get_address_attr(kdump_ctx_t *ctx, const char *key, kdump_addr_t *addr)
 	kdump_attr_t attr;
 	kdump_status ret = kdump_get_attr(ctx, key, &attr);
 	if (ret == KDUMP_OK) {
-		if (attr.type == kdump_address)
+		if (attr.type == KDUMP_ADDRESS)
 			*addr = attr.val.address;
 		else
 			ret = KDUMP_INVALID;
@@ -498,7 +498,7 @@ kdump_get_string_attr(kdump_ctx_t *ctx, const char *key, const char **str)
 	kdump_attr_t attr;
 	kdump_status ret = kdump_get_attr(ctx, key, &attr);
 	if (ret == KDUMP_OK) {
-		if (attr.type == kdump_string)
+		if (attr.type == KDUMP_STRING)
 			*str = attr.val.string;
 		else
 			ret = KDUMP_INVALID;

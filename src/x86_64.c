@@ -162,7 +162,7 @@ struct xen_vcpu_guest_context {
 /** @endcond */
 
 static const struct attr_template reg_names[] = {
-#define REG(name)	{ #name, NULL, kdump_number }
+#define REG(name)	{ #name, NULL, KDUMP_NUMBER }
 	REG(r15),		/*  0 */
 	REG(r14),		/*  1 */
 	REG(r13),		/*  2 */
@@ -209,7 +209,7 @@ static const struct attr_template reg_names[] = {
 };
 
 static const struct attr_template tmpl_pid =
-	{ "pid", NULL, kdump_number };
+	{ "pid", NULL, KDUMP_NUMBER };
 
 /** Set the kernel text virtual to physical offset.
  * @param archdata   x86-64 arch-specific data.

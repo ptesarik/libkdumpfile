@@ -48,7 +48,7 @@ check(kdump_ctx_t *ctx)
 	/* First value. */
 	cnt = 1;
 
-	attr.type = kdump_string;
+	attr.type = KDUMP_STRING;
 	attr.val.string = vmcore1;
 	status = kdump_set_attr(ctx, "linux.vmcoreinfo.raw", &attr);
 	if (status != KDUMP_OK) {
@@ -65,7 +65,7 @@ check(kdump_ctx_t *ctx)
 		return TEST_ERR;
 	}
 
-	if (attr.type != kdump_string || strcmp(attr.val.string, "test1")) {
+	if (attr.type != KDUMP_STRING || strcmp(attr.val.string, "test1")) {
 		fprintf(stderr, "#%d: Invalid attribute value\n", cnt);
 		return TEST_FAIL;
 	}
@@ -74,7 +74,7 @@ check(kdump_ctx_t *ctx)
 	/* (Conflicting) second value */
 	cnt = 2;
 
-	attr.type = kdump_string;
+	attr.type = KDUMP_STRING;
 	attr.val.string = vmcore2;
 	status = kdump_set_attr(ctx, "linux.vmcoreinfo.raw", &attr);
 	if (status != KDUMP_OK) {
@@ -90,13 +90,13 @@ check(kdump_ctx_t *ctx)
 		return TEST_ERR;
 	}
 
-	if (attr.type != kdump_string || strcmp(attr.val.string, "test2")) {
+	if (attr.type != KDUMP_STRING || strcmp(attr.val.string, "test2")) {
 		fprintf(stderr, "#%d: Invalid attribute value\n", cnt);
 		return TEST_FAIL;
 	}
 	printf("#%d: DIR.SUB=%s\n", cnt, attr.val.string);
 
-	attr.type = kdump_nil;
+	attr.type = KDUMP_NIL;
 	status = kdump_set_attr(ctx, "linux.vmcoreinfo.raw", &attr);
 	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot clear vmcoreinfo: %s\n",

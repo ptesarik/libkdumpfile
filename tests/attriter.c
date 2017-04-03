@@ -86,7 +86,7 @@ main(int argc, char **argv)
 		char key[MAXATTRLEN];
 
 		sprintf(key, "%s.%s", ATTRPATH, ad->name);
-		attr.type = kdump_string;
+		attr.type = KDUMP_STRING;
 		attr.val.string = ad->value;
 		res = kdump_set_attr(ctx, key, &attr);
 		if (res != KDUMP_OK) {
@@ -128,7 +128,7 @@ main(int argc, char **argv)
 				rc = TEST_FAIL;
 			}
 
-			if (attr.type != kdump_string) {
+			if (attr.type != KDUMP_STRING) {
 				fprintf(stderr, "Wrong type: %d\n", attr.type);
 				rc = TEST_FAIL;
 			} else if (strcmp(attrs[i].value, attr.val.string)) {

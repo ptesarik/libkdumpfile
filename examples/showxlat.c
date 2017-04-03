@@ -317,10 +317,10 @@ main(int argc, char **argv)
 	}
 
 	if (argv[2]) {
-		attr.type = kdump_string;
+		attr.type = KDUMP_STRING;
 		attr.val.string = argv[2];
 	} else
-		attr.type = kdump_nil;
+		attr.type = KDUMP_NIL;
 	status = kdump_set_attr(ctx, "addrxlat.ostype", &attr);
 	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot set ostype: %s\n",

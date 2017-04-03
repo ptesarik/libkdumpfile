@@ -91,7 +91,7 @@ check_string(kdump_ctx_t *ctx, const char *attrpath, const char *expect)
 			attrpath, kdump_get_err(ctx));
 		return TEST_ERR;
 	}
-	if (attr.type != kdump_string) {
+	if (attr.type != KDUMP_STRING) {
 		fprintf(stderr, "%s: Wrong attribute type: %d\n",
 			attrpath, (int) attr.type);
 		return TEST_FAIL;
@@ -118,7 +118,7 @@ check_number(kdump_ctx_t *ctx, const char *attrpath, long long expect)
 			attrpath, kdump_get_err(ctx));
 		return TEST_ERR;
 	}
-	if (attr.type != kdump_number) {
+	if (attr.type != KDUMP_NUMBER) {
 		fprintf(stderr, "%s: Wrong attribute type: %d\n",
 			attrpath, (int) attr.type);
 		return TEST_FAIL;
@@ -142,7 +142,7 @@ check(kdump_ctx_t *ctx)
 	kdump_status status;
 	int rc, tmprc;
 
-	attr.type = kdump_string;
+	attr.type = KDUMP_STRING;
 	attr.val.string = "linux";
 	status = kdump_set_attr(ctx, "addrxlat.ostype", &attr);
 	if (status != KDUMP_OK) {
@@ -151,7 +151,7 @@ check(kdump_ctx_t *ctx)
 		return TEST_ERR;
 	}
 
-	attr.type = kdump_string;
+	attr.type = KDUMP_STRING;
 	attr.val.string = vmcore;
 	status = kdump_set_attr(ctx, "linux.vmcoreinfo.raw", &attr);
 	if (status != KDUMP_OK) {
@@ -161,7 +161,7 @@ check(kdump_ctx_t *ctx)
 	}
 
 	rc = TEST_OK;
-	attr.type = kdump_string;
+	attr.type = KDUMP_STRING;
 
 	/* Check modifications */
 	attr.val.string = ALT_OSRELEASE;

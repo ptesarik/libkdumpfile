@@ -84,11 +84,11 @@ check_attr(kdump_ctx_t *ctx, char *key, const kdump_attr_t *expect, int chkval)
 		goto out;
 
 	switch (attr.type) {
-	case kdump_directory:
+	case KDUMP_DIRECTORY:
 		/* Nothing to check (beyond type) */
 		break;
 
-	case kdump_number:
+	case KDUMP_NUMBER:
 		if (attr.val.number == expect->val.number)
 			break;
 
@@ -99,7 +99,7 @@ check_attr(kdump_ctx_t *ctx, char *key, const kdump_attr_t *expect, int chkval)
 			(unsigned long long) attr.val.number);
 		return TEST_FAIL;
 
-	case kdump_address:
+	case KDUMP_ADDRESS:
 		if (attr.val.address == expect->val.address)
 			break;
 
@@ -110,7 +110,7 @@ check_attr(kdump_ctx_t *ctx, char *key, const kdump_attr_t *expect, int chkval)
 			(unsigned long long) attr.val.address);
 		return TEST_FAIL;
 
-	case kdump_string:
+	case KDUMP_STRING:
 		if (!strcmp(attr.val.string, expect->val.string))
 			break;
 
@@ -150,18 +150,18 @@ check_attr_val(kdump_ctx_t *ctx, char *key, char *val)
 	} while (p >= val && isspace(*p));
 
 	if (!strcmp(val, "directory")) {
-		attr.type = kdump_directory;
+		attr.type = KDUMP_DIRECTORY;
 		return check_attr(ctx, key, &attr, 0);
 	} else if (!strcmp(val, "number")) {
-		attr.type = kdump_number;
+		attr.type = KDUMP_NUMBER;
 		param.type = param_number;
 		param.number = &number;
 	} else if (!strcmp(val, "address")) {
-		attr.type = kdump_address;
+		attr.type = KDUMP_ADDRESS;
 		param.type = param_number;
 		param.number = &number;
 	} else if (!strcmp(val, "string")) {
-		attr.type = kdump_string;
+		attr.type = KDUMP_STRING;
 		param.type = param_string;
 		param.string = &string;
 		string = NULL;
@@ -186,9 +186,9 @@ check_attr_val(kdump_ctx_t *ctx, char *key, char *val)
 		return rc;
 
 	switch (attr.type) {
-	case kdump_number:  attr.val.number = number;  break;
-	case kdump_address: attr.val.address = number; break;
-	case kdump_string:  attr.val.string = string;  break;
+	case KDUMP_NUMBER:  attr.val.number = number;  break;
+	case KDUMP_ADDRESS: attr.val.address = number; break;
+	case KDUMP_STRING:  attr.val.string = string;  break;
 	default:
 		fprintf(stderr, "INTERNAL ERROR: Invalid attr type: %u\n",
 			(unsigned) attr.type);

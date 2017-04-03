@@ -88,7 +88,7 @@ run_threads(kdump_ctx_t *ctx, unsigned long nthreads, unsigned long cache_size)
 	int rc;
 
 	if (cache_size) {
-		val.type = kdump_number;
+		val.type = KDUMP_NUMBER;
 		val.val.number = cache_size;
 		res = kdump_set_attr(ctx, "cache.size", &val);
 		if (res != KDUMP_OK) {

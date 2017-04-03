@@ -83,7 +83,7 @@ get_version_code(kdump_ctx_t *ctx, unsigned long *pver)
 
 	/* Get OS directory attribute */
 	attr = lookup_attr(ctx->shared, ostype);
-	if (!attr || attr->template->type != kdump_directory)
+	if (!attr || attr->template->type != KDUMP_DIRECTORY)
 		return set_error(ctx, KDUMP_UNSUPPORTED,
 				 "Unknown operating system type: %s", ostype);
 	status = validate_attr(ctx, attr);
@@ -105,7 +105,7 @@ get_version_code(kdump_ctx_t *ctx, unsigned long *pver)
 		return set_error(ctx, status, "Cannot get %s.%s",
 				 ostype, attrname);
 
-	if (attr->template->type != kdump_number)
+	if (attr->template->type != KDUMP_NUMBER)
 		status = set_error(ctx, KDUMP_INVALID,
 				   "Attribute %s.%s is not a number",
 				   ostype, attrname);
@@ -399,11 +399,11 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 
 	ret = ADDRXLAT_OK;
 	switch (attr->template->type) {
-	case kdump_number:
+	case KDUMP_NUMBER:
 		sym->val = attr_value(attr)->number;
 		break;
 
-	case kdump_address:
+	case KDUMP_ADDRESS:
 		sym->val = attr_value(attr)->address;
 		break;
 

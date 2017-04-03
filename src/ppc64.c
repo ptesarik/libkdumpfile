@@ -38,7 +38,7 @@
 #include <elf.h>
 
 static const struct attr_template reg_names[] = {
-#define REG(name)	{ #name, NULL, kdump_number }
+#define REG(name)	{ #name, NULL, KDUMP_NUMBER }
 	REG(gpr00),
 	REG(gpr01),
 	REG(gpr02),

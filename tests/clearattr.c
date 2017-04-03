@@ -48,7 +48,7 @@ main(int argc, char **argv)
 		return TEST_ERR;
 	}
 
-	attr.type = kdump_string;
+	attr.type = KDUMP_STRING;
 	attr.val.string = ATTRVALUE;
 	status = kdump_set_attr(ctx, ATTRPATH, &attr);
 	if (status != KDUMP_OK) {
@@ -66,7 +66,7 @@ main(int argc, char **argv)
 	}
 	printf("%s = %s\n", ATTRPATH, attr.val.string);
 
-	attr.type = kdump_nil;
+	attr.type = KDUMP_NIL;
 	status = kdump_set_attr(ctx, ATTRPATH, &attr);
 	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot clear %s: %s\n",

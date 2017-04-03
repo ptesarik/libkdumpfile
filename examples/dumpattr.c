@@ -64,16 +64,16 @@ show_attr(kdump_ctx_t *ctx, kdump_attr_ref_t *ref, int indent, const char *key)
 	}
 
 	switch (attr.type) {
-	case kdump_string:
+	case KDUMP_STRING:
 		printf("%s\n", attr.val.string);
 		break;
-	case kdump_number:
+	case KDUMP_NUMBER:
 		printf("%llu\n", (unsigned long long) attr.val.number);
 		break;
-	case kdump_address:
+	case KDUMP_ADDRESS:
 		printf("%llx\n", (unsigned long long) attr.val.address);
 		break;
-	case kdump_directory:
+	case KDUMP_DIRECTORY:
 		if (key && *key)
 			putchar('\n');
 		list_attr_recursive(ctx, ref, indent);

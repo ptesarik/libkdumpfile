@@ -37,15 +37,21 @@
 
 /** Generic directory attribute template. */
 const struct attr_template dir_template = {
-	.type = kdump_directory,
+	.type = KDUMP_DIRECTORY,
 };
+
+#define KDUMP_nil	KDUMP_NIL
+#define KDUMP_directory	KDUMP_DIRECTORY
+#define KDUMP_number	KDUMP_NUMBER
+#define KDUMP_address	KDUMP_ADDRESS
+#define KDUMP_string	KDUMP_STRING
 
 static const struct attr_template global_keys[] = {
 #define ATTR(dir, key, field, type, ctype, ...)				\
 	[GKI_ ## field] = {						\
 		key,							\
 		&global_keys[GKI_dir_ ## dir],				\
-		kdump_ ## type,						\
+		KDUMP_ ## type,						\
 		##__VA_ARGS__						\
 	},
 #include "static-attr.def"
@@ -338,7 +344,7 @@ clear_attr(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	struct attr_data *child;
 
-	if (attr->template->type == kdump_directory)
+	if (attr->template->type == KDUMP_DIRECTORY)
 		for (child = attr->dir; child; child = child->next)
 			clear_attr(ctx, child);
 
@@ -360,7 +366,7 @@ clear_volatile(kdump_ctx_t *ctx, struct attr_data *attr)
 	unsigned persist;
 
 	persist = attr->flags.persist;
-	if (attr->template->type == kdump_directory)
+	if (attr->template->type == KDUMP_DIRECTORY)
 		for (child = attr->dir; child; child = child->next)
 			persist |= clear_volatile(ctx, child);
 
@@ -385,7 +391,7 @@ void
 dealloc_attr(struct attr_data *attr)
 {
 	struct attr_data *child;
-	if (attr->template->type == kdump_directory)
+	if (attr->template->type == KDUMP_DIRECTORY)
 		for (child = attr->dir; child; child = child->next)
 			dealloc_attr(child);
 
@@ -578,19 +584,19 @@ attr_has_value(struct attr_data *attr, kdump_attr_value_t newval)
 		return 0;
 
 	switch (attr->template->type) {
-	case kdump_directory:
+	case KDUMP_DIRECTORY:
 		return 1;
 
-	case kdump_number:
+	case KDUMP_NUMBER:
 		return oldval->number == newval.number;
 
-	case kdump_address:
+	case KDUMP_ADDRESS:
 		return oldval->address == newval.address;
 
-	case kdump_string:
+	case KDUMP_STRING:
 		return !strcmp(oldval->string, newval.string);
 
-	case kdump_nil:
+	case KDUMP_NIL:
 	default:
 		return 0;	/* Should not happen */
 	}
@@ -632,7 +638,7 @@ set_attr(kdump_ctx_t *ctx, struct attr_data *attr,
 
 	instantiate_path(attr->parent);
 
-	if (attr->template->type != kdump_directory) {
+	if (attr->template->type != KDUMP_DIRECTORY) {
 		if (attr->flags.dynstr)
 			free((void*) attr_value(attr)->string);
 
@@ -861,7 +867,7 @@ check_set_attr(kdump_ctx_t *ctx, struct attr_data *attr,
 {
 	kdump_attr_value_t val;
 
-	if (valp->type == kdump_nil) {
+	if (valp->type == KDUMP_NIL) {
 		clear_attr(ctx, attr);
 		return KDUMP_OK;
 	}
@@ -869,7 +875,7 @@ check_set_attr(kdump_ctx_t *ctx, struct attr_data *attr,
 	if (valp->type != attr->template->type)
 		return set_error(ctx, KDUMP_INVALID, "Type mismatch");
 
-	if (valp->type == kdump_string)
+	if (valp->type == KDUMP_STRING)
 		return set_attr_string(ctx, attr, ATTR_PERSIST,
 				       valp->val.string);
 
@@ -1040,7 +1046,7 @@ attr_iter_start(kdump_ctx_t *ctx, const struct attr_data *attr,
 {
 	if (!attr_isset(attr))
 		return set_error(ctx, KDUMP_NODATA, "Key has no value");
-	if (attr->template->type != kdump_directory)
+	if (attr->template->type != KDUMP_DIRECTORY)
 		return set_error(ctx, KDUMP_INVALID,
 				 "Path is a leaf attribute");
 

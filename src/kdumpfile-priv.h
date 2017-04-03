@@ -462,7 +462,7 @@ struct attr_data {
 
 	union {
 		kdump_attr_value_t val;
-		struct attr_data *dir;	  /**< For @c kdump_directory */
+		struct attr_data *dir;	  /**< For @c KDUMP_DIRECTORY */
 		kdump_attr_value_t *pval; /**< Pointer to indirect value */
 	};
 };

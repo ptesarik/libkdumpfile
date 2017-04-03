@@ -71,7 +71,7 @@ struct elf_prstatus
 /** @endcond */
 
 static const struct attr_template reg_names[] = {
-#define REG(name)	{ #name, NULL, kdump_number }
+#define REG(name)	{ #name, NULL, KDUMP_NUMBER }
 	REG(ebx),
 	REG(ecx),
 	REG(edx),
@@ -92,7 +92,7 @@ static const struct attr_template reg_names[] = {
 };
 
 static const struct attr_template tmpl_pid =
-	{ "pid", NULL, kdump_number };
+	{ "pid", NULL, KDUMP_NUMBER };
 
 static kdump_status
 process_ia32_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
