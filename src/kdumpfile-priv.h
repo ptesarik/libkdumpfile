@@ -1046,7 +1046,7 @@ bitcount(unsigned x)
 static inline uint16_t
 dump16toh(kdump_ctx_t *ctx, uint16_t x)
 {
-	return get_byte_order(ctx) == kdump_big_endian
+	return get_byte_order(ctx) == KDUMP_BIG_ENDIAN
 		? be16toh(x)
 		: le16toh(x);
 }
@@ -1054,7 +1054,7 @@ dump16toh(kdump_ctx_t *ctx, uint16_t x)
 static inline uint32_t
 dump32toh(kdump_ctx_t *ctx, uint32_t x)
 {
-	return get_byte_order(ctx) == kdump_big_endian
+	return get_byte_order(ctx) == KDUMP_BIG_ENDIAN
 		? be32toh(x)
 		: le32toh(x);
 }
@@ -1062,7 +1062,7 @@ dump32toh(kdump_ctx_t *ctx, uint32_t x)
 static inline uint64_t
 dump64toh(kdump_ctx_t *ctx, uint64_t x)
 {
-	return get_byte_order(ctx) == kdump_big_endian
+	return get_byte_order(ctx) == KDUMP_BIG_ENDIAN
 		? be64toh(x)
 		: le64toh(x);
 }

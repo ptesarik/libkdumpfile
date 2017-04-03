@@ -140,8 +140,8 @@ typedef enum _kdump_status {
  * @sa KDUMP_ATTR_BYTE_ORDER
  */
 typedef enum _kdump_byte_order {
-	kdump_big_endian,
-	kdump_little_endian,
+	KDUMP_BIG_ENDIAN,
+	KDUMP_LITTLE_ENDIAN,
 } kdump_byte_order_t;
 
 /**  Type of a Xen dump.

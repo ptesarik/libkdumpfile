@@ -992,9 +992,9 @@ lkcd_probe(kdump_ctx_t *ctx, void *hdr)
 		{ 0xa8, 0x19, 0x01, 0x73, 0x61, 0x8f, 0x23, 0xed };
 
 	if (!memcmp(hdr, magic_le, sizeof magic_le))
-		set_byte_order(ctx, kdump_little_endian);
+		set_byte_order(ctx, KDUMP_LITTLE_ENDIAN);
 	else if (!memcmp(hdr, magic_be, sizeof magic_be))
-		set_byte_order(ctx, kdump_big_endian);
+		set_byte_order(ctx, KDUMP_BIG_ENDIAN);
 	else
 		return set_error(ctx, kdump_noprobe,
 				 "Unrecognized LKCD signature");

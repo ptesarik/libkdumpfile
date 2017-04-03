@@ -638,7 +638,7 @@ try_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh)
 			 le32toh(dh->bitmap_blocks),
 			 le32toh(dh->max_mapnr));
 	if (ret == KDUMP_OK)
-		return do_header_32(sdp, dh, kdump_little_endian);
+		return do_header_32(sdp, dh, KDUMP_LITTLE_ENDIAN);
 
 	if (ret != KDUMP_DATAERR)
 		return ret;
@@ -648,7 +648,7 @@ try_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh)
 			 be32toh(dh->bitmap_blocks),
 			 be32toh(dh->max_mapnr));
 	if (ret == KDUMP_OK)
-		return do_header_32(sdp, dh, kdump_big_endian);
+		return do_header_32(sdp, dh, KDUMP_BIG_ENDIAN);
 
 	return ret;
 }
@@ -719,7 +719,7 @@ try_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh)
 			 le32toh(dh->bitmap_blocks),
 			 le32toh(dh->max_mapnr));
 	if (ret == KDUMP_OK)
-		return do_header_64(sdp, dh, kdump_little_endian);
+		return do_header_64(sdp, dh, KDUMP_LITTLE_ENDIAN);
 
 	if (ret != KDUMP_DATAERR)
 		return ret;
@@ -729,7 +729,7 @@ try_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh)
 			 be32toh(dh->bitmap_blocks),
 			 be32toh(dh->max_mapnr));
 	if (ret == KDUMP_OK)
-		return do_header_64(sdp, dh, kdump_big_endian);
+		return do_header_64(sdp, dh, KDUMP_BIG_ENDIAN);
 
 	return ret;
 }

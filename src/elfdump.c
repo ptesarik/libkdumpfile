@@ -733,10 +733,10 @@ elf_probe(kdump_ctx_t *ctx, void *hdr)
 
 	switch (eheader[EI_DATA]) {
 	case ELFDATA2LSB:
-		set_byte_order(ctx, kdump_little_endian);
+		set_byte_order(ctx, KDUMP_LITTLE_ENDIAN);
 		break;
 	case ELFDATA2MSB:
-		set_byte_order(ctx, kdump_big_endian);
+		set_byte_order(ctx, KDUMP_BIG_ENDIAN);
 		break;
 	default:
 		return set_error(ctx, KDUMP_UNSUPPORTED,

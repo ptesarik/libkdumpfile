@@ -258,9 +258,9 @@ devmem_probe(kdump_ctx_t *ctx, void *hdr)
 
 	set_file_description(ctx, "Live memory source");
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-	set_byte_order(ctx, kdump_little_endian);
+	set_byte_order(ctx, KDUMP_LITTLE_ENDIAN);
 #else
-	set_byte_order(ctx, kdump_big_endian);
+	set_byte_order(ctx, KDUMP_BIG_ENDIAN);
 #endif
 
 	ret = set_page_size(ctx, sysconf(_SC_PAGESIZE));
