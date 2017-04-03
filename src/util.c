@@ -61,7 +61,7 @@ kdump_err(kdump_ctx_t *ctx, kdump_status status, const char *msgfmt, ...)
 	int msglen, dlen;
 	size_t remain;
 
-	if (status == kdump_ok)
+	if (status == KDUMP_OK)
 		return status;
 
 	/* Get length of formatted message. */
@@ -143,14 +143,14 @@ addrxlat2kdump(kdump_ctx_t *ctx, addrxlat_status status)
 	kdump_status ret;
 
 	if (status == ADDRXLAT_OK)
-		return kdump_ok;
+		return KDUMP_OK;
 
 	if (status < 0)
 		ret = -status;
 	else if (status == ADDRXLAT_NODATA)
-		ret = kdump_nodata;
+		ret = KDUMP_NODATA;
 	else
-		ret = kdump_addrxlat;
+		ret = KDUMP_ADDRXLAT;
 
 	set_error(ctx, ret, "%s", addrxlat_ctx_get_err(ctx->xlatctx));
 	addrxlat_ctx_clear_err(ctx->xlatctx);
@@ -167,10 +167,10 @@ kdump2addrxlat(kdump_ctx_t *ctx, kdump_status status)
 {
 	addrxlat_status ret;
 
-	if (status == kdump_ok)
+	if (status == KDUMP_OK)
 		return ADDRXLAT_OK;
 
-	if (status == kdump_nodata)
+	if (status == KDUMP_NODATA)
 		ret = ADDRXLAT_NODATA;
 	else
 		ret = -status;
@@ -186,7 +186,7 @@ ctx_malloc(size_t size, kdump_ctx_t *ctx, const char *desc)
 {
 	void *ret = malloc(size);
 	if (!ret)
-		set_error(ctx, kdump_syserr,
+		set_error(ctx, KDUMP_SYSERR,
 			  "Cannot allocate %s (%zu bytes)", desc, size);
 	return ret;
 }
@@ -409,7 +409,7 @@ do_arch_init(kdump_ctx_t *ctx)
 	if (ctx->shared->arch_ops && ctx->shared->arch_ops->init)
 		return ctx->shared->arch_ops->init(ctx);
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -423,7 +423,7 @@ arch_name_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 	ctx->shared->arch_init_done = 0;
 
 	if (ctx->shared->arch == ARCH_UNKNOWN)
-		return kdump_ok;
+		return KDUMP_OK;
 
 	set_ptr_size(ctx, arch_ptr_size(ctx->shared->arch));
 	set_attr_number(ctx, gattr(ctx, GKI_pteval_size), ATTR_DEFAULT,
@@ -432,7 +432,7 @@ arch_name_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 	if (!isset_page_size(ctx)) {
 		int page_shift = default_page_shift(ctx->shared->arch);
 		if (!page_shift)
-			return kdump_ok;
+			return KDUMP_OK;
 
 		/* Call do_arch_init() via hooks. */
 		return set_page_shift(ctx, page_shift);
@@ -452,12 +452,12 @@ uts_machine_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 	const char *arch;
 
 	if (isset_arch_name(ctx))
-		return kdump_ok;
+		return KDUMP_OK;
 
 	arch = machine_arch_name(attr_value(attr)->string);
 	return arch
 		? set_arch_name(ctx, arch)
-		: kdump_ok;
+		: KDUMP_OK;
 }
 
 const struct attr_ops uts_machine_ops = {
@@ -472,7 +472,7 @@ page_size_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
 
 	/* It must be a power of 2 */
 	if (page_size != (page_size & ~(page_size - 1)))
-		return set_error(ctx, kdump_dataerr,
+		return set_error(ctx, KDUMP_DATAERR,
 				 "Invalid page size: %zu", page_size);
 
 	return set_page_shift(ctx, ffsl((unsigned long)page_size) - 1);
@@ -485,17 +485,17 @@ page_size_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 
 	if (ctx->shared->ops && ctx->shared->ops->realloc_caches) {
 		res = ctx->shared->ops->realloc_caches(ctx);
-		if (res != kdump_ok)
+		if (res != KDUMP_OK)
 			return res;
 	}
 
 	if (isset_arch_name(ctx) && !ctx->shared->arch_init_done) {
 		res = do_arch_init(ctx);
-		if (res != kdump_ok)
+		if (res != KDUMP_OK)
 			return res;
 	}
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 const struct attr_ops page_size_ops = {
@@ -552,12 +552,12 @@ set_uts(kdump_ctx_t *ctx, const struct new_utsname *src)
 		const char *s = (const char*)src + defs[i].off;
 		if (*s || !attr_isset(d)) {
 			res = set_uts_string(ctx, d, s);
-			if (res != kdump_ok)
+			if (res != KDUMP_OK)
 				return res;
 		}
 	}
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 int
@@ -620,13 +620,13 @@ set_zlib_error(kdump_ctx_t *ctx, const char *what,
 	       const z_stream *zstream, int err)
 {
 	if (err == Z_ERRNO)
-		return set_error(ctx, kdump_syserr, "%s", what);
+		return set_error(ctx, KDUMP_SYSERR, "%s", what);
 
 	if (!zstream->msg)
-		return set_error(ctx, kdump_dataerr,
+		return set_error(ctx, KDUMP_DATAERR,
 				 "%s: error %d", what, err);
 
-	return set_error(ctx, kdump_dataerr,
+	return set_error(ctx, KDUMP_DATAERR,
 			 "%s: %s", what, zstream->msg);
 }
 #endif
@@ -671,14 +671,14 @@ uncompress_page_gzip(kdump_ctx_t *ctx, unsigned char *dst,
 				      &zstream, res);
 
 	if (zstream.avail_out)
-		return set_error(ctx, kdump_dataerr,
+		return set_error(ctx, KDUMP_DATAERR,
 				 "Wrong uncompressed size: %lu",
 				 (unsigned long) zstream.total_out);
 
-	return kdump_ok;
+	return KDUMP_OK;
 
 #else
-	return set_error(ctx, kdump_unsupported,
+	return set_error(ctx, KDUMP_UNSUPPORTED,
 			 "Unsupported compression method: %s", "zlib");
 #endif
 }
@@ -763,24 +763,24 @@ set_cpu_regs64(kdump_ctx_t *ctx, unsigned cpu,
 	dir = create_attr_path(ctx->shared, gattr(ctx, GKI_dir_cpu),
 			       cpukey, keylen, &dir_template);
 	if (!dir)
-		return set_error(ctx, kdump_syserr,
+		return set_error(ctx, KDUMP_SYSERR,
 				 "Cannot allocate CPU %u registers", cpu);
 
 	for (i = 0; i < num; ++i) {
 		attr = new_attr(ctx->shared, dir, tmpl + i);
 		if (!attr)
-			return set_error(ctx, kdump_syserr,
+			return set_error(ctx, KDUMP_SYSERR,
 					 "Cannot %s CPU %u register %s",
 					 "allocate", cpu, tmpl[i].key);
 		res = set_attr_number(ctx, attr, ATTR_DEFAULT,
 				      dump64toh(ctx, regs[i]));
-		if (res != kdump_ok)
+		if (res != KDUMP_OK)
 			return set_error(ctx, res,
 					 "Cannot %s CPU %u register %s",
 					 "set", cpu, tmpl[i].key);
 	}
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 kdump_status
@@ -797,24 +797,24 @@ set_cpu_regs32(kdump_ctx_t *ctx, unsigned cpu,
 	dir = create_attr_path(ctx->shared, gattr(ctx, GKI_dir_cpu),
 			       cpukey, keylen, &dir_template);
 	if (!dir)
-		return set_error(ctx, kdump_syserr,
+		return set_error(ctx, KDUMP_SYSERR,
 				 "Cannot allocate CPU %u registers", cpu);
 
 	for (i = 0; i < num; ++i) {
 		attr = new_attr(ctx->shared, dir, tmpl + i);
 		if (!attr)
-			return set_error(ctx, kdump_syserr,
+			return set_error(ctx, KDUMP_SYSERR,
 					 "Cannot %s CPU %u register %s",
 					 "allocate", cpu, tmpl[i].key);
 		res = set_attr_number(ctx, attr, ATTR_DEFAULT,
 				      dump32toh(ctx, regs[i]));
-		if (res != kdump_ok)
+		if (res != KDUMP_OK)
 			return set_error(ctx, res,
 					 "Cannot %s CPU %u register %s",
 					 "set", cpu, tmpl[i].key);
 	}
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 /**  Set file.description to a static string.

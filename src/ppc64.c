@@ -132,18 +132,18 @@ process_ppc64_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
 	kdump_status res;
 
 	if (size < sizeof(struct elf_prstatus))
-		return set_error(ctx, kdump_dataerr,
+		return set_error(ctx, KDUMP_DATAERR,
 				 "Wrong PRSTATUS size: %zu", size);
 
 	res = set_cpu_regs64(ctx, get_num_cpus(ctx), reg_names,
 			     status->pr_reg, ELF_NGREG);
 
-	if (res != kdump_ok)
+	if (res != KDUMP_OK)
 		return res;
 
 	set_num_cpus(ctx, get_num_cpus(ctx) + 1);
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 const struct arch_ops ppc64_ops = {

@@ -56,7 +56,7 @@ run_reads(void *arg)
 	kdump_status res;
 
 	res = kdump_get_number_attr(ctx, KDUMP_ATTR_PAGE_SHIFT, &page_shift);
-	if (res != kdump_ok)
+	if (res != KDUMP_OK)
 		return (void*) kdump_get_err(ctx);
 
 	sz = sizeof buf;
@@ -64,7 +64,7 @@ run_reads(void *arg)
 		pfn = base_pfn + lrand48() % npages;
 		res = kdump_read(ctx, KDUMP_MACHPHYSADDR, pfn << page_shift,
 				 &buf, &sz);
-		if (res != kdump_ok) {
+		if (res != KDUMP_OK) {
 			fprintf(stderr, "Read failed at 0x%llx\n",
 				(unsigned long long) pfn << page_shift);
 			return (void*) kdump_get_err(ctx);
@@ -91,7 +91,7 @@ run_threads(kdump_ctx_t *ctx, unsigned long nthreads, unsigned long cache_size)
 		val.type = kdump_number;
 		val.val.number = cache_size;
 		res = kdump_set_attr(ctx, "cache.size", &val);
-		if (res != kdump_ok) {
+		if (res != KDUMP_OK) {
 			fprintf(stderr, "Cannot set cache size: %s\n",
 				kdump_get_err(ctx));
 			return TEST_ERR;
@@ -153,7 +153,7 @@ run_threads_fd(int fd, unsigned long nthreads, unsigned long cache_size)
 	}
 
 	res = kdump_set_number_attr(ctx, KDUMP_ATTR_FILE_FD, fd);
-	if (res != kdump_ok) {
+	if (res != KDUMP_OK) {
 		fprintf(stderr, "Cannot open dump: %s\n", kdump_get_err(ctx));
 		rc = TEST_ERR;
 	} else

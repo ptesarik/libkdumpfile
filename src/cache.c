@@ -825,16 +825,16 @@ def_read_cache(kdump_ctx_t *ctx, struct page_io *pio,
 	entry = cache_get_entry(pio->cache, idx);
 	if (!entry) {
 		cache_unref(pio->cache);
-		return set_error(ctx, kdump_busy,
+		return set_error(ctx, KDUMP_BUSY,
 				 "Cache is fully utilized");
 	}
 
 	pio->ce = entry;
 	if (cache_entry_valid(entry))
-		return kdump_ok;
+		return KDUMP_OK;
 
 	ret = fn(ctx, idx, entry);
-	if (ret == kdump_ok) {
+	if (ret == KDUMP_OK) {
 		if (pio->precious)
 			cache_make_precious(pio->cache, entry);
 		cache_insert(pio->cache, entry);
@@ -867,7 +867,7 @@ unsigned
 get_cache_size(kdump_ctx_t *ctx)
 {
 	struct attr_data *attr = gattr(ctx, GKI_cache_size);
-	return validate_attr(ctx, attr) == kdump_ok
+	return validate_attr(ctx, attr) == KDUMP_OK
 		? attr_value(attr)->number
 		: DEFAULT_CACHE_SIZE;
 }
@@ -888,7 +888,7 @@ def_realloc_caches(kdump_ctx_t *ctx)
 
 	cache = cache_alloc(cache_size, get_page_size(ctx));
 	if (!cache)
-		return set_error(ctx, kdump_syserr,
+		return set_error(ctx, KDUMP_SYSERR,
 				 "Cannot allocate cache (%u * %zu bytes)",
 				 cache_size, get_page_size(ctx));
 
@@ -901,7 +901,7 @@ def_realloc_caches(kdump_ctx_t *ctx)
 		cache_unref(ctx->shared->cache);
 	ctx->shared->cache = cache;
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -909,9 +909,9 @@ cache_size_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
 		    kdump_attr_value_t *val)
 {
 	if (val->number > UINT_MAX)
-		return set_error(ctx, kdump_invalid,
+		return set_error(ctx, KDUMP_INVALID,
 				 "Cache size too big (max %u)", UINT_MAX);
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -919,7 +919,7 @@ cache_size_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	return ctx->shared->ops && ctx->shared->ops->realloc_caches
 		? ctx->shared->ops->realloc_caches(ctx)
-		: kdump_ok;
+		: KDUMP_OK;
 }
 
 const struct attr_ops cache_size_ops = {

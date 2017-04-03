@@ -44,7 +44,7 @@ qemu_probe(kdump_ctx_t *ctx, void *hdr)
 		return kdump_noprobe;
 
 	set_file_description(ctx, "QEMU snapshot");
-	return set_error(ctx, kdump_unsupported,
+	return set_error(ctx, KDUMP_UNSUPPORTED,
 			 "%s files not yet implemented", "QEMU snapshot");
 }
 
@@ -63,7 +63,7 @@ libvirt_probe(kdump_ctx_t *ctx, void *hdr)
 		return kdump_noprobe;
 
 	set_file_description(ctx, "Libvirt core dump");
-	return set_error(ctx, kdump_unsupported,
+	return set_error(ctx, KDUMP_UNSUPPORTED,
 			 "%s files not yet implemented", "Libvirt core dump");
 }
 
@@ -83,7 +83,7 @@ xc_save_probe(kdump_ctx_t *ctx, void *hdr)
 		return kdump_noprobe;
 
 	set_file_description(ctx, "Xen xc_save");
-	return set_error(ctx, kdump_unsupported,
+	return set_error(ctx, KDUMP_UNSUPPORTED,
 			 "%s files not yet implemented", "Xen xc_save");
 }
 
@@ -110,7 +110,7 @@ xc_core_probe(kdump_ctx_t *ctx, void *hdr)
 	else
 		return kdump_noprobe;
 
-	return set_error(ctx, kdump_unsupported,
+	return set_error(ctx, KDUMP_UNSUPPORTED,
 			 "%s files not yet implemented", "Xen xc_core");
 }
 
@@ -129,7 +129,7 @@ mclxcd_probe(kdump_ctx_t *ctx, void *hdr)
 		return kdump_noprobe;
 
 	set_file_description(ctx, "Mision Critical Linux Crash Dump");
-	return set_error(ctx, kdump_unsupported,
+	return set_error(ctx, KDUMP_UNSUPPORTED,
 			 "%s files not yet implemented",
 			 "Mision Critical Linux Crash Dump");
 }

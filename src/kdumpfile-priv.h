@@ -204,7 +204,7 @@ struct format_ops {
 	 *   ctx->utsname    filled in as much as possible
 	 *   ctx->ops        possibly modified
 	 * Return:
-	 *   kdump_ok        can be handled by these ops
+	 *   KDUMP_OK        can be handled by these ops
 	 *   kdump_noprobe   cannot be handled by these ops
 	 *   or any other kdump_* error status
 	 */
@@ -214,8 +214,8 @@ struct format_ops {
 	 * Input:
 	 *   ctx->fd         core dump file descriptor open for reading
 	 * Return:
-	 *   kdump_ok        buffer is filled with page data
-	 *   kdump_nodata    data for the given page is not present
+	 *   KDUMP_OK        buffer is filled with page data
+	 *   KDUMP_NODATA    data for the given page is not present
 	 *
 	 * Note: The requested address space is specified in @c pio.
 	 * It is always an address space specified by @c xlat_caps.
@@ -233,8 +233,8 @@ struct format_ops {
 	/* Translate a machine frame number to physical frame number.
 	 *   ctx->fmtdata    initialized in probe()
 	 * Return:
-	 *   kdump_ok        output variable contains translated PFN
-	 *   kdump_nodata    given MFN was not found
+	 *   KDUMP_OK        output variable contains translated PFN
+	 *   KDUMP_NODATA    given MFN was not found
 	 *
 	 * This function should be used for single domain dumps.
 	 */
@@ -242,7 +242,7 @@ struct format_ops {
 
 	/** Reallocate any format-specific caches.
 	 * @param ctx  Dump file object.
-	 * @returns    Status (@ref kdump_ok on success).
+	 * @returns    Status (@ref KDUMP_OK on success).
 	 */
 	kdump_status (*realloc_caches)(kdump_ctx_t *ctx);
 
@@ -1102,6 +1102,6 @@ clear_error(kdump_ctx_t *ctx)
 
 /* These are macros to avoid possible conversions of the "rd" parameter */
 
-#define read_error(rd)  ((rd) < 0 ? kdump_syserr : kdump_eof)
+#define read_error(rd)  ((rd) < 0 ? KDUMP_SYSERR : KDUMP_EOF)
 
 #endif	/* kdumpfile-priv.h */

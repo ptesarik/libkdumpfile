@@ -150,7 +150,7 @@ process_core_note(kdump_ctx_t *ctx, uint32_t type,
 				ctx, desc, descsz);
 	}
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 /* These fields in kdump_ctx_t must be initialised:
@@ -206,38 +206,38 @@ process_xen_crash_info(kdump_ctx_t *ctx, void *data, size_t len)
 			version = 2;
 		}
 	} else
-		return kdump_ok;
+		return KDUMP_OK;
 
 	res = set_attr_number(ctx, gattr(ctx, GKI_xen_ver_major),
 			      ATTR_DEFAULT, major);
-	if (res != kdump_ok)
+	if (res != KDUMP_OK)
 		return res;
 
 	res = set_attr_number(ctx, gattr(ctx, GKI_xen_ver_minor),
 			      ATTR_DEFAULT, minor);
-	if (res != kdump_ok)
+	if (res != KDUMP_OK)
 		return res;
 
 	res = set_attr_address(ctx, gattr(ctx, GKI_xen_ver_extra_addr),
 			       ATTR_DEFAULT, extra);
-	if (res != kdump_ok)
+	if (res != KDUMP_OK)
 		return res;
 
 	if (version >= 1) {
 		res = set_attr_address(ctx, gattr(ctx, GKI_xen_p2m_mfn),
 				       ATTR_DEFAULT, p2m_mfn);
-		if (res != kdump_ok)
+		if (res != KDUMP_OK)
 			return res;
 	}
 
 	if (version >= 2) {
 		res = set_attr_address(ctx, gattr(ctx, GKI_xen_phys_start),
 				       ATTR_DEFAULT, phys_start);
-		if (res != kdump_ok)
+		if (res != KDUMP_OK)
 			return res;
 	}
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -262,26 +262,26 @@ process_xen_dumpcore_version(kdump_ctx_t *ctx, void *data, size_t len)
 		minor = dump64toh(ctx, ver->minor_version);
 		extra = ver->extra_version;
 	} else
-		return kdump_ok;
+		return KDUMP_OK;
 
 	res = set_attr_number(ctx, gattr(ctx, GKI_xen_ver_major),
 			      ATTR_DEFAULT, major);
-	if (res != kdump_ok)
+	if (res != KDUMP_OK)
 		return res;
 
 	res = set_attr_number(ctx, gattr(ctx, GKI_xen_ver_minor),
 			      ATTR_DEFAULT, minor);
-	if (res != kdump_ok)
+	if (res != KDUMP_OK)
 		return res;
 
 	memcpy(extra_str, extra, XEN_EXTRA_VERSION_SZ);
 	extra_str[XEN_EXTRA_VERSION_SZ] = '\0';
 	res = set_attr_string(ctx, gattr(ctx, GKI_xen_ver_extra),
 			      ATTR_DEFAULT, extra_str);
-	if (res != kdump_ok)
+	if (res != KDUMP_OK)
 		return res;
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 /* These fields in kdump_ctx_t must be initialised:
@@ -293,7 +293,7 @@ static kdump_status
 process_xen_note(kdump_ctx_t *ctx, uint32_t type,
 		 void *desc, size_t descsz)
 {
-	kdump_status ret = kdump_ok;
+	kdump_status ret = KDUMP_OK;
 
 	if (type == XEN_ELFNOTE_CRASH_INFO)
 		ret = process_xen_crash_info(ctx, desc, descsz);
@@ -320,12 +320,12 @@ process_xc_xen_note(kdump_ctx_t *ctx, uint32_t type,
 		uint64_t version = dump64toh(ctx, *(uint64_t*)desc);
 
 		if (version != 1)
-			return set_error(ctx, kdump_unsupported,
+			return set_error(ctx, KDUMP_UNSUPPORTED,
 					 "Unsupported Xen dumpcore format version: %llu",
 					 (unsigned long long) version);
 	}
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static int
@@ -352,9 +352,9 @@ set_vmcoreinfo(kdump_ctx_t *ctx, enum global_keyidx key,
 
 	res = set_attr_sized_string(ctx, gattr(ctx, key),
 				    ATTR_DEFAULT, data, sz);
-	if (res != kdump_ok)
+	if (res != KDUMP_OK)
 		return set_error(ctx, res, "Cannot set %s", what);
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -368,7 +368,7 @@ do_noarch_note(kdump_ctx_t *ctx, Elf32_Word type,
 		return set_vmcoreinfo(ctx, GKI_xen_vmcoreinfo_raw,
 				      desc, descsz, "VMCOREINFO_XEN");
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 /* These fields from kdump_ctx_t must be initialised:
@@ -389,7 +389,7 @@ do_arch_note(kdump_ctx_t *ctx, Elf32_Word type,
 	else if (note_equal(".note.Xen", name, namesz))
 		return process_xc_xen_note(ctx, type, desc, descsz);
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -399,7 +399,7 @@ do_any_note(kdump_ctx_t *ctx, Elf32_Word type,
 	kdump_status ret;
 
 	ret = do_noarch_note(ctx, type, name, namesz, desc, descsz);
-	if (ret != kdump_ok)
+	if (ret != KDUMP_OK)
 		return ret;
 	return do_arch_note(ctx, type, name, namesz, desc, descsz);
 }
@@ -410,9 +410,9 @@ static kdump_status
 do_notes(kdump_ctx_t *ctx, void *data, size_t size, do_note_fn *do_note)
 {
 	Elf32_Nhdr *hdr = data;
-	kdump_status ret = kdump_ok;
+	kdump_status ret = KDUMP_OK;
 
-	while (ret == kdump_ok && size >= sizeof(Elf32_Nhdr)) {
+	while (ret == KDUMP_OK && size >= sizeof(Elf32_Nhdr)) {
 		char *name, *desc;
 		Elf32_Word namesz = dump32toh(ctx, hdr->n_namesz);
 		Elf32_Word descsz = dump32toh(ctx, hdr->n_descsz);

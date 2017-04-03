@@ -118,16 +118,16 @@ typedef struct _kdump_ctx kdump_ctx_t;
  * if you want a human-readable error description.
  */
 typedef enum _kdump_status {
-	kdump_ok = 0,		/**< Success. */
-	kdump_syserr,		/**< OS error, see @c errno. */
-	kdump_unsupported,	/**< Unsupported file format. */
-	kdump_nodata,		/**< Data is not stored in the dump file. */
-	kdump_dataerr,		/**< Corrupted file data. */
-	kdump_invalid,		/**< Invalid value. */
-	kdump_nokey,		/**< No such attribute key. */
-	kdump_eof,		/**< Unexpected EOF. */
-	kdump_busy,		/**< Too many pending requests. */
-	kdump_addrxlat,		/**< Address translation error. */
+	KDUMP_OK = 0,		/**< Success. */
+	KDUMP_SYSERR,		/**< OS error, see @c errno. */
+	KDUMP_UNSUPPORTED,	/**< Unsupported file format. */
+	KDUMP_NODATA,		/**< Data is not stored in the dump file. */
+	KDUMP_DATAERR,		/**< Corrupted file data. */
+	KDUMP_INVALID,		/**< Invalid value. */
+	KDUMP_NOKEY,		/**< No such attribute key. */
+	KDUMP_EOF,		/**< Unexpected EOF. */
+	KDUMP_BUSY,		/**< Too many pending requests. */
+	KDUMP_ADDRXLAT,		/**< Address translation error. */
 } kdump_status;
 
 /**  Target dump byte order.
@@ -278,14 +278,14 @@ typedef enum _kdump_addrspace {
  * to by @c plength is updated to reflect the actual number of bytes read
  * from the dump file.
  *
- * If @c kdump_read returns @ref kdump_ok, then all requested bytes have
+ * If @c kdump_read returns @ref KDUMP_OK, then all requested bytes have
  * been read successfully, and the value referenced by @p plength is not
  * changed. However, if the read fails, some bytes may already have been
  * read, and their number is reported in this variable, so the caller may
  * process a partial read.
  *
  * In particular, if some pages were filtered out, @c kdump_read may return
- * @ref kdump_nodata when it reaches the filtered out page.
+ * @ref KDUMP_NODATA when it reaches the filtered out page.
  */
 kdump_status kdump_read(kdump_ctx_t *ctx,
 			 kdump_addrspace_t as, kdump_addr_t addr,
@@ -449,11 +449,11 @@ kdump_get_number_attr(kdump_ctx_t *ctx, const char *key, kdump_num_t *num)
 {
 	kdump_attr_t attr;
 	kdump_status ret = kdump_get_attr(ctx, key, &attr);
-	if (ret == kdump_ok) {
+	if (ret == KDUMP_OK) {
 		if (attr.type == kdump_number)
 			*num = attr.val.number;
 		else
-			ret = kdump_invalid;
+			ret = KDUMP_INVALID;
 	}
 	return ret;
 }
@@ -473,11 +473,11 @@ kdump_get_address_attr(kdump_ctx_t *ctx, const char *key, kdump_addr_t *addr)
 {
 	kdump_attr_t attr;
 	kdump_status ret = kdump_get_attr(ctx, key, &attr);
-	if (ret == kdump_ok) {
+	if (ret == KDUMP_OK) {
 		if (attr.type == kdump_address)
 			*addr = attr.val.address;
 		else
-			ret = kdump_invalid;
+			ret = KDUMP_INVALID;
 	}
 	return ret;
 }
@@ -497,11 +497,11 @@ kdump_get_string_attr(kdump_ctx_t *ctx, const char *key, const char **str)
 {
 	kdump_attr_t attr;
 	kdump_status ret = kdump_get_attr(ctx, key, &attr);
-	if (ret == kdump_ok) {
+	if (ret == KDUMP_OK) {
 		if (attr.type == kdump_string)
 			*str = attr.val.string;
 		else
-			ret = kdump_invalid;
+			ret = KDUMP_INVALID;
 	}
 	return ret;
 }
@@ -577,7 +577,7 @@ kdump_status kdump_attr_ref_set(kdump_ctx_t *ctx, kdump_attr_ref_t *ref,
  *
  * On return, the iterator is set to the first child attribute. If the
  * attribute directory is empty, this function sets the @c key field
- * of @p iter to @c NULL and returns @ref kdump_ok.
+ * of @p iter to @c NULL and returns @ref KDUMP_OK.
  */
 kdump_status kdump_attr_iter_start(kdump_ctx_t *ctx, const char *path,
 				   kdump_attr_iter_t *iter);
@@ -601,9 +601,9 @@ kdump_status kdump_attr_ref_iter_start(kdump_ctx_t *ctx,
  * @returns     Error status.
  *
  * If there are no more items in the iteration, this function sets
- * the @c key field of @p iter to @c NULL and returns @ref kdump_ok.
+ * the @c key field of @p iter to @c NULL and returns @ref KDUMP_OK.
  * If you try to advance past end of iteration, this function returns
- * @ref kdump_invalid.
+ * @ref KDUMP_INVALID.
  */
 kdump_status kdump_attr_iter_next(kdump_ctx_t *ctx, kdump_attr_iter_t *iter);
 

@@ -55,14 +55,14 @@ main(int argc, char **argv)
 	attr.type = kdump_string;
 	attr.val.string = ATTRVALUE;
 	status = kdump_set_attr(ctx, ATTRPATH, &attr);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot set %s: %s\n",
 			ATTRPATH, kdump_get_err(ctx));
 		return TEST_FAIL;
 	}
 
 	status = kdump_attr_ref(ctx, "linux", &ref);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		fprintf(stderr, "kdump_attr_ref failed: %s\n",
 			kdump_get_err(ctx));
 		return TEST_FAIL;
@@ -71,7 +71,7 @@ main(int argc, char **argv)
 	rc = TEST_OK;
 
 	status = kdump_sub_attr_ref(ctx, &ref, "uts", &subref);
-	if (status == kdump_ok) {
+	if (status == KDUMP_OK) {
 		status = kdump_attr_ref_get(ctx, &subref, &attr);
 		if (attr.type != kdump_directory) {
 			fprintf(stderr, "Wrong type for %s: %d\n",
@@ -87,7 +87,7 @@ main(int argc, char **argv)
 	}
 
 	status = kdump_sub_attr_ref(ctx, &ref, "uts.sysname", &subref);
-	if (status == kdump_ok) {
+	if (status == KDUMP_OK) {
 		status = kdump_attr_ref_get(ctx, &subref, &attr);
 		if (attr.type != kdump_string) {
 			fprintf(stderr, "Wrong type for %s: %d\n",

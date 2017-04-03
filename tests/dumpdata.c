@@ -79,7 +79,7 @@ dump_data(kdump_ctx_t *ctx, unsigned long long addr, unsigned long long len)
 			dump_buffer(addr, buf, sz);
 			addr += sz;
 			remain -= sz;
-			if (res != kdump_ok) {
+			if (res != KDUMP_OK) {
 				if (!iserr) {
 					fprintf(stderr,
 						"Read failed at 0x%llx: %s\n",
@@ -117,7 +117,7 @@ dump_data_fd(int fd, unsigned long long addr, unsigned long long len)
 	}
 
 	res = kdump_set_number_attr(ctx, KDUMP_ATTR_FILE_FD, fd);
-	if (res != kdump_ok) {
+	if (res != KDUMP_OK) {
 		fprintf(stderr, "Cannot open dump: %s\n", kdump_get_err(ctx));
 		rc = TEST_ERR;
 	} else

@@ -14,7 +14,7 @@ read_ptr(kdump_ctx_t *ctx, kdump_vaddr_t addr)
 	uint64_t ptr;
 	size_t sz = sizeof ptr;
 
-	if (kdump_read(ctx, KDUMP_KVADDR, addr, &ptr, &sz) != kdump_ok) {
+	if (kdump_read(ctx, KDUMP_KVADDR, addr, &ptr, &sz) != KDUMP_OK) {
 		fprintf(stderr, "read failed at 0x%llx: %s\n",
 			(unsigned long long) addr, kdump_get_err(ctx));
 		return 0;
@@ -32,16 +32,16 @@ print_xen_domains(kdump_ctx_t *ctx)
 
 	status = kdump_get_number_attr(
 		ctx, "xen.vmcoreinfo.OFFSET.domain.domain_id", &off_id);
-	if (status != kdump_ok)
+	if (status != KDUMP_OK)
 		return status;
 
 	status = kdump_get_number_attr(
 		ctx, "xen.vmcoreinfo.OFFSET.domain.next_in_list", &off_next);
-	if (status != kdump_ok)
+	if (status != KDUMP_OK)
 		return status;
 
 	status = kdump_vmcoreinfo_symbol(ctx, "domain_list", &domain);
-	if (status != kdump_ok)
+	if (status != KDUMP_OK)
 		return status;
 
 	domain -= off_next;
@@ -49,14 +49,14 @@ print_xen_domains(kdump_ctx_t *ctx)
 		size_t sz = sizeof id;
 		status = kdump_read(ctx, KDUMP_KVADDR, domain + off_id,
 				    &id, &sz);
-		if (status != kdump_ok)
+		if (status != KDUMP_OK)
 			return status;
 
 		printf("Domain ID 0x%"PRIx64" at 0x%llx\n",
 		       id, (unsigned long long)domain);
 	}
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 int
@@ -85,7 +85,7 @@ main(int argc, char **argv)
 	}
 
 	status = kdump_set_number_attr(ctx, KDUMP_ATTR_FILE_FD, fd);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		fprintf(stderr, "File initialization failed: %s\n",
 			kdump_get_err(ctx));
 		kdump_free(ctx);
@@ -93,11 +93,11 @@ main(int argc, char **argv)
 	}
 
 	status = kdump_get_attr(ctx, KDUMP_ATTR_XEN_TYPE, &attr);
-	if (status == kdump_nodata ||
-	    (status == kdump_ok && attr.val.number != kdump_xen_system)) {
+	if (status == KDUMP_NODATA ||
+	    (status == KDUMP_OK && attr.val.number != kdump_xen_system)) {
 		fputs("Not a Xen system dump\n", stderr);
 		return 1;
-	} else if (status != kdump_ok) {
+	} else if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot get Xen type: %s\n",
 			kdump_get_err(ctx));
 		kdump_free(ctx);
@@ -105,13 +105,13 @@ main(int argc, char **argv)
 	}
 
 	status = kdump_set_string_attr(ctx, KDUMP_ATTR_OSTYPE, "xen");
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot set ostype: %s\n",
 			kdump_get_err(ctx));
 		return 1;
 	}
 
-	if (print_xen_domains(ctx) != kdump_ok)
+	if (print_xen_domains(ctx) != KDUMP_OK)
 		printf("Cannot read domains: %s\n", kdump_get_err(ctx));
 
 	kdump_free(ctx);

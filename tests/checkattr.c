@@ -47,10 +47,10 @@ check_noattr(kdump_ctx_t *ctx, char *key)
 
 	printf("Checking no %s... ", key);
 	res = kdump_get_attr(ctx, key, &attr);
-	if (res == kdump_ok) {
+	if (res == KDUMP_OK) {
 		puts("FAILED");
 		return TEST_FAIL;
-	} else if (res != kdump_nodata) {
+	} else if (res != KDUMP_NODATA) {
 		fprintf(stderr, "Cannot get attribute %s: %s\n",
 			key, kdump_get_err(ctx));
 		return TEST_ERR;
@@ -66,7 +66,7 @@ check_attr(kdump_ctx_t *ctx, char *key, const kdump_attr_t *expect, int chkval)
 	kdump_attr_t attr;
 
 	printf("Checking %s... ", key);
-	if (kdump_get_attr(ctx, key, &attr) != kdump_ok) {
+	if (kdump_get_attr(ctx, key, &attr) != KDUMP_OK) {
 		puts("FAILED");
 		fprintf(stderr, "Cannot get attribute %s: %s\n",
 			key, kdump_get_err(ctx));
@@ -251,7 +251,7 @@ check_attrs_fd(FILE *parm, int dumpfd)
 	}
 
 	res = kdump_set_number_attr(ctx, KDUMP_ATTR_FILE_FD, dumpfd);
-	if (res != kdump_ok) {
+	if (res != KDUMP_OK) {
 		fprintf(stderr, "Cannot open dump: %s\n", kdump_get_err(ctx));
 		rc = TEST_ERR;
 	} else

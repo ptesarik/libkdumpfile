@@ -253,25 +253,25 @@ const char *
 kdump_strerror(kdump_status status)
 {
 	switch (status) {
-	case kdump_ok:
+	case KDUMP_OK:
 		return "Success";
-	case kdump_syserr:
+	case KDUMP_SYSERR:
 		return "OS error, see @c errno";
-	case kdump_unsupported:
+	case KDUMP_UNSUPPORTED:
 		return "Unsupported file format";
-	case kdump_nodata:
+	case KDUMP_NODATA:
 		return "Data is not stored in the dump file";
-	case kdump_dataerr:
+	case KDUMP_DATAERR:
 		return "Corrupted file data";
-	case kdump_invalid:
+	case KDUMP_INVALID:
 		return "Invalid value";
-	case kdump_nokey:
+	case KDUMP_NOKEY:
 		return "No such attribute key";
-	case kdump_eof:
+	case KDUMP_EOF:
 		return "Unexpected EOF";
-	case kdump_busy:
+	case KDUMP_BUSY:
 		return "Too many pending requests";
-	case kdump_addrxlat:
+	case KDUMP_ADDRXLAT:
 		return "Address translation error";
 	default:
 		return "Unknown error";

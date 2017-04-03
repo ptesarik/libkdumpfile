@@ -70,10 +70,10 @@ main(int argc, char **argv)
 
 	/* Non-existent path must fail. */
 	res = kdump_attr_iter_start(ctx, NOPATH, &it);
-	if (res == kdump_ok) {
+	if (res == KDUMP_OK) {
 		fprintf(stderr, "Found non-existent path %s??\n", NOPATH);
 		return TEST_FAIL;
-	} else if (res != kdump_nokey) {
+	} else if (res != KDUMP_NOKEY) {
 		fprintf(stderr, "Unexpected error for %s: %s\n",
 			NOPATH, kdump_get_err(ctx));
 		return TEST_FAIL;
@@ -89,7 +89,7 @@ main(int argc, char **argv)
 		attr.type = kdump_string;
 		attr.val.string = ad->value;
 		res = kdump_set_attr(ctx, key, &attr);
-		if (res != kdump_ok) {
+		if (res != KDUMP_OK) {
 			fprintf(stderr, "Cannot set %s: %s\n",
 				key, kdump_get_err(ctx));
 			return TEST_FAIL;
@@ -97,7 +97,7 @@ main(int argc, char **argv)
 	}
 
 	res = kdump_attr_iter_start(ctx, ATTRPATH, &it);
-	if (res != kdump_ok) {
+	if (res != KDUMP_OK) {
 		fprintf(stderr, "Cannot start iteration: %s\n",
 			kdump_get_err(ctx));
 		return TEST_FAIL;
@@ -122,7 +122,7 @@ main(int argc, char **argv)
 				seen[i] = 1;
 
 			res = kdump_attr_ref_get(ctx, &it.pos, &attr);
-			if (res != kdump_ok) {
+			if (res != KDUMP_OK) {
 				fprintf(stderr, "Cannot get value of %s: %s\n",
 					it.key, kdump_get_err(ctx));
 				rc = TEST_FAIL;
@@ -142,7 +142,7 @@ main(int argc, char **argv)
 		}
 
 		res = kdump_attr_iter_next(ctx, &it);
-		if (res != kdump_ok) {
+		if (res != KDUMP_OK) {
 			fprintf(stderr, "Cannot advance iterator: %s\n",
 				kdump_get_err(ctx));
 			rc = TEST_FAIL;
@@ -151,10 +151,10 @@ main(int argc, char **argv)
 	}
 
 	res = kdump_attr_iter_next(ctx, &it);
-	if (res == kdump_ok) {
+	if (res == KDUMP_OK) {
 		fprintf(stderr, "Advancing past end succeeds??\n");
 		rc = TEST_FAIL;
-	} else if (res != kdump_invalid) {
+	} else if (res != KDUMP_INVALID) {
 		fprintf(stderr, "Unexpected error advancing past end: %s\n",
 			kdump_get_err(ctx));
 		rc = TEST_FAIL;

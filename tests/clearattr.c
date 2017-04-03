@@ -51,7 +51,7 @@ main(int argc, char **argv)
 	attr.type = kdump_string;
 	attr.val.string = ATTRVALUE;
 	status = kdump_set_attr(ctx, ATTRPATH, &attr);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot set %s: %s\n",
 			ATTRPATH, kdump_get_err(ctx));
 		return TEST_FAIL;
@@ -59,7 +59,7 @@ main(int argc, char **argv)
 
 	memset(&attr, 0, sizeof attr);
 	status = kdump_get_attr(ctx, ATTRPATH, &attr);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot get %s: %s\n",
 			ATTRPATH, kdump_get_err(ctx));
 		return TEST_FAIL;
@@ -68,7 +68,7 @@ main(int argc, char **argv)
 
 	attr.type = kdump_nil;
 	status = kdump_set_attr(ctx, ATTRPATH, &attr);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot clear %s: %s\n",
 			ATTRPATH, kdump_get_err(ctx));
 		return TEST_FAIL;
@@ -76,10 +76,10 @@ main(int argc, char **argv)
 
 	memset(&attr, 0, sizeof attr);
 	status = kdump_get_attr(ctx, ATTRPATH, &attr);
-	if (status == kdump_ok) {
+	if (status == KDUMP_OK) {
 		fprintf(stderr, "Attribute %s is still set!\n", ATTRPATH);
 		return TEST_FAIL;
-	} else if (status != kdump_nodata) {
+	} else if (status != KDUMP_NODATA) {
 		fprintf(stderr, "Unexpected error on getting %s: %s\n",
 			ATTRPATH, kdump_get_err(ctx));
 		return TEST_FAIL;

@@ -354,7 +354,7 @@ get_pfn_slot(kdump_ctx_t *ctx, kdump_pfn_t pfn)
 		new_l1 = realloc(lkcdp->pfn_level1,
 				 (idx + 1) * sizeof(*new_l1));
 		if (!new_l1) {
-			set_error(ctx, kdump_syserr,
+			set_error(ctx, KDUMP_SYSERR,
 				  "Cannot allocate PFN level-%u table", 1);
 			return NULL;
 		}
@@ -369,7 +369,7 @@ get_pfn_slot(kdump_ctx_t *ctx, kdump_pfn_t pfn)
 	if (!l2) {
 		l2 = calloc(PFN_IDX2_SIZE, sizeof(struct pfn_block*));
 		if (!l2) {
-			set_error(ctx, kdump_syserr,
+			set_error(ctx, KDUMP_SYSERR,
 				  "Cannot allocate PFN level-%u table", 2);
 			return NULL;
 		}
@@ -414,11 +414,11 @@ realloc_pfn_offs(struct pfn_block *block, unsigned short alloc)
 	uint32_t *newoffs;
 
 	if (block->alloc == alloc)
-		return kdump_ok;
+		return KDUMP_OK;
 
 	newoffs = realloc(block->offs, alloc * sizeof(uint32_t));
 	if (!newoffs)
-		return kdump_syserr;
+		return KDUMP_SYSERR;
 
 	if (alloc > block->alloc)
 		memset(newoffs + block->alloc, 0,
@@ -426,7 +426,7 @@ realloc_pfn_offs(struct pfn_block *block, unsigned short alloc)
 
 	block->alloc = alloc;
 	block->offs = newoffs;
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -445,14 +445,14 @@ alloc_tail_pfn_block(kdump_ctx_t *ctx, struct pfn_block *block,
 
 	next = ctx_malloc(sizeof(struct pfn_block), ctx, "PFN block");
 	if (!next)
-		return kdump_syserr;
+		return KDUMP_SYSERR;
 
 	next->idx3 = block->idx3 + nextidx + 1;
 	next->n = block->n - nextidx - 1;
 	next->alloc = 0;
 	next->offs = NULL;
 	res = realloc_pfn_offs(next, next->n);
-	if (res != kdump_ok) {
+	if (res != KDUMP_OK) {
 		free(next);
 		return error_pfn_offs(ctx, res);
 	}
@@ -465,7 +465,7 @@ alloc_tail_pfn_block(kdump_ctx_t *ctx, struct pfn_block *block,
 	next->next = block->next;
 	block->next = next;
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -479,14 +479,14 @@ split_pfn_block(kdump_ctx_t *ctx, struct pfn_block *block, unsigned short idx)
 		++nextidx;
 	if (nextidx < block->n) {
 		res = alloc_tail_pfn_block(ctx, block, idx, nextidx);
-		if (res != kdump_ok)
+		if (res != KDUMP_OK)
 			return res;
 	}
 
 	block->n = idx - 1;
 	realloc_pfn_offs(block, block->n);
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static struct pfn_block *
@@ -553,7 +553,7 @@ read_page_desc(kdump_ctx_t *ctx, struct dump_page *dp, off_t off)
 	dp->dp_address = dump64toh(ctx, dp->dp_address);
 	dp->dp_size = dump32toh(ctx, dp->dp_size);
 	dp->dp_flags = dump32toh(ctx, dp->dp_flags);
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -563,7 +563,7 @@ error_dup(kdump_ctx_t *ctx, off_t off, struct pfn_block *block, kdump_pfn_t pfn)
 	unsigned idx = pfn_idx3(pfn);
 	if (idx > block->idx3)
 		prevoff += block->offs[idx - block->idx3 - 1];
-	return set_error(ctx, kdump_dataerr,
+	return set_error(ctx, KDUMP_DATAERR,
 			 "Duplicate PFN 0x%llx at %lld (previous %lld)",
 			 (unsigned long long) pfn,
 			 (unsigned long long) off,
@@ -583,13 +583,13 @@ search_page_desc(kdump_ctx_t *ctx, kdump_pfn_t pfn,
 
 	off = lkcdp->last_offset;
 	if (off == lkcdp->end_offset)
-		return set_error(ctx, kdump_nodata, "Page not found");
+		return set_error(ctx, KDUMP_NODATA, "Page not found");
 
 	block = NULL;
 	do {
 		res = read_page_desc(ctx, dp, off);
-		if (res != kdump_ok) {
-			if (res == kdump_eof)
+		if (res != KDUMP_OK) {
+			if (res == KDUMP_EOF)
 				lkcdp->end_offset = off;
 			if (block)
 				realloc_pfn_offs(block, block->n);
@@ -600,7 +600,7 @@ search_page_desc(kdump_ctx_t *ctx, kdump_pfn_t pfn,
 			lkcdp->end_offset = off;
 			if (block)
 				realloc_pfn_offs(block, block->n);
-			return set_error(ctx, kdump_nodata, "Page not found");
+			return set_error(ctx, KDUMP_NODATA, "Page not found");
 		}
 
 		curpfn = dp->dp_address >> get_page_shift(ctx);
@@ -614,7 +614,7 @@ search_page_desc(kdump_ctx_t *ctx, kdump_pfn_t pfn,
 		if (block && off > block->filepos + UINT32_MAX) {
 			idx = pfn_idx3(curpfn) - block->idx3;
 			res = split_pfn_block(ctx, block, idx);
-			if (res != kdump_ok)
+			if (res != KDUMP_OK)
 				return set_error(ctx, res,
 						 "Cannot split PFN block");
 			block = NULL;
@@ -627,7 +627,7 @@ search_page_desc(kdump_ctx_t *ctx, kdump_pfn_t pfn,
 				block->n = idx + 1;
 			if (block->n >= block->alloc) {
 				res = realloc_pfn_offs(block, PFN_IDX3_SIZE);
-				if (res != kdump_ok)
+				if (res != KDUMP_OK)
 					return error_pfn_offs(ctx, res);
 			}
 		}
@@ -636,7 +636,7 @@ search_page_desc(kdump_ctx_t *ctx, kdump_pfn_t pfn,
 		if (!block) {
 			block = alloc_pfn_block(ctx, curpfn);
 			if (!block)
-				return kdump_syserr;
+				return KDUMP_SYSERR;
 			block->filepos = off;
 		} else if (block->offs[idx] == 0)
 			block->offs[idx] = off - block->filepos;
@@ -651,7 +651,7 @@ search_page_desc(kdump_ctx_t *ctx, kdump_pfn_t pfn,
 	} while (curpfn != pfn);
 
 	*dataoff = off - dp->dp_size;
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static inline int
@@ -705,20 +705,20 @@ lkcd_max_pfn_validate(kdump_ctx_t *ctx, struct attr_data *attr)
 
 		res = search_page_desc(ctx, ~(kdump_pfn_t)0,
 				       &dummy_dp, &dummy_off);
-		if (res == kdump_nodata) {
+		if (res == KDUMP_NODATA) {
 			clear_error(ctx);
-			res = kdump_ok;
+			res = KDUMP_OK;
 		}
-		if (res != kdump_ok)
+		if (res != KDUMP_OK)
 			res = set_error(ctx, res, "Cannot get max_pfn");
 	} else
-		res = kdump_ok;
+		res = KDUMP_OK;
 
 	parent_ops = lkcdp->max_pfn_override.template.parent->ops;
 	parent_validate = parent_ops ? parent_ops->validate : NULL;
 	lkcdp->max_pfn_override.ops.validate = parent_validate;
 
-	if (res == kdump_ok) {
+	if (res == KDUMP_OK) {
 		kdump_attr_value_t val;
 		val.number = lkcdp->max_pfn;
 		res = set_attr(ctx, attr, ATTR_DEFAULT, &val);
@@ -726,7 +726,7 @@ lkcd_max_pfn_validate(kdump_ctx_t *ctx, struct attr_data *attr)
 
 	mutex_unlock(&lkcdp->pfn_block_mutex);
 
-	if (res == kdump_ok && parent_validate)
+	if (res == KDUMP_OK && parent_validate)
 		res = parent_validate(ctx, attr);
 	return res;
 }
@@ -744,27 +744,27 @@ lkcd_read_cache(kdump_ctx_t *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 
 	off = 0;
 	ret = get_page_desc(ctx, pfn, &dp, &off);
-	if (ret != kdump_ok)
+	if (ret != KDUMP_OK)
 		return ret;
 
 	type = dp.dp_flags & (DUMP_COMPRESSED|DUMP_RAW);
 	switch (type) {
 	case DUMP_COMPRESSED:
 		if (dp.dp_size > MAX_PAGE_SIZE)
-			return set_error(ctx, kdump_dataerr,
+			return set_error(ctx, KDUMP_DATAERR,
 					 "Wrong compressed size: %lu",
 					 (unsigned long) dp.dp_size);
 		buf = ctx->data[lkcdp->cbuf_slot];
 		break;
 	case DUMP_RAW:
 		if (dp.dp_size != get_page_size(ctx))
-			return set_error(ctx, kdump_dataerr,
+			return set_error(ctx, KDUMP_DATAERR,
 					 "Wrong page size: %lu",
 					 (unsigned long) dp.dp_size);
 		buf = ce->data;
 		break;
 	default:
-		return set_error(ctx, kdump_unsupported,
+		return set_error(ctx, KDUMP_UNSUPPORTED,
 				 "Unsupported compression type: 0x%x", type);
 	}
 
@@ -776,28 +776,28 @@ lkcd_read_cache(kdump_ctx_t *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 				 (unsigned long long) off);
 
 	if (type == DUMP_RAW)
-		return kdump_ok;
+		return KDUMP_OK;
 
 	if (lkcdp->compression == DUMP_COMPRESS_RLE) {
 		size_t retlen = get_page_size(ctx);
 		int ret = uncompress_rle(ce->data, &retlen, buf, dp.dp_size);
 		if (ret)
-			return set_error(ctx, kdump_dataerr,
+			return set_error(ctx, KDUMP_DATAERR,
 					 "Decompression failed: %d", ret);
 		if (retlen != get_page_size(ctx))
-			return set_error(ctx, kdump_dataerr,
+			return set_error(ctx, KDUMP_DATAERR,
 					 "Wrong uncompressed size: %lu",
 					 (unsigned long) retlen);
 	} else if (lkcdp->compression == DUMP_COMPRESS_GZIP) {
 		ret = uncompress_page_gzip(ctx, ce->data, buf, dp.dp_size);
-		if (ret != kdump_ok)
+		if (ret != KDUMP_OK)
 			return ret;
 	} else
-		return set_error(ctx, kdump_unsupported,
+		return set_error(ctx, KDUMP_UNSUPPORTED,
 				 "Unknown compression method: %d",
 				 lkcdp->compression);
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -825,7 +825,7 @@ lkcd_realloc_compressed(kdump_ctx_t *ctx, struct attr_data *attr)
 
 	newslot = per_ctx_alloc(ctx->shared, attr_value(attr)->number);
 	if (newslot < 0)
-		return set_error(ctx, kdump_syserr,
+		return set_error(ctx, KDUMP_SYSERR,
 				 "Cannot allocate buffer for compressed data");
 
 	lkcdp = ctx->shared->fmtdata;
@@ -836,7 +836,7 @@ lkcd_realloc_compressed(kdump_ctx_t *ctx, struct attr_data *attr)
 	parent_ops = lkcdp->page_size_override.template.parent->ops;
 	return (parent_ops && parent_ops->post_set)
 		? parent_ops->post_set(ctx, attr)
-		: kdump_ok;
+		: KDUMP_OK;
 }
 
 static inline unsigned long
@@ -859,7 +859,7 @@ init_v1(kdump_ctx_t *ctx, void *hdr)
 	else
 		set_uts(ctx, &dh32->dh_utsname);
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -882,7 +882,7 @@ init_v2(kdump_ctx_t *ctx, void *hdr)
 		set_uts(ctx, &dh32->dh_utsname);
 	}
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -899,7 +899,7 @@ init_v8(kdump_ctx_t *ctx, void *hdr)
 
 	set_uts(ctx, &dh->dh_utsname);
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -911,7 +911,7 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 
 	lkcdp = ctx_malloc(sizeof *lkcdp, ctx, "LKCD private data");
 	if (!lkcdp)
-		return kdump_syserr;
+		return KDUMP_SYSERR;
 	ctx->shared->fmtdata = lkcdp;
 
 	lkcdp->version = base_version(dump32toh(ctx, dh->dh_version));
@@ -926,7 +926,7 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 
 	if (mutex_init(&lkcdp->pfn_block_mutex, NULL)) {
 		free(lkcdp);
-		return set_error(ctx, kdump_syserr,
+		return set_error(ctx, KDUMP_SYSERR,
 				 "Cannot initialize LKCD data mutex");
 	}
 	lkcdp->pfn_level1 = NULL;
@@ -938,7 +938,7 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 	lkcdp->cbuf_slot = -1;
 
 	ret = set_page_size(ctx, dump32toh(ctx, dh->dh_page_size));
-	if (ret != kdump_ok)
+	if (ret != KDUMP_OK)
 		return ret;
 
 	attr_add_override(gattr(ctx, GKI_max_pfn),
@@ -968,15 +968,15 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 		break;
 
 	default:
-		ret = set_error(ctx, kdump_unsupported,
+		ret = set_error(ctx, KDUMP_UNSUPPORTED,
 				"Unsupported LKCD version: %u",
 				lkcdp->version);
 	}
 
-	if (ret != kdump_ok)
+	if (ret != KDUMP_OK)
 		goto err_free;
 
-	return kdump_ok;
+	return KDUMP_OK;
 
   err_free:
 	lkcd_cleanup(ctx->shared);

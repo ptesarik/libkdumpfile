@@ -51,7 +51,7 @@ check(kdump_ctx_t *ctx)
 	attr.type = kdump_string;
 	attr.val.string = vmcore1;
 	status = kdump_set_attr(ctx, "linux.vmcoreinfo.raw", &attr);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		fprintf(stderr, "#%d: Cannot set vmcoreinfo: %s\n",
 			cnt, kdump_get_err(ctx));
 		return TEST_ERR;
@@ -59,7 +59,7 @@ check(kdump_ctx_t *ctx)
 
 	status = kdump_get_attr(ctx, "linux.vmcoreinfo.lines.DIR.SUB.VAL",
 				&attr);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		fprintf(stderr, "#%d: Cannot get vmcoreinfo: %s\n",
 			cnt, kdump_get_err(ctx));
 		return TEST_ERR;
@@ -77,14 +77,14 @@ check(kdump_ctx_t *ctx)
 	attr.type = kdump_string;
 	attr.val.string = vmcore2;
 	status = kdump_set_attr(ctx, "linux.vmcoreinfo.raw", &attr);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		fprintf(stderr, "#%d: Cannot set vmcoreinfo: %s\n",
 			cnt, kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 
 	status = kdump_get_attr(ctx, "linux.vmcoreinfo.lines.DIR.SUB", &attr);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		fprintf(stderr, "#%d: Cannot get vmcoreinfo: %s\n",
 			cnt, kdump_get_err(ctx));
 		return TEST_ERR;
@@ -98,17 +98,17 @@ check(kdump_ctx_t *ctx)
 
 	attr.type = kdump_nil;
 	status = kdump_set_attr(ctx, "linux.vmcoreinfo.raw", &attr);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot clear vmcoreinfo: %s\n",
 			kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 
 	status = kdump_get_attr(ctx, "linux.vmcoreinfo.lines.DIR.SUB", &attr);
-	if (status == kdump_ok) {
+	if (status == KDUMP_OK) {
 		fprintf(stderr, "vmcoreinfo not cleared!\n");
 		return TEST_ERR;
-	} else if (status != kdump_nokey) {
+	} else if (status != KDUMP_NOKEY) {
 		fprintf(stderr, "Unexpected failure after unset: %s\n",
 			kdump_get_err(ctx));
 		return TEST_ERR;

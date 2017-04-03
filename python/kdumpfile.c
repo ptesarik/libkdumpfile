@@ -52,17 +52,17 @@ static PyObject *
 exception_map(kdump_status status)
 {
 	switch (status) {
-	case kdump_syserr:      return SysErrException;
-	case kdump_unsupported: return UnsupportedException;
-	case kdump_nodata:      return NoDataException;
-	case kdump_dataerr:     return DataErrException;
-	case kdump_invalid:     return InvalidException;
-	case kdump_nokey:       return NoKeyException;
-	case kdump_eof:         return EOFException;
-	case kdump_busy:	return BusyException;
-	case kdump_addrxlat:	return AddressTranslationException;
-	/* If we raise an exception with status == kdump_ok, it's a bug. */
-	case kdump_ok:
+	case KDUMP_SYSERR:      return SysErrException;
+	case KDUMP_UNSUPPORTED: return UnsupportedException;
+	case KDUMP_NODATA:      return NoDataException;
+	case KDUMP_DATAERR:     return DataErrException;
+	case KDUMP_INVALID:     return InvalidException;
+	case KDUMP_NOKEY:       return NoKeyException;
+	case KDUMP_EOF:         return EOFException;
+	case KDUMP_BUSY:	return BusyException;
+	case KDUMP_ADDRXLAT:	return AddressTranslationException;
+	/* If we raise an exception with status == KDUMP_OK, it's a bug. */
+	case KDUMP_OK:
 	default:                return PyExc_RuntimeError;
 	};
 }
@@ -78,15 +78,15 @@ cb_get_symbol(kdump_ctx_t *ctx, const char *name, kdump_addr_t *addr)
 	ret = PyObject_CallFunction(self->cb_get_symbol, "s", name);
 	if (!ret) {
 		PyErr_Clear();
-		return kdump_nodata;
+		return KDUMP_NODATA;
 	}
 
-	status = kdump_ok;
+	status = KDUMP_OK;
 	if (!PyLong_Check(ret)) {
 		PyErr_Format(PyExc_TypeError,
 			     "get_symbol: cannot convert '%.200s' to address",
 			     Py_TYPE(ret)->tp_name);
-		status = kdump_invalid;
+		status = KDUMP_INVALID;
 	} else
 		*addr = PyLong_AsUnsignedLongLong(ret);
 
@@ -126,7 +126,7 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 
 	status = kdump_set_number_attr(self->ctx, KDUMP_ATTR_FILE_FD,
 				       self->fd);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		PyErr_Format(exception_map(status),
 			     "Cannot open dump: %s", kdump_get_err(self->ctx));
 		goto fail;
@@ -136,7 +136,7 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 	self->cb_get_symbol = NULL;
 
 	status = kdump_attr_ref(self->ctx, NULL, &rootref);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		PyErr_Format(exception_map(status),
 			     "Cannot reference root attribute: %s",
 			     kdump_get_err(self->ctx));
@@ -202,7 +202,7 @@ static PyObject *kdumpfile_read (PyObject *_self, PyObject *args, PyObject *kw)
 	r = size;
 	status = kdump_read(self->ctx, addrspace, addr,
 			    PyByteArray_AS_STRING(obj), &r);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		Py_XDECREF(obj);
 		PyErr_Format(exception_map(status), kdump_get_err(self->ctx));
 		return NULL;
@@ -241,7 +241,7 @@ static PyObject *kdumpfile_vtop_init(PyObject *_self, PyObject *args)
 	kdump_status status;
 
 	status = kdump_set_string_attr(self->ctx, KDUMP_ATTR_OSTYPE, "linux");
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		PyErr_SetString(exception_map(status),
 				kdump_get_err(self->ctx));
 		return NULL;
@@ -519,9 +519,9 @@ lookup_attribute(attr_dir_object *self, PyObject *key, kdump_attr_ref_t *ref)
 		kdump_status status;
 
 		status = kdump_sub_attr_ref(ctx, &self->baseref, keystr, ref);
-		if (status == kdump_ok)
+		if (status == KDUMP_OK)
 			ret = 1;
-		else if (status == kdump_nokey)
+		else if (status == KDUMP_NOKEY)
 			ret = 0;
 		else
 			PyErr_SetString(exception_map(status),
@@ -585,17 +585,17 @@ attr_dir_length(PyObject *_self)
 	Py_ssize_t len = 0;
 
 	status = kdump_attr_ref_iter_start(ctx, &self->baseref, &iter);
-	if (status != kdump_ok)
+	if (status != KDUMP_OK)
 		goto err;
 
 	while (iter.key) {
 		++len;
 		status = kdump_attr_iter_next(ctx, &iter);
-		if (status != kdump_ok)
+		if (status != KDUMP_OK)
 			break;
 	}
 	kdump_attr_iter_end(ctx, &iter);
-	if (status != kdump_ok)
+	if (status != KDUMP_OK)
 		goto err;
 
 	return len;
@@ -619,10 +619,10 @@ attr_dir_subscript(PyObject *_self, PyObject *key)
 
 	ctx = self->kdumpfile->ctx;
 	status = kdump_attr_ref_get(ctx, &ref, &attr);
-	if (status == kdump_ok)
+	if (status == KDUMP_OK)
 		return attr_new(self->kdumpfile, &ref, &attr);
 
-	if (status == kdump_nodata)
+	if (status == KDUMP_NODATA)
 		PyErr_SetObject(PyExc_KeyError, key);
 	else
 		PyErr_SetString(exception_map(status), kdump_get_err(ctx));
@@ -726,7 +726,7 @@ set_attribute(attr_dir_object *self, kdump_attr_ref_t *ref, PyObject *value)
 	status = kdump_attr_ref_set(ctx, ref, &attr);
 	if (conv != value)
 		Py_XDECREF(conv);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		PyErr_SetString(exception_map(status), kdump_get_err(ctx));
 		return -1;
 	}
@@ -892,10 +892,10 @@ attr_dir_get(PyObject *_self, PyObject *args)
 
 	ctx = self->kdumpfile->ctx;
 	status = kdump_attr_ref_get(ctx, &ref, &attr);
-	if (status == kdump_ok)
+	if (status == KDUMP_OK)
 		return attr_new(self->kdumpfile, &ref, &attr);
 
-	if (status != kdump_nodata) {
+	if (status != KDUMP_NODATA) {
 		PyErr_SetString(exception_map(status), kdump_get_err(ctx));
 		return NULL;
 	}
@@ -928,9 +928,9 @@ dict_setdefault(PyObject *_self, PyObject *args)
 
 	ctx = self->kdumpfile->ctx;
 	status = kdump_attr_ref_get(ctx, &ref, &attr);
-	if (status == kdump_ok)
+	if (status == KDUMP_OK)
 		val = attr_new(self->kdumpfile, &ref, &attr);
-	else if (status == kdump_nodata)
+	else if (status == KDUMP_NODATA)
 		val = (set_attribute(self, &ref, failobj) == 0)
 			? failobj
 			: NULL;
@@ -1080,16 +1080,16 @@ attr_dir_clear(PyObject *_self, PyObject *args)
 	kdump_status status;
 
 	status = kdump_attr_ref_iter_start(ctx, &self->baseref, &iter);
-	if (status != kdump_ok)
+	if (status != KDUMP_OK)
 		goto err_noiter;
 
 	attr.type = kdump_nil;
 	while (iter.key) {
 		status = kdump_attr_ref_set(ctx, &iter.pos, &attr);
-		if (status != kdump_ok)
+		if (status != KDUMP_OK)
 			goto err;
 		status = kdump_attr_iter_next(ctx, &iter);
-		if (status != kdump_ok)
+		if (status != KDUMP_OK)
 			goto err;
 	}
 
@@ -1117,7 +1117,7 @@ attr_dir_repr(PyObject *_self)
 	int res;
 
 	status = kdump_attr_ref_iter_start(ctx, &self->baseref, &iter);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		PyErr_Format(exception_map(status), kdump_get_err(ctx));
 		return NULL;
 	}
@@ -1159,7 +1159,7 @@ attr_dir_repr(PyObject *_self)
 			goto out;
 
 		status = kdump_attr_iter_next(ctx, &iter);
-		if (status != kdump_ok) {
+		if (status != KDUMP_OK) {
 			PyErr_Format(exception_map(status), kdump_get_err(ctx));
 			goto out;
 		}
@@ -1208,7 +1208,7 @@ attr_dir_print(PyObject *_self, FILE *fp, int flags)
 	int res;
 
 	status = kdump_attr_ref_iter_start(ctx, &self->baseref, &iter);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		PyErr_Format(exception_map(status), kdump_get_err(ctx));
 		return -1;
 	}
@@ -1241,7 +1241,7 @@ attr_dir_print(PyObject *_self, FILE *fp, int flags)
 			goto err;
 
 		status = kdump_attr_iter_next(ctx, &iter);
-		if (status != kdump_ok) {
+		if (status != KDUMP_OK) {
 			PyErr_Format(exception_map(status), kdump_get_err(ctx));
 			goto err;
 		}
@@ -1547,7 +1547,7 @@ attr_iter_new(attr_dir_object *attr_dir, PyTypeObject *itertype)
 
 	status = kdump_attr_ref_iter_start(ctx, &attr_dir->baseref,
 					   &self->iter);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		PyErr_Format(exception_map(status), kdump_get_err(ctx));
 		Py_DECREF(self);
 		return NULL;
@@ -1587,7 +1587,7 @@ attr_iter_advance(attr_iter_object *self, PyObject *ret)
 	kdump_status status;
 
 	status = kdump_attr_iter_next(ctx, &self->iter);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		PyErr_Format(exception_map(status), kdump_get_err(ctx));
 		Py_XDECREF(ret);
 		ret = NULL;
@@ -1621,7 +1621,7 @@ attr_itervalue_next(PyObject *_self)
 
 	ctx = self->kdumpfile->ctx;
 	status = kdump_attr_ref_get(ctx, &self->iter.pos, &attr);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		PyErr_SetString(exception_map(status), kdump_get_err(ctx));
 		return NULL;
 	}
@@ -1644,7 +1644,7 @@ attr_iteritem_next(PyObject *_self)
 
 	ctx = self->kdumpfile->ctx;
 	status = kdump_attr_ref_get(ctx, &self->iter.pos, &attr);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		PyErr_SetString(exception_map(status), kdump_get_err(ctx));
 		return NULL;
 	}

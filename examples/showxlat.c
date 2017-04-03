@@ -309,7 +309,7 @@ main(int argc, char **argv)
 	}
 
 	status = kdump_set_number_attr(ctx, KDUMP_ATTR_FILE_FD, fd);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		fprintf(stderr, "File initialization failed: %s\n",
 			kdump_get_err(ctx));
 		kdump_free(ctx);
@@ -322,7 +322,7 @@ main(int argc, char **argv)
 	} else
 		attr.type = kdump_nil;
 	status = kdump_set_attr(ctx, "addrxlat.ostype", &attr);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot set ostype: %s\n",
 			kdump_get_err(ctx));
 		return 1;

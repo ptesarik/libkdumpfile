@@ -73,21 +73,21 @@ add_parsed_row(kdump_ctx_t *ctx, struct attr_data *dir,
 
 	attr = lookup_dir_attr(ctx->shared, dir, "lines", 5);
 	if (!attr)
-		return set_error(ctx, kdump_nokey,
+		return set_error(ctx, KDUMP_NOKEY,
 				 "Cannot set VMCOREINFO '%.*s'",
 				 (int) keylen, key);
 	attr = create_attr_path(ctx->shared, attr, key, keylen, &lines_tmpl);
 	if (!attr)
-		return set_error(ctx, kdump_syserr,
+		return set_error(ctx, KDUMP_SYSERR,
 				 "Cannot set VMCOREINFO '%.*s'",
 				 (int) keylen, key);
 	res = set_attr_sized_string(ctx, attr, ATTR_DEFAULT, val, vallen);
-	if (res != kdump_ok)
+	if (res != KDUMP_OK)
 		return set_error(ctx, res,
 				 "Cannot set VMCOREINFO '%.*s'",
 				 (int) keylen, key);
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -129,10 +129,10 @@ lines_post_hook(kdump_ctx_t *ctx, struct attr_data *lineattr)
 					    &p, 10);
 			if (*p)
 				/* invalid format -> ignore */
-				return kdump_ok;
+				return KDUMP_OK;
 
 			res = set_page_size(ctx, page_size);
-			if (res != kdump_ok)
+			if (res != KDUMP_OK)
 				return set_error(ctx, res,
 						 "Cannot set page size");
 		} else if (!strcmp(key, "OSRELEASE")) {
@@ -140,7 +140,7 @@ lines_post_hook(kdump_ctx_t *ctx, struct attr_data *lineattr)
 			res = set_attr_string(ctx, attr,
 					      ATTR_DEFAULT,
 					      attr_value(lineattr)->string);
-			if (res != kdump_ok)
+			if (res != KDUMP_OK)
 				return set_error(ctx, res,
 						 "Cannot set UTS release");
 		}
@@ -149,11 +149,11 @@ lines_post_hook(kdump_ctx_t *ctx, struct attr_data *lineattr)
 	type = key;
 	sym = strchr(key, '(');
 	if (!sym)
-		return kdump_ok;
+		return KDUMP_OK;
 	*sym++ = '\0';
 	p = strchr(sym, ')');
 	if (!p || p[1])
-		return kdump_ok;
+		return KDUMP_OK;
 	*p = '\0';
 
 	memset(&tmpl, 0, sizeof tmpl);
@@ -162,7 +162,7 @@ lines_post_hook(kdump_ctx_t *ctx, struct attr_data *lineattr)
 		num = strtoull(attr_value(lineattr)->string, &p, 16);
 		if (*p)
 			/* invalid format -> ignore */
-			return kdump_ok;
+			return KDUMP_OK;
 		tmpl.type = kdump_address;
 	} else if (!strcmp(type, "LENGTH") ||
 		   !strcmp(type, "NUMBER") ||
@@ -171,15 +171,15 @@ lines_post_hook(kdump_ctx_t *ctx, struct attr_data *lineattr)
 		num = strtoull(attr_value(lineattr)->string, &p, 10);
 		if (*p)
 			/* invalid format -> ignore */
-			return kdump_ok;
+			return KDUMP_OK;
 		tmpl.type = kdump_number;
 	} else
-		return kdump_ok;
+		return KDUMP_OK;
 
 	sym[-1] = '.';
 	attr = create_attr_path(ctx->shared, dir, key, strlen(key), &tmpl);
 	if (!attr)
-		return set_error(ctx, kdump_syserr,
+		return set_error(ctx, KDUMP_SYSERR,
 				 "Cannot set VMCOREINFO '%s'", key);
 	return set_error(ctx,
 			 (tmpl.type == kdump_number)
@@ -215,7 +215,7 @@ vmcoreinfo_raw_post_hook(kdump_ctx_t *ctx, struct attr_data *rawattr)
 		}
 
 		res = add_parsed_row(ctx, dir, p, len, val, endp - val);
-		if (res != kdump_ok)
+		if (res != KDUMP_OK)
 			break;
 
 		if (*endp)
@@ -252,7 +252,7 @@ kdump_vmcoreinfo(kdump_ctx_t *ctx)
 	rwlock_rdlock(&ctx->shared->lock);
 
 	attr = ostype_attr(ctx->shared, raw_map);
-	ret = (attr && validate_attr(ctx, attr) == kdump_ok &&
+	ret = (attr && validate_attr(ctx, attr) == KDUMP_OK &&
 	       attr->template->type == kdump_string)
 		? attr_value(attr)->string
 		: NULL;
@@ -280,7 +280,7 @@ kdump_vmcoreinfo_row(kdump_ctx_t *ctx, const char *key)
 	base = ostype_attr(ctx->shared, lines_map);
 	if (base) {
 		attr = lookup_dir_attr(ctx->shared, base, key, strlen(key));
-		if (attr && validate_attr(ctx, attr) == kdump_ok)
+		if (attr && validate_attr(ctx, attr) == KDUMP_OK)
 			ret = attr_value(attr)->string;
 	}
 
@@ -307,22 +307,22 @@ kdump_vmcoreinfo_symbol(kdump_ctx_t *ctx, const char *symname,
 
 	base = ostype_attr(ctx->shared, symbol_map);
 	if (!base) {
-		ret = set_error(ctx, kdump_unsupported, "Unsupported OS");
+		ret = set_error(ctx, KDUMP_UNSUPPORTED, "Unsupported OS");
 		goto out;
 	}
 
 	attr = lookup_dir_attr(ctx->shared, base, symname, strlen(symname));
 	if (!attr) {
-		ret = set_error(ctx, kdump_nodata, "Symbol not found");
+		ret = set_error(ctx, KDUMP_NODATA, "Symbol not found");
 		goto out;
 	}
-	if (validate_attr(ctx, attr) != kdump_ok) {
-		ret = set_error(ctx, kdump_nodata, "Symbol has no value");
+	if (validate_attr(ctx, attr) != KDUMP_OK) {
+		ret = set_error(ctx, KDUMP_NODATA, "Symbol has no value");
 		goto out;
 	}
 
 	*symvalue = attr_value(attr)->address;
-	ret = kdump_ok;
+	ret = KDUMP_OK;
 
  out:
 	rwlock_unlock(&ctx->shared->lock);

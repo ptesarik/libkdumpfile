@@ -248,7 +248,7 @@ update_phys_base(kdump_ctx_t *ctx, struct attr_data *attr)
 	parent_ops = archdata->phys_base_override.template.parent->ops;
 	return (parent_ops && parent_ops->post_set)
 		? parent_ops->post_set(ctx, attr)
-		: kdump_ok;
+		: KDUMP_OK;
 }
 
 static kdump_status
@@ -260,13 +260,13 @@ x86_64_init(kdump_ctx_t *ctx)
 
 	archdata = calloc(1, sizeof(struct x86_64_data));
 	if (!archdata)
-		return set_error(ctx, kdump_syserr,
+		return set_error(ctx, KDUMP_SYSERR,
 				 "Cannot allocate x86_64 private data");
 	ctx->shared->archdata = archdata;
 
 	ktext = addrxlat_meth_new();
 	if (!ktext) {
-		ret = set_error(ctx, kdump_syserr,
+		ret = set_error(ctx, KDUMP_SYSERR,
 				"Cannot allocate kernel text mapping");
 		goto err_arch;
 	}
@@ -280,7 +280,7 @@ x86_64_init(kdump_ctx_t *ctx)
 			  &archdata->phys_base_override);
 	archdata->phys_base_override.ops.post_set = update_phys_base;
 
-	return kdump_ok;
+	return KDUMP_OK;
 
  err_arch:
 	free(archdata);
@@ -296,18 +296,18 @@ calc_linux_phys_base(kdump_ctx_t *ctx, kdump_paddr_t paddr)
 
 	rwlock_unlock(&ctx->shared->lock);
 	status = get_symbol_val(ctx, "_text", &stext);
-	if (status == kdump_nodata) {
+	if (status == KDUMP_NODATA) {
 		clear_error(ctx);
 		status = get_symbol_val(ctx, "_stext", &stext);
 	}
 	rwlock_rdlock(&ctx->shared->lock);
 
-	if (status != kdump_ok)
+	if (status != KDUMP_OK)
 		return set_error(ctx, status,
 				 "Cannot get kernel text start address");
 	stext &= -(kdump_addr_t)LINUX_TEXT_ALIGN;
 	set_phys_base(ctx, paddr - (stext - __START_KERNEL_map));
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -317,9 +317,9 @@ set_linux_phys_base(kdump_ctx_t *ctx)
 
 	if (ctx->shared->ops == &devmem_ops) {
 		kdump_status status = linux_iomem_kcode(ctx, &paddr);
-		if (status == kdump_ok)
+		if (status == KDUMP_OK)
 			status = calc_linux_phys_base(ctx, paddr);
-		if (status != kdump_nodata)
+		if (status != KDUMP_NODATA)
 			return status;
 		clear_error(ctx);
 	}
@@ -328,7 +328,7 @@ set_linux_phys_base(kdump_ctx_t *ctx)
 	    get_xen_type(ctx) != kdump_xen_none)
 		return set_phys_base(ctx, 0);
 
-	return kdump_nodata;
+	return KDUMP_NODATA;
 }
 
 static kdump_status
@@ -336,14 +336,14 @@ x86_64_late_init(kdump_ctx_t *ctx)
 {
 	if (ctx->shared->ostype == addrxlat_os_linux &&
 	    !isset_phys_base(ctx) &&
-	    set_linux_phys_base(ctx) == kdump_ok) {
+	    set_linux_phys_base(ctx) == KDUMP_OK) {
 		kdump_status status = vtop_init(ctx);
-		if (status != kdump_ok)
+		if (status != KDUMP_OK)
 			return set_error(ctx, status,
 					 "Cannot initialize address translation");
 	}
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -355,31 +355,31 @@ process_x86_64_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
 	kdump_status res;
 
 	if (size < sizeof(struct elf_prstatus))
-		return set_error(ctx, kdump_dataerr,
+		return set_error(ctx, KDUMP_DATAERR,
 				 "Wrong PRSTATUS size: %zu", size);
 
 	res = set_cpu_regs64(ctx, get_num_cpus(ctx), reg_names,
 			     status->pr_reg, ELF_NGREG);
-	if (res != kdump_ok)
+	if (res != KDUMP_OK)
 		return res;
 
 	sprintf(cpukey, "cpu.%u", get_num_cpus(ctx));
 	dir = lookup_attr(ctx->shared, cpukey);
 	if (!dir)
-		return set_error(ctx, kdump_nokey,
+		return set_error(ctx, KDUMP_NOKEY,
 				 "'%s': %s", cpukey, "No such key");
 	attr = new_attr(ctx->shared, dir, &tmpl_pid);
 	if (!attr)
-		return set_error(ctx, kdump_syserr,
+		return set_error(ctx, KDUMP_SYSERR,
 				 "Cannot allocate '%s'", cpukey);
 	res = set_attr_number(ctx, attr, ATTR_DEFAULT,
 			      dump32toh(ctx, status->pr_pid));
-	if (res != kdump_ok)
+	if (res != KDUMP_OK)
 		return set_error(ctx, res,
 				 "Cannot set '%s'", cpukey);
 
 	set_num_cpus(ctx, get_num_cpus(ctx) + 1);
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 #define xen_reg_idx(field) \
@@ -404,17 +404,17 @@ process_x86_64_xen_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
 
 		res = set_cpu_regs64(ctx, cpu, &reg_names[0], &regs->r15,
 				     xen_reg_cnt(r15, rdi));
-		if (res != kdump_ok)
+		if (res != KDUMP_OK)
 			return res;
 
 		res = set_cpu_regs64(ctx, cpu, &reg_names[16], &regs->rip,
 				     xen_reg_cnt(cs, gs));
-		if (res != kdump_ok)
+		if (res != KDUMP_OK)
 			return res;
 
 		res = set_cpu_regs64(ctx, cpu, &reg_names[27],
 				     vgc->ctrlreg, 16);
-		if (res != kdump_ok)
+		if (res != KDUMP_OK)
 			return res;
 
 		++cpu;
@@ -425,7 +425,7 @@ process_x86_64_xen_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
 	if (!isset_num_cpus(ctx) || cpu > get_num_cpus(ctx))
 		set_num_cpus(ctx, cpu);
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -435,7 +435,7 @@ x86_64_process_load(kdump_ctx_t *ctx, kdump_vaddr_t vaddr, kdump_paddr_t paddr)
 	    vaddr >= __START_KERNEL_map &&
 	    vaddr < __START_KERNEL_map + MAX_PHYSICAL_START)
 		set_phys_base(ctx, paddr - (vaddr - __START_KERNEL_map));
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static void

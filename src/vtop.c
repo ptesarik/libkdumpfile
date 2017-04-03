@@ -75,21 +75,21 @@ get_version_code(kdump_ctx_t *ctx, unsigned long *pver)
 	/* Get OS type name */
 	attr = gattr(ctx, GKI_ostype);
 	status = validate_attr(ctx, attr);
-	if (status == kdump_nodata)
-		return kdump_ok;
-	if (status != kdump_ok)
+	if (status == KDUMP_NODATA)
+		return KDUMP_OK;
+	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot get OS type");
 	ostype = attr_value(attr)->string;
 
 	/* Get OS directory attribute */
 	attr = lookup_attr(ctx->shared, ostype);
 	if (!attr || attr->template->type != kdump_directory)
-		return set_error(ctx, kdump_unsupported,
+		return set_error(ctx, KDUMP_UNSUPPORTED,
 				 "Unknown operating system type: %s", ostype);
 	status = validate_attr(ctx, attr);
-	if (status == kdump_nodata)
-		return kdump_ok;
-	if (status != kdump_ok)
+	if (status == KDUMP_NODATA)
+		return KDUMP_OK;
+	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot get %s.%s",
 				 ostype, attrname);
 
@@ -97,21 +97,21 @@ get_version_code(kdump_ctx_t *ctx, unsigned long *pver)
 	attr = lookup_dir_attr(
 		ctx->shared, attr, attrname, sizeof(attrname) - 1);
 	if (!attr)
-		return kdump_ok;
+		return KDUMP_OK;
 	status = validate_attr(ctx, attr);
-	if (status == kdump_nodata)
-		return kdump_ok;
-	if (status != kdump_ok)
+	if (status == KDUMP_NODATA)
+		return KDUMP_OK;
+	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot get %s.%s",
 				 ostype, attrname);
 
 	if (attr->template->type != kdump_number)
-		status = set_error(ctx, kdump_invalid,
+		status = set_error(ctx, KDUMP_INVALID,
 				   "Attribute %s.%s is not a number",
 				   ostype, attrname);
 
 	 *pver = attr_value(attr)->number;
-	 return kdump_ok;
+	 return KDUMP_OK;
 }
 
 #define MAX_OPTS	8
@@ -161,18 +161,18 @@ set_x86_pae_opt(kdump_ctx_t *ctx, struct opts *opts)
 		pae_state = "no";
 	attr = lookup_dir_attr(ctx->shared, attr,
 			       config_pae, sizeof(config_pae) - 1);
-	if (attr && validate_attr(ctx, attr) == kdump_ok &&
+	if (attr && validate_attr(ctx, attr) == KDUMP_OK &&
 	    !strcmp(attr_value(attr)->string, "y"))
 		pae_state = "yes";
 	if (pae_state) {
 		len = asprintf(&opts->str[opts->n], "pae=%s", pae_state);
 		if (len < 0)
-			return set_error(ctx, kdump_syserr,
+			return set_error(ctx, KDUMP_SYSERR,
 					 "Cannot make %s option", "pae");
 		++opts->n;
 	}
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -183,7 +183,7 @@ set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 
 	if (ctx->shared->arch == ARCH_IA32) {
 		kdump_status status = set_x86_pae_opt(ctx, opts);
-		if (status != kdump_ok)
+		if (status != KDUMP_OK)
 			return status;
 	}
 
@@ -192,7 +192,7 @@ set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 			       "physbase=0x%"ADDRXLAT_PRIxADDR,
 			       get_phys_base(ctx));
 		if (len < 0)
-			return set_error(ctx, kdump_syserr,
+			return set_error(ctx, KDUMP_SYSERR,
 					 "Cannot make %s option", "physbase");
 		++opts->n;
 	}
@@ -200,24 +200,24 @@ set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 	if ((isset_xen_xlat(ctx) && get_xen_xlat(ctx) != kdump_xen_auto) ||
 	    (isset_xen_type(ctx) && get_xen_type(ctx) == kdump_xen_system)) {
 		if (! (opts->str[opts->n] = strdup("xen_xlat=1")) )
-			return set_error(ctx, kdump_syserr,
+			return set_error(ctx, KDUMP_SYSERR,
 					 "Cannot make %s option", "xen_xlat");
 		++opts->n;
 	}
 
 	attr = gattr(ctx, GKI_xen_p2m_mfn);
-	if (validate_attr(ctx, attr) == kdump_ok) {
+	if (validate_attr(ctx, attr) == KDUMP_OK) {
 		len = asprintf(&opts->str[opts->n],
 			"xen_p2m_mfn=0x%"ADDRXLAT_PRIxADDR,
 			attr_value(attr)->number);
 		if (len < 0)
-			return set_error(ctx, kdump_syserr,
+			return set_error(ctx, KDUMP_SYSERR,
 					 "Cannot make %s option",
 					 "xen_p2m_mfn");
 		++opts->n;
 	}
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -227,17 +227,17 @@ set_xen_opts(kdump_ctx_t *ctx, struct opts *opts)
 	int len;
 
 	attr = gattr(ctx, GKI_xen_phys_start);
-	if (validate_attr(ctx, attr) == kdump_ok) {
+	if (validate_attr(ctx, attr) == KDUMP_OK) {
 		len = asprintf(&opts->str[opts->n],
 			       "physbase=0x%"ADDRXLAT_PRIxADDR,
 			       attr_value(attr)->address);
 		if (len < 0)
-			return set_error(ctx, kdump_syserr,
+			return set_error(ctx, KDUMP_SYSERR,
 					 "Cannot make %s option", "physbase");
 		++opts->n;
 	}
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 kdump_status
@@ -252,7 +252,7 @@ vtop_init(kdump_ctx_t *ctx)
 	osdesc.arch = get_arch_name(ctx);
 
 	status = get_version_code(ctx, &osdesc.ver);
-	if (status != kdump_ok)
+	if (status != KDUMP_OK)
 		return status;
 	clear_error(ctx);
 
@@ -261,7 +261,7 @@ vtop_init(kdump_ctx_t *ctx)
 		status = set_linux_opts(ctx, &opts);
 	else if (ctx->shared->ostype == addrxlat_os_xen)
 		status = set_xen_opts(ctx, &opts);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		free_opts(&opts);
 		return status;
 	}
@@ -269,7 +269,7 @@ vtop_init(kdump_ctx_t *ctx)
 		osdesc.opts = join_opts(&opts);
 		free_opts(&opts);
 		if (!osdesc.opts)
-			return set_error(ctx, kdump_syserr,
+			return set_error(ctx, KDUMP_SYSERR,
 					 "Cannot allocate addrxlat options");
 	} else
 		osdesc.opts = NULL;
@@ -287,7 +287,7 @@ vtop_init(kdump_ctx_t *ctx)
 
 	if (!attr_isset(gattr(ctx, GKI_pteval_size)))
 		set_pteval_size(ctx);
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static addrxlat_status
@@ -333,7 +333,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 	switch (sym->type) {
 	case ADDRXLAT_SYM_VALUE:
 		status = ctx->cb_get_symbol_val(ctx, sym->args[0], &sym->val);
-		return status == kdump_nodata
+		return status == KDUMP_NODATA
 			? ADDRXLAT_NODATA
 			: (addrxlat_status) -(int)status;
 
@@ -376,7 +376,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 				       "Symbol not found");
 		goto out;
 	}
-	if (validate_attr(ctx, attr) != kdump_ok) {
+	if (validate_attr(ctx, attr) != KDUMP_OK) {
 		ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_NODATA,
 				       "Symbol has no value");
 		goto out;
@@ -390,7 +390,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 					       "Field not found");
 			goto out;
 		}
-		if (validate_attr(ctx, attr) != kdump_ok) {
+		if (validate_attr(ctx, attr) != KDUMP_OK) {
 			ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_NODATA,
 					       "Field has no value");
 			goto out;

@@ -74,7 +74,7 @@ raw_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 	kdump_status status;
 
 	status = xlat_pio(ctx, pio);
-	if (status != kdump_ok)
+	if (status != KDUMP_OK)
 		return set_error(ctx, status,
 				 "Cannot get page I/O address");
 
@@ -102,7 +102,7 @@ read_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	size_t remain;
 	kdump_status ret;
 
-	ret = kdump_ok;
+	ret = KDUMP_OK;
 	pio.precious = 0;
 	remain = *plength;
 	while (remain) {
@@ -111,7 +111,7 @@ read_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		pio.addr.as = as;
 		pio.addr.addr = page_align(ctx, addr);
 		ret = raw_read_page(ctx, &pio);
-		if (ret != kdump_ok)
+		if (ret != KDUMP_OK)
 			break;
 
 		off = addr % get_page_size(ctx);
@@ -170,7 +170,7 @@ read_string_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		pio.addr.as = as;
 		pio.addr.addr = page_align(ctx, addr);
 		ret = raw_read_page(ctx, &pio);
-		if (ret != kdump_ok)
+		if (ret != KDUMP_OK)
 			return ret;
 
 		off = addr % get_page_size(ctx);
@@ -185,7 +185,7 @@ read_string_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 			unref_page(ctx, &pio);
 			if (str)
 				free(str);
-			return set_error(ctx, kdump_syserr,
+			return set_error(ctx, KDUMP_SYSERR,
 					 "Cannot enlarge string to %zu bytes",
 					 newlength + 1);
 		}
@@ -199,7 +199,7 @@ read_string_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 
 	str[length] = 0;
 	*pstr = str;
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 kdump_status
@@ -238,7 +238,7 @@ read_u32(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	pio.addr.as = as;
 	pio.precious = precious;
 	ret = raw_read_page(ctx, &pio);
-	if (ret != kdump_ok)
+	if (ret != KDUMP_OK)
 		return what
 			? set_error(ctx, ret,
 				    "Reading %s failed at %llx",
@@ -248,7 +248,7 @@ read_u32(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	p = pio.ce->data + (addr & (get_page_size(ctx) - 1));
 	*result = dump32toh(ctx, *p);
 	unref_page(ctx, &pio);
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 /**  Get an aligned uint64_t value in host-byte order.
@@ -274,7 +274,7 @@ read_u64(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	pio.addr.as = as;
 	pio.precious = precious;
 	ret = raw_read_page(ctx, &pio);
-	if (ret != kdump_ok)
+	if (ret != KDUMP_OK)
 		return what
 			? set_error(ctx, ret,
 				    "Reading %s failed at %llx",
@@ -284,7 +284,7 @@ read_u64(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	p = pio.ce->data + (addr & (get_page_size(ctx) - 1));
 	*result = dump64toh(ctx, *p);
 	unref_page(ctx, &pio);
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 /**  Set read address spaces.

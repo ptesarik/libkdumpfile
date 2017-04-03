@@ -103,31 +103,31 @@ process_ia32_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
 	kdump_status res;
 
 	if (size < sizeof(struct elf_prstatus))
-		return set_error(ctx, kdump_dataerr,
+		return set_error(ctx, KDUMP_DATAERR,
 				 "Wrong PRSTATUS size: %zu", size);
 
 	res = set_cpu_regs32(ctx, get_num_cpus(ctx),
 			     reg_names, status->pr_reg, ELF_NGREG);
-	if (res != kdump_ok)
+	if (res != KDUMP_OK)
 		return res;
 
 	sprintf(cpukey, "cpu.%u", get_num_cpus(ctx));
 	dir = lookup_attr(ctx->shared, cpukey);
 	if (!dir)
-		return set_error(ctx, kdump_nokey,
+		return set_error(ctx, KDUMP_NOKEY,
 				 "'%s': %s", cpukey, "No such key");
 	attr = new_attr(ctx->shared, dir, &tmpl_pid);
 	if (!attr)
-		return set_error(ctx, kdump_syserr,
+		return set_error(ctx, KDUMP_SYSERR,
 				 "Cannot allocate '%s'", cpukey);
 	res = set_attr_number(ctx, attr, ATTR_DEFAULT,
 			      dump32toh(ctx, status->pr_pid));
-	if (res != kdump_ok)
+	if (res != KDUMP_OK)
 		return set_error(ctx, res,
 				 "Cannot set '%s'", cpukey);
 
 	set_num_cpus(ctx, get_num_cpus(ctx) + 1);
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -135,7 +135,7 @@ ia32_init(kdump_ctx_t *ctx)
 {
 	clear_attr(ctx, gattr(ctx, GKI_pteval_size));
 
-	return kdump_ok;
+	return KDUMP_OK;
 }
 
 const struct arch_ops ia32_ops = {

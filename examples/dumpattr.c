@@ -20,7 +20,7 @@ list_attr_recursive(kdump_ctx_t *ctx, kdump_attr_ref_t *dir, int indent)
 	int ret;
 
 	status = kdump_attr_ref_iter_start(ctx, dir, &it);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		fprintf(stderr, "kdump_attr_ref_iter_start failed: %s\n",
 			kdump_get_err(ctx));
 		return -1;
@@ -33,7 +33,7 @@ list_attr_recursive(kdump_ctx_t *ctx, kdump_attr_ref_t *dir, int indent)
 			break;
 
 		status = kdump_attr_iter_next(ctx, &it);
-		if (status != kdump_ok) {
+		if (status != KDUMP_OK) {
 			fprintf(stderr, "kdump_attr_iter_next failed: %s\n",
 				kdump_get_err(ctx));
 			ret = -1;
@@ -57,7 +57,7 @@ show_attr(kdump_ctx_t *ctx, kdump_attr_ref_t *ref, int indent, const char *key)
 	}
 
 	status = kdump_attr_ref_get(ctx, ref, &attr);
-	if (status != kdump_ok) {
+	if (status != KDUMP_OK) {
 		fprintf(stderr, "kdump_attr_ref_get failed: %s\n",
 			kdump_get_err(ctx));
 		return -1;
@@ -108,7 +108,7 @@ main(int argc, char **argv)
 	}
 
 	res = kdump_set_number_attr(ctx, KDUMP_ATTR_FILE_FD, fd);
-	if (res != kdump_ok) {
+	if (res != KDUMP_OK) {
 		fprintf(stderr, "File initialization failed: %s\n",
 			kdump_get_err(ctx));
 		kdump_free(ctx);
@@ -117,7 +117,7 @@ main(int argc, char **argv)
 
 	kdump_attr_ref_t root;
 	res = kdump_attr_ref(ctx, argv[2], &root);
-	if (res != kdump_ok) {
+	if (res != KDUMP_OK) {
 		fprintf(stderr, "kdump_attr_ref failed: %s\n",
 			kdump_get_err(ctx));
 		kdump_free(ctx);
