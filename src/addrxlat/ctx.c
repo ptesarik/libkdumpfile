@@ -139,7 +139,7 @@ read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
 	addrxlat_status status;
 
 	if (!ctx->cb.read32)
-		return set_error(ctx, addrxlat_nometh, read_nometh_fmt, 32,
+		return set_error(ctx, ADDRXLAT_NOMETH, read_nometh_fmt, 32,
 				 addrspace_name(addr->as));
 
 	param.ctx = ctx;
@@ -150,11 +150,11 @@ read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
 	ctl.data = &param;
 	ctl.caps = step->ctx->cb.read_caps;
 	status = xlat_op(&ctl, addr);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status, read_err_fmt, 32, what,
 				 addrspace_name(addr->as), addr->addr);
 
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 static addrxlat_status
@@ -181,7 +181,7 @@ read64(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint64_t *val,
 	addrxlat_status status;
 
 	if (!ctx->cb.read64)
-		return set_error(ctx, addrxlat_nometh, read_nometh_fmt, 64,
+		return set_error(ctx, ADDRXLAT_NOMETH, read_nometh_fmt, 64,
 				 addrspace_name(addr->as));
 
 	param.ctx = ctx;
@@ -192,11 +192,11 @@ read64(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint64_t *val,
 	ctl.data = &param;
 	ctl.caps = step->ctx->cb.read_caps;
 	status = xlat_op(&ctl, addr);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status, read_err_fmt, 64, what,
 				 addrspace_name(addr->as), addr->addr);
 
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 /** Get register value.
@@ -217,13 +217,13 @@ get_reg(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 	addrxlat_status status;
 
 	if (!ctx->cb.sym)
-		return set_error(ctx, addrxlat_notimpl,
+		return set_error(ctx, ADDRXLAT_NOTIMPL,
 				 "No symbolic information callback");
 
 	info.sym.type = ADDRXLAT_SYM_REG;
 	info.name = name;
 	status = ctx->cb.sym(ctx->cb.data, (addrxlat_sym_t*)&info);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status,
 				 "Cannot read register \"%s\"", info.name);
 
@@ -249,13 +249,13 @@ get_symval(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 	addrxlat_status status;
 
 	if (!ctx->cb.sym)
-		return set_error(ctx, addrxlat_notimpl,
+		return set_error(ctx, ADDRXLAT_NOTIMPL,
 				 "No symbolic information callback");
 
 	info.sym.type = ADDRXLAT_SYM_VALUE;
 	info.name = name;
 	status = ctx->cb.sym(ctx->cb.data, (addrxlat_sym_t*)&info);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status,
 				 "Cannot resolve \"%s\"", info.name);
 
@@ -281,13 +281,13 @@ get_sizeof(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *sz)
 	addrxlat_status status;
 
 	if (!ctx->cb.sym)
-		return set_error(ctx, addrxlat_notimpl,
+		return set_error(ctx, ADDRXLAT_NOTIMPL,
 				 "No symbolic information callback");
 
 	info.sym.type = ADDRXLAT_SYM_SIZEOF;
 	info.name = name;
 	status = ctx->cb.sym(ctx->cb.data, (addrxlat_sym_t*)&info);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status, "Cannot get sizeof(%s)",
 				 info.name);
 
@@ -316,14 +316,14 @@ get_offsetof(addrxlat_ctx_t *ctx, const char *type, const char *memb,
 	addrxlat_status status;
 
 	if (!ctx->cb.sym)
-		return set_error(ctx, addrxlat_notimpl,
+		return set_error(ctx, ADDRXLAT_NOTIMPL,
 				 "No symbolic information callback");
 
 	info.sym.type = ADDRXLAT_SYM_OFFSETOF;
 	info.type = type;
 	info.memb = memb;
 	status = ctx->cb.sym(ctx->cb.data, (addrxlat_sym_t*)&info);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status, "Cannot get offsetof(%s, %s)",
 				 info.type, info.memb);
 
@@ -345,7 +345,7 @@ addrxlat_ctx_err(addrxlat_ctx_t *ctx, addrxlat_status status,
 	int msglen, dlen;
 	size_t remain;
 
-	if (status == addrxlat_ok)
+	if (status == ADDRXLAT_OK)
 		return status;
 
 	/* Get length of formatted message. */
@@ -420,13 +420,13 @@ const char *
 addrxlat_strerror(addrxlat_status status)
 {
 	switch (status) {
-	case addrxlat_ok:         return "Success";                   break;
-	case addrxlat_notimpl:    return "Unimplemented feature";     break;
-	case addrxlat_notpresent: return "Page not present";          break;
-	case addrxlat_invalid:    return "Invalid address";           break;
-	case addrxlat_nomem:      return "Memory allocation failure"; break;
-	case addrxlat_nodata:     return "Uninitialized data";        break;
-	case addrxlat_nometh:     return "No translation method";     break;
-	default:                  return "Unknown error";             break;
+	case ADDRXLAT_OK:         return "Success";
+	case ADDRXLAT_NOTIMPL:    return "Unimplemented feature";
+	case ADDRXLAT_NOTPRESENT: return "Page not present";
+	case ADDRXLAT_INVALID:    return "Invalid address";
+	case ADDRXLAT_NOMEM:      return "Memory allocation failure";
+	case ADDRXLAT_NODATA:     return "Uninitialized data";
+	case ADDRXLAT_NOMETH:     return "No translation method";
+	default:                  return "Unknown error";
 	}
 }

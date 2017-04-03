@@ -73,11 +73,11 @@ pgt_s390x(addrxlat_step_t *step)
 	addrxlat_status status;
 
 	status = read_pte(step);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	if (PTE_I(step->raw_pte))
-		return set_error(step->ctx, addrxlat_notpresent,
+		return set_error(step->ctx, ADDRXLAT_NOTPRESENT,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
 				 pgt_full_name[step->remain - 1],
 				 pte_name[step->remain - 1],
@@ -85,7 +85,7 @@ pgt_s390x(addrxlat_step_t *step)
 				 step->raw_pte);
 
 	if (step->remain >= 2 && PTE_TT(step->raw_pte) != step->remain - 2)
-		return set_error(step->ctx, addrxlat_invalid,
+		return set_error(step->ctx, ADDRXLAT_INVALID,
 				 "Table type field %u in %s",
 				 (unsigned) PTE_TT(step->raw_pte),
 				 pgt_full_name[step->remain]);
@@ -104,7 +104,7 @@ pgt_s390x(addrxlat_step_t *step)
 			(pf->bits[step->remain - 1] - pf->bits[0]);
 		if (pgidx < PTE_TF(step->raw_pte) ||
 		    pgidx > PTE_TL(step->raw_pte))
-			return set_error(step->ctx, addrxlat_notpresent,
+			return set_error(step->ctx, ADDRXLAT_NOTPRESENT,
 					 "%s index %u not within %u and %u",
 					 pgt_full_name[step->remain-1],
 					 (unsigned) step->idx[step->remain-1],
@@ -113,7 +113,7 @@ pgt_s390x(addrxlat_step_t *step)
 	}
 
 	step->base.addr &= (step->remain == 2 ? PTO_MASK : pgt->pgt_mask[0]);
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 /** Determine OS-specific page table root.
@@ -129,9 +129,9 @@ get_pgtroot(struct sys_init_data *ctl, addrxlat_fulladdr_t *root)
 	switch (ctl->osdesc->type) {
 	case addrxlat_os_linux:
 		status = get_symval(ctl->ctx, "swapper_pg_dir", &root->addr);
-		if (status == addrxlat_ok) {
+		if (status == ADDRXLAT_OK) {
 			root->as = ADDRXLAT_KPHYSADDR;
-			return addrxlat_ok;
+			return ADDRXLAT_OK;
 		}
 		break;
 
@@ -140,7 +140,7 @@ get_pgtroot(struct sys_init_data *ctl, addrxlat_fulladdr_t *root)
 	}
 
 	clear_error(ctl->ctx);
-	return set_error(ctl->ctx, addrxlat_notimpl,
+	return set_error(ctl->ctx, ADDRXLAT_NOTIMPL,
 			 "Cannot determine page table root address");
 }
 
@@ -166,14 +166,14 @@ determine_pgttype(struct sys_init_data *ctl)
 
 	if (def.param.pgt.root.as == ADDRXLAT_NOADDR) {
 		status = get_pgtroot(ctl, &def.param.pgt.root);
-		if (status != addrxlat_ok)
+		if (status != ADDRXLAT_OK)
 			return status;
 	}
 
 	ptr = def.param.pgt.root;
 	for (i = 0; i < ROOT_PGT_LEN; ++i) {
 		status = read64(&step, &ptr, &entry, "page table");
-		if (status != addrxlat_ok)
+		if (status != ADDRXLAT_OK)
 			return status;
 		if (!PTE_I(entry)) {
 			static const addrxlat_paging_form_t pf = {
@@ -192,7 +192,7 @@ determine_pgttype(struct sys_init_data *ctl)
 		ptr.addr += sizeof(uint64_t);
 	}
 
-	return set_error(ctl->ctx, addrxlat_notpresent,
+	return set_error(ctl->ctx, ADDRXLAT_NOTPRESENT,
 			 "Empty top-level page table");
 }
 
@@ -208,34 +208,34 @@ sys_s390x(struct sys_init_data *ctl)
 	addrxlat_status status;
 
 	status = sys_set_physmaps(ctl, ~(uint64_t)0);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_PGT);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	status = determine_pgttype(ctl);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	range.endoff = paging_max_index(&range.meth->def.param.pgt.pf);
 	newmap = internal_map_new();
 	if (!newmap)
-		return set_error(ctl->ctx, addrxlat_nomem,
+		return set_error(ctl->ctx, ADDRXLAT_NOMEM,
 				 "Cannot set up hardware mapping");
 	ctl->sys->map[ADDRXLAT_SYS_MAP_HW] = newmap;
 	status = internal_map_set(newmap, 0, &range);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot set up hardware mapping");
 
 	newmap = internal_map_dup(ctl->sys->map[ADDRXLAT_SYS_MAP_HW]);
 	if (!newmap)
-		return set_error(ctl->ctx, addrxlat_nomem,
+		return set_error(ctl->ctx, ADDRXLAT_NOMEM,
 				 "Cannot duplicate hardware mapping");
 	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
 
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }

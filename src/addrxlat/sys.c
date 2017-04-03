@@ -106,7 +106,7 @@ addrxlat_sys_init(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	else if (!strcmp(osdesc->arch, "ppc64"))
 		arch_fn = sys_ppc64;
 	else
-		return set_error(ctx, addrxlat_notimpl,
+		return set_error(ctx, ADDRXLAT_NOTIMPL,
 				"Unsupported architecture");
 
 	sys_cleanup(sys);
@@ -116,7 +116,7 @@ addrxlat_sys_init(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	ctl.osdesc = osdesc;
 
 	status = parse_opts(&ctl.popt, ctx, osdesc->opts);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	return arch_fn(&ctl);
@@ -169,12 +169,12 @@ addrxlat_status
 sys_ensure_meth(struct sys_init_data *ctl, addrxlat_sys_meth_t idx)
 {
 	if (ctl->sys->meth[idx])
-		return addrxlat_ok;
+		return ADDRXLAT_OK;
 
 	if ( (ctl->sys->meth[idx] = internal_meth_new()) )
-		return addrxlat_ok;
+		return ADDRXLAT_OK;
 
-	return set_error(ctl->ctx, addrxlat_nomem,
+	return set_error(ctl->ctx, ADDRXLAT_NOMEM,
 			 "Cannot allocate translation method %u",
 			 (unsigned) idx);
 }
@@ -205,7 +205,7 @@ act_direct(struct sys_init_data *ctl,
 	internal_meth_set_def(meth, &def);
 
 	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_RDIRECT);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	def.target_as = ADDRXLAT_KVADDR;
@@ -265,7 +265,7 @@ sys_set_layout(struct sys_init_data *ctl, addrxlat_sys_map_t idx,
 	if (!map) {
 		map = internal_map_new();
 		if (!map)
-			return set_error(ctl->ctx, addrxlat_nomem,
+			return set_error(ctl->ctx, ADDRXLAT_NOMEM,
 					 "Cannot allocate translation map");
 		ctl->sys->map[idx] = map;
 	}
@@ -276,7 +276,7 @@ sys_set_layout(struct sys_init_data *ctl, addrxlat_sys_map_t idx,
 		addrxlat_status status;
 
 		status = sys_ensure_meth(ctl, region->meth);
-		if (status != addrxlat_ok)
+		if (status != ADDRXLAT_OK)
 			return status;
 
 		range.endoff = region->last - region->first;
@@ -285,7 +285,7 @@ sys_set_layout(struct sys_init_data *ctl, addrxlat_sys_map_t idx,
 		switch (region->act) {
 		case SYS_ACT_DIRECT:
 			status = act_direct(ctl, range.meth, region);
-			if (status != addrxlat_ok)
+			if (status != ADDRXLAT_OK)
 				return status;
 			break;
 
@@ -302,7 +302,7 @@ sys_set_layout(struct sys_init_data *ctl, addrxlat_sys_map_t idx,
 		}
 
 		status = internal_map_set(map, region->first, &range);
-		if (status != addrxlat_ok)
+		if (status != ADDRXLAT_OK)
 			return set_error(ctl->ctx, status,
 					 "Cannot set up mapping for"
 					 " 0x%"ADDRXLAT_PRIxADDR
@@ -311,7 +311,7 @@ sys_set_layout(struct sys_init_data *ctl, addrxlat_sys_map_t idx,
 					 region->last);
 	}
 
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 /** Set default (identity) physical mappings.
@@ -332,7 +332,7 @@ sys_set_physmaps(struct sys_init_data *ctl, addrxlat_addr_t maxaddr)
 	layout[0].meth = ADDRXLAT_SYS_METH_MACHPHYS_KPHYS;
 	layout[0].act = SYS_ACT_IDENT_KPHYS;
 	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS, layout);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	layout[0].meth = ADDRXLAT_SYS_METH_KPHYS_MACHPHYS;
@@ -354,23 +354,23 @@ sys_sym_pgtroot(struct sys_init_data *ctl, const char *reg, const char *sym)
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	if (meth->def.param.pgt.root.as != ADDRXLAT_NOADDR)
-		return addrxlat_ok;
+		return ADDRXLAT_OK;
 
-	if (reg && get_reg(ctl->ctx, "cr3", &addr) == addrxlat_ok) {
+	if (reg && get_reg(ctl->ctx, "cr3", &addr) == ADDRXLAT_OK) {
 		meth->def.param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
 		meth->def.param.pgt.root.addr = addr;
-		return addrxlat_ok;
+		return ADDRXLAT_OK;
 	}
 	clear_error(ctl->ctx);
 
-	if (sym && get_symval(ctl->ctx, sym, &addr) == addrxlat_ok) {
+	if (sym && get_symval(ctl->ctx, sym, &addr) == ADDRXLAT_OK) {
 		meth->def.param.pgt.root.as = ADDRXLAT_KVADDR;
 		meth->def.param.pgt.root.addr = addr;
-		return addrxlat_ok;
+		return ADDRXLAT_OK;
 	}
 	clear_error(ctl->ctx);
 
-	return addrxlat_nodata;
+	return ADDRXLAT_NODATA;
 }
 
 #define MAX_ALT_NUM	2
@@ -466,22 +466,22 @@ do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
 
 			clear_error(ctl->ctx);
 			status = internal_launch_map(&step, paddr->addr, map);
-			if (status == addrxlat_ok)
+			if (status == ADDRXLAT_OK)
 				status = internal_walk(&step);
 
-			if (status == addrxlat_ok) {
+			if (status == ADDRXLAT_OK) {
 				paddr = &step.base;
 				if (ctl->caps & ADDRXLAT_CAPS(paddr->as))
 					return ctl->op(ctl->data, paddr);
 				break;
-			} else if (status != addrxlat_nometh)
+			} else if (status != ADDRXLAT_NOMETH)
 				return status;
 		}
 	}
 
 	return ctl->ctx->err_str == NULL
-		? set_error(ctl->ctx, addrxlat_nometh, "No way to translate")
-		: addrxlat_nometh;
+		? set_error(ctl->ctx, ADDRXLAT_NOMETH, "No way to translate")
+		: ADDRXLAT_NOMETH;
 }
 
 /** A version of @ref addrxlat_op for internal use.
@@ -506,11 +506,11 @@ xlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
 	if ((ctl->caps & (ADDRXLAT_CAPS(ADDRXLAT_KVADDR) |
 			  ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR) |
 			  ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR))) == 0)
-		return set_error(ctl->ctx, addrxlat_nometh,
+		return set_error(ctl->ctx, ADDRXLAT_NOMETH,
 				 "No suitable capabilities");
 
 	if (!ctl->sys)
-		return set_error(ctl->ctx, addrxlat_nometh,
+		return set_error(ctl->ctx, ADDRXLAT_NOMETH,
 				 "No translation system");
 
 	switch (paddr->as) {
@@ -531,7 +531,7 @@ xlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
 		break;
 
 	default:
-		return set_error(ctl->ctx, addrxlat_notimpl,
+		return set_error(ctl->ctx, ADDRXLAT_NOTIMPL,
 				 "Unrecognized address space");
 	}
 
@@ -541,7 +541,7 @@ xlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
 		if (pif->faddr.addr == inflight.faddr.addr &&
 		    pif->faddr.as == inflight.faddr.as &&
 		    pif->chain == inflight.chain)
-			return set_error(ctl->ctx, addrxlat_nometh,
+			return set_error(ctl->ctx, ADDRXLAT_NOMETH,
 					 "Infinite recursion loop");
 	inflight.next = ctl->ctx->inflight;
 	ctl->ctx->inflight = &inflight;
@@ -572,7 +572,7 @@ storeaddr(void *data, const addrxlat_fulladdr_t *paddr)
 {
 	addrxlat_fulladdr_t *dstaddr = data;
 	*dstaddr = *paddr;
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 DEFINE_ALIAS(by_sys);

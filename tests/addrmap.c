@@ -128,7 +128,7 @@ main(int argc, char **argv)
 
 		range.meth = meths[methidx];
 		status = addrxlat_map_set(map, addr, &range);
-		if (status != addrxlat_ok) {
+		if (status != ADDRXLAT_OK) {
 			fprintf(stderr, "Cannot add range: %s\n",
 				addrxlat_strerror(status));
 			return TEST_ERR;

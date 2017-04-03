@@ -165,7 +165,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 		addrxlat_range_t *newranges =
 			realloc(map->ranges, newn * sizeof(newranges[0]));
 		if (!newranges)
-			return addrxlat_nomem;
+			return ADDRXLAT_NOMEM;
 
 		if (!first) {
 			map->n = 1;
@@ -216,7 +216,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 
 	first->endoff = range->endoff + extend;
 	first->meth = range->meth;
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 DEFINE_ALIAS(map_search);

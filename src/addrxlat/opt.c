@@ -300,20 +300,20 @@ parse_val(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 		break;
 
 	default:
-		return set_error(ctx, addrxlat_notimpl,
+		return set_error(ctx, ADDRXLAT_NOTIMPL,
 				 "Unknown option type: %u",
 				 (unsigned) opt->type);
 	}
 
 	optval->set = 1;
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 
  err_noval:
-	return set_error(ctx, addrxlat_invalid,
+	return set_error(ctx, ADDRXLAT_INVALID,
 			 "Missing value for option '%s'", opt->name);
 
  err_badval:
-	return set_error(ctx, addrxlat_invalid,
+	return set_error(ctx, ADDRXLAT_INVALID,
 			 "'%s' is not a valid value for option '%s'",
 			 val, opt->name);
 }
@@ -346,7 +346,7 @@ parse_opt(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 	}
 
  err:
-	return set_error(ctx, addrxlat_notimpl, "Unknown option: %s", key);
+	return set_error(ctx, ADDRXLAT_NOTIMPL, "Unknown option: %s", key);
 }
 
 /** OS map option parser.
@@ -367,11 +367,11 @@ parse_opts(struct parsed_opts *popt, addrxlat_ctx_t *ctx, const char *opts)
 		popt->val[idx].set = 0;
 
 	if (!opts)
-		return addrxlat_ok;
+		return ADDRXLAT_OK;
 
 	popt->buf = realloc(NULL, strlen(opts) + 1);
 	if (!popt->buf)
-		return set_error(ctx, addrxlat_nomem,
+		return set_error(ctx, ADDRXLAT_NOMEM,
 				 "Cannot allocate options");
 
 	p = opts;
@@ -404,7 +404,7 @@ parse_opts(struct parsed_opts *popt, addrxlat_ctx_t *ctx, const char *opts)
 			++p;
 		}
 		if (quot) {
-			status = set_error(ctx, addrxlat_invalid,
+			status = set_error(ctx, ADDRXLAT_INVALID,
 					   "Unterminated %s quotes",
 					   quot == '"' ? "double" : "single");
 			goto err;
@@ -414,14 +414,14 @@ parse_opts(struct parsed_opts *popt, addrxlat_ctx_t *ctx, const char *opts)
 
 		keylen = (val ? val - key : dst - key) - 1;
 		status = parse_opt(popt, ctx, key, keylen, val);
-		if (status != addrxlat_ok)
+		if (status != ADDRXLAT_OK)
 			goto err;
 
 		while (is_posix_space(*p))
 			++p;
 	}
 
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 
  err:
 	free(popt->buf);

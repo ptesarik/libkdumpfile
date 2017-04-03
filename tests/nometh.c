@@ -56,7 +56,7 @@ setup_pgt(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 	def.param.pgt.pf.bits[0] = 12;
 	def.param.pgt.pf.bits[1] = 9;
 	status = addrxlat_meth_set_def(range.meth, &def);
-	if (status != addrxlat_ok) {
+	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot set up translation map: %s",
 			addrxlat_strerror(status));
 		return TEST_ERR;
@@ -69,7 +69,7 @@ setup_pgt(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 		return TEST_ERR;
 	}
 	status = addrxlat_map_set(map, 0, &range);
-	if (status != addrxlat_ok) {
+	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot add translation map range: %s\n",
 			addrxlat_strerror(status));
 		return TEST_ERR;
@@ -83,7 +83,7 @@ static addrxlat_status
 myread64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 {
 	fputs("read callback called?!\n", stderr);
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 
@@ -124,11 +124,11 @@ main(int argc, char **argv)
 	faddr.addr = 0x123456;
 	faddr.as = ADDRXLAT_KVADDR;
 	status = addrxlat_by_sys(ctx, sys, &faddr, ADDRXLAT_MACHPHYSADDR);
-	if (status == addrxlat_ok) {
+	if (status == ADDRXLAT_OK) {
 		puts("FAIL");
 		fputs("Unexpected success??\n", stderr);
 		ret = TEST_FAIL;
-	} else if (status != addrxlat_nometh) {
+	} else if (status != ADDRXLAT_NOMETH) {
 		puts("ERR");
 		fprintf(stderr, "Cannot translate: %s\n",
 			addrxlat_ctx_get_err(ctx));
@@ -142,11 +142,11 @@ main(int argc, char **argv)
 	faddr.addr = 0x123456;
 	faddr.as = ADDRXLAT_KVADDR;
 	status = addrxlat_by_sys(ctx, sys, &faddr, ADDRXLAT_MACHPHYSADDR);
-	if (status == addrxlat_ok) {
+	if (status == ADDRXLAT_OK) {
 		puts("FAIL");
 		fputs("Unexpected success??\n", stderr);
 		ret = TEST_FAIL;
-	} else if (status != addrxlat_nometh) {
+	} else if (status != ADDRXLAT_NOMETH) {
 		puts("ERR");
 		fprintf(stderr, "Cannot translate: %s\n",
 			addrxlat_ctx_get_err(ctx));
@@ -160,11 +160,11 @@ main(int argc, char **argv)
 	faddr.addr = 0x123456;
 	faddr.as = ADDRXLAT_KVADDR;
 	status = addrxlat_by_sys(ctx, sys, &faddr, ADDRXLAT_MACHPHYSADDR);
-	if (status == addrxlat_ok) {
+	if (status == ADDRXLAT_OK) {
 		puts("FAIL");
 		fputs("Unexpected success??\n", stderr);
 		ret = TEST_FAIL;
-	} else if (status != addrxlat_nometh) {
+	} else if (status != ADDRXLAT_NOMETH) {
 		puts("ERR");
 		fprintf(stderr, "Cannot translate: %s\n",
 			addrxlat_ctx_get_err(ctx));

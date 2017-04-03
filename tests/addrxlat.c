@@ -57,9 +57,9 @@ read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 	addrxlat_ctx_t *ctx = data;
 	addrxlat_lookup_elem_t *ent = find_entry(addr->addr);
 	if (!ent)
-		return addrxlat_ctx_err(ctx, addrxlat_nodata, "No data");
+		return addrxlat_ctx_err(ctx, ADDRXLAT_NODATA, "No data");
 	*val = ent->dest;
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 static addrxlat_status
@@ -68,9 +68,9 @@ read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 	addrxlat_ctx_t *ctx = data;
 	addrxlat_lookup_elem_t *ent = find_entry(addr->addr);
 	if (!ent)
-		return addrxlat_ctx_err(ctx, addrxlat_nodata, "No data");
+		return addrxlat_ctx_err(ctx, ADDRXLAT_NODATA, "No data");
 	*val = ent->dest;
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 static int
@@ -281,14 +281,14 @@ do_xlat(addrxlat_ctx_t *ctx, addrxlat_addr_t addr)
 	step.sys = NULL;
 	step.meth = xlat;
 	status = addrxlat_launch(&step, addr);
-	if (status != addrxlat_ok) {
+	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot launch address translation: %s\n",
 			addrxlat_ctx_get_err(ctx));
 		return TEST_FAIL;
 	}
 
 	status = addrxlat_walk(&step);
-	if (status != addrxlat_ok) {
+	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Address translation failed: %s\n",
 			addrxlat_ctx_get_err(ctx));
 		return TEST_FAIL;
@@ -449,7 +449,7 @@ main(int argc, char **argv)
 	lookup.param.lookup.tbl = entries;
 
 	status = addrxlat_meth_set_def(xlat, def);
-	if (status != addrxlat_ok) {
+	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot set up address translation: %s\n",
 			addrxlat_strerror(status));
 		rc = TEST_ERR;

@@ -36,7 +36,7 @@
 #include "testutil.h"
 
 enum read_status {
-	read_ok = addrxlat_ok,
+	read_ok = ADDRXLAT_OK,
 	read_notfound,
 	read_vtop_failed,
 	read_unknown_as,
@@ -83,7 +83,7 @@ read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 	uint32_t *p;
 
 	if (addr->as != ADDRXLAT_MACHPHYSADDR)
-		return addrxlat_ctx_err(cbd->ctx, addrxlat_invalid,
+		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_INVALID,
 					"Unexpected address space: %ld",
 					(long)addr->as);
 
@@ -92,7 +92,7 @@ read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 		return addrxlat_ctx_err(cbd->ctx, -read_notfound, "No data");
 	p = (uint32_t*)(ent->buf + addr->addr - ent->addr);
 	*val = *p;
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 static addrxlat_status
@@ -103,7 +103,7 @@ read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 	uint64_t *p;
 
 	if (addr->as != ADDRXLAT_MACHPHYSADDR)
-		return addrxlat_ctx_err(cbd->ctx, addrxlat_invalid,
+		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_INVALID,
 					"Unexpected address space: %ld",
 					(long)addr->as);
 
@@ -112,7 +112,7 @@ read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 		return addrxlat_ctx_err(cbd->ctx, -read_notfound, "No data");
 	p = (uint64_t*)(ent->buf + addr->addr - ent->addr);
 	*val = *p;
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 static int
@@ -180,7 +180,7 @@ get_symdata(void *data, addrxlat_sym_t *sym)
 			if (sd->ss.args[0] &&
 			    !strcmp(sd->ss.args[0], sym->args[0])) {
 				sym->val = sd->val;
-				return addrxlat_ok;
+				return ADDRXLAT_OK;
 			}
 			break;
 
@@ -189,12 +189,12 @@ get_symdata(void *data, addrxlat_sym_t *sym)
 			    !strcmp(sd->ss.args[0], sym->args[0]) &&
 			    !strcmp(sd->ss.args[1], sym->args[1])) {
 				sym->val = sd->val;
-				return addrxlat_ok;
+				return ADDRXLAT_OK;
 			}
 		}
 	}
 
-	return addrxlat_nodata;
+	return ADDRXLAT_NODATA;
 }
 
 static unsigned long long ostype;
@@ -476,7 +476,7 @@ os_map(void)
 	}
 
 	status = addrxlat_sys_init(data.sys, data.ctx, &desc);
-	if (status != addrxlat_ok) {
+	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "OS map failed: %s\n",
 			addrxlat_ctx_get_err(data.ctx));
 		addrxlat_sys_decref(data.sys);

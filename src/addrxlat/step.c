@@ -60,12 +60,12 @@ read_pte(addrxlat_step_t *step)
 		break;
 
 	default:
-		return set_error(step->ctx, addrxlat_notimpl,
+		return set_error(step->ctx, ADDRXLAT_NOTIMPL,
 				 "Unsupported PTE size: %u",
 				 1 << pgt->pte_shift);
 	}
 
-	if (status == addrxlat_ok)
+	if (status == ADDRXLAT_OK)
 		step->raw_pte = pte;
 
 	return status;
@@ -73,7 +73,7 @@ read_pte(addrxlat_step_t *step)
 
 /** Update current step state for huge page.
  * @param step  Current step state.
- * @returns     Always @c addrxlat_ok.
+ * @returns     Always @c ADDRXLAT_OK.
  *
  * This function skips all lower paging levels and updates the state
  * so that the next page table step adds the correct page offset and
@@ -91,7 +91,7 @@ pgt_huge_page(addrxlat_step_t *step)
 		off <<= pgt->pf.bits[step->remain - 1];
 	}
 	step->idx[0] |= off;
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 DEFINE_ALIAS(launch);
@@ -113,7 +113,7 @@ addrxlat_launch_map(addrxlat_step_t *step, addrxlat_addr_t addr,
 
 	step->meth = internal_map_search(map, addr);
 	if (!step->meth)
-		return set_error(step->ctx, addrxlat_nometh,
+		return set_error(step->ctx, ADDRXLAT_NOMETH,
 				 "No translation method defined");
 
 	return step->meth->first_step(step, addr);
@@ -129,13 +129,13 @@ addrxlat_step(addrxlat_step_t *step)
 	clear_error(step->ctx);
 
 	if (!step->remain)
-		return addrxlat_ok;
+		return ADDRXLAT_OK;
 
 	--step->remain;
 	if (!step->remain) {
 		step->base.addr += step->idx[0];
 		step->base.as = meth->def.target_as;
-		return addrxlat_ok;
+		return ADDRXLAT_OK;
 	}
 
 	return meth->next_step(step);
@@ -152,7 +152,7 @@ addrxlat_walk(addrxlat_step_t *step)
 
 	while (step->remain) {
 		status = internal_step(step);
-		if (status != addrxlat_ok)
+		if (status != ADDRXLAT_OK)
 			break;
 	}
 

@@ -272,7 +272,7 @@ kdumpfile_vtop(PyObject *_self, PyObject *args)
 	faddr.as = ADDRXLAT_KVADDR;
 	axstatus = addrxlat_by_sys(axctx, axsys, &faddr, ADDRXLAT_KPHYSADDR);
 	addrxlat_sys_decref(axsys);
-	if (axstatus != addrxlat_ok) {
+	if (axstatus != ADDRXLAT_OK) {
 		PyErr_SetString(AddressTranslationException,
 				addrxlat_ctx_get_err(axctx));
 		addrxlat_ctx_decref(axctx);

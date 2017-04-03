@@ -122,7 +122,7 @@ huge_pd_linux(addrxlat_step_t *step)
 
 	pdshift = hugepd_shift(step->raw_pte);
 	if (!pdshift)
-		return set_error(step->ctx, addrxlat_invalid,
+		return set_error(step->ctx, ADDRXLAT_INVALID,
 				 "Invalid hugepd shift");
 
 	step->base.addr = (step->raw_pte & ~HUGEPD_SHIFT_MASK) | PD_HUGE;
@@ -144,7 +144,7 @@ huge_pd_linux(addrxlat_step_t *step)
 	step->idx[0] |= off;
 
 	step->remain = 2;
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 /**  Check whether a Linux page table entry is huge.
@@ -160,7 +160,7 @@ is_hugepte_linux(addrxlat_pte_t pte)
 /** Update current step state for Linux huge page.
  * @param state      Current step state.
  * @param rpn_shift  RPN shift.
- * @returns          Always @c addrxlat_ok.
+ * @returns          Always @c ADDRXLAT_OK.
  *
  * This function skips all lower paging levels and updates the state
  * so that the next page table translation step adds the correct page
@@ -195,11 +195,11 @@ pgt_ppc64_linux(addrxlat_step_t *step, unsigned rpn_shift)
 	addrxlat_status status;
 
 	status = read_pte(step);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	if (!step->raw_pte)
-		return set_error(step->ctx, addrxlat_notpresent,
+		return set_error(step->ctx, ADDRXLAT_NOTPRESENT,
 				 "%s[%u] is none",
 				 pte_name[step->remain - 1],
 				 (unsigned) step->idx[step->remain]);
@@ -223,7 +223,7 @@ pgt_ppc64_linux(addrxlat_step_t *step, unsigned rpn_shift)
 		step->base.as = step->meth->def.target_as;
 	}
 
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 /** 64-bit IBM POWER Linux page table step function with RPN shift 30.
@@ -272,33 +272,33 @@ get_vmemmap_def(struct sys_init_data *ctl, addrxlat_def_t *def)
 	addrxlat_status status;
 
 	status = get_symval(ctl->ctx, "vmemmap_list", &vmemmap_list);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	status = get_offsetof(ctl->ctx, "vmemmap_backing", "list", &off_list);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	status = get_offsetof(ctl->ctx, "vmemmap_backing", "phys", &off_phys);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	status = get_offsetof(ctl->ctx, "vmemmap_backing", "virt_addr",
 			      &off_virt);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	readptr.as = ADDRXLAT_KVADDR;
 	readptr.addr = vmemmap_list;
 	status = read64(&step, &readptr, &data, "vmemmap_list");
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 	first_elem = data;
 
 	for (cnt = 0, elem = first_elem; elem != 0; ++cnt) {
 		readptr.addr = elem + off_list;
 		status = read64(&step, &readptr, &data, "vmemmap list");
-		if (status != addrxlat_ok)
+		if (status != ADDRXLAT_OK)
 			return status;
 		elem = data;
 	}
@@ -306,31 +306,31 @@ get_vmemmap_def(struct sys_init_data *ctl, addrxlat_def_t *def)
 	def->param.lookup.nelem = cnt;
 	tblp = malloc(cnt * sizeof(addrxlat_lookup_elem_t));
 	if (!tblp)
-		return set_error(ctl->ctx, addrxlat_nomem,
+		return set_error(ctl->ctx, ADDRXLAT_NOMEM,
 				 "Cannot allocate VMEMMAP translation");
 	def->param.lookup.tbl = tblp;
 
 	for (elem = first_elem; elem != 0; ++tblp) {
 		readptr.addr = elem + off_phys;
 		status = read64(&step, &readptr, &data, "vmemmap phys");
-		if (status != addrxlat_ok)
+		if (status != ADDRXLAT_OK)
 			goto err_free;
 		tblp->orig = data;
 
 		readptr.addr = elem + off_virt;
 		status = read64(&step, &readptr, &data, "vmemmap virt");
-		if (status != addrxlat_ok)
+		if (status != ADDRXLAT_OK)
 			goto err_free;
 		tblp->dest = data;
 
 		readptr.addr = elem + off_list;
 		status = read64(&step, &readptr, &data, "vmemmap list");
-		if (status != addrxlat_ok)
+		if (status != ADDRXLAT_OK)
 			goto err_free;
 		elem = data;
 	}
 
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 
  err_free:
 	free((void*)def->param.lookup.tbl);
@@ -360,15 +360,15 @@ map_linux_ppc64(struct sys_init_data *ctl)
 		: _64K;		/* default 64k */
 
 	if (pagesize != _64K)
-		return set_error(ctl->ctx, addrxlat_notimpl,
+		return set_error(ctl->ctx, ADDRXLAT_NOTIMPL,
 				 "Unsupported page size: %ld", pagesize);
 
 	status = sys_set_physmaps(ctl, (1ULL << (64 - 30 + 16)) - 1);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, linux_layout);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT];
@@ -380,7 +380,7 @@ map_linux_ppc64(struct sys_init_data *ctl)
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	if (get_symval(ctl->ctx, "swapper_pg_dir",
-		       &def.param.pgt.root.addr) == addrxlat_ok)
+		       &def.param.pgt.root.addr) == ADDRXLAT_OK)
 		def.param.pgt.root.as = ADDRXLAT_KVADDR;
 	else
 		clear_error(ctl->ctx);
@@ -388,19 +388,19 @@ map_linux_ppc64(struct sys_init_data *ctl)
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_VMEMMAP];
 	status = get_vmemmap_def(ctl, &def);
-	if (status == addrxlat_nodata) {
+	if (status == ADDRXLAT_NODATA) {
 		/* ignore (VMEMMAP addresses will be unresolvable) */
 		clear_error(ctl->ctx);
-		return addrxlat_ok;
+		return ADDRXLAT_OK;
 	}
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 	def.kind = ADDRXLAT_LOOKUP;
 	def.target_as = ADDRXLAT_KPHYSADDR;
 	def.param.lookup.endoff = pagesize - 1;
 	internal_meth_set_def(meth, &def);
 
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 /** Initialize a translation map for a 64-bit IBM POWER OS.
@@ -415,7 +415,7 @@ sys_ppc64(struct sys_init_data *ctl)
 		return map_linux_ppc64(ctl);
 
 	default:
-		return set_error(ctl->ctx, addrxlat_notimpl,
+		return set_error(ctl->ctx, ADDRXLAT_NOTIMPL,
 				 "OS type not implemented");
 	}
 }

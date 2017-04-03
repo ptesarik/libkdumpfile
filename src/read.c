@@ -40,7 +40,7 @@ xlat_pio_op(void *data, const addrxlat_fulladdr_t *addr)
 {
 	struct page_io *pio = data;
 	pio->addr = *addr;
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 /**  Tranlate the address for page I/O.

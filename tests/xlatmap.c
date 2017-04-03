@@ -170,7 +170,7 @@ map_set(addrxlat_map_t **pmap, addrxlat_addr_t addr,
 	curmap = *pmap;
 	status = addrxlat_map_set(curmap, addr, range);
 	curmap = NULL;
-	if (status != addrxlat_ok) {
+	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot update map: %s\n",
 			addrxlat_strerror(status));
 		exit(TEST_ERR);

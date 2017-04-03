@@ -632,7 +632,7 @@ add_map_entry(const char *spec, addrxlat_sys_t *sys, addrxlat_map_t **map)
 		*map = newmap;
 	}
 	status = addrxlat_map_set(*map, beg, &range);
-	if (status != addrxlat_ok) {
+	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot add map entry: %s\n",
 			addrxlat_strerror(status));
 		return TEST_ERR;
@@ -660,7 +660,7 @@ cfg_block(enum cfg_state state, addrxlat_sys_t *sys,
 			return TEST_ERR;
 
 		status = addrxlat_meth_set_def(meth, def);
-		if (status != addrxlat_ok) {
+		if (status != ADDRXLAT_OK) {
 			fprintf(stderr, "Cannot define translation: %s\n",
 				addrxlat_strerror(status));
 			addrxlat_meth_decref(meth);
@@ -782,7 +782,7 @@ struct entry {
 };
 
 enum read_status {
-	read_ok = addrxlat_ok,
+	read_ok = ADDRXLAT_OK,
 	read_notfound,
 	read_vtop_failed,
 	read_unknown_as,
@@ -813,7 +813,7 @@ read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 	uint32_t *p;
 
 	if (addr->as != ADDRXLAT_MACHPHYSADDR)
-		return addrxlat_ctx_err(cbd->ctx, addrxlat_invalid,
+		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_INVALID,
 					"Unexpected address space: %ld",
 					(long)addr->as);
 
@@ -822,7 +822,7 @@ read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 		return addrxlat_ctx_err(cbd->ctx, -read_notfound, "No data");
 	p = (uint32_t*)(ent->buf + addr->addr - ent->addr);
 	*val = *p;
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 static addrxlat_status
@@ -833,7 +833,7 @@ read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 	uint64_t *p;
 
 	if (addr->as != ADDRXLAT_MACHPHYSADDR)
-		return addrxlat_ctx_err(cbd->ctx, addrxlat_invalid,
+		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_INVALID,
 					"Unexpected address space: %ld",
 					(long)addr->as);
 
@@ -842,7 +842,7 @@ read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 		return addrxlat_ctx_err(cbd->ctx, -read_notfound, "No data");
 	p = (uint64_t*)(ent->buf + addr->addr - ent->addr);
 	*val = *p;
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 static int
@@ -931,9 +931,9 @@ translate(struct cbdata *cbd, char *spec)
 		return res;
 
 	status = addrxlat_by_sys(cbd->ctx, cbd->sys, &addr, goal);
-	if (status == addrxlat_nometh) {
+	if (status == ADDRXLAT_NOMETH) {
 		printf("%s -> NOMETH\n", spec);
-	} else if (status != addrxlat_ok) {
+	} else if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Address translation failed: %s\n",
 			addrxlat_ctx_get_err(cbd->ctx));
 		return TEST_FAIL;

@@ -142,12 +142,12 @@ addrxlat2kdump(kdump_ctx_t *ctx, addrxlat_status status)
 {
 	kdump_status ret;
 
-	if (status == addrxlat_ok)
+	if (status == ADDRXLAT_OK)
 		return kdump_ok;
 
 	if (status < 0)
 		ret = -status;
-	else if (status == addrxlat_nodata)
+	else if (status == ADDRXLAT_NODATA)
 		ret = kdump_nodata;
 	else
 		ret = kdump_addrxlat;
@@ -168,10 +168,10 @@ kdump2addrxlat(kdump_ctx_t *ctx, kdump_status status)
 	addrxlat_status ret;
 
 	if (status == kdump_ok)
-		return addrxlat_ok;
+		return ADDRXLAT_OK;
 
 	if (status == kdump_nodata)
-		ret = addrxlat_nodata;
+		ret = ADDRXLAT_NODATA;
 	else
 		ret = -status;
 

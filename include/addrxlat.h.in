@@ -66,20 +66,20 @@ extern "C" {
  * status codes may be used for custom use.
  */
 typedef enum _addrxlat_status {
-	addrxlat_ok = 0,		/**< Success. */
-	addrxlat_notimpl,		/**< Unimplemented feature. */
-	addrxlat_notpresent,		/**< Page not present. */
-	addrxlat_invalid,		/**< Invalid address. */
-	addrxlat_nomem,			/**< Memory allocation failure. */
-	addrxlat_nodata,		/**< Uninitialized data. */
-	addrxlat_nometh,		/**< No translation method. */
+	ADDRXLAT_OK = 0,		/**< Success. */
+	ADDRXLAT_NOTIMPL,		/**< Unimplemented feature. */
+	ADDRXLAT_NOTPRESENT,		/**< Page not present. */
+	ADDRXLAT_INVALID,		/**< Invalid address. */
+	ADDRXLAT_NOMEM,			/**< Memory allocation failure. */
+	ADDRXLAT_NODATA,		/**< Uninitialized data. */
+	ADDRXLAT_NOMETH,		/**< No translation method. */
 
 	/** Base for custom status codes.
 	 * More importantly, this enumerator forces the whole enum
 	 * type to be signed, so you can compare it against 0 without
 	 * an explicit typecast to a signed integer.
 	 */
-	addrxlat_custom_status_base = -1
+	ADDRXLAT_CUSTOM_STATUS_BASE = -1
 } addrxlat_status;
 
 /**  Type of a physical or virtual address.
@@ -480,7 +480,7 @@ typedef struct _addrxlat_sym {
  * The callback function should check the information type and fill in
  * the output fields in @c sym. If it is called for a type that is not
  * handled (including an unknown type, not listed above), it must return
- * @ref addrxlat_notimpl,
+ * @ref ADDRXLAT_NOTIMPL,
  */
 typedef addrxlat_status addrxlat_sym_fn(void *data, addrxlat_sym_t *sym);
 
@@ -962,7 +962,7 @@ addrxlat_status addrxlat_walk(addrxlat_step_t *step);
  * address space @c goal. On success, it stores the result in @c dest.
  *
  * NB: If there is no way to translate the source address space to
- * target address space, this function returns @ref addrxlat_nometh.
+ * target address space, this function returns @ref ADDRXLAT_NOMETH.
  */
 addrxlat_status addrxlat_by_sys(
 	addrxlat_ctx_t *ctx, const addrxlat_sys_t *sys,

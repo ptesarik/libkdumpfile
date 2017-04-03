@@ -240,8 +240,8 @@ testop(void *data, const addrxlat_fulladdr_t *addr)
 	print_fulladdr(addr);
 
 	return addr->as == expect->as && addr->addr == expect->addr
-		? addrxlat_ok
-		: addrxlat_custom_status_base;
+		? ADDRXLAT_OK
+		: ADDRXLAT_CUSTOM_STATUS_BASE;
 }
 
 static int
@@ -253,7 +253,7 @@ test_one(addrxlat_op_ctl_t *ctl, const struct test *test)
 	print_fulladdr(&test->addr);
 	fputs(" expect ", stdout);
 	if (test->expect.as == ADDRXLAT_NOADDR)
-		fputs("addrxlat_nometh", stdout);
+		fputs("ADDRXLAT_NOMETH", stdout);
 	else
 		print_fulladdr(&test->expect);
 
@@ -262,21 +262,21 @@ test_one(addrxlat_op_ctl_t *ctl, const struct test *test)
 	addr = test->addr;
 	status = addrxlat_op(ctl, &addr);
 	if (test->expect.as == ADDRXLAT_NOADDR) {
-		if (status == addrxlat_nometh) {
+		if (status == ADDRXLAT_NOMETH) {
 			printf(": OK (%s)\n", addrxlat_ctx_get_err(ctl->ctx));
 			return TEST_OK;
 		}
-		if (status == addrxlat_ok ||
-		    status == addrxlat_custom_status_base) {
+		if (status == ADDRXLAT_OK ||
+		    status == ADDRXLAT_CUSTOM_STATUS_BASE) {
 			puts(": FAIL");
 			return TEST_FAIL;
 		}
 	} else {
-		if (status == addrxlat_ok) {
+		if (status == ADDRXLAT_OK) {
 			puts(": OK");
 			return TEST_OK;
 		}
-		if (status == addrxlat_custom_status_base) {
+		if (status == ADDRXLAT_CUSTOM_STATUS_BASE) {
 			puts(": FAIL");
 			return TEST_FAIL;
 		}
@@ -301,7 +301,7 @@ unmap(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys,
 	range.endoff = endoff;
 	range.meth = NULL;
 	status = addrxlat_map_set(map, addr, &range);
-	if (status != addrxlat_ok) {
+	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot allocate virt-to-phys map: %s\n",
 			addrxlat_strerror(status));
 		return TEST_ERR;
@@ -330,7 +330,7 @@ make_linear_map(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys,
 	def.target_as = target_as;
 	def.param.linear.off = off;
 	status = addrxlat_meth_set_def(range.meth, &def);
-	if (status != addrxlat_ok) {
+	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot set up translation map: %s",
 			addrxlat_strerror(status));
 	}
@@ -346,7 +346,7 @@ make_linear_map(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys,
 	}
 	range.endoff = endoff;
 	status = addrxlat_map_set(map, addr, &range);
-	if (status != addrxlat_ok) {
+	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot update virt-to-phys map: %s\n",
 			addrxlat_strerror(status));
 		return TEST_ERR;

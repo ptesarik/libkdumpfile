@@ -51,7 +51,7 @@ vtop(kdump_ctx_t *ctx, unsigned long long vaddr)
 	faddr.as = ADDRXLAT_KVADDR;
 	axstatus = addrxlat_by_sys(axctx, axsys, &faddr, ADDRXLAT_KPHYSADDR);
 	addrxlat_sys_decref(axsys);
-	if (axstatus != addrxlat_ok) {
+	if (axstatus != ADDRXLAT_OK) {
 		fprintf(stderr, "VTOP translation failed: %s\n",
 			addrxlat_ctx_get_err(axctx));
 		addrxlat_ctx_decref(axctx);

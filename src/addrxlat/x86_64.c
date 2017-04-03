@@ -185,11 +185,11 @@ pgt_x86_64(addrxlat_step_t *step)
 	addrxlat_status status;
 
 	status = read_pte(step);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	if (!(step->raw_pte & _PAGE_PRESENT))
-		return set_error(step->ctx, addrxlat_notpresent,
+		return set_error(step->ctx, ADDRXLAT_NOTPRESENT,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
 				 pgt_full_name[step->remain - 1],
 				 pte_name[step->remain - 1],
@@ -206,7 +206,7 @@ pgt_x86_64(addrxlat_step_t *step)
 	}
 
 	step->base.addr &= pgt->pgt_mask[0];
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 /** Get Linux virtual memory layout by kernel version.
@@ -246,11 +246,11 @@ is_mapped(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	step.meth = sys->meth[ADDRXLAT_SYS_METH_PGT];
 	status = internal_launch(&step, addr);
 
-	if (status == addrxlat_ok)
+	if (status == ADDRXLAT_OK)
 		status = internal_walk(&step);
 
 	clear_error(ctx);
-	return status == addrxlat_ok;
+	return status == ADDRXLAT_OK;
 }
 
 /** Check whether an address looks like start of direct mapping.
@@ -270,7 +270,7 @@ is_directmap(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	faddr.as = ADDRXLAT_KVADDR;
 	status = internal_by_sys(ctx, sys, &faddr, ADDRXLAT_KPHYSADDR);
 	clear_error(ctx);
-	return status == addrxlat_ok && faddr.addr == 0;
+	return status == ADDRXLAT_OK && faddr.addr == 0;
 }
 
 /** Get virtual memory layout by walking page tables.
@@ -318,15 +318,15 @@ set_ktext_offset(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	step.sys = sys;
 	status = internal_launch_map(&step, vaddr,
 				     sys->map[ADDRXLAT_SYS_MAP_HW]);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	status = internal_walk(&step);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	status = internal_by_sys(ctx, sys, &step.base, ADDRXLAT_KPHYSADDR);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	def.kind = ADDRXLAT_LINEAR;
@@ -387,13 +387,13 @@ linux_ktext_meth(struct sys_init_data *ctl)
 
 	status = set_ktext_offset(ctl->sys, ctl->ctx,
 				  __START_KERNEL_map + LINUX_KTEXT_SKIP);
-	if (status == addrxlat_notpresent || status == addrxlat_nodata) {
+	if (status == ADDRXLAT_NOTPRESENT || status == ADDRXLAT_NODATA) {
 		clear_error(ctl->ctx);
 		status = set_ktext_offset(ctl->sys, ctl->ctx,
 					  __START_KERNEL_map +
 					  LINUX_KTEXT_SKIP_alt);
 	}
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status, "Cannot translate ktext");
 	return status;
 }
@@ -409,14 +409,14 @@ linux_ktext_map(struct sys_init_data *ctl)
 	addrxlat_status status;
 
 	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_KTEXT);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	status = linux_ktext_meth(ctl);
-	if (status != addrxlat_ok &&
-	    status != addrxlat_nometh &&
-	    status != addrxlat_nodata &&
-	    status != addrxlat_notpresent)
+	if (status != ADDRXLAT_OK &&
+	    status != ADDRXLAT_NOMETH &&
+	    status != ADDRXLAT_NODATA &&
+	    status != ADDRXLAT_NOTPRESENT)
 		return status;
 	clear_error(ctl->ctx);
 
@@ -424,10 +424,10 @@ linux_ktext_map(struct sys_init_data *ctl)
 	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT];
 	status = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS],
 				  __START_KERNEL_map, &range);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot set up Linux kernel text mapping");
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 /** Initialize a translation map for Linux on x86_64.
@@ -475,7 +475,7 @@ set_xen_p2m(struct sys_init_data *ctl)
 	map = ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS];
 	internal_map_clear(map);
 	if (!ctl->popt.val[OPT_xen_p2m_mfn].set)
-		return addrxlat_ok; /* leave undefined */
+		return ADDRXLAT_OK; /* leave undefined */
 	p2m_maddr = ctl->popt.val[OPT_xen_p2m_mfn].num << PAGE_SHIFT;
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_KPHYS_MACHPHYS];
@@ -489,11 +489,11 @@ set_xen_p2m(struct sys_init_data *ctl)
 	range.endoff = paging_max_index(&xen_p2m_pf);
 	range.meth = meth;
 	status = internal_map_set(map, 0, &range);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot allocate Xen p2m map");
 
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 /** Initialize a translation map for Linux on x86_64.
@@ -511,16 +511,16 @@ map_linux_x86_64(struct sys_init_data *ctl)
 	if (ctl->popt.val[OPT_xen_xlat].set &&
 	    ctl->popt.val[OPT_xen_xlat].num) {
 		status = set_xen_p2m(ctl);
-		if (status != addrxlat_ok)
+		if (status != ADDRXLAT_OK)
 			return status;
 
 		status = set_xen_mach2phys(ctl, XEN_MACH2PHYS_ADDR);
-		if (status != addrxlat_ok)
+		if (status != ADDRXLAT_OK)
 			return status;
 	}
 
 	status = linux_ktext_map(ctl);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	layout = linux_layout_by_pgt(ctl->sys, ctl->ctx);
@@ -528,15 +528,15 @@ map_linux_x86_64(struct sys_init_data *ctl)
 	if (!layout && ctl->osdesc->ver)
 		layout = linux_layout_by_ver(ctl->osdesc->ver);
 	if (!layout)
-		return addrxlat_ok;
+		return ADDRXLAT_OK;
 
 	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, layout);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	set_pgt_fallback(ctl->sys, ADDRXLAT_SYS_METH_KTEXT);
 
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 /** Xen direct mapping virtual address. */
@@ -588,14 +588,14 @@ is_xen_ktext(struct sys_init_data *ctl, addrxlat_addr_t addr)
 	step.sys = ctl->sys;
 	step.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	status = internal_launch(&step, addr);
-	while (status == addrxlat_ok && step.remain) {
+	while (status == ADDRXLAT_OK && step.remain) {
 		++steps;
 		status = internal_step(&step);
 	}
 
 	clear_error(ctl->ctx);
 
-	return status == addrxlat_ok && steps == 4;
+	return status == ADDRXLAT_OK && steps == 4;
 }
 
 /** Initialize temporary mapping to make the page table usable.
@@ -627,7 +627,7 @@ setup_xen_pgt(struct sys_init_data *ctl)
 		def.param.linear.off = ctl->popt.val[OPT_physbase].num -
 			xen_virt_start;
 	} else
-		return addrxlat_nodata;
+		return ADDRXLAT_NODATA;
 
 	/* Temporary linear mapping just for the page table */
 	layout[0].first = pgt;
@@ -638,7 +638,7 @@ setup_xen_pgt(struct sys_init_data *ctl)
 	layout[1].meth = ADDRXLAT_SYS_METH_NUM;
 
 	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, layout);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	return internal_meth_set_def(
@@ -709,12 +709,12 @@ map_xen_x86_64(struct sys_init_data *ctl)
 			/* Prior to Xen 3.2, text was in direct mapping. */
 			layout[1].meth = ADDRXLAT_SYS_METH_NUM;
 	} else
-		return addrxlat_ok;
+		return ADDRXLAT_OK;
 
 	layout[1].last = layout[1].first + XEN_TEXT_SIZE - 1;
 
 	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, layout);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	if (layout[1].meth == ADDRXLAT_SYS_METH_KTEXT) {
@@ -723,7 +723,7 @@ map_xen_x86_64(struct sys_init_data *ctl)
 		set_pgt_fallback(ctl->sys, ADDRXLAT_SYS_METH_KTEXT);
 	}
 
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 /** Generic x86_64 layout */
@@ -754,7 +754,7 @@ sys_x86_64(struct sys_init_data *ctl)
 	addrxlat_status status;
 
 	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_PGT);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
@@ -768,17 +768,17 @@ sys_x86_64(struct sys_init_data *ctl)
 	internal_meth_set_def(meth, &def);
 
 	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_HW, layout_generic);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	map = internal_map_dup(ctl->sys->map[ADDRXLAT_SYS_MAP_HW]);
 	if (!map)
-		return set_error(ctl->ctx, addrxlat_nomem,
+		return set_error(ctl->ctx, ADDRXLAT_NOMEM,
 				 "Cannot duplicate hardware mapping");
 	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = map;
 
 	status = sys_set_physmaps(ctl, PHYSADDR_SIZE - 1);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	switch (ctl->osdesc->type) {
@@ -789,6 +789,6 @@ sys_x86_64(struct sys_init_data *ctl)
 		return map_xen_x86_64(ctl);
 
 	default:
-		return addrxlat_ok;
+		return ADDRXLAT_OK;
 	}
 }

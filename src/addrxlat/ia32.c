@@ -79,11 +79,11 @@ pgt_ia32(addrxlat_step_t *step)
 	addrxlat_status status;
 
 	status = read_pte(step);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	if (!(step->raw_pte & _PAGE_PRESENT))
-		return set_error(step->ctx, addrxlat_notpresent,
+		return set_error(step->ctx, ADDRXLAT_NOTPRESENT,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
 				 pgt_full_name[step->remain - 1],
 				 pte_name[step->remain - 1],
@@ -99,7 +99,7 @@ pgt_ia32(addrxlat_step_t *step)
 		step->base.addr = step->raw_pte & pgt->pgt_mask[0];
 	step->base.as = step->meth->def.target_as;
 
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 /** IA32 PAE page table step function.
@@ -124,11 +124,11 @@ pgt_ia32_pae(addrxlat_step_t *step)
 	addrxlat_status status;
 
 	status = read_pte(step);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	if (!(step->raw_pte & _PAGE_PRESENT))
-		return set_error(step->ctx, addrxlat_notpresent,
+		return set_error(step->ctx, ADDRXLAT_NOTPRESENT,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
 				 pgt_full_name[step->remain - 1],
 				 pte_name[step->remain - 1],
@@ -144,7 +144,7 @@ pgt_ia32_pae(addrxlat_step_t *step)
 		step->base.addr &= pgt->pgt_mask[0];
 	step->base.as = step->meth->def.target_as;
 
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 /** Starting virtual address of Linux direct mapping */
@@ -192,17 +192,17 @@ check_pae(struct sys_init_data *ctl, const addrxlat_fulladdr_t *root,
 	step.sys = ctl->sys;
 	step.meth = &meth;
 	status = internal_launch(&step, direct);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot launch %s translation", "PAE");
 	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_PAE - 1);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot set up physical mappings");
 	status = internal_walk(&step);
-	if (status == addrxlat_ok && step.base.addr == 0) {
+	if (status == ADDRXLAT_OK && step.base.addr == 0) {
 		ctl->popt.val[OPT_pae].num = 1;
-		return addrxlat_ok;
+		return ADDRXLAT_OK;
 	}
 
 	clear_error(ctl->ctx);
@@ -215,24 +215,24 @@ check_pae(struct sys_init_data *ctl, const addrxlat_fulladdr_t *root,
 	step.sys = ctl->sys;
 	step.meth = &meth;
 	status = internal_launch(&step, direct);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot launch %s translation", "non-PAE");
 	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_NONPAE - 1);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot set up physical mappings");
 	status = internal_walk(&step);
-	if (status == addrxlat_ok && step.base.addr == 0) {
+	if (status == ADDRXLAT_OK && step.base.addr == 0) {
 		ctl->popt.val[OPT_pae].num = 0;
-		return addrxlat_ok;
+		return ADDRXLAT_OK;
 	}
 
 	clear_error(ctl->ctx);
 	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS]);
 	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS]);
 
-	return set_error(ctl->ctx, addrxlat_notimpl,
+	return set_error(ctl->ctx, ADDRXLAT_NOTIMPL,
 			 "Neither %s nor %s directmap found",
 			 "PAE", "non-PAE");
 }
@@ -248,11 +248,11 @@ check_pae_sym(struct sys_init_data *ctl)
 	addrxlat_status status;
 
 	if (ctl->osdesc->type != addrxlat_os_linux)
-		return set_error(ctl->ctx, addrxlat_notimpl,
+		return set_error(ctl->ctx, ADDRXLAT_NOTIMPL,
 				 "Unsupported OS");
 
 	status = get_symval(ctl->ctx, "swapper_pg_dir", &rootpgt.addr);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	rootpgt.as = ADDRXLAT_KVADDR;
@@ -271,7 +271,7 @@ sys_ia32_nonpae(struct sys_init_data *ctl)
 	addrxlat_status status;
 
 	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_NONPAE - 1);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
@@ -283,7 +283,7 @@ sys_ia32_nonpae(struct sys_init_data *ctl)
 		def.param.pgt.root.as = ADDRXLAT_NOADDR;
 	def.param.pgt.pf = ia32_pf;
 	internal_meth_set_def(meth, &def);
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 /** Initialize a translation map for an Intel IA32 (pae) OS.
@@ -298,7 +298,7 @@ sys_ia32_pae(struct sys_init_data *ctl)
 	addrxlat_status status;
 
 	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_PAE - 1);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
@@ -310,7 +310,7 @@ sys_ia32_pae(struct sys_init_data *ctl)
 		def.param.pgt.root.as = ADDRXLAT_NOADDR;
 	def.param.pgt.pf = ia32_pf_pae;
 	internal_meth_set_def(meth, &def);
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 /** Try to get vmalloc_start from vmap_area_list.
@@ -328,20 +328,20 @@ try_vmap_area_list(struct sys_init_data *ctl, addrxlat_addr_t *addr)
 	addrxlat_status status;
 
 	status = get_symval(ctl->ctx, "vmap_area_list", &vmap_area_list.addr);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 	vmap_area_list.as = ADDRXLAT_KVADDR;
 
 	status = get_offsetof(ctl->ctx, "vmap_area", "va_start", &va_start);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	status = get_offsetof(ctl->ctx, "vmap_area", "list", &va_list);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	status = get_offsetof(ctl->ctx, "list_head", "next", &list_next);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	dummystep.ctx = ctl->ctx;
@@ -350,17 +350,17 @@ try_vmap_area_list(struct sys_init_data *ctl, addrxlat_addr_t *addr)
 	vmap_area_list.addr += list_next;
 	status = read32(&dummystep, &vmap_area_list, &val,
 			"vmap_area_list node");
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	vmap_area_list.addr = val - va_list + va_start;
 	status = read32(&dummystep, &vmap_area_list, &val,
 			"vmap_area start address");
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	*addr = val;
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 /** Try to get vmalloc_start from vmlist.
@@ -378,28 +378,28 @@ try_vmlist(struct sys_init_data *ctl, addrxlat_addr_t *addr)
 	addrxlat_status status;
 
 	status = get_symval(ctl->ctx, "vmlist", &vmlist.addr);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 	vmlist.as = ADDRXLAT_KVADDR;
 
 	status = get_offsetof(ctl->ctx, "vm_struct", "addr", &vm_addr);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	dummystep.ctx = ctl->ctx;
 	dummystep.sys = ctl->sys;
 
 	status = read32(&dummystep, &vmlist, &val, "vmlist");
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	vmlist.addr = val + vm_addr;
 	status = read32(&dummystep, &vmlist, &val, "vmlist address");
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	*addr = val;
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 /** Adjust Linux directmap limits on IA32.
@@ -415,19 +415,19 @@ set_linux_directmap(struct sys_init_data *ctl, addrxlat_map_t *vtop)
 	addrxlat_status status;
 
 	status = try_vmap_area_list(ctl, &vmalloc_start);
-	if (status == addrxlat_nodata) {
+	if (status == ADDRXLAT_NODATA) {
 		clear_error(ctl->ctx);
 		status = try_vmlist(ctl, &vmalloc_start);
-		if (status == addrxlat_nodata) {
+		if (status == ADDRXLAT_NODATA) {
 			clear_error(ctl->ctx);
-			return addrxlat_ok;
+			return ADDRXLAT_OK;
 		}
 	}
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot determine VMALLOC start");
 	if (vmalloc_start <= LINUX_DIRECTMAP)
-		return set_error(ctl->ctx, addrxlat_invalid,
+		return set_error(ctl->ctx, ADDRXLAT_INVALID,
 				 "Invalid VMALLOC start: %"ADDRXLAT_PRIxADDR,
 				 vmalloc_start);
 
@@ -435,18 +435,18 @@ set_linux_directmap(struct sys_init_data *ctl, addrxlat_map_t *vtop)
 	range.endoff = ADDRXLAT_ADDR_MAX - (vmalloc_start - LINUX_DIRECTMAP);
 	status = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_DIRECT],
 				  vmalloc_start - LINUX_DIRECTMAP, &range);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot update reverse directmap");
 
 	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_DIRECT];
 	range.endoff = vmalloc_start - 1 - LINUX_DIRECTMAP;
 	status = internal_map_set(vtop, LINUX_DIRECTMAP, &range);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot set up directmap");
 
-	return addrxlat_ok;
+	return ADDRXLAT_OK;
 }
 
 /** Direct mapping, used temporarily to translate swapper_pg_dir */
@@ -471,14 +471,14 @@ sys_ia32(struct sys_init_data *ctl)
 	if (ctl->osdesc->type == addrxlat_os_linux) {
 		status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS,
 					linux_directmap);
-		if (status != addrxlat_ok)
+		if (status != ADDRXLAT_OK)
 			return set_error(ctl->ctx, status,
 					 "Cannot set up directmap");
 	}
 
 	rootpgtopt = &ctl->popt.val[OPT_rootpgt];
 
-	status = addrxlat_ok;
+	status = ADDRXLAT_OK;
 	if (!ctl->popt.val[OPT_pae].set) {
 		if (!rootpgtopt->set)
 			status = check_pae_sym(ctl);
@@ -489,26 +489,26 @@ sys_ia32(struct sys_init_data *ctl)
 			status = check_pae(ctl, &rootpgtopt->fulladdr,
 					   XEN_DIRECTMAP);
 		else
-			status = addrxlat_notimpl;
+			status = ADDRXLAT_NOTIMPL;
 	}
 
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot determine PAE state");
 
 	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_PGT);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	range.endoff = VIRTADDR_MAX;
 	newmap = internal_map_new();
 	if (!newmap)
-		return set_error(ctl->ctx, addrxlat_nomem,
+		return set_error(ctl->ctx, ADDRXLAT_NOMEM,
 				 "Cannot set up hardware mapping");
 	ctl->sys->map[ADDRXLAT_SYS_MAP_HW] = newmap;
 	status = internal_map_set(newmap, 0, &range);
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot set up hardware mapping");
 
@@ -516,15 +516,15 @@ sys_ia32(struct sys_init_data *ctl)
 		? sys_ia32_pae(ctl)
 		: sys_ia32_nonpae(ctl);
 
-	if (status != addrxlat_ok)
+	if (status != ADDRXLAT_OK)
 		return status;
 
 	newmap = internal_map_new();
 	if (!newmap)
-		return set_error(ctl->ctx, addrxlat_nomem,
+		return set_error(ctl->ctx, ADDRXLAT_NOMEM,
 				 "Cannot set up virt-to-phys mapping");
 	status = internal_map_set(newmap, 0, &range);
-	if (status != addrxlat_ok) {
+	if (status != ADDRXLAT_OK) {
 		internal_map_decref(newmap);
 		return set_error(ctl->ctx, status,
 				 "Cannot set up virt-to-phys mapping");
@@ -534,7 +534,7 @@ sys_ia32(struct sys_init_data *ctl)
 		sys_sym_pgtroot(ctl, "cr3", "swapper_pg_dir");
 
 		status = set_linux_directmap(ctl, newmap);
-		if (status != addrxlat_ok) {
+		if (status != ADDRXLAT_OK) {
 			internal_map_decref(newmap);
 			return status;
 		}
