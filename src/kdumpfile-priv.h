@@ -943,7 +943,7 @@ kphys_is_machphys(kdump_ctx_t *ctx)
 {
 	return get_xen_type(ctx) == KDUMP_XEN_NONE ||
 		(get_xen_type(ctx) == KDUMP_XEN_DOMAIN &&
-		 get_xen_xlat(ctx) == kdump_xen_auto);
+		 get_xen_xlat(ctx) == KDUMP_XEN_AUTO);
 }
 
 /* Caching */

@@ -157,8 +157,8 @@ typedef enum _kdump_xen_type {
  * @sa KDUMP_ATTR_XEN_XLAT
  */
 typedef enum _kdump_xen_xlat {
-	kdump_xen_auto,		/**< Auto-translated physmap */
-	kdump_xen_nonauto	/**< Non-auto-translated physmap */
+	KDUMP_XEN_AUTO,		/**< Auto-translated physmap */
+	KDUMP_XEN_NONAUTO	/**< Non-auto-translated physmap */
 } kdump_xen_xlat_t;
 
 /**  Initialize a new dump file object.

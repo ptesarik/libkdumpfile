@@ -234,7 +234,7 @@ pfn_to_idx(kdump_ctx_t *ctx, kdump_pfn_t pfn)
 {
 	unsigned long i;
 
-	if (get_xen_xlat(ctx) == kdump_xen_auto) {
+	if (get_xen_xlat(ctx) == KDUMP_XEN_AUTO) {
 		uint64_t *p = ctx->shared->xen_map;
 		for (i = 0; i < ctx->shared->xen_map_size; ++i, ++p)
 			if (*p == pfn)
@@ -270,7 +270,7 @@ mfn_to_idx(kdump_ctx_t *ctx, kdump_pfn_t mfn)
 {
 	unsigned long i;
 
-	if (get_xen_xlat(ctx) == kdump_xen_nonauto) {
+	if (get_xen_xlat(ctx) == KDUMP_XEN_NONAUTO) {
 		struct xen_p2m *p = ctx->shared->xen_map;
 		for (i = 0; i < ctx->shared->xen_map_size; ++i, ++p)
 			if (p->gmfn == mfn)
@@ -286,7 +286,7 @@ xc_mfn_to_pfn(kdump_ctx_t *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 	struct xen_p2m *p = ctx->shared->xen_map;
 	unsigned long i;
 
-	if (get_xen_xlat(ctx) != kdump_xen_nonauto) {
+	if (get_xen_xlat(ctx) != KDUMP_XEN_NONAUTO) {
 		*pfn = mfn;
 		return KDUMP_OK;
 	}
@@ -664,14 +664,14 @@ open_common(kdump_ctx_t *ctx)
 			if (!ctx->shared->xen_map)
 				return KDUMP_SYSERR;
 			ctx->shared->xen_map_size = sect->size /sizeof(struct xen_p2m);
-			set_xen_xlat(ctx, kdump_xen_nonauto);
+			set_xen_xlat(ctx, KDUMP_XEN_NONAUTO);
 			get_max_pfn_xen_nonauto(ctx);
 		} else if (!strcmp(name, ".xen_pfn")) {
 			ctx->shared->xen_map = read_elf_sect(ctx, sect);
 			if (!ctx->shared->xen_map)
 				return KDUMP_SYSERR;
 			ctx->shared->xen_map_size = sect->size / sizeof(uint64_t);
-			set_xen_xlat(ctx, kdump_xen_auto);
+			set_xen_xlat(ctx, KDUMP_XEN_AUTO);
 			get_max_pfn_xen_auto(ctx);
 		} else if (!strcmp(name, ".note.Xen")) {
 			notes = read_elf_sect(ctx, sect);
