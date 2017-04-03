@@ -308,14 +308,14 @@ static void
 print_pgt(const addrxlat_def_t *def)
 {
 	static const char *pte_formats[] = {
-		[addrxlat_pte_none] = "none",
-		[addrxlat_pte_pfn32] = "pfn32",
-		[addrxlat_pte_pfn64] = "pfn64",
-		[addrxlat_pte_ia32] = "ia32",
-		[addrxlat_pte_ia32_pae] = "ia32_pae",
-		[addrxlat_pte_x86_64] = "x86_64",
-		[addrxlat_pte_s390x] = "s390x",
-		[addrxlat_pte_ppc64_linux_rpn30] = "ppc64_linux_rpn30",
+		[ADDRXLAT_PTE_NONE] = "none",
+		[ADDRXLAT_PTE_PFN32] = "pfn32",
+		[ADDRXLAT_PTE_PFN64] = "pfn64",
+		[ADDRXLAT_PTE_IA32] = "ia32",
+		[ADDRXLAT_PTE_IA32_PAE] = "ia32_pae",
+		[ADDRXLAT_PTE_X86_64] = "x86_64",
+		[ADDRXLAT_PTE_S390X] = "s390x",
+		[ADDRXLAT_PTE_PPC64_LINUX_RPN30] = "ppc64_linux_rpn30",
 	};
 
 	const addrxlat_paging_form_t *pf = &def->param.pgt.pf;

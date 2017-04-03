@@ -154,13 +154,13 @@ pgt_ia32_pae(addrxlat_step_t *step)
 #define XEN_DIRECTMAP	0xff000000
 
 static const addrxlat_paging_form_t ia32_pf = {
-	.pte_format = addrxlat_pte_ia32,
+	.pte_format = ADDRXLAT_PTE_IA32,
 	.levels = 3,
 	.bits = { 12, 10, 10 }
 };
 
 static const addrxlat_paging_form_t ia32_pf_pae = {
-	.pte_format = addrxlat_pte_ia32_pae,
+	.pte_format = ADDRXLAT_PTE_IA32_PAE,
 	.levels = 4,
 	.bits = { 12, 9, 9, 2 }
 };

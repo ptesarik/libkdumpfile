@@ -345,7 +345,7 @@ static addrxlat_status
 map_linux_ppc64(struct sys_init_data *ctl)
 {
 	static const addrxlat_paging_form_t ppc64_pf_64k = {
-		.pte_format = addrxlat_pte_ppc64_linux_rpn30,
+		.pte_format = ADDRXLAT_PTE_PPC64_LINUX_RPN30,
 		.levels = 4,
 		.bits = { 16, 12, 12, 4 }
 	};

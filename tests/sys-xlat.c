@@ -121,14 +121,14 @@ static const kw_pair_t map_names[] = {
 };
 
 static const kw_pair_t pte_formats[] = {
-	{ "none", addrxlat_pte_none },
-	{ "pfn32", addrxlat_pte_pfn32 },
-	{ "pfn64", addrxlat_pte_pfn64 },
-	{ "ia32", addrxlat_pte_ia32 },
-	{ "ia32_pae", addrxlat_pte_ia32_pae },
-	{ "x86_64", addrxlat_pte_x86_64 },
-	{ "s390x", addrxlat_pte_s390x },
-	{ "ppc64_linux_rpn30", addrxlat_pte_ppc64_linux_rpn30 },
+	{ "none", ADDRXLAT_PTE_NONE },
+	{ "pfn32", ADDRXLAT_PTE_PFN32 },
+	{ "pfn64", ADDRXLAT_PTE_PFN64 },
+	{ "ia32", ADDRXLAT_PTE_IA32 },
+	{ "ia32_pae", ADDRXLAT_PTE_IA32_PAE },
+	{ "x86_64", ADDRXLAT_PTE_X86_64 },
+	{ "s390x", ADDRXLAT_PTE_S390X },
+	{ "ppc64_linux_rpn30", ADDRXLAT_PTE_PPC64_LINUX_RPN30 },
 	{NULL}
 };
 

@@ -121,21 +121,21 @@ set_paging_form(addrxlat_paging_form_t *pf, const char *spec)
 	}
 
 	if (!strncasecmp(spec, "none:", endp - spec + 1))
-		pf->pte_format = addrxlat_pte_none;
+		pf->pte_format = ADDRXLAT_PTE_NONE;
 	else if (!strncasecmp(spec, "pfn32:", endp - spec + 1))
-		pf->pte_format = addrxlat_pte_pfn32;
+		pf->pte_format = ADDRXLAT_PTE_PFN32;
 	else if (!strncasecmp(spec, "pfn64:", endp - spec + 1))
-		pf->pte_format = addrxlat_pte_pfn64;
+		pf->pte_format = ADDRXLAT_PTE_PFN64;
 	else if (!strncasecmp(spec, "ia32:", endp - spec + 1))
-		pf->pte_format = addrxlat_pte_ia32;
+		pf->pte_format = ADDRXLAT_PTE_IA32;
 	else if (!strncasecmp(spec, "ia32_pae:", endp - spec + 1))
-		pf->pte_format = addrxlat_pte_ia32_pae;
+		pf->pte_format = ADDRXLAT_PTE_IA32_PAE;
 	else if (!strncasecmp(spec, "x86_64:", endp - spec + 1))
-		pf->pte_format = addrxlat_pte_x86_64;
+		pf->pte_format = ADDRXLAT_PTE_X86_64;
 	else if (!strncasecmp(spec, "s390x:", endp - spec + 1))
-		pf->pte_format = addrxlat_pte_s390x;
+		pf->pte_format = ADDRXLAT_PTE_S390X;
 	else if (!strncasecmp(spec, "ppc64_linux_rpn30:", endp - spec + 1))
-		pf->pte_format = addrxlat_pte_ppc64_linux_rpn30;
+		pf->pte_format = ADDRXLAT_PTE_PPC64_LINUX_RPN30;
 	else {
 		fprintf(stderr, "Unknown PTE format: %s\n", spec);
 		return TEST_ERR;

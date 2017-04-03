@@ -51,7 +51,7 @@ setup_pgt(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 	def.target_as = ADDRXLAT_MACHPHYSADDR;
 	def.param.pgt.root.addr = 0xf000;
 	def.param.pgt.root.as = ADDRXLAT_KVADDR;
-	def.param.pgt.pf.pte_format = addrxlat_pte_pfn64;
+	def.param.pgt.pf.pte_format = ADDRXLAT_PTE_PFN64;
 	def.param.pgt.pf.levels = 2;
 	def.param.pgt.pf.bits[0] = 12;
 	def.param.pgt.pf.bits[1] = 9;

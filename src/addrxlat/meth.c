@@ -280,14 +280,14 @@ setup_pgt(addrxlat_meth_t *meth, const addrxlat_def_t *def)
 		break
 
 	switch (pf->pte_format) {
-		SETUP(addrxlat_pte_none, first_step_pgt, next_step_ident);
-		SETUP(addrxlat_pte_pfn32, first_step_uaddr, next_step_pfn);
-		SETUP(addrxlat_pte_pfn64, first_step_uaddr, next_step_pfn);
-		SETUP(addrxlat_pte_ia32, first_step_uaddr, pgt_ia32);
-		SETUP(addrxlat_pte_ia32_pae, first_step_uaddr, pgt_ia32_pae);
-		SETUP(addrxlat_pte_x86_64, first_step_saddr, pgt_x86_64);
-		SETUP(addrxlat_pte_s390x, first_step_uaddr, pgt_s390x);
-		SETUP(addrxlat_pte_ppc64_linux_rpn30,
+		SETUP(ADDRXLAT_PTE_NONE, first_step_pgt, next_step_ident);
+		SETUP(ADDRXLAT_PTE_PFN32, first_step_uaddr, next_step_pfn);
+		SETUP(ADDRXLAT_PTE_PFN64, first_step_uaddr, next_step_pfn);
+		SETUP(ADDRXLAT_PTE_IA32, first_step_uaddr, pgt_ia32);
+		SETUP(ADDRXLAT_PTE_IA32_PAE, first_step_uaddr, pgt_ia32_pae);
+		SETUP(ADDRXLAT_PTE_X86_64, first_step_saddr, pgt_x86_64);
+		SETUP(ADDRXLAT_PTE_S390X, first_step_uaddr, pgt_s390x);
+		SETUP(ADDRXLAT_PTE_PPC64_LINUX_RPN30,
 		      first_step_pgt, pgt_ppc64_linux_rpn30);
 	default:
 		return addrxlat_notimpl;

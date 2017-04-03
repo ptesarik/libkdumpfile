@@ -177,7 +177,7 @@ determine_pgttype(struct sys_init_data *ctl)
 			return status;
 		if (!PTE_I(entry)) {
 			static const addrxlat_paging_form_t pf = {
-				.pte_format = addrxlat_pte_s390x,
+				.pte_format = ADDRXLAT_PTE_S390X,
 				.bits = { 12, 8, 11, 11, 11, 11 }
 			};
 			addrxlat_meth_t *pgtmeth =
