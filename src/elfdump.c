@@ -696,7 +696,7 @@ open_common(kdump_ctx_t *ctx)
 	}
 
 	if (edp->xen_pages_offset) {
-		set_xen_type(ctx, kdump_xen_domain);
+		set_xen_type(ctx, KDUMP_XEN_DOMAIN);
 		if (!ctx->shared->xen_map)
 			return set_error(ctx, KDUMP_UNSUPPORTED,
 					 "Missing Xen P2M mapping");

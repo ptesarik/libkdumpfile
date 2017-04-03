@@ -170,7 +170,7 @@ process_xen_crash_info(kdump_ctx_t *ctx, void *data, size_t len)
 	kdump_paddr_t phys_start = 0;
 	kdump_status res;
 
-	set_xen_type(ctx, kdump_xen_system);
+	set_xen_type(ctx, KDUMP_XEN_SYSTEM);
 
 	version = 0;
 	if (ptr_size == 8 &&

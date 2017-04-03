@@ -198,7 +198,7 @@ set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 	}
 
 	if ((isset_xen_xlat(ctx) && get_xen_xlat(ctx) != kdump_xen_auto) ||
-	    (isset_xen_type(ctx) && get_xen_type(ctx) == kdump_xen_system)) {
+	    (isset_xen_type(ctx) && get_xen_type(ctx) == KDUMP_XEN_SYSTEM)) {
 		if (! (opts->str[opts->n] = strdup("xen_xlat=1")) )
 			return set_error(ctx, KDUMP_SYSERR,
 					 "Cannot make %s option", "xen_xlat");

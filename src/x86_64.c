@@ -325,7 +325,7 @@ set_linux_phys_base(kdump_ctx_t *ctx)
 	}
 
 	if (isset_xen_type(ctx) &&
-	    get_xen_type(ctx) != kdump_xen_none)
+	    get_xen_type(ctx) != KDUMP_XEN_NONE)
 		return set_phys_base(ctx, 0);
 
 	return KDUMP_NODATA;

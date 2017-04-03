@@ -941,8 +941,8 @@ INTERNAL_DECL(void, attr_remove_override,
 static inline int
 kphys_is_machphys(kdump_ctx_t *ctx)
 {
-	return get_xen_type(ctx) == kdump_xen_none ||
-		(get_xen_type(ctx) == kdump_xen_domain &&
+	return get_xen_type(ctx) == KDUMP_XEN_NONE ||
+		(get_xen_type(ctx) == KDUMP_XEN_DOMAIN &&
 		 get_xen_xlat(ctx) == kdump_xen_auto);
 }
 

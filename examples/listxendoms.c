@@ -94,7 +94,7 @@ main(int argc, char **argv)
 
 	status = kdump_get_attr(ctx, KDUMP_ATTR_XEN_TYPE, &attr);
 	if (status == KDUMP_NODATA ||
-	    (status == KDUMP_OK && attr.val.number != kdump_xen_system)) {
+	    (status == KDUMP_OK && attr.val.number != KDUMP_XEN_SYSTEM)) {
 		fputs("Not a Xen system dump\n", stderr);
 		return 1;
 	} else if (status != KDUMP_OK) {

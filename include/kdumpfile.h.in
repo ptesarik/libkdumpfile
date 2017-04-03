@@ -148,9 +148,9 @@ typedef enum _kdump_byte_order {
  * @sa KDUMP_ATTR_XEN_TYPE
  */
 typedef enum _kdump_xen_type {
-	kdump_xen_none,		/**< Not running under Xen */
-	kdump_xen_system,	/**< Comlete dump of a Xen machine */
-	kdump_xen_domain,	/**< Dump of a single domain */
+	KDUMP_XEN_NONE,		/**< Not running under Xen */
+	KDUMP_XEN_SYSTEM,	/**< Comlete dump of a Xen machine */
+	KDUMP_XEN_DOMAIN,	/**< Dump of a single domain */
 } kdump_xen_type_t;
 
 /**  Xen physmap translation type.
