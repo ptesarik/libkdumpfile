@@ -152,9 +152,9 @@ first_step_pgt(addrxlat_step_t *step, addrxlat_addr_t addr)
 				 "Page table address not specified");
 
 	step->base = pgt->root;
-	step->remain = pgt->pf.levels;
-	for (i = 0; i < pgt->pf.levels; ++i) {
-		unsigned short bits = pgt->pf.bits[i];
+	step->remain = pgt->pf.nfields;
+	for (i = 0; i < pgt->pf.nfields; ++i) {
+		unsigned short bits = pgt->pf.fieldsz[i];
 		addrxlat_addr_t mask = bits < sizeof(addrxlat_addr_t) * 8
 			? ((addrxlat_addr_t)1 << bits) - 1
 			: ~(addrxlat_addr_t)0;
@@ -176,7 +176,7 @@ first_step_pgt(addrxlat_step_t *step, addrxlat_addr_t addr)
 static addrxlat_status
 step_check_uaddr(addrxlat_step_t *step)
 {
-	return step->idx[step->meth->desc.param.pgt.pf.levels]
+	return step->idx[step->meth->desc.param.pgt.pf.nfields]
 		? set_error(step->ctx, ADDRXLAT_INVALID,
 			    "Virtual address too big")
 		: ADDRXLAT_OK;
@@ -210,13 +210,13 @@ step_check_saddr(addrxlat_step_t *step)
 {
 	const addrxlat_paging_form_t *pf = &step->meth->desc.param.pgt.pf;
 	const struct pgt_extra_def *extra = &step->meth->extra.pgt;
-	unsigned short lvl = pf->levels;
+	unsigned short lvl = pf->nfields;
 	struct {
 		int bit : 1;
 	} s;
 	addrxlat_addr_t signext;
 
-	s.bit = step->idx[lvl - 1] >> (pf->bits[lvl - 1] - 1);
+	s.bit = step->idx[lvl - 1] >> (pf->fieldsz[lvl - 1] - 1);
 	signext = s.bit & (extra->pgt_mask[lvl - 1] >> extra->vaddr_bits);
 	return step->idx[lvl] != signext
 		? set_error(step->ctx, ADDRXLAT_INVALID,
@@ -252,9 +252,10 @@ next_step_pfn(addrxlat_step_t *step)
 
 	status = read_pte(step);
 	if (status == ADDRXLAT_OK) {
+		const addrxlat_desc_t *desc = &step->meth->desc;
 		step->base.addr =
-			step->raw_pte << step->meth->desc.param.pgt.pf.bits[0];
-		step->base.as = step->meth->desc.target_as;
+			step->raw_pte << desc->param.pgt.pf.fieldsz[0];
+		step->base.as = desc->target_as;
 	}
 
 	return status;
@@ -296,9 +297,9 @@ setup_pgt(addrxlat_meth_t *meth, const addrxlat_desc_t *desc)
 	extra->pte_shift = addrxlat_pteval_shift(pf->pte_format);
 	extra->vaddr_bits = 0;
 	mask = 1;
-	for (i = 0; i < pf->levels; ++i) {
-		extra->vaddr_bits += pf->bits[i];
-		mask <<= pf->bits[i];
+	for (i = 0; i < pf->nfields; ++i) {
+		extra->vaddr_bits += pf->fieldsz[i];
+		mask <<= pf->fieldsz[i];
 		extra->pgt_mask[i] = ~(mask - 1);
 	}
 
@@ -465,8 +466,8 @@ paging_max_index(const addrxlat_paging_form_t *pf)
 {
 	unsigned short i;
 	unsigned bits = 0;
-	for (i = 0; i < pf->levels; ++i)
-		bits += pf->bits[i];
+	for (i = 0; i < pf->nfields; ++i)
+		bits += pf->fieldsz[i];
 	return (bits < 8 * sizeof(addrxlat_addr_t)
 		? (((addrxlat_addr_t)1 << bits) - 1)
 		: ADDRXLAT_ADDR_MAX);

@@ -101,7 +101,7 @@ pgt_s390x(addrxlat_step_t *step)
 
 	if (step->remain >= 3) {
 		unsigned pgidx = step->idx[step->remain - 1] >>
-			(pf->bits[step->remain - 1] - pf->bits[0]);
+			(pf->fieldsz[step->remain - 1] - pf->fieldsz[0]);
 		if (pgidx < PTE_TF(step->raw_pte) ||
 		    pgidx > PTE_TL(step->raw_pte))
 			return set_error(step->ctx, ADDRXLAT_NOTPRESENT,
@@ -178,7 +178,7 @@ determine_pgttype(struct sys_init_data *ctl)
 		if (!PTE_I(entry)) {
 			static const addrxlat_paging_form_t pf = {
 				.pte_format = ADDRXLAT_PTE_S390X,
-				.bits = { 12, 8, 11, 11, 11, 11 }
+				.fieldsz = { 12, 8, 11, 11, 11, 11 }
 			};
 			addrxlat_meth_t *pgtmeth =
 				ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
@@ -186,7 +186,7 @@ determine_pgttype(struct sys_init_data *ctl)
 			desc.kind = ADDRXLAT_PGT;
 			desc.target_as = ADDRXLAT_MACHPHYSADDR;
 			desc.param.pgt.pf = pf;
-			desc.param.pgt.pf.levels = PTE_TT(entry) + 3;
+			desc.param.pgt.pf.nfields = PTE_TT(entry) + 3;
 			return internal_meth_set_desc(pgtmeth, &desc);
 		}
 		ptr.addr += sizeof(uint64_t);

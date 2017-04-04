@@ -88,7 +88,7 @@ pgt_huge_page(addrxlat_step_t *step)
 	while (step->remain > 1) {
 		--step->remain;
 		off |= step->idx[step->remain];
-		off <<= pgt->pf.bits[step->remain - 1];
+		off <<= pgt->pf.fieldsz[step->remain - 1];
 	}
 	step->idx[0] |= off;
 	return ADDRXLAT_OK;

@@ -94,7 +94,7 @@ pgt_ia32(addrxlat_step_t *step)
 		--step->remain;
 		step->base.addr = (step->raw_pte & pgt->pgt_mask[1]) |
 			pgd_pse_high(step->raw_pte);
-		step->idx[0] |= step->idx[1] << pf->bits[0];
+		step->idx[0] |= step->idx[1] << pf->fieldsz[0];
 	} else
 		step->base.addr = step->raw_pte & pgt->pgt_mask[0];
 	step->base.as = step->meth->desc.target_as;
@@ -139,7 +139,7 @@ pgt_ia32_pae(addrxlat_step_t *step)
 	if (step->remain == 2 && (step->raw_pte & _PAGE_PSE)) {
 		--step->remain;
 		step->base.addr &= pgt->pgt_mask[1];
-		step->idx[0] |= step->idx[1] << pf->bits[0];
+		step->idx[0] |= step->idx[1] << pf->fieldsz[0];
 	} else
 		step->base.addr &= pgt->pgt_mask[0];
 	step->base.as = step->meth->desc.target_as;
@@ -155,14 +155,14 @@ pgt_ia32_pae(addrxlat_step_t *step)
 
 static const addrxlat_paging_form_t ia32_pf = {
 	.pte_format = ADDRXLAT_PTE_IA32,
-	.levels = 3,
-	.bits = { 12, 10, 10 }
+	.nfields = 3,
+	.fieldsz = { 12, 10, 10 }
 };
 
 static const addrxlat_paging_form_t ia32_pf_pae = {
 	.pte_format = ADDRXLAT_PTE_IA32_PAE,
-	.levels = 4,
-	.bits = { 12, 9, 9, 2 }
+	.nfields = 4,
+	.fieldsz = { 12, 9, 9, 2 }
 };
 
 /** Check whether a page table hierarchy looks like PAE.

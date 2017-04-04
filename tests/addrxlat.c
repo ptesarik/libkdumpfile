@@ -141,13 +141,13 @@ set_paging_form(addrxlat_paging_form_t *pf, const char *spec)
 		return TEST_ERR;
 	}
 
-	pf->levels = 0;
+	pf->nfields = 0;
 	do {
-		if (pf->levels >= ADDRXLAT_MAXLEVELS) {
+		if (pf->nfields >= ADDRXLAT_MAXLEVELS) {
 			fprintf(stderr, "Too many paging levels!\n");
 			return TEST_ERR;
 		}
-		pf->bits[pf->levels++] =
+		pf->fieldsz[pf->nfields++] =
 			strtoul(endp + 1, &endp, 0);
 	} while (*endp == ',');
 
@@ -322,7 +322,7 @@ usage(const char *name)
 		"  -p|--pgt              Use page table translation\n"
 		"  -t|--table pgendoff   Use table lookup translation\n"
 		"  -m|--memarr params    Use memory array translation\n"
-		"  -f|--form fmt:bits    Set paging form\n"
+		"  -f|--form fmt:fields  Set paging form\n"
 		"  -r|--root as:addr     Set the root page table address\n"
 		"  -e|--entry addr:val   Set table entry value\n",
 		name);

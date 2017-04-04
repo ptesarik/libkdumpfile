@@ -143,7 +143,7 @@ enum param_index {
 	/* Page tables */
 	pgt_root,
 	pgt_pte_format,
-	pgt_bits,
+	pgt_fields,
 
 	/* Table lookup */
 	lookup_endoff,
@@ -170,7 +170,7 @@ static const kw_pair_t linear_param[] = {
 static const kw_pair_t pgt_param[] = {
 	{"root", pgt_root },
 	{"pte_format", pgt_pte_format },
-	{"bits", pgt_bits },
+	{"fields", pgt_fields },
 	{NULL}
 };
 
@@ -258,7 +258,7 @@ parse_pte_format(const char *spec, addrxlat_pte_format_t *fmt)
 }
 
 static int
-parse_pgt_bits(const char *spec, addrxlat_paging_form_t *pf)
+parse_pgt_fields(const char *spec, addrxlat_paging_form_t *pf)
 {
 	const char *p;
 	int i;
@@ -266,9 +266,9 @@ parse_pgt_bits(const char *spec, addrxlat_paging_form_t *pf)
 	p = spec;
 	for (i = 0; i < ADDRXLAT_MAXLEVELS; ++i) {
 		char *endp;
-		pf->bits[i] = strtoul(p, &endp, 0);
+		pf->fieldsz[i] = strtoul(p, &endp, 0);
 		if (endp == p) {
-			fprintf(stderr, "Invalid page form bits: %s\n", spec);
+			fprintf(stderr, "Invalid page form fields: %s\n", spec);
 			return TEST_ERR;
 		}
 		p = endp;
@@ -290,7 +290,7 @@ parse_pgt_bits(const char *spec, addrxlat_paging_form_t *pf)
 		return TEST_ERR;
 	}
 
-	pf->levels = i + 1;
+	pf->nfields = i + 1;
 	return TEST_OK;
 }
 
@@ -467,8 +467,8 @@ parse_meth_param(const char *spec, addrxlat_desc_t *desc)
 		res = parse_pte_format(p, &desc->param.pgt.pf.pte_format);
 		break;
 
-	case pgt_bits:
-		res = parse_pgt_bits(p, &desc->param.pgt.pf);
+	case pgt_fields:
+		res = parse_pgt_fields(p, &desc->param.pgt.pf);
 		break;
 
 	case lookup_endoff:

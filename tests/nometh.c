@@ -52,9 +52,9 @@ setup_pgt(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 	desc.param.pgt.root.addr = 0xf000;
 	desc.param.pgt.root.as = ADDRXLAT_KVADDR;
 	desc.param.pgt.pf.pte_format = ADDRXLAT_PTE_PFN64;
-	desc.param.pgt.pf.levels = 2;
-	desc.param.pgt.pf.bits[0] = 12;
-	desc.param.pgt.pf.bits[1] = 9;
+	desc.param.pgt.pf.nfields = 2;
+	desc.param.pgt.pf.fieldsz[0] = 12;
+	desc.param.pgt.pf.fieldsz[1] = 9;
 	status = addrxlat_meth_set_desc(range.meth, &desc);
 	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot set up translation map: %s",

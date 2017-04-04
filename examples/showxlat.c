@@ -89,9 +89,9 @@ print_pgt(const addrxlat_desc_t *desc)
 		printf("%s", pte_formats[pf->pte_format]);
 	else
 		printf("%u", pf->pte_format);
-	printf("\n  bits=");
-	for (i = 0; i < pf->levels; ++i)
-		printf("%s%u", i ? "," : "", pf->bits[i]);
+	printf("\n  fields=");
+	for (i = 0; i < pf->nfields; ++i)
+		printf("%s%u", i ? "," : "", pf->fieldsz[i]);
 	putchar('\n');
 }
 

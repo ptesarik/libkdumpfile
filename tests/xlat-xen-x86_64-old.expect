@@ -2,7 +2,7 @@
   target_as=MACHPHYSADDR
   root=NOADDR
   pte_format=x86_64
-  bits=12,9,9,9,9
+  fields=12,9,9,9,9
 
 @direct: LINEAR
   target_as=KPHYSADDR

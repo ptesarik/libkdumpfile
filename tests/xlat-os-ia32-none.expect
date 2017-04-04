@@ -2,7 +2,7 @@
   target_as=MACHPHYSADDR
   root=NOADDR
   pte_format=ia32
-  bits=12,10,10
+  fields=12,10,10
 
 @machphys_kphys: LINEAR
   target_as=KPHYSADDR

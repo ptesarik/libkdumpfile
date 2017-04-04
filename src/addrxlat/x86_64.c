@@ -462,8 +462,8 @@ set_xen_p2m(struct sys_init_data *ctl)
 {
 	static const addrxlat_paging_form_t xen_p2m_pf = {
 		.pte_format = ADDRXLAT_PTE_PFN64,
-		.levels = 4,
-		.bits = { 12, 9, 9, 9 }
+		.nfields = 4,
+		.fieldsz = { 12, 9, 9, 9 }
 	};
 
 	addrxlat_addr_t p2m_maddr;
@@ -746,8 +746,8 @@ sys_x86_64(struct sys_init_data *ctl)
 {
 	static const addrxlat_paging_form_t x86_64_pf = {
 		.pte_format = ADDRXLAT_PTE_X86_64,
-		.levels = 5,
-		.bits = { 12, 9, 9, 9, 9 }
+		.nfields = 5,
+		.fieldsz = { 12, 9, 9, 9, 9 }
 	};
 	addrxlat_map_t *map;
 	addrxlat_meth_t *meth;

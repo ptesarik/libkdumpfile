@@ -255,18 +255,23 @@ typedef struct _addrxlat_paging_form {
 	/** Format of each page table entry. */
 	addrxlat_pte_format_t pte_format;
 
-	/** Number of paging levels.
-	 * Note that this is one higher than the number of page tables,
-	 * because adding the offset within a page is also counted as
-	 * one level here.
+	/** Number of fields in the source address.
+	 * With hierarchical page tables, a virtual address is split
+	 * into multiple fields, e.g. on x86_64 there are up to 5 fields:
+	 *  - bits 47:39 = PML4 index
+	 *  - bits 38:30 = page-directory-pointer index
+	 *  - bits 29:21 = page directory index
+	 *  - bits 20:12 = page table index
+	 *  - bits 11:0  = page offset
 	 */
-	unsigned short levels;
+	unsigned short nfields;
 
-	/** Number of bits in each source address part.
-	 * This array is sorted from lowest-level tables to the top level;
-	 * the first element corresponds to page size.
+	/** Sizes of individual address fields in bits.
+	 * This array is sorted from lowest-level tables to the top level.
+	 * The first element is the number of bits for the page offset
+	 * (also known as page shift).
 	 */
-	unsigned short bits[ADDRXLAT_MAXLEVELS];
+	unsigned short fieldsz[ADDRXLAT_MAXLEVELS];
 } addrxlat_paging_form_t;
 
 /** Parameters of page table translation. */

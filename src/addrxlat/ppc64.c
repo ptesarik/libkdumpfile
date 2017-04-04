@@ -133,7 +133,7 @@ huge_pd_linux(addrxlat_step_t *step)
 	i = step->remain;
 	while (--i) {
 		off |= step->idx[i];
-		off <<= pf->bits[i - 1];
+		off <<= pf->fieldsz[i - 1];
 	}
 
 	/* Calculate the index in the huge page table. */
@@ -171,7 +171,7 @@ huge_page_linux(addrxlat_step_t *step, unsigned rpn_shift)
 {
 	const addrxlat_paging_form_t *pf = &step->meth->desc.param.pgt.pf;
 
-	step->base.addr = (step->raw_pte >> rpn_shift) << pf->bits[0];
+	step->base.addr = (step->raw_pte >> rpn_shift) << pf->fieldsz[0];
 	step->base.as = step->meth->desc.target_as;
 	return pgt_huge_page(step);
 }
@@ -214,12 +214,12 @@ pgt_ppc64_linux(addrxlat_step_t *step, unsigned rpn_shift)
 			return huge_pd_linux(step);
 
 		table_size = ((addrxlat_addr_t)1 << pgt->pte_shift <<
-			      pf->bits[step->remain - 1]);
+			      pf->fieldsz[step->remain - 1]);
 		step->base.addr = step->raw_pte & ~(table_size - 1);
 		step->base.as = ADDRXLAT_KVADDR;
 	} else {
 		step->base.addr =
-			(step->raw_pte >> rpn_shift) << pf->bits[0];
+			(step->raw_pte >> rpn_shift) << pf->fieldsz[0];
 		step->base.as = step->meth->desc.target_as;
 	}
 
@@ -346,8 +346,8 @@ map_linux_ppc64(struct sys_init_data *ctl)
 {
 	static const addrxlat_paging_form_t ppc64_pf_64k = {
 		.pte_format = ADDRXLAT_PTE_PPC64_LINUX_RPN30,
-		.levels = 4,
-		.bits = { 16, 12, 12, 4 }
+		.nfields = 4,
+		.fieldsz = { 16, 12, 12, 4 }
 	};
 
 	long pagesize;
