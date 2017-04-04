@@ -305,7 +305,7 @@ typedef struct _addrxlat_param_lookup {
 	 * The lookup table is owned by the translation method, i.e. it
 	 * is freed when the method reference count becomes zero.
 	 */
-	const addrxlat_lookup_elem_t *tbl;
+	addrxlat_lookup_elem_t *tbl;
 } addrxlat_param_lookup_t;
 
 /** Parameters of memory array translation. */
