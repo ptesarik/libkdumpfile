@@ -1,0 +1,30 @@
+#! /bin/sh
+
+#
+# Create an x86_64 ELF dump file with a version code but no
+# information to allow page translation.
+# Check that Linux mapping is initialized by kernel version.
+#
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+dumpfile="out/${name}.dump"
+resultfile="out/${name}.result"
+expectfile="$srcdir/${name}.expect"
+
+./mkelf "$dumpfile" <<EOF
+ei_class = 2
+ei_data = 1
+e_machine = 62
+e_phoff = 64
+
+DATA = $srcdir/early-version-code.data
+EOF
+
+$srcdir/../examples/showxlat "$dumpfile" linux > "$resultfile"
+
+if ! diff "$expectfile" "$resultfile"; then
+    echo "Results do not match" >&2
+    exit 1
+fi

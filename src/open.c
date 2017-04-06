@@ -345,6 +345,19 @@ ostype_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 	kdump_status status;
 
 	if (isset_arch_name(ctx)) {
+		switch (ctx->shared->ostype) {
+		case addrxlat_os_linux:
+			linux_version_code(ctx);
+			break;
+
+		case addrxlat_os_xen:
+			xen_version_code(ctx);
+			break;
+
+		default:
+			break;
+		}
+		clear_error(ctx); /* version_code errors are not fatal */
 		status = vtop_init(ctx);
 		if (status != KDUMP_OK)
 			return set_error(ctx, status,

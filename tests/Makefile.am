@@ -169,6 +169,7 @@ test_scripts = \
 	diskdump-basic-lzo \
 	diskdump-basic-snappy \
 	diskdump-multiread \
+	early-version-code \
 	elf-empty-i386 \
 	elf-empty-i386-elf64 \
 	elf-empty-s390 \
@@ -249,6 +250,8 @@ dist_check_DATA = \
 	addrmap-overlap-begin.expect \
 	addrmap-overlap-end.expect \
 	addrmap-reduce.expect \
+	early-version-code.data \
+	early-version-code.expect \
 	elf-empty.data \
 	basic.expect \
 	partial.expect \

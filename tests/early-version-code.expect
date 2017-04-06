@@ -1,0 +1,53 @@
+METH_PGT: PGT
+  target_as=MACHPHYSADDR
+  root=NOADDR
+  pte_format=x86_64
+  fields=12,9,9,9,9
+
+METH_DIRECT: LINEAR
+  target_as=KPHYSADDR
+  off=0x780000000000
+
+METH_KTEXT: PGT
+  target_as=MACHPHYSADDR
+  root=NOADDR
+  pte_format=x86_64
+  fields=12,9,9,9,9
+
+METH_RDIRECT: LINEAR
+  target_as=KVADDR
+  off=0xffff880000000000
+
+METH_MACHPHYS_KPHYS: LINEAR
+  target_as=KPHYSADDR
+  off=0x0
+
+METH_KPHYS_MACHPHYS: LINEAR
+  target_as=MACHPHYSADDR
+  off=0x0
+
+MAP_HW:
+0-7fffffffffff: PGT
+800000000000-ffff7fffffffffff: NONE
+ffff800000000000-ffffffffffffffff: PGT
+
+MAP_KV_PHYS:
+0-7fffffffffff: PGT
+800000000000-ffff7fffffffffff: NONE
+ffff800000000000-ffff87ffffffffff: PGT
+ffff880000000000-ffffc7ffffffffff: DIRECT
+ffffc80000000000-ffffffff7fffffff: PGT
+ffffffff80000000-ffffffff827fffff: KTEXT
+ffffffff82800000-ffffffffffffffff: PGT
+
+MAP_KPHYS_DIRECT:
+0-3fffffffffff: RDIRECT
+400000000000-ffffffffffffffff: NONE
+
+MACHPHYS -> KPHYS:
+0-fffffffffffff: MACHPHYS_KPHYS
+10000000000000-ffffffffffffffff: NONE
+
+KPHYS -> MACHPHYS:
+0-fffffffffffff: KPHYS_MACHPHYS
+10000000000000-ffffffffffffffff: NONE
