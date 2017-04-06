@@ -257,9 +257,9 @@ vtop_init(kdump_ctx_t *ctx)
 	clear_error(ctx);
 
 	opts.n = 0;
-	if (ctx->shared->ostype == addrxlat_os_linux)
+	if (ctx->shared->ostype == ADDRXLAT_OS_LINUX)
 		status = set_linux_opts(ctx, &opts);
-	else if (ctx->shared->ostype == addrxlat_os_xen)
+	else if (ctx->shared->ostype == ADDRXLAT_OS_XEN)
 		status = set_xen_opts(ctx, &opts);
 	if (status != KDUMP_OK) {
 		free_opts(&opts);
@@ -314,14 +314,14 @@ static addrxlat_status
 addrxlat_sym(void *data, addrxlat_sym_t *sym)
 {
 	static const struct ostype_attr_map sizeof_map[] = {
-		{ addrxlat_os_linux, GKI_linux_size },
-		{ addrxlat_os_xen, GKI_xen_size },
-		{ addrxlat_os_unknown }
+		{ ADDRXLAT_OS_LINUX, GKI_linux_size },
+		{ ADDRXLAT_OS_XEN, GKI_xen_size },
+		{ ADDRXLAT_OS_UNKNOWN }
 	};
 	static const struct ostype_attr_map offsetof_map[] = {
-		{ addrxlat_os_linux, GKI_linux_offset },
-		{ addrxlat_os_xen, GKI_xen_offset },
-		{ addrxlat_os_unknown }
+		{ ADDRXLAT_OS_LINUX, GKI_linux_offset },
+		{ ADDRXLAT_OS_XEN, GKI_xen_offset },
+		{ ADDRXLAT_OS_UNKNOWN }
 	};
 
 	kdump_ctx_t *ctx = (kdump_ctx_t*) data;

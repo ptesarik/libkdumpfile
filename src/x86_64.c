@@ -334,7 +334,7 @@ set_linux_phys_base(kdump_ctx_t *ctx)
 static kdump_status
 x86_64_late_init(kdump_ctx_t *ctx)
 {
-	if (ctx->shared->ostype == addrxlat_os_linux &&
+	if (ctx->shared->ostype == ADDRXLAT_OS_LINUX &&
 	    !isset_phys_base(ctx) &&
 	    set_linux_phys_base(ctx) == KDUMP_OK) {
 		kdump_status status = vtop_init(ctx);

@@ -783,10 +783,10 @@ sys_x86_64(struct sys_init_data *ctl)
 		return status;
 
 	switch (ctl->osdesc->type) {
-	case addrxlat_os_linux:
+	case ADDRXLAT_OS_LINUX:
 		return map_linux_x86_64(ctl);
 
-	case addrxlat_os_xen:
+	case ADDRXLAT_OS_XEN:
 		return map_xen_x86_64(ctl);
 
 	default:

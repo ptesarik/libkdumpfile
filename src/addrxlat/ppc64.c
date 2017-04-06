@@ -411,7 +411,7 @@ addrxlat_status
 sys_ppc64(struct sys_init_data *ctl)
 {
 	switch (ctl->osdesc->type) {
-	case addrxlat_os_linux:
+	case ADDRXLAT_OS_LINUX:
 		return map_linux_ppc64(ctl);
 
 	default:

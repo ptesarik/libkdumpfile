@@ -240,9 +240,9 @@ const char *
 kdump_vmcoreinfo(kdump_ctx_t *ctx)
 {
 	static const struct ostype_attr_map raw_map[] = {
-		{ addrxlat_os_linux, GKI_linux_vmcoreinfo_raw },
-		{ addrxlat_os_xen, GKI_xen_vmcoreinfo_raw },
-		{ addrxlat_os_unknown }
+		{ ADDRXLAT_OS_LINUX, GKI_linux_vmcoreinfo_raw },
+		{ ADDRXLAT_OS_XEN, GKI_xen_vmcoreinfo_raw },
+		{ ADDRXLAT_OS_UNKNOWN }
 	};
 
 	struct attr_data *attr;
@@ -265,9 +265,9 @@ const char *
 kdump_vmcoreinfo_row(kdump_ctx_t *ctx, const char *key)
 {
 	static const struct ostype_attr_map lines_map[] = {
-		{ addrxlat_os_linux, GKI_linux_vmcoreinfo_lines },
-		{ addrxlat_os_xen, GKI_xen_vmcoreinfo_lines },
-		{ addrxlat_os_unknown }
+		{ ADDRXLAT_OS_LINUX, GKI_linux_vmcoreinfo_lines },
+		{ ADDRXLAT_OS_XEN, GKI_xen_vmcoreinfo_lines },
+		{ ADDRXLAT_OS_UNKNOWN }
 	};
 
 	const struct attr_data *base;
@@ -293,9 +293,9 @@ kdump_vmcoreinfo_symbol(kdump_ctx_t *ctx, const char *symname,
 			kdump_addr_t *symvalue)
 {
 	static const struct ostype_attr_map symbol_map[] = {
-		{ addrxlat_os_linux, GKI_linux_symbol },
-		{ addrxlat_os_xen, GKI_xen_symbol },
-		{ addrxlat_os_unknown }
+		{ ADDRXLAT_OS_LINUX, GKI_linux_symbol },
+		{ ADDRXLAT_OS_XEN, GKI_xen_symbol },
+		{ ADDRXLAT_OS_UNKNOWN }
 	};
 
 	const struct attr_data *base;

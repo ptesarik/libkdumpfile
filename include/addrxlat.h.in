@@ -643,9 +643,9 @@ addrxlat_map_t *addrxlat_map_dup(const addrxlat_map_t *map);
 
 /** Operating system type. */
 typedef enum _addrxlat_ostype {
-	addrxlat_os_unknown,	/**< Unknown OS. */
-	addrxlat_os_linux,	/**< Linux kernel. */
-	addrxlat_os_xen,	/**< Xen hypervisor. */
+	ADDRXLAT_OS_UNKNOWN,	/**< Unknown OS. */
+	ADDRXLAT_OS_LINUX,	/**< Linux kernel. */
+	ADDRXLAT_OS_XEN,	/**< Xen hypervisor. */
 } addrxlat_ostype_t;
 
 /** Description of an operating system.

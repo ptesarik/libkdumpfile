@@ -1119,7 +1119,7 @@ struct attr_data *
 ostype_attr(const struct kdump_shared *shared,
 	    const struct ostype_attr_map *map)
 {
-	while (map->ostype != addrxlat_os_unknown) {
+	while (map->ostype != ADDRXLAT_OS_UNKNOWN) {
 		if (map->ostype == shared->ostype)
 			return sgattr(shared, map->attrkey);
 		++map;
