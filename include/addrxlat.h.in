@@ -653,16 +653,25 @@ typedef enum _addrxlat_ostype {
  * to set up a translation map.
  */
 typedef struct _addrxlat_osdesc {
-	/** Operating system type. */
-	addrxlat_ostype_t type;
-
-	/** Operating system version. */
-	unsigned long ver;
-
-	/** Architecture name. */
+	/** Architecture name.
+	 * This member must be set and not @c NULL.
+	 */
 	const char *arch;
 
-	/** Further options, e.g. architecture variant */
+	/** Operating system type.
+	 * If undetermined, use @c ADDRXLAT_OS_UNKNOWN.
+	 */
+	addrxlat_ostype_t type;
+
+	/** Operating system version.
+	 * Use zero if uknown.
+	 */
+	unsigned long ver;
+
+	/** Further options, e.g. architecture variant.
+	 * This member is optional. If there are no options, you can
+	 * eith set it to an empty string or @c NULL.
+	 */
 	const char *opts;
 } addrxlat_osdesc_t;
 
