@@ -311,6 +311,7 @@ DECLARE_ALIAS(launch);
 DECLARE_ALIAS(launch_map);
 DECLARE_ALIAS(step);
 DECLARE_ALIAS(walk);
+DECLARE_ALIAS(op);
 DECLARE_ALIAS(by_sys);
 
 /* near alias */

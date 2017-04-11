@@ -554,6 +554,8 @@ xlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
 	return status;
 }
 
+DEFINE_ALIAS(op);
+
 addrxlat_status
 addrxlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
 {
@@ -590,5 +592,5 @@ addrxlat_by_sys(addrxlat_ctx_t *ctx, const addrxlat_sys_t *sys,
 	opctl.op = storeaddr;
 	opctl.data = paddr;
 	opctl.caps = ADDRXLAT_CAPS(goal);
-	return addrxlat_op(&opctl, paddr);
+	return internal_op(&opctl, paddr);
 }
