@@ -100,7 +100,10 @@ addrxlat_status
 addrxlat_launch(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
 	clear_error(step->ctx);
-	return step->meth->first_step(step, addr);
+	return step->meth
+		? step->meth->first_step(step, addr)
+		: set_error(step->ctx, ADDRXLAT_ERR_NOMETH,
+			    "Null translation method");
 }
 
 DEFINE_ALIAS(launch_map);
