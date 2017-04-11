@@ -39,8 +39,8 @@ LIBADDRXLAT_0 {
     addrxlat_step;
     addrxlat_walk;
 
-    addrxlat_by_sys;
     addrxlat_op;
+    addrxlat_fulladdr_conv;
 
     addrxlat_strerror;
 

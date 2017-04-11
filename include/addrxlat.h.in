@@ -964,24 +964,6 @@ addrxlat_status addrxlat_step(addrxlat_step_t *step);
  */
 addrxlat_status addrxlat_walk(addrxlat_step_t *step);
 
-/** Translate an address using a translation system.
- * @param ctx            Address translation context.
- * @param sys            Translation system.
- * @param[in,out] paddr  Address.
- * @param goal           Target address space.
- * @returns              Error status.
- *
- * This function performs all address translations (possibly repeated)
- * necessary to convert the original address @c orig to the target
- * address space @c goal. On success, it stores the result in @c dest.
- *
- * NB: If there is no way to translate the source address space to
- * target address space, this function returns @ref ADDRXLAT_ERR_NOMETH.
- */
-addrxlat_status addrxlat_by_sys(
-	addrxlat_ctx_t *ctx, const addrxlat_sys_t *sys,
-	addrxlat_fulladdr_t *paddr, addrxlat_addrspace_t goal);
-
 /** Type of the @ref addrxlat_op callback.
  * @param data      Arbitrary user-supplied data.
  * @param[in] addr  Translated address.
@@ -1017,9 +999,26 @@ typedef struct _addrxlat_op_ctl {
  * @param ctl   Control structure.
  * @param addr  Address (in any address space).
  * @returns     Error status.
+ *
+ * NB: If there is no way to translate the source address space to
+ * target address space, this function returns @ref ADDRXLAT_ERR_NOMETH.
  */
 addrxlat_status addrxlat_op(const addrxlat_op_ctl_t *ctl,
 			    const addrxlat_fulladdr_t *addr);
+
+/** Translate a full address.
+ * @param faddr  Full address to be translated.
+ * @param as     Target address space.
+ * @param ctx    Address translation context.
+ * @param sys    Translation system.
+ * @returns      Error status.
+ *
+ * Convert a full address to the target address space using the given
+ * translation context and translation system.
+ */
+addrxlat_status addrxlat_fulladdr_conv(
+	addrxlat_fulladdr_t *faddr, addrxlat_addrspace_t as,
+	addrxlat_ctx_t *ctx, const addrxlat_sys_t *sys);
 
 #ifdef  __cplusplus
 }

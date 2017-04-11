@@ -312,7 +312,7 @@ DECLARE_ALIAS(launch_map);
 DECLARE_ALIAS(step);
 DECLARE_ALIAS(walk);
 DECLARE_ALIAS(op);
-DECLARE_ALIAS(by_sys);
+DECLARE_ALIAS(fulladdr_conv);
 
 /* near alias */
 INTERNAL_DECL(addrxlat_status, xlat_op,

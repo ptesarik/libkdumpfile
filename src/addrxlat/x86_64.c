@@ -268,7 +268,7 @@ is_directmap(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 
 	faddr.addr = addr;
 	faddr.as = ADDRXLAT_KVADDR;
-	status = internal_by_sys(ctx, sys, &faddr, ADDRXLAT_KPHYSADDR);
+	status = internal_fulladdr_conv(&faddr, ADDRXLAT_KPHYSADDR, ctx, sys);
 	clear_error(ctx);
 	return status == ADDRXLAT_OK && faddr.addr == 0;
 }
@@ -325,7 +325,8 @@ set_ktext_offset(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	status = internal_by_sys(ctx, sys, &step.base, ADDRXLAT_KPHYSADDR);
+	status = internal_fulladdr_conv(&step.base, ADDRXLAT_KPHYSADDR,
+					ctx, sys);
 	if (status != ADDRXLAT_OK)
 		return status;
 

@@ -930,7 +930,7 @@ translate(struct cbdata *cbd, char *spec)
 	if (res != TEST_OK)
 		return res;
 
-	status = addrxlat_by_sys(cbd->ctx, cbd->sys, &addr, goal);
+	status = addrxlat_fulladdr_conv(&addr, goal, cbd->ctx, cbd->sys);
 	if (status == ADDRXLAT_ERR_NOMETH) {
 		printf("%s -> NOMETH\n", spec);
 	} else if (status != ADDRXLAT_OK) {

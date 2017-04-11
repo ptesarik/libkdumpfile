@@ -429,7 +429,7 @@ static const addrxlat_addrspace_t map_expect_as[ADDRXLAT_SYS_MAP_NUM] =
 
 /**  In-flight translation.
  * This is used to detect infinite recursion.
- * @sa addrxlat_by_sys
+ * @sa addrxlat_op
  */
 struct inflight {
 	/** Full address to be translated. */
@@ -579,18 +579,18 @@ storeaddr(void *data, const addrxlat_fulladdr_t *paddr)
 	return ADDRXLAT_OK;
 }
 
-DEFINE_ALIAS(by_sys);
+DEFINE_ALIAS(fulladdr_conv);
 
 addrxlat_status
-addrxlat_by_sys(addrxlat_ctx_t *ctx, const addrxlat_sys_t *sys,
-		addrxlat_fulladdr_t *paddr, addrxlat_addrspace_t goal)
+addrxlat_fulladdr_conv(addrxlat_fulladdr_t *faddr, addrxlat_addrspace_t as,
+		       addrxlat_ctx_t *ctx, const addrxlat_sys_t *sys)
 {
 	addrxlat_op_ctl_t opctl;
 
 	opctl.ctx = ctx;
 	opctl.sys = sys;
 	opctl.op = storeaddr;
-	opctl.data = paddr;
-	opctl.caps = ADDRXLAT_CAPS(goal);
-	return internal_op(&opctl, paddr);
+	opctl.data = faddr;
+	opctl.caps = ADDRXLAT_CAPS(as);
+	return internal_op(&opctl, faddr);
 }
