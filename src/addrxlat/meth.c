@@ -32,7 +32,7 @@
 
 #include "addrxlat-priv.h"
 
-static void setup_none(addrxlat_meth_t *meth);
+static void setup_nometh(addrxlat_meth_t *meth);
 
 DEFINE_ALIAS(meth_new);
 
@@ -42,8 +42,8 @@ addrxlat_meth_new(void)
 	addrxlat_meth_t *meth = calloc(1, sizeof(addrxlat_meth_t));
 	if (meth) {
 		meth->refcnt = 1;
-		meth->desc.kind = ADDRXLAT_NONE;
-		setup_none(meth);
+		meth->desc.kind = ADDRXLAT_NOMETH;
+		setup_nometh(meth);
 	}
 	return meth;
 }
@@ -80,7 +80,7 @@ addrxlat_meth_decref(addrxlat_meth_t *meth)
  * @ref ADDRXLAT_ERR_NOMETH.
  */
 static addrxlat_status
-first_step_none(addrxlat_step_t *step, addrxlat_addr_t addr)
+first_step_nometh(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
 	return set_error(step->ctx, ADDRXLAT_ERR_NOMETH,
 			 "Null translation method");
@@ -102,9 +102,9 @@ next_step_ident(addrxlat_step_t *state)
  * @param meth  Translation method.
  */
 static void
-setup_none(addrxlat_meth_t *meth)
+setup_nometh(addrxlat_meth_t *meth)
 {
-	meth->first_step = first_step_none;
+	meth->first_step = first_step_nometh;
 	meth->next_step = next_step_ident;
 }
 
@@ -418,8 +418,8 @@ addrxlat_meth_set_desc(addrxlat_meth_t *meth, const addrxlat_desc_t *desc)
 	addrxlat_status status;
 
 	switch (desc->kind) {
-	case ADDRXLAT_NONE:
-		setup_none(meth);
+	case ADDRXLAT_NOMETH:
+		setup_nometh(meth);
 		break;
 
 	case ADDRXLAT_LINEAR:

@@ -130,8 +130,8 @@ print_meth(const addrxlat_meth_t *meth)
 	const addrxlat_desc_t *desc = addrxlat_meth_get_desc(meth);
 
 	switch (desc->kind) {
-	case ADDRXLAT_NONE:
-		puts("NONE");
+	case ADDRXLAT_NOMETH:
+		puts("NOMETH");
 		break;
 
 	case ADDRXLAT_LINEAR:

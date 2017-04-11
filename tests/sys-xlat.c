@@ -103,7 +103,7 @@ static const kw_pair_t meth_names[] = {
 };
 
 static const kw_pair_t kind_names[] = {
-	{ "NONE", ADDRXLAT_NONE },
+	{ "NOMETH", ADDRXLAT_NOMETH },
 	{ "LINEAR", ADDRXLAT_LINEAR },
 	{ "PGT", ADDRXLAT_PGT },
 	{ "LOOKUP", ADDRXLAT_LOOKUP },
@@ -410,7 +410,7 @@ parse_meth_param(const char *spec, addrxlat_desc_t *desc)
 
 	i = NOTFOUND;
 	switch (desc->kind) {
-	case ADDRXLAT_NONE:
+	case ADDRXLAT_NOMETH:
 		break;
 
 	case ADDRXLAT_LINEAR:
@@ -685,7 +685,7 @@ read_config(FILE *f)
 	enum cfg_state state = cfg_init;
 	addrxlat_sys_meth_t methidx = ADDRXLAT_SYS_METH_NUM;
 	addrxlat_sys_map_t mapidx = ADDRXLAT_SYS_MAP_NUM;
-	addrxlat_desc_t desc = { .kind = ADDRXLAT_NONE };
+	addrxlat_desc_t desc = { .kind = ADDRXLAT_NOMETH };
 	addrxlat_map_t *map = NULL;
 	addrxlat_sys_t *sys;
 	int res;

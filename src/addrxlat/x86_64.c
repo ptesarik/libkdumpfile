@@ -348,7 +348,7 @@ set_pgt_fallback(addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
 {
 	addrxlat_meth_t *meth = sys->meth[idx];
 
-	if (meth->desc.kind == ADDRXLAT_NONE) {
+	if (meth->desc.kind == ADDRXLAT_NOMETH) {
 		addrxlat_meth_t *fallback = sys->meth[ADDRXLAT_SYS_METH_PGT];
 		internal_meth_set_desc(meth, &fallback->desc);
 	}

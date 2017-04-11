@@ -219,9 +219,9 @@ act_direct(struct sys_init_data *ctl,
 /** Action function for @ref SYS_ACT_IDENT_KPHYS.
  * @param meth  Current translation method.
  *
- * If the current method is @c ADDRXLAT_NONE, this action sets it up
+ * If the current method is @c ADDRXLAT_NOMETH, this action sets it up
  * as identity mapping to kernel physical addresses.
- * If the current method is not @c ADDRXLAT_NONE, nothing is done.
+ * If the current method is not @c ADDRXLAT_NOMETH, nothing is done.
  */
 static void
 act_ident_kphys(addrxlat_meth_t *meth)
@@ -236,9 +236,9 @@ act_ident_kphys(addrxlat_meth_t *meth)
 /** Action function for @ref SYS_ACT_IDENT_MACHPHYS.
  * @param meth  Current translation method.
  *
- * If the current method is @c ADDRXLAT_NONE, this action sets it up
+ * If the current method is @c ADDRXLAT_NOMETH, this action sets it up
  * as identity mapping to machine physical addresses.
- * If the current method is not @c ADDRXLAT_NONE, nothing is done.
+ * If the current method is not @c ADDRXLAT_NOMETH, nothing is done.
  */
 static void
 act_ident_machphys(addrxlat_meth_t *meth)

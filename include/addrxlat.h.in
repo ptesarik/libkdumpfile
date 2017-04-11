@@ -161,7 +161,7 @@ typedef struct _addrxlat_meth addrxlat_meth_t;
  */
 typedef enum _addrxlat_kind {
 	/** No mapping set. */
-	ADDRXLAT_NONE,
+	ADDRXLAT_NOMETH,
 
 	/** Linear mapping: dest = src + off. */
 	ADDRXLAT_LINEAR,
