@@ -475,7 +475,8 @@ do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
 				if (ctl->caps & ADDRXLAT_CAPS(paddr->as))
 					return ctl->op(ctl->data, paddr);
 				break;
-			} else if (status != ADDRXLAT_ERR_NOMETH)
+			} else if (status != ADDRXLAT_ERR_NOMETH &&
+				   status != ADDRXLAT_ERR_NODATA)
 				return status;
 		}
 	}

@@ -1,4 +1,4 @@
-/* Translations that should produce kdump_nometh
+/* Translations that should produce ADDRXLAT_ERR_NOMETH errors
    Copyright (C) 2017 Petr Tesarik <ptesarik@suse.com>
 
    This file is free software; you can redistribute it and/or modify

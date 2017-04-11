@@ -102,9 +102,9 @@ addrspace_name(addrxlat_addrspace_t as)
 	}
 }
 
-/** Common format string for missing read callback/capability. */
-static const char read_nometh_fmt[] =
-	"No method to read %d-bit %s";
+/** Common format string for missing read callback. */
+static const char read_nocb_fmt[] =
+	"No read callback for %d-bit %s";
 
 /** Common format string for read callback failures. */
 static const char read_err_fmt[] =
@@ -139,7 +139,7 @@ read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
 	addrxlat_status status;
 
 	if (!ctx->cb.read32)
-		return set_error(ctx, ADDRXLAT_ERR_NOMETH, read_nometh_fmt, 32,
+		return set_error(ctx, ADDRXLAT_ERR_NODATA, read_nocb_fmt, 32,
 				 addrspace_name(addr->as));
 
 	param.ctx = ctx;
@@ -181,7 +181,7 @@ read64(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint64_t *val,
 	addrxlat_status status;
 
 	if (!ctx->cb.read64)
-		return set_error(ctx, ADDRXLAT_ERR_NOMETH, read_nometh_fmt, 64,
+		return set_error(ctx, ADDRXLAT_ERR_NODATA, read_nocb_fmt, 64,
 				 addrspace_name(addr->as));
 
 	param.ctx = ctx;
@@ -217,7 +217,7 @@ get_reg(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 	addrxlat_status status;
 
 	if (!ctx->cb.sym)
-		return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
+		return set_error(ctx, ADDRXLAT_ERR_NODATA,
 				 "No symbolic information callback");
 
 	info.sym.type = ADDRXLAT_SYM_REG;
@@ -249,7 +249,7 @@ get_symval(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 	addrxlat_status status;
 
 	if (!ctx->cb.sym)
-		return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
+		return set_error(ctx, ADDRXLAT_ERR_NODATA,
 				 "No symbolic information callback");
 
 	info.sym.type = ADDRXLAT_SYM_VALUE;
@@ -281,7 +281,7 @@ get_sizeof(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *sz)
 	addrxlat_status status;
 
 	if (!ctx->cb.sym)
-		return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
+		return set_error(ctx, ADDRXLAT_ERR_NODATA,
 				 "No symbolic information callback");
 
 	info.sym.type = ADDRXLAT_SYM_SIZEOF;
@@ -316,7 +316,7 @@ get_offsetof(addrxlat_ctx_t *ctx, const char *type, const char *memb,
 	addrxlat_status status;
 
 	if (!ctx->cb.sym)
-		return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
+		return set_error(ctx, ADDRXLAT_ERR_NODATA,
 				 "No symbolic information callback");
 
 	info.sym.type = ADDRXLAT_SYM_OFFSETOF;
