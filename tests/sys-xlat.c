@@ -813,7 +813,7 @@ read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 	uint32_t *p;
 
 	if (addr->as != ADDRXLAT_MACHPHYSADDR)
-		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_INVALID,
+		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_ERR_INVALID,
 					"Unexpected address space: %ld",
 					(long)addr->as);
 
@@ -833,7 +833,7 @@ read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 	uint64_t *p;
 
 	if (addr->as != ADDRXLAT_MACHPHYSADDR)
-		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_INVALID,
+		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_ERR_INVALID,
 					"Unexpected address space: %ld",
 					(long)addr->as);
 
@@ -931,7 +931,7 @@ translate(struct cbdata *cbd, char *spec)
 		return res;
 
 	status = addrxlat_by_sys(cbd->ctx, cbd->sys, &addr, goal);
-	if (status == ADDRXLAT_NOMETH) {
+	if (status == ADDRXLAT_ERR_NOMETH) {
 		printf("%s -> NOMETH\n", spec);
 	} else if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Address translation failed: %s\n",

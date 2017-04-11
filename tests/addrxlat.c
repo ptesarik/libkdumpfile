@@ -57,7 +57,7 @@ read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 	addrxlat_ctx_t *ctx = data;
 	addrxlat_lookup_elem_t *ent = find_entry(addr->addr);
 	if (!ent)
-		return addrxlat_ctx_err(ctx, ADDRXLAT_NODATA, "No data");
+		return addrxlat_ctx_err(ctx, ADDRXLAT_ERR_NODATA, "No data");
 	*val = ent->dest;
 	return ADDRXLAT_OK;
 }
@@ -68,7 +68,7 @@ read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 	addrxlat_ctx_t *ctx = data;
 	addrxlat_lookup_elem_t *ent = find_entry(addr->addr);
 	if (!ent)
-		return addrxlat_ctx_err(ctx, ADDRXLAT_NODATA, "No data");
+		return addrxlat_ctx_err(ctx, ADDRXLAT_ERR_NODATA, "No data");
 	*val = ent->dest;
 	return ADDRXLAT_OK;
 }

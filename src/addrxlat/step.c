@@ -60,7 +60,7 @@ read_pte(addrxlat_step_t *step)
 		break;
 
 	default:
-		return set_error(step->ctx, ADDRXLAT_NOTIMPL,
+		return set_error(step->ctx, ADDRXLAT_ERR_NOTIMPL,
 				 "Unsupported PTE size: %u",
 				 1 << pgt->pte_shift);
 	}
@@ -113,7 +113,7 @@ addrxlat_launch_map(addrxlat_step_t *step, addrxlat_addr_t addr,
 
 	step->meth = internal_map_search(map, addr);
 	if (!step->meth)
-		return set_error(step->ctx, ADDRXLAT_NOMETH,
+		return set_error(step->ctx, ADDRXLAT_ERR_NOMETH,
 				 "No translation method defined");
 
 	return step->meth->first_step(step, addr);

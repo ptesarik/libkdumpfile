@@ -119,7 +119,7 @@ main(int argc, char **argv)
 	puts("Testing single error message...");
 	for (i = 0; i < sizeof(loremipsum); ++i) {
 		addrxlat_ctx_clear_err(ctx);
-		addrxlat_ctx_err(ctx, ADDRXLAT_CUSTOM_STATUS_BASE,
+		addrxlat_ctx_err(ctx, ADDRXLAT_ERR_CUSTOM_BASE,
 				 "%.*s", i, loremipsum);
 		err = addrxlat_ctx_get_err(ctx);
 		len = strlen(err);
@@ -137,14 +137,14 @@ main(int argc, char **argv)
 	puts("Testing appended message...");
 	for (i = 0; i < sizeof(loremipsum); ++i) {
 		addrxlat_ctx_clear_err(ctx);
-		addrxlat_ctx_err(ctx, ADDRXLAT_CUSTOM_STATUS_BASE, othermsg);
+		addrxlat_ctx_err(ctx, ADDRXLAT_ERR_CUSTOM_BASE, othermsg);
 		err = addrxlat_ctx_get_err(ctx);
 		if (strcmp(err, othermsg)) {
 			printf("Wrong last level message: %s\n", err);
 			++errors;
 		}
 
-		addrxlat_ctx_err(ctx, ADDRXLAT_CUSTOM_STATUS_BASE,
+		addrxlat_ctx_err(ctx, ADDRXLAT_ERR_CUSTOM_BASE,
 				 "%.*s", i, loremipsum);
 		err = addrxlat_ctx_get_err(ctx);
 		len = strlen(err);
@@ -164,7 +164,7 @@ main(int argc, char **argv)
 	puts("Testing prepended message...");
 	for (i = 0; i < sizeof(loremipsum); ++i) {
 		addrxlat_ctx_clear_err(ctx);
-		addrxlat_ctx_err(ctx, ADDRXLAT_CUSTOM_STATUS_BASE,
+		addrxlat_ctx_err(ctx, ADDRXLAT_ERR_CUSTOM_BASE,
 				 "%.*s", i, loremipsum);
 		err = addrxlat_ctx_get_err(ctx);
 		len = strlen(err);
@@ -174,7 +174,7 @@ main(int argc, char **argv)
 			continue;
 		}
 
-		addrxlat_ctx_err(ctx, ADDRXLAT_CUSTOM_STATUS_BASE, othermsg);
+		addrxlat_ctx_err(ctx, ADDRXLAT_ERR_CUSTOM_BASE, othermsg);
 		err = addrxlat_ctx_get_err(ctx);
 		len = strlen(err);
 		explen = strlen(othermsg) + i;
@@ -199,7 +199,7 @@ main(int argc, char **argv)
 
 	puts("Invalid format string...");
 	addrxlat_ctx_clear_err(ctx);
-	addrxlat_ctx_err(ctx, ADDRXLAT_CUSTOM_STATUS_BASE,
+	addrxlat_ctx_err(ctx, ADDRXLAT_ERR_CUSTOM_BASE,
 			 "%9999999999999d", 0);
 	err = addrxlat_ctx_get_err(ctx);
 	if (strcmp(err, "(bad format string)")) {
@@ -223,7 +223,7 @@ main(int argc, char **argv)
 	/* Get size of the fallback buffer. */
 	if (force_nomem())
 		return TEST_ERR;
-	addrxlat_ctx_err(ctx, ADDRXLAT_CUSTOM_STATUS_BASE, loremipsum);
+	addrxlat_ctx_err(ctx, ADDRXLAT_ERR_CUSTOM_BASE, loremipsum);
 	if (release_mem())
 		return TEST_ERR;
 
@@ -242,7 +242,7 @@ main(int argc, char **argv)
 		return TEST_ERR;
 	for (i = maxlen; i < sizeof(loremipsum); ++i) {
 		addrxlat_ctx_clear_err(ctx);
-		addrxlat_ctx_err(ctx, ADDRXLAT_CUSTOM_STATUS_BASE,
+		addrxlat_ctx_err(ctx, ADDRXLAT_ERR_CUSTOM_BASE,
 				 "%.*s", i, loremipsum);
 		err = addrxlat_ctx_get_err(ctx);
 		len = strlen(err);
@@ -268,14 +268,14 @@ main(int argc, char **argv)
 		return TEST_ERR;
 	for (i = maxlen - strlen(othermsg) - 2; i < sizeof(loremipsum); ++i) {
 		addrxlat_ctx_clear_err(ctx);
-		addrxlat_ctx_err(ctx, ADDRXLAT_CUSTOM_STATUS_BASE, othermsg);
+		addrxlat_ctx_err(ctx, ADDRXLAT_ERR_CUSTOM_BASE, othermsg);
 		err = addrxlat_ctx_get_err(ctx);
 		if (strcmp(err, othermsg)) {
 			printf("Wrong last level message: %s\n", err);
 			++errors;
 		}
 
-		addrxlat_ctx_err(ctx, ADDRXLAT_CUSTOM_STATUS_BASE,
+		addrxlat_ctx_err(ctx, ADDRXLAT_ERR_CUSTOM_BASE,
 				 "%.*s", i, loremipsum);
 		err = addrxlat_ctx_get_err(ctx);
 		len = strlen(err);
@@ -316,7 +316,7 @@ main(int argc, char **argv)
 	puts("Testing prepended message...");
 	for (i = maxlen - strlen(othermsg) - 2; i < sizeof(loremipsum); ++i) {
 		addrxlat_ctx_clear_err(ctx);
-		addrxlat_ctx_err(ctx, ADDRXLAT_CUSTOM_STATUS_BASE,
+		addrxlat_ctx_err(ctx, ADDRXLAT_ERR_CUSTOM_BASE,
 				 "%.*s", i, loremipsum);
 		err = addrxlat_ctx_get_err(ctx);
 		len = strlen(err);
@@ -328,7 +328,7 @@ main(int argc, char **argv)
 
 		if (force_nomem())
 			return TEST_ERR;
-		addrxlat_ctx_err(ctx, ADDRXLAT_CUSTOM_STATUS_BASE, othermsg);
+		addrxlat_ctx_err(ctx, ADDRXLAT_ERR_CUSTOM_BASE, othermsg);
 		if (release_mem())
 			return TEST_ERR;
 		err = addrxlat_ctx_get_err(ctx);

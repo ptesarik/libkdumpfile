@@ -241,7 +241,7 @@ testop(void *data, const addrxlat_fulladdr_t *addr)
 
 	return addr->as == expect->as && addr->addr == expect->addr
 		? ADDRXLAT_OK
-		: ADDRXLAT_CUSTOM_STATUS_BASE;
+		: ADDRXLAT_ERR_CUSTOM_BASE;
 }
 
 static int
@@ -253,7 +253,7 @@ test_one(addrxlat_op_ctl_t *ctl, const struct test *test)
 	print_fulladdr(&test->addr);
 	fputs(" expect ", stdout);
 	if (test->expect.as == ADDRXLAT_NOADDR)
-		fputs("ADDRXLAT_NOMETH", stdout);
+		fputs("ADDRXLAT_ERR_NOMETH", stdout);
 	else
 		print_fulladdr(&test->expect);
 
@@ -262,12 +262,12 @@ test_one(addrxlat_op_ctl_t *ctl, const struct test *test)
 	addr = test->addr;
 	status = addrxlat_op(ctl, &addr);
 	if (test->expect.as == ADDRXLAT_NOADDR) {
-		if (status == ADDRXLAT_NOMETH) {
+		if (status == ADDRXLAT_ERR_NOMETH) {
 			printf(": OK (%s)\n", addrxlat_ctx_get_err(ctl->ctx));
 			return TEST_OK;
 		}
 		if (status == ADDRXLAT_OK ||
-		    status == ADDRXLAT_CUSTOM_STATUS_BASE) {
+		    status == ADDRXLAT_ERR_CUSTOM_BASE) {
 			puts(": FAIL");
 			return TEST_FAIL;
 		}
@@ -276,7 +276,7 @@ test_one(addrxlat_op_ctl_t *ctl, const struct test *test)
 			puts(": OK");
 			return TEST_OK;
 		}
-		if (status == ADDRXLAT_CUSTOM_STATUS_BASE) {
+		if (status == ADDRXLAT_ERR_CUSTOM_BASE) {
 			puts(": FAIL");
 			return TEST_FAIL;
 		}

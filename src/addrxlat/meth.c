@@ -77,12 +77,12 @@ addrxlat_meth_decref(addrxlat_meth_t *meth)
  * @returns     Error status.
  *
  * This method does not modify anything and always fails with
- * @ref ADDRXLAT_NOMETH.
+ * @ref ADDRXLAT_ERR_NOMETH.
  */
 static addrxlat_status
 first_step_none(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	return set_error(step->ctx, ADDRXLAT_NOMETH,
+	return set_error(step->ctx, ADDRXLAT_ERR_NOMETH,
 			 "Null translation method");
 }
 
@@ -148,7 +148,7 @@ first_step_pgt(addrxlat_step_t *step, addrxlat_addr_t addr)
 	unsigned short i;
 
 	if (pgt->root.as == ADDRXLAT_NOADDR)
-		return set_error(step->ctx, ADDRXLAT_NODATA,
+		return set_error(step->ctx, ADDRXLAT_ERR_NODATA,
 				 "Page table address not specified");
 
 	step->base = pgt->root;
@@ -177,7 +177,7 @@ static addrxlat_status
 step_check_uaddr(addrxlat_step_t *step)
 {
 	return step->idx[step->meth->desc.param.pgt.pf.nfields]
-		? set_error(step->ctx, ADDRXLAT_INVALID,
+		? set_error(step->ctx, ADDRXLAT_ERR_INVALID,
 			    "Virtual address too big")
 		: ADDRXLAT_OK;
 }
@@ -219,7 +219,7 @@ step_check_saddr(addrxlat_step_t *step)
 	s.bit = step->idx[lvl - 1] >> (pf->fieldsz[lvl - 1] - 1);
 	signext = s.bit & (extra->pgt_mask[lvl - 1] >> extra->vaddr_bits);
 	return step->idx[lvl] != signext
-		? set_error(step->ctx, ADDRXLAT_INVALID,
+		? set_error(step->ctx, ADDRXLAT_ERR_INVALID,
 			    "Virtual address too big")
 		: ADDRXLAT_OK;
 }
@@ -291,7 +291,7 @@ setup_pgt(addrxlat_meth_t *meth, const addrxlat_desc_t *desc)
 		SETUP(ADDRXLAT_PTE_PPC64_LINUX_RPN30,
 		      first_step_pgt, pgt_ppc64_linux_rpn30);
 	default:
-		return ADDRXLAT_NOTIMPL;
+		return ADDRXLAT_ERR_NOTIMPL;
 	};
 
 	extra->pte_shift = addrxlat_pteval_shift(pf->pte_format);
@@ -329,7 +329,7 @@ first_step_lookup(addrxlat_step_t *step, addrxlat_addr_t addr)
 		}
 	}
 
-	return set_error(step->ctx, ADDRXLAT_NOTPRESENT, "Not mapped");
+	return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT, "Not mapped");
 }
 
 /** Set up table lookup translation.
@@ -387,7 +387,7 @@ next_step_memarr(addrxlat_step_t *step)
 		break;
 
 	default:
-		return set_error(step->ctx, ADDRXLAT_NOTIMPL,
+		return set_error(step->ctx, ADDRXLAT_ERR_NOTIMPL,
 				 "Unsupported value size: %u", memarr->valsz);
 	}
 
@@ -441,7 +441,7 @@ addrxlat_meth_set_desc(addrxlat_meth_t *meth, const addrxlat_desc_t *desc)
 		break;
 
 	default:
-		return ADDRXLAT_NOTIMPL;
+		return ADDRXLAT_ERR_NOTIMPL;
 	}
 
 	meth->desc = *desc;

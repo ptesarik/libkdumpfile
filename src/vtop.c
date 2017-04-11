@@ -334,14 +334,14 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 	case ADDRXLAT_SYM_VALUE:
 		status = ctx->cb_get_symbol_val(ctx, sym->args[0], &sym->val);
 		return status == KDUMP_NODATA
-			? ADDRXLAT_NODATA
+			? ADDRXLAT_ERR_NODATA
 			: (addrxlat_status) -(int)status;
 
 	case ADDRXLAT_SYM_SIZEOF:
 		base = ostype_attr(ctx->shared, sizeof_map);
 		if (!base)
 			return addrxlat_ctx_err(
-				ctx->xlatctx, ADDRXLAT_NOTIMPL,
+				ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
 				"Unsupported OS");
 		break;
 
@@ -349,7 +349,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 		base = ostype_attr(ctx->shared, offsetof_map);
 		if (!base)
 			return addrxlat_ctx_err(
-				ctx->xlatctx, ADDRXLAT_NOTIMPL,
+				ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
 				"Unsupported OS");
 		break;
 
@@ -358,12 +358,12 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 		base = lookup_attr(ctx->shared, "cpu.0.reg");
 		rwlock_unlock(&ctx->shared->lock);
 		if (!base)
-			return addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_NODATA,
+			return addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
 						"No registers");
 		break;
 
 	default:
-		return addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_NOTIMPL,
+		return addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
 					"Unhandled symbolic type");
 	}
 
@@ -372,12 +372,12 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 	attr = lookup_dir_attr(ctx->shared, base,
 			       sym->args[0], strlen(sym->args[0]));
 	if (!attr) {
-		ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_NODATA,
+		ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
 				       "Symbol not found");
 		goto out;
 	}
 	if (validate_attr(ctx, attr) != KDUMP_OK) {
-		ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_NODATA,
+		ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
 				       "Symbol has no value");
 		goto out;
 	}
@@ -386,12 +386,12 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 		attr = lookup_dir_attr(ctx->shared, attr,
 				       sym->args[1], strlen(sym->args[1]));
 		if (!attr) {
-			ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_NODATA,
+			ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
 					       "Field not found");
 			goto out;
 		}
 		if (validate_attr(ctx, attr) != KDUMP_OK) {
-			ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_NODATA,
+			ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
 					       "Field has no value");
 			goto out;
 		}
@@ -408,7 +408,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 		break;
 
 	default:
-		ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_NOTIMPL,
+		ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
 				       "Unhandled attribute type");
 	}
 

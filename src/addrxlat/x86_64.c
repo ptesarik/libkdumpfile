@@ -189,7 +189,7 @@ pgt_x86_64(addrxlat_step_t *step)
 		return status;
 
 	if (!(step->raw_pte & _PAGE_PRESENT))
-		return set_error(step->ctx, ADDRXLAT_NOTPRESENT,
+		return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
 				 pgt_full_name[step->remain - 1],
 				 pte_name[step->remain - 1],
@@ -388,7 +388,7 @@ linux_ktext_meth(struct sys_init_data *ctl)
 
 	status = set_ktext_offset(ctl->sys, ctl->ctx,
 				  __START_KERNEL_map + LINUX_KTEXT_SKIP);
-	if (status == ADDRXLAT_NOTPRESENT || status == ADDRXLAT_NODATA) {
+	if (status == ADDRXLAT_ERR_NOTPRESENT || status == ADDRXLAT_ERR_NODATA) {
 		clear_error(ctl->ctx);
 		status = set_ktext_offset(ctl->sys, ctl->ctx,
 					  __START_KERNEL_map +
@@ -415,9 +415,9 @@ linux_ktext_map(struct sys_init_data *ctl)
 
 	status = linux_ktext_meth(ctl);
 	if (status != ADDRXLAT_OK &&
-	    status != ADDRXLAT_NOMETH &&
-	    status != ADDRXLAT_NODATA &&
-	    status != ADDRXLAT_NOTPRESENT)
+	    status != ADDRXLAT_ERR_NOMETH &&
+	    status != ADDRXLAT_ERR_NODATA &&
+	    status != ADDRXLAT_ERR_NOTPRESENT)
 		return status;
 	clear_error(ctl->ctx);
 
@@ -628,7 +628,7 @@ setup_xen_pgt(struct sys_init_data *ctl)
 		desc.param.linear.off = ctl->popt.val[OPT_physbase].num -
 			xen_virt_start;
 	} else
-		return ADDRXLAT_NODATA;
+		return ADDRXLAT_ERR_NODATA;
 
 	/* Temporary linear mapping just for the page table */
 	layout[0].first = pgt;
@@ -774,7 +774,7 @@ sys_x86_64(struct sys_init_data *ctl)
 
 	map = internal_map_dup(ctl->sys->map[ADDRXLAT_SYS_MAP_HW]);
 	if (!map)
-		return set_error(ctl->ctx, ADDRXLAT_NOMEM,
+		return set_error(ctl->ctx, ADDRXLAT_ERR_NOMEM,
 				 "Cannot duplicate hardware mapping");
 	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = map;
 

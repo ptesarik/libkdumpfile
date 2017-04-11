@@ -122,7 +122,7 @@ huge_pd_linux(addrxlat_step_t *step)
 
 	pdshift = hugepd_shift(step->raw_pte);
 	if (!pdshift)
-		return set_error(step->ctx, ADDRXLAT_INVALID,
+		return set_error(step->ctx, ADDRXLAT_ERR_INVALID,
 				 "Invalid hugepd shift");
 
 	step->base.addr = (step->raw_pte & ~HUGEPD_SHIFT_MASK) | PD_HUGE;
@@ -199,7 +199,7 @@ pgt_ppc64_linux(addrxlat_step_t *step, unsigned rpn_shift)
 		return status;
 
 	if (!step->raw_pte)
-		return set_error(step->ctx, ADDRXLAT_NOTPRESENT,
+		return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 				 "%s[%u] is none",
 				 pte_name[step->remain - 1],
 				 (unsigned) step->idx[step->remain]);
@@ -306,7 +306,7 @@ get_vmemmap_desc(struct sys_init_data *ctl, addrxlat_desc_t *desc)
 	desc->param.lookup.nelem = cnt;
 	tblp = malloc(cnt * sizeof(addrxlat_lookup_elem_t));
 	if (!tblp)
-		return set_error(ctl->ctx, ADDRXLAT_NOMEM,
+		return set_error(ctl->ctx, ADDRXLAT_ERR_NOMEM,
 				 "Cannot allocate VMEMMAP translation");
 	desc->param.lookup.tbl = tblp;
 
@@ -360,7 +360,7 @@ map_linux_ppc64(struct sys_init_data *ctl)
 		: _64K;		/* default 64k */
 
 	if (pagesize != _64K)
-		return set_error(ctl->ctx, ADDRXLAT_NOTIMPL,
+		return set_error(ctl->ctx, ADDRXLAT_ERR_NOTIMPL,
 				 "Unsupported page size: %ld", pagesize);
 
 	status = sys_set_physmaps(ctl, (1ULL << (64 - 30 + 16)) - 1);
@@ -388,7 +388,7 @@ map_linux_ppc64(struct sys_init_data *ctl)
 
 	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_VMEMMAP];
 	status = get_vmemmap_desc(ctl, &desc);
-	if (status == ADDRXLAT_NODATA) {
+	if (status == ADDRXLAT_ERR_NODATA) {
 		/* ignore (VMEMMAP addresses will be unresolvable) */
 		clear_error(ctl->ctx);
 		return ADDRXLAT_OK;
@@ -415,7 +415,7 @@ sys_ppc64(struct sys_init_data *ctl)
 		return map_linux_ppc64(ctl);
 
 	default:
-		return set_error(ctl->ctx, ADDRXLAT_NOTIMPL,
+		return set_error(ctl->ctx, ADDRXLAT_ERR_NOTIMPL,
 				 "OS type not implemented");
 	}
 }

@@ -83,7 +83,7 @@ read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 	uint32_t *p;
 
 	if (addr->as != ADDRXLAT_MACHPHYSADDR)
-		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_INVALID,
+		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_ERR_INVALID,
 					"Unexpected address space: %ld",
 					(long)addr->as);
 
@@ -103,7 +103,7 @@ read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 	uint64_t *p;
 
 	if (addr->as != ADDRXLAT_MACHPHYSADDR)
-		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_INVALID,
+		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_ERR_INVALID,
 					"Unexpected address space: %ld",
 					(long)addr->as);
 
@@ -194,7 +194,7 @@ get_symdata(void *data, addrxlat_sym_t *sym)
 		}
 	}
 
-	return ADDRXLAT_NODATA;
+	return ADDRXLAT_ERR_NODATA;
 }
 
 static unsigned long long ostype;

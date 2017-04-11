@@ -83,7 +83,7 @@ pgt_ia32(addrxlat_step_t *step)
 		return status;
 
 	if (!(step->raw_pte & _PAGE_PRESENT))
-		return set_error(step->ctx, ADDRXLAT_NOTPRESENT,
+		return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
 				 pgt_full_name[step->remain - 1],
 				 pte_name[step->remain - 1],
@@ -128,7 +128,7 @@ pgt_ia32_pae(addrxlat_step_t *step)
 		return status;
 
 	if (!(step->raw_pte & _PAGE_PRESENT))
-		return set_error(step->ctx, ADDRXLAT_NOTPRESENT,
+		return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
 				 pgt_full_name[step->remain - 1],
 				 pte_name[step->remain - 1],
@@ -232,7 +232,7 @@ check_pae(struct sys_init_data *ctl, const addrxlat_fulladdr_t *root,
 	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS]);
 	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS]);
 
-	return set_error(ctl->ctx, ADDRXLAT_NOTIMPL,
+	return set_error(ctl->ctx, ADDRXLAT_ERR_NOTIMPL,
 			 "Neither %s nor %s directmap found",
 			 "PAE", "non-PAE");
 }
@@ -248,7 +248,7 @@ check_pae_sym(struct sys_init_data *ctl)
 	addrxlat_status status;
 
 	if (ctl->osdesc->type != ADDRXLAT_OS_LINUX)
-		return set_error(ctl->ctx, ADDRXLAT_NOTIMPL,
+		return set_error(ctl->ctx, ADDRXLAT_ERR_NOTIMPL,
 				 "Unsupported OS");
 
 	status = get_symval(ctl->ctx, "swapper_pg_dir", &rootpgt.addr);
@@ -415,10 +415,10 @@ set_linux_directmap(struct sys_init_data *ctl, addrxlat_map_t *vtop)
 	addrxlat_status status;
 
 	status = try_vmap_area_list(ctl, &vmalloc_start);
-	if (status == ADDRXLAT_NODATA) {
+	if (status == ADDRXLAT_ERR_NODATA) {
 		clear_error(ctl->ctx);
 		status = try_vmlist(ctl, &vmalloc_start);
-		if (status == ADDRXLAT_NODATA) {
+		if (status == ADDRXLAT_ERR_NODATA) {
 			clear_error(ctl->ctx);
 			return ADDRXLAT_OK;
 		}
@@ -427,7 +427,7 @@ set_linux_directmap(struct sys_init_data *ctl, addrxlat_map_t *vtop)
 		return set_error(ctl->ctx, status,
 				 "Cannot determine VMALLOC start");
 	if (vmalloc_start <= LINUX_DIRECTMAP)
-		return set_error(ctl->ctx, ADDRXLAT_INVALID,
+		return set_error(ctl->ctx, ADDRXLAT_ERR_INVALID,
 				 "Invalid VMALLOC start: %"ADDRXLAT_PRIxADDR,
 				 vmalloc_start);
 
@@ -489,7 +489,7 @@ sys_ia32(struct sys_init_data *ctl)
 			status = check_pae(ctl, &rootpgtopt->fulladdr,
 					   XEN_DIRECTMAP);
 		else
-			status = ADDRXLAT_NOTIMPL;
+			status = ADDRXLAT_ERR_NOTIMPL;
 	}
 
 	if (status != ADDRXLAT_OK)
@@ -504,7 +504,7 @@ sys_ia32(struct sys_init_data *ctl)
 	range.endoff = VIRTADDR_MAX;
 	newmap = internal_map_new();
 	if (!newmap)
-		return set_error(ctl->ctx, ADDRXLAT_NOMEM,
+		return set_error(ctl->ctx, ADDRXLAT_ERR_NOMEM,
 				 "Cannot set up hardware mapping");
 	ctl->sys->map[ADDRXLAT_SYS_MAP_HW] = newmap;
 	status = internal_map_set(newmap, 0, &range);
@@ -521,7 +521,7 @@ sys_ia32(struct sys_init_data *ctl)
 
 	newmap = internal_map_new();
 	if (!newmap)
-		return set_error(ctl->ctx, ADDRXLAT_NOMEM,
+		return set_error(ctl->ctx, ADDRXLAT_ERR_NOMEM,
 				 "Cannot set up virt-to-phys mapping");
 	status = internal_map_set(newmap, 0, &range);
 	if (status != ADDRXLAT_OK) {

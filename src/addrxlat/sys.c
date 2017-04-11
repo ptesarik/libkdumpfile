@@ -106,7 +106,7 @@ addrxlat_sys_init(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	else if (!strcmp(osdesc->arch, "ppc64"))
 		arch_fn = sys_ppc64;
 	else
-		return set_error(ctx, ADDRXLAT_NOTIMPL,
+		return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
 				"Unsupported architecture");
 
 	sys_cleanup(sys);
@@ -174,7 +174,7 @@ sys_ensure_meth(struct sys_init_data *ctl, addrxlat_sys_meth_t idx)
 	if ( (ctl->sys->meth[idx] = internal_meth_new()) )
 		return ADDRXLAT_OK;
 
-	return set_error(ctl->ctx, ADDRXLAT_NOMEM,
+	return set_error(ctl->ctx, ADDRXLAT_ERR_NOMEM,
 			 "Cannot allocate translation method %u",
 			 (unsigned) idx);
 }
@@ -266,7 +266,7 @@ sys_set_layout(struct sys_init_data *ctl, addrxlat_sys_map_t idx,
 	if (!map) {
 		map = internal_map_new();
 		if (!map)
-			return set_error(ctl->ctx, ADDRXLAT_NOMEM,
+			return set_error(ctl->ctx, ADDRXLAT_ERR_NOMEM,
 					 "Cannot allocate translation map");
 		ctl->sys->map[idx] = map;
 	}
@@ -371,7 +371,7 @@ sys_sym_pgtroot(struct sys_init_data *ctl, const char *reg, const char *sym)
 	}
 	clear_error(ctl->ctx);
 
-	return ADDRXLAT_NODATA;
+	return ADDRXLAT_ERR_NODATA;
 }
 
 #define MAX_ALT_NUM	2
@@ -475,14 +475,14 @@ do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
 				if (ctl->caps & ADDRXLAT_CAPS(paddr->as))
 					return ctl->op(ctl->data, paddr);
 				break;
-			} else if (status != ADDRXLAT_NOMETH)
+			} else if (status != ADDRXLAT_ERR_NOMETH)
 				return status;
 		}
 	}
 
 	return ctl->ctx->err_str == NULL
-		? set_error(ctl->ctx, ADDRXLAT_NOMETH, "No way to translate")
-		: ADDRXLAT_NOMETH;
+		? set_error(ctl->ctx, ADDRXLAT_ERR_NOMETH, "No way to translate")
+		: ADDRXLAT_ERR_NOMETH;
 }
 
 /** A version of @ref addrxlat_op for internal use.
@@ -507,11 +507,11 @@ xlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
 	if ((ctl->caps & (ADDRXLAT_CAPS(ADDRXLAT_KVADDR) |
 			  ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR) |
 			  ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR))) == 0)
-		return set_error(ctl->ctx, ADDRXLAT_NOMETH,
+		return set_error(ctl->ctx, ADDRXLAT_ERR_NOMETH,
 				 "No suitable capabilities");
 
 	if (!ctl->sys)
-		return set_error(ctl->ctx, ADDRXLAT_NOMETH,
+		return set_error(ctl->ctx, ADDRXLAT_ERR_NOMETH,
 				 "No translation system");
 
 	switch (paddr->as) {
@@ -532,7 +532,7 @@ xlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
 		break;
 
 	default:
-		return set_error(ctl->ctx, ADDRXLAT_NOTIMPL,
+		return set_error(ctl->ctx, ADDRXLAT_ERR_NOTIMPL,
 				 "Unrecognized address space");
 	}
 
@@ -542,7 +542,7 @@ xlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
 		if (pif->faddr.addr == inflight.faddr.addr &&
 		    pif->faddr.as == inflight.faddr.as &&
 		    pif->chain == inflight.chain)
-			return set_error(ctl->ctx, ADDRXLAT_NOMETH,
+			return set_error(ctl->ctx, ADDRXLAT_ERR_NOMETH,
 					 "Infinite recursion loop");
 	inflight.next = ctl->ctx->inflight;
 	ctl->ctx->inflight = &inflight;

@@ -147,7 +147,7 @@ addrxlat2kdump(kdump_ctx_t *ctx, addrxlat_status status)
 
 	if (status < 0)
 		ret = -status;
-	else if (status == ADDRXLAT_NODATA)
+	else if (status == ADDRXLAT_ERR_NODATA)
 		ret = KDUMP_NODATA;
 	else
 		ret = KDUMP_ADDRXLAT;
@@ -171,7 +171,7 @@ kdump2addrxlat(kdump_ctx_t *ctx, kdump_status status)
 		return ADDRXLAT_OK;
 
 	if (status == KDUMP_NODATA)
-		ret = ADDRXLAT_NODATA;
+		ret = ADDRXLAT_ERR_NODATA;
 	else
 		ret = -status;
 

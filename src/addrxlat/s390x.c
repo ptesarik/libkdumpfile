@@ -77,7 +77,7 @@ pgt_s390x(addrxlat_step_t *step)
 		return status;
 
 	if (PTE_I(step->raw_pte))
-		return set_error(step->ctx, ADDRXLAT_NOTPRESENT,
+		return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
 				 pgt_full_name[step->remain - 1],
 				 pte_name[step->remain - 1],
@@ -85,7 +85,7 @@ pgt_s390x(addrxlat_step_t *step)
 				 step->raw_pte);
 
 	if (step->remain >= 2 && PTE_TT(step->raw_pte) != step->remain - 2)
-		return set_error(step->ctx, ADDRXLAT_INVALID,
+		return set_error(step->ctx, ADDRXLAT_ERR_INVALID,
 				 "Table type field %u in %s",
 				 (unsigned) PTE_TT(step->raw_pte),
 				 pgt_full_name[step->remain]);
@@ -104,7 +104,7 @@ pgt_s390x(addrxlat_step_t *step)
 			(pf->fieldsz[step->remain - 1] - pf->fieldsz[0]);
 		if (pgidx < PTE_TF(step->raw_pte) ||
 		    pgidx > PTE_TL(step->raw_pte))
-			return set_error(step->ctx, ADDRXLAT_NOTPRESENT,
+			return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 					 "%s index %u not within %u and %u",
 					 pgt_full_name[step->remain-1],
 					 (unsigned) step->idx[step->remain-1],
@@ -140,7 +140,7 @@ get_pgtroot(struct sys_init_data *ctl, addrxlat_fulladdr_t *root)
 	}
 
 	clear_error(ctl->ctx);
-	return set_error(ctl->ctx, ADDRXLAT_NOTIMPL,
+	return set_error(ctl->ctx, ADDRXLAT_ERR_NOTIMPL,
 			 "Cannot determine page table root address");
 }
 
@@ -192,7 +192,7 @@ determine_pgttype(struct sys_init_data *ctl)
 		ptr.addr += sizeof(uint64_t);
 	}
 
-	return set_error(ctl->ctx, ADDRXLAT_NOTPRESENT,
+	return set_error(ctl->ctx, ADDRXLAT_ERR_NOTPRESENT,
 			 "Empty top-level page table");
 }
 
@@ -223,7 +223,7 @@ sys_s390x(struct sys_init_data *ctl)
 	range.endoff = paging_max_index(&range.meth->desc.param.pgt.pf);
 	newmap = internal_map_new();
 	if (!newmap)
-		return set_error(ctl->ctx, ADDRXLAT_NOMEM,
+		return set_error(ctl->ctx, ADDRXLAT_ERR_NOMEM,
 				 "Cannot set up hardware mapping");
 	ctl->sys->map[ADDRXLAT_SYS_MAP_HW] = newmap;
 	status = internal_map_set(newmap, 0, &range);
@@ -233,7 +233,7 @@ sys_s390x(struct sys_init_data *ctl)
 
 	newmap = internal_map_dup(ctl->sys->map[ADDRXLAT_SYS_MAP_HW]);
 	if (!newmap)
-		return set_error(ctl->ctx, ADDRXLAT_NOMEM,
+		return set_error(ctl->ctx, ADDRXLAT_ERR_NOMEM,
 				 "Cannot duplicate hardware mapping");
 	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
 

@@ -128,7 +128,7 @@ main(int argc, char **argv)
 		puts("FAIL");
 		fputs("Unexpected success??\n", stderr);
 		ret = TEST_FAIL;
-	} else if (status != ADDRXLAT_NOMETH) {
+	} else if (status != ADDRXLAT_ERR_NOMETH) {
 		puts("ERR");
 		fprintf(stderr, "Cannot translate: %s\n",
 			addrxlat_ctx_get_err(ctx));
@@ -146,7 +146,7 @@ main(int argc, char **argv)
 		puts("FAIL");
 		fputs("Unexpected success??\n", stderr);
 		ret = TEST_FAIL;
-	} else if (status != ADDRXLAT_NOMETH) {
+	} else if (status != ADDRXLAT_ERR_NOMETH) {
 		puts("ERR");
 		fprintf(stderr, "Cannot translate: %s\n",
 			addrxlat_ctx_get_err(ctx));
@@ -164,7 +164,7 @@ main(int argc, char **argv)
 		puts("FAIL");
 		fputs("Unexpected success??\n", stderr);
 		ret = TEST_FAIL;
-	} else if (status != ADDRXLAT_NOMETH) {
+	} else if (status != ADDRXLAT_ERR_NOMETH) {
 		puts("ERR");
 		fprintf(stderr, "Cannot translate: %s\n",
 			addrxlat_ctx_get_err(ctx));
