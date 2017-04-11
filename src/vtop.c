@@ -75,7 +75,7 @@ get_version_code(kdump_ctx_t *ctx, unsigned long *pver)
 	/* Get OS type name */
 	attr = gattr(ctx, GKI_ostype);
 	status = validate_attr(ctx, attr);
-	if (status == KDUMP_NODATA)
+	if (status == KDUMP_ERR_NODATA)
 		return KDUMP_OK;
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot get OS type");
@@ -84,10 +84,10 @@ get_version_code(kdump_ctx_t *ctx, unsigned long *pver)
 	/* Get OS directory attribute */
 	attr = lookup_attr(ctx->shared, ostype);
 	if (!attr || attr->template->type != KDUMP_DIRECTORY)
-		return set_error(ctx, KDUMP_UNSUPPORTED,
+		return set_error(ctx, KDUMP_ERR_NOTIMPL,
 				 "Unknown operating system type: %s", ostype);
 	status = validate_attr(ctx, attr);
-	if (status == KDUMP_NODATA)
+	if (status == KDUMP_ERR_NODATA)
 		return KDUMP_OK;
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot get %s.%s",
@@ -99,14 +99,14 @@ get_version_code(kdump_ctx_t *ctx, unsigned long *pver)
 	if (!attr)
 		return KDUMP_OK;
 	status = validate_attr(ctx, attr);
-	if (status == KDUMP_NODATA)
+	if (status == KDUMP_ERR_NODATA)
 		return KDUMP_OK;
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot get %s.%s",
 				 ostype, attrname);
 
 	if (attr->template->type != KDUMP_NUMBER)
-		status = set_error(ctx, KDUMP_INVALID,
+		status = set_error(ctx, KDUMP_ERR_INVALID,
 				   "Attribute %s.%s is not a number",
 				   ostype, attrname);
 
@@ -167,7 +167,7 @@ set_x86_pae_opt(kdump_ctx_t *ctx, struct opts *opts)
 	if (pae_state) {
 		len = asprintf(&opts->str[opts->n], "pae=%s", pae_state);
 		if (len < 0)
-			return set_error(ctx, KDUMP_SYSERR,
+			return set_error(ctx, KDUMP_ERR_SYSTEM,
 					 "Cannot make %s option", "pae");
 		++opts->n;
 	}
@@ -192,7 +192,7 @@ set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 			       "physbase=0x%"ADDRXLAT_PRIxADDR,
 			       get_phys_base(ctx));
 		if (len < 0)
-			return set_error(ctx, KDUMP_SYSERR,
+			return set_error(ctx, KDUMP_ERR_SYSTEM,
 					 "Cannot make %s option", "physbase");
 		++opts->n;
 	}
@@ -200,7 +200,7 @@ set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 	if ((isset_xen_xlat(ctx) && get_xen_xlat(ctx) != KDUMP_XEN_AUTO) ||
 	    (isset_xen_type(ctx) && get_xen_type(ctx) == KDUMP_XEN_SYSTEM)) {
 		if (! (opts->str[opts->n] = strdup("xen_xlat=1")) )
-			return set_error(ctx, KDUMP_SYSERR,
+			return set_error(ctx, KDUMP_ERR_SYSTEM,
 					 "Cannot make %s option", "xen_xlat");
 		++opts->n;
 	}
@@ -211,7 +211,7 @@ set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 			"xen_p2m_mfn=0x%"ADDRXLAT_PRIxADDR,
 			attr_value(attr)->number);
 		if (len < 0)
-			return set_error(ctx, KDUMP_SYSERR,
+			return set_error(ctx, KDUMP_ERR_SYSTEM,
 					 "Cannot make %s option",
 					 "xen_p2m_mfn");
 		++opts->n;
@@ -232,7 +232,7 @@ set_xen_opts(kdump_ctx_t *ctx, struct opts *opts)
 			       "physbase=0x%"ADDRXLAT_PRIxADDR,
 			       attr_value(attr)->address);
 		if (len < 0)
-			return set_error(ctx, KDUMP_SYSERR,
+			return set_error(ctx, KDUMP_ERR_SYSTEM,
 					 "Cannot make %s option", "physbase");
 		++opts->n;
 	}
@@ -269,7 +269,7 @@ vtop_init(kdump_ctx_t *ctx)
 		osdesc.opts = join_opts(&opts);
 		free_opts(&opts);
 		if (!osdesc.opts)
-			return set_error(ctx, KDUMP_SYSERR,
+			return set_error(ctx, KDUMP_ERR_SYSTEM,
 					 "Cannot allocate addrxlat options");
 	} else
 		osdesc.opts = NULL;
@@ -333,7 +333,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 	switch (sym->type) {
 	case ADDRXLAT_SYM_VALUE:
 		status = ctx->cb_get_symbol_val(ctx, sym->args[0], &sym->val);
-		return status == KDUMP_NODATA
+		return status == KDUMP_ERR_NODATA
 			? ADDRXLAT_ERR_NODATA
 			: (addrxlat_status) -(int)status;
 

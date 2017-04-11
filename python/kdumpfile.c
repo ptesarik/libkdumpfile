@@ -25,10 +25,10 @@ typedef struct {
 	PyObject *attr;
 } kdumpfile_object;
 
-static PyObject *SysErrException;
-static PyObject *UnsupportedException;
+static PyObject *OSErrorException;
+static PyObject *NotImplementedException;
 static PyObject *NoDataException;
-static PyObject *DataErrException;
+static PyObject *CorruptException;
 static PyObject *InvalidException;
 static PyObject *NoKeyException;
 static PyObject *EOFException;
@@ -52,15 +52,15 @@ static PyObject *
 exception_map(kdump_status status)
 {
 	switch (status) {
-	case KDUMP_SYSERR:      return SysErrException;
-	case KDUMP_UNSUPPORTED: return UnsupportedException;
-	case KDUMP_NODATA:      return NoDataException;
-	case KDUMP_DATAERR:     return DataErrException;
-	case KDUMP_INVALID:     return InvalidException;
-	case KDUMP_NOKEY:       return NoKeyException;
-	case KDUMP_EOF:         return EOFException;
-	case KDUMP_BUSY:	return BusyException;
-	case KDUMP_ADDRXLAT:	return AddressTranslationException;
+	case KDUMP_ERR_SYSTEM:	return OSErrorException;
+	case KDUMP_ERR_NOTIMPL:	return NotImplementedException;
+	case KDUMP_ERR_NODATA:	return NoDataException;
+	case KDUMP_ERR_CORRUPT:	return CorruptException;
+	case KDUMP_ERR_INVALID:	return InvalidException;
+	case KDUMP_ERR_NOKEY:	return NoKeyException;
+	case KDUMP_ERR_EOF:	return EOFException;
+	case KDUMP_ERR_BUSY:	return BusyException;
+	case KDUMP_ERR_ADDRXLAT: return AddressTranslationException;
 	/* If we raise an exception with status == KDUMP_OK, it's a bug. */
 	case KDUMP_OK:
 	default:                return PyExc_RuntimeError;
@@ -78,7 +78,7 @@ cb_get_symbol(kdump_ctx_t *ctx, const char *name, kdump_addr_t *addr)
 	ret = PyObject_CallFunction(self->cb_get_symbol, "s", name);
 	if (!ret) {
 		PyErr_Clear();
-		return KDUMP_NODATA;
+		return KDUMP_ERR_NODATA;
 	}
 
 	status = KDUMP_OK;
@@ -86,7 +86,7 @@ cb_get_symbol(kdump_ctx_t *ctx, const char *name, kdump_addr_t *addr)
 		PyErr_Format(PyExc_TypeError,
 			     "get_symbol: cannot convert '%.200s' to address",
 			     Py_TYPE(ret)->tp_name);
-		status = KDUMP_INVALID;
+		status = KDUMP_ERR_INVALID;
 	} else
 		*addr = PyLong_AsUnsignedLongLong(ret);
 
@@ -120,7 +120,7 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 
 	self->fd = open (filepath, O_RDWR);
 	if (self->fd < 0) {
-		PyErr_Format(SysErrException, "Couldn't open dump file");
+		PyErr_Format(OSErrorException, "Couldn't open dump file");
 		goto fail;
 	}
 
@@ -344,10 +344,10 @@ int kdumpfile_set_symbol_func(PyObject *_self, PyObject *value, void *_data)
 static void
 cleanup_exceptions(void)
 {
-	Py_XDECREF(SysErrException);
-	Py_XDECREF(UnsupportedException);
+	Py_XDECREF(OSErrorException);
+	Py_XDECREF(NotImplementedException);
 	Py_XDECREF(NoDataException);
-	Py_XDECREF(DataErrException);
+	Py_XDECREF(CorruptException);
 	Py_XDECREF(InvalidException);
 	Py_XDECREF(NoKeyException);
 	Py_XDECREF(EOFException);
@@ -368,10 +368,10 @@ do {							\
 		goto fail;				\
 } while(0)
 
-	lookup_exception(SysErrException);
-	lookup_exception(UnsupportedException);
+	lookup_exception(OSErrorException);
+	lookup_exception(NotImplementedException);
 	lookup_exception(NoDataException);
-	lookup_exception(DataErrException);
+	lookup_exception(CorruptException);
 	lookup_exception(InvalidException);
 	lookup_exception(NoKeyException);
 	lookup_exception(EOFException);
@@ -521,7 +521,7 @@ lookup_attribute(attr_dir_object *self, PyObject *key, kdump_attr_ref_t *ref)
 		status = kdump_sub_attr_ref(ctx, &self->baseref, keystr, ref);
 		if (status == KDUMP_OK)
 			ret = 1;
-		else if (status == KDUMP_NOKEY)
+		else if (status == KDUMP_ERR_NOKEY)
 			ret = 0;
 		else
 			PyErr_SetString(exception_map(status),
@@ -622,7 +622,7 @@ attr_dir_subscript(PyObject *_self, PyObject *key)
 	if (status == KDUMP_OK)
 		return attr_new(self->kdumpfile, &ref, &attr);
 
-	if (status == KDUMP_NODATA)
+	if (status == KDUMP_ERR_NODATA)
 		PyErr_SetObject(PyExc_KeyError, key);
 	else
 		PyErr_SetString(exception_map(status), kdump_get_err(ctx));
@@ -895,7 +895,7 @@ attr_dir_get(PyObject *_self, PyObject *args)
 	if (status == KDUMP_OK)
 		return attr_new(self->kdumpfile, &ref, &attr);
 
-	if (status != KDUMP_NODATA) {
+	if (status != KDUMP_ERR_NODATA) {
 		PyErr_SetString(exception_map(status), kdump_get_err(ctx));
 		return NULL;
 	}
@@ -930,7 +930,7 @@ dict_setdefault(PyObject *_self, PyObject *args)
 	status = kdump_attr_ref_get(ctx, &ref, &attr);
 	if (status == KDUMP_OK)
 		val = attr_new(self->kdumpfile, &ref, &attr);
-	else if (status == KDUMP_NODATA)
+	else if (status == KDUMP_ERR_NODATA)
 		val = (set_attribute(self, &ref, failobj) == 0)
 			? failobj
 			: NULL;

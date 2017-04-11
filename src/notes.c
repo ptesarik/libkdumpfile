@@ -320,7 +320,7 @@ process_xc_xen_note(kdump_ctx_t *ctx, uint32_t type,
 		uint64_t version = dump64toh(ctx, *(uint64_t*)desc);
 
 		if (version != 1)
-			return set_error(ctx, KDUMP_UNSUPPORTED,
+			return set_error(ctx, KDUMP_ERR_NOTIMPL,
 					 "Unsupported Xen dumpcore format version: %llu",
 					 (unsigned long long) version);
 	}

@@ -118,7 +118,7 @@ s390_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
 	if (pfn >= get_max_pfn(ctx))
-		return set_error(ctx, KDUMP_NODATA, "Out-of-bounds PFN");
+		return set_error(ctx, KDUMP_ERR_NODATA, "Out-of-bounds PFN");
 
 	return def_read_cache(ctx, pio, s390_read_cache, pfn);
 }
@@ -149,11 +149,11 @@ s390_probe(kdump_ctx_t *ctx, void *hdr)
 				 (unsigned long long) pos);
 	if (memcmp(marker.str, END_MARKER, sizeof END_MARKER - 1) ||
 	    dump64toh(ctx, marker.tod) < dump64toh(ctx, dh->h1.tod))
-		return set_error(ctx, KDUMP_DATAERR, "End marker not found");
+		return set_error(ctx, KDUMP_ERR_CORRUPT, "End marker not found");
 
 	sdp = calloc(1, sizeof *sdp);
 	if (!sdp)
-		return set_error(ctx, KDUMP_SYSERR,
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate s390dump private data");
 	ctx->shared->fmtdata = sdp;
 
@@ -176,7 +176,7 @@ s390_probe(kdump_ctx_t *ctx, void *hdr)
 		break;
 
 	default:
-		ret = set_error(ctx, KDUMP_UNSUPPORTED,
+		ret = set_error(ctx, KDUMP_ERR_NOTIMPL,
 				"Unsupported dump architecture: %lu",
 				(unsigned long) dump32toh(ctx, dh->h1.arch));
 		goto err;

@@ -185,7 +185,7 @@ read_string_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 			unref_page(ctx, &pio);
 			if (str)
 				free(str);
-			return set_error(ctx, KDUMP_SYSERR,
+			return set_error(ctx, KDUMP_ERR_SYSTEM,
 					 "Cannot enlarge string to %zu bytes",
 					 newlength + 1);
 		}

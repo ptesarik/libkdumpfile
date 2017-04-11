@@ -108,7 +108,7 @@ check(kdump_ctx_t *ctx)
 	if (status == KDUMP_OK) {
 		fprintf(stderr, "vmcoreinfo not cleared!\n");
 		return TEST_ERR;
-	} else if (status != KDUMP_NOKEY) {
+	} else if (status != KDUMP_ERR_NOKEY) {
 		fprintf(stderr, "Unexpected failure after unset: %s\n",
 			kdump_get_err(ctx));
 		return TEST_ERR;

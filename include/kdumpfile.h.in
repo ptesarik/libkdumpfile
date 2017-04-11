@@ -119,15 +119,15 @@ typedef struct _kdump_ctx kdump_ctx_t;
  */
 typedef enum _kdump_status {
 	KDUMP_OK = 0,		/**< Success. */
-	KDUMP_SYSERR,		/**< OS error, see @c errno. */
-	KDUMP_UNSUPPORTED,	/**< Unsupported file format. */
-	KDUMP_NODATA,		/**< Data is not stored in the dump file. */
-	KDUMP_DATAERR,		/**< Corrupted file data. */
-	KDUMP_INVALID,		/**< Invalid value. */
-	KDUMP_NOKEY,		/**< No such attribute key. */
-	KDUMP_EOF,		/**< Unexpected EOF. */
-	KDUMP_BUSY,		/**< Too many pending requests. */
-	KDUMP_ADDRXLAT,		/**< Address translation error. */
+	KDUMP_ERR_SYSTEM,	/**< OS error, see @c errno. */
+	KDUMP_ERR_NOTIMPL,	/**< Unimplemented feature. */
+	KDUMP_ERR_NODATA,	/**< Data is not stored in the dump file. */
+	KDUMP_ERR_CORRUPT,	/**< Corrupted file data. */
+	KDUMP_ERR_INVALID,	/**< Invalid value. */
+	KDUMP_ERR_NOKEY,	/**< No such attribute key. */
+	KDUMP_ERR_EOF,		/**< Unexpected EOF. */
+	KDUMP_ERR_BUSY,		/**< Too many pending requests. */
+	KDUMP_ERR_ADDRXLAT,	/**< Address translation error. */
 } kdump_status;
 
 /**  Target dump byte order.
@@ -285,7 +285,7 @@ typedef enum _kdump_addrspace {
  * process a partial read.
  *
  * In particular, if some pages were filtered out, @c kdump_read may return
- * @ref KDUMP_NODATA when it reaches the filtered out page.
+ * @ref KDUMP_ERR_NODATA when it reaches the filtered out page.
  */
 kdump_status kdump_read(kdump_ctx_t *ctx,
 			 kdump_addrspace_t as, kdump_addr_t addr,
@@ -453,7 +453,7 @@ kdump_get_number_attr(kdump_ctx_t *ctx, const char *key, kdump_num_t *num)
 		if (attr.type == KDUMP_NUMBER)
 			*num = attr.val.number;
 		else
-			ret = KDUMP_INVALID;
+			ret = KDUMP_ERR_INVALID;
 	}
 	return ret;
 }
@@ -477,7 +477,7 @@ kdump_get_address_attr(kdump_ctx_t *ctx, const char *key, kdump_addr_t *addr)
 		if (attr.type == KDUMP_ADDRESS)
 			*addr = attr.val.address;
 		else
-			ret = KDUMP_INVALID;
+			ret = KDUMP_ERR_INVALID;
 	}
 	return ret;
 }
@@ -501,7 +501,7 @@ kdump_get_string_attr(kdump_ctx_t *ctx, const char *key, const char **str)
 		if (attr.type == KDUMP_STRING)
 			*str = attr.val.string;
 		else
-			ret = KDUMP_INVALID;
+			ret = KDUMP_ERR_INVALID;
 	}
 	return ret;
 }
@@ -603,7 +603,7 @@ kdump_status kdump_attr_ref_iter_start(kdump_ctx_t *ctx,
  * If there are no more items in the iteration, this function sets
  * the @c key field of @p iter to @c NULL and returns @ref KDUMP_OK.
  * If you try to advance past end of iteration, this function returns
- * @ref KDUMP_INVALID.
+ * @ref KDUMP_ERR_INVALID.
  */
 kdump_status kdump_attr_iter_next(kdump_ctx_t *ctx, kdump_attr_iter_t *iter);
 

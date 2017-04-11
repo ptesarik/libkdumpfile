@@ -103,7 +103,7 @@ process_ia32_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
 	kdump_status res;
 
 	if (size < sizeof(struct elf_prstatus))
-		return set_error(ctx, KDUMP_DATAERR,
+		return set_error(ctx, KDUMP_ERR_CORRUPT,
 				 "Wrong PRSTATUS size: %zu", size);
 
 	res = set_cpu_regs32(ctx, get_num_cpus(ctx),
@@ -114,11 +114,11 @@ process_ia32_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
 	sprintf(cpukey, "cpu.%u", get_num_cpus(ctx));
 	dir = lookup_attr(ctx->shared, cpukey);
 	if (!dir)
-		return set_error(ctx, KDUMP_NOKEY,
+		return set_error(ctx, KDUMP_ERR_NOKEY,
 				 "'%s': %s", cpukey, "No such key");
 	attr = new_attr(ctx->shared, dir, &tmpl_pid);
 	if (!attr)
-		return set_error(ctx, KDUMP_SYSERR,
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate '%s'", cpukey);
 	res = set_attr_number(ctx, attr, ATTR_DEFAULT,
 			      dump32toh(ctx, status->pr_pid));

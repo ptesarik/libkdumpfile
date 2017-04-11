@@ -712,7 +712,7 @@ set_attr_string(kdump_ctx_t *ctx, struct attr_data *attr,
 	kdump_attr_value_t val;
 
 	if (!dynstr)
-		return set_error(ctx, KDUMP_SYSERR,
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate string");
 
 	val.string = dynstr;
@@ -741,7 +741,7 @@ set_attr_sized_string(kdump_ctx_t *ctx, struct attr_data *attr,
 		++dynlen;
 	dynstr = ctx_malloc(dynlen, ctx, "sized string");
 	if (!dynstr)
-		return KDUMP_SYSERR;
+		return KDUMP_ERR_SYSTEM;
 	memcpy(dynstr, str, len);
 	dynstr[dynlen-1] = '\0';
 
@@ -773,7 +773,7 @@ set_attr_static_string(kdump_ctx_t *ctx, struct attr_data *attr,
  * @returns     Error status.
  *
  * This can be safely used with unset attributes. If an attribute
- * has no value, then this function returns @ref KDUMP_NODATA but
+ * has no value, then this function returns @ref KDUMP_ERR_NODATA but
  * does not set any error message, so callers can clear the error
  * simply by ignoring the return value.
  */
@@ -781,7 +781,7 @@ kdump_status
 validate_attr(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	if (!attr_isset(attr))
-		return KDUMP_NODATA;
+		return KDUMP_ERR_NODATA;
 	if (!attr->template->ops || !attr->template->ops->validate)
 		return KDUMP_OK;
 	return attr->template->ops->validate(ctx, attr);
@@ -839,11 +839,11 @@ kdump_get_attr(kdump_ctx_t *ctx, const char *key, kdump_attr_t *valp)
 
 	d = lookup_attr(ctx->shared, key);
 	if (!d) {
-		ret = set_error(ctx, KDUMP_NOKEY, "No such key");
+		ret = set_error(ctx, KDUMP_ERR_NOKEY, "No such key");
 		goto out;
 	}
 	if (validate_attr(ctx, d) != KDUMP_OK) {
-		ret = set_error(ctx, KDUMP_NODATA, "Key has no value");
+		ret = set_error(ctx, KDUMP_ERR_NODATA, "Key has no value");
 		goto out;
 	}
 
@@ -873,7 +873,7 @@ check_set_attr(kdump_ctx_t *ctx, struct attr_data *attr,
 	}
 
 	if (valp->type != attr->template->type)
-		return set_error(ctx, KDUMP_INVALID, "Type mismatch");
+		return set_error(ctx, KDUMP_ERR_INVALID, "Type mismatch");
 
 	if (valp->type == KDUMP_STRING)
 		return set_attr_string(ctx, attr, ATTR_PERSIST,
@@ -895,7 +895,7 @@ kdump_set_attr(kdump_ctx_t *ctx, const char *key,
 
 	d = lookup_attr(ctx->shared, key);
 	if (!d) {
-		ret = set_error(ctx, KDUMP_NODATA, "No such key");
+		ret = set_error(ctx, KDUMP_ERR_NODATA, "No such key");
 		goto out;
 	}
 
@@ -937,7 +937,7 @@ kdump_attr_ref(kdump_ctx_t *ctx, const char *key, kdump_attr_ref_t *ref)
 	d = lookup_attr(ctx->shared, key);
 	rwlock_unlock(&ctx->shared->lock);
 	if (!d)
-		return set_error(ctx, KDUMP_NOKEY, "No such key");
+		return set_error(ctx, KDUMP_ERR_NOKEY, "No such key");
 
 	mkref(ref, d);
 	return KDUMP_OK;
@@ -956,7 +956,7 @@ kdump_sub_attr_ref(kdump_ctx_t *ctx, const kdump_attr_ref_t *base,
 	attr = lookup_dir_attr(ctx->shared, dir, subkey, strlen(subkey));
 	rwlock_unlock(&ctx->shared->lock);
 	if (!attr)
-		return set_error(ctx, KDUMP_NOKEY, "No such key");
+		return set_error(ctx, KDUMP_ERR_NOKEY, "No such key");
 
 	mkref(ref, attr);
 	return KDUMP_OK;
@@ -991,7 +991,7 @@ kdump_attr_ref_get(kdump_ctx_t *ctx, const kdump_attr_ref_t *ref,
 	rwlock_rdlock(&ctx->shared->lock);
 
 	if (validate_attr(ctx, d) != KDUMP_OK) {
-		ret = set_error(ctx, KDUMP_NODATA, "Key has no value");
+		ret = set_error(ctx, KDUMP_ERR_NODATA, "Key has no value");
 		goto out;
 	}
 
@@ -1045,9 +1045,9 @@ attr_iter_start(kdump_ctx_t *ctx, const struct attr_data *attr,
 		kdump_attr_iter_t *iter)
 {
 	if (!attr_isset(attr))
-		return set_error(ctx, KDUMP_NODATA, "Key has no value");
+		return set_error(ctx, KDUMP_ERR_NODATA, "Key has no value");
 	if (attr->template->type != KDUMP_DIRECTORY)
-		return set_error(ctx, KDUMP_INVALID,
+		return set_error(ctx, KDUMP_ERR_INVALID,
 				 "Path is a leaf attribute");
 
 	return set_iter_pos(iter, attr->dir);
@@ -1067,7 +1067,7 @@ kdump_attr_iter_start(kdump_ctx_t *ctx, const char *path,
 	if (d)
 		ret = attr_iter_start(ctx, d, iter);
 	else
-		ret = set_error(ctx, KDUMP_NOKEY, "No such path");
+		ret = set_error(ctx, KDUMP_ERR_NOKEY, "No such path");
 
 	rwlock_unlock(&ctx->shared->lock);
 	return ret;
@@ -1098,7 +1098,7 @@ kdump_attr_iter_next(kdump_ctx_t *ctx, kdump_attr_iter_t *iter)
 	if (d)
 		ret = set_iter_pos(iter, d->next);
 	else
-		ret = set_error(ctx, KDUMP_INVALID, "End of iteration");
+		ret = set_error(ctx, KDUMP_ERR_INVALID, "End of iteration");
 
 	rwlock_unlock(&ctx->shared->lock);
 	return ret;

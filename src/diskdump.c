@@ -200,7 +200,7 @@ add_pfn_rgn(kdump_ctx_t *ctx, const struct pfn_rgn *rgn)
 		struct pfn_rgn *rgn =
 			realloc(ddp->pfn_rgn, num * sizeof(struct pfn_rgn));
 		if (!rgn)
-			return set_error(ctx, KDUMP_SYSERR,
+			return set_error(ctx, KDUMP_ERR_SYSTEM,
 					 "Cannot allocate space for"
 					 " %zu PFN region mappings", num);
 		ddp->pfn_rgn = rgn;
@@ -257,13 +257,13 @@ diskdump_read_cache(kdump_ctx_t *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 
 	if (pd.flags & DUMP_DH_COMPRESSED) {
 		if (pd.size > MAX_PAGE_SIZE)
-			return set_error(ctx, KDUMP_DATAERR,
+			return set_error(ctx, KDUMP_ERR_CORRUPT,
 					 "Wrong compressed size: %lu",
 					 (unsigned long)pd.size);
 		buf = ctx->data[ddp->cbuf_slot];
 	} else {
 		if (pd.size != get_page_size(ctx))
-			return set_error(ctx, KDUMP_DATAERR,
+			return set_error(ctx, KDUMP_ERR_CORRUPT,
 					 "Wrong page size: %lu",
 					 (unsigned long)pd.size);
 		buf = ce->data;
@@ -287,14 +287,14 @@ diskdump_read_cache(kdump_ctx_t *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 						(lzo_bytep)ce->data, &retlen,
 						LZO1X_MEM_DECOMPRESS);
 		if (ret != LZO_E_OK)
-			return set_error(ctx, KDUMP_DATAERR,
+			return set_error(ctx, KDUMP_ERR_CORRUPT,
 					 "Decompression failed: %d", ret);
 		if (retlen != get_page_size(ctx))
-			return set_error(ctx, KDUMP_DATAERR,
+			return set_error(ctx, KDUMP_ERR_CORRUPT,
 					 "Wrong uncompressed size: %lu",
 					 (unsigned long) retlen);
 #else
-		return set_error(ctx, KDUMP_UNSUPPORTED,
+		return set_error(ctx, KDUMP_ERR_NOTIMPL,
 				 "Unsupported compression method: %s",
 				 "lzo");
 #endif
@@ -305,15 +305,15 @@ diskdump_read_cache(kdump_ctx_t *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 		ret = snappy_uncompress((char *)buf, pd.size,
 					(char *)ce->data, &retlen);
 		if (ret != SNAPPY_OK)
-			return set_error(ctx, KDUMP_DATAERR,
+			return set_error(ctx, KDUMP_ERR_CORRUPT,
 					 "Decompression failed: %d",
 					 (int) ret);
 		if (retlen != get_page_size(ctx))
-			return set_error(ctx, KDUMP_DATAERR,
+			return set_error(ctx, KDUMP_ERR_CORRUPT,
 					 "Wrong uncompressed size: %lu",
 					 (unsigned long) retlen);
 #else
-		return set_error(ctx, KDUMP_UNSUPPORTED,
+		return set_error(ctx, KDUMP_ERR_NOTIMPL,
 				 "Unsupported compression method: %s",
 				 "snappy");
 #endif
@@ -328,7 +328,7 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
 
 	if (pfn >= get_max_pfn(ctx))
-		return set_error(ctx, KDUMP_NODATA, "Out-of-bounds PFN");
+		return set_error(ctx, KDUMP_ERR_NODATA, "Out-of-bounds PFN");
 
 	return def_read_cache(ctx, pio, diskdump_read_cache, pfn);
 }
@@ -351,7 +351,7 @@ diskdump_realloc_compressed(kdump_ctx_t *ctx, struct attr_data *attr)
 
 	newslot = per_ctx_alloc(ctx->shared, attr_value(attr)->number);
 	if (newslot < 0)
-		return set_error(ctx, KDUMP_SYSERR,
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate buffer for compressed data");
 
 	ddp = ctx->shared->fmtdata;
@@ -374,7 +374,7 @@ read_vmcoreinfo(kdump_ctx_t *ctx, off_t off, size_t size)
 
 	info = ctx_malloc(size, ctx, "VMCOREINFO buffer");
 	if (!info)
-		return KDUMP_SYSERR;
+		return KDUMP_ERR_SYSTEM;
 
 	rd = pread(get_file_fd(ctx), info, size, off);
 	if (rd != size)
@@ -404,7 +404,7 @@ read_notes(kdump_ctx_t *ctx, off_t off, size_t size)
 
 	notes = ctx_malloc(size, ctx, "notes");
 	if (!notes)
-		return KDUMP_SYSERR;
+		return KDUMP_ERR_SYSTEM;
 
 	rd = pread(get_file_fd(ctx), notes, size, off);
 	if (rd != size) {
@@ -508,7 +508,7 @@ read_bitmap(kdump_ctx_t *ctx, int32_t sub_hdr_size,
 		set_max_pfn(ctx, max_bitmap_pfn);
 
 	if (! (bitmap = ctx_malloc(bitmapsize, ctx, "page bitmap")) )
-		return KDUMP_SYSERR;
+		return KDUMP_ERR_SYSTEM;
 
 	rd = pread(get_file_fd(ctx), bitmap, bitmapsize, off);
 	if (rd != bitmapsize) {
@@ -549,14 +549,14 @@ try_header(kdump_ctx_t *ctx, int32_t block_size,
 
 	/* Page size must be reasonable */
 	if (block_size < MIN_PAGE_SIZE || block_size > MAX_PAGE_SIZE)
-		return set_error(ctx, KDUMP_DATAERR,
+		return set_error(ctx, KDUMP_ERR_CORRUPT,
 				 "Out-of-bounds page size: %lu",
 				 (unsigned long) block_size);
 
 	/* Number of bitmap blocks should cover all pages in the system */
 	maxcovered = (uint64_t)8 * bitmap_blocks * block_size;
 	if (maxcovered < max_mapnr)
-		return set_error(ctx, KDUMP_DATAERR,
+		return set_error(ctx, KDUMP_ERR_CORRUPT,
 				 "Page bitmap too small:"
 				 " Need %llu bits, only %llu found",
 				 (unsigned long long) max_mapnr,
@@ -581,7 +581,7 @@ read_sub_hdr_32(struct setup_data *sdp, int32_t header_version)
 	kdump_status ret = KDUMP_OK;
 
 	if (header_version < 0)
-		return set_error(ctx, KDUMP_DATAERR,
+		return set_error(ctx, KDUMP_ERR_CORRUPT,
 				 "Invalid header version: %lu",
 				 (unsigned long) header_version);
 
@@ -640,7 +640,7 @@ try_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh)
 	if (ret == KDUMP_OK)
 		return do_header_32(sdp, dh, KDUMP_LITTLE_ENDIAN);
 
-	if (ret != KDUMP_DATAERR)
+	if (ret != KDUMP_ERR_CORRUPT)
 		return ret;
 	clear_error(ctx);
 
@@ -662,7 +662,7 @@ read_sub_hdr_64(struct setup_data *sdp, int32_t header_version)
 	kdump_status ret = KDUMP_OK;
 
 	if (header_version < 0)
-		return set_error(ctx, KDUMP_DATAERR,
+		return set_error(ctx, KDUMP_ERR_CORRUPT,
 				 "Invalid header version: %lu",
 				 (unsigned long) header_version);
 
@@ -721,7 +721,7 @@ try_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh)
 	if (ret == KDUMP_OK)
 		return do_header_64(sdp, dh, KDUMP_LITTLE_ENDIAN);
 
-	if (ret != KDUMP_DATAERR)
+	if (ret != KDUMP_ERR_CORRUPT)
 		return ret;
 	clear_error(ctx);
 
@@ -748,7 +748,7 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 
 	ddp = calloc(1, sizeof *ddp);
 	if (!ddp)
-		return set_error(ctx, KDUMP_SYSERR,
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate diskdump private data");
 
 	attr_add_override(gattr(ctx, GKI_page_size),
@@ -766,13 +766,13 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 		set_uts(ctx, &dh64->utsname);
 
 	ret = try_header_32(&sd, dh32);
-	if (ret == KDUMP_DATAERR) {
+	if (ret == KDUMP_ERR_CORRUPT) {
 		clear_error(ctx);
 		ret = try_header_64(&sd, dh64);
 	}
-	if (ret == KDUMP_DATAERR) {
+	if (ret == KDUMP_ERR_CORRUPT) {
 		clear_error(ctx);
-		ret = set_error(ctx, KDUMP_UNSUPPORTED,
+		ret = set_error(ctx, KDUMP_ERR_NOTIMPL,
 				"Invalid diskdump header content");
 	}
 	if (ret != KDUMP_OK)

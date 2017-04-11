@@ -214,8 +214,8 @@ struct format_ops {
 	 * Input:
 	 *   ctx->fd         core dump file descriptor open for reading
 	 * Return:
-	 *   KDUMP_OK        buffer is filled with page data
-	 *   KDUMP_NODATA    data for the given page is not present
+	 *   KDUMP_OK          buffer is filled with page data
+	 *   KDUMP_ERR_NODATA  data for the given page is not present
 	 *
 	 * Note: The requested address space is specified in @c pio.
 	 * It is always an address space specified by @c xlat_caps.
@@ -233,8 +233,8 @@ struct format_ops {
 	/* Translate a machine frame number to physical frame number.
 	 *   ctx->fmtdata    initialized in probe()
 	 * Return:
-	 *   KDUMP_OK        output variable contains translated PFN
-	 *   KDUMP_NODATA    given MFN was not found
+	 *   KDUMP_OK          output variable contains translated PFN
+	 *   KDUMP_ERR_NODATA  given MFN was not found
 	 *
 	 * This function should be used for single domain dumps.
 	 */
@@ -1102,6 +1102,6 @@ clear_error(kdump_ctx_t *ctx)
 
 /* These are macros to avoid possible conversions of the "rd" parameter */
 
-#define read_error(rd)  ((rd) < 0 ? KDUMP_SYSERR : KDUMP_EOF)
+#define read_error(rd)  ((rd) < 0 ? KDUMP_ERR_SYSTEM : KDUMP_ERR_EOF)
 
 #endif	/* kdumpfile-priv.h */

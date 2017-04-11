@@ -68,7 +68,7 @@ set_fd(kdump_ctx_t *ctx, void *buf)
 
 	rd = paged_read(get_file_fd(ctx), buf, MAX_PAGE_SIZE);
 	if (rd < 0)
-		return set_error(ctx, KDUMP_SYSERR, "Cannot read file header");
+		return set_error(ctx, KDUMP_ERR_SYSTEM, "Cannot read file header");
 	memset(buf + rd, 0, MAX_PAGE_SIZE - rd);
 
 	for (i = 0; i < ARRAY_SIZE(formats); ++i) {
@@ -88,7 +88,7 @@ set_fd(kdump_ctx_t *ctx, void *buf)
 		clear_error(ctx);
 	}
 
-	return set_error(ctx, KDUMP_UNSUPPORTED, "Unknown file format");
+	return set_error(ctx, KDUMP_ERR_NOTIMPL, "Unknown file format");
 }
 
 static kdump_status
@@ -113,7 +113,7 @@ file_fd_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 
 	buffer = ctx_malloc(MAX_PAGE_SIZE, ctx, "file header buffer");
 	if (!buffer)
-		return KDUMP_SYSERR;
+		return KDUMP_ERR_SYSTEM;
 
 	ret = set_fd(ctx, buffer);
 
@@ -154,7 +154,7 @@ uts_name_from_init_uts_ns(kdump_ctx_t *ctx, kdump_vaddr_t *uts_name)
 		if (!memcmp(p, UTS_SYSNAME, sizeof(UTS_SYSNAME)))
 			break;
 	if (p > &buf[2 * NEW_UTS_LEN])
-		return set_error(ctx, KDUMP_DATAERR, "UTS_SYSNAME not found");
+		return set_error(ctx, KDUMP_ERR_CORRUPT, "UTS_SYSNAME not found");
 
 	*uts_name = init_uts_ns + p - buf;
 	return KDUMP_OK;
@@ -174,11 +174,11 @@ update_linux_utsname(kdump_ctx_t *ctx)
 	rwlock_unlock(&ctx->shared->lock);
 	ret = get_symbol_val(ctx, "system_utsname", &uts_name);
 	rwlock_wrlock(&ctx->shared->lock);
-	if (ret == KDUMP_NODATA) {
+	if (ret == KDUMP_ERR_NODATA) {
 		clear_error(ctx);
 		ret = uts_name_from_init_uts_ns(ctx, &uts_name);
 	}
-	if (ret == KDUMP_NODATA || ret == KDUMP_ADDRXLAT) {
+	if (ret == KDUMP_ERR_NODATA || ret == KDUMP_ERR_ADDRXLAT) {
 		clear_error(ctx);
 		return KDUMP_OK;
 	}
@@ -192,7 +192,7 @@ update_linux_utsname(kdump_ctx_t *ctx)
 		return ret;
 
 	if (!uts_looks_sane(&uts))
-		return set_error(ctx, KDUMP_DATAERR,
+		return set_error(ctx, KDUMP_ERR_CORRUPT,
 				 "Wrong utsname content");
 
 	set_uts(ctx, &uts);
@@ -220,7 +220,7 @@ linux_version_code(kdump_ctx_t *ctx)
 
 	rel = gattr(ctx, GKI_linux_uts_release);
 	status = validate_attr(ctx, rel);
-	if (status == KDUMP_NODATA)
+	if (status == KDUMP_ERR_NODATA)
 		return KDUMP_OK; /* Missing data => ignore */
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot get Linux release");
@@ -250,7 +250,7 @@ linux_version_code(kdump_ctx_t *ctx)
 			ATTR_DEFAULT, &val);
 
  err:
-	return set_error(ctx, KDUMP_DATAERR, "Invalid kernel version: %s",
+	return set_error(ctx, KDUMP_ERR_CORRUPT, "Invalid kernel version: %s",
 			 attr_value(rel)->string);
 }
 
@@ -268,7 +268,7 @@ update_xen_extra_ver(kdump_ctx_t *ctx)
 
 	attr = gattr(ctx, GKI_xen_ver_extra_addr);
 	status = validate_attr(ctx, attr);
-	if (status == KDUMP_NODATA)
+	if (status == KDUMP_ERR_NODATA)
 		return KDUMP_OK;
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot locate %s", desc);
@@ -305,7 +305,7 @@ xen_version_code(kdump_ctx_t *ctx)
 
 	ver = gattr(ctx, GKI_xen_ver_major);
 	status = validate_attr(ctx, ver);
-	if (status == KDUMP_NODATA)
+	if (status == KDUMP_ERR_NODATA)
 		return KDUMP_OK; /* Missing data => ignore */
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot get Xen major");
@@ -313,7 +313,7 @@ xen_version_code(kdump_ctx_t *ctx)
 
 	ver = gattr(ctx, GKI_xen_ver_minor);
 	status = validate_attr(ctx, ver);
-	if (status == KDUMP_NODATA)
+	if (status == KDUMP_ERR_NODATA)
 		return KDUMP_OK; /* Missing data => ignore */
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot get Xen minor");
@@ -333,7 +333,7 @@ ostype_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
 	else if (!strcmp(val->string, "xen"))
 		ctx->shared->ostype = ADDRXLAT_OS_XEN;
 	else
-		return set_error(ctx, KDUMP_UNSUPPORTED,
+		return set_error(ctx, KDUMP_ERR_NOTIMPL,
 				 "Unsupported OS type");
 
 	return KDUMP_OK;

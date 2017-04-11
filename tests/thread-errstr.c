@@ -61,7 +61,7 @@ get_nokey(void *arg)
 	res = kdump_get_attr(ctx, "non.existent", &attr);
 	if (res == KDUMP_OK)
 		return (void*) "non.existent is a valid key?!";
-	else if (res != KDUMP_NOKEY)
+	else if (res != KDUMP_ERR_NOKEY)
 		return (void*) kdump_get_err(ctx);
 
 	err = strdup(kdump_get_err(ctx));
@@ -77,7 +77,7 @@ get_nokey(void *arg)
 	if (strcmp(err, kdump_get_err(ctx))) {
 		fprintf(stderr, "nokey: '%s' != '%s'\n",
 			err, kdump_get_err(ctx));
-		ret = "KDUMP_NOKEY error string has changed";
+		ret = "KDUMP_ERR_NOKEY error string has changed";
 	}
 
 	state = state_check_nodata;
@@ -105,7 +105,7 @@ get_novalue(void *arg)
 	res = kdump_get_attr(ctx, "xen.type", &attr);
 	if (res == KDUMP_OK)
 		return (void*) "xen.type has a value?!";
-	else if (res != KDUMP_NODATA)
+	else if (res != KDUMP_ERR_NODATA)
 		return (void*) kdump_get_err(ctx);
 
 	err = strdup(kdump_get_err(ctx));
@@ -121,7 +121,7 @@ get_novalue(void *arg)
 	if (strcmp(err, kdump_get_err(ctx))) {
 		fprintf(stderr, "nodata: '%s' != '%s'\n",
 			err, kdump_get_err(ctx));
-		ret = "KDUMP_NODATA error string has changed";
+		ret = "KDUMP_ERR_NODATA error string has changed";
 	}
 
 	pthread_mutex_unlock(&attr_mutex);

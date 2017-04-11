@@ -73,12 +73,12 @@ add_parsed_row(kdump_ctx_t *ctx, struct attr_data *dir,
 
 	attr = lookup_dir_attr(ctx->shared, dir, "lines", 5);
 	if (!attr)
-		return set_error(ctx, KDUMP_NOKEY,
+		return set_error(ctx, KDUMP_ERR_NOKEY,
 				 "Cannot set VMCOREINFO '%.*s'",
 				 (int) keylen, key);
 	attr = create_attr_path(ctx->shared, attr, key, keylen, &lines_tmpl);
 	if (!attr)
-		return set_error(ctx, KDUMP_SYSERR,
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot set VMCOREINFO '%.*s'",
 				 (int) keylen, key);
 	res = set_attr_sized_string(ctx, attr, ATTR_DEFAULT, val, vallen);
@@ -179,7 +179,7 @@ lines_post_hook(kdump_ctx_t *ctx, struct attr_data *lineattr)
 	sym[-1] = '.';
 	attr = create_attr_path(ctx->shared, dir, key, strlen(key), &tmpl);
 	if (!attr)
-		return set_error(ctx, KDUMP_SYSERR,
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot set VMCOREINFO '%s'", key);
 	return set_error(ctx,
 			 (tmpl.type == KDUMP_NUMBER)
@@ -307,17 +307,17 @@ kdump_vmcoreinfo_symbol(kdump_ctx_t *ctx, const char *symname,
 
 	base = ostype_attr(ctx->shared, symbol_map);
 	if (!base) {
-		ret = set_error(ctx, KDUMP_UNSUPPORTED, "Unsupported OS");
+		ret = set_error(ctx, KDUMP_ERR_NOTIMPL, "Unsupported OS");
 		goto out;
 	}
 
 	attr = lookup_dir_attr(ctx->shared, base, symname, strlen(symname));
 	if (!attr) {
-		ret = set_error(ctx, KDUMP_NODATA, "Symbol not found");
+		ret = set_error(ctx, KDUMP_ERR_NODATA, "Symbol not found");
 		goto out;
 	}
 	if (validate_attr(ctx, attr) != KDUMP_OK) {
-		ret = set_error(ctx, KDUMP_NODATA, "Symbol has no value");
+		ret = set_error(ctx, KDUMP_ERR_NODATA, "Symbol has no value");
 		goto out;
 	}
 

@@ -79,7 +79,7 @@ main(int argc, char **argv)
 	if (status == KDUMP_OK) {
 		fprintf(stderr, "Attribute %s is still set!\n", ATTRPATH);
 		return TEST_FAIL;
-	} else if (status != KDUMP_NODATA) {
+	} else if (status != KDUMP_ERR_NODATA) {
 		fprintf(stderr, "Unexpected error on getting %s: %s\n",
 			ATTRPATH, kdump_get_err(ctx));
 		return TEST_FAIL;

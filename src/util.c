@@ -148,9 +148,9 @@ addrxlat2kdump(kdump_ctx_t *ctx, addrxlat_status status)
 	if (status < 0)
 		ret = -status;
 	else if (status == ADDRXLAT_ERR_NODATA)
-		ret = KDUMP_NODATA;
+		ret = KDUMP_ERR_NODATA;
 	else
-		ret = KDUMP_ADDRXLAT;
+		ret = KDUMP_ERR_ADDRXLAT;
 
 	set_error(ctx, ret, "%s", addrxlat_ctx_get_err(ctx->xlatctx));
 	addrxlat_ctx_clear_err(ctx->xlatctx);
@@ -170,7 +170,7 @@ kdump2addrxlat(kdump_ctx_t *ctx, kdump_status status)
 	if (status == KDUMP_OK)
 		return ADDRXLAT_OK;
 
-	if (status == KDUMP_NODATA)
+	if (status == KDUMP_ERR_NODATA)
 		ret = ADDRXLAT_ERR_NODATA;
 	else
 		ret = -status;
@@ -186,7 +186,7 @@ ctx_malloc(size_t size, kdump_ctx_t *ctx, const char *desc)
 {
 	void *ret = malloc(size);
 	if (!ret)
-		set_error(ctx, KDUMP_SYSERR,
+		set_error(ctx, KDUMP_ERR_SYSTEM,
 			  "Cannot allocate %s (%zu bytes)", desc, size);
 	return ret;
 }
@@ -472,7 +472,7 @@ page_size_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
 
 	/* It must be a power of 2 */
 	if (page_size != (page_size & ~(page_size - 1)))
-		return set_error(ctx, KDUMP_DATAERR,
+		return set_error(ctx, KDUMP_ERR_CORRUPT,
 				 "Invalid page size: %zu", page_size);
 
 	return set_page_shift(ctx, ffsl((unsigned long)page_size) - 1);
@@ -620,13 +620,13 @@ set_zlib_error(kdump_ctx_t *ctx, const char *what,
 	       const z_stream *zstream, int err)
 {
 	if (err == Z_ERRNO)
-		return set_error(ctx, KDUMP_SYSERR, "%s", what);
+		return set_error(ctx, KDUMP_ERR_SYSTEM, "%s", what);
 
 	if (!zstream->msg)
-		return set_error(ctx, KDUMP_DATAERR,
+		return set_error(ctx, KDUMP_ERR_CORRUPT,
 				 "%s: error %d", what, err);
 
-	return set_error(ctx, KDUMP_DATAERR,
+	return set_error(ctx, KDUMP_ERR_CORRUPT,
 			 "%s: %s", what, zstream->msg);
 }
 #endif
@@ -671,14 +671,14 @@ uncompress_page_gzip(kdump_ctx_t *ctx, unsigned char *dst,
 				      &zstream, res);
 
 	if (zstream.avail_out)
-		return set_error(ctx, KDUMP_DATAERR,
+		return set_error(ctx, KDUMP_ERR_CORRUPT,
 				 "Wrong uncompressed size: %lu",
 				 (unsigned long) zstream.total_out);
 
 	return KDUMP_OK;
 
 #else
-	return set_error(ctx, KDUMP_UNSUPPORTED,
+	return set_error(ctx, KDUMP_ERR_NOTIMPL,
 			 "Unsupported compression method: %s", "zlib");
 #endif
 }
@@ -763,13 +763,13 @@ set_cpu_regs64(kdump_ctx_t *ctx, unsigned cpu,
 	dir = create_attr_path(ctx->shared, gattr(ctx, GKI_dir_cpu),
 			       cpukey, keylen, &dir_template);
 	if (!dir)
-		return set_error(ctx, KDUMP_SYSERR,
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate CPU %u registers", cpu);
 
 	for (i = 0; i < num; ++i) {
 		attr = new_attr(ctx->shared, dir, tmpl + i);
 		if (!attr)
-			return set_error(ctx, KDUMP_SYSERR,
+			return set_error(ctx, KDUMP_ERR_SYSTEM,
 					 "Cannot %s CPU %u register %s",
 					 "allocate", cpu, tmpl[i].key);
 		res = set_attr_number(ctx, attr, ATTR_DEFAULT,
@@ -797,13 +797,13 @@ set_cpu_regs32(kdump_ctx_t *ctx, unsigned cpu,
 	dir = create_attr_path(ctx->shared, gattr(ctx, GKI_dir_cpu),
 			       cpukey, keylen, &dir_template);
 	if (!dir)
-		return set_error(ctx, KDUMP_SYSERR,
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate CPU %u registers", cpu);
 
 	for (i = 0; i < num; ++i) {
 		attr = new_attr(ctx->shared, dir, tmpl + i);
 		if (!attr)
-			return set_error(ctx, KDUMP_SYSERR,
+			return set_error(ctx, KDUMP_ERR_SYSTEM,
 					 "Cannot %s CPU %u register %s",
 					 "allocate", cpu, tmpl[i].key);
 		res = set_attr_number(ctx, attr, ATTR_DEFAULT,

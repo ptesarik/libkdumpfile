@@ -260,13 +260,13 @@ x86_64_init(kdump_ctx_t *ctx)
 
 	archdata = calloc(1, sizeof(struct x86_64_data));
 	if (!archdata)
-		return set_error(ctx, KDUMP_SYSERR,
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate x86_64 private data");
 	ctx->shared->archdata = archdata;
 
 	ktext = addrxlat_meth_new();
 	if (!ktext) {
-		ret = set_error(ctx, KDUMP_SYSERR,
+		ret = set_error(ctx, KDUMP_ERR_SYSTEM,
 				"Cannot allocate kernel text mapping");
 		goto err_arch;
 	}
@@ -296,7 +296,7 @@ calc_linux_phys_base(kdump_ctx_t *ctx, kdump_paddr_t paddr)
 
 	rwlock_unlock(&ctx->shared->lock);
 	status = get_symbol_val(ctx, "_text", &stext);
-	if (status == KDUMP_NODATA) {
+	if (status == KDUMP_ERR_NODATA) {
 		clear_error(ctx);
 		status = get_symbol_val(ctx, "_stext", &stext);
 	}
@@ -319,7 +319,7 @@ set_linux_phys_base(kdump_ctx_t *ctx)
 		kdump_status status = linux_iomem_kcode(ctx, &paddr);
 		if (status == KDUMP_OK)
 			status = calc_linux_phys_base(ctx, paddr);
-		if (status != KDUMP_NODATA)
+		if (status != KDUMP_ERR_NODATA)
 			return status;
 		clear_error(ctx);
 	}
@@ -328,7 +328,7 @@ set_linux_phys_base(kdump_ctx_t *ctx)
 	    get_xen_type(ctx) != KDUMP_XEN_NONE)
 		return set_phys_base(ctx, 0);
 
-	return KDUMP_NODATA;
+	return KDUMP_ERR_NODATA;
 }
 
 static kdump_status
@@ -355,7 +355,7 @@ process_x86_64_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
 	kdump_status res;
 
 	if (size < sizeof(struct elf_prstatus))
-		return set_error(ctx, KDUMP_DATAERR,
+		return set_error(ctx, KDUMP_ERR_CORRUPT,
 				 "Wrong PRSTATUS size: %zu", size);
 
 	res = set_cpu_regs64(ctx, get_num_cpus(ctx), reg_names,
@@ -366,11 +366,11 @@ process_x86_64_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
 	sprintf(cpukey, "cpu.%u", get_num_cpus(ctx));
 	dir = lookup_attr(ctx->shared, cpukey);
 	if (!dir)
-		return set_error(ctx, KDUMP_NOKEY,
+		return set_error(ctx, KDUMP_ERR_NOKEY,
 				 "'%s': %s", cpukey, "No such key");
 	attr = new_attr(ctx->shared, dir, &tmpl_pid);
 	if (!attr)
-		return set_error(ctx, KDUMP_SYSERR,
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate '%s'", cpukey);
 	res = set_attr_number(ctx, attr, ATTR_DEFAULT,
 			      dump32toh(ctx, status->pr_pid));

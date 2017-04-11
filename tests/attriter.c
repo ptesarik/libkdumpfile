@@ -73,7 +73,7 @@ main(int argc, char **argv)
 	if (res == KDUMP_OK) {
 		fprintf(stderr, "Found non-existent path %s??\n", NOPATH);
 		return TEST_FAIL;
-	} else if (res != KDUMP_NOKEY) {
+	} else if (res != KDUMP_ERR_NOKEY) {
 		fprintf(stderr, "Unexpected error for %s: %s\n",
 			NOPATH, kdump_get_err(ctx));
 		return TEST_FAIL;
@@ -154,7 +154,7 @@ main(int argc, char **argv)
 	if (res == KDUMP_OK) {
 		fprintf(stderr, "Advancing past end succeeds??\n");
 		rc = TEST_FAIL;
-	} else if (res != KDUMP_INVALID) {
+	} else if (res != KDUMP_ERR_INVALID) {
 		fprintf(stderr, "Unexpected error advancing past end: %s\n",
 			kdump_get_err(ctx));
 		rc = TEST_FAIL;

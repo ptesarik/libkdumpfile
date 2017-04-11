@@ -50,7 +50,7 @@ check_noattr(kdump_ctx_t *ctx, char *key)
 	if (res == KDUMP_OK) {
 		puts("FAILED");
 		return TEST_FAIL;
-	} else if (res != KDUMP_NODATA) {
+	} else if (res != KDUMP_ERR_NODATA) {
 		fprintf(stderr, "Cannot get attribute %s: %s\n",
 			key, kdump_get_err(ctx));
 		return TEST_ERR;

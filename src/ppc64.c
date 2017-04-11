@@ -132,7 +132,7 @@ process_ppc64_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
 	kdump_status res;
 
 	if (size < sizeof(struct elf_prstatus))
-		return set_error(ctx, KDUMP_DATAERR,
+		return set_error(ctx, KDUMP_ERR_CORRUPT,
 				 "Wrong PRSTATUS size: %zu", size);
 
 	res = set_cpu_regs64(ctx, get_num_cpus(ctx), reg_names,

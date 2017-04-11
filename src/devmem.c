@@ -61,16 +61,16 @@ get_vmcoreinfo(kdump_ctx_t *ctx)
 	if (!f)
 		return errno == ENOENT
 			? KDUMP_OK
-			: set_error(ctx, KDUMP_SYSERR,
+			: set_error(ctx, KDUMP_ERR_SYSTEM,
 				    "Cannot open %s", FN_VMCOREINFO);
 
 	if (fscanf(f, "%llx %zx", &addr, &length) == 2)
 		ret = KDUMP_OK;
 	else if (ferror(f))
-		ret = set_error(ctx, KDUMP_SYSERR,
+		ret = set_error(ctx, KDUMP_ERR_SYSTEM,
 				"Error reading %s", FN_VMCOREINFO);
 	else
-		ret = set_error(ctx, KDUMP_DATAERR,
+		ret = set_error(ctx, KDUMP_ERR_CORRUPT,
 				"Error parsing %s: Wrong file format",
 				FN_VMCOREINFO);
 	fclose(f);
@@ -79,7 +79,7 @@ get_vmcoreinfo(kdump_ctx_t *ctx)
 
 	info = ctx_malloc(length, ctx, "VMCOREINFO buffer");
 	if (!info)
-		return KDUMP_SYSERR;
+		return KDUMP_ERR_SYSTEM;
 
 	ret = read_locked(ctx, KDUMP_MACHPHYSADDR, addr, info, &length);
 	if (ret == KDUMP_OK)
@@ -99,7 +99,7 @@ check_kcode(kdump_ctx_t *ctx, char *line, kdump_paddr_t *paddr)
 
 	p = strchr(line, ':');
 	if (!p)
-		return KDUMP_NOKEY;
+		return KDUMP_ERR_NOKEY;
 	++p;
 	while (is_posix_space(*p))
 		++p;
@@ -108,7 +108,7 @@ check_kcode(kdump_ctx_t *ctx, char *line, kdump_paddr_t *paddr)
 	while (is_posix_space(*q))
 		*q-- = '\0';
 	if (strcmp(p, "Kernel code"))
-		return KDUMP_NOKEY;
+		return KDUMP_ERR_NOKEY;
 
 	p = line;
 	while (is_posix_space(*p))
@@ -117,7 +117,7 @@ check_kcode(kdump_ctx_t *ctx, char *line, kdump_paddr_t *paddr)
 	while (is_posix_space(*p))
 		++p;
 	if (p == line || *p != '-')
-		return set_error(ctx, KDUMP_DATAERR,
+		return set_error(ctx, KDUMP_ERR_CORRUPT,
 				 "Invalid iomem format: %s", line);
 
 	*paddr = start;
@@ -135,8 +135,8 @@ linux_iomem_kcode(kdump_ctx_t *ctx, kdump_paddr_t *paddr)
 	f = fopen(FN_IOMEM, "r");
 	if (!f)
 		return errno == ENOENT
-			? KDUMP_NODATA
-			: set_error(ctx, KDUMP_SYSERR,
+			? KDUMP_ERR_NODATA
+			: set_error(ctx, KDUMP_ERR_SYSTEM,
 				    "Cannot open %s", FN_VMCOREINFO);
 
 	line = NULL;
@@ -145,10 +145,10 @@ linux_iomem_kcode(kdump_ctx_t *ctx, kdump_paddr_t *paddr)
 		ssize_t linelen = getline(&line, &linealloc, f);
 		if (linelen < 0)
 			break;
-	} while ((ret = check_kcode(ctx, line, paddr)) == KDUMP_NOKEY);
+	} while ((ret = check_kcode(ctx, line, paddr)) == KDUMP_ERR_NOKEY);
 
 	if (ferror(f))
-		ret = set_error(ctx, KDUMP_SYSERR,
+		ret = set_error(ctx, KDUMP_ERR_SYSTEM,
 				"Error reading %s", FN_IOMEM);
 	if (line)
 		free(line);
@@ -174,7 +174,7 @@ devmem_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 			ce = &dmp->ce[i];
 	}
 	if (!ce)
-		return set_error(ctx, KDUMP_BUSY,
+		return set_error(ctx, KDUMP_ERR_BUSY,
 				 "Cache is fully utilized");
 	++ce->refcnt;
 
@@ -207,7 +207,7 @@ devmem_realloc_caches(kdump_ctx_t *ctx)
 
 	ce = calloc(cache_size, sizeof *ce);
 	if (!ce)
-		return set_error(ctx, KDUMP_SYSERR,
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate cache (%u * %zu bytes)",
 				 cache_size, sizeof *ce);
 
@@ -215,7 +215,7 @@ devmem_realloc_caches(kdump_ctx_t *ctx)
 				ctx, "cache data");
 	if (!ce[0].data) {
 		free(ce);
-		return KDUMP_SYSERR;
+		return KDUMP_ERR_SYSTEM;
 	}
 
 	ce[0].pfn = CACHE_FLAGS_PFN(-1);
@@ -242,7 +242,7 @@ devmem_probe(kdump_ctx_t *ctx, void *hdr)
 	kdump_status ret;
 
 	if (fstat(get_file_fd(ctx), &st))
-		return set_error(ctx, KDUMP_SYSERR, "Cannot stat file");
+		return set_error(ctx, KDUMP_ERR_SYSTEM, "Cannot stat file");
 
 	if (!S_ISCHR(st.st_mode) ||
 	    (st.st_rdev != makedev(1, 1) &&
@@ -252,7 +252,7 @@ devmem_probe(kdump_ctx_t *ctx, void *hdr)
 
 	dmp = ctx_malloc(sizeof *dmp, ctx, "Live source private data");
 	if (!dmp)
-		return KDUMP_SYSERR;
+		return KDUMP_ERR_SYSTEM;
 	dmp->ce = NULL;
 	ctx->shared->fmtdata = dmp;
 

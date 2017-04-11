@@ -186,7 +186,7 @@ elf_read_cache(kdump_ctx_t *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
 	}
 
 	if (p == ce->data)
-		return set_error(ctx, KDUMP_NODATA, "Page not found");
+		return set_error(ctx, KDUMP_ERR_NODATA, "Page not found");
 	else if (p < endp)
 		memset(p, 0, endp - p);
 
@@ -296,7 +296,7 @@ xc_mfn_to_pfn(kdump_ctx_t *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 			*pfn = p->pfn;
 			return KDUMP_OK;
 		}
-	return set_error(ctx, KDUMP_NODATA, "MFN not found");
+	return set_error(ctx, KDUMP_ERR_NODATA, "MFN not found");
 }
 
 static kdump_status
@@ -309,7 +309,7 @@ xc_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 	       ? pfn_to_idx(ctx, pfn)
 	       : mfn_to_idx(ctx, pfn));
 	if (idx == ~0UL)
-		return set_error(ctx, KDUMP_NODATA, "Page not found");
+		return set_error(ctx, KDUMP_ERR_NODATA, "Page not found");
 
 	return def_read_cache(ctx, pio, xc_read_cache, idx);
 }
@@ -326,7 +326,7 @@ init_segments(kdump_ctx_t *ctx, unsigned phnum)
 		ctx_malloc(2 * phnum * sizeof(struct load_segment),
 			   ctx, "program headers");
 	if (!edp->load_segments)
-		return KDUMP_SYSERR;
+		return KDUMP_ERR_SYSTEM;
 	edp->num_load_segments = 0;
 
 	edp->note_segments = edp->load_segments + phnum;
@@ -346,7 +346,7 @@ init_sections(kdump_ctx_t *ctx, unsigned snum)
 		ctx_malloc(snum * sizeof(struct section),
 			   ctx, "section headers");
 	if (!edp->sections)
-		return KDUMP_SYSERR;
+		return KDUMP_ERR_SYSTEM;
 	edp->num_sections = 0;
 	return KDUMP_OK;
 }
@@ -411,7 +411,7 @@ init_strtab(kdump_ctx_t *ctx, unsigned strtabidx)
 	edp->strtab_size = ps->size;
 	edp->strtab = read_elf_sect(ctx, ps);
 	if (!edp->strtab)
-		return set_error(ctx, KDUMP_SYSERR,
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate string table (%zu bytes)",
 				 edp->strtab_size);
 
@@ -448,7 +448,7 @@ init_elf32(kdump_ctx_t *ctx, Elf32_Ehdr *ehdr)
 
 	offset = dump32toh(ctx, ehdr->e_phoff);
 	if (lseek(get_file_fd(ctx), offset, SEEK_SET) < 0)
-		return set_error(ctx, KDUMP_SYSERR,
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot seek to program headers at %llu",
 				 (unsigned long long) offset);
 	for (i = 0; i < dump16toh(ctx, ehdr->e_phnum); ++i) {
@@ -472,7 +472,7 @@ init_elf32(kdump_ctx_t *ctx, Elf32_Ehdr *ehdr)
 
 	offset = dump32toh(ctx, ehdr->e_shoff);
 	if (lseek(get_file_fd(ctx), offset, SEEK_SET) < 0)
-		return set_error(ctx, KDUMP_SYSERR,
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot seek to section headers at %llu",
 				 (unsigned long long) offset);
 	for (i = 0; i < dump16toh(ctx, ehdr->e_shnum); ++i) {
@@ -518,7 +518,7 @@ init_elf64(kdump_ctx_t *ctx, Elf64_Ehdr *ehdr)
 
 	offset = dump64toh(ctx, ehdr->e_phoff);
 	if (lseek(get_file_fd(ctx), offset, SEEK_SET) < 0)
-		return set_error(ctx, KDUMP_SYSERR,
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot seek to program headers at %llu",
 				 (unsigned long long) offset);
 	for (i = 0; i < dump16toh(ctx, ehdr->e_phnum); ++i) {
@@ -542,7 +542,7 @@ init_elf64(kdump_ctx_t *ctx, Elf64_Ehdr *ehdr)
 
 	offset = dump32toh(ctx, ehdr->e_shoff);
 	if (lseek(get_file_fd(ctx), offset, SEEK_SET) < 0)
-		return set_error(ctx, KDUMP_SYSERR,
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot seek to section headers at %llu",
 				 (unsigned long long) offset);
 	for (i = 0; i < dump16toh(ctx, ehdr->e_shnum); ++i) {
@@ -623,7 +623,7 @@ open_common(kdump_ctx_t *ctx)
 	int i;
 
 	if (!edp->num_load_segments && !edp->num_sections)
-		return set_error(ctx, KDUMP_UNSUPPORTED, "No content found");
+		return set_error(ctx, KDUMP_ERR_NOTIMPL, "No content found");
 
 	/* read notes */
 	notesz = 0;
@@ -631,7 +631,7 @@ open_common(kdump_ctx_t *ctx)
 		notesz += edp->note_segments[i].filesz;
 	notes = ctx_malloc(notesz, ctx, "ELF notes");
 	if (!notes)
-		return KDUMP_SYSERR;
+		return KDUMP_ERR_SYSTEM;
 
 	ret = process_elf_notes(ctx, notes);
 	free(notes);
@@ -662,21 +662,21 @@ open_common(kdump_ctx_t *ctx)
 		else if (!strcmp(name, ".xen_p2m")) {
 			ctx->shared->xen_map = read_elf_sect(ctx, sect);
 			if (!ctx->shared->xen_map)
-				return KDUMP_SYSERR;
+				return KDUMP_ERR_SYSTEM;
 			ctx->shared->xen_map_size = sect->size /sizeof(struct xen_p2m);
 			set_xen_xlat(ctx, KDUMP_XEN_NONAUTO);
 			get_max_pfn_xen_nonauto(ctx);
 		} else if (!strcmp(name, ".xen_pfn")) {
 			ctx->shared->xen_map = read_elf_sect(ctx, sect);
 			if (!ctx->shared->xen_map)
-				return KDUMP_SYSERR;
+				return KDUMP_ERR_SYSTEM;
 			ctx->shared->xen_map_size = sect->size / sizeof(uint64_t);
 			set_xen_xlat(ctx, KDUMP_XEN_AUTO);
 			get_max_pfn_xen_auto(ctx);
 		} else if (!strcmp(name, ".note.Xen")) {
 			notes = read_elf_sect(ctx, sect);
 			if (!notes)
-				return KDUMP_SYSERR;
+				return KDUMP_ERR_SYSTEM;
 			ret = process_notes(ctx, notes, sect->size);
 			free(notes);
 			if (ret != KDUMP_OK)
@@ -685,7 +685,7 @@ open_common(kdump_ctx_t *ctx)
 		} else if (!strcmp(name, ".xen_prstatus")) {
 			void *data = read_elf_sect(ctx, sect);
 			if (!data)
-				return KDUMP_SYSERR;
+				return KDUMP_ERR_SYSTEM;
 			ret = ctx->shared->arch_ops->process_xen_prstatus(
 				ctx, data, sect->size);
 			free(data);
@@ -698,7 +698,7 @@ open_common(kdump_ctx_t *ctx)
 	if (edp->xen_pages_offset) {
 		set_xen_type(ctx, KDUMP_XEN_DOMAIN);
 		if (!ctx->shared->xen_map)
-			return set_error(ctx, KDUMP_UNSUPPORTED,
+			return set_error(ctx, KDUMP_ERR_NOTIMPL,
 					 "Missing Xen P2M mapping");
 		ctx->shared->ops = &xc_core_elf_ops;
 		set_addrspace_caps(ctx->shared,
@@ -724,7 +724,7 @@ elf_probe(kdump_ctx_t *ctx, void *hdr)
 
 	edp = calloc(1, sizeof *edp);
 	if (!edp)
-		return set_error(ctx, KDUMP_SYSERR,
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate ELF dump private data");
 	ctx->shared->fmtdata = edp;
 
@@ -739,7 +739,7 @@ elf_probe(kdump_ctx_t *ctx, void *hdr)
 		set_byte_order(ctx, KDUMP_BIG_ENDIAN);
 		break;
 	default:
-		return set_error(ctx, KDUMP_UNSUPPORTED,
+		return set_error(ctx, KDUMP_ERR_NOTIMPL,
 				 "Unsupported ELF data format: %u",
 				 eheader[EI_DATA]);
 	}
@@ -761,7 +761,7 @@ elf_probe(kdump_ctx_t *ctx, void *hdr)
 		if (ret == KDUMP_OK)
 			ret = open_common(ctx);
 	} else
-		ret = set_error(ctx, KDUMP_UNSUPPORTED,
+		ret = set_error(ctx, KDUMP_ERR_NOTIMPL,
 				"Unsupported ELF class: %u",
 				elf32->e_ident[EI_CLASS]);
 

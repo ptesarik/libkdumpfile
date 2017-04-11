@@ -50,7 +50,7 @@ cache entries.
 
 The library does not block until a cache entry is available.
 Instead, the read attempt fails immediately with a specific error
-status: [KDUMP_BUSY]. Retrying the read may be successful, but
+status: [KDUMP_ERR_BUSY]. Retrying the read may be successful, but
 this error indicates that the cache size should be increased.
 
 [kdump_ctx_t]: @ref kdump_ctx_t
@@ -58,4 +58,4 @@ this error indicates that the cache size should be increased.
 [kdump_get_err]: @ref kdump_get_err
 [kdump_get_priv]: @ref kdump_get_priv
 [kdump_set_priv]: @ref kdump_set_priv
-[KDUMP_BUSY]: @ref KDUMP_BUSY
+[KDUMP_ERR_BUSY]: @ref KDUMP_ERR_BUSY

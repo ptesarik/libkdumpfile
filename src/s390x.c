@@ -87,10 +87,10 @@ read_os_info_from_lowcore(kdump_ctx_t *ctx)
 		return set_error(ctx, ret, "Cannot read LC_OS_INFO pointer");
 	addr = dump64toh(ctx, addr);
 	if (!addr)
-		return set_error(ctx, KDUMP_NODATA,
+		return set_error(ctx, KDUMP_ERR_NODATA,
 				 "NULL os_info pointer");
 	if (addr % PAGE_SIZE != 0)
-		return set_error(ctx, KDUMP_DATAERR,
+		return set_error(ctx, KDUMP_ERR_CORRUPT,
 				 "Invalid os_info pointer: 0x%llx",
 				 (unsigned long long) addr);
 
@@ -102,7 +102,7 @@ read_os_info_from_lowcore(kdump_ctx_t *ctx)
 
 	magic = dump64toh(ctx, os_info->magic);
 	if (magic != OS_INFO_MAGIC)
-		return set_error(ctx, KDUMP_NODATA,
+		return set_error(ctx, KDUMP_ERR_NODATA,
 				 "Invalid os_info magic: 0x%llx",
 				 (unsigned long long) magic);
 
@@ -110,7 +110,7 @@ read_os_info_from_lowcore(kdump_ctx_t *ctx)
 	csum = cksum32(&os_info->version_major, sz, 0);
 	csum_expect = dump32toh(ctx, os_info->csum);
 	if (csum != csum_expect)
-		return set_error(ctx, KDUMP_DATAERR,
+		return set_error(ctx, KDUMP_ERR_CORRUPT,
 				 "Invalid os_info checksum: 0x%lx != 0x%lx",
 				 (unsigned long) csum,
 				 (unsigned long) csum_expect);
@@ -118,12 +118,12 @@ read_os_info_from_lowcore(kdump_ctx_t *ctx)
 	sz = dump64toh(ctx, os_info->entry[OS_INFO_VMCOREINFO].size);
 	addr = dump64toh(ctx, os_info->entry[OS_INFO_VMCOREINFO].addr);
 	if (!sz || !addr)
-		return set_error(ctx, KDUMP_NODATA,
+		return set_error(ctx, KDUMP_ERR_NODATA,
 				 "No VMCOREINFO found in os_info");
 
 	vmcoreinfo = ctx_malloc(sz, ctx, "VMCOREINFO buffer");
 	if (!vmcoreinfo)
-		return KDUMP_SYSERR;
+		return KDUMP_ERR_SYSTEM;
 
 	ret = read_locked(ctx, KDUMP_KPHYSADDR, addr, vmcoreinfo, &sz);
 	if (ret != KDUMP_OK) {
@@ -135,7 +135,7 @@ read_os_info_from_lowcore(kdump_ctx_t *ctx)
 	csum_expect = dump32toh(ctx, os_info->entry[OS_INFO_VMCOREINFO].csum);
 	if (csum != csum_expect) {
 		free(vmcoreinfo);
-		return set_error(ctx, KDUMP_DATAERR,
+		return set_error(ctx, KDUMP_ERR_CORRUPT,
 				 "Invalid VMCOREINFO checksum: 0x%lx != 0x%lx",
 				 (unsigned long) csum,
 				 (unsigned long) csum_expect);
@@ -165,7 +165,7 @@ read_vmcoreinfo_from_lowcore(kdump_ctx_t *ctx)
 		return ret;
 	addr = dump64toh(ctx, addr);
 	if (!addr)
-		return set_error(ctx, KDUMP_NODATA,
+		return set_error(ctx, KDUMP_ERR_NODATA,
 				 "NULL VMCOREINFO pointer");
 
 	sz = sizeof(hdr);
@@ -180,7 +180,7 @@ read_vmcoreinfo_from_lowcore(kdump_ctx_t *ctx)
 	notesz = descoff + hdr.n_descsz;
 	note = ctx_malloc(notesz, ctx, "VMCOREINFO buffer");
 	if (!note)
-		return KDUMP_SYSERR;
+		return KDUMP_ERR_SYSTEM;
 
 	sz = notesz;
 	ret = read_locked(ctx, KDUMP_KPHYSADDR, addr, note, &sz);
@@ -198,7 +198,7 @@ process_lowcore_info(kdump_ctx_t *ctx)
 	kdump_status ret;
 
 	ret = read_os_info_from_lowcore(ctx);
-	if (ret == KDUMP_NODATA) {
+	if (ret == KDUMP_ERR_NODATA) {
 		clear_error(ctx);
 		ret = read_vmcoreinfo_from_lowcore(ctx);
 	}

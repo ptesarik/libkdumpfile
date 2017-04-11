@@ -825,7 +825,7 @@ def_read_cache(kdump_ctx_t *ctx, struct page_io *pio,
 	entry = cache_get_entry(pio->cache, idx);
 	if (!entry) {
 		cache_unref(pio->cache);
-		return set_error(ctx, KDUMP_BUSY,
+		return set_error(ctx, KDUMP_ERR_BUSY,
 				 "Cache is fully utilized");
 	}
 
@@ -888,7 +888,7 @@ def_realloc_caches(kdump_ctx_t *ctx)
 
 	cache = cache_alloc(cache_size, get_page_size(ctx));
 	if (!cache)
-		return set_error(ctx, KDUMP_SYSERR,
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate cache (%u * %zu bytes)",
 				 cache_size, get_page_size(ctx));
 
@@ -909,7 +909,7 @@ cache_size_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
 		    kdump_attr_value_t *val)
 {
 	if (val->number > UINT_MAX)
-		return set_error(ctx, KDUMP_INVALID,
+		return set_error(ctx, KDUMP_ERR_INVALID,
 				 "Cache size too big (max %u)", UINT_MAX);
 	return KDUMP_OK;
 }

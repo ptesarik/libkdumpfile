@@ -255,23 +255,23 @@ kdump_strerror(kdump_status status)
 	switch (status) {
 	case KDUMP_OK:
 		return "Success";
-	case KDUMP_SYSERR:
-		return "OS error, see @c errno";
-	case KDUMP_UNSUPPORTED:
-		return "Unsupported file format";
-	case KDUMP_NODATA:
+	case KDUMP_ERR_SYSTEM:
+		return "OS error";
+	case KDUMP_ERR_NOTIMPL:
+		return "Unimplemented feature";
+	case KDUMP_ERR_NODATA:
 		return "Data is not stored in the dump file";
-	case KDUMP_DATAERR:
+	case KDUMP_ERR_CORRUPT:
 		return "Corrupted file data";
-	case KDUMP_INVALID:
+	case KDUMP_ERR_INVALID:
 		return "Invalid value";
-	case KDUMP_NOKEY:
+	case KDUMP_ERR_NOKEY:
 		return "No such attribute key";
-	case KDUMP_EOF:
+	case KDUMP_ERR_EOF:
 		return "Unexpected EOF";
-	case KDUMP_BUSY:
+	case KDUMP_ERR_BUSY:
 		return "Too many pending requests";
-	case KDUMP_ADDRXLAT:
+	case KDUMP_ERR_ADDRXLAT:
 		return "Address translation error";
 	default:
 		return "Unknown error";
