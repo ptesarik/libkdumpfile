@@ -86,7 +86,11 @@ myread64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 	return ADDRXLAT_OK;
 }
 
-
+static addrxlat_status
+nullop(void *data, const addrxlat_fulladdr_t *paddr)
+{
+	return ADDRXLAT_OK;
+}
 
 int
 main(int argc, char **argv)
@@ -99,6 +103,7 @@ main(int argc, char **argv)
 	addrxlat_ctx_t *ctx;
 	addrxlat_sys_t *sys;
 	addrxlat_fulladdr_t faddr;
+	addrxlat_op_ctl_t opctl;
 	addrxlat_status status;
 	int ret;
 
@@ -120,10 +125,17 @@ main(int argc, char **argv)
 	if (ret != TEST_OK)
 		return ret;
 
-	fputs("Infinite recursion: ", stdout);
 	faddr.addr = 0x123456;
 	faddr.as = ADDRXLAT_KVADDR;
-	status = addrxlat_by_sys(ctx, sys, &faddr, ADDRXLAT_MACHPHYSADDR);
+
+	opctl.ctx = ctx;
+	opctl.sys = sys;
+	opctl.op = nullop;
+	opctl.data = &faddr;
+	opctl.caps = ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR);
+
+	fputs("Infinite recursion: ", stdout);
+	status = addrxlat_op(&opctl, &faddr);
 	if (status == ADDRXLAT_OK) {
 		puts("FAIL");
 		fputs("Unexpected success??\n", stderr);
@@ -139,9 +151,7 @@ main(int argc, char **argv)
 	fputs("Callback with no capabilities: ", stdout);
 	cb.read_caps = 0;
 	addrxlat_ctx_set_cb(ctx, &cb);
-	faddr.addr = 0x123456;
-	faddr.as = ADDRXLAT_KVADDR;
-	status = addrxlat_by_sys(ctx, sys, &faddr, ADDRXLAT_MACHPHYSADDR);
+	status = addrxlat_op(&opctl, &faddr);
 	if (status == ADDRXLAT_OK) {
 		puts("FAIL");
 		fputs("Unexpected success??\n", stderr);
@@ -157,9 +167,7 @@ main(int argc, char **argv)
 	fputs("Missing callback: ", stdout);
 	cb.read64 = NULL;
 	addrxlat_ctx_set_cb(ctx, &cb);
-	faddr.addr = 0x123456;
-	faddr.as = ADDRXLAT_KVADDR;
-	status = addrxlat_by_sys(ctx, sys, &faddr, ADDRXLAT_MACHPHYSADDR);
+	status = addrxlat_op(&opctl, &faddr);
 	if (status == ADDRXLAT_OK) {
 		puts("FAIL");
 		fputs("Unexpected success??\n", stderr);
