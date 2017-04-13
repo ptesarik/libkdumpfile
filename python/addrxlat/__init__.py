@@ -19,10 +19,18 @@ class FullAddress(FullAddress):
             raise get_exception(status, ctx.get_err())
 
 class Context(Context):
+    def __new__(cls, *args, **kwargs):
+        kwargs['convert'] = _convert
+        return super(Context, cls).__new__(cls, *args, **kwargs)
+
     def __repr__(self):
         return '%s()' % (self.__class__.__name__,)
 
 class Description(Description):
+    def __new__(cls, *args, **kwargs):
+        kwargs['convert'] = _convert
+        return super(Description, cls).__new__(cls, *args, **kwargs)
+
     def __init__(self, kind, target_as=NOADDR, param=()):
         super(Description, self).__init__(kind)
         self.target_as = target_as
@@ -36,6 +44,10 @@ class Description(Description):
             self.param)
 
 class LinearDescription(LinearDescription):
+    def __new__(cls, *args, **kwargs):
+        kwargs['convert'] = _convert
+        return super(LinearDescription, cls).__new__(cls, *args, **kwargs)
+
     def __init__(self, target_as=NOADDR, off=0):
         super(LinearDescription, self).__init__()
         self.target_as = target_as
@@ -48,6 +60,10 @@ class LinearDescription(LinearDescription):
             self.off)
 
 class PageTableDescription(PageTableDescription):
+    def __new__(cls, *args, **kwargs):
+        kwargs['convert'] = _convert
+        return super(PageTableDescription, cls).__new__(cls, *args, **kwargs)
+
     def __init__(self, target_as=NOADDR, root=None, pte_format=PTE_NONE, fields=()):
         super(PageTableDescription, self).__init__()
         self.target_as = target_as
@@ -65,6 +81,10 @@ class PageTableDescription(PageTableDescription):
             self.fields)
 
 class LookupDescription(LookupDescription):
+    def __new__(cls, *args, **kwargs):
+        kwargs['convert'] = _convert
+        return super(LookupDescription, cls).__new__(cls, *args, **kwargs)
+
     def __init__(self, target_as=NOADDR, endoff=0, tbl=()):
         super(LookupDescription, self).__init__()
         self.target_as = target_as
@@ -79,6 +99,10 @@ class LookupDescription(LookupDescription):
             self.tbl)
 
 class MemoryArrayDescription(MemoryArrayDescription):
+    def __new__(cls, *args, **kwargs):
+        kwargs['convert'] = _convert
+        return super(MemoryArrayDescription, cls).__new__(cls, *args, **kwargs)
+
     def __init__(self, target_as=NOADDR, base=None, shift=0, elemsz=0, valsz=0):
         super(MemoryArrayDescription, self).__init__()
         self.target_as = target_as
@@ -98,6 +122,10 @@ class MemoryArrayDescription(MemoryArrayDescription):
             self.valsz)
 
 class Method(Method):
+    def __new__(cls, *args, **kwargs):
+        kwargs['convert'] = _convert
+        return super(Method, cls).__new__(cls, *args, **kwargs)
+
     def __init__(self, desc=None):
         super(Method, self).__init__()
         if desc is not None:
@@ -123,6 +151,10 @@ class Range(Range):
             self.meth)
 
 class Map(Map):
+    def __new__(cls, *args, **kwargs):
+        kwargs['convert'] = _convert
+        return super(Map, cls).__new__(cls, *args, **kwargs)
+
     def __init__(self):
         super(Map, self).__init__()
 
@@ -130,6 +162,10 @@ class Map(Map):
         return '%s()' % (self.__class__.__name__)
 
 class System(System):
+    def __new__(cls, *args, **kwargs):
+        kwargs['convert'] = _convert
+        return super(System, cls).__new__(cls, *args, **kwargs)
+
     def __init__(self):
         super(System, self).__init__()
 
@@ -143,6 +179,10 @@ class System(System):
             raise get_exception(status, ctx.get_err())
 
 class Step(Step):
+    def __new__(cls, *args, **kwargs):
+        kwargs['convert'] = _convert
+        return super(Step, cls).__new__(cls, *args, **kwargs)
+
     def __init__(self, ctx, sys=None, meth=None):
         super(Step, self).__init__(ctx)
         if sys is not None:
@@ -178,6 +218,10 @@ class Step(Step):
             raise get_exception(status, self.ctx.get_err())
 
 class Operator(Operator):
+    def __new__(cls, *args, **kwargs):
+        kwargs['convert'] = _convert
+        return super(Operator, cls).__new__(cls, *args, **kwargs)
+
     def __init__(self, ctx, sys=None, caps=0):
         super(Operator, self).__init__(ctx)
         if sys is not None:
@@ -195,3 +239,18 @@ class Operator(Operator):
         if status != OK:
             raise get_exception(status, self.ctx.get_err())
         return self.result
+
+_convert = TypeConvert()
+_convert.FullAddress = FullAddress
+_convert.Context = Context
+_convert.Description = Description
+_convert.LinearDescription = LinearDescription
+_convert.PageTableDescription = PageTableDescription
+_convert.LookupDescription = LookupDescription
+_convert.MemoryArrayDescription = MemoryArrayDescription
+_convert.Method = Method
+_convert.Range = Range
+_convert.Map = Map
+_convert.System = System
+_convert.Step = Step
+_convert.Operator = Operator
