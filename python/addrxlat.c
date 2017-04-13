@@ -170,21 +170,22 @@ check_null_attr(PyObject *obj, const char *name)
 	return -1;
 }
 
-/** Check that a constructor gets no arguments.
- * @param type    type
- * @param args    positional arguments
- * @param kwargs  keyword arguments
- * @returns       zero if no arguments given, -1 otherwise
+/** Get the n-th argument in the list.
+ * @param fname  function name (used in exception message)
+ * @param args   positional arguments
+ * @param n      parameter index (zero-based)
+ * @returns      n-th argument, or @c NULL on failure
  */
-static int
-check_no_args(PyTypeObject *type, PyObject *args, PyObject *kwargs)
+static PyObject *
+nth_arg(const char *fname, PyObject *args, Py_ssize_t n)
 {
-	if (PyTuple_GET_SIZE(args) || (kwargs && PyDict_Size(kwargs))) {
-		PyErr_Format(PyExc_TypeError, "%s takes no arguments",
-			     type->tp_name);
-		return -1;
+	Py_ssize_t sz = PyTuple_GET_SIZE(args);
+	if (sz <= n) {
+		PyErr_Format(PyExc_TypeError, "%.200s() takes at least %ld argument%s (%ld given)",
+			     fname, (long) n + 1, n ? "s" : "", (long) sz);
+		return NULL;
 	}
-	return 0;
+	return PyTuple_GET_ITEM(args, n);
 }
 
 /** Offset of a type member as a void pointer. */
@@ -817,9 +818,6 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	ctx_object *self;
 	addrxlat_cb_t cb;
 
-	if (check_no_args(type, args, kwargs))
-		return NULL;
-
 	self = (ctx_object*) type->tp_alloc(type, 0);
 	if (!self)
 		return NULL;
@@ -1215,12 +1213,15 @@ of a specific translation kind.");
 static PyObject *
 desc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
-	static char *keywords[] = {"kind", NULL};
 	desc_object *self;
+	PyObject *value;
 	long kind;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "l:Description",
-					 keywords, &kind))
+	value = nth_arg("Description", args, 0);
+	if (!value)
+		return NULL;
+	kind = Number_AsLong(value);
+	if (PyErr_Occurred())
 		return NULL;
 
 	self = (desc_object*) type->tp_alloc(type, 0);
@@ -1512,9 +1513,6 @@ lineardesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	desc_object *self;
 
-	if (check_no_args(type, args, kwargs))
-		return NULL;
-
 	self = (desc_object*) make_desc(type, ADDRXLAT_LINEAR);
 	if (self)
 		self->loc[0].len = sizeof(addrxlat_param_linear_t);
@@ -1590,9 +1588,6 @@ static PyObject *
 pgtdesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	pgtdesc_object *self;
-
-	if (check_no_args(type, args, kwargs))
-		return NULL;
 
 	self = (pgtdesc_object*) make_desc(type, ADDRXLAT_PGT);
 	if (self) {
@@ -1811,9 +1806,6 @@ lookupdesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	desc_object *self;
 
-	if (check_no_args(type, args, kwargs))
-		return NULL;
-
 	self = (desc_object*) make_desc(type, ADDRXLAT_LOOKUP);
 	if (self) {
 		self->loc[0].len = sizeof(addrxlat_param_lookup_t);
@@ -2016,9 +2008,6 @@ memarrdesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	memarrdesc_object *self;
 
-	if (check_no_args(type, args, kwargs))
-		return NULL;
-
 	self = (memarrdesc_object*) make_desc(type, ADDRXLAT_MEMARR);
 	if (self) {
 		param_loc *loc;
@@ -2214,9 +2203,6 @@ static PyObject *
 meth_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	meth_object *self;
-
-	if (check_no_args(type, args, kwargs))
-		return NULL;
 
 	self = (meth_object*) type->tp_alloc(type, 0);
 	if (!self)
@@ -2584,9 +2570,6 @@ map_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	map_object *self;
 
-	if (check_no_args(type, args, kwargs))
-		return NULL;
-
 	self = (map_object*) type->tp_alloc(type, 0);
 	if (!self)
 		return NULL;
@@ -2867,9 +2850,6 @@ static PyObject *
 sys_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	sys_object *self;
-
-	if (check_no_args(type, args, kwargs))
-		return NULL;
 
 	self = (sys_object*) type->tp_alloc(type, 0);
 	if (!self)
@@ -3190,11 +3170,10 @@ static PyObject *
 step_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	step_object *self;
-	static char *keywords[] = { "ctx", NULL };
 	PyObject *ctxobj;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:Step",
-					 keywords, &ctxobj))
+	ctxobj = nth_arg("Step", args, 0);
+	if (!ctxobj)
 		return NULL;
 
 	self = (step_object*) type->tp_alloc(type, 0);
@@ -3707,11 +3686,10 @@ static PyObject *
 op_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	op_object *self;
-	static char *keywords[] = { "ctx", NULL };
 	PyObject *ctxobj;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:Operator",
-					 keywords, &ctxobj))
+	ctxobj = nth_arg("Operator", args, 0);
+	if (!ctxobj)
 		return NULL;
 
 	self = (op_object*) type->tp_alloc(type, 0);
