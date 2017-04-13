@@ -1168,21 +1168,19 @@ set_fulladdr(PyObject *self, PyObject *value, void *data)
 	PyObject **pobj = (PyObject**)((char*)self + addrloc->off_obj);
 	param_loc *loc = (param_loc*)((char*)self + addrloc->off_loc);
 	PyObject *oldval;
+	addrxlat_fulladdr_t *addr;
 
 	if (check_null_attr(value, addrloc->name))
 		return -1;
 
-	if (!PyObject_TypeCheck(value, &fulladdr_type)) {
-		PyErr_Format(PyExc_TypeError,
-			     "need a FullAddress, not '%.200s'",
-			     Py_TYPE(value)->tp_name);
+	addr = fulladdr_AsPointer(value);
+	if (!addr)
 		return -1;
-	}
 
 	Py_INCREF(value);
 	oldval = *pobj;
 	*pobj = value;
-	loc->ptr = &((fulladdr_object*)value)->faddr;
+	loc->ptr = addr;
 	Py_DECREF(oldval);
 	return 0;
 }
