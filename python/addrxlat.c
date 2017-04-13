@@ -56,9 +56,29 @@
 
 static addrxlat_status ctx_error_status(PyObject *_self);
 static PyObject *ctx_status_result(PyObject *_self, addrxlat_status status);
-static addrxlat_ctx_t *ctx_AsPointer(PyObject *value);
-static addrxlat_sys_t *sys_AsPointer(PyObject *value);
 static PyObject *make_desc_param(PyObject *desc);
+
+/* Conversion functions */
+static addrxlat_fulladdr_t *fulladdr_AsPointer(PyObject *value);
+static PyObject *fulladdr_FromPointer(
+	PyObject *_conv, const addrxlat_fulladdr_t *faddr);
+static addrxlat_ctx_t *ctx_AsPointer(PyObject *value);
+static PyObject *ctx_FromPointer(PyObject *_conv, addrxlat_ctx_t *ctx);
+static addrxlat_desc_t *desc_AsPointer(PyObject *value);
+static PyObject *desc_FromPointer(
+	PyObject *_conv, const addrxlat_desc_t *desc);
+static addrxlat_meth_t *meth_AsPointer(PyObject *value);
+static PyObject *meth_FromPointer(PyObject *_conv, addrxlat_meth_t *meth);
+static addrxlat_range_t *range_AsPointer(PyObject *value);
+static PyObject *range_FromPointer(
+	PyObject *_conv, const addrxlat_range_t *range);
+static addrxlat_map_t *map_AsPointer(PyObject *value);
+static PyObject *map_FromPointer(PyObject *_conv, addrxlat_map_t *map);
+static addrxlat_sys_t *sys_AsPointer(PyObject *value);
+static PyObject *sys_FromPointer(PyObject *_conv, addrxlat_sys_t *sys);
+
+/** Default type converter object. */
+static PyObject *def_convert;
 
 /** Convert a PyLong or PyInt to a C long.
  * @param num  a @c PyLong or @c PyInt object
@@ -527,44 +547,6 @@ static PyTypeObject fulladdr_type =
 	0,				/* tp_new */
 };
 
-/** Construct a fulladdr object from @c addrxlat_fulladdr_t pointer.
- * @param faddr  libaddrxlat representation of a full address
- * @returns      corresponding Python object (or @c NULL on failure)
- *
- * This function makes a new copy of the full address.
- */
-static PyObject *
-fulladdr_FromPointer(const addrxlat_fulladdr_t *faddr)
-{
-	PyTypeObject *type = &fulladdr_type;
-	PyObject *result;
-
-	result = type->tp_alloc(type, 0);
-	if (result)
-		((fulladdr_object*)result)->faddr = *faddr;
-	return result;
-}
-
-/** Get the libaddrxlat representation of a Python fulladdr object.
- * @param value  a Python fulladdr object
- * @returns      address of the embedded @c libaddrxlat_fulladdr_t,
- *               or @c NULL on error
- *
- * The returned pointer refers to a @c libaddrxlat_fulladdr_t
- * structure embedded in the Python object, i.e. the pointer is
- * valid only as long as the containing Python object exists.
- */
-static addrxlat_fulladdr_t *
-fulladdr_AsPointer(PyObject *value)
-{
-	if (PyObject_TypeCheck(value, &fulladdr_type))
-		return &((fulladdr_object*)value)->faddr;
-
-	PyErr_Format(PyExc_TypeError, "need a FullAddress, not '%.200s'",
-		     Py_TYPE(value)->tp_name);
-	return NULL;
-}
-
 typedef struct tag_ctx_object {
 	PyObject_HEAD
 
@@ -764,7 +746,7 @@ cb_read32(void *_self, const addrxlat_fulladdr_t *addr, uint32_t *val)
 		return addrxlat_ctx_err(self->ctx, ADDRXLAT_ERR_NOMETH,
 					"NULL callback");
 
-	addrobj = fulladdr_FromPointer(addr);
+	addrobj = fulladdr_FromPointer(def_convert, addr);
 	if (!addrobj)
 		return ctx_error_status((PyObject*)self);
 	result = call_func(self->read32_func, "(O)", addrobj);
@@ -792,7 +774,7 @@ cb_read64(void *_self, const addrxlat_fulladdr_t *addr, uint64_t *val)
 		return addrxlat_ctx_err(self->ctx, ADDRXLAT_ERR_NOMETH,
 					"NULL callback");
 
-	addrobj = fulladdr_FromPointer(addr);
+	addrobj = fulladdr_FromPointer(def_convert, addr);
 	if (!addrobj)
 		return ctx_error_status((PyObject*)self);
 	result = call_func(self->read64_func, "(O)", addrobj);
@@ -1062,50 +1044,6 @@ static PyTypeObject ctx_type =
 	0,				/* tp_alloc */
 	ctx_new,			/* tp_new */
 };
-
-/** Construct a context object from @c addrxlat_ctx_t.
- * @param ctx  libaddrxlat context or @c NULL
- * @returns    corresponding Python object (or @c NULL on failure)
- *
- * The Python object contains a new reference to the translation context.
- */
-static PyObject *
-ctx_FromPointer(addrxlat_ctx_t *ctx)
-{
-	PyTypeObject *type = &ctx_type;
-	PyObject *result;
-
-	if (!ctx)
-		Py_RETURN_NONE;
-
-	result = type->tp_alloc(type, 0);
-	if (!result)
-		return NULL;
-
-	addrxlat_ctx_incref(ctx);
-	((ctx_object*)result)->ctx = ctx;
-
-	return result;
-}
-
-/** Get the libaddrxlat representation of a Python ctx object.
- * @param value  a Python ctx object
- * @returns      associated @c libaddrxlat_ctx_t (new reference),
- *               or @c NULL on error
- */
-static addrxlat_ctx_t *
-ctx_AsPointer(PyObject *value)
-{
-	if (PyObject_TypeCheck(value, &ctx_type)) {
-		addrxlat_ctx_t *ctx = ((ctx_object*)value)->ctx;
-		addrxlat_ctx_incref(ctx);
-		return ctx;
-	}
-
-	PyErr_Format(PyExc_TypeError, "need a Context, not '%.200s'",
-		     Py_TYPE(value)->tp_name);
-	return NULL;
-}
 
 typedef struct {
 	void *ptr;
@@ -1594,7 +1532,8 @@ pgtdesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		self->loc[0].len = sizeof(addrxlat_param_pgt_t);
 
 		self->desc.param.pgt.root.as = ADDRXLAT_NOADDR;
-		self->root = fulladdr_FromPointer(&self->desc.param.pgt.root);
+		self->root = fulladdr_FromPointer(
+			def_convert, &self->desc.param.pgt.root);
 		if (!self->root) {
 			Py_DECREF(self);
 			return NULL;
@@ -2013,7 +1952,8 @@ memarrdesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		self->loc[0].len = sizeof(addrxlat_param_memarr_t);
 
 		self->desc.param.memarr.base.as = ADDRXLAT_NOADDR;
-		self->base = fulladdr_FromPointer(&self->desc.param.memarr.base);
+		self->base = fulladdr_FromPointer(
+			def_convert, &self->desc.param.memarr.base);
 		if (!self->base) {
 			Py_DECREF(self);
 			return NULL;
@@ -2128,66 +2068,6 @@ static PyTypeObject memarrdesc_type =
 	memarrdesc_new,			/* tp_new */
 };
 
-static PyObject *
-desc_FromPointer(const addrxlat_desc_t *desc)
-{
-	PyTypeObject *type;
-	PyObject *args, *result;
-	desc_object *descobj;
-
-	switch (desc->kind) {
-	case ADDRXLAT_LINEAR:	type = &lineardesc_type;	break;
-	case ADDRXLAT_PGT:	type = &pgtdesc_type;		break;
-	case ADDRXLAT_LOOKUP:	type = &lookupdesc_type;	break;
-	case ADDRXLAT_MEMARR:	type = &memarrdesc_type;	break;
-	default:		type = &desc_type;		break;
-	}
-
-	args = (type == &desc_type
-		? Py_BuildValue("(k)", desc->kind)
-		: PyTuple_New(0));
-	if (!args)
-		return NULL;
-	result = PyObject_Call((PyObject*)type, args, NULL);
-	Py_DECREF(args);
-	if (!result)
-		return NULL;
-
-	args = PyInt_FromLong(desc->target_as);
-	if (!args)
-		goto err;
-	if (PyObject_SetAttrString(result, "target_as", args))
-		goto err_args;
-
-	descobj = (desc_object*)result;
-	descobj->desc.target_as = desc->target_as;
-	loc_scatter(descobj->loc, descobj->nloc, &desc->param);
-	return result;
-
- err_args:
-	Py_DECREF(args);
- err:
-	Py_DECREF(result);
-	return NULL;
-}
-
-static addrxlat_desc_t *
-desc_AsPointer(PyObject *value)
-{
-	desc_object *descobj;
-
-	if (!PyObject_TypeCheck(value, &desc_type)) {
-		PyErr_Format(PyExc_TypeError,
-			     "need a Description, not '%.200s'",
-			     Py_TYPE(value)->tp_name);
-		return NULL;
-	}
-
-	descobj = (desc_object*)value;
-	loc_gather(descobj->loc, descobj->nloc, &descobj->desc.param);
-	return &descobj->desc;
-}
-
 typedef struct {
 	PyObject_HEAD
 
@@ -2260,7 +2140,8 @@ static PyObject *
 meth_get_desc(PyObject *_self, PyObject *args)
 {
 	meth_object *self = (meth_object*)_self;
-	return desc_FromPointer(addrxlat_meth_get_desc(self->meth));
+	return desc_FromPointer(
+		def_convert, addrxlat_meth_get_desc(self->meth));
 }
 
 static PyMethodDef meth_methods[] = {
@@ -2313,56 +2194,6 @@ static PyTypeObject meth_type =
 	0,				/* tp_alloc */
 	meth_new,			/* tp_new */
 };
-
-/** Construct a meth object from @c addrxlat_meth_t.
- * @param meth  libaddrxlat translation method or @c NULL
- * @returns     corresponding Python object (or @c NULL on failure)
- *
- * The Python object contains a new reference to the translation method.
- */
-static PyObject *
-meth_FromPointer(addrxlat_meth_t *meth)
-{
-	PyTypeObject *type = &meth_type;
-	PyObject *result;
-
-	if (!meth)
-		Py_RETURN_NONE;
-
-	result = type->tp_alloc(type, 0);
-	if (!result)
-		return NULL;
-
-	addrxlat_meth_incref(meth);
-	((meth_object*)result)->meth = meth;
-
-	return result;
-}
-
-/** Get the libaddrxlat representation of a Python meth object.
- * @param value   a Python meth object
- * @returns       associated @c libaddrxlat_meth_t (new reference),
- *                or @c NULL if @c value is None
- *
- * Since all possible return values error are valid, error conditions
- * must be detected by calling @c PyErr_Occurred.
- */
-static addrxlat_meth_t *
-meth_AsPointer(PyObject *value)
-{
-	if (value == Py_None)
-		return NULL;
-
-	if (PyObject_TypeCheck(value, &meth_type)) {
-		addrxlat_meth_t *meth = ((meth_object*)value)->meth;
-		addrxlat_meth_incref(meth);
-		return meth;
-	}
-
-	PyErr_Format(PyExc_TypeError, "need a Method or None, not '%.200s'",
-		     Py_TYPE(value)->tp_name);
-	return NULL;
-}
 
 /** Python representation of @ref addrxlat_range_t.
  */
@@ -2506,54 +2337,6 @@ static PyTypeObject range_type =
 	range_new,			/* tp_new */
 };
 
-/** Construct a range object from @c addrxlat_range_t.
- * @param faddr  libaddrxlat representation of a full address
- * @returns      corresponding Python object (or @c NULL on failure)
- *
- * This function makes a new copy of the range.
- */
-static PyObject *
-range_FromPointer(const addrxlat_range_t *range)
-{
-	PyTypeObject *type = &range_type;
-	PyObject *meth;
-	PyObject *result;
-
-	result = type->tp_alloc(type, 0);
-	if (!result)
-		return NULL;
-
-	meth = meth_FromPointer(range->meth);
-	if (!meth) {
-		Py_DECREF(result);
-		return NULL;
-	}
-	((range_object*)result)->meth = meth;
-	((range_object*)result)->range = *range;
-
-	return result;
-}
-
-/** Get the libaddrxlat representation of a Python range object.
- * @param value  a Python range object
- * @returns      address of the embedded @c libaddrxlat_range_t,
- *               or @c NULL on error
- *
- * The returned pointer refers to a @c libaddrxlat_range_t
- * structure embedded in the Python object, i.e. the pointer is
- * valid only as long as the containing Python object exists.
- */
-static addrxlat_range_t *
-range_AsPointer(PyObject *value)
-{
-	if (PyObject_TypeCheck(value, &range_type))
-		return &((range_object*)value)->range;
-
-	PyErr_Format(PyExc_TypeError, "need a Range, not '%.200s'",
-		     Py_TYPE(value)->tp_name);
-	return NULL;
-}
-
 typedef struct {
 	PyObject_HEAD
 
@@ -2635,7 +2418,7 @@ map_get_range(PyObject *_self, PyObject *args, PyObject *kwargs)
 	}
 
 	ranges = addrxlat_map_ranges(self->map);
-	return range_FromPointer(&ranges[index]);
+	return range_FromPointer(def_convert, &ranges[index]);
 }
 
 PyDoc_STRVAR(map_set__doc__,
@@ -2682,7 +2465,8 @@ map_search(PyObject *_self, PyObject *args, PyObject *kwargs)
 					 keywords, &addr))
 		return NULL;
 
-	return meth_FromPointer(addrxlat_map_search(self->map, addr));
+	return meth_FromPointer(
+		def_convert, addrxlat_map_search(self->map, addr));
 }
 
 PyDoc_STRVAR(map_clear__doc__,
@@ -2784,56 +2568,6 @@ static PyTypeObject map_type =
 	0,				/* tp_alloc */
 	map_new,			/* tp_new */
 };
-
-/** Construct a map object from @c addrxlat_map_t.
- * @param map  libaddrxlat map or @c NULL
- * @returns    corresponding Python object (or @c NULL on failure)
- *
- * The Python object contains a new reference to the translation map.
- */
-static PyObject *
-map_FromPointer(addrxlat_map_t *map)
-{
-	PyTypeObject *type = &map_type;
-	PyObject *result;
-
-	if (!map)
-		Py_RETURN_NONE;
-
-	result = type->tp_alloc(type, 0);
-	if (!result)
-		return NULL;
-
-	addrxlat_map_incref(map);
-	((map_object*)result)->map = map;
-
-	return result;
-}
-
-/** Get the libaddrxlat representation of a Python map object.
- * @param value   a Python map object
- * @returns       associated @c libaddrxlat_map_t (new reference),
- *                or @c NULL if @c value is None
- *
- * Since all possible return values error are valid, error conditions
- * must be detected by calling @c PyErr_Occurred.
- */
-static addrxlat_map_t *
-map_AsPointer(PyObject *value)
-{
-	if (value == Py_None)
-		return NULL;
-
-	if (PyObject_TypeCheck(value, &map_type)) {
-		map_object *mapobj = (map_object*)value;
-		addrxlat_map_incref(mapobj->map);
-		return mapobj->map;
-	}
-
-	PyErr_Format(PyExc_TypeError, "need a Map or None, not '%.200s'",
-		     Py_TYPE(value)->tp_name);
-	return NULL;
-}
 
 typedef struct {
 	PyObject_HEAD
@@ -2970,7 +2704,8 @@ sys_get_map(PyObject *_self, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 
-	return map_FromPointer(addrxlat_sys_get_map(self->sys, idx));
+	return map_FromPointer(
+		def_convert, addrxlat_sys_get_map(self->sys, idx));
 }
 
 PyDoc_STRVAR(sys_set_meth__doc__,
@@ -3033,7 +2768,8 @@ sys_get_meth(PyObject *_self, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 
-	return meth_FromPointer(addrxlat_sys_get_meth(self->sys, idx));
+	return meth_FromPointer(
+		def_convert, addrxlat_sys_get_meth(self->sys, idx));
 }
 
 static PyMethodDef sys_methods[] = {
@@ -3092,57 +2828,6 @@ static PyTypeObject sys_type =
 	0,				/* tp_alloc */
 	sys_new,			/* tp_new */
 };
-
-/** Construct a sys object from @c addrxlat_sys_t.
- * @param sys  libaddrxlat translation system or @c NULL
- * @returns     corresponding Python object (or @c NULL on failure)
- *
- * The Python object contains a new reference to the translation system.
- */
-static PyObject *
-sys_FromPointer(addrxlat_sys_t *sys)
-{
-	PyTypeObject *type = &sys_type;
-	PyObject *result;
-
-	if (!sys)
-		Py_RETURN_NONE;
-
-	result = type->tp_alloc(type, 0);
-	if (!result)
-		return NULL;
-
-	addrxlat_sys_incref(sys);
-	((sys_object*)result)->sys = sys;
-
-	return result;
-}
-
-/** Get the libaddrxlat representation of a Python sys object.
- * @param value   a Python sys object
- * @returns       associated @c libaddrxlat_sys_t (new reference),
- *                or @c NULL if @c value is None
- *
- * Since all possible return values error are valid, error conditions
- * must be detected by calling @c PyErr_Occurred.
- */
-static addrxlat_sys_t *
-sys_AsPointer(PyObject *value)
-{
-	if (value == Py_None)
-		return NULL;
-
-	if (PyObject_TypeCheck(value, &sys_type)) {
-		addrxlat_sys_t *sys = ((sys_object*)value)->sys;
-		addrxlat_sys_incref(sys);
-		return sys;
-	}
-
-	PyErr_Format(PyExc_TypeError, "need a System or None, not '%.200s'",
-		     Py_TYPE(value)->tp_name);
-
-	return NULL;
-}
 
 /** Python representation of @ref addrxlat_step_t.
  */
@@ -3263,7 +2948,8 @@ static PyObject *
 step_get_sys(PyObject *_self, void *data)
 {
 	step_object *self = (step_object*)_self;
-	return sys_FromPointer((addrxlat_sys_t*)self->step.sys);
+	return sys_FromPointer(
+		def_convert, (addrxlat_sys_t*)self->step.sys);
 }
 
 /** Setter for the sys type.
@@ -3303,7 +2989,8 @@ static PyObject *
 step_get_meth(PyObject *_self, void *data)
 {
 	step_object *self = (step_object*)_self;
-	return meth_FromPointer((addrxlat_meth_t*)self->step.meth);
+	return meth_FromPointer(
+		def_convert, (addrxlat_meth_t*)self->step.meth);
 }
 
 /** Setter for the meth type.
@@ -3654,7 +3341,7 @@ cb_op(void *data, const addrxlat_fulladdr_t *addr)
 	PyObject *addrobj;
 	PyObject *result;
 
-	addrobj = fulladdr_FromPointer(addr);
+	addrobj = fulladdr_FromPointer(def_convert, addr);
 	if (!addrobj)
 		return ctx_error_status(self->ctx);
 
@@ -3802,7 +3489,8 @@ static PyObject *
 op_get_sys(PyObject *_self, void *data)
 {
 	op_object *self = (op_object*)_self;
-	return sys_FromPointer((addrxlat_sys_t*)self->opctl.sys);
+	return sys_FromPointer(
+		def_convert, (addrxlat_sys_t*)self->opctl.sys);
 }
 
 /** Setter for the sys type.
@@ -3913,6 +3601,637 @@ static PyTypeObject op_type =
 	0,				/* tp_init */
 	0,				/* tp_alloc */
 	op_new,				/* tp_new */
+};
+
+/** Converter between C types and Python types.
+ */
+typedef struct {
+	/** Standard Python object header.  */
+	PyObject_HEAD
+
+	/** Target type for FullAddress conversions. */
+	PyTypeObject *fulladdr_type;
+	/** Target type for Context conversions. */
+	PyTypeObject *ctx_type;
+	/** Target type for Description conversions. */
+	PyTypeObject *desc_type;
+	/** Target type for LinearDescription conversions. */
+	PyTypeObject *lineardesc_type;
+	/** Target type for PageTableDescription conversions. */
+	PyTypeObject *pgtdesc_type;
+	/** Target type for LookupDescription conversions. */
+	PyTypeObject *lookupdesc_type;
+	/** Target type for MemoryArrayDescription conversions. */
+	PyTypeObject *memarrdesc_type;
+	/** Target type for Method conversions. */
+	PyTypeObject *meth_type;
+	/** Target type for Range conversions. */
+	PyTypeObject *range_type;
+	/** Target type for Map conversions. */
+	PyTypeObject *map_type;
+	/** Target type for System conversions. */
+	PyTypeObject *sys_type;
+	/** Target type for Step conversions. */
+	PyTypeObject *step_type;
+	/** Target type for Operator conversions. */
+	PyTypeObject *op_type;
+} convert_object;
+
+PyDoc_STRVAR(convert__doc__,
+"Converter type between C pointer types and Python types");
+
+/** Create a new convert object.
+ * @param type    convert type
+ * @param args    ignored
+ * @param kwargs  ignored
+ * @returns       new convert object, or @c NULL on failure
+ */
+static PyObject *
+convert_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
+{
+	convert_object *self;
+
+	self = (convert_object*) type->tp_alloc(type, 0);
+	if (!self)
+		return NULL;
+
+	self->fulladdr_type = &fulladdr_type;
+	Py_INCREF(self->fulladdr_type);
+	self->ctx_type = &ctx_type;
+	Py_INCREF(self->ctx_type);
+	self->desc_type = &desc_type;
+	Py_INCREF(self->desc_type);
+	self->lineardesc_type = &lineardesc_type;
+	Py_INCREF(self->lineardesc_type);
+	self->pgtdesc_type = &pgtdesc_type;
+	Py_INCREF(self->pgtdesc_type);
+	self->lookupdesc_type = &lookupdesc_type;
+	Py_INCREF(self->lookupdesc_type);
+	self->memarrdesc_type = &memarrdesc_type;
+	Py_INCREF(self->memarrdesc_type);
+	self->meth_type = &meth_type;
+	Py_INCREF(self->meth_type);
+	self->range_type = &range_type;
+	Py_INCREF(self->range_type);
+	self->map_type = &map_type;
+	Py_INCREF(self->map_type);
+	self->sys_type = &sys_type;
+	Py_INCREF(self->sys_type);
+	self->step_type = &step_type;
+	Py_INCREF(self->step_type);
+	self->op_type = &op_type;
+	Py_INCREF(self->op_type);
+
+	return (PyObject*)self;
+}
+
+static void
+convert_dealloc(PyObject *_self)
+{
+	convert_object *self = (convert_object *)_self;
+
+	PyObject_GC_UnTrack(_self);
+
+	Py_XDECREF(self->fulladdr_type);
+	Py_XDECREF(self->ctx_type);
+	Py_XDECREF(self->desc_type);
+	Py_XDECREF(self->lineardesc_type);
+	Py_XDECREF(self->pgtdesc_type);
+	Py_XDECREF(self->lookupdesc_type);
+	Py_XDECREF(self->memarrdesc_type);
+	Py_XDECREF(self->meth_type);
+	Py_XDECREF(self->range_type);
+	Py_XDECREF(self->map_type);
+	Py_XDECREF(self->sys_type);
+	Py_XDECREF(self->step_type);
+	Py_XDECREF(self->op_type);
+}
+
+static int
+convert_traverse(PyObject *_self, visitproc visit, void *arg)
+{
+	convert_object *self = (convert_object *)_self;
+
+	Py_VISIT(self->fulladdr_type);
+	Py_VISIT(self->ctx_type);
+	Py_VISIT(self->desc_type);
+	Py_VISIT(self->lineardesc_type);
+	Py_VISIT(self->pgtdesc_type);
+	Py_VISIT(self->lookupdesc_type);
+	Py_VISIT(self->memarrdesc_type);
+	Py_VISIT(self->meth_type);
+	Py_VISIT(self->range_type);
+	Py_VISIT(self->map_type);
+	Py_VISIT(self->sys_type);
+	Py_VISIT(self->step_type);
+	Py_VISIT(self->op_type);
+	return 0;
+}
+
+PyDoc_STRVAR(convert_fulladdr__doc__,
+"target type for FullAddress conversions");
+
+PyDoc_STRVAR(convert_ctx__doc__,
+"Target type for Context conversions.");
+
+PyDoc_STRVAR(convert_desc__doc__,
+"Target type for Description conversions.");
+
+PyDoc_STRVAR(convert_lineardesc__doc__,
+"Target type for LinearDescription conversions.");
+
+PyDoc_STRVAR(convert_pgtdesc__doc__,
+"Target type for PageTableDescription conversions.");
+
+PyDoc_STRVAR(convert_lookupdesc__doc__,
+"Target type for LookupDescription conversions.");
+
+PyDoc_STRVAR(convert_memarrdesc__doc__,
+"Target type for MemoryArrayDescription conversions.");
+
+PyDoc_STRVAR(convert_meth__doc__,
+"Target type for Method conversions.");
+
+PyDoc_STRVAR(convert_range__doc__,
+"Target type for Range conversions.");
+
+PyDoc_STRVAR(convert_map__doc__,
+"Target type for Map conversions.");
+
+PyDoc_STRVAR(convert_sys__doc__,
+"Target type for System conversions.");
+
+PyDoc_STRVAR(convert_step__doc__,
+"Target type for Step conversions.");
+
+PyDoc_STRVAR(convert_op__doc__,
+"Target type for Operator conversions.");
+
+static PyMemberDef convert_members[] = {
+	{ "FullAddress", T_OBJECT, offsetof(convert_object, fulladdr_type),
+	  0, convert_fulladdr__doc__ },
+	{ "Context", T_OBJECT, offsetof(convert_object, ctx_type),
+	  0, convert_ctx__doc__ },
+	{ "Description", T_OBJECT, offsetof(convert_object, desc_type),
+	  0, convert_desc__doc__ },
+	{ "LinearDescription", T_OBJECT,
+	  offsetof(convert_object, lineardesc_type),
+	  0, convert_lineardesc__doc__ },
+	{ "PageTableDescription", T_OBJECT,
+	  offsetof(convert_object, pgtdesc_type),
+	  0, convert_pgtdesc__doc__ },
+	{ "LookupDescription", T_OBJECT,
+	  offsetof(convert_object, lookupdesc_type),
+	  0, convert_lookupdesc__doc__ },
+	{ "MemoryArrayDescription", T_OBJECT,
+	  offsetof(convert_object, memarrdesc_type),
+	  0, convert_memarrdesc__doc__ },
+	{ "Method", T_OBJECT, offsetof(convert_object, meth_type),
+	  0, convert_meth__doc__ },
+	{ "Range", T_OBJECT, offsetof(convert_object, range_type),
+	  0, convert_range__doc__ },
+	{ "Map", T_OBJECT, offsetof(convert_object, map_type),
+	  0, convert_map__doc__ },
+	{ "System", T_OBJECT, offsetof(convert_object, sys_type),
+	  0, convert_sys__doc__ },
+	{ "Step", T_OBJECT, offsetof(convert_object, step_type),
+	  0, convert_step__doc__ },
+	{ "Operator", T_OBJECT, offsetof(convert_object, op_type),
+	  0, convert_op__doc__ },
+
+	{ NULL }
+};
+
+/** Get the libaddrxlat representation of a Python fulladdr object.
+ * @param value  a Python fulladdr object
+ * @returns      address of the embedded @c libaddrxlat_fulladdr_t,
+ *               or @c NULL on error
+ *
+ * The returned pointer refers to a @c libaddrxlat_fulladdr_t
+ * structure embedded in the Python object, i.e. the pointer is
+ * valid only as long as the containing Python object exists.
+ */
+static addrxlat_fulladdr_t *
+fulladdr_AsPointer(PyObject *value)
+{
+	if (!PyObject_TypeCheck(value, &fulladdr_type)) {
+		PyErr_Format(PyExc_TypeError,
+			     "need a FullAddress, not '%.200s'",
+			     Py_TYPE(value)->tp_name);
+		return NULL;
+	}
+
+	return &((fulladdr_object*)value)->faddr;
+}
+
+/** Construct a fulladdr object from @c addrxlat_fulladdr_t pointer.
+ * @param _conv  convert object
+ * @param faddr  libaddrxlat representation of a full address
+ * @returns      corresponding Python object (or @c NULL on failure)
+ *
+ * This function makes a new copy of the full address.
+ */
+static PyObject *
+fulladdr_FromPointer(PyObject *_conv, const addrxlat_fulladdr_t *faddr)
+{
+	convert_object *conv = (convert_object *)_conv;
+	PyTypeObject *type = conv->fulladdr_type;
+	PyObject *result;
+
+	result = type->tp_alloc(type, 0);
+	if (result)
+		((fulladdr_object*)result)->faddr = *faddr;
+	return result;
+}
+
+/** Get the libaddrxlat representation of a Python ctx object.
+ * @param value  a Python ctx object
+ * @returns      associated @c libaddrxlat_ctx_t (new reference),
+ *               or @c NULL on error
+ */
+static addrxlat_ctx_t *
+ctx_AsPointer(PyObject *value)
+{
+	addrxlat_ctx_t *ctx;
+
+	if (!PyObject_TypeCheck(value, &ctx_type)) {
+		PyErr_Format(PyExc_TypeError,
+			     "need a Context, not '%.200s'",
+			     Py_TYPE(value)->tp_name);
+		return NULL;
+	}
+
+	ctx = ((ctx_object*)value)->ctx;
+	addrxlat_ctx_incref(ctx);
+	return ctx;
+}
+
+/** Construct a context object from @c addrxlat_ctx_t.
+ * @param _conv  convert object
+ * @param ctx    libaddrxlat context or @c NULL
+ * @returns      corresponding Python object (or @c NULL on failure)
+ *
+ * The Python object contains a new reference to the translation context.
+ */
+static PyObject *
+ctx_FromPointer(PyObject *_conv, addrxlat_ctx_t *ctx)
+{
+	convert_object *conv = (convert_object *)_conv;
+	PyTypeObject *type = conv->ctx_type;
+	PyObject *result;
+
+	if (!ctx)
+		Py_RETURN_NONE;
+
+	result = type->tp_alloc(type, 0);
+	if (!result)
+		return NULL;
+
+	addrxlat_ctx_incref(ctx);
+	((ctx_object*)result)->ctx = ctx;
+
+	return result;
+}
+
+/** Get the libaddrxlat representation of a Python desc object.
+ * @param value  a Python desc object
+ * @returns      address of the embedded @c libaddrxlat_desc_t,
+ *               or @c NULL on error
+ *
+ * The returned pointer refers to a @c libaddrxlat_desc_t structure embedded
+ * in the Python object, i.e. the pointer is valid only as long as the
+ * containing Python object exists.
+ *
+ * NB: Some fields are updated dynamically, so the returned data may be stale
+ * after the Python object is modified.
+ */
+static addrxlat_desc_t *
+desc_AsPointer(PyObject *value)
+{
+	desc_object *descobj;
+
+	if (!PyObject_TypeCheck(value, &desc_type)) {
+		PyErr_Format(PyExc_TypeError,
+			     "need a Description, not '%.200s'",
+			     Py_TYPE(value)->tp_name);
+		return NULL;
+	}
+
+	descobj = (desc_object*)value;
+	loc_gather(descobj->loc, descobj->nloc, &descobj->desc.param);
+	return &descobj->desc;
+}
+
+/** Construct a desc object from @c addrxlat_desc_t.
+ * @param _conv  convert object
+ * @param desc   libaddrxlat description or @c NULL
+ * @returns      corresponding Python object (or @c NULL on failure)
+ *
+ * This function makes a new copy of the description.
+ */
+static PyObject *
+desc_FromPointer(PyObject *_conv, const addrxlat_desc_t *desc)
+{
+	convert_object *conv = (convert_object *)_conv;
+	PyTypeObject *type;
+	PyObject *args, *val;
+	PyObject *result;
+	desc_object *descobj;
+
+	switch (desc->kind) {
+	case ADDRXLAT_LINEAR:	type = conv->lineardesc_type;	break;
+	case ADDRXLAT_PGT:	type = conv->pgtdesc_type;	break;
+	case ADDRXLAT_LOOKUP:	type = conv->lookupdesc_type;	break;
+	case ADDRXLAT_MEMARR:	type = conv->memarrdesc_type;	break;
+	default:		type = conv->desc_type;		break;
+	}
+
+	args = (type == conv->desc_type
+		? Py_BuildValue("(k)", desc->kind)
+		: PyTuple_New(0));
+	if (!args)
+		return NULL;
+	result = PyObject_Call((PyObject*)type, args, NULL);
+	Py_DECREF(args);
+	if (!result)
+		return NULL;
+
+	val = PyInt_FromLong(desc->target_as);
+	if (!val)
+		goto err;
+	if (PyObject_SetAttrString(result, "target_as", val))
+		goto err_val;
+
+	descobj = (desc_object*)result;
+	descobj->desc.target_as = desc->target_as;
+	loc_scatter(descobj->loc, descobj->nloc, &desc->param);
+	return result;
+
+ err_val:
+	Py_DECREF(val);
+ err:
+	Py_DECREF(result);
+	return NULL;
+}
+
+/** Get the libaddrxlat representation of a Python meth object.
+ * @param value   a Python meth object
+ * @returns       associated @c libaddrxlat_meth_t (new reference),
+ *                or @c NULL if @c value is None
+ *
+ * Since all possible return values error are valid, error conditions
+ * must be detected by calling @c PyErr_Occurred.
+ */
+static addrxlat_meth_t *
+meth_AsPointer(PyObject *value)
+{
+	addrxlat_meth_t *meth;
+
+	if (value == Py_None)
+		return NULL;
+
+	if (!PyObject_TypeCheck(value, &meth_type)) {
+		PyErr_Format(PyExc_TypeError,
+			     "need a Method or None, not '%.200s'",
+			     Py_TYPE(value)->tp_name);
+		return NULL;
+	}
+
+	meth = ((meth_object*)value)->meth;
+	addrxlat_meth_incref(meth);
+	return meth;
+}
+
+/** Construct a meth object from @c addrxlat_meth_t.
+ * @param _conv  convert object
+ * @param meth  libaddrxlat translation method or @c NULL
+ * @returns     corresponding Python object (or @c NULL on failure)
+ *
+ * The Python object contains a new reference to the translation method.
+ */
+static PyObject *
+meth_FromPointer(PyObject *_conv, addrxlat_meth_t *meth)
+{
+	convert_object *conv = (convert_object *)_conv;
+	PyTypeObject *type = conv->meth_type;
+	PyObject *result;
+
+	if (!meth)
+		Py_RETURN_NONE;
+
+	result = type->tp_alloc(type, 0);
+	if (!result)
+		return NULL;
+
+	addrxlat_meth_incref(meth);
+	((meth_object*)result)->meth = meth;
+
+	return result;
+}
+
+/** Get the libaddrxlat representation of a Python range object.
+ * @param value  a Python range object
+ * @returns      address of the embedded @c libaddrxlat_range_t,
+ *               or @c NULL on error
+ *
+ * The returned pointer refers to a @c libaddrxlat_range_t
+ * structure embedded in the Python object, i.e. the pointer is
+ * valid only as long as the containing Python object exists.
+ */
+static addrxlat_range_t *
+range_AsPointer(PyObject *value)
+{
+	if (!PyObject_TypeCheck(value, &range_type)) {
+		PyErr_Format(PyExc_TypeError, "need a Range, not '%.200s'",
+			     Py_TYPE(value)->tp_name);
+		return NULL;
+	}
+
+	return &((range_object*)value)->range;
+}
+
+/** Construct a range object from @c addrxlat_range_t.
+ * @param _conv  convert object
+ * @param range  libaddrxlat representation of a range
+ * @returns      corresponding Python object (or @c NULL on failure)
+ *
+ * This function makes a new copy of the range.
+ */
+static PyObject *
+range_FromPointer(PyObject *_conv, const addrxlat_range_t *range)
+{
+	convert_object *conv = (convert_object *)_conv;
+	PyTypeObject *type = conv->range_type;
+	PyObject *meth;
+	PyObject *result;
+
+	result = type->tp_alloc(type, 0);
+	if (!result)
+		return NULL;
+
+	meth = meth_FromPointer((PyObject*)conv, range->meth);
+	if (!meth) {
+		Py_DECREF(result);
+		return NULL;
+	}
+	((range_object*)result)->meth = meth;
+	((range_object*)result)->range = *range;
+
+	return result;
+}
+
+/** Get the libaddrxlat representation of a Python map object.
+ * @param value   a Python map object
+ * @returns       associated @c libaddrxlat_map_t (new reference),
+ *                or @c NULL if @c value is None
+ *
+ * Since all possible return values error are valid, error conditions
+ * must be detected by calling @c PyErr_Occurred.
+ */
+static addrxlat_map_t *
+map_AsPointer(PyObject *value)
+{
+	map_object *mapobj;
+
+	if (value == Py_None)
+		return NULL;
+
+	if (!PyObject_TypeCheck(value, &map_type)) {
+		PyErr_Format(PyExc_TypeError,
+			     "need a Map or None, not '%.200s'",
+			     Py_TYPE(value)->tp_name);
+		return NULL;
+	}
+
+	mapobj = (map_object*)value;
+	addrxlat_map_incref(mapobj->map);
+	return mapobj->map;
+}
+
+/** Construct a map object from @c addrxlat_map_t.
+ * @param _conv  convert object
+ * @param map    libaddrxlat map or @c NULL
+ * @returns      corresponding Python object (or @c NULL on failure)
+ *
+ * The Python object contains a new reference to the translation map.
+ */
+static PyObject *
+map_FromPointer(PyObject *_conv, addrxlat_map_t *map)
+{
+	convert_object *conv = (convert_object *)_conv;
+	PyTypeObject *type = conv->map_type;
+	PyObject *result;
+
+	if (!map)
+		Py_RETURN_NONE;
+
+	result = type->tp_alloc(type, 0);
+	if (!result)
+		return NULL;
+
+	addrxlat_map_incref(map);
+	((map_object*)result)->map = map;
+
+	return result;
+}
+
+/** Get the libaddrxlat representation of a Python sys object.
+ * @param value   a Python sys object
+ * @returns       associated @c libaddrxlat_sys_t (new reference),
+ *                or @c NULL if @c value is None
+ *
+ * Since all possible return values error are valid, error conditions
+ * must be detected by calling @c PyErr_Occurred.
+ */
+static addrxlat_sys_t *
+sys_AsPointer(PyObject *value)
+{
+	addrxlat_sys_t *sys;
+
+	if (value == Py_None)
+		return NULL;
+
+	if (!PyObject_TypeCheck(value, &sys_type)) {
+		PyErr_Format(PyExc_TypeError,
+			     "need a System or None, not '%.200s'",
+			     Py_TYPE(value)->tp_name);
+		return NULL;
+	}
+
+	sys = ((sys_object*)value)->sys;
+	addrxlat_sys_incref(sys);
+	return sys;
+}
+
+/** Construct a sys object from @c addrxlat_sys_t.
+ * @param _conv  convert object
+ * @param sys  libaddrxlat translation system or @c NULL
+ * @returns     corresponding Python object (or @c NULL on failure)
+ *
+ * The Python object contains a new reference to the translation system.
+ */
+static PyObject *
+sys_FromPointer(PyObject *_conv, addrxlat_sys_t *sys)
+{
+	convert_object *conv = (convert_object *)_conv;
+	PyTypeObject *type = conv->sys_type;
+	PyObject *result;
+
+	if (!sys)
+		Py_RETURN_NONE;
+
+	result = type->tp_alloc(type, 0);
+	if (!result)
+		return NULL;
+
+	addrxlat_sys_incref(sys);
+	((sys_object*)result)->sys = sys;
+
+	return result;
+}
+
+static PyTypeObject convert_type =
+{
+	PyVarObject_HEAD_INIT(NULL, 0)
+	MOD_NAME ".TypeConvert",	/* tp_name */
+	sizeof (convert_object),	/* tp_basicsize */
+	0,				/* tp_itemsize */
+	convert_dealloc,		/* tp_dealloc */
+	0,				/* tp_print */
+	0,				/* tp_getattr */
+	0,				/* tp_setattr */
+	0,				/* tp_compare */
+	0,				/* tp_repr */
+	0,				/* tp_as_number */
+	0,				/* tp_as_sequence */
+	0,				/* tp_as_mapping */
+	0,				/* tp_hash */
+	0,				/* tp_call */
+	0,				/* tp_str */
+	0,				/* tp_getattro */
+	0,				/* tp_setattro */
+	0,				/* tp_as_buffer */
+	Py_TPFLAGS_DEFAULT
+	    | Py_TPFLAGS_HAVE_GC
+	    | Py_TPFLAGS_BASETYPE,	/* tp_flags */
+	convert__doc__,			/* tp_doc */
+	convert_traverse,		/* tp_traverse */
+	0,				/* tp_clear */
+	0,				/* tp_richcompare */
+	0,				/* tp_weaklistoffset */
+	0,				/* tp_iter */
+	0,				/* tp_iternext */
+	0,				/* tp_methods */
+	convert_members,		/* tp_members */
+	0,				/* tp_getset */
+	0,				/* tp_base */
+	0,				/* tp_dict */
+	0,				/* tp_descr_get */
+	0,				/* tp_descr_set */
+	0,				/* tp_dictoffset */
+	0,				/* tp_init */
+	0,				/* tp_alloc */
+	convert_new,			/* tp_new */
 };
 
 PyDoc_STRVAR(_addrxlat_strerror__doc__,
@@ -4130,6 +4449,9 @@ init_addrxlat (void)
 	if (PyType_Ready(&op_type) < 0)
 		return MOD_ERROR_VAL;
 
+	if (PyType_Ready(&convert_type) < 0)
+		return MOD_ERROR_VAL;
+
 #if PY_MAJOR_VERSION >= 3
 	mod = PyModule_Create(&addrxlat_moddef);
 #else
@@ -4215,9 +4537,14 @@ init_addrxlat (void)
 	if (ret)
 		goto err_step;
 
+	Py_INCREF((PyObject*)&convert_type);
+	ret = PyModule_AddObject(mod, "TypeConvert", (PyObject*)&convert_type);
+	if (ret)
+		goto err_op;
+
 #define CONSTDEF(x)						\
 	if (PyModule_AddIntConstant(mod, #x, ADDRXLAT_ ## x))	\
-		goto err_op
+		goto err_convert
 
 	/* status codes */
 	CONSTDEF(OK);
@@ -4286,14 +4613,24 @@ init_addrxlat (void)
 	/* too big for PyModule_AddIntConstant() */
 	obj = PyLong_FromUnsignedLongLong(ADDRXLAT_ADDR_MAX);
 	if (!obj)
-		goto err_op;
+		goto err_convert;
 	if (PyModule_AddObject(mod, "ADDR_MAX", obj)) {
 		Py_DECREF(obj);
-		goto err_op;
+		goto err_convert;
 	}
+
+	obj = PyTuple_New(0);
+	if (!obj)
+		goto err_convert;
+	def_convert = PyObject_Call((PyObject*)&convert_type, obj, NULL);
+	Py_DECREF(obj);
+	if (!def_convert)
+		goto err_convert;
 
 	return MOD_SUCCESS_VAL(mod);
 
+ err_convert:
+	Py_DECREF((PyObject*)&convert_type);
  err_op:
 	Py_DECREF((PyObject*)&op_type);
  err_step:
