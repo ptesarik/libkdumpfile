@@ -2197,6 +2197,9 @@ meth_set_desc(PyObject *_self, PyObject *args, PyObject *kwargs)
 		return NULL;
 
 	desc = desc_AsPointer(value);
+	if (!desc)
+		return NULL;
+
 	status = addrxlat_meth_set_desc(self->meth, desc);
 	return PyInt_FromLong(status);
 }
