@@ -80,6 +80,10 @@ static PyObject *sys_FromPointer(PyObject *_conv, addrxlat_sys_t *sys);
 /** Default type converter object. */
 static PyObject *def_convert;
 
+/** Documentation for the convert attribute (multiple types). */
+PyDoc_STRVAR(attr_convert__doc__,
+"C type converter");
+
 /** Convert a PyLong or PyInt to a C long.
  * @param num  a @c PyLong or @c PyInt object
  * @returns    numeric value of @c num or -1
@@ -206,6 +210,26 @@ nth_arg(const char *fname, PyObject *args, Py_ssize_t n)
 		return NULL;
 	}
 	return PyTuple_GET_ITEM(args, n);
+}
+
+/** Get the convert object from keyword arguments.
+ * @param kwargs  keyword arguments
+ * @returns       convert object (new reference), or @c NULL on failure
+ */
+static PyObject *
+get_convert(PyObject *kwargs)
+{
+	PyObject *result;
+
+	result = kwargs
+		? PyDict_GetItemString(kwargs, "convert")
+		: NULL;
+
+	if (!result)
+		result = def_convert;
+
+	Py_INCREF(result);
+	return result;
 }
 
 /** Offset of a type member as a void pointer. */
@@ -552,6 +576,8 @@ typedef struct tag_ctx_object {
 
 	addrxlat_ctx_t *ctx;
 
+	PyObject *convert;
+
 	PyObject *exc_type, *exc_val, *exc_tb;
 
 	PyObject *sym_reg_func;
@@ -746,7 +772,7 @@ cb_read32(void *_self, const addrxlat_fulladdr_t *addr, uint32_t *val)
 		return addrxlat_ctx_err(self->ctx, ADDRXLAT_ERR_NOMETH,
 					"NULL callback");
 
-	addrobj = fulladdr_FromPointer(def_convert, addr);
+	addrobj = fulladdr_FromPointer(self->convert, addr);
 	if (!addrobj)
 		return ctx_error_status((PyObject*)self);
 	result = call_func(self->read32_func, "(O)", addrobj);
@@ -774,7 +800,7 @@ cb_read64(void *_self, const addrxlat_fulladdr_t *addr, uint64_t *val)
 		return addrxlat_ctx_err(self->ctx, ADDRXLAT_ERR_NOMETH,
 					"NULL callback");
 
-	addrobj = fulladdr_FromPointer(def_convert, addr);
+	addrobj = fulladdr_FromPointer(self->convert, addr);
 	if (!addrobj)
 		return ctx_error_status((PyObject*)self);
 	result = call_func(self->read64_func, "(O)", addrobj);
@@ -804,6 +830,12 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
+	self->convert = get_convert(kwargs);
+	if (!self->convert) {
+		Py_DECREF(self);
+		return NULL;
+	}
+
 	self->ctx = addrxlat_ctx_new();
 	if (!self->ctx) {
 		Py_DECREF(self);
@@ -830,6 +862,8 @@ ctx_dealloc(PyObject *_self)
 		addrxlat_ctx_decref(self->ctx);
 		self->ctx = NULL;
 	}
+
+	Py_DECREF(self->convert);
 
 	Py_XDECREF(self->exc_type);
 	Py_XDECREF(self->exc_val);
@@ -945,6 +979,8 @@ PyDoc_STRVAR(ctx_read64_func__doc__,
 "callback function to read a 64-bit integer from a given address");
 
 static PyMemberDef ctx_members[] = {
+	{ "convert", T_OBJECT, offsetof(ctx_object, convert), 0,
+	  attr_convert__doc__ },
 	{ "sym_reg_func", T_OBJECT,
 	  offsetof(ctx_object, sym_reg_func), 0,
 	  ctx_sym_reg_func__doc__ },
@@ -1128,6 +1164,7 @@ set_fulladdr(PyObject *self, PyObject *value, void *data)
 #define desc_HEAD		\
 	PyObject_HEAD		\
 	addrxlat_desc_t desc;	\
+	PyObject *convert;	\
 	PyObject *paramobj;	\
 	unsigned nloc;		\
 	param_loc loc[MAXLOC];
@@ -1164,6 +1201,12 @@ desc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
+	self->convert = get_convert(kwargs);
+	if (!self->convert) {
+		Py_DECREF(self);
+		return NULL;
+	}
+
 	self->desc.kind = kind;
 	self->desc.target_as = ADDRXLAT_NOADDR;
 	self->nloc = DESC_NLOC;
@@ -1185,6 +1228,7 @@ desc_dealloc(PyObject *_self)
 	desc_object *self = (desc_object*)_self;
 
 	PyObject_GC_UnTrack(_self);
+	Py_XDECREF(self->convert);
 	Py_XDECREF(self->paramobj);
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -1193,9 +1237,16 @@ static int
 desc_traverse(PyObject *_self, visitproc visit, void *arg)
 {
 	desc_object *self = (desc_object*)_self;
+	Py_VISIT(self->convert);
 	Py_VISIT(self->paramobj);
 	return 0;
 }
+
+static PyMemberDef desc_members[] = {
+	{ "convert", T_OBJECT, offsetof(desc_object, convert), 0,
+	  attr_convert__doc__ },
+	{ NULL }
+};
 
 PyDoc_STRVAR(desc_kind__doc__,
 "translation kind");
@@ -1271,7 +1322,7 @@ static PyTypeObject desc_type =
 	0,				/* tp_iter */
 	0,				/* tp_iternext */
 	0,				/* tp_methods */
-	0,				/* tp_members */
+	desc_members,			/* tp_members */
 	desc_getset,			/* tp_getset */
 	0,				/* tp_base */
 	0,				/* tp_dict */
@@ -1284,14 +1335,14 @@ static PyTypeObject desc_type =
 };
 
 static PyObject *
-make_desc(PyTypeObject *type, addrxlat_kind_t kind)
+make_desc(PyTypeObject *type, addrxlat_kind_t kind, PyObject *kwargs)
 {
 	PyObject *args, *result;
 
 	args = Py_BuildValue("(l)", (long)kind);
 	if (!args)
 		return NULL;
-	result = desc_new(type, args, NULL);
+	result = desc_new(type, args, kwargs);
 	Py_DECREF(args);
 
 	return result;
@@ -1449,7 +1500,7 @@ lineardesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	desc_object *self;
 
-	self = (desc_object*) make_desc(type, ADDRXLAT_LINEAR);
+	self = (desc_object*) make_desc(type, ADDRXLAT_LINEAR, kwargs);
 	if (self)
 		self->loc[0].len = sizeof(addrxlat_param_linear_t);
 
@@ -1525,7 +1576,7 @@ pgtdesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	pgtdesc_object *self;
 
-	self = (pgtdesc_object*) make_desc(type, ADDRXLAT_PGT);
+	self = (pgtdesc_object*) make_desc(type, ADDRXLAT_PGT, kwargs);
 	if (self) {
 		param_loc *loc;
 
@@ -1533,7 +1584,7 @@ pgtdesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 
 		self->desc.param.pgt.root.as = ADDRXLAT_NOADDR;
 		self->root = fulladdr_FromPointer(
-			def_convert, &self->desc.param.pgt.root);
+			self->convert, &self->desc.param.pgt.root);
 		if (!self->root) {
 			Py_DECREF(self);
 			return NULL;
@@ -1743,7 +1794,7 @@ lookupdesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	desc_object *self;
 
-	self = (desc_object*) make_desc(type, ADDRXLAT_LOOKUP);
+	self = (desc_object*) make_desc(type, ADDRXLAT_LOOKUP, kwargs);
 	if (self) {
 		self->loc[0].len = sizeof(addrxlat_param_lookup_t);
 	}
@@ -1945,7 +1996,7 @@ memarrdesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	memarrdesc_object *self;
 
-	self = (memarrdesc_object*) make_desc(type, ADDRXLAT_MEMARR);
+	self = (memarrdesc_object*) make_desc(type, ADDRXLAT_MEMARR, kwargs);
 	if (self) {
 		param_loc *loc;
 
@@ -1953,7 +2004,7 @@ memarrdesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 
 		self->desc.param.memarr.base.as = ADDRXLAT_NOADDR;
 		self->base = fulladdr_FromPointer(
-			def_convert, &self->desc.param.memarr.base);
+			self->convert, &self->desc.param.memarr.base);
 		if (!self->base) {
 			Py_DECREF(self);
 			return NULL;
@@ -2072,6 +2123,8 @@ typedef struct {
 	PyObject_HEAD
 
 	addrxlat_meth_t *meth;
+
+	PyObject *convert;
 } meth_object;
 
 PyDoc_STRVAR(meth__doc__,
@@ -2085,6 +2138,12 @@ meth_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	self = (meth_object*) type->tp_alloc(type, 0);
 	if (!self)
 		return NULL;
+
+	self->convert = get_convert(kwargs);
+	if (!self->convert) {
+		Py_DECREF(self);
+		return NULL;
+	}
 
 	self->meth = addrxlat_meth_new();
 	if (!self->meth) {
@@ -2100,12 +2159,23 @@ meth_dealloc(PyObject *_self)
 {
 	meth_object *self = (meth_object*)_self;
 
+	PyObject_GC_UnTrack(_self);
+
 	if (self->meth) {
 		addrxlat_meth_decref(self->meth);
 		self->meth = NULL;
 	}
 
+	Py_XDECREF(self->convert);
 	Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+static int
+meth_traverse(PyObject *_self, visitproc visit, void *arg)
+{
+	meth_object *self = (meth_object*)_self;
+	Py_VISIT(self->convert);
+	return 0;
 }
 
 PyDoc_STRVAR(meth_set_desc__doc__,
@@ -2141,7 +2211,7 @@ meth_get_desc(PyObject *_self, PyObject *args)
 {
 	meth_object *self = (meth_object*)_self;
 	return desc_FromPointer(
-		def_convert, addrxlat_meth_get_desc(self->meth));
+		self->convert, addrxlat_meth_get_desc(self->meth));
 }
 
 static PyMethodDef meth_methods[] = {
@@ -2149,6 +2219,12 @@ static PyMethodDef meth_methods[] = {
 	  meth_set_desc__doc__ },
 	{ "get_desc", meth_get_desc, METH_NOARGS,
 	  meth_get_desc__doc__ },
+	{ NULL }
+};
+
+static PyMemberDef meth_members[] = {
+	{ "convert", T_OBJECT, offsetof(meth_object, convert), 0,
+	  attr_convert__doc__ },
 	{ NULL }
 };
 
@@ -2174,16 +2250,17 @@ static PyTypeObject meth_type =
 	0,				/* tp_setattro */
 	0,				/* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT
+	    | Py_TPFLAGS_HAVE_GC
 	    | Py_TPFLAGS_BASETYPE,	/* tp_flags */
 	meth__doc__,			/* tp_doc */
-	0,				/* tp_traverse */
+	meth_traverse,			/* tp_traverse */
 	0,				/* tp_clear */
 	0,				/* tp_richcompare */
 	0,				/* tp_weaklistoffset */
 	0,				/* tp_iter */
 	0,				/* tp_iternext */
 	meth_methods,			/* tp_methods */
-	0,				/* tp_members */
+	meth_members,			/* tp_members */
 	0,				/* tp_getset */
 	0,				/* tp_base */
 	0,				/* tp_dict */
@@ -2341,6 +2418,8 @@ typedef struct {
 	PyObject_HEAD
 
 	addrxlat_map_t *map;
+
+	PyObject *convert;
 } map_object;
 
 PyDoc_STRVAR(map__doc__,
@@ -2354,6 +2433,12 @@ map_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	self = (map_object*) type->tp_alloc(type, 0);
 	if (!self)
 		return NULL;
+
+	self->convert = get_convert(kwargs);
+	if (!self->convert) {
+		Py_DECREF(self);
+		return NULL;
+	}
 
 	self->map = addrxlat_map_new();
 	if (!self->map) {
@@ -2369,12 +2454,23 @@ map_dealloc(PyObject *_self)
 {
 	map_object *self = (map_object*)_self;
 
+	PyObject_GC_UnTrack(_self);
+
 	if (self->map) {
 		addrxlat_map_decref(self->map);
 		self->map = NULL;
 	}
 
+	Py_XDECREF(self->convert);
 	Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+static int
+map_traverse(PyObject *_self, visitproc visit, void *arg)
+{
+	map_object *self = (map_object*)_self;
+	Py_VISIT(self->convert);
+	return 0;
 }
 
 PyDoc_STRVAR(map_len__doc__,
@@ -2418,7 +2514,7 @@ map_get_range(PyObject *_self, PyObject *args, PyObject *kwargs)
 	}
 
 	ranges = addrxlat_map_ranges(self->map);
-	return range_FromPointer(def_convert, &ranges[index]);
+	return range_FromPointer(self->convert, &ranges[index]);
 }
 
 PyDoc_STRVAR(map_set__doc__,
@@ -2466,7 +2562,7 @@ map_search(PyObject *_self, PyObject *args, PyObject *kwargs)
 		return NULL;
 
 	return meth_FromPointer(
-		def_convert, addrxlat_map_search(self->map, addr));
+		self->convert, addrxlat_map_search(self->map, addr));
 }
 
 PyDoc_STRVAR(map_clear__doc__,
@@ -2526,6 +2622,12 @@ static PyMethodDef map_methods[] = {
 	{ NULL }
 };
 
+static PyMemberDef map_members[] = {
+	{ "convert", T_OBJECT, offsetof(map_object, convert), 0,
+	  attr_convert__doc__ },
+	{ NULL }
+};
+
 static PyTypeObject map_type =
 {
 	PyVarObject_HEAD_INIT(NULL, 0)
@@ -2548,16 +2650,17 @@ static PyTypeObject map_type =
 	0,				/* tp_setattro */
 	0,				/* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT
+	    | Py_TPFLAGS_HAVE_GC
 	    | Py_TPFLAGS_BASETYPE,	/* tp_flags */
 	map__doc__,			/* tp_doc */
-	0,				/* tp_traverse */
+	map_traverse,			/* tp_traverse */
 	0,				/* tp_clear */
 	0,				/* tp_richcompare */
 	0,				/* tp_weaklistoffset */
 	0,				/* tp_iter */
 	0,				/* tp_iternext */
 	map_methods,			/* tp_methods */
-	0,				/* tp_members */
+	map_members,			/* tp_members */
 	0,				/* tp_getset */
 	0,				/* tp_base */
 	0,				/* tp_dict */
@@ -2573,6 +2676,8 @@ typedef struct {
 	PyObject_HEAD
 
 	addrxlat_sys_t *sys;
+
+	PyObject *convert;
 } sys_object;
 
 PyDoc_STRVAR(sys__doc__,
@@ -2586,6 +2691,12 @@ sys_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	self = (sys_object*) type->tp_alloc(type, 0);
 	if (!self)
 		return NULL;
+
+	self->convert = get_convert(kwargs);
+	if (!self->convert) {
+		Py_DECREF(self);
+		return NULL;
+	}
 
 	self->sys = addrxlat_sys_new();
 	if (!self->sys) {
@@ -2601,12 +2712,23 @@ sys_dealloc(PyObject *_self)
 {
 	sys_object *self = (sys_object*)_self;
 
+	PyObject_GC_UnTrack(_self);
+
 	if (self->sys) {
 		addrxlat_sys_decref(self->sys);
 		self->sys = NULL;
 	}
 
+	Py_XDECREF(self->convert);
 	Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+static int
+sys_traverse(PyObject *_self, visitproc visit, void *arg)
+{
+	sys_object *self = (sys_object*)_self;
+	Py_VISIT(self->convert);
+	return 0;
 }
 
 PyDoc_STRVAR(sys_init__doc__,
@@ -2705,7 +2827,7 @@ sys_get_map(PyObject *_self, PyObject *args, PyObject *kwargs)
 	}
 
 	return map_FromPointer(
-		def_convert, addrxlat_sys_get_map(self->sys, idx));
+		self->convert, addrxlat_sys_get_map(self->sys, idx));
 }
 
 PyDoc_STRVAR(sys_set_meth__doc__,
@@ -2769,7 +2891,7 @@ sys_get_meth(PyObject *_self, PyObject *args, PyObject *kwargs)
 	}
 
 	return meth_FromPointer(
-		def_convert, addrxlat_sys_get_meth(self->sys, idx));
+		self->convert, addrxlat_sys_get_meth(self->sys, idx));
 }
 
 static PyMethodDef sys_methods[] = {
@@ -2783,6 +2905,12 @@ static PyMethodDef sys_methods[] = {
 	  sys_set_meth__doc__ },
 	{ "get_meth", (PyCFunction)sys_get_meth, METH_VARARGS | METH_KEYWORDS,
 	  sys_get_meth__doc__ },
+	{ NULL }
+};
+
+static PyMemberDef sys_members[] = {
+	{ "convert", T_OBJECT, offsetof(sys_object, convert), 0,
+	  attr_convert__doc__ },
 	{ NULL }
 };
 
@@ -2808,16 +2936,17 @@ static PyTypeObject sys_type =
 	0,				/* tp_setattro */
 	0,				/* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT
+	    | Py_TPFLAGS_HAVE_GC
 	    | Py_TPFLAGS_BASETYPE,	/* tp_flags */
 	sys__doc__,			/* tp_doc */
-	0,				/* tp_traverse */
+	sys_traverse,			/* tp_traverse */
 	0,				/* tp_clear */
 	0,				/* tp_richcompare */
 	0,				/* tp_weaklistoffset */
 	0,				/* tp_iter */
 	0,				/* tp_iternext */
 	sys_methods,			/* tp_methods */
-	0,				/* tp_members */
+	sys_members,			/* tp_members */
 	0,				/* tp_getset */
 	0,				/* tp_base */
 	0,				/* tp_dict */
@@ -2838,6 +2967,8 @@ typedef struct {
 	PyObject *ctx;
 	/** Translation step in libaddrxlat format. */
 	addrxlat_step_t step;
+
+	PyObject *convert;
 } step_object;
 
 PyDoc_STRVAR(step__doc__,
@@ -2862,6 +2993,12 @@ step_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	self = (step_object*) type->tp_alloc(type, 0);
 	if (!self)
 		return NULL;
+
+	self->convert = get_convert(kwargs);
+	if (!self->convert) {
+		Py_DECREF(self);
+		return NULL;
+	}
 
 	self->step.ctx = ctx_AsPointer(ctxobj);
 	if (PyErr_Occurred()) {
@@ -2895,6 +3032,7 @@ step_dealloc(PyObject *_self)
 		self->step.meth = NULL;
 	}
 
+	Py_XDECREF(self->convert);
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -2903,6 +3041,7 @@ step_traverse(PyObject *_self, visitproc visit, void *arg)
 {
 	step_object *self = (step_object*)_self;
 	Py_VISIT(self->ctx);
+	Py_VISIT(self->convert);
 	return 0;
 }
 
@@ -2949,7 +3088,7 @@ step_get_sys(PyObject *_self, void *data)
 {
 	step_object *self = (step_object*)_self;
 	return sys_FromPointer(
-		def_convert, (addrxlat_sys_t*)self->step.sys);
+		self->convert, (addrxlat_sys_t*)self->step.sys);
 }
 
 /** Setter for the sys type.
@@ -2990,7 +3129,7 @@ step_get_meth(PyObject *_self, void *data)
 {
 	step_object *self = (step_object*)_self;
 	return meth_FromPointer(
-		def_convert, (addrxlat_meth_t*)self->step.meth);
+		self->convert, (addrxlat_meth_t*)self->step.meth);
 }
 
 /** Setter for the meth type.
@@ -3156,6 +3295,8 @@ PyDoc_STRVAR(step_remain__doc__,
 "remaining steps");
 
 static PyMemberDef step_members[] = {
+	{ "convert", T_OBJECT, offsetof(step_object, convert), 0,
+	  attr_convert__doc__ },
 	{ "remain", T_USHORT, offsetof(step_object, step.remain),
 	  0, step_remain__doc__ },
 	{ NULL }
@@ -3331,6 +3472,8 @@ typedef struct {
 	addrxlat_op_ctl_t opctl;
 	/** Result of the last callback. */
 	PyObject *result;
+
+	PyObject *convert;
 } op_object;
 
 /** Operation callback wrapper */
@@ -3341,7 +3484,7 @@ cb_op(void *data, const addrxlat_fulladdr_t *addr)
 	PyObject *addrobj;
 	PyObject *result;
 
-	addrobj = fulladdr_FromPointer(def_convert, addr);
+	addrobj = fulladdr_FromPointer(self->convert, addr);
 	if (!addrobj)
 		return ctx_error_status(self->ctx);
 
@@ -3381,6 +3524,12 @@ op_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
+	self->convert = get_convert(kwargs);
+	if (!self->convert) {
+		Py_DECREF(self);
+		return NULL;
+	}
+
 	self->opctl.ctx = ctx_AsPointer(ctxobj);
 	if (PyErr_Occurred()) {
 		Py_DECREF(self);
@@ -3413,6 +3562,7 @@ op_dealloc(PyObject *_self)
 	}
 
 	Py_XDECREF(self->result);
+	Py_XDECREF(self->convert);
 
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -3423,6 +3573,7 @@ op_traverse(PyObject *_self, visitproc visit, void *arg)
 	op_object *self = (op_object*)_self;
 	Py_VISIT(self->ctx);
 	Py_VISIT(self->result);
+	Py_VISIT(self->convert);
 	return 0;
 }
 
@@ -3490,7 +3641,7 @@ op_get_sys(PyObject *_self, void *data)
 {
 	op_object *self = (op_object*)_self;
 	return sys_FromPointer(
-		def_convert, (addrxlat_sys_t*)self->opctl.sys);
+		self->convert, (addrxlat_sys_t*)self->opctl.sys);
 }
 
 /** Setter for the sys type.
@@ -3532,6 +3683,8 @@ PyDoc_STRVAR(op_result__doc__,
 "result of the last callback");
 
 static PyMemberDef op_members[] = {
+	{ "convert", T_OBJECT, offsetof(op_object, convert), 0,
+	  attr_convert__doc__ },
 	{ "caps", T_ULONG, offsetof(op_object, opctl.caps),
 	  0, op_caps__doc__ },
 	{ "result", T_OBJECT_EX, offsetof(op_object, result),
@@ -3889,6 +4042,8 @@ ctx_FromPointer(PyObject *_conv, addrxlat_ctx_t *ctx)
 
 	addrxlat_ctx_incref(ctx);
 	((ctx_object*)result)->ctx = ctx;
+	Py_INCREF(conv);
+	((ctx_object*)result)->convert = (PyObject*)conv;
 
 	return result;
 }
@@ -3965,6 +4120,8 @@ desc_FromPointer(PyObject *_conv, const addrxlat_desc_t *desc)
 	descobj = (desc_object*)result;
 	descobj->desc.target_as = desc->target_as;
 	loc_scatter(descobj->loc, descobj->nloc, &desc->param);
+	Py_INCREF(conv);
+	descobj->convert = (PyObject*)conv;
 	return result;
 
  err_val:
@@ -4025,6 +4182,8 @@ meth_FromPointer(PyObject *_conv, addrxlat_meth_t *meth)
 
 	addrxlat_meth_incref(meth);
 	((meth_object*)result)->meth = meth;
+	Py_INCREF(conv);
+	((meth_object*)result)->convert = (PyObject*)conv;
 
 	return result;
 }
@@ -4131,6 +4290,8 @@ map_FromPointer(PyObject *_conv, addrxlat_map_t *map)
 
 	addrxlat_map_incref(map);
 	((map_object*)result)->map = map;
+	Py_INCREF(conv);
+	((map_object*)result)->convert = (PyObject*)conv;
 
 	return result;
 }
@@ -4186,6 +4347,8 @@ sys_FromPointer(PyObject *_conv, addrxlat_sys_t *sys)
 
 	addrxlat_sys_incref(sys);
 	((sys_object*)result)->sys = sys;
+	Py_INCREF(conv);
+	((sys_object*)result)->convert = (PyObject*)conv;
 
 	return result;
 }
