@@ -413,7 +413,7 @@ typedef struct {
 } fulladdr_object;
 
 PyDoc_STRVAR(fulladdr__doc__,
-"fulladdr() -> fulladdr\n\
+"FullAddress() -> fulladdr\n\
 \n\
 Construct a full address, that is an address within a given\n\
 address space (ADDRXLAT_xxxADDR).");
@@ -486,7 +486,7 @@ static PyMethodDef fulladdr_methods[] = {
 static PyTypeObject fulladdr_type =
 {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	MOD_NAME ".fulladdr",		/* tp_name */
+	MOD_NAME ".FullAddress",	/* tp_name */
 	sizeof (fulladdr_object),	/* tp_basicsize */
 	0,				/* tp_itemsize */
 	0,				/* tp_dealloc */
@@ -559,7 +559,7 @@ fulladdr_AsPointer(PyObject *value)
 	if (PyObject_TypeCheck(value, &fulladdr_type))
 		return &((fulladdr_object*)value)->faddr;
 
-	PyErr_Format(PyExc_TypeError, "need a fulladdr, not '%.200s'",
+	PyErr_Format(PyExc_TypeError, "need a FullAddress, not '%.200s'",
 		     Py_TYPE(value)->tp_name);
 	return NULL;
 }
@@ -809,7 +809,7 @@ cb_read64(void *_self, const addrxlat_fulladdr_t *addr, uint64_t *val)
 }
 
 PyDoc_STRVAR(ctx__doc__,
-"ctx() -> address translation context");
+"Context() -> address translation context");
 
 static PyObject *
 ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -1024,7 +1024,7 @@ static PyGetSetDef ctx_getset[] = {
 static PyTypeObject ctx_type =
 {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	MOD_NAME ".ctx",		/* tp_name */
+	MOD_NAME ".Context",		/* tp_name */
 	sizeof (ctx_object),		/* tp_basicsize */
 	0,				/* tp_itemsize */
 	ctx_dealloc,			/* tp_dealloc */
@@ -1104,7 +1104,7 @@ ctx_AsPointer(PyObject *value)
 		return ctx;
 	}
 
-	PyErr_Format(PyExc_TypeError, "need a ctx, not '%.200s'",
+	PyErr_Format(PyExc_TypeError, "need a Context, not '%.200s'",
 		     Py_TYPE(value)->tp_name);
 	return NULL;
 }
@@ -1176,7 +1176,7 @@ set_fulladdr(PyObject *self, PyObject *value, void *data)
 
 	if (!PyObject_TypeCheck(value, &fulladdr_type)) {
 		PyErr_Format(PyExc_TypeError,
-			     "need a fulladdr, not '%.200s'",
+			     "need a FullAddress, not '%.200s'",
 			     Py_TYPE(value)->tp_name);
 		return -1;
 	}
@@ -1206,7 +1206,7 @@ typedef struct {
 #define DESC_NLOC	1
 
 PyDoc_STRVAR(desc__doc__,
-"desc(kind) -> address translation description\n\
+"Description(kind) -> address translation description\n\
 \n\
 This is a generic base class for all translation desriptions.\n\
 Use a subclass to get a more suitable interface to the parameters\n\
@@ -1219,7 +1219,7 @@ desc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	desc_object *self;
 	long kind;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "l:desc",
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "l:Description",
 					 keywords, &kind))
 		return NULL;
 
@@ -1305,7 +1305,7 @@ static PyGetSetDef desc_getset[] = {
 static PyTypeObject desc_type =
 {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	MOD_NAME ".desc",		/* tp_name */
+	MOD_NAME ".Description",	/* tp_name */
 	sizeof (desc_object),		/* tp_basicsize */
 	0,				/* tp_itemsize */
 	0,				/* tp_dealloc */
@@ -1505,7 +1505,7 @@ make_desc_param(PyObject *desc)
 }
 
 PyDoc_STRVAR(lineardesc__doc__,
-"lineardesc() -> linear address translation description");
+"LinearDescription() -> linear address translation description");
 
 static PyObject *
 lineardesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -1538,7 +1538,7 @@ static PyGetSetDef lineardesc_getset[] = {
 static PyTypeObject lineardesc_type =
 {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	MOD_NAME ".lineardesc",		/* tp_name */
+	MOD_NAME ".LinearDescription",	/* tp_name */
 	sizeof (desc_object),		/* tp_basicsize */
 	0,				/* tp_itemsize */
 	0,				/* tp_dealloc */
@@ -1584,7 +1584,7 @@ typedef struct {
 } pgtdesc_object;
 
 PyDoc_STRVAR(pgtdesc__doc__,
-"pgtdesc() -> page table address translation description");
+"PageTableDescription() -> page table address translation description");
 
 static PyObject *
 pgtdesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -1765,7 +1765,7 @@ static PyGetSetDef pgtdesc_getset[] = {
 static PyTypeObject pgtdesc_type =
 {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	MOD_NAME ".pgtdesc",		/* tp_name */
+	MOD_NAME ".PageTableDescription", /* tp_name */
 	sizeof (pgtdesc_object),	/* tp_basicsize */
 	0,				/* tp_itemsize */
 	pgtdesc_dealloc,		/* tp_dealloc */
@@ -1834,7 +1834,7 @@ lookupdesc_dealloc(PyObject *_self)
 }
 
 PyDoc_STRVAR(lookupdesc__doc__,
-"lookupdesc() -> table lookup address translation description");
+"LookupDescription() -> table lookup address translation description");
 
 PyDoc_STRVAR(lookupdesc_kind__doc__,
 "translation kind (always ADDRXLAT_LOOKUP)");
@@ -1963,7 +1963,7 @@ static PyGetSetDef lookupdesc_getset[] = {
 static PyTypeObject lookupdesc_type =
 {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	MOD_NAME ".lookupdesc",		/* tp_name */
+	MOD_NAME ".LookupDescription",	/* tp_name */
 	sizeof (desc_object),		/* tp_basicsize */
 	0,				/* tp_itemsize */
 	lookupdesc_dealloc,		/* tp_dealloc */
@@ -2009,7 +2009,7 @@ typedef struct {
 } memarrdesc_object;
 
 PyDoc_STRVAR(memarrdesc__doc__,
-"memarrdesc() -> memory array address translation description");
+"MemoryArrayDescription() -> memory array address translation description");
 
 static PyObject *
 memarrdesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -2100,7 +2100,7 @@ static PyGetSetDef memarrdesc_getset[] = {
 static PyTypeObject memarrdesc_type =
 {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	MOD_NAME ".memarrdesc",		/* tp_name */
+	MOD_NAME ".MemoryArrayDescription", /* tp_name */
 	sizeof (memarrdesc_object),	/* tp_basicsize */
 	0,				/* tp_itemsize */
 	memarrdesc_dealloc,		/* tp_dealloc */
@@ -2191,7 +2191,7 @@ desc_AsPointer(PyObject *value)
 
 	if (!PyObject_TypeCheck(value, &desc_type)) {
 		PyErr_Format(PyExc_TypeError,
-			     "need a desc, not '%.200s'",
+			     "need a Description, not '%.200s'",
 			     Py_TYPE(value)->tp_name);
 		return NULL;
 	}
@@ -2208,7 +2208,7 @@ typedef struct {
 } meth_object;
 
 PyDoc_STRVAR(meth__doc__,
-"meth() -> address translation method");
+"Method() -> address translation method");
 
 static PyObject *
 meth_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -2290,7 +2290,7 @@ static PyMethodDef meth_methods[] = {
 static PyTypeObject meth_type =
 {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	MOD_NAME ".meth",		/* tp_name */
+	MOD_NAME ".Method",		/* tp_name */
 	sizeof (meth_object),		/* tp_basicsize */
 	0,				/* tp_itemsize */
 	meth_dealloc,			/* tp_dealloc */
@@ -2375,7 +2375,7 @@ meth_AsPointer(PyObject *value)
 		return meth;
 	}
 
-	PyErr_Format(PyExc_TypeError, "need a meth or None, not '%.200s'",
+	PyErr_Format(PyExc_TypeError, "need a Method or None, not '%.200s'",
 		     Py_TYPE(value)->tp_name);
 	return NULL;
 }
@@ -2392,7 +2392,7 @@ typedef struct {
 } range_object;
 
 PyDoc_STRVAR(range__doc__,
-"range() -> range\n\
+"Range() -> range\n\
 \n\
 Construct an empty address range.");
 
@@ -2481,7 +2481,7 @@ static PyGetSetDef range_getset[] = {
 static PyTypeObject range_type =
 {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	MOD_NAME ".range",		/* tp_name */
+	MOD_NAME ".Range",		/* tp_name */
 	sizeof (range_object),		/* tp_basicsize */
 	0,				/* tp_itemsize */
 	range_dealloc,			/* tp_dealloc */
@@ -2565,7 +2565,7 @@ range_AsPointer(PyObject *value)
 	if (PyObject_TypeCheck(value, &range_type))
 		return &((range_object*)value)->range;
 
-	PyErr_Format(PyExc_TypeError, "need a range, not '%.200s'",
+	PyErr_Format(PyExc_TypeError, "need a Range, not '%.200s'",
 		     Py_TYPE(value)->tp_name);
 	return NULL;
 }
@@ -2577,7 +2577,7 @@ typedef struct {
 } map_object;
 
 PyDoc_STRVAR(map__doc__,
-"map() -> address translation map");
+"Map() -> address translation map");
 
 static PyObject *
 map_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -2764,7 +2764,7 @@ static PyMethodDef map_methods[] = {
 static PyTypeObject map_type =
 {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	MOD_NAME ".map",		/* tp_name */
+	MOD_NAME ".Map",		/* tp_name */
 	sizeof (map_object),		/* tp_basicsize */
 	0,				/* tp_itemsize */
 	map_dealloc,			/* tp_dealloc */
@@ -2849,7 +2849,7 @@ map_AsPointer(PyObject *value)
 		return mapobj->map;
 	}
 
-	PyErr_Format(PyExc_TypeError, "need a map or None, not '%.200s'",
+	PyErr_Format(PyExc_TypeError, "need a Map or None, not '%.200s'",
 		     Py_TYPE(value)->tp_name);
 	return NULL;
 }
@@ -2861,7 +2861,7 @@ typedef struct {
 } sys_object;
 
 PyDoc_STRVAR(sys__doc__,
-"sys() -> address translation system");
+"System() -> address translation system");
 
 static PyObject *
 sys_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -2970,7 +2970,7 @@ sys_set_map(PyObject *_self, PyObject *args, PyObject *kwargs)
 }
 
 PyDoc_STRVAR(sys_get_map__doc__,
-"SYS.get_map(idx) -> map or None\n\
+"SYS.get_map(idx) -> Map or None\n\
 \n\
 Get the given translation map of a translation system.\n\
 See SYS_MAP_xxx for valid values of idx.");
@@ -3033,7 +3033,7 @@ sys_set_meth(PyObject *_self, PyObject *args, PyObject *kwargs)
 }
 
 PyDoc_STRVAR(sys_get_meth__doc__,
-"SYS.get_meth(idx) -> meth or None\n\
+"SYS.get_meth(idx) -> Method or None\n\
 \n\
 Get the given translation method of a translation system.\n\
 See SYS_METH_xxx for valid values of idx.");
@@ -3075,7 +3075,7 @@ static PyMethodDef sys_methods[] = {
 static PyTypeObject sys_type =
 {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	MOD_NAME ".sys",		/* tp_name */
+	MOD_NAME ".System",		/* tp_name */
 	sizeof (sys_object),		/* tp_basicsize */
 	0,				/* tp_itemsize */
 	sys_dealloc,			/* tp_dealloc */
@@ -3160,7 +3160,7 @@ sys_AsPointer(PyObject *value)
 		return sys;
 	}
 
-	PyErr_Format(PyExc_TypeError, "need a sys or None, not '%.200s'",
+	PyErr_Format(PyExc_TypeError, "need a System or None, not '%.200s'",
 		     Py_TYPE(value)->tp_name);
 
 	return NULL;
@@ -3178,7 +3178,7 @@ typedef struct {
 } step_object;
 
 PyDoc_STRVAR(step__doc__,
-"step(ctx) -> step");
+"Step(ctx) -> step");
 
 /** Create a new, uninitialized step object.
  * @param type    step type
@@ -3193,7 +3193,7 @@ step_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	static char *keywords[] = { "ctx", NULL };
 	PyObject *ctxobj;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:step",
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:Step",
 					 keywords, &ctxobj))
 		return NULL;
 
@@ -3615,7 +3615,7 @@ static PyMethodDef step_methods[] = {
 static PyTypeObject step_type =
 {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	MOD_NAME ".step",		/* tp_name */
+	MOD_NAME ".Step",		/* tp_name */
 	sizeof (step_object),		/* tp_basicsize */
 	0,				/* tp_itemsize */
 	step_dealloc,			/* tp_dealloc */
@@ -3693,7 +3693,7 @@ cb_op(void *data, const addrxlat_fulladdr_t *addr)
 }
 
 PyDoc_STRVAR(op__doc__,
-"op(ctx) -> op\n\
+"Operator(ctx) -> op\n\
 \n\
 Base class for generic addrxlat operations.");
 
@@ -3710,7 +3710,7 @@ op_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	static char *keywords[] = { "ctx", NULL };
 	PyObject *ctxobj;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:op",
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:Operator",
 					 keywords, &ctxobj))
 		return NULL;
 
@@ -3772,7 +3772,7 @@ op_call(PyObject *_self, PyObject *args, PyObject *kwargs)
 	const addrxlat_fulladdr_t *addr;
 	addrxlat_status status;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:op",
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:Operator",
 					 keywords, &addrobj))
 		return NULL;
 
@@ -3898,7 +3898,7 @@ static PyMethodDef op_methods[] = {
 static PyTypeObject op_type =
 {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	MOD_NAME ".op",			/* tp_name */
+	MOD_NAME ".Operator",		/* tp_name */
 	sizeof (op_object),		/* tp_basicsize */
 	0,				/* tp_itemsize */
 	op_dealloc,			/* tp_dealloc */
@@ -4170,70 +4170,72 @@ init_addrxlat (void)
 		goto err_exception;
 
 	Py_INCREF((PyObject*)&fulladdr_type);
-	ret = PyModule_AddObject(mod, "fulladdr", (PyObject*)&fulladdr_type);
+	ret = PyModule_AddObject(mod, "FullAddress",
+				 (PyObject*)&fulladdr_type);
 	if (ret)
 		goto err_exception;
 
 	Py_INCREF((PyObject*)&ctx_type);
-	ret = PyModule_AddObject(mod, "ctx", (PyObject*)&ctx_type);
+	ret = PyModule_AddObject(mod, "Context", (PyObject*)&ctx_type);
 	if (ret)
 		goto err_fulladdr;
 
 	Py_INCREF((PyObject*)&desc_type);
-	ret = PyModule_AddObject(mod, "desc", (PyObject*)&desc_type);
+	ret = PyModule_AddObject(mod, "Description", (PyObject*)&desc_type);
 	if (ret)
 		goto err_ctx;
 
 	Py_INCREF((PyObject*)&lineardesc_type);
-	ret = PyModule_AddObject(mod, "lineardesc",
+	ret = PyModule_AddObject(mod, "LinearDescription",
 				 (PyObject*)&lineardesc_type);
 	if (ret)
 		goto err_desc;
 
 	Py_INCREF((PyObject*)&pgtdesc_type);
-	ret = PyModule_AddObject(mod, "pgtdesc", (PyObject*)&pgtdesc_type);
+	ret = PyModule_AddObject(mod, "PageTableDescription",
+				 (PyObject*)&pgtdesc_type);
 	if (ret)
 		goto err_lineardesc;
 
 	Py_INCREF((PyObject*)&lookupdesc_type);
-	ret = PyModule_AddObject(mod, "lookupdesc",
+	ret = PyModule_AddObject(mod, "LookupDescription",
 				 (PyObject*)&lookupdesc_type);
 	if (ret)
 		goto err_pgtdesc;
 
 	Py_INCREF((PyObject*)&memarrdesc_type);
-	ret = PyModule_AddObject(mod, "memarrdesc",
+	ret = PyModule_AddObject(mod, "MemoryArrayDescription",
 				 (PyObject*)&memarrdesc_type);
 	if (ret)
 		goto err_lookupdesc;
 
 	Py_INCREF((PyObject*)&meth_type);
-	ret = PyModule_AddObject(mod, "meth", (PyObject*)&meth_type);
+	ret = PyModule_AddObject(mod, "Method", (PyObject*)&meth_type);
 	if (ret)
 		goto err_memarrdesc;
 
 	Py_INCREF((PyObject*)&range_type);
-	ret = PyModule_AddObject(mod, "range", (PyObject*)&range_type);
+	ret = PyModule_AddObject(mod, "Range", (PyObject*)&range_type);
 	if (ret)
 		goto err_meth;
 
 	Py_INCREF((PyObject*)&map_type);
-	ret = PyModule_AddObject(mod, "map", (PyObject*)&map_type);
+	ret = PyModule_AddObject(mod, "Map", (PyObject*)&map_type);
 	if (ret)
 		goto err_range;
 
 	Py_INCREF((PyObject*)&sys_type);
-	ret = PyModule_AddObject(mod, "sys", (PyObject*)&sys_type);
+	ret = PyModule_AddObject(mod, "System", (PyObject*)&sys_type);
 	if (ret)
 		goto err_map;
 
 	Py_INCREF((PyObject*)&step_type);
-	ret = PyModule_AddObject(mod, "step", (PyObject*)&step_type);
+	ret = PyModule_AddObject(mod, "Step", (PyObject*)&step_type);
 	if (ret)
 		goto err_sys;
 
 	Py_INCREF((PyObject*)&op_type);
-	ret = PyModule_AddObject(mod, "op", (PyObject*)&op_type);
+	ret = PyModule_AddObject(mod, "Operator", (PyObject*)&op_type);
 	if (ret)
 		goto err_step;
 
