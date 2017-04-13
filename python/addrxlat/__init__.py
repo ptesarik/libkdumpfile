@@ -29,7 +29,7 @@ class Description(Description):
         self.param = param
 
     def __repr__(self):
-        return '%s(%r, %r)' % (
+        return '%s(%r, %r, %r)' % (
             self.__class__.__name__,
             self.kind,
             self.target_as,
@@ -82,14 +82,14 @@ class MemoryArrayDescription(MemoryArrayDescription):
     def __init__(self, target_as, base=None, shift=0, elemsz=0, valsz=0):
         super(MemoryArrayDescription, self).__init__()
         self.target_as = target_as
-        if self.base is not None:
+        if base is not None:
             self.base = base
         self.shift = shift
         self.elemsz = elemsz
         self.valsz = valsz
 
     def __repr__(self):
-        return '%s(%r, %r, %r)' % (
+        return '%s(%r, %r, %r, %r, %r)' % (
             self.__class__.__name__,
             self.target_as,
             self.base,
