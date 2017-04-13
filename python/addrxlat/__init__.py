@@ -100,9 +100,10 @@ class MemoryArrayDescription(MemoryArrayDescription):
 class Method(Method):
     def __init__(self, desc=None):
         super(Method, self).__init__()
-        status = self.set_desc(desc)
-        if status != OK:
-            raise get_exception(status)
+        if desc is not None:
+            status = self.set_desc(desc)
+            if status != OK:
+                raise get_exception(status)
 
     def __repr__(self):
         return '%s(%r)' % (
