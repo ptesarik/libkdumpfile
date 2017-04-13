@@ -21,7 +21,12 @@
 
 AM_CPPFLAGS = -I$(top_builddir)/include
 
-pyexec_LTLIBRARIES = _kdumpfile.la
+pyexec_LTLIBRARIES = _addrxlat.la _kdumpfile.la
+
+_addrxlat_la_SOURCES = addrxlat.c
+_addrxlat_la_CFLAGS = $(PYTHON_CFLAGS)
+_addrxlat_la_LDFLAGS = -module -avoid-version
+_addrxlat_la_LIBADD = $(PYTHON_LIBS) $(top_builddir)/src/addrxlat/libaddrxlat.la
 
 _kdumpfile_la_SOURCES = kdumpfile.c
 _kdumpfile_la_CFLAGS = $(PYTHON_CFLAGS) -I$(top_srcdir)/src
