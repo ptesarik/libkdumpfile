@@ -23,7 +23,7 @@ class Context(Context):
         return '%s()' % (self.__class__.__name__,)
 
 class Description(Description):
-    def __init__(self, kind, target_as, param=()):
+    def __init__(self, kind, target_as=NOADDR, param=()):
         super(Description, self).__init__(kind)
         self.target_as = target_as
         self.param = param
@@ -36,7 +36,7 @@ class Description(Description):
             self.param)
 
 class LinearDescription(LinearDescription):
-    def __init__(self, target_as, off=0):
+    def __init__(self, target_as=NOADDR, off=0):
         super(LinearDescription, self).__init__()
         self.target_as = target_as
         self.off = off
@@ -48,7 +48,7 @@ class LinearDescription(LinearDescription):
             self.off)
 
 class PageTableDescription(PageTableDescription):
-    def __init__(self, target_as, root=None, pte_format=PTE_NONE, fields=()):
+    def __init__(self, target_as=NOADDR, root=None, pte_format=PTE_NONE, fields=()):
         super(PageTableDescription, self).__init__()
         self.target_as = target_as
         if root is not None:
@@ -65,7 +65,7 @@ class PageTableDescription(PageTableDescription):
             self.fields)
 
 class LookupDescription(LookupDescription):
-    def __init__(self, target_as, endoff=0, tbl=()):
+    def __init__(self, target_as=NOADDR, endoff=0, tbl=()):
         super(LookupDescription, self).__init__()
         self.target_as = target_as
         self.endoff = endoff
@@ -79,7 +79,7 @@ class LookupDescription(LookupDescription):
             self.tbl)
 
 class MemoryArrayDescription(MemoryArrayDescription):
-    def __init__(self, target_as, base=None, shift=0, elemsz=0, valsz=0):
+    def __init__(self, target_as=NOADDR, base=None, shift=0, elemsz=0, valsz=0):
         super(MemoryArrayDescription, self).__init__()
         self.target_as = target_as
         if base is not None:
