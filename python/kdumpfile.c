@@ -1,10 +1,12 @@
 #include <Python.h>
+#include <structmember.h>
 #include <kdumpfile.h>
 #include <addrxlat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include "addrxlatmod.h"
 
 #define MOD_NAME	"_kdumpfile"
 #define MOD_DOC		"kdumpfile - interface to libkdumpfile"
@@ -23,6 +25,7 @@ typedef struct {
 	int fd;
 	PyObject *cb_get_symbol;
 	PyObject *attr;
+	PyObject *addrxlat_convert;
 } kdumpfile_object;
 
 static PyObject *OSErrorException;
@@ -34,6 +37,8 @@ static PyObject *NoKeyException;
 static PyObject *EOFException;
 static PyObject *BusyException;
 static PyObject *AddressTranslationException;
+
+static struct addrxlat_CAPI *addrxlat_API;
 
 static PyTypeObject attr_dir_object_type;
 static PyTypeObject attr_iterkey_object_type;
@@ -149,6 +154,9 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 		goto fail;
 	}
 
+	Py_INCREF(addrxlat_API->def_convert);
+	self->addrxlat_convert = addrxlat_API->def_convert;
+
 	return (PyObject*)self;
 
 fail:
@@ -169,6 +177,7 @@ kdumpfile_dealloc(PyObject *_self)
 	}
 
 	if (self->fd) close(self->fd);
+	Py_XDECREF(self->addrxlat_convert);
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -284,6 +293,28 @@ kdumpfile_vtop(PyObject *_self, PyObject *args)
 	return PyLong_FromUnsignedLongLong(faddr.addr);
 }
 
+PyDoc_STRVAR(get_addrxlat_ctx__doc__,
+"K.get_addrxlat_ctx() -> addrxlat.Context");
+
+static PyObject *
+get_addrxlat_ctx(PyObject *_self, PyObject *args)
+{
+	kdumpfile_object *self = (kdumpfile_object*)_self;
+	addrxlat_ctx_t *ctx = kdump_get_addrxlat_ctx(self->ctx);
+	return addrxlat_API->ctx_FromPointer(self->addrxlat_convert, ctx);
+}
+
+PyDoc_STRVAR(get_addrxlat_sys__doc__,
+"K.get_addrxlat_sys() -> addrxlat.System");
+
+static PyObject *
+get_addrxlat_sys(PyObject *_self, PyObject *args)
+{
+	kdumpfile_object *self = (kdumpfile_object*)_self;
+	addrxlat_sys_t *sys = kdump_get_addrxlat_sys(self->ctx);
+	return addrxlat_API->sys_FromPointer(self->addrxlat_convert, sys);
+}
+
 static PyMethodDef kdumpfile_object_methods[] = {
 	{"read",      (PyCFunction) kdumpfile_read, METH_VARARGS | METH_KEYWORDS,
 		read__doc__},
@@ -291,6 +322,10 @@ static PyMethodDef kdumpfile_object_methods[] = {
 		vtop_init__doc__},
 	{"vtop",	kdumpfile_vtop,			METH_VARARGS,
 	 vtop__doc__},
+	{ "get_addrxlat_ctx", get_addrxlat_ctx, METH_NOARGS,
+	  get_addrxlat_ctx__doc__ },
+	{ "get_addrxlat_sys", get_addrxlat_sys, METH_NOARGS,
+	  get_addrxlat_sys__doc__ },
 	{NULL}
 };
 
@@ -436,6 +471,16 @@ static PyGetSetDef kdumpfile_object_getset[] = {
 	{ NULL }
 };
 
+PyDoc_STRVAR(kdumpfile_addrxlat_convert__doc__,
+"addrxlat C type converter");
+
+static PyMemberDef kdumpfile_members[] = {
+	{ "addrxlat_convert", T_OBJECT,
+	  offsetof(kdumpfile_object, addrxlat_convert), 0,
+	  kdumpfile_addrxlat_convert__doc__ },
+	{ NULL }
+};
+
 static PyTypeObject kdumpfile_object_type = 
 {
 	PyVarObject_HEAD_INIT(NULL, 0)
@@ -466,7 +511,7 @@ static PyTypeObject kdumpfile_object_type =
 	0,                              /* tp_iter */ 
 	0,                              /* tp_iternext */ 
 	kdumpfile_object_methods,       /* tp_methods */ 
-	0,                              /* tp_members */ 
+	kdumpfile_members,		/* tp_members */
 	kdumpfile_object_getset,        /* tp_getset */ 
 	0,                              /* tp_base */
 	0,                              /* tp_dict */
@@ -1851,6 +1896,17 @@ init_kdumpfile (void)
 	ret = lookup_views();
 	if (ret)
 		goto fail;
+
+	addrxlat_API = (struct addrxlat_CAPI*)
+		PyCapsule_Import(addrxlat_CAPSULE_NAME, 0);
+	if (!addrxlat_API)
+		goto fail;
+	if (addrxlat_API->ver < addrxlat_CAPI_VER) {
+		PyErr_Format(PyExc_RuntimeError,
+			     "addrxlat CAPI ver >= %lu needed, %lu found",
+			     addrxlat_CAPI_VER, addrxlat_API->ver);
+		goto fail;
+	}
 
 	return MOD_SUCCESS_VAL(mod);
 
