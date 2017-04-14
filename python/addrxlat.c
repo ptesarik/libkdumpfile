@@ -1159,7 +1159,15 @@ set_fulladdr(PyObject *self, PyObject *value, void *data)
 	return 0;
 }
 
-#define MAXLOC	4
+/** Maximum number of parameter locations in desc_object.
+ * This is not checked anywhere, but should be less than the maximum
+ * possible number of parameter locations. The assignment is currently:
+ *
+ * - @c loc[0] corresponds to the whole raw param object
+ * - @c loc[1] is the root address (for PageTableDescription) or
+ *             base address (for MemoryArrayDescription)
+ */
+#define MAXLOC	2
 
 #define desc_HEAD		\
 	PyObject_HEAD		\
@@ -1376,13 +1384,8 @@ desc_param_len(PyObject *_self)
 {
 	desc_param_object *self = (desc_param_object*)_self;
 	desc_object *param = (desc_object*)self->desc;
-	param_loc *loc;
-	Py_ssize_t len = 0;
 
-	for (loc = param->loc; loc < &param->loc[param->nloc]; ++loc)
-		if (loc->off + loc->len > len)
-			len = loc->off + loc->len;
-	return len;
+	return param->loc[0].len;
 }
 
 static void *
