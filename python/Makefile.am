@@ -38,4 +38,7 @@ EXTRA__kdumpfile_la_DEPENDENCIES = kdumpfile.sym
 dist_noinst_DATA = \
 	kdumpfile.sym
 
+noinst_HEADERS = \
+	addrxlatmod.h
+
 SUBDIRS = kdumpfile

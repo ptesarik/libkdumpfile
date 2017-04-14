@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include "addrxlatmod.h"
 
 #if PY_MAJOR_VERSION >= 3
 #define Text_FromUTF8(x)	PyUnicode_FromString(x)
@@ -58,6 +59,9 @@ static addrxlat_status ctx_error_status(PyObject *_self);
 static PyObject *ctx_status_result(PyObject *_self, addrxlat_status status);
 static PyObject *make_desc_param(PyObject *desc);
 
+/** Default type converter object. */
+static PyObject *def_convert;
+
 /* Conversion functions */
 static addrxlat_fulladdr_t *fulladdr_AsPointer(PyObject *value);
 static PyObject *fulladdr_FromPointer(
@@ -77,8 +81,8 @@ static PyObject *map_FromPointer(PyObject *_conv, addrxlat_map_t *map);
 static addrxlat_sys_t *sys_AsPointer(PyObject *value);
 static PyObject *sys_FromPointer(PyObject *_conv, addrxlat_sys_t *sys);
 
-/** Default type converter object. */
-static PyObject *def_convert;
+/** Capsule data. */
+static struct addrxlat_CAPI CAPI;
 
 /** Documentation for the convert attribute (multiple types). */
 PyDoc_STRVAR(attr_convert__doc__,
@@ -4780,6 +4784,31 @@ init_addrxlat (void)
 	Py_DECREF(obj);
 	if (!def_convert)
 		goto err_convert;
+
+	CAPI.ver = addrxlat_CAPI_VER;
+	CAPI.def_convert = def_convert;
+	CAPI.fulladdr_AsPointer = fulladdr_AsPointer;
+	CAPI.fulladdr_FromPointer = fulladdr_FromPointer;
+	CAPI.ctx_AsPointer = ctx_AsPointer;
+	CAPI.ctx_FromPointer = ctx_FromPointer;
+	CAPI.desc_AsPointer = desc_AsPointer;
+	CAPI.desc_FromPointer = desc_FromPointer;
+	CAPI.meth_AsPointer = meth_AsPointer;
+	CAPI.meth_FromPointer = meth_FromPointer;
+	CAPI.range_AsPointer = range_AsPointer;
+	CAPI.range_FromPointer = range_FromPointer;
+	CAPI.map_AsPointer = map_AsPointer;
+	CAPI.map_FromPointer = map_FromPointer;
+	CAPI.sys_AsPointer = sys_AsPointer;
+	CAPI.sys_FromPointer = sys_FromPointer;
+
+	obj = PyCapsule_New(&CAPI, addrxlat_CAPSULE_NAME, NULL);
+	if (!obj)
+		goto err_convert;
+	if (PyModule_AddObject(mod, "_C_API", obj)) {
+		Py_DECREF(obj);
+		goto err_convert;
+	}
 
 	return MOD_SUCCESS_VAL(mod);
 
