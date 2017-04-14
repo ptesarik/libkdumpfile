@@ -1468,6 +1468,7 @@ make_desc_param(PyObject *desc)
 	PyObject *result;
 
 	result = type->tp_alloc(type, 0);
+	Py_INCREF(desc);
 	((desc_param_object*)result)->desc = desc;
 	return result;
 }
