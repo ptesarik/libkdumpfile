@@ -48,7 +48,7 @@ class LinearDescription(LinearDescription):
         self.off = off
 
     def __repr__(self):
-        return '%s(%r)' % (
+        return '%s(%r, %r)' % (
             self.__class__.__name__,
             self.target_as,
             self.off)
