@@ -67,8 +67,7 @@ class PageTableDescription(PageTableDescription):
     def __init__(self, target_as=NOADDR, root=None, pte_format=PTE_NONE, fields=()):
         super(PageTableDescription, self).__init__()
         self.target_as = target_as
-        if root is not None:
-            self.root = root
+        self.root = root
         self.pte_format = pte_format
         self.fields = fields
 
@@ -106,8 +105,7 @@ class MemoryArrayDescription(MemoryArrayDescription):
     def __init__(self, target_as=NOADDR, base=None, shift=0, elemsz=0, valsz=0):
         super(MemoryArrayDescription, self).__init__()
         self.target_as = target_as
-        if base is not None:
-            self.base = base
+        self.base = base
         self.shift = shift
         self.elemsz = elemsz
         self.valsz = valsz
