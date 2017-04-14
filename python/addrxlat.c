@@ -1156,7 +1156,7 @@ set_fulladdr(PyObject *self, PyObject *value, void *data)
 	Py_INCREF(value);
 	oldval = *pobj;
 	*pobj = value;
-	loc->ptr = addr;
+	loc->ptr = (value == Py_None ? NULL : addr);
 	Py_DECREF(oldval);
 	return 0;
 }
@@ -3972,13 +3972,22 @@ static PyMemberDef convert_members[] = {
  * The returned pointer refers to a @c libaddrxlat_fulladdr_t
  * structure embedded in the Python object, i.e. the pointer is
  * valid only as long as the containing Python object exists.
+ *
+ * If @c param is @c NULL, return a pointer to a null address singleton.
+ * This singleton should not be modified, as it would affect all other
+ * @c None full addresses.
  */
 static addrxlat_fulladdr_t *
 fulladdr_AsPointer(PyObject *value)
 {
+	static addrxlat_fulladdr_t nulladdr = { 0, ADDRXLAT_NOADDR };
+
+	if (value == Py_None)
+		return &nulladdr;
+
 	if (!PyObject_TypeCheck(value, &fulladdr_type)) {
 		PyErr_Format(PyExc_TypeError,
-			     "need a FullAddress, not '%.200s'",
+			     "need a FullAddress or None, not '%.200s'",
 			     Py_TYPE(value)->tp_name);
 		return NULL;
 	}
