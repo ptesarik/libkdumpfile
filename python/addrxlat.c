@@ -212,26 +212,6 @@ nth_arg(const char *fname, PyObject *args, Py_ssize_t n)
 	return PyTuple_GET_ITEM(args, n);
 }
 
-/** Get the convert object from keyword arguments.
- * @param kwargs  keyword arguments
- * @returns       convert object (new reference), or @c NULL on failure
- */
-static PyObject *
-get_convert(PyObject *kwargs)
-{
-	PyObject *result;
-
-	result = kwargs
-		? PyDict_GetItemString(kwargs, "convert")
-		: NULL;
-
-	if (!result)
-		result = def_convert;
-
-	Py_INCREF(result);
-	return result;
-}
-
 /** Offset of a type member as a void pointer. */
 #define OFFSETOF_PTR(type, member)	((void*)&(((type*)0)->member))
 
@@ -830,12 +810,7 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = get_convert(kwargs);
-	if (!self->convert) {
-		Py_DECREF(self);
-		return NULL;
-	}
-
+	self->convert = def_convert;
 	self->ctx = addrxlat_ctx_new();
 	if (!self->ctx) {
 		Py_DECREF(self);
@@ -1211,12 +1186,7 @@ desc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = get_convert(kwargs);
-	if (!self->convert) {
-		Py_DECREF(self);
-		return NULL;
-	}
-
+	self->convert = def_convert;
 	self->desc.kind = kind;
 	self->desc.target_as = ADDRXLAT_NOADDR;
 	self->nloc = DESC_NLOC;
@@ -2137,12 +2107,7 @@ meth_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = get_convert(kwargs);
-	if (!self->convert) {
-		Py_DECREF(self);
-		return NULL;
-	}
-
+	self->convert = def_convert;
 	self->meth = addrxlat_meth_new();
 	if (!self->meth) {
 		Py_DECREF(self);
@@ -2435,12 +2400,7 @@ map_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = get_convert(kwargs);
-	if (!self->convert) {
-		Py_DECREF(self);
-		return NULL;
-	}
-
+	self->convert = def_convert;
 	self->map = addrxlat_map_new();
 	if (!self->map) {
 		Py_DECREF(self);
@@ -2693,12 +2653,7 @@ sys_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = get_convert(kwargs);
-	if (!self->convert) {
-		Py_DECREF(self);
-		return NULL;
-	}
-
+	self->convert = def_convert;
 	self->sys = addrxlat_sys_new();
 	if (!self->sys) {
 		Py_DECREF(self);
@@ -2995,12 +2950,7 @@ step_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = get_convert(kwargs);
-	if (!self->convert) {
-		Py_DECREF(self);
-		return NULL;
-	}
-
+	self->convert = def_convert;
 	self->step.ctx = ctx_AsPointer(ctxobj);
 	if (PyErr_Occurred()) {
 		Py_DECREF(self);
@@ -3525,12 +3475,7 @@ op_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = get_convert(kwargs);
-	if (!self->convert) {
-		Py_DECREF(self);
-		return NULL;
-	}
-
+	self->convert = def_convert;
 	self->opctl.ctx = ctx_AsPointer(ctxobj);
 	if (PyErr_Occurred()) {
 		Py_DECREF(self);
