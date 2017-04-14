@@ -1092,7 +1092,8 @@ loc_scatter(const param_loc *loc, unsigned n, const void *buffer)
 {
 	unsigned i;
 	for (i = 0; i < n; ++i, ++loc)
-		memcpy(loc->ptr, buffer + loc->off, loc->len);
+		if (loc->ptr)
+			memcpy(loc->ptr, buffer + loc->off, loc->len);
 }
 
 static void
@@ -1100,7 +1101,8 @@ loc_gather(const param_loc *loc, unsigned n, void *buffer)
 {
 	unsigned i;
 	for (i = 0; i < n; ++i, ++loc)
-		memcpy(buffer + loc->off, loc->ptr, loc->len);
+		if (loc->ptr)
+			memcpy(buffer + loc->off, loc->ptr, loc->len);
 }
 
 /** Location of a fulladdr parameter within another object. */
@@ -1395,7 +1397,8 @@ desc_param_ptr(desc_object *param, Py_ssize_t index)
 	void *ptr = NULL;
 
 	for (loc = param->loc; loc < &param->loc[param->nloc]; ++loc)
-		if (loc->off <= index && index < loc->off + loc->len)
+		if (loc->ptr &&
+		    loc->off <= index && index < loc->off + loc->len)
 			ptr = loc->ptr + index - loc->off;
 	return ptr;
 }
