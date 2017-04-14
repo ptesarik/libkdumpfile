@@ -1588,15 +1588,11 @@ pgtdesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 
 		self->loc[0].len = sizeof(addrxlat_param_pgt_t);
 
-		self->desc.param.pgt.root.as = ADDRXLAT_NOADDR;
-		self->root = fulladdr_FromPointer(
-			self->convert, &self->desc.param.pgt.root);
-		if (!self->root) {
-			Py_DECREF(self);
-			return NULL;
-		}
+		Py_INCREF(Py_None);
+		self->root = Py_None;
+		self->desc.param.pgt.root = *fulladdr_AsPointer(self->root);
 		loc = &self->loc[DESC_NLOC];
-		loc->ptr = &((fulladdr_object*)self->root)->faddr;
+		loc->ptr = NULL;
 		loc->off = offsetof(addrxlat_param_t, pgt.root);
 		loc->len = sizeof(addrxlat_fulladdr_t);
 		self->nloc = DESC_NLOC + 1;
@@ -2008,15 +2004,11 @@ memarrdesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 
 		self->loc[0].len = sizeof(addrxlat_param_memarr_t);
 
-		self->desc.param.memarr.base.as = ADDRXLAT_NOADDR;
-		self->base = fulladdr_FromPointer(
-			self->convert, &self->desc.param.memarr.base);
-		if (!self->base) {
-			Py_DECREF(self);
-			return NULL;
-		}
+		Py_INCREF(Py_None);
+		self->base = Py_None;
+		self->desc.param.memarr.base = *fulladdr_AsPointer(self->base);
 		loc = &self->loc[DESC_NLOC];
-		loc->ptr = &((fulladdr_object*)self->base)->faddr;
+		loc->ptr = NULL;
 		loc->off = offsetof(addrxlat_param_t, memarr.base);
 		loc->len = sizeof(addrxlat_fulladdr_t);
 		self->nloc = DESC_NLOC + 1;
