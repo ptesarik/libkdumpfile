@@ -4102,6 +4102,7 @@ desc_FromPointer(PyObject *_conv, const addrxlat_desc_t *desc)
 	PyObject *args, *val;
 	PyObject *result;
 	desc_object *descobj;
+	int res;
 
 	switch (desc->kind) {
 	case ADDRXLAT_LINEAR:	type = conv->lineardesc_type;	break;
@@ -4124,8 +4125,10 @@ desc_FromPointer(PyObject *_conv, const addrxlat_desc_t *desc)
 	val = PyInt_FromLong(desc->target_as);
 	if (!val)
 		goto err;
-	if (PyObject_SetAttrString(result, "target_as", val))
-		goto err_val;
+	res = PyObject_SetAttrString(result, "target_as", val);
+	Py_DECREF(val);
+	if (res)
+		goto err;
 
 	descobj = (desc_object*)result;
 	descobj->desc.target_as = desc->target_as;
@@ -4134,8 +4137,6 @@ desc_FromPointer(PyObject *_conv, const addrxlat_desc_t *desc)
 	descobj->convert = (PyObject*)conv;
 	return result;
 
- err_val:
-	Py_DECREF(val);
  err:
 	Py_DECREF(result);
 	return NULL;
