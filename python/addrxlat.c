@@ -4100,27 +4100,58 @@ desc_FromPointer(PyObject *_conv, const addrxlat_desc_t *desc)
 	convert_object *conv = (convert_object *)_conv;
 	PyTypeObject *type;
 	PyObject *args, *val;
+	PyObject *addr = NULL;
+	fulladdr_loc *addrloc = NULL;
 	PyObject *result;
 	desc_object *descobj;
 	int res;
 
 	switch (desc->kind) {
-	case ADDRXLAT_LINEAR:	type = conv->lineardesc_type;	break;
-	case ADDRXLAT_PGT:	type = conv->pgtdesc_type;	break;
-	case ADDRXLAT_LOOKUP:	type = conv->lookupdesc_type;	break;
-	case ADDRXLAT_MEMARR:	type = conv->memarrdesc_type;	break;
-	default:		type = conv->desc_type;		break;
+	case ADDRXLAT_LINEAR:
+		type = conv->lineardesc_type;
+		break;
+
+	case ADDRXLAT_PGT:
+		type = conv->pgtdesc_type;
+		addr = fulladdr_FromPointer(_conv, &desc->param.pgt.root);
+		if (!addr)
+			return NULL;
+		addrloc = &pgtdesc_root_loc;
+		break;
+
+	case ADDRXLAT_LOOKUP:
+		type = conv->lookupdesc_type;
+		break;
+
+	case ADDRXLAT_MEMARR:
+		type = conv->memarrdesc_type;
+		addr = fulladdr_FromPointer(_conv, &desc->param.memarr.base);
+		if (!addr)
+			return NULL;
+		addrloc = &memarrdesc_base_loc;
+		break;
+
+	default:
+		type = conv->desc_type;
+		break;
 	}
 
 	args = (type == conv->desc_type
 		? Py_BuildValue("(k)", desc->kind)
 		: PyTuple_New(0));
 	if (!args)
-		return NULL;
+		goto err_addr;
 	result = PyObject_Call((PyObject*)type, args, NULL);
 	Py_DECREF(args);
 	if (!result)
-		return NULL;
+		goto err_addr;
+
+	if (addr) {
+		res = set_fulladdr(result, addr, addrloc);
+		Py_DECREF(addr);
+		if (res)
+			goto err;
+	}
 
 	val = PyInt_FromLong(desc->target_as);
 	if (!val)
@@ -4139,6 +4170,10 @@ desc_FromPointer(PyObject *_conv, const addrxlat_desc_t *desc)
 
  err:
 	Py_DECREF(result);
+	return NULL;
+
+ err_addr:
+	Py_XDECREF(addr);
 	return NULL;
 }
 
