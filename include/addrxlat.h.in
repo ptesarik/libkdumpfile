@@ -878,13 +878,19 @@ typedef struct _addrxlat_step {
 	 */
 	addrxlat_fulladdr_t base;
 
-	/** Raw PTE value.
-	 * This value is stored on output, but it may be also used
-	 * as input for the next step.
+	/** Raw translation step result.
 	 * This field is set on a successful return from @ref addrxlat_step
-	 * if it is meaningful for the translation method.
+	 * if it is meaningful for the translation method. It may be also used
+	 * as input for the next translation step (but not for the first step).
 	 */
-	addrxlat_pte_t raw_pte;
+	union {
+		/** PTE value for @ref ADDRXLAT_PGT. */
+		addrxlat_pte_t pte;
+		/** Matched element for @ref ADDRXLAT_LOOKUP. */
+		const addrxlat_lookup_elem_t *elem;
+		/** Array content for @ref ADDRXLAT_MEMARR. */
+		addrxlat_addr_t addr;
+	} raw;
 
 	/** Table indices at individual levels.
 	 *
@@ -910,9 +916,6 @@ typedef addrxlat_status addrxlat_first_step_fn(
  * @returns     Error status.
  *
  * This function is called repeatedly with a non-zero @c step->remain.
- * For page table translation, @c step->raw_pte is already filled from
- * the page table. The callback function should interpret the PTE value
- * and update @c step.
  *
  * Note that page offset is automatically added by @ref addrxlat_step
  * when @c step->remain is 1. The callback function is never called to

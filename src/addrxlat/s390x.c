@@ -76,25 +76,25 @@ pgt_s390x(addrxlat_step_t *step)
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	if (PTE_I(step->raw_pte))
+	if (PTE_I(step->raw.pte))
 		return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
 				 pgt_full_name[step->remain - 1],
 				 pte_name[step->remain - 1],
 				 (unsigned) step->idx[step->remain],
-				 step->raw_pte);
+				 step->raw.pte);
 
-	if (step->remain >= 2 && PTE_TT(step->raw_pte) != step->remain - 2)
+	if (step->remain >= 2 && PTE_TT(step->raw.pte) != step->remain - 2)
 		return set_error(step->ctx, ADDRXLAT_ERR_INVALID,
 				 "Table type field %u in %s",
-				 (unsigned) PTE_TT(step->raw_pte),
+				 (unsigned) PTE_TT(step->raw.pte),
 				 pgt_full_name[step->remain]);
 
-	step->base.addr = step->raw_pte;
+	step->base.addr = step->raw.pte;
 	step->base.as = step->meth->desc.target_as;
 
 	if (step->remain >= 2 && step->remain <= 3 &&
-	    PTE_FC(step->raw_pte)) {
+	    PTE_FC(step->raw.pte)) {
 		step->base.addr &= pgt->pgt_mask[step->remain - 1];
 		return pgt_huge_page(step);
 	}
@@ -102,14 +102,14 @@ pgt_s390x(addrxlat_step_t *step)
 	if (step->remain >= 3) {
 		unsigned pgidx = step->idx[step->remain - 1] >>
 			(pf->fieldsz[step->remain - 1] - pf->fieldsz[0]);
-		if (pgidx < PTE_TF(step->raw_pte) ||
-		    pgidx > PTE_TL(step->raw_pte))
+		if (pgidx < PTE_TF(step->raw.pte) ||
+		    pgidx > PTE_TL(step->raw.pte))
 			return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 					 "%s index %u not within %u and %u",
 					 pgt_full_name[step->remain-1],
 					 (unsigned) step->idx[step->remain-1],
-					 (unsigned) PTE_TF(step->raw_pte),
-					 (unsigned) PTE_TL(step->raw_pte));
+					 (unsigned) PTE_TF(step->raw.pte),
+					 (unsigned) PTE_TL(step->raw.pte));
 	}
 
 	step->base.addr &= (step->remain == 2 ? PTO_MASK : pgt->pgt_mask[0]);

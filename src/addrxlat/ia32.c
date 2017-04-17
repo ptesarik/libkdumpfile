@@ -82,21 +82,21 @@ pgt_ia32(addrxlat_step_t *step)
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	if (!(step->raw_pte & _PAGE_PRESENT))
+	if (!(step->raw.pte & _PAGE_PRESENT))
 		return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
 				 pgt_full_name[step->remain - 1],
 				 pte_name[step->remain - 1],
 				 (unsigned) step->idx[step->remain],
-				 step->raw_pte);
+				 step->raw.pte);
 
-	if (step->remain == 2 && (step->raw_pte & _PAGE_PSE)) {
+	if (step->remain == 2 && (step->raw.pte & _PAGE_PSE)) {
 		--step->remain;
-		step->base.addr = (step->raw_pte & pgt->pgt_mask[1]) |
-			pgd_pse_high(step->raw_pte);
+		step->base.addr = (step->raw.pte & pgt->pgt_mask[1]) |
+			pgd_pse_high(step->raw.pte);
 		step->idx[0] |= step->idx[1] << pf->fieldsz[0];
 	} else
-		step->base.addr = step->raw_pte & pgt->pgt_mask[0];
+		step->base.addr = step->raw.pte & pgt->pgt_mask[0];
 	step->base.as = step->meth->desc.target_as;
 
 	return ADDRXLAT_OK;
@@ -127,16 +127,16 @@ pgt_ia32_pae(addrxlat_step_t *step)
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	if (!(step->raw_pte & _PAGE_PRESENT))
+	if (!(step->raw.pte & _PAGE_PRESENT))
 		return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
 				 pgt_full_name[step->remain - 1],
 				 pte_name[step->remain - 1],
 				 (unsigned) step->idx[step->remain],
-				 step->raw_pte);
+				 step->raw.pte);
 
-	step->base.addr = step->raw_pte & ~PHYSADDR_MASK_PAE;
-	if (step->remain == 2 && (step->raw_pte & _PAGE_PSE)) {
+	step->base.addr = step->raw.pte & ~PHYSADDR_MASK_PAE;
+	if (step->remain == 2 && (step->raw.pte & _PAGE_PSE)) {
 		--step->remain;
 		step->base.addr &= pgt->pgt_mask[1];
 		step->idx[0] |= step->idx[1] << pf->fieldsz[0];

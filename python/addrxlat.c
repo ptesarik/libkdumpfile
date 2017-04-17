@@ -3116,38 +3116,79 @@ step_set_meth(PyObject *_self, PyObject *value, void *data)
 PyDoc_STRVAR(step_base__doc__,
 "base address for next translation step");
 
-PyDoc_STRVAR(step_raw_pte__doc__,
-"raw PTE value from last step");
+PyDoc_STRVAR(step_raw__doc__,
+"raw value from last step");
 
-/** Getter for the raw_pte attribute.
+/** Getter for the raw attribute.
  * @param _self  step object
  * @param data   ignored
  * @returns      PyLong object (or @c NULL on failure)
  */
 static PyObject *
-step_get_raw_pte(PyObject *_self, void *data)
+step_get_raw(PyObject *_self, void *data)
 {
 	step_object *self = (step_object*)_self;
-	return PyLong_FromUnsignedLongLong(self->step.raw_pte);
+	const addrxlat_lookup_elem_t *elem;
+
+	if (!self->step.meth)
+		Py_RETURN_NONE;
+
+	switch (addrxlat_meth_get_desc(self->step.meth)->kind) {
+	case ADDRXLAT_PGT:
+		return PyLong_FromUnsignedLongLong(self->step.raw.pte);
+
+	case ADDRXLAT_LOOKUP:
+		elem = self->step.raw.elem;
+		return Py_BuildValue("(KK)",
+				     (unsigned PY_LONG_LONG)elem->orig,
+				     (unsigned PY_LONG_LONG)elem->dest);
+
+	case ADDRXLAT_MEMARR:
+		return PyLong_FromUnsignedLongLong(self->step.raw.addr);
+
+	default:
+		Py_RETURN_NONE;
+	}
 }
 
-/** Setter for the raw_pte attribute.
+/** Setter for the raw attribute.
  * @param _self  step object
  * @param value  new value (a @c PyLong or @c PyInt)
  * @param data   ignored
  * @returns      zero on success, -1 otherwise
  */
 static int
-step_set_raw_pte(PyObject *_self, PyObject *value, void *data)
+step_set_raw(PyObject *_self, PyObject *value, void *data)
 {
 	step_object *self = (step_object*)_self;
-	unsigned long long raw_pte = Number_AsUnsignedLongLong(value);
 
-	if (PyErr_Occurred())
-		return -1;
+	if (self->step.meth) {
+		addrxlat_pte_t pte;
+		addrxlat_addr_t addr;
 
-	self->step.raw_pte = raw_pte;
-	return 0;
+		switch (addrxlat_meth_get_desc(self->step.meth)->kind) {
+		case ADDRXLAT_PGT:
+			pte = Number_AsUnsignedLongLong(value);
+			if (PyErr_Occurred())
+				return -1;
+			self->step.raw.pte = pte;
+			return 0;
+
+		case ADDRXLAT_MEMARR:
+			addr = Number_AsUnsignedLongLong(value);
+			if (PyErr_Occurred())
+				return -1;
+			self->step.raw.addr = addr;
+			return 0;
+
+		default:
+			break;
+		}
+	}
+
+	PyErr_SetString(PyExc_TypeError,
+			"attribute cannot be changed for this method");
+	return -1;
 }
 
 PyDoc_STRVAR(step_idx__doc__,
@@ -3240,8 +3281,8 @@ static PyGetSetDef step_getset[] = {
 	{ "meth", step_get_meth, step_set_meth, step_meth__doc__ },
 	{ "base", get_addr, set_addr, step_base__doc__,
 	  OFFSETOF_PTR(step_object, step.base) },
-	{ "raw_pte", step_get_raw_pte, step_set_raw_pte ,
-	  step_raw_pte__doc__ },
+	{ "raw", step_get_raw, step_set_raw,
+	  step_raw__doc__ },
 	{ "idx", step_get_idx, step_set_idx,
 	  step_idx__doc__ },
 	{ NULL }

@@ -34,7 +34,7 @@
  * @param step  Current step state.
  * @returns     Error status.
  *
- * On successful return, @c step->raw_pte contains the raw
+ * On successful return, @c step->raw.pte contains the raw
  * PTE value for the current translation step.
  */
 addrxlat_status
@@ -66,7 +66,7 @@ read_pte(addrxlat_step_t *step)
 	}
 
 	if (status == ADDRXLAT_OK)
-		step->raw_pte = pte;
+		step->raw.pte = pte;
 
 	return status;
 }

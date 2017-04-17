@@ -254,7 +254,7 @@ next_step_pfn(addrxlat_step_t *step)
 	if (status == ADDRXLAT_OK) {
 		const addrxlat_desc_t *desc = &step->meth->desc;
 		step->base.addr =
-			step->raw_pte << desc->param.pgt.pf.fieldsz[0];
+			step->raw.pte << desc->param.pgt.pf.fieldsz[0];
 		step->base.as = desc->target_as;
 	}
 
@@ -369,7 +369,6 @@ next_step_memarr(addrxlat_step_t *step)
 	const addrxlat_param_memarr_t *memarr = &step->meth->desc.param.memarr;
 	uint64_t val64;
 	uint32_t val32;
-	addrxlat_addr_t val;
 	addrxlat_status status;
 
 	step->base.addr += step->idx[step->remain] * memarr->elemsz;
@@ -377,13 +376,13 @@ next_step_memarr(addrxlat_step_t *step)
 	case 4:
 		status = read32(step, &step->base, &val32,
 				"memory array element");
-		val =val32;
+		step->raw.addr = val32;
 		break;
 
 	case 8:
 		status = read64(step, &step->base, &val64,
 				"memory array element");
-		val = val64;
+		step->raw.addr = val64;
 		break;
 
 	default:
@@ -392,7 +391,7 @@ next_step_memarr(addrxlat_step_t *step)
 	}
 
 	if (status == ADDRXLAT_OK) {
-		step->base.addr = val << memarr->shift;
+		step->base.addr = step->raw.addr << memarr->shift;
 		step->base.as = step->meth->desc.target_as;
 	}
 

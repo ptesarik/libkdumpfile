@@ -188,19 +188,19 @@ pgt_x86_64(addrxlat_step_t *step)
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	if (!(step->raw_pte & _PAGE_PRESENT))
+	if (!(step->raw.pte & _PAGE_PRESENT))
 		return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
 				 pgt_full_name[step->remain - 1],
 				 pte_name[step->remain - 1],
 				 (unsigned) step->idx[step->remain],
-				 step->raw_pte);
+				 step->raw.pte);
 
-	step->base.addr = step->raw_pte & ~PHYSADDR_MASK;
+	step->base.addr = step->raw.pte & ~PHYSADDR_MASK;
 	step->base.as = step->meth->desc.target_as;
 
 	if (step->remain >= 2 && step->remain <= 3 &&
-	    (step->raw_pte & _PAGE_PSE)) {
+	    (step->raw.pte & _PAGE_PSE)) {
 		step->base.addr &= pgt->pgt_mask[step->remain - 1];
 		return pgt_huge_page(step);
 	}

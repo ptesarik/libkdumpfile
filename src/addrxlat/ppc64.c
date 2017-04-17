@@ -120,12 +120,12 @@ huge_pd_linux(addrxlat_step_t *step)
 	unsigned pdshift;
 	unsigned short i;
 
-	pdshift = hugepd_shift(step->raw_pte);
+	pdshift = hugepd_shift(step->raw.pte);
 	if (!pdshift)
 		return set_error(step->ctx, ADDRXLAT_ERR_INVALID,
 				 "Invalid hugepd shift");
 
-	step->base.addr = (step->raw_pte & ~HUGEPD_SHIFT_MASK) | PD_HUGE;
+	step->base.addr = (step->raw.pte & ~HUGEPD_SHIFT_MASK) | PD_HUGE;
 	step->base.as = ADDRXLAT_KVADDR;
 
 	/* Calculate the total byte offset below current table. */
@@ -171,7 +171,7 @@ huge_page_linux(addrxlat_step_t *step, unsigned rpn_shift)
 {
 	const addrxlat_paging_form_t *pf = &step->meth->desc.param.pgt.pf;
 
-	step->base.addr = (step->raw_pte >> rpn_shift) << pf->fieldsz[0];
+	step->base.addr = (step->raw.pte >> rpn_shift) << pf->fieldsz[0];
 	step->base.as = step->meth->desc.target_as;
 	return pgt_huge_page(step);
 }
@@ -198,7 +198,7 @@ pgt_ppc64_linux(addrxlat_step_t *step, unsigned rpn_shift)
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	if (!step->raw_pte)
+	if (!step->raw.pte)
 		return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 				 "%s[%u] is none",
 				 pte_name[step->remain - 1],
@@ -207,19 +207,19 @@ pgt_ppc64_linux(addrxlat_step_t *step, unsigned rpn_shift)
 	if (step->remain > 1) {
 		addrxlat_addr_t table_size;
 
-		if (is_hugepte_linux(step->raw_pte))
+		if (is_hugepte_linux(step->raw.pte))
 			return huge_page_linux(step, rpn_shift);
 
-		if (is_hugepd_linux(step->raw_pte))
+		if (is_hugepd_linux(step->raw.pte))
 			return huge_pd_linux(step);
 
 		table_size = ((addrxlat_addr_t)1 << pgt->pte_shift <<
 			      pf->fieldsz[step->remain - 1]);
-		step->base.addr = step->raw_pte & ~(table_size - 1);
+		step->base.addr = step->raw.pte & ~(table_size - 1);
 		step->base.as = ADDRXLAT_KVADDR;
 	} else {
 		step->base.addr =
-			(step->raw_pte >> rpn_shift) << pf->fieldsz[0];
+			(step->raw.pte >> rpn_shift) << pf->fieldsz[0];
 		step->base.as = step->meth->desc.target_as;
 	}
 
