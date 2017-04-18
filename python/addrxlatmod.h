@@ -63,7 +63,7 @@ struct addrxlat_CAPI {
 	PyObject *(*map_FromPointer)(PyObject *conv, addrxlat_map_t *map);
 	addrxlat_sys_t *(*sys_AsPointer)(PyObject *value);
 	PyObject *(*sys_FromPointer)(PyObject *conv, addrxlat_sys_t *sys);
-} addrxlat_APIObject;
+};
 
 #ifdef __cplusplus
 }

@@ -25,8 +25,10 @@ pyexec_LTLIBRARIES = _addrxlat.la _kdumpfile.la
 
 _addrxlat_la_SOURCES = addrxlat.c
 _addrxlat_la_CFLAGS = $(PYTHON_CFLAGS)
-_addrxlat_la_LDFLAGS = -module -avoid-version
+_addrxlat_la_LDFLAGS = -module -avoid-version -export-symbols $(srcdir)/addrxlat.sym
 _addrxlat_la_LIBADD = $(PYTHON_LIBS) $(top_builddir)/src/addrxlat/libaddrxlat.la
+
+EXTRA__addrxlat_la_DEPENDENCIES = addrxlat.sym
 
 _kdumpfile_la_SOURCES = kdumpfile.c
 _kdumpfile_la_CFLAGS = $(PYTHON_CFLAGS) -I$(top_srcdir)/src
@@ -36,6 +38,7 @@ _kdumpfile_la_LIBADD = $(PYTHON_LIBS) $(top_builddir)/src/libkdumpfile.la
 EXTRA__kdumpfile_la_DEPENDENCIES = kdumpfile.sym
 
 dist_noinst_DATA = \
+	addrxlat.sym \
 	kdumpfile.sym
 
 noinst_HEADERS = \
