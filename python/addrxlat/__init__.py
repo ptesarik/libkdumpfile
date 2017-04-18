@@ -109,14 +109,17 @@ class Method(Method):
         super(Method, self).__init__()
         self.convert = _convert
         if desc is not None:
-            status = self.set_desc(desc)
-            if status != OK:
-                raise get_exception(status)
+            self.set_desc(desc)
 
     def __repr__(self):
         return '%s(%r)' % (
             self.__class__.__name__,
             self.get_desc())
+
+    def set_desc(self, desc):
+        status = super(Method, self).set_desc(desc)
+        if status != OK:
+            raise get_exception(status)
 
 class Range(Range):
     def __init__(self, endoff=0, meth=None):
@@ -137,6 +140,11 @@ class Map(Map):
 
     def __repr__(self):
         return '%s()' % (self.__class__.__name__)
+
+    def set(self, addr, range):
+        status = super(Map, self).set(addr, range)
+        if status != OK:
+            raise get_exception(status)
 
 class System(System):
     def __init__(self):
