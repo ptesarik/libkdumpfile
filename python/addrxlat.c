@@ -37,6 +37,9 @@
 #include "addrxlatmod.h"
 
 #if PY_MAJOR_VERSION >= 3
+#define PyInt_FromLong(x)	PyLong_FromLong(x)
+#define PyInt_FromSize_t(x)	PyLong_FromSize_t(x)
+
 #define Text_FromUTF8(x)	PyUnicode_FromString(x)
 #define Text_AsUTF8(x)		PyUnicode_AsUTF8(x)
 #else
