@@ -83,6 +83,12 @@ static addrxlat_map_t *map_AsPointer(PyObject *value);
 static PyObject *map_FromPointer(PyObject *_conv, addrxlat_map_t *map);
 static addrxlat_sys_t *sys_AsPointer(PyObject *value);
 static PyObject *sys_FromPointer(PyObject *_conv, addrxlat_sys_t *sys);
+static addrxlat_step_t *step_AsPointer(PyObject *value);
+static PyObject *step_FromPointer(
+	PyObject *_conv, const addrxlat_step_t *step);
+static addrxlat_op_ctl_t *op_AsPointer(PyObject *value);
+static PyObject *op_FromPointer(
+	PyObject *conv, const addrxlat_op_ctl_t *opctl);
 
 /** Capsule data. */
 static struct addrxlat_CAPI CAPI;
@@ -4498,6 +4504,112 @@ sys_FromPointer(PyObject *_conv, addrxlat_sys_t *sys)
 	return result;
 }
 
+/** Get the libaddrxlat representation of a Python step object.
+ * @param value  a Python step object
+ * @returns      address of the embedded @c libaddrxlat_step_t,
+ *               or @c NULL on error
+ *
+ * The returned pointer refers to a @c libaddrxlat_step_t
+ * structure embedded in the Python object, i.e. the pointer is
+ * valid only as long as the containing Python object exists.
+ */
+static addrxlat_step_t *
+step_AsPointer(PyObject *value)
+{
+	if (!PyObject_TypeCheck(value, &step_type)) {
+		PyErr_Format(PyExc_TypeError, "need a Step, not '%.200s'",
+			     Py_TYPE(value)->tp_name);
+		return NULL;
+	}
+
+	return &((step_object*)value)->step;
+}
+
+/** Construct a step object from @c addrxlat_step_t.
+ * @param _conv  convert object
+ * @param step   libaddrxlat representation of a step
+ * @returns      corresponding Python object (or @c NULL on failure)
+ *
+ * This function makes a new copy of the step.
+ */
+static PyObject *
+step_FromPointer(PyObject *_conv, const addrxlat_step_t *step)
+{
+	convert_object *conv = (convert_object *)_conv;
+	PyTypeObject *type = conv->step_type;
+	PyObject *ctx;
+	PyObject *result;
+
+	result = type->tp_alloc(type, 0);
+	if (!result)
+		return NULL;
+
+	ctx = ctx_FromPointer((PyObject*)conv, step->ctx);
+	if (!ctx) {
+		Py_DECREF(result);
+		return NULL;
+	}
+	((step_object*)result)->ctx = ctx;
+	((step_object*)result)->step = *step;
+	Py_INCREF(conv);
+	((step_object*)result)->convert = (PyObject*)conv;
+
+	return result;
+}
+
+/** Get the libaddrxlat representation of a Python op object.
+ * @param value  a Python op object
+ * @returns      address of the embedded @c libaddrxlat_op_ctl_t,
+ *               or @c NULL on error
+ *
+ * The returned pointer refers to a @c libaddrxlat_op_ctl_t
+ * structure embedded in the Python object, i.e. the pointer is
+ * valid only as long as the containing Python object exists.
+ */
+static addrxlat_op_ctl_t *
+op_AsPointer(PyObject *value)
+{
+	if (!PyObject_TypeCheck(value, &op_type)) {
+		PyErr_Format(PyExc_TypeError, "need an Operator, not '%.200s'",
+			     Py_TYPE(value)->tp_name);
+		return NULL;
+	}
+
+	return &((op_object*)value)->opctl;
+}
+
+/** Construct a op object from @c addrxlat_op_ctl_t.
+ * @param _conv  convert object
+ * @param opctl  libaddrxlat representation of an op
+ * @returns      corresponding Python object (or @c NULL on failure)
+ *
+ * This function makes a new copy of the op.
+ */
+static PyObject *
+op_FromPointer(PyObject *_conv, const addrxlat_op_ctl_t *opctl)
+{
+	convert_object *conv = (convert_object *)_conv;
+	PyTypeObject *type = conv->op_type;
+	PyObject *ctx;
+	PyObject *result;
+
+	result = type->tp_alloc(type, 0);
+	if (!result)
+		return NULL;
+
+	ctx = ctx_FromPointer((PyObject*)conv, opctl->ctx);
+	if (!ctx) {
+		Py_DECREF(result);
+		return NULL;
+	}
+	((op_object*)result)->ctx = ctx;
+	((op_object*)result)->opctl = *opctl;
+	Py_INCREF(conv);
+	((op_object*)result)->convert = (PyObject*)conv;
+
+	return result;
+}
+
 static PyTypeObject convert_type =
 {
 	PyVarObject_HEAD_INIT(NULL, 0)
@@ -4958,6 +5070,10 @@ init_addrxlat (void)
 	CAPI.Map_FromPointer = map_FromPointer;
 	CAPI.System_AsPointer = sys_AsPointer;
 	CAPI.System_FromPointer = sys_FromPointer;
+	CAPI.Step_AsPointer = step_AsPointer;
+	CAPI.Step_FromPointer = step_FromPointer;
+	CAPI.Operator_AsPointer = op_AsPointer;
+	CAPI.Operator_FromPointer = op_FromPointer;
 
 	obj = PyCapsule_New(&CAPI, addrxlat_CAPSULE_NAME, NULL);
 	if (!obj)
