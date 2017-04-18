@@ -2534,39 +2534,23 @@ map_richcompare(PyObject *v, PyObject *w, int op)
 	return result;
 }
 
-PyDoc_STRVAR(map_len__doc__,
-"MAP.len() -> length\n\
-\n\
-Total number of ranges contained in this map.");
-
-static PyObject *
-map_len(PyObject *_self, PyObject *args)
+static Py_ssize_t
+map_len(PyObject *_self)
 {
 	map_object *self = (map_object*)_self;
-	return PyInt_FromSize_t(self->map
-				? addrxlat_map_len(self->map)
-				: 0);
+	return self->map
+		? addrxlat_map_len(self->map)
+		: 0;
 }
 
-PyDoc_STRVAR(map_get_range__doc__,
-"MAP.get_range(index) -> range\n\
-\n\
-Get the parameters of a range. A new object is created.");
-
 static PyObject *
-map_get_range(PyObject *_self, PyObject *args, PyObject *kwargs)
+map_item(PyObject *_self, Py_ssize_t index)
 {
 	map_object *self = (map_object*)_self;
-	static char *keywords[] = {"index", NULL};
-	long index;
-	size_t n;
 	const addrxlat_range_t *ranges;
+	Py_ssize_t n;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "l:get_range",
-					 keywords, &index))
-		return NULL;
-
-	n = self->map ? addrxlat_map_len(self->map) : 0;
+	n = map_len((PyObject*)self);
 	if (index < 0)
 		index = n - index;
 	if (index >= n) {
@@ -2577,6 +2561,17 @@ map_get_range(PyObject *_self, PyObject *args, PyObject *kwargs)
 	ranges = addrxlat_map_ranges(self->map);
 	return range_FromPointer(self->convert, &ranges[index]);
 }
+
+static PySequenceMethods map_as_sequence = {
+	map_len,		/* sq_length */
+	0,			/* sq_concat */
+	0,			/* sq_repeat */
+	map_item,		/* sq_item */
+	0,			/* sq_slice */
+	0,			/* sq_ass_item */
+	0,			/* sq_ass_slice */
+	0,			/* sq_contains */
+};
 
 PyDoc_STRVAR(map_set__doc__,
 "MAP.set(addr, range) -> status\n\
@@ -2669,9 +2664,6 @@ map_dup(PyObject *_self, PyObject *args)
 }
 
 static PyMethodDef map_methods[] = {
-	{ "len", map_len, METH_NOARGS, map_len__doc__ },
-	{ "get_range", (PyCFunction)map_get_range,
-	  METH_VARARGS | METH_KEYWORDS, map_get_range__doc__ },
 	{ "set", (PyCFunction)map_set, METH_VARARGS | METH_KEYWORDS,
 	  map_set__doc__ },
 	{ "search", (PyCFunction)map_search, METH_VARARGS | METH_KEYWORDS,
@@ -2702,7 +2694,7 @@ static PyTypeObject map_type =
 	0,				/* tp_compare */
 	0,				/* tp_repr */
 	0,				/* tp_as_number */
-	0,				/* tp_as_sequence */
+	&map_as_sequence,		/* tp_as_sequence */
 	0,				/* tp_as_mapping */
 	0,				/* tp_hash */
 	0,				/* tp_call */
