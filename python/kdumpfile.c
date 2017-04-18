@@ -301,7 +301,7 @@ get_addrxlat_ctx(PyObject *_self, PyObject *args)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
 	addrxlat_ctx_t *ctx = kdump_get_addrxlat_ctx(self->ctx);
-	return addrxlat_API->ctx_FromPointer(self->addrxlat_convert, ctx);
+	return addrxlat_API->Context_FromPointer(self->addrxlat_convert, ctx);
 }
 
 PyDoc_STRVAR(get_addrxlat_sys__doc__,
@@ -312,7 +312,7 @@ get_addrxlat_sys(PyObject *_self, PyObject *args)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
 	addrxlat_sys_t *sys = kdump_get_addrxlat_sys(self->ctx);
-	return addrxlat_API->sys_FromPointer(self->addrxlat_convert, sys);
+	return addrxlat_API->System_FromPointer(self->addrxlat_convert, sys);
 }
 
 static PyMethodDef kdumpfile_object_methods[] = {

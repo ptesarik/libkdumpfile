@@ -46,23 +46,30 @@ struct addrxlat_CAPI {
 
 	PyObject *convert;	/**< Default conversion object. */
 
-	addrxlat_fulladdr_t *(*fulladdr_AsPointer)(PyObject *value);
-	PyObject *(*fulladdr_FromPointer)(
+	addrxlat_fulladdr_t *(*FullAddress_AsPointer)(PyObject *value);
+	PyObject *(*FullAddress_FromPointer)(
 		PyObject *conv, const addrxlat_fulladdr_t *faddr);
-	addrxlat_ctx_t *(*ctx_AsPointer)(PyObject *value);
-	PyObject *(*ctx_FromPointer)(PyObject *conv, addrxlat_ctx_t *ctx);
-	addrxlat_desc_t *(*desc_AsPointer)(PyObject *value);
-	PyObject *(*desc_FromPointer)(
+
+	addrxlat_ctx_t *(*Context_AsPointer)(PyObject *value);
+	PyObject *(*Context_FromPointer)(PyObject *conv, addrxlat_ctx_t *ctx);
+
+	addrxlat_desc_t *(*Description_AsPointer)(PyObject *value);
+	PyObject *(*Description_FromPointer)(
 		PyObject *conv, const addrxlat_desc_t *desc);
-	addrxlat_meth_t *(*meth_AsPointer)(PyObject *value);
-	PyObject *(*meth_FromPointer)(PyObject *conv, addrxlat_meth_t *meth);
-	addrxlat_range_t *(*range_AsPointer)(PyObject *value);
-	PyObject *(*range_FromPointer)(
+
+	addrxlat_meth_t *(*Method_AsPointer)(PyObject *value);
+	PyObject *(*Method_FromPointer)(PyObject *conv, addrxlat_meth_t *meth);
+
+	addrxlat_range_t *(*Range_AsPointer)(PyObject *value);
+	PyObject *(*Range_FromPointer)(
 		PyObject *conv, const addrxlat_range_t *range);
-	addrxlat_map_t *(*map_AsPointer)(PyObject *value);
-	PyObject *(*map_FromPointer)(PyObject *conv, addrxlat_map_t *map);
-	addrxlat_sys_t *(*sys_AsPointer)(PyObject *value);
-	PyObject *(*sys_FromPointer)(PyObject *conv, addrxlat_sys_t *sys);
+
+	addrxlat_map_t *(*Map_AsPointer)(PyObject *value);
+	PyObject *(*Map_FromPointer)(PyObject *conv, addrxlat_map_t *map);
+
+	addrxlat_sys_t *(*System_AsPointer)(PyObject *value);
+	PyObject *(*System_FromPointer)(PyObject *conv, addrxlat_sys_t *sys);
+
 };
 
 #ifdef __cplusplus

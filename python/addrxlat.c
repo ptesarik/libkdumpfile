@@ -4944,20 +4944,20 @@ init_addrxlat (void)
 
 	CAPI.ver = addrxlat_CAPI_VER;
 	CAPI.convert = convert;
-	CAPI.fulladdr_AsPointer = fulladdr_AsPointer;
-	CAPI.fulladdr_FromPointer = fulladdr_FromPointer;
-	CAPI.ctx_AsPointer = ctx_AsPointer;
-	CAPI.ctx_FromPointer = ctx_FromPointer;
-	CAPI.desc_AsPointer = desc_AsPointer;
-	CAPI.desc_FromPointer = desc_FromPointer;
-	CAPI.meth_AsPointer = meth_AsPointer;
-	CAPI.meth_FromPointer = meth_FromPointer;
-	CAPI.range_AsPointer = range_AsPointer;
-	CAPI.range_FromPointer = range_FromPointer;
-	CAPI.map_AsPointer = map_AsPointer;
-	CAPI.map_FromPointer = map_FromPointer;
-	CAPI.sys_AsPointer = sys_AsPointer;
-	CAPI.sys_FromPointer = sys_FromPointer;
+	CAPI.FullAddress_AsPointer = fulladdr_AsPointer;
+	CAPI.FullAddress_FromPointer = fulladdr_FromPointer;
+	CAPI.Context_AsPointer = ctx_AsPointer;
+	CAPI.Context_FromPointer = ctx_FromPointer;
+	CAPI.Description_AsPointer = desc_AsPointer;
+	CAPI.Description_FromPointer = desc_FromPointer;
+	CAPI.Method_AsPointer = meth_AsPointer;
+	CAPI.Method_FromPointer = meth_FromPointer;
+	CAPI.Range_AsPointer = range_AsPointer;
+	CAPI.Range_FromPointer = range_FromPointer;
+	CAPI.Map_AsPointer = map_AsPointer;
+	CAPI.Map_FromPointer = map_FromPointer;
+	CAPI.System_AsPointer = sys_AsPointer;
+	CAPI.System_FromPointer = sys_FromPointer;
 
 	obj = PyCapsule_New(&CAPI, addrxlat_CAPSULE_NAME, NULL);
 	if (!obj)
