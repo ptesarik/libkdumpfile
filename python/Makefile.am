@@ -39,7 +39,8 @@ EXTRA__kdumpfile_la_DEPENDENCIES = kdumpfile.sym
 
 dist_noinst_DATA = \
 	addrxlat.sym \
-	kdumpfile.sym
+	kdumpfile.sym \
+	showxlat.py
 
 noinst_HEADERS = \
 	addrxlatmod.h
