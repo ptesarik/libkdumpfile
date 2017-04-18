@@ -444,11 +444,40 @@ typedef struct {
 	addrxlat_fulladdr_t faddr;
 } fulladdr_object;
 
+static PyTypeObject fulladdr_type;
+
 PyDoc_STRVAR(fulladdr__doc__,
 "FullAddress() -> fulladdr\n\
 \n\
 Construct a full address, that is an address within a given\n\
 address space (ADDRXLAT_xxxADDR).");
+
+static int
+fulladdr_equal(fulladdr_object *v, fulladdr_object *w)
+{
+	return v->faddr.addr == w->faddr.addr &&
+		v->faddr.as == w->faddr.as;
+}
+
+static PyObject *
+fulladdr_richcompare(PyObject *v, PyObject *w, int op)
+{
+	PyObject *result;
+
+	if ((op == Py_EQ || op == Py_NE) &&
+	    PyObject_TypeCheck(v, &fulladdr_type) &&
+	    PyObject_TypeCheck(w, &fulladdr_type)) {
+		int cmp = fulladdr_equal((fulladdr_object*)v,
+					 (fulladdr_object*)w);
+		result = (cmp == (op == Py_EQ))
+			? Py_True
+			: Py_False;
+	} else
+		result = Py_NotImplemented;
+
+	Py_INCREF(result);
+	return result;
+}
 
 PyDoc_STRVAR(fulladdr_addr__doc__,
 "address (unsigned)");
@@ -541,7 +570,7 @@ static PyTypeObject fulladdr_type =
 	fulladdr__doc__,		/* tp_doc */
 	0,				/* tp_traverse */
 	0,				/* tp_clear */
-	0,				/* tp_richcompare */
+	fulladdr_richcompare,		/* tp_richcompare */
 	0,				/* tp_weaklistoffset */
 	0,				/* tp_iter */
 	0,				/* tp_iternext */
@@ -575,6 +604,8 @@ typedef struct tag_ctx_object {
 	PyObject *read32_func;
 	PyObject *read64_func;
 } ctx_object;
+
+static PyTypeObject ctx_type;
 
 static void
 ctx_set_exception(ctx_object *self,
@@ -880,6 +911,25 @@ ctx_traverse(PyObject *_self, visitproc visit, void *arg)
 	return 0;
 }
 
+static PyObject *
+ctx_richcompare(PyObject *v, PyObject *w, int op)
+{
+	PyObject *result;
+
+	if ((op == Py_EQ || op == Py_NE) &&
+	    PyObject_TypeCheck(v, &ctx_type) &&
+	    PyObject_TypeCheck(w, &ctx_type)) {
+		int cmp = (((ctx_object*)v)->ctx == ((ctx_object*)w)->ctx);
+		result = (cmp == (op == Py_EQ))
+			? Py_True
+			: Py_False;
+	} else
+		result = Py_NotImplemented;
+
+	Py_INCREF(result);
+	return result;
+}
+
 PyDoc_STRVAR(ctx_err__doc__,
 "CTX.err(status, str) -> error status\n\
 \n\
@@ -1046,7 +1096,7 @@ static PyTypeObject ctx_type =
 	ctx__doc__,			/* tp_doc */
 	ctx_traverse,			/* tp_traverse */
 	0,				/* tp_clear */
-	0,				/* tp_richcompare */
+	ctx_richcompare,		/* tp_richcompare */
 	0,				/* tp_weaklistoffset */
 	0,				/* tp_iter */
 	0,				/* tp_iternext */
@@ -2103,6 +2153,8 @@ typedef struct {
 	PyObject *convert;
 } meth_object;
 
+static PyTypeObject meth_type;
+
 PyDoc_STRVAR(meth__doc__,
 "Method() -> address translation method");
 
@@ -2147,6 +2199,25 @@ meth_traverse(PyObject *_self, visitproc visit, void *arg)
 	meth_object *self = (meth_object*)_self;
 	Py_VISIT(self->convert);
 	return 0;
+}
+
+static PyObject *
+meth_richcompare(PyObject *v, PyObject *w, int op)
+{
+	PyObject *result;
+
+	if ((op == Py_EQ || op == Py_NE) &&
+	    PyObject_TypeCheck(v, &meth_type) &&
+	    PyObject_TypeCheck(w, &meth_type)) {
+		int cmp = (((meth_object*)v)->meth == ((meth_object*)w)->meth);
+		result = (cmp == (op == Py_EQ))
+			? Py_True
+			: Py_False;
+	} else
+		result = Py_NotImplemented;
+
+	Py_INCREF(result);
+	return result;
 }
 
 PyDoc_STRVAR(meth_set_desc__doc__,
@@ -2229,7 +2300,7 @@ static PyTypeObject meth_type =
 	meth__doc__,			/* tp_doc */
 	meth_traverse,			/* tp_traverse */
 	0,				/* tp_clear */
-	0,				/* tp_richcompare */
+	meth_richcompare,		/* tp_richcompare */
 	0,				/* tp_weaklistoffset */
 	0,				/* tp_iter */
 	0,				/* tp_iternext */
@@ -2396,6 +2467,8 @@ typedef struct {
 	PyObject *convert;
 } map_object;
 
+static PyTypeObject map_type;
+
 PyDoc_STRVAR(map__doc__,
 "Map() -> address translation map");
 
@@ -2440,6 +2513,25 @@ map_traverse(PyObject *_self, visitproc visit, void *arg)
 	map_object *self = (map_object*)_self;
 	Py_VISIT(self->convert);
 	return 0;
+}
+
+static PyObject *
+map_richcompare(PyObject *v, PyObject *w, int op)
+{
+	PyObject *result;
+
+	if ((op == Py_EQ || op == Py_NE) &&
+	    PyObject_TypeCheck(v, &map_type) &&
+	    PyObject_TypeCheck(w, &map_type)) {
+		int cmp = (((map_object*)v)->map == ((map_object*)w)->map);
+		result = (cmp == (op == Py_EQ))
+			? Py_True
+			: Py_False;
+	} else
+		result = Py_NotImplemented;
+
+	Py_INCREF(result);
+	return result;
 }
 
 PyDoc_STRVAR(map_len__doc__,
@@ -2624,7 +2716,7 @@ static PyTypeObject map_type =
 	map__doc__,			/* tp_doc */
 	map_traverse,			/* tp_traverse */
 	0,				/* tp_clear */
-	0,				/* tp_richcompare */
+	map_richcompare,		/* tp_richcompare */
 	0,				/* tp_weaklistoffset */
 	0,				/* tp_iter */
 	0,				/* tp_iternext */
@@ -2648,6 +2740,8 @@ typedef struct {
 
 	PyObject *convert;
 } sys_object;
+
+static PyTypeObject sys_type;
 
 PyDoc_STRVAR(sys__doc__,
 "System() -> address translation system");
@@ -2693,6 +2787,25 @@ sys_traverse(PyObject *_self, visitproc visit, void *arg)
 	sys_object *self = (sys_object*)_self;
 	Py_VISIT(self->convert);
 	return 0;
+}
+
+static PyObject *
+sys_richcompare(PyObject *v, PyObject *w, int op)
+{
+	PyObject *result;
+
+	if ((op == Py_EQ || op == Py_NE) &&
+	    PyObject_TypeCheck(v, &sys_type) &&
+	    PyObject_TypeCheck(w, &sys_type)) {
+		int cmp = (((sys_object*)v)->sys == ((sys_object*)w)->sys);
+		result = (cmp == (op == Py_EQ))
+			? Py_True
+			: Py_False;
+	} else
+		result = Py_NotImplemented;
+
+	Py_INCREF(result);
+	return result;
 }
 
 PyDoc_STRVAR(sys_init__doc__,
@@ -2905,7 +3018,7 @@ static PyTypeObject sys_type =
 	sys__doc__,			/* tp_doc */
 	sys_traverse,			/* tp_traverse */
 	0,				/* tp_clear */
-	0,				/* tp_richcompare */
+	sys_richcompare,		/* tp_richcompare */
 	0,				/* tp_weaklistoffset */
 	0,				/* tp_iter */
 	0,				/* tp_iternext */
