@@ -44,7 +44,7 @@ extern "C" {
 struct addrxlat_CAPI {
 	unsigned long ver;	/**< Structure version. */
 
-	PyObject *def_convert;	/**< Default conversion object. */
+	PyObject *convert;	/**< Default conversion object. */
 
 	addrxlat_fulladdr_t *(*fulladdr_AsPointer)(PyObject *value);
 	PyObject *(*fulladdr_FromPointer)(

@@ -21,7 +21,7 @@ class FullAddress(FullAddress):
 class Context(Context):
     def __init__(self):
         super(Context, self).__init__()
-        self.convert = _convert
+        self.convert = convert
 
     def __repr__(self):
         return '%s()' % (self.__class__.__name__,)
@@ -29,7 +29,7 @@ class Context(Context):
 class Description(Description):
     def __init__(self, kind, target_as=NOADDR, param=()):
         super(Description, self).__init__()
-        self.convert = _convert
+        self.convert = convert
         self.target_as = target_as
         self.param = param
 
@@ -43,7 +43,7 @@ class Description(Description):
 class LinearDescription(LinearDescription):
     def __init__(self, target_as=NOADDR, off=0):
         super(LinearDescription, self).__init__()
-        self.convert = _convert
+        self.convert = convert
         self.target_as = target_as
         self.off = off
 
@@ -56,7 +56,7 @@ class LinearDescription(LinearDescription):
 class PageTableDescription(PageTableDescription):
     def __init__(self, target_as=NOADDR, root=None, pte_format=PTE_NONE, fields=()):
         super(PageTableDescription, self).__init__()
-        self.convert = _convert
+        self.convert = convert
         self.target_as = target_as
         self.root = root
         self.pte_format = pte_format
@@ -73,7 +73,7 @@ class PageTableDescription(PageTableDescription):
 class LookupDescription(LookupDescription):
     def __init__(self, target_as=NOADDR, endoff=0, tbl=()):
         super(LookupDescription, self).__init__()
-        self.convert = _convert
+        self.convert = convert
         self.target_as = target_as
         self.endoff = endoff
         self.tbl = tbl
@@ -88,7 +88,7 @@ class LookupDescription(LookupDescription):
 class MemoryArrayDescription(MemoryArrayDescription):
     def __init__(self, target_as=NOADDR, base=None, shift=0, elemsz=0, valsz=0):
         super(MemoryArrayDescription, self).__init__()
-        self.convert = _convert
+        self.convert = convert
         self.target_as = target_as
         self.base = base
         self.shift = shift
@@ -107,7 +107,7 @@ class MemoryArrayDescription(MemoryArrayDescription):
 class Method(Method):
     def __init__(self, desc=None):
         super(Method, self).__init__()
-        self.convert = _convert
+        self.convert = convert
         if desc is not None:
             self.set_desc(desc)
 
@@ -136,7 +136,7 @@ class Range(Range):
 class Map(Map):
     def __init__(self):
         super(Map, self).__init__()
-        self.convert = _convert
+        self.convert = convert
 
     def __repr__(self):
         return '%s()' % (self.__class__.__name__)
@@ -149,7 +149,7 @@ class Map(Map):
 class System(System):
     def __init__(self):
         super(System, self).__init__()
-        self.convert = _convert
+        self.convert = convert
 
     def __repr__(self):
         return '%s()' % (self.__class__.__name__)
@@ -163,7 +163,7 @@ class System(System):
 class Step(Step):
     def __init__(self, ctx, sys=None, meth=None):
         super(Step, self).__init__()
-        self.convert = _convert
+        self.convert = convert
         if sys is not None:
             self.sys = sys
         if meth is not None:
@@ -199,7 +199,7 @@ class Step(Step):
 class Operator(Operator):
     def __init__(self, ctx, sys=None, caps=0):
         super(Operator, self).__init__()
-        self.convert = _convert
+        self.convert = convert
         if sys is not None:
             self.sys = sys
         self.caps = caps
@@ -216,17 +216,17 @@ class Operator(Operator):
             raise get_exception(status, self.ctx.get_err())
         return self.result
 
-_convert = TypeConvert()
-_convert.FullAddress = FullAddress
-_convert.Context = Context
-_convert.Description = Description
-_convert.LinearDescription = LinearDescription
-_convert.PageTableDescription = PageTableDescription
-_convert.LookupDescription = LookupDescription
-_convert.MemoryArrayDescription = MemoryArrayDescription
-_convert.Method = Method
-_convert.Range = Range
-_convert.Map = Map
-_convert.System = System
-_convert.Step = Step
-_convert.Operator = Operator
+convert = TypeConvert()
+convert.FullAddress = FullAddress
+convert.Context = Context
+convert.Description = Description
+convert.LinearDescription = LinearDescription
+convert.PageTableDescription = PageTableDescription
+convert.LookupDescription = LookupDescription
+convert.MemoryArrayDescription = MemoryArrayDescription
+convert.Method = Method
+convert.Range = Range
+convert.Map = Map
+convert.System = System
+convert.Step = Step
+convert.Operator = Operator

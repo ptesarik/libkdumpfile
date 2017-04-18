@@ -63,7 +63,7 @@ static PyObject *ctx_status_result(PyObject *_self, addrxlat_status status);
 static PyObject *make_desc_param(PyObject *desc);
 
 /** Default type converter object. */
-static PyObject *def_convert;
+static PyObject *convert;
 
 /* Conversion functions */
 static addrxlat_fulladdr_t *fulladdr_AsPointer(PyObject *value);
@@ -848,7 +848,7 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = def_convert;
+	self->convert = convert;
 	self->ctx = addrxlat_ctx_new();
 	if (!self->ctx) {
 		Py_DECREF(self);
@@ -1243,7 +1243,7 @@ desc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = def_convert;
+	self->convert = convert;
 	self->desc.kind = kind;
 	self->desc.target_as = ADDRXLAT_NOADDR;
 	self->nloc = DESC_NLOC;
@@ -2167,7 +2167,7 @@ meth_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = def_convert;
+	self->convert = convert;
 	self->meth = addrxlat_meth_new();
 	if (!self->meth) {
 		Py_DECREF(self);
@@ -2481,7 +2481,7 @@ map_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = def_convert;
+	self->convert = convert;
 	self->map = addrxlat_map_new();
 	if (!self->map) {
 		Py_DECREF(self);
@@ -2747,7 +2747,7 @@ sys_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = def_convert;
+	self->convert = convert;
 	self->sys = addrxlat_sys_new();
 	if (!self->sys) {
 		Py_DECREF(self);
@@ -3063,7 +3063,7 @@ step_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = def_convert;
+	self->convert = convert;
 	self->step.ctx = ctx_AsPointer(ctxobj);
 	if (PyErr_Occurred()) {
 		Py_DECREF(self);
@@ -3629,7 +3629,7 @@ op_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = def_convert;
+	self->convert = convert;
 	self->opctl.ctx = ctx_AsPointer(ctxobj);
 	if (PyErr_Occurred()) {
 		Py_DECREF(self);
@@ -4932,13 +4932,18 @@ init_addrxlat (void)
 	obj = PyTuple_New(0);
 	if (!obj)
 		goto err_convert;
-	def_convert = PyObject_Call((PyObject*)&convert_type, obj, NULL);
+	convert = PyObject_Call((PyObject*)&convert_type, obj, NULL);
 	Py_DECREF(obj);
-	if (!def_convert)
+	if (!convert)
 		goto err_convert;
 
+	if (PyModule_AddObject(mod, "convert", convert)) {
+		Py_DECREF(convert);
+		goto err_convert;
+	}
+
 	CAPI.ver = addrxlat_CAPI_VER;
-	CAPI.def_convert = def_convert;
+	CAPI.convert = convert;
 	CAPI.fulladdr_AsPointer = fulladdr_AsPointer;
 	CAPI.fulladdr_FromPointer = fulladdr_FromPointer;
 	CAPI.ctx_AsPointer = ctx_AsPointer;

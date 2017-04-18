@@ -154,8 +154,8 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 		goto fail;
 	}
 
-	Py_INCREF(addrxlat_API->def_convert);
-	self->addrxlat_convert = addrxlat_API->def_convert;
+	Py_INCREF(addrxlat_API->convert);
+	self->addrxlat_convert = addrxlat_API->convert;
 
 	return (PyObject*)self;
 
