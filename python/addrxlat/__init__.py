@@ -28,7 +28,7 @@ class Context(Context):
 
 class Description(Description):
     def __init__(self, kind, target_as=NOADDR, param=()):
-        super(Description, self).__init__(kind)
+        super(Description, self).__init__()
         self.convert = _convert
         self.target_as = target_as
         self.param = param
@@ -162,7 +162,7 @@ class System(System):
 
 class Step(Step):
     def __init__(self, ctx, sys=None, meth=None):
-        super(Step, self).__init__(ctx)
+        super(Step, self).__init__()
         self.convert = _convert
         if sys is not None:
             self.sys = sys
@@ -198,7 +198,7 @@ class Step(Step):
 
 class Operator(Operator):
     def __init__(self, ctx, sys=None, caps=0):
-        super(Operator, self).__init__(ctx)
+        super(Operator, self).__init__()
         self.convert = _convert
         if sys is not None:
             self.sys = sys
