@@ -683,7 +683,7 @@ static PyObject *
 ctx_status_result(PyObject *_self, addrxlat_status status)
 {
 	ctx_object *self = (ctx_object*)_self;
-	if (status == STATUS_PYEXC) {
+	if (status == STATUS_PYEXC && self->exc_type) {
 		PyErr_Restore(self->exc_type, self->exc_val, self->exc_tb);
 		self->exc_type = NULL;
 		self->exc_val = NULL;
