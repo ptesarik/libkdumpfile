@@ -4,6 +4,7 @@ addrxlat
 attriter
 checkattr
 clearattr
+custom-meth
 dumpdata
 err-addrxlat
 mkdiskdump

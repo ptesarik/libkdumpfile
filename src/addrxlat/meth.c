@@ -108,6 +108,17 @@ setup_nometh(addrxlat_meth_t *meth)
 	meth->next_step = next_step_ident;
 }
 
+/** Set up custom translation.
+ * @param meth  Translation method.
+ * @param desc  Translation description.
+ */
+static void
+setup_custom(addrxlat_meth_t *meth, const addrxlat_desc_t *desc)
+{
+	meth->first_step = desc->param.custom.first_step;
+	meth->next_step = desc->param.custom.next_step;
+}
+
 /** Initialize step state for linear offset.
  * @param walk  Page table walk state.
  * @param addr  Address to be translated.
@@ -419,6 +430,10 @@ addrxlat_meth_set_desc(addrxlat_meth_t *meth, const addrxlat_desc_t *desc)
 	switch (desc->kind) {
 	case ADDRXLAT_NOMETH:
 		setup_nometh(meth);
+		break;
+
+	case ADDRXLAT_CUSTOM:
+		setup_custom(meth, desc);
 		break;
 
 	case ADDRXLAT_LINEAR:

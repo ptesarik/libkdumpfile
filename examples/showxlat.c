@@ -134,6 +134,10 @@ print_meth(const addrxlat_meth_t *meth)
 		puts("NOMETH");
 		break;
 
+	case ADDRXLAT_CUSTOM:
+		puts("CUSTOM");
+		break;
+
 	case ADDRXLAT_LINEAR:
 		print_linear(desc);
 		break;

@@ -411,6 +411,7 @@ parse_meth_param(const char *spec, addrxlat_desc_t *desc)
 	i = NOTFOUND;
 	switch (desc->kind) {
 	case ADDRXLAT_NOMETH:
+	case ADDRXLAT_CUSTOM:
 		break;
 
 	case ADDRXLAT_LINEAR:

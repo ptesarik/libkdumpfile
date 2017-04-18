@@ -53,6 +53,8 @@ clearattr_LDADD = \
 	$(LDADD) \
 	$(top_builddir)/src/libkdumpfile.la
 
+custom_meth_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
+
 err_addrxlat_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
 
 mkdiskdump_SOURCES = mkdiskdump.c
@@ -112,6 +114,7 @@ check_PROGRAMS = \
 	attriter \
 	checkattr \
 	clearattr \
+	custom-meth \
 	dumpdata \
 	err-addrxlat \
 	mkdiskdump \
@@ -357,6 +360,7 @@ dist_check_SCRIPTS = \
 TESTS = $(test_scripts) \
 	attriter \
 	clearattr \
+	custom-meth \
 	err-addrxlat \
 	nometh \
 	privptr \
