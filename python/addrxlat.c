@@ -598,8 +598,6 @@ typedef struct tag_ctx_object {
 
 	addrxlat_ctx_t *ctx;
 
-	PyObject *convert;
-
 	PyObject *exc_type, *exc_val, *exc_tb;
 
 	PyObject *sym_reg_func;
@@ -609,6 +607,8 @@ typedef struct tag_ctx_object {
 
 	PyObject *read32_func;
 	PyObject *read64_func;
+
+	PyObject *convert;
 } ctx_object;
 
 static PyTypeObject ctx_type;
@@ -832,7 +832,6 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = convert;
 	self->ctx = addrxlat_ctx_new();
 	if (!self->ctx) {
 		Py_DECREF(self);
@@ -845,6 +844,9 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	cb.read64 = cb_read64;
 	addrxlat_ctx_set_cb(self->ctx, &cb);
 
+	Py_INCREF(convert);
+	self->convert = convert;
+
 	return (PyObject*)self;
 }
 
@@ -854,13 +856,7 @@ ctx_dealloc(PyObject *_self)
 	ctx_object *self = (ctx_object*)_self;
 
 	PyObject_GC_UnTrack(_self);
-
-	if (self->ctx) {
-		addrxlat_ctx_decref(self->ctx);
-		self->ctx = NULL;
-	}
-
-	Py_DECREF(self->convert);
+	Py_XDECREF(self->convert);
 
 	Py_XDECREF(self->exc_type);
 	Py_XDECREF(self->exc_val);
@@ -872,6 +868,11 @@ ctx_dealloc(PyObject *_self)
 	Py_XDECREF(self->sym_offsetof_func);
 	Py_XDECREF(self->read32_func);
 	Py_XDECREF(self->read64_func);
+
+	if (self->ctx) {
+		addrxlat_ctx_decref(self->ctx);
+		self->ctx = NULL;
+	}
 
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -891,6 +892,8 @@ ctx_traverse(PyObject *_self, visitproc visit, void *arg)
 	Py_VISIT(self->sym_offsetof_func);
 	Py_VISIT(self->read32_func);
 	Py_VISIT(self->read64_func);
+
+	Py_VISIT(self->convert);
 
 	return 0;
 }
@@ -1190,10 +1193,10 @@ set_fulladdr(PyObject *self, PyObject *value, void *data)
 #define desc_HEAD		\
 	PyObject_HEAD		\
 	addrxlat_desc_t desc;	\
-	PyObject *convert;	\
 	PyObject *paramobj;	\
 	unsigned nloc;		\
-	param_loc loc[MAXLOC];
+	param_loc loc[MAXLOC];	\
+	PyObject *convert;
 
 typedef struct {
 	desc_HEAD
@@ -1227,7 +1230,6 @@ desc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = convert;
 	self->desc.kind = kind;
 	self->desc.target_as = ADDRXLAT_NOADDR;
 	self->nloc = DESC_NLOC;
@@ -1239,6 +1241,8 @@ desc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		Py_DECREF(self);
 		return NULL;
 	}
+	Py_INCREF(convert);
+	self->convert = convert;
 
 	return (PyObject*)self;
 }
@@ -1258,8 +1262,8 @@ static int
 desc_traverse(PyObject *_self, visitproc visit, void *arg)
 {
 	desc_object *self = (desc_object*)_self;
-	Py_VISIT(self->convert);
 	Py_VISIT(self->paramobj);
+	Py_VISIT(self->convert);
 	return 0;
 }
 
@@ -2151,12 +2155,13 @@ meth_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = convert;
 	self->meth = addrxlat_meth_new();
 	if (!self->meth) {
 		Py_DECREF(self);
 		return PyErr_NoMemory();
 	}
+	Py_INCREF(convert);
+	self->convert = convert;
 
 	return (PyObject*)self;
 }
@@ -2167,13 +2172,13 @@ meth_dealloc(PyObject *_self)
 	meth_object *self = (meth_object*)_self;
 
 	PyObject_GC_UnTrack(_self);
+	Py_XDECREF(self->convert);
 
 	if (self->meth) {
 		addrxlat_meth_decref(self->meth);
 		self->meth = NULL;
 	}
 
-	Py_XDECREF(self->convert);
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -2465,12 +2470,13 @@ map_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = convert;
 	self->map = addrxlat_map_new();
 	if (!self->map) {
 		Py_DECREF(self);
 		return PyErr_NoMemory();
 	}
+	Py_INCREF(convert);
+	self->convert = convert;
 
 	return (PyObject*)self;
 }
@@ -2481,13 +2487,13 @@ map_dealloc(PyObject *_self)
 	map_object *self = (map_object*)_self;
 
 	PyObject_GC_UnTrack(_self);
+	Py_XDECREF(self->convert);
 
 	if (self->map) {
 		addrxlat_map_decref(self->map);
 		self->map = NULL;
 	}
 
-	Py_XDECREF(self->convert);
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -2731,12 +2737,13 @@ sys_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = convert;
 	self->sys = addrxlat_sys_new();
 	if (!self->sys) {
 		Py_DECREF(self);
 		return PyErr_NoMemory();
 	}
+	Py_INCREF(convert);
+	self->convert = convert;
 
 	return (PyObject*)self;
 }
@@ -2747,13 +2754,13 @@ sys_dealloc(PyObject *_self)
 	sys_object *self = (sys_object*)_self;
 
 	PyObject_GC_UnTrack(_self);
+	Py_XDECREF(self->convert);
 
 	if (self->sys) {
 		addrxlat_sys_decref(self->sys);
 		self->sys = NULL;
 	}
 
-	Py_XDECREF(self->convert);
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -3047,7 +3054,6 @@ step_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = convert;
 	self->step.ctx = ctx_AsPointer(ctxobj);
 	if (PyErr_Occurred()) {
 		Py_DECREF(self);
@@ -3055,6 +3061,8 @@ step_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	}
 	Py_INCREF(ctxobj);
 	self->ctx = ctxobj;
+	Py_INCREF(convert);
+	self->convert = convert;
 
 	return (PyObject*)self;
 }
@@ -3065,6 +3073,7 @@ step_dealloc(PyObject *_self)
 	step_object *self = (step_object*)_self;
 
 	PyObject_GC_UnTrack(_self);
+	Py_XDECREF(self->convert);
 
 	if (self->step.ctx) {
 		addrxlat_ctx_decref(self->step.ctx);
@@ -3080,7 +3089,6 @@ step_dealloc(PyObject *_self)
 		self->step.meth = NULL;
 	}
 
-	Py_XDECREF(self->convert);
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -3613,7 +3621,6 @@ op_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->convert = convert;
 	self->opctl.ctx = ctx_AsPointer(ctxobj);
 	if (PyErr_Occurred()) {
 		Py_DECREF(self);
@@ -3625,6 +3632,9 @@ op_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	self->opctl.op = cb_op;
 	self->opctl.data = self;
 
+	Py_INCREF(convert);
+	self->convert = convert;
+
 	return (PyObject*)self;
 }
 
@@ -3634,6 +3644,7 @@ op_dealloc(PyObject *_self)
 	op_object *self = (op_object*)_self;
 
 	PyObject_GC_UnTrack(_self);
+	Py_XDECREF(self->convert);
 
 	if (self->opctl.ctx) {
 		addrxlat_ctx_decref(self->opctl.ctx);
@@ -3644,9 +3655,7 @@ op_dealloc(PyObject *_self)
 		addrxlat_sys_decref((addrxlat_sys_t*)self->opctl.sys);
 		self->opctl.sys = NULL;
 	}
-
 	Py_XDECREF(self->result);
-	Py_XDECREF(self->convert);
 
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
