@@ -695,31 +695,6 @@ ctx_status_result(PyObject *_self, addrxlat_status status)
 	return PyInt_FromLong(status);
 }
 
-static PyObject *
-call_func(PyObject *func, const char *format, ...)
-{
-	PyObject *args, *result;
-	va_list ap;
-
-	if (!PyCallable_Check(func)) {
-		PyErr_Format(PyExc_TypeError,
-			     "'%.200s' object is not callable",
-			     Py_TYPE(func)->tp_name);
-		return NULL;
-	}
-
-	va_start(ap, format);
-	args = Py_VaBuildValue(format, ap);
-	va_end(ap);
-
-	if (!args)
-		return NULL;
-
-	result = PyObject_CallObject(func, args);
-	Py_DECREF(args);
-	return result;
-}
-
 static addrxlat_status
 cb_sym(void *_self, addrxlat_sym_t *sym)
 {
@@ -731,29 +706,32 @@ cb_sym(void *_self, addrxlat_sym_t *sym)
 		if (!self->sym_reg_func ||
 		    self->sym_reg_func == Py_None)
 			goto err_no_cb;
-		result = call_func(self->sym_reg_func, "(s)", sym->args[0]);
+		result = PyObject_CallFunction(self->sym_reg_func, "(s)",
+					       sym->args[0]);
 		break;
 
 	case ADDRXLAT_SYM_VALUE:
 		if (!self->sym_value_func ||
 		    self->sym_value_func == Py_None)
 			goto err_no_cb;
-		result = call_func(self->sym_value_func, "(s)", sym->args[0]);
+		result = PyObject_CallFunction(self->sym_value_func, "(s)",
+					       sym->args[0]);
 		break;
 
 	case ADDRXLAT_SYM_SIZEOF:
 		if (!self->sym_sizeof_func ||
 		    self->sym_sizeof_func == Py_None)
 			goto err_no_cb;
-		result = call_func(self->sym_sizeof_func, "(s)", sym->args[0]);
+		result = PyObject_CallFunction(self->sym_sizeof_func, "(s)",
+					       sym->args[0]);
 		break;
 
 	case ADDRXLAT_SYM_OFFSETOF:
 		if (!self->sym_offsetof_func ||
 		    self->sym_offsetof_func == Py_None)
 			goto err_no_cb;
-		result = call_func(self->sym_offsetof_func, "(ss)",
-				   sym->args[0], sym->args[1]);
+		result = PyObject_CallFunction(self->sym_offsetof_func, "(ss)",
+					       sym->args[0], sym->args[1]);
 
 	default:
 		return addrxlat_ctx_err(self->ctx, ADDRXLAT_ERR_NOTIMPL,
@@ -799,7 +777,7 @@ cb_read32(void *_self, const addrxlat_fulladdr_t *addr, uint32_t *val)
 	addrobj = fulladdr_FromPointer(self->convert, addr);
 	if (!addrobj)
 		return ctx_error_status((PyObject*)self);
-	result = call_func(self->read32_func, "(O)", addrobj);
+	result = PyObject_CallFunction(self->read32_func, "(O)", addrobj);
 	Py_DECREF(addrobj);
 	if (!result)
 		return ctx_error_status((PyObject*)self);
@@ -827,7 +805,7 @@ cb_read64(void *_self, const addrxlat_fulladdr_t *addr, uint64_t *val)
 	addrobj = fulladdr_FromPointer(self->convert, addr);
 	if (!addrobj)
 		return ctx_error_status((PyObject*)self);
-	result = call_func(self->read64_func, "(O)", addrobj);
+	result = PyObject_CallFunction(self->read64_func, "(O)", addrobj);
 	Py_DECREF(addrobj);
 	if (!result)
 		return ctx_error_status((PyObject*)self);
