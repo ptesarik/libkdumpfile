@@ -154,10 +154,9 @@ class System(System):
     def __repr__(self):
         return '%s()' % (self.__class__.__name__)
 
-    def init(self, *args, **kwargs):
-        status = super(System, self).init(*args, **kwargs)
+    def init(self, ctx, arch, *args, **kwargs):
+        status = super(System, self).init(ctx, *args, **kwargs)
         if status != OK:
-            ctx = kwargs.get('ctx', args[0])
             raise get_exception(status, ctx.get_err())
 
 class Step(Step):
