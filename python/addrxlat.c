@@ -3855,9 +3855,8 @@ cb_op(void *data, const addrxlat_fulladdr_t *addr)
 				     "O", addrobj);
 	if (!result)
 		return ctx_error_status(self->ctx);
-	if (PyObject_SetAttrString((PyObject*)self, "result", result))
-		return ctx_error_status(self->ctx);
-	Py_DECREF(result);
+	Py_XDECREF(self->result);
+	self->result = result;
 
 	return ADDRXLAT_OK;
 }
@@ -3944,6 +3943,7 @@ op_call(PyObject *_self, PyObject *args, PyObject *kwargs)
 	PyObject *addrobj;
 	const addrxlat_fulladdr_t *addr;
 	addrxlat_status status;
+	PyObject *result;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:Operator",
 					 keywords, &addrobj))
@@ -3954,7 +3954,12 @@ op_call(PyObject *_self, PyObject *args, PyObject *kwargs)
 		return NULL;
 
 	status = addrxlat_op(&self->opctl, addr);
-	return ctx_status_result(self->ctx, status);
+	result = ctx_status_result(self->ctx, status);
+	if (result) {
+		result = Py_BuildValue("(NN)", result, self->result);
+		self->result = NULL;
+	}
+	return result;
 }
 
 PyDoc_STRVAR(op_ctx__doc__,
@@ -4038,16 +4043,11 @@ static PyGetSetDef op_getset[] = {
 PyDoc_STRVAR(op_caps__doc__,
 "operation capabilities");
 
-PyDoc_STRVAR(op_result__doc__,
-"result of the last callback");
-
 static PyMemberDef op_members[] = {
 	{ "convert", T_OBJECT, offsetof(op_object, convert), 0,
 	  attr_convert__doc__ },
 	{ "caps", T_ULONG, offsetof(op_object, opctl.caps),
 	  0, op_caps__doc__ },
-	{ "result", T_OBJECT_EX, offsetof(op_object, result),
-	  0, op_result__doc__ },
 	{ NULL }
 };
 

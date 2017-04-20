@@ -211,10 +211,10 @@ class Operator(Operator):
             self.sys)
 
     def __call__(self, *args, **kwargs):
-        status = super(Operator, self).__call__(*args, **kwargs)
+        (status, result) = super(Operator, self).__call__(*args, **kwargs)
         if status != OK:
             raise get_exception(status, self.ctx.get_err())
-        return self.result
+        return result
 
 convert = TypeConvert()
 convert.FullAddress = FullAddress
