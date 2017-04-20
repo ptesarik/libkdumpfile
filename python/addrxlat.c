@@ -225,6 +225,37 @@ nth_arg(const char *fname, PyObject *args, Py_ssize_t n)
 	return PyTuple_GET_ITEM(args, n);
 }
 
+/** Call a cooperative superclass method
+ * @param type    derived class type
+ * @param obj     object
+ * @param name    method name
+ * @param args    positional arguments
+ * @param kwargs  keyword arguments
+ * @returns       method return value, or @c NULL on failure
+ */
+static PyObject *
+call_super(PyTypeObject *type, PyObject *obj,
+	   const char *name, PyObject *args, PyObject *kwargs)
+{
+	PyObject *super;
+	PyObject *func;
+	PyObject *result;
+
+	super = PyObject_CallFunction((PyObject*)&PySuper_Type,
+				      "(OO)", type, obj);
+	if (!super)
+		return NULL;
+
+	func = PyObject_GetAttrString(super, name);
+	Py_DECREF(super);
+	if (!func)
+		return NULL;
+
+	result = PyObject_Call(func, args, kwargs);
+	Py_DECREF(func);
+	return result;
+}
+
 /** Offset of a type member as a void pointer. */
 #define OFFSETOF_PTR(type, member)	((void*)&(((type*)0)->member))
 
@@ -341,6 +372,186 @@ set_addrspace(PyObject *self, PyObject *value, void *data)
 
 	*paddrspace = addrspace;
 	return 0;
+}
+
+/** An object with a C pointer.
+ * This object is used to create a Python object from a C pointer to
+ * the corresponding libaddrxlat object passed as a _C_POINTER argument.
+ */
+typedef struct {
+	/** Standard Python object header.  */
+	PyObject_HEAD
+	/** Pointer to the C structure. */
+	void *ptr;
+} c_pointer_object;
+
+PyDoc_STRVAR(c_pointer__doc__,
+"Internal-only type for creating Python objects from C pointers.");
+
+static PyTypeObject c_pointer_type =
+{
+	PyVarObject_HEAD_INIT(NULL, 0)
+	MOD_NAME ".c-pointer",		/* tp_name */
+	sizeof (c_pointer_object),	/* tp_basicsize */
+	0,				/* tp_itemsize */
+	0,				/* tp_dealloc */
+	0,				/* tp_print */
+	0,				/* tp_getattr */
+	0,				/* tp_setattr */
+	0,				/* tp_compare */
+	0,				/* tp_repr */
+	0,				/* tp_as_number */
+	0,				/* tp_as_sequence */
+	0,				/* tp_as_mapping */
+	0,				/* tp_hash */
+	0,				/* tp_call */
+	0,				/* tp_str */
+	0,				/* tp_getattro */
+	0,				/* tp_setattro */
+	0,				/* tp_as_buffer */
+	Py_TPFLAGS_DEFAULT,		/* tp_flags */
+	c_pointer__doc__,		/* tp_doc */
+};
+
+/** Create a c-pointer object with a given pointer value.
+ * @param ptr  C pointer to an object
+ * @returns    Python object, or @c NULL on error
+ *
+ * This function returns @c NULL on error, or if the argument is not
+ * found.  To distinguish between these two cases, the caller should
+ * use @c PyErr_Occurred().
+ */
+static PyObject *
+make_c_pointer(void *ptr)
+{
+	PyTypeObject *type = &c_pointer_type;
+	PyObject *result;
+
+	result = type->tp_alloc(type, 0);
+	if (result)
+		((c_pointer_object*)result)->ptr = ptr;
+	return result;
+}
+
+/** Name of the C pointer parameter.
+ * Use this variable instead of a literal string to prevent typos.
+ */
+static const char _C_POINTER[] = "_C_POINTER";
+
+/** Create keyword args with a _C_POINTER value.
+ * @param ptr C pointer
+ * @returns     Python dictionary to be used as kwargs
+ */
+static PyObject *
+c_pointer_arg(void *ptr)
+{
+	PyObject *obj;
+	PyObject *result;
+
+	result = PyDict_New();
+	if (result) {
+		obj = make_c_pointer(ptr);
+		if (!obj)
+			goto err_dict;
+		if (PyDict_SetItemString(result, _C_POINTER, obj))
+			goto err_obj;
+	}
+	return result;
+
+ err_obj:
+	Py_DECREF(obj);
+ err_dict:
+	Py_DECREF(result);
+	return NULL;
+}
+
+/** Get the _C_POINTER from keyword arguments (with type check).
+ * @param kwargs  keyword arguments
+ * @returns       C pointer, or @c NULL
+ *
+ * This function returns @c NULL on error, or if the argument is not
+ * found.  To distinguish between these two cases, the caller should
+ * use @c PyErr_Occurred().
+ */
+static void *
+get_c_pointer(PyObject *kwargs)
+{
+	PyObject *obj;
+
+	if (!kwargs)
+		return NULL;
+
+	obj = PyDict_GetItemString(kwargs, _C_POINTER);
+	if (!obj)
+		return NULL;
+
+	if (!PyObject_TypeCheck(obj, &c_pointer_type)) {
+		PyErr_Format(PyExc_TypeError,
+			     "need a c-pointer, not '%.200s'",
+			     Py_TYPE(obj)->tp_name);
+		return NULL;
+	}
+
+	return ((c_pointer_object*)obj)->ptr;
+}
+
+/** Call superclass init, removing a C-pointer from args.
+ * @param type    derived class type
+ * @param self    calling object
+ * @param args    positional arguments
+ * @param kwargs  keyword arguments
+ * @returns       zero on success, -1 on failure
+ */
+static int
+c_pointer_super_init(PyTypeObject *type, PyObject *self,
+		     PyObject *args, PyObject *kwargs)
+{
+	PyObject *result;
+
+	if (PyDict_DelItemString(kwargs, _C_POINTER))
+		PyErr_Clear();
+
+	result = call_super(type, self, "__init__", args, kwargs);
+	if (!result)
+		return -1;
+
+	if (result != Py_None) {
+		PyErr_Format(PyExc_TypeError,
+			     "__init__() should return None, not '%.200s'",
+			     Py_TYPE(result)->tp_name);
+		Py_DECREF(result);
+		return -1;
+	}
+
+	Py_DECREF(result);
+	return 0;
+}
+
+/** Create a new Python object from a C pointer.
+ * @param type  type of object
+ * @param ptr   C pointer used for initialization
+ * @returns     new Python object, or @c NULL on failure
+ */
+static PyObject *
+object_FromPointer(PyTypeObject *type, void *ptr)
+{
+	PyObject *args, *kwargs;
+	PyObject *result;
+
+	args = PyTuple_New(0);
+	if (!args)
+		return NULL;
+
+	kwargs = c_pointer_arg(ptr);
+	if (!kwargs) {
+		Py_DECREF(args);
+		return NULL;
+	}
+
+	result = PyObject_Call((PyObject*)type, args, kwargs);
+	Py_DECREF(kwargs);
+	Py_DECREF(args);
+	return result;
 }
 
 static PyObject *BaseException;
@@ -832,22 +1043,35 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->ctx = addrxlat_ctx_new();
+	self->ctx = get_c_pointer(kwargs);
 	if (!self->ctx) {
-		Py_DECREF(self);
-		return PyErr_NoMemory();
-	}
+		if (PyErr_Occurred())
+			return NULL;
 
-	cb.data = self;
-	cb.sym = cb_sym;
-	cb.read32 = cb_read32;
-	cb.read64 = cb_read64;
-	addrxlat_ctx_set_cb(self->ctx, &cb);
+		self->ctx = addrxlat_ctx_new();
+		if (!self->ctx) {
+			Py_DECREF(self);
+			return PyErr_NoMemory();
+		}
+
+		cb.data = self;
+		cb.sym = cb_sym;
+		cb.read32 = cb_read32;
+		cb.read64 = cb_read64;
+		addrxlat_ctx_set_cb(self->ctx, &cb);
+	} else
+		addrxlat_ctx_incref(self->ctx);
 
 	Py_INCREF(convert);
 	self->convert = convert;
 
 	return (PyObject*)self;
+}
+
+static int
+ctx__init(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+	return c_pointer_super_init(&ctx_type, self, args, kwargs);
 }
 
 static void
@@ -1095,7 +1319,7 @@ static PyTypeObject ctx_type =
 	0,				/* tp_descr_get */
 	0,				/* tp_descr_set */
 	0,				/* tp_dictoffset */
-	0,				/* tp_init */
+	ctx__init,			/* tp_init */
 	0,				/* tp_alloc */
 	ctx_new,			/* tp_new */
 };
@@ -2155,15 +2379,29 @@ meth_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->meth = addrxlat_meth_new();
+	self->meth = get_c_pointer(kwargs);
 	if (!self->meth) {
-		Py_DECREF(self);
-		return PyErr_NoMemory();
-	}
+		if (PyErr_Occurred())
+			return NULL;
+
+		self->meth = addrxlat_meth_new();
+		if (!self->meth) {
+			Py_DECREF(self);
+			return PyErr_NoMemory();
+		}
+	} else
+		addrxlat_meth_incref(self->meth);
+
 	Py_INCREF(convert);
 	self->convert = convert;
 
 	return (PyObject*)self;
+}
+
+static int
+meth__init(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+	return c_pointer_super_init(&meth_type, self, args, kwargs);
 }
 
 static void
@@ -2301,7 +2539,7 @@ static PyTypeObject meth_type =
 	0,				/* tp_descr_get */
 	0,				/* tp_descr_set */
 	0,				/* tp_dictoffset */
-	0,				/* tp_init */
+	meth__init,			/* tp_init */
 	0,				/* tp_alloc */
 	meth_new,			/* tp_new */
 };
@@ -2470,15 +2708,29 @@ map_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->map = addrxlat_map_new();
+	self->map = get_c_pointer(kwargs);
 	if (!self->map) {
-		Py_DECREF(self);
-		return PyErr_NoMemory();
-	}
+		if (PyErr_Occurred())
+			return NULL;
+
+		self->map = addrxlat_map_new();
+		if (!self->map) {
+			Py_DECREF(self);
+			return PyErr_NoMemory();
+		}
+	} else
+		addrxlat_map_incref(self->map);
+
 	Py_INCREF(convert);
 	self->convert = convert;
 
 	return (PyObject*)self;
+}
+
+static int
+map__init(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+	return c_pointer_super_init(&map_type, self, args, kwargs);
 }
 
 static void
@@ -2710,7 +2962,7 @@ static PyTypeObject map_type =
 	0,				/* tp_descr_get */
 	0,				/* tp_descr_set */
 	0,				/* tp_dictoffset */
-	0,				/* tp_init */
+	map__init,			/* tp_init */
 	0,				/* tp_alloc */
 	map_new,			/* tp_new */
 };
@@ -2737,15 +2989,29 @@ sys_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->sys = addrxlat_sys_new();
+	self->sys = get_c_pointer(kwargs);
 	if (!self->sys) {
-		Py_DECREF(self);
-		return PyErr_NoMemory();
-	}
+		if (PyErr_Occurred())
+			return NULL;
+
+		self->sys = addrxlat_sys_new();
+		if (!self->sys) {
+			Py_DECREF(self);
+			return PyErr_NoMemory();
+		}
+	} else
+		addrxlat_sys_incref(self->sys);
+
 	Py_INCREF(convert);
 	self->convert = convert;
 
 	return (PyObject*)self;
+}
+
+static int
+sys__init(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+	return c_pointer_super_init(&sys_type, self, args, kwargs);
 }
 
 static void
@@ -3013,7 +3279,7 @@ static PyTypeObject sys_type =
 	0,				/* tp_descr_get */
 	0,				/* tp_descr_set */
 	0,				/* tp_dictoffset */
-	0,				/* tp_init */
+	sys__init,			/* tp_init */
 	0,				/* tp_alloc */
 	sys_new,			/* tp_new */
 };
@@ -4132,22 +4398,11 @@ static PyObject *
 ctx_FromPointer(PyObject *_conv, addrxlat_ctx_t *ctx)
 {
 	convert_object *conv = (convert_object *)_conv;
-	PyTypeObject *type = conv->ctx_type;
-	PyObject *result;
 
 	if (!ctx)
 		Py_RETURN_NONE;
 
-	result = type->tp_alloc(type, 0);
-	if (!result)
-		return NULL;
-
-	addrxlat_ctx_incref(ctx);
-	((ctx_object*)result)->ctx = ctx;
-	Py_INCREF(conv);
-	((ctx_object*)result)->convert = (PyObject*)conv;
-
-	return result;
+	return object_FromPointer(conv->ctx_type, ctx);
 }
 
 /** Get the libaddrxlat representation of a Python desc object.
@@ -4308,22 +4563,11 @@ static PyObject *
 meth_FromPointer(PyObject *_conv, addrxlat_meth_t *meth)
 {
 	convert_object *conv = (convert_object *)_conv;
-	PyTypeObject *type = conv->meth_type;
-	PyObject *result;
 
 	if (!meth)
 		Py_RETURN_NONE;
 
-	result = type->tp_alloc(type, 0);
-	if (!result)
-		return NULL;
-
-	addrxlat_meth_incref(meth);
-	((meth_object*)result)->meth = meth;
-	Py_INCREF(conv);
-	((meth_object*)result)->convert = (PyObject*)conv;
-
-	return result;
+	return object_FromPointer(conv->meth_type, meth);
 }
 
 /** Get the libaddrxlat representation of a Python range object.
@@ -4416,22 +4660,11 @@ static PyObject *
 map_FromPointer(PyObject *_conv, addrxlat_map_t *map)
 {
 	convert_object *conv = (convert_object *)_conv;
-	PyTypeObject *type = conv->map_type;
-	PyObject *result;
 
 	if (!map)
 		Py_RETURN_NONE;
 
-	result = type->tp_alloc(type, 0);
-	if (!result)
-		return NULL;
-
-	addrxlat_map_incref(map);
-	((map_object*)result)->map = map;
-	Py_INCREF(conv);
-	((map_object*)result)->convert = (PyObject*)conv;
-
-	return result;
+	return object_FromPointer(conv->map_type, map);
 }
 
 /** Get the libaddrxlat representation of a Python sys object.
@@ -4473,22 +4706,11 @@ static PyObject *
 sys_FromPointer(PyObject *_conv, addrxlat_sys_t *sys)
 {
 	convert_object *conv = (convert_object *)_conv;
-	PyTypeObject *type = conv->sys_type;
-	PyObject *result;
 
 	if (!sys)
 		Py_RETURN_NONE;
 
-	result = type->tp_alloc(type, 0);
-	if (!result)
-		return NULL;
-
-	addrxlat_sys_incref(sys);
-	((sys_object*)result)->sys = sys;
-	Py_INCREF(conv);
-	((sys_object*)result)->convert = (PyObject*)conv;
-
-	return result;
+	return object_FromPointer(conv->sys_type, sys);
 }
 
 /** Get the libaddrxlat representation of a Python step object.
@@ -4812,6 +5034,9 @@ init_addrxlat (void)
 	PyObject *mod;
 	PyObject *obj;
 	int ret;
+
+	if (PyType_Ready(&c_pointer_type) < 0)
+		return MOD_ERROR_VAL;
 
 	fulladdr_type.tp_new = PyType_GenericNew;
 	if (PyType_Ready(&fulladdr_type) < 0)

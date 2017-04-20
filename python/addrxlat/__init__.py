@@ -5,8 +5,8 @@ from _addrxlat import *
 from addrxlat.exceptions import *
 
 class FullAddress(FullAddress):
-    def __init__(self, addrspace=NOADDR, addr=0):
-        super(FullAddress, self).__init__()
+    def __init__(self, addrspace=NOADDR, addr=0, *args, **kwargs):
+        super(FullAddress, self).__init__(*args, **kwargs)
         self.addrspace = addrspace
         self.addr = addr
 
@@ -19,16 +19,16 @@ class FullAddress(FullAddress):
             raise get_exception(status, ctx.get_err())
 
 class Context(Context):
-    def __init__(self):
-        super(Context, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(Context, self).__init__(*args, **kwargs)
         self.convert = convert
 
     def __repr__(self):
         return '%s()' % (self.__class__.__name__,)
 
 class Description(Description):
-    def __init__(self, kind, target_as=NOADDR, param=()):
-        super(Description, self).__init__()
+    def __init__(self, kind, target_as=NOADDR, param=(), *args, **kwargs):
+        super(Description, self).__init__(*args, **kwargs)
         self.convert = convert
         self.target_as = target_as
         self.param = param
@@ -41,8 +41,8 @@ class Description(Description):
             self.param)
 
 class LinearDescription(LinearDescription):
-    def __init__(self, target_as=NOADDR, off=0):
-        super(LinearDescription, self).__init__()
+    def __init__(self, target_as=NOADDR, off=0, *args, **kwargs):
+        super(LinearDescription, self).__init__(*args, **kwargs)
         self.convert = convert
         self.target_as = target_as
         self.off = off
@@ -54,8 +54,8 @@ class LinearDescription(LinearDescription):
             self.off)
 
 class PageTableDescription(PageTableDescription):
-    def __init__(self, target_as=NOADDR, root=None, pte_format=PTE_NONE, fields=()):
-        super(PageTableDescription, self).__init__()
+    def __init__(self, target_as=NOADDR, root=None, pte_format=PTE_NONE, fields=(), *args, **kwargs):
+        super(PageTableDescription, self).__init__(*args, **kwargs)
         self.convert = convert
         self.target_as = target_as
         self.root = root
@@ -71,8 +71,8 @@ class PageTableDescription(PageTableDescription):
             self.fields)
 
 class LookupDescription(LookupDescription):
-    def __init__(self, target_as=NOADDR, endoff=0, tbl=()):
-        super(LookupDescription, self).__init__()
+    def __init__(self, target_as=NOADDR, endoff=0, tbl=(), *args, **kwargs):
+        super(LookupDescription, self).__init__(*args, **kwargs)
         self.convert = convert
         self.target_as = target_as
         self.endoff = endoff
@@ -86,8 +86,8 @@ class LookupDescription(LookupDescription):
             self.tbl)
 
 class MemoryArrayDescription(MemoryArrayDescription):
-    def __init__(self, target_as=NOADDR, base=None, shift=0, elemsz=0, valsz=0):
-        super(MemoryArrayDescription, self).__init__()
+    def __init__(self, target_as=NOADDR, base=None, shift=0, elemsz=0, valsz=0, *args, **kwargs):
+        super(MemoryArrayDescription, self).__init__(*args, **kwargs)
         self.convert = convert
         self.target_as = target_as
         self.base = base
@@ -105,8 +105,8 @@ class MemoryArrayDescription(MemoryArrayDescription):
             self.valsz)
 
 class Method(Method):
-    def __init__(self, desc=None):
-        super(Method, self).__init__()
+    def __init__(self, desc=None, *args, **kwargs):
+        super(Method, self).__init__(*args, **kwargs)
         self.convert = convert
         if desc is not None:
             self.set_desc(desc)
@@ -122,8 +122,8 @@ class Method(Method):
             raise get_exception(status)
 
 class Range(Range):
-    def __init__(self, endoff=0, meth=None):
-        super(Range, self).__init__()
+    def __init__(self, endoff=0, meth=None, *args, **kwargs):
+        super(Range, self).__init__(*args, **kwargs)
         self.endoff = endoff
         self.meth = meth
 
@@ -134,8 +134,8 @@ class Range(Range):
             self.meth)
 
 class Map(Map):
-    def __init__(self):
-        super(Map, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(Map, self).__init__(*args, **kwargs)
         self.convert = convert
 
     def __repr__(self):
@@ -147,8 +147,8 @@ class Map(Map):
             raise get_exception(status)
 
 class System(System):
-    def __init__(self):
-        super(System, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(System, self).__init__(*args, **kwargs)
         self.convert = convert
 
     def __repr__(self):
@@ -161,8 +161,8 @@ class System(System):
             raise get_exception(status, ctx.get_err())
 
 class Step(Step):
-    def __init__(self, ctx, sys=None, meth=None):
-        super(Step, self).__init__()
+    def __init__(self, ctx, sys=None, meth=None, *args, **kwargs):
+        super(Step, self).__init__(*args, **kwargs)
         self.convert = convert
         if sys is not None:
             self.sys = sys
