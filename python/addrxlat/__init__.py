@@ -196,12 +196,13 @@ class Step(Step):
             raise get_exception(status, self.ctx.get_err())
 
 class Operator(Operator):
-    def __init__(self, ctx, sys=None, caps=0):
+    def __init__(self, ctx, sys=None, caps=None):
         super(Operator, self).__init__()
         self.convert = convert
         if sys is not None:
             self.sys = sys
-        self.caps = caps
+        if caps is not None:
+            self.caps = caps
 
     def __repr__(self):
         return '%s(%r, %r)' % (
