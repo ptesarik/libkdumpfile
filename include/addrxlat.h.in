@@ -504,6 +504,25 @@ typedef enum _addrxlat_sym_type {
 	ADDRXLAT_SYM_OFFSETOF,
 } addrxlat_sym_type_t;
 
+/** Get the number of arguments for a given type.
+ * @param type  Type of symbolic information.
+ * @returns     Number of arguments, or -1 if unknown.
+*/
+static inline int
+addrxlat_sym_argc(addrxlat_sym_type_t type)
+{
+	switch (type) {
+	case ADDRXLAT_SYM_REG:
+	case ADDRXLAT_SYM_VALUE:
+	case ADDRXLAT_SYM_SIZEOF:
+		return 1;
+
+	case ADDRXLAT_SYM_OFFSETOF:
+		return 2;
+	}
+	return -1;
+}
+
 /** Data structure used to hold symbolic information. */
 typedef struct _addrxlat_sym {
 	/** [out] Resolved value. */

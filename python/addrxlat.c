@@ -4940,6 +4940,31 @@ _addrxlat_pteval_shift(PyObject *self, PyObject *args, PyObject *kwargs)
 	return PyInt_FromLong(addrxlat_pteval_shift(fmt));
 }
 
+PyDoc_STRVAR(_addrxlat_sym_argc__doc__,
+"sym_argc(type) -> number of arguments\n\
+\n\
+Get the number of arguments for a given type of symbolic info.\n\
+See SYM_xxx for valid values of type.");
+
+/** Wrapper for @ref addrxlat_sym_argc
+ * @param self    module object
+ * @param args    positional arguments
+ * @param kwargs  keyword arguments
+ * @returns       Log2 value of the PTE size, -1 if unknown / invalid
+ */
+static PyObject *
+_addrxlat_sym_argc(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+	static char *keywords[] = {"type", NULL};
+	unsigned long fmt;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "k",
+					 keywords, &fmt))
+		return NULL;
+
+	return PyInt_FromLong(addrxlat_sym_argc(fmt));
+}
+
 static PyMethodDef addrxlat_methods[] = {
 	{ "strerror", (PyCFunction)_addrxlat_strerror,
 	  METH_VARARGS | METH_KEYWORDS,
@@ -4955,6 +4980,9 @@ static PyMethodDef addrxlat_methods[] = {
 	{ "pteval_shift", (PyCFunction)_addrxlat_pteval_shift,
 	  METH_VARARGS | METH_KEYWORDS,
 	  _addrxlat_pteval_shift__doc__ },
+	{ "sym_argc", (PyCFunction)_addrxlat_sym_argc,
+	  METH_VARARGS | METH_KEYWORDS,
+	  _addrxlat_sym_argc__doc__ },
 	{ NULL }
 };
 
