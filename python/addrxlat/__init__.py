@@ -155,7 +155,7 @@ class System(System):
         return '%s()' % (self.__class__.__name__)
 
     def init(self, ctx, arch, *args, **kwargs):
-        status = super(System, self).init(ctx, *args, **kwargs)
+        status = super(System, self).init(ctx, arch, *args, **kwargs)
         if status != OK:
             raise get_exception(status, ctx.get_err())
 
