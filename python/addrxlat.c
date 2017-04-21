@@ -603,15 +603,11 @@ BaseException_init(PyObject *self, PyObject *args, PyObject *kwargs)
 					 keywords, &statobj, &msgobj))
 		return NULL;
 
-	args = PyTuple_New(msgobj ? 2 : 1);
+	args = msgobj
+		? Py_BuildValue("(OO)", statobj, msgobj)
+		: Py_BuildValue("(O)", statobj);
 	if (!args)
 		return NULL;
-	Py_INCREF(statobj);
-	PyTuple_SET_ITEM(args, 0, statobj);
-	if (msgobj) {
-		Py_INCREF(msgobj);
-		PyTuple_SET_ITEM(args, 1, msgobj);
-	}
 	result = basetype->tp_init(self, args, NULL);
 	Py_DECREF(args);
 	if (result)
