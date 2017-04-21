@@ -811,14 +811,6 @@ typedef struct tag_ctx_object {
 
 	PyObject *exc_type, *exc_val, *exc_tb;
 
-	PyObject *sym_reg_func;
-	PyObject *sym_value_func;
-	PyObject *sym_sizeof_func;
-	PyObject *sym_offsetof_func;
-
-	PyObject *read32_func;
-	PyObject *read64_func;
-
 	PyObject *convert;
 } ctx_object;
 
@@ -914,35 +906,24 @@ cb_sym(void *_self, addrxlat_sym_t *sym)
 
 	switch (sym->type) {
 	case ADDRXLAT_SYM_REG:
-		if (!self->sym_reg_func ||
-		    self->sym_reg_func == Py_None)
-			goto err_no_cb;
-		result = PyObject_CallFunction(self->sym_reg_func, "(s)",
-					       sym->args[0]);
+		result = PyObject_CallMethod(_self, "cb_reg", "(s)",
+					     sym->args[0]);
 		break;
 
 	case ADDRXLAT_SYM_VALUE:
-		if (!self->sym_value_func ||
-		    self->sym_value_func == Py_None)
-			goto err_no_cb;
-		result = PyObject_CallFunction(self->sym_value_func, "(s)",
-					       sym->args[0]);
+		result = PyObject_CallMethod(_self, "cb_symbol", "(s)",
+					     sym->args[0]);
 		break;
 
 	case ADDRXLAT_SYM_SIZEOF:
-		if (!self->sym_sizeof_func ||
-		    self->sym_sizeof_func == Py_None)
-			goto err_no_cb;
-		result = PyObject_CallFunction(self->sym_sizeof_func, "(s)",
-					       sym->args[0]);
+		result = PyObject_CallMethod(_self, "cb_sizeof", "(s)",
+					     sym->args[0]);
 		break;
 
 	case ADDRXLAT_SYM_OFFSETOF:
-		if (!self->sym_offsetof_func ||
-		    self->sym_offsetof_func == Py_None)
-			goto err_no_cb;
-		result = PyObject_CallFunction(self->sym_offsetof_func, "(ss)",
-					       sym->args[0], sym->args[1]);
+		result = PyObject_CallMethod(_self, "cb_offsetof", "(ss)",
+					     sym->args[0], sym->args[1]);
+		break;
 
 	default:
 		return addrxlat_ctx_err(self->ctx, ADDRXLAT_ERR_NOTIMPL,
@@ -968,35 +949,27 @@ cb_sym(void *_self, addrxlat_sym_t *sym)
 		return ctx_error_status((PyObject*)self);
 
 	return ADDRXLAT_OK;
-
- err_no_cb:
-	return addrxlat_ctx_err(self->ctx, ADDRXLAT_ERR_NOTIMPL,
-				"NULL callback");
 }
 
 static addrxlat_status
 cb_read32(void *_self, const addrxlat_fulladdr_t *addr, uint32_t *val)
 {
-	ctx_object *self = (ctx_object*)_self;
+	PyObject *self = (PyObject*)_self;
 	PyObject *addrobj, *result;
 	unsigned long long tmpval;
 
-	if (!self->read32_func || self->read32_func == Py_None)
-		return addrxlat_ctx_err(self->ctx, ADDRXLAT_ERR_NOMETH,
-					"NULL callback");
-
-	addrobj = fulladdr_FromPointer(self->convert, addr);
+	addrobj = fulladdr_FromPointer(((ctx_object*)self)->convert, addr);
 	if (!addrobj)
-		return ctx_error_status((PyObject*)self);
-	result = PyObject_CallFunction(self->read32_func, "(O)", addrobj);
+		return ctx_error_status(self);
+	result = PyObject_CallMethod(self, "cb_read32", "(O)", addrobj);
 	Py_DECREF(addrobj);
 	if (!result)
-		return ctx_error_status((PyObject*)self);
+		return ctx_error_status(self);
 
 	tmpval = PyLong_AsUnsignedLongLong(result);
 	Py_DECREF(result);
 	if (PyErr_Occurred())
-		return ctx_error_status((PyObject*)self);
+		return ctx_error_status(self);
 
 	*val = tmpval;
 	return ADDRXLAT_OK;
@@ -1005,26 +978,22 @@ cb_read32(void *_self, const addrxlat_fulladdr_t *addr, uint32_t *val)
 static addrxlat_status
 cb_read64(void *_self, const addrxlat_fulladdr_t *addr, uint64_t *val)
 {
-	ctx_object *self = (ctx_object*)_self;
+	PyObject *self = (PyObject*)_self;
 	PyObject *addrobj, *result;
 	unsigned long long tmpval;
 
-	if (!self->read64_func || self->read64_func == Py_None)
-		return addrxlat_ctx_err(self->ctx, ADDRXLAT_ERR_NOMETH,
-					"NULL callback");
-
-	addrobj = fulladdr_FromPointer(self->convert, addr);
+	addrobj = fulladdr_FromPointer(((ctx_object*)self)->convert, addr);
 	if (!addrobj)
-		return ctx_error_status((PyObject*)self);
-	result = PyObject_CallFunction(self->read64_func, "(O)", addrobj);
+		return ctx_error_status(self);
+	result = PyObject_CallMethod(self, "cb_read64", "(O)", addrobj);
 	Py_DECREF(addrobj);
 	if (!result)
-		return ctx_error_status((PyObject*)self);
+		return ctx_error_status(self);
 
 	tmpval = PyLong_AsUnsignedLongLong(result);
 	Py_DECREF(result);
 	if (PyErr_Occurred())
-		return ctx_error_status((PyObject*)self);
+		return ctx_error_status(self);
 
 	*val = tmpval;
 	return ADDRXLAT_OK;
@@ -1086,13 +1055,6 @@ ctx_dealloc(PyObject *_self)
 	Py_XDECREF(self->exc_val);
 	Py_XDECREF(self->exc_tb);
 
-	Py_XDECREF(self->sym_reg_func);
-	Py_XDECREF(self->sym_value_func);
-	Py_XDECREF(self->sym_sizeof_func);
-	Py_XDECREF(self->sym_offsetof_func);
-	Py_XDECREF(self->read32_func);
-	Py_XDECREF(self->read64_func);
-
 	if (self->ctx) {
 		addrxlat_ctx_decref(self->ctx);
 		self->ctx = NULL;
@@ -1109,13 +1071,6 @@ ctx_traverse(PyObject *_self, visitproc visit, void *arg)
 	Py_VISIT(self->exc_type);
 	Py_VISIT(self->exc_val);
 	Py_VISIT(self->exc_tb);
-
-	Py_VISIT(self->sym_reg_func);
-	Py_VISIT(self->sym_value_func);
-	Py_VISIT(self->sym_sizeof_func);
-	Py_VISIT(self->sym_offsetof_func);
-	Py_VISIT(self->read32_func);
-	Py_VISIT(self->read64_func);
 
 	Py_VISIT(self->convert);
 
@@ -1193,6 +1148,49 @@ ctx_get_err(PyObject *_self, PyObject *args)
 		: (Py_INCREF(Py_None), Py_None);
 }
 
+PyDoc_STRVAR(ctx_cb_reg__doc__,
+"CTX.cb_reg(register) -> value\n\
+\n\
+Callback function to get the content of a named register.");
+
+PyDoc_STRVAR(ctx_cb_symbol__doc__,
+"CTX.cb_symbol(symbol) -> value\n\
+\n\
+Callback function to get the numeric value of a symbol.");
+
+PyDoc_STRVAR(ctx_cb_sizeof__doc__,
+"CTX.cb_sizeof(symbol) -> size\n\
+\n\
+Callback function to get the size of an object.");
+
+PyDoc_STRVAR(ctx_cb_offsetof__doc__,
+"CTX.cb_offsetof(struct, member) -> offset\n\
+\n\
+Callback function to get the offset of a member within a structure.");
+
+PyDoc_STRVAR(ctx_cb_read32__doc__,
+"CTX.cb_read32(fulladdr) -> value\n\
+\n\
+Callback function to read a 32-bit integer from a given address.");
+
+PyDoc_STRVAR(ctx_cb_read64__doc__,
+"CTX.cb_read64(fulladdr) -> value\n\
+\n\
+Callback function to read a 64-bit integer from a given address.");
+
+static PyObject *
+ctx_cb_nodata(PyObject *self, PyObject *args)
+{
+	PyObject *exc_val;
+
+	exc_val = Py_BuildValue("(is)", (int)ADDRXLAT_ERR_NODATA,
+				"NULL callback");
+	if (!exc_val)
+		return NULL;
+	PyErr_SetObject(BaseException, exc_val);
+	return NULL;
+}
+
 static PyMethodDef ctx_methods[] = {
 	{ "err", (PyCFunction)ctx_err, METH_VARARGS | METH_KEYWORDS,
 	  ctx_err__doc__ },
@@ -1200,48 +1198,21 @@ static PyMethodDef ctx_methods[] = {
 	  ctx_clear_err__doc__ },
 	{ "get_err", ctx_get_err, METH_NOARGS,
 	  ctx_get_err__doc__ },
+
+	/* Callbacks */
+	{ "cb_reg", ctx_cb_nodata, METH_VARARGS, ctx_cb_reg__doc__ },
+	{ "cb_symbol", ctx_cb_nodata, METH_VARARGS, ctx_cb_symbol__doc__ },
+	{ "cb_sizeof", ctx_cb_nodata, METH_VARARGS, ctx_cb_sizeof__doc__ },
+	{ "cb_offsetof", ctx_cb_nodata, METH_VARARGS, ctx_cb_offsetof__doc__ },
+	{ "cb_read32", ctx_cb_nodata, METH_VARARGS, ctx_cb_read32__doc__ },
+	{ "cb_read64", ctx_cb_nodata, METH_VARARGS, ctx_cb_read64__doc__ },
+
 	{ NULL }
 };
-
-PyDoc_STRVAR(ctx_sym_reg_func__doc__,
-"callback function to get register value");
-
-PyDoc_STRVAR(ctx_sym_value_func__doc__,
-"callback function to get symbol value");
-
-PyDoc_STRVAR(ctx_sym_sizeof_func__doc__,
-"callback function to get size of an object");
-
-PyDoc_STRVAR(ctx_sym_offsetof_func__doc__,
-"callback function to get offset of a member within a structure");
-
-PyDoc_STRVAR(ctx_read32_func__doc__,
-"callback function to read a 32-bit integer from a given address");
-
-PyDoc_STRVAR(ctx_read64_func__doc__,
-"callback function to read a 64-bit integer from a given address");
 
 static PyMemberDef ctx_members[] = {
 	{ "convert", T_OBJECT, offsetof(ctx_object, convert), 0,
 	  attr_convert__doc__ },
-	{ "sym_reg_func", T_OBJECT,
-	  offsetof(ctx_object, sym_reg_func), 0,
-	  ctx_sym_reg_func__doc__ },
-	{ "sym_value_func", T_OBJECT,
-	  offsetof(ctx_object, sym_value_func), 0,
-	  ctx_sym_value_func__doc__ },
-	{ "sym_sizeof_func", T_OBJECT,
-	  offsetof(ctx_object, sym_sizeof_func), 0,
-	  ctx_sym_sizeof_func__doc__ },
-	{ "sym_offsetof_func", T_OBJECT,
-	  offsetof(ctx_object, sym_offsetof_func), 0,
-	  ctx_sym_offsetof_func__doc__ },
-	{ "read32_func", T_OBJECT,
-	  offsetof(ctx_object, read32_func), 0,
-	  ctx_read32_func__doc__ },
-	{ "read64_func", T_OBJECT,
-	  offsetof(ctx_object, read64_func), 0,
-	  ctx_read64_func__doc__ },
 	{ NULL }
 };
 
