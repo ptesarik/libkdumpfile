@@ -922,30 +922,36 @@ static addrxlat_status
 cb_sym(void *_self, addrxlat_sym_t *sym)
 {
 	ctx_object *self = (ctx_object*)_self;
+	PyObject *args;
+	PyObject *obj;
 	PyObject *result;
+	int argc, i;
 
-	switch (sym->type) {
-	case ADDRXLAT_SYM_REG:
-	case ADDRXLAT_SYM_VALUE:
-	case ADDRXLAT_SYM_SIZEOF:
-		result = PyObject_CallMethod(_self, "cb_sym", "(is)",
-					     (int)sym->type, sym->args[0]);
-		break;
-
-	case ADDRXLAT_SYM_OFFSETOF:
-		result = PyObject_CallMethod(_self, "cb_sym", "(iss)",
-					     (int)sym->type, sym->args[0],
-					     sym->args[1]);
-		break;
-
-	default:
+	argc = addrxlat_sym_argc(sym->type);
+	if (argc == -1)
 		return addrxlat_ctx_err(self->ctx, ADDRXLAT_ERR_NOTIMPL,
 					"Unknown symbolic info type: %d",
 					(int)sym->type);
+	args = PyTuple_New(1 + argc);
+	if (!args)
+		goto err;
+
+	obj = PyInt_FromLong(sym->type);
+	if (!obj)
+		goto err_args;
+	PyTuple_SET_ITEM(args, 0, obj);
+
+	for (i = 0; i < argc; ++i) {
+		obj = Text_FromUTF8(sym->args[i]);
+		if (!obj)
+			goto err_args;
+		PyTuple_SET_ITEM(args, i + 1, obj);
 	}
 
+	result = call_method((PyObject*)self, "cb_sym", args, NULL);
+	Py_DECREF(args);
 	if (!result)
-		return ctx_error_status((PyObject*)self);
+		goto err;
 
 	if (PyLong_Check(result))
 		sym->val = PyLong_AsUnsignedLongLong(result);
@@ -959,9 +965,14 @@ cb_sym(void *_self, addrxlat_sym_t *sym)
 			     Py_TYPE(result)->tp_name);
 
 	if (PyErr_Occurred())
-		return ctx_error_status((PyObject*)self);
+		goto err;
 
 	return ADDRXLAT_OK;
+
+ err_args:
+	Py_DECREF(args);
+ err:
+	return ctx_error_status((PyObject*)self);
 }
 
 static addrxlat_status
