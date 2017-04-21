@@ -269,6 +269,10 @@ get_object(PyObject *self, void *data)
 {
 	Py_ssize_t off = (intptr_t)data;
 	PyObject **pobj = (PyObject**)((char*)self + off);
+
+	if (!*pobj)
+		Py_RETURN_NONE;
+
 	Py_INCREF(*pobj);
 	return *pobj;
 }
