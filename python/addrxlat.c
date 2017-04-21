@@ -906,23 +906,16 @@ cb_sym(void *_self, addrxlat_sym_t *sym)
 
 	switch (sym->type) {
 	case ADDRXLAT_SYM_REG:
-		result = PyObject_CallMethod(_self, "cb_reg", "(s)",
-					     sym->args[0]);
-		break;
-
 	case ADDRXLAT_SYM_VALUE:
-		result = PyObject_CallMethod(_self, "cb_symbol", "(s)",
-					     sym->args[0]);
-		break;
-
 	case ADDRXLAT_SYM_SIZEOF:
-		result = PyObject_CallMethod(_self, "cb_sizeof", "(s)",
-					     sym->args[0]);
+		result = PyObject_CallMethod(_self, "cb_sym", "(is)",
+					     (int)sym->type, sym->args[0]);
 		break;
 
 	case ADDRXLAT_SYM_OFFSETOF:
-		result = PyObject_CallMethod(_self, "cb_offsetof", "(ss)",
-					     sym->args[0], sym->args[1]);
+		result = PyObject_CallMethod(_self, "cb_sym", "(iss)",
+					     (int)sym->type, sym->args[0],
+					     sym->args[1]);
 		break;
 
 	default:
@@ -1148,25 +1141,16 @@ ctx_get_err(PyObject *_self, PyObject *args)
 		: (Py_INCREF(Py_None), Py_None);
 }
 
-PyDoc_STRVAR(ctx_cb_reg__doc__,
-"CTX.cb_reg(register) -> value\n\
+PyDoc_STRVAR(ctx_cb_sym__doc__,
+"CTX.cb_sym(type, *args) -> value\n\
 \n\
-Callback function to get the content of a named register.");
-
-PyDoc_STRVAR(ctx_cb_symbol__doc__,
-"CTX.cb_symbol(symbol) -> value\n\
+Callback function to resolve symbolic information. The function\n\
+can be called as:\n\
 \n\
-Callback function to get the numeric value of a symbol.");
-
-PyDoc_STRVAR(ctx_cb_sizeof__doc__,
-"CTX.cb_sizeof(symbol) -> size\n\
-\n\
-Callback function to get the size of an object.");
-
-PyDoc_STRVAR(ctx_cb_offsetof__doc__,
-"CTX.cb_offsetof(struct, member) -> offset\n\
-\n\
-Callback function to get the offset of a member within a structure.");
+  - CTX.cb_sym(SYM_REG, regname) -> register value\n\
+  - CTX.cb_sym(SYM_VALUE, symname) -> symbol value\n\
+  - CTX.cb_sym(SYM_SIZEOF, symname) -> size\n\
+  - CTX.cb_sym(SYM_OFFSETOF, typename, member) -> offset");
 
 PyDoc_STRVAR(ctx_cb_read32__doc__,
 "CTX.cb_read32(fulladdr) -> value\n\
@@ -1200,10 +1184,7 @@ static PyMethodDef ctx_methods[] = {
 	  ctx_get_err__doc__ },
 
 	/* Callbacks */
-	{ "cb_reg", ctx_cb_nodata, METH_VARARGS, ctx_cb_reg__doc__ },
-	{ "cb_symbol", ctx_cb_nodata, METH_VARARGS, ctx_cb_symbol__doc__ },
-	{ "cb_sizeof", ctx_cb_nodata, METH_VARARGS, ctx_cb_sizeof__doc__ },
-	{ "cb_offsetof", ctx_cb_nodata, METH_VARARGS, ctx_cb_offsetof__doc__ },
+	{ "cb_sym", ctx_cb_nodata, METH_VARARGS, ctx_cb_sym__doc__ },
 	{ "cb_read32", ctx_cb_nodata, METH_VARARGS, ctx_cb_read32__doc__ },
 	{ "cb_read64", ctx_cb_nodata, METH_VARARGS, ctx_cb_read64__doc__ },
 
