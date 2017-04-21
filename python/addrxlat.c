@@ -225,6 +225,28 @@ nth_arg(const char *fname, PyObject *args, Py_ssize_t n)
 	return PyTuple_GET_ITEM(args, n);
 }
 
+/** Call a method by name
+ * @param obj     object
+ * @param name    method name
+ * @param args    positional arguments
+ * @param kwargs  keyword arguments
+ * @returns       method return value, or @c NULL on failure
+ */
+static PyObject *
+call_method(PyObject *obj, const char *name, PyObject *args, PyObject *kwargs)
+{
+	PyObject *func;
+	PyObject *result;
+
+	func = PyObject_GetAttrString(obj, name);
+	if (!func)
+		return NULL;
+
+	result = PyObject_Call(func, args, kwargs);
+	Py_DECREF(func);
+	return result;
+}
+
 /** Call a cooperative superclass method
  * @param type    derived class type
  * @param obj     object
@@ -238,7 +260,6 @@ call_super(PyTypeObject *type, PyObject *obj,
 	   const char *name, PyObject *args, PyObject *kwargs)
 {
 	PyObject *super;
-	PyObject *func;
 	PyObject *result;
 
 	super = PyObject_CallFunction((PyObject*)&PySuper_Type,
@@ -246,13 +267,8 @@ call_super(PyTypeObject *type, PyObject *obj,
 	if (!super)
 		return NULL;
 
-	func = PyObject_GetAttrString(super, name);
+	result = call_method(super, name, args, kwargs);
 	Py_DECREF(super);
-	if (!func)
-		return NULL;
-
-	result = PyObject_Call(func, args, kwargs);
-	Py_DECREF(func);
 	return result;
 }
 
