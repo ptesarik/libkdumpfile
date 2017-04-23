@@ -528,10 +528,17 @@ c_pointer_super_init(PyTypeObject *type, PyObject *self,
 {
 	PyObject *result;
 
-	if (PyDict_DelItemString(kwargs, _C_POINTER))
-		PyErr_Clear();
+	if (kwargs) {
+		kwargs = PyDict_Copy(kwargs);
+		if (!kwargs)
+			return -1;
+
+		if (PyDict_DelItemString(kwargs, _C_POINTER))
+			PyErr_Clear();
+	}
 
 	result = call_super(type, self, "__init__", args, kwargs);
+	Py_XDECREF(kwargs);
 	if (!result)
 		return -1;
 
