@@ -2546,27 +2546,6 @@ PyDoc_STRVAR(range__doc__,
 \n\
 Construct an empty address range.");
 
-/** Create a new, uninitialized range object.
- * @param type    range type
- * @param args    ignored
- * @param kwargs  ignored
- * @returns       new range object, or @c NULL on failure
- */
-static PyObject *
-range_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
-{
-	range_object *self;
-
-	self = (range_object*) type->tp_alloc(type, 0);
-	if (!self)
-		return NULL;
-
-	Py_INCREF(Py_None);
-	self->meth = Py_None;
-
-	return (PyObject*)self;
-}
-
 static void
 range_dealloc(PyObject *_self)
 {
@@ -2612,7 +2591,7 @@ range_set_meth(PyObject *_self, PyObject *value, void *data)
 	oldval = self->meth;
 	self->meth = value;
 	self->range.meth = meth;
-	Py_DECREF(oldval);
+	Py_XDECREF(oldval);
 
 	return 0;
 }
@@ -2669,7 +2648,7 @@ static PyTypeObject range_type =
 	0,				/* tp_dictoffset */
 	0,				/* tp_init */
 	0,				/* tp_alloc */
-	range_new,			/* tp_new */
+	0,				/* tp_new */
 };
 
 typedef struct {
@@ -5080,6 +5059,7 @@ init_addrxlat (void)
 	if (PyType_Ready(&meth_type) < 0)
 		return MOD_ERROR_VAL;
 
+	range_type.tp_new = PyType_GenericNew;
 	if (PyType_Ready(&range_type) < 0)
 		return MOD_ERROR_VAL;
 
