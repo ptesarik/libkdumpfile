@@ -675,6 +675,29 @@ make_BaseException(PyObject *mod)
 	return NULL;
 }
 
+/** Raise an _addrxlat.BaseException.
+ * @param ctx     Address translation context
+ * @param status  Status code (see @c ADDRXLAT_ERR_xxx)
+ *
+ * Use the provided context object to construct the arguments of
+ * an addrxlat exception.
+ */
+static PyObject *
+raise_exception(addrxlat_ctx_t *ctx, addrxlat_status status)
+{
+	const char *err = ctx
+		? addrxlat_ctx_get_err(ctx)
+		: NULL;
+	PyObject *exc_val = err
+		? Py_BuildValue("(is)", (int)status, err)
+		: Py_BuildValue("(i)", (int)status);
+	if (exc_val) {
+		PyErr_SetObject(BaseException, exc_val);
+		Py_DECREF(exc_val);
+	}
+	return NULL;
+}
+
 /** Python representation of @ref addrxlat_fulladdr_t.
  */
 typedef struct {
@@ -831,6 +854,7 @@ typedef struct tag_ctx_object {
 	PyObject_HEAD
 
 	addrxlat_ctx_t *ctx;
+	addrxlat_cb_t next_cb;
 
 	PyObject *exc_type, *exc_val, *exc_tb;
 
@@ -1026,6 +1050,23 @@ cb_read64(void *_self, const addrxlat_fulladdr_t *addr, uint64_t *val)
 	return ADDRXLAT_OK;
 }
 
+static void
+cb_hook(void *_self, addrxlat_cb_t *cb)
+{
+	ctx_object *self = (ctx_object*)_self;
+
+	if (self->next_cb.cb_hook)
+		self->next_cb.cb_hook(self->next_cb.data, cb);
+
+	self->next_cb = *cb;
+
+	cb->data = self;
+	cb->cb_hook = cb_hook;
+	cb->sym = cb_sym;
+	cb->read32 = cb_read32;
+	cb->read64 = cb_read64;
+}
+
 PyDoc_STRVAR(ctx__doc__,
 "Context() -> address translation context");
 
@@ -1050,13 +1091,13 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 			return PyErr_NoMemory();
 		}
 
-		cb.data = self;
-		cb.sym = cb_sym;
-		cb.read32 = cb_read32;
-		cb.read64 = cb_read64;
+		cb_hook(self, &cb);
+		cb.cb_hook = NULL;
 		addrxlat_ctx_set_cb(self->ctx, &cb);
-	} else
+	} else {
 		addrxlat_ctx_incref(self->ctx);
+		addrxlat_ctx_install_cb_hook(self->ctx, cb_hook, self);
+	}
 
 	Py_INCREF(convert);
 	self->convert = convert;
@@ -1209,6 +1250,128 @@ ctx_cb_nodata(PyObject *self, PyObject *args)
 	return NULL;
 }
 
+PyDoc_STRVAR(ctx_next_cb_sym__doc__,
+"CTX.next_cb_sym(type, *args) -> value\n\
+\n\
+Call the next symbolic information callback.");
+
+static PyObject *
+ctx_next_cb_sym(PyObject *_self, PyObject *args)
+{
+	ctx_object *self = (ctx_object*)_self;
+	PyObject *obj;
+	addrxlat_sym_type_t type;
+	Py_ssize_t argc, i;
+	int symargc;
+	addrxlat_sym_t *sym;
+	addrxlat_status status;
+
+	argc = PyTuple_GET_SIZE(args);
+	if (argc < 1) {
+		PyErr_Format(PyExc_TypeError,
+			     "%s() takes at least one argument",
+			     "next_cb_sym");
+		return NULL;
+	}
+
+	obj = PyTuple_GET_ITEM(args, 0);
+	type = Number_AsLong(obj);
+	Py_DECREF(obj);
+	if (PyErr_Occurred())
+		return NULL;
+
+	symargc = addrxlat_sym_argc(type);
+	if (symargc == -1) {
+		PyErr_Format(PyExc_NotImplementedError,
+			     "Unknown symbolic info type: %d", (int)type);
+		return NULL;
+	}
+	if (argc != symargc + 1) {
+		PyErr_Format(PyExc_TypeError,
+			     "%s(%d, ...) requires exactly %d arguments",
+			     "next_cb_sym", (int)type, symargc + 1);
+		return NULL;
+	}
+
+	sym = malloc(offsetof(addrxlat_sym_t, args) +
+		     symargc * sizeof(const char*));
+	if (!sym)
+		return PyErr_NoMemory();
+
+	sym->type = type;
+	for (i = 1; i < argc; ++i) {
+		char *arg = Text_AsUTF8(PyTuple_GET_ITEM(args, i));
+		if (!arg) {
+			free(sym);
+			return NULL;
+		}
+		sym->args[i - 1] = arg;
+	}
+
+	addrxlat_ctx_clear_err(self->ctx);
+	status = self->next_cb.sym(self->next_cb.data, sym);
+	obj = (status == ADDRXLAT_OK)
+		? PyLong_FromUnsignedLongLong(sym->val)
+		: raise_exception(self->ctx, status);
+	free(sym);
+
+	return obj;
+}
+
+PyDoc_STRVAR(ctx_next_cb_read32__doc__,
+"CTX.next_cb_read32(type, *args) -> value\n\
+\n\
+Call the next callback to read 32-bit entities.");
+
+static PyObject *
+ctx_next_cb_read32(PyObject *_self, PyObject *args)
+{
+	ctx_object *self = (ctx_object*)_self;
+	PyObject *addrobj;
+	addrxlat_fulladdr_t *addr;
+	uint32_t val;
+	addrxlat_status status;
+
+	if (!PyArg_ParseTuple(args, "O", &addrobj))
+		return NULL;
+	addr = fulladdr_AsPointer(addrobj);
+	if (!addr)
+		return NULL;
+
+	addrxlat_ctx_clear_err(self->ctx);
+	status = self->next_cb.read32(self->next_cb.data, addr, &val);
+	return (status == ADDRXLAT_OK)
+		? PyLong_FromUnsignedLongLong(val)
+		: raise_exception(self->ctx, status);
+}
+
+PyDoc_STRVAR(ctx_next_cb_read64__doc__,
+"CTX.next_cb_read64(type, *args) -> value\n\
+\n\
+Call the next callback to read 64-bit entities.");
+
+static PyObject *
+ctx_next_cb_read64(PyObject *_self, PyObject *args)
+{
+	ctx_object *self = (ctx_object*)_self;
+	PyObject *addrobj;
+	addrxlat_fulladdr_t *addr;
+	uint64_t val;
+	addrxlat_status status;
+
+	if (!PyArg_ParseTuple(args, "O", &addrobj))
+		return NULL;
+	addr = fulladdr_AsPointer(addrobj);
+	if (!addr)
+		return NULL;
+
+	addrxlat_ctx_clear_err(self->ctx);
+	status = self->next_cb.read64(self->next_cb.data, addr, &val);
+	return (status == ADDRXLAT_OK)
+		? PyLong_FromUnsignedLongLong(val)
+		: raise_exception(self->ctx, status);
+}
+
 static PyMethodDef ctx_methods[] = {
 	{ "err", (PyCFunction)ctx_err, METH_VARARGS | METH_KEYWORDS,
 	  ctx_err__doc__ },
@@ -1221,6 +1384,13 @@ static PyMethodDef ctx_methods[] = {
 	{ "cb_sym", ctx_cb_nodata, METH_VARARGS, ctx_cb_sym__doc__ },
 	{ "cb_read32", ctx_cb_nodata, METH_VARARGS, ctx_cb_read32__doc__ },
 	{ "cb_read64", ctx_cb_nodata, METH_VARARGS, ctx_cb_read64__doc__ },
+
+	{ "next_cb_sym", ctx_next_cb_sym, METH_VARARGS,
+	  ctx_next_cb_sym__doc__ },
+	{ "next_cb_read32", ctx_next_cb_read32, METH_VARARGS,
+	  ctx_next_cb_read32__doc__ },
+	{ "next_cb_read64", ctx_next_cb_read64, METH_VARARGS,
+	  ctx_next_cb_read64__doc__ },
 
 	{ NULL }
 };
