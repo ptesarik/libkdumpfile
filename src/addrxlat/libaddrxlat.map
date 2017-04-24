@@ -14,6 +14,7 @@ LIBADDRXLAT_0 {
     addrxlat_ctx_get_err;
     addrxlat_ctx_set_cb;
     addrxlat_ctx_get_cb;
+    addrxlat_ctx_install_cb_hook;
 
     addrxlat_map_new;
     addrxlat_map_incref;

@@ -468,6 +468,19 @@ const char *addrxlat_ctx_get_err(const addrxlat_ctx_t *ctx);
  */
 const char *addrxlat_strerror(addrxlat_status status);
 
+/* Forward declaration to solve circular reference. */
+typedef struct _addrxlat_cb addrxlat_cb_t;
+
+/** Type of the callback hook function.
+ * @param data  Arbitrary user-supplied data.
+ * @param cb    New callbacks (already installed).
+ *
+ * This callback is called after installing new callbacks. This function
+ * may change the new callbacks, and the modified version will then be
+ * used instead of the original values.
+ */
+typedef void addrxlat_cb_hook_fn(void *data, addrxlat_cb_t *cb);
+
 /** Type of symbolic information. */
 typedef enum _addrxlat_sym_type {
 	/** Register value.
@@ -566,9 +579,12 @@ typedef addrxlat_status addrxlat_read64_fn(
 	void *data, const addrxlat_fulladdr_t *addr, uint64_t *val);
 
 /** Callback function pointers and data. */
-typedef struct _addrxlat_cb {
+struct _addrxlat_cb {
 	/** Arbitrary callback data, passed to callback functions. */
 	void *data;
+
+	/** Callback update hook. */
+	addrxlat_cb_hook_fn *cb_hook;
 
 	/** Symbolic information callback. */
 	addrxlat_sym_fn *sym;
@@ -586,7 +602,7 @@ typedef struct _addrxlat_cb {
 	 * @sa ADDRXLAT_CAPS
 	 */
 	unsigned long read_caps;
-} addrxlat_cb_t;
+};
 
 /** Translate an enum value into a capability bitmask. */
 #define ADDRXLAT_CAPS(val)	(1UL << (unsigned)(val))
@@ -608,6 +624,24 @@ void addrxlat_ctx_set_cb(addrxlat_ctx_t *ctx, const addrxlat_cb_t *cb);
  * to @ref addrxlat_ctx_set_cb.
  */
 const addrxlat_cb_t *addrxlat_ctx_get_cb(const addrxlat_ctx_t *ctx);
+
+/** Install the callback hook.
+ * @param ctx   Address translation context.
+ * @param hook  New hook function.
+ * @param data  Data for the new hook function.
+ *
+ * The callback hook cannot be installed through @ref addrxlat_ctx_set_cb,
+ * because that would call the existing hook on it instead of letting the
+ * new hook decide if it wants to override the behaviour.
+ *
+ * This function simply runs the hook function once with the currently
+ * active callback settings (but with the provided @c data pointer) and
+ * then installs the resulting callback settings.
+ *
+ * @sa addrxlat_cb_hook_fn
+ */
+void addrxlat_ctx_install_cb_hook(addrxlat_ctx_t *ctx,
+				  addrxlat_cb_hook_fn *hook, void *data);
 
 /** Definition of an address range.
  */

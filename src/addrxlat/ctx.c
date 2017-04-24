@@ -77,13 +77,24 @@ addrxlat_ctx_get_err(const addrxlat_ctx_t *ctx)
 void
 addrxlat_ctx_set_cb(addrxlat_ctx_t *ctx, const addrxlat_cb_t *cb)
 {
-	ctx->cb = *cb;
+	addrxlat_cb_hook_fn *hook = ctx->cb.cb_hook;
+	void *data = ctx->cb.data;
+	ctx->cb = ctx->orig_cb = *cb;
+	if (hook)
+		hook(data, &ctx->cb);
 }
 
 const addrxlat_cb_t *
 addrxlat_ctx_get_cb(const addrxlat_ctx_t *ctx)
 {
-	return &ctx->cb;
+	return &ctx->orig_cb;
+}
+
+void
+addrxlat_ctx_install_cb_hook(addrxlat_ctx_t *ctx,
+			     addrxlat_cb_hook_fn *hook, void *data)
+{
+	hook(data, &ctx->cb);
 }
 
 /** Get the (string) name of an address space.
