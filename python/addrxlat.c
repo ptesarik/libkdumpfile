@@ -1078,13 +1078,22 @@ cb_hook(void *_self, addrxlat_cb_t *cb)
 	if (self->next_cb.cb_hook)
 		self->next_cb.cb_hook(self->next_cb.data, cb);
 
-	self->next_cb = *cb;
+	if (self->ctx) {
+		self->next_cb = *cb;
 
-	cb->data = self;
-	cb->cb_hook = cb_hook;
-	cb->sym = cb_sym;
-	cb->read32 = cb_read32;
-	cb->read64 = cb_read64;
+		cb->data = self;
+		cb->cb_hook = cb_hook;
+		cb->sym = cb_sym;
+		cb->read32 = cb_read32;
+		cb->read64 = cb_read64;
+	}
+}
+
+static void
+cb_unhook(void *_self, addrxlat_cb_t *cb)
+{
+	if (cb->cb_hook)
+		cb->cb_hook(cb->data, cb);
 }
 
 PyDoc_STRVAR(ctx__doc__,
@@ -1146,8 +1155,10 @@ ctx_dealloc(PyObject *_self)
 	Py_XDECREF(self->exc_tb);
 
 	if (self->ctx) {
-		addrxlat_ctx_decref(self->ctx);
+		addrxlat_ctx_t *ctx = self->ctx;
 		self->ctx = NULL;
+		addrxlat_ctx_install_cb_hook(ctx, cb_unhook, self);
+		addrxlat_ctx_decref(ctx);
 	}
 
 	Py_TYPE(self)->tp_free((PyObject*)self);
