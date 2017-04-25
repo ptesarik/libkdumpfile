@@ -994,22 +994,20 @@ cb_sym(void *_self, addrxlat_sym_t *sym)
 		return addrxlat_ctx_err(self->ctx, ADDRXLAT_ERR_NOTIMPL,
 					"Unknown symbolic info type: %d",
 					(int)sym->type);
-	args = PyTuple_New(2 + argc);
+	args = PyTuple_New(1 + argc);
 	if (!args)
 		goto err;
-	Py_INCREF(self);
-	PyTuple_SET_ITEM(args, 0, (PyObject*)self);
 
 	obj = PyInt_FromLong(sym->type);
 	if (!obj)
 		goto err_args;
-	PyTuple_SET_ITEM(args, 1, obj);
+	PyTuple_SET_ITEM(args, 0, obj);
 
 	for (i = 0; i < argc; ++i) {
 		obj = Text_FromUTF8(sym->args[i]);
 		if (!obj)
 			goto err_args;
-		PyTuple_SET_ITEM(args, i + 2, obj);
+		PyTuple_SET_ITEM(args, 1 + i, obj);
 	}
 
 	result = PyObject_Call(self->cb_sym, args, NULL);
@@ -1049,8 +1047,7 @@ cb_read32(void *_self, const addrxlat_fulladdr_t *addr, uint32_t *val)
 	addrobj = fulladdr_FromPointer(self->convert, addr);
 	if (!addrobj)
 		return ctx_error_status(self);
-	result = PyObject_CallFunctionObjArgs(
-		self->cb_read32, (PyObject*)self, addrobj, NULL);
+	result = PyObject_CallFunctionObjArgs(self->cb_read32, addrobj, NULL);
 	Py_DECREF(addrobj);
 	if (!result)
 		return ctx_error_status(self);
@@ -1074,8 +1071,7 @@ cb_read64(void *_self, const addrxlat_fulladdr_t *addr, uint64_t *val)
 	addrobj = fulladdr_FromPointer(self->convert, addr);
 	if (!addrobj)
 		return ctx_error_status(self);
-	result = PyObject_CallFunctionObjArgs(
-		self->cb_read64, (PyObject*)self, addrobj, NULL);
+	result = PyObject_CallFunctionObjArgs(self->cb_read64, addrobj, NULL);
 	Py_DECREF(addrobj);
 	if (!result)
 		return ctx_error_status(self);
