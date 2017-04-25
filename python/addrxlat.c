@@ -1094,7 +1094,6 @@ static PyObject *
 ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
 	ctx_object *self;
-	addrxlat_cb_t cb;
 
 	self = (ctx_object*) type->tp_alloc(type, 0);
 	if (!self)
@@ -1110,14 +1109,6 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 			Py_DECREF(self);
 			return PyErr_NoMemory();
 		}
-
-		cb.data = self;
-		cb.cb_hook = NULL;
-		cb.sym = (addrxlat_sym_fn*) cb_null;
-		cb.read32 = (addrxlat_read32_fn*) cb_null;
-		cb.read64 = (addrxlat_read64_fn*) cb_null;
-		cb.read_caps = 0UL;
-		addrxlat_ctx_set_cb(self->ctx, &cb);
 	} else
 		addrxlat_ctx_incref(self->ctx);
 
@@ -1263,6 +1254,10 @@ ctx_next_cb_sym(PyObject *_self, PyObject *args)
 	addrxlat_sym_t *sym;
 	addrxlat_status status;
 
+	addrxlat_ctx_clear_err(self->ctx);
+	if (!self->next_cb.sym)
+		return raise_exception(self->ctx, cb_null(self));
+
 	argc = PyTuple_GET_SIZE(args);
 	if (argc < 1) {
 		PyErr_Format(PyExc_TypeError,
@@ -1305,7 +1300,6 @@ ctx_next_cb_sym(PyObject *_self, PyObject *args)
 		sym->args[i - 1] = arg;
 	}
 
-	addrxlat_ctx_clear_err(self->ctx);
 	status = self->next_cb.sym(self->next_cb.data, sym);
 	obj = (status == ADDRXLAT_OK)
 		? PyLong_FromUnsignedLongLong(sym->val)
@@ -1329,13 +1323,16 @@ ctx_next_cb_read32(PyObject *_self, PyObject *args)
 	uint32_t val;
 	addrxlat_status status;
 
+	addrxlat_ctx_clear_err(self->ctx);
+	if (!self->next_cb.read32)
+		return raise_exception(self->ctx, cb_null(self));
+
 	if (!PyArg_ParseTuple(args, "O", &addrobj))
 		return NULL;
 	addr = fulladdr_AsPointer(addrobj);
 	if (!addr)
 		return NULL;
 
-	addrxlat_ctx_clear_err(self->ctx);
 	status = self->next_cb.read32(self->next_cb.data, addr, &val);
 	return (status == ADDRXLAT_OK)
 		? PyLong_FromUnsignedLongLong(val)
@@ -1356,13 +1353,16 @@ ctx_next_cb_read64(PyObject *_self, PyObject *args)
 	uint64_t val;
 	addrxlat_status status;
 
+	addrxlat_ctx_clear_err(self->ctx);
+	if (!self->next_cb.read64)
+		return raise_exception(self->ctx, cb_null(self));
+
 	if (!PyArg_ParseTuple(args, "O", &addrobj))
 		return NULL;
 	addr = fulladdr_AsPointer(addrobj);
 	if (!addr)
 		return NULL;
 
-	addrxlat_ctx_clear_err(self->ctx);
 	status = self->next_cb.read64(self->next_cb.data, addr, &val);
 	return (status == ADDRXLAT_OK)
 		? PyLong_FromUnsignedLongLong(val)
