@@ -58,7 +58,6 @@
  */
 #define STATUS_PYEXC	ADDRXLAT_ERR_CUSTOM_BASE
 
-static addrxlat_status ctx_error_status(PyObject *_self);
 static PyObject *ctx_status_result(PyObject *_self, addrxlat_status status);
 static PyObject *make_desc_param(PyObject *desc);
 
@@ -856,6 +855,10 @@ typedef struct tag_ctx_object {
 	addrxlat_ctx_t *ctx;
 	addrxlat_cb_t next_cb;
 
+	PyObject *cb_sym;
+	PyObject *cb_read32;
+	PyObject *cb_read64;
+
 	PyObject *exc_type, *exc_val, *exc_tb;
 
 	PyObject *convert;
@@ -881,9 +884,8 @@ ctx_set_exception(ctx_object *self,
 }
 
 static addrxlat_status
-ctx_error_status(PyObject *_self)
+ctx_error_status(ctx_object *self)
 {
-	ctx_object *self = (ctx_object*)_self;
 	PyObject *exc_type, *exc_val, *exc_tb;
 	PyObject *obj;
 	addrxlat_status status;
@@ -945,6 +947,17 @@ ctx_status_result(PyObject *_self, addrxlat_status status)
 	return PyInt_FromLong(status);
 }
 
+/** Null callback function.
+ * @param self  Python Context object
+ * @returns     Always ADDRXLAT_ERR_NODATA
+ */
+static addrxlat_status
+cb_null(ctx_object *self)
+{
+	return addrxlat_ctx_err(self->ctx, ADDRXLAT_ERR_NODATA,
+				"NULL callback");
+}
+
 static addrxlat_status
 cb_sym(void *_self, addrxlat_sym_t *sym)
 {
@@ -954,28 +967,33 @@ cb_sym(void *_self, addrxlat_sym_t *sym)
 	PyObject *result;
 	int argc, i;
 
+	if (!self->cb_sym || self->cb_sym == Py_None)
+		return cb_null(self);
+
 	argc = addrxlat_sym_argc(sym->type);
 	if (argc == -1)
 		return addrxlat_ctx_err(self->ctx, ADDRXLAT_ERR_NOTIMPL,
 					"Unknown symbolic info type: %d",
 					(int)sym->type);
-	args = PyTuple_New(1 + argc);
+	args = PyTuple_New(2 + argc);
 	if (!args)
 		goto err;
+	Py_INCREF(self);
+	PyTuple_SET_ITEM(args, 0, (PyObject*)self);
 
 	obj = PyInt_FromLong(sym->type);
 	if (!obj)
 		goto err_args;
-	PyTuple_SET_ITEM(args, 0, obj);
+	PyTuple_SET_ITEM(args, 1, obj);
 
 	for (i = 0; i < argc; ++i) {
 		obj = Text_FromUTF8(sym->args[i]);
 		if (!obj)
 			goto err_args;
-		PyTuple_SET_ITEM(args, i + 1, obj);
+		PyTuple_SET_ITEM(args, i + 2, obj);
 	}
 
-	result = call_method((PyObject*)self, "cb_sym", args, NULL);
+	result = PyObject_Call(self->cb_sym, args, NULL);
 	Py_DECREF(args);
 	if (!result)
 		goto err;
@@ -999,20 +1017,21 @@ cb_sym(void *_self, addrxlat_sym_t *sym)
  err_args:
 	Py_DECREF(args);
  err:
-	return ctx_error_status((PyObject*)self);
+	return ctx_error_status(self);
 }
 
 static addrxlat_status
 cb_read32(void *_self, const addrxlat_fulladdr_t *addr, uint32_t *val)
 {
-	PyObject *self = (PyObject*)_self;
+	ctx_object *self = (ctx_object*)_self;
 	PyObject *addrobj, *result;
 	unsigned long long tmpval;
 
-	addrobj = fulladdr_FromPointer(((ctx_object*)self)->convert, addr);
+	addrobj = fulladdr_FromPointer(self->convert, addr);
 	if (!addrobj)
 		return ctx_error_status(self);
-	result = PyObject_CallMethod(self, "cb_read32", "(O)", addrobj);
+	result = PyObject_CallFunctionObjArgs(
+		self->cb_read32, (PyObject*)self, addrobj, NULL);
 	Py_DECREF(addrobj);
 	if (!result)
 		return ctx_error_status(self);
@@ -1029,14 +1048,15 @@ cb_read32(void *_self, const addrxlat_fulladdr_t *addr, uint32_t *val)
 static addrxlat_status
 cb_read64(void *_self, const addrxlat_fulladdr_t *addr, uint64_t *val)
 {
-	PyObject *self = (PyObject*)_self;
+	ctx_object *self = (ctx_object*)_self;
 	PyObject *addrobj, *result;
 	unsigned long long tmpval;
 
-	addrobj = fulladdr_FromPointer(((ctx_object*)self)->convert, addr);
+	addrobj = fulladdr_FromPointer(self->convert, addr);
 	if (!addrobj)
 		return ctx_error_status(self);
-	result = PyObject_CallMethod(self, "cb_read64", "(O)", addrobj);
+	result = PyObject_CallFunctionObjArgs(
+		self->cb_read64, (PyObject*)self, addrobj, NULL);
 	Py_DECREF(addrobj);
 	if (!result)
 		return ctx_error_status(self);
@@ -1216,40 +1236,6 @@ ctx_get_err(PyObject *_self, PyObject *args)
 		: (Py_INCREF(Py_None), Py_None);
 }
 
-PyDoc_STRVAR(ctx_cb_sym__doc__,
-"CTX.cb_sym(type, *args) -> value\n\
-\n\
-Callback function to resolve symbolic information. The function\n\
-can be called as:\n\
-\n\
-  - CTX.cb_sym(SYM_REG, regname) -> register value\n\
-  - CTX.cb_sym(SYM_VALUE, symname) -> symbol value\n\
-  - CTX.cb_sym(SYM_SIZEOF, symname) -> size\n\
-  - CTX.cb_sym(SYM_OFFSETOF, typename, member) -> offset");
-
-PyDoc_STRVAR(ctx_cb_read32__doc__,
-"CTX.cb_read32(fulladdr) -> value\n\
-\n\
-Callback function to read a 32-bit integer from a given address.");
-
-PyDoc_STRVAR(ctx_cb_read64__doc__,
-"CTX.cb_read64(fulladdr) -> value\n\
-\n\
-Callback function to read a 64-bit integer from a given address.");
-
-static PyObject *
-ctx_cb_nodata(PyObject *self, PyObject *args)
-{
-	PyObject *exc_val;
-
-	exc_val = Py_BuildValue("(is)", (int)ADDRXLAT_ERR_NODATA,
-				"NULL callback");
-	if (!exc_val)
-		return NULL;
-	PyErr_SetObject(BaseException, exc_val);
-	return NULL;
-}
-
 PyDoc_STRVAR(ctx_next_cb_sym__doc__,
 "CTX.next_cb_sym(type, *args) -> value\n\
 \n\
@@ -1381,10 +1367,6 @@ static PyMethodDef ctx_methods[] = {
 	  ctx_get_err__doc__ },
 
 	/* Callbacks */
-	{ "cb_sym", ctx_cb_nodata, METH_VARARGS, ctx_cb_sym__doc__ },
-	{ "cb_read32", ctx_cb_nodata, METH_VARARGS, ctx_cb_read32__doc__ },
-	{ "cb_read64", ctx_cb_nodata, METH_VARARGS, ctx_cb_read64__doc__ },
-
 	{ "next_cb_sym", ctx_next_cb_sym, METH_VARARGS,
 	  ctx_next_cb_sym__doc__ },
 	{ "next_cb_read32", ctx_next_cb_read32, METH_VARARGS,
@@ -1395,9 +1377,38 @@ static PyMethodDef ctx_methods[] = {
 	{ NULL }
 };
 
+PyDoc_STRVAR(ctx_cb_sym__doc__,
+"CTX.cb_sym(type, *args) -> value\n\
+\n\
+Callback function to resolve symbolic information. The function\n\
+can be called as:\n\
+\n\
+  - CTX.cb_sym(SYM_REG, regname) -> register value\n\
+  - CTX.cb_sym(SYM_VALUE, symname) -> symbol value\n\
+  - CTX.cb_sym(SYM_SIZEOF, symname) -> size\n\
+  - CTX.cb_sym(SYM_OFFSETOF, typename, member) -> offset");
+
+PyDoc_STRVAR(ctx_cb_read32__doc__,
+"CTX.cb_read32(fulladdr) -> value\n\
+\n\
+Callback function to read a 32-bit integer from a given address.");
+
+PyDoc_STRVAR(ctx_cb_read64__doc__,
+"CTX.cb_read64(fulladdr) -> value\n\
+\n\
+Callback function to read a 64-bit integer from a given address.");
+
 static PyMemberDef ctx_members[] = {
 	{ "convert", T_OBJECT, offsetof(ctx_object, convert), 0,
 	  attr_convert__doc__ },
+
+	/* Callbacks */
+	{ "cb_sym", T_OBJECT, offsetof(ctx_object, cb_sym), 0,
+	  ctx_cb_sym__doc__ },
+	{ "cb_read32", T_OBJECT, offsetof(ctx_object, cb_read32), 0,
+	  ctx_cb_read32__doc__ },
+	{ "cb_read64", T_OBJECT, offsetof(ctx_object, cb_read64), 0,
+	  ctx_cb_read64__doc__ },
 	{ NULL }
 };
 
@@ -3984,12 +3995,12 @@ cb_op(void *data, const addrxlat_fulladdr_t *addr)
 
 	addrobj = fulladdr_FromPointer(self->convert, addr);
 	if (!addrobj)
-		return ctx_error_status(self->ctx);
+		return ctx_error_status((ctx_object*)self->ctx);
 
 	result = PyObject_CallMethod((PyObject*)self, "callback",
 				     "O", addrobj);
 	if (!result)
-		return ctx_error_status(self->ctx);
+		return ctx_error_status((ctx_object*)self->ctx);
 	Py_XDECREF(self->result);
 	self->result = result;
 
