@@ -1111,13 +1111,17 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 			return PyErr_NoMemory();
 		}
 
-		cb_hook(self, &cb);
+		cb.data = self;
 		cb.cb_hook = NULL;
+		cb.sym = (addrxlat_sym_fn*) cb_null;
+		cb.read32 = (addrxlat_read32_fn*) cb_null;
+		cb.read64 = (addrxlat_read64_fn*) cb_null;
+		cb.read_caps = 0UL;
 		addrxlat_ctx_set_cb(self->ctx, &cb);
-	} else {
+	} else
 		addrxlat_ctx_incref(self->ctx);
-		addrxlat_ctx_install_cb_hook(self->ctx, cb_hook, self);
-	}
+
+	addrxlat_ctx_install_cb_hook(self->ctx, cb_hook, self);
 
 	Py_INCREF(convert);
 	self->convert = convert;
