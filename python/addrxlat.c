@@ -1123,6 +1123,13 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 
 	addrxlat_ctx_install_cb_hook(self->ctx, cb_hook, self);
 
+	self->cb_sym = PyObject_GetAttrString(
+		(PyObject*)self, "next_cb_sym");
+	self->cb_read32 = PyObject_GetAttrString(
+		(PyObject*)self, "next_cb_read32");
+	self->cb_read64 = PyObject_GetAttrString(
+		(PyObject*)self, "next_cb_read64");
+
 	Py_INCREF(convert);
 	self->convert = convert;
 
