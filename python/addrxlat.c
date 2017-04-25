@@ -693,6 +693,8 @@ raise_exception(addrxlat_ctx_t *ctx, addrxlat_status status)
 	if (exc_val) {
 		PyErr_SetObject(BaseException, exc_val);
 		Py_DECREF(exc_val);
+		if (ctx)
+			addrxlat_ctx_clear_err(ctx);
 	}
 	return NULL;
 }
