@@ -931,20 +931,39 @@ ctx_error_status(ctx_object *self)
 	return STATUS_PYEXC;
 }
 
-static PyObject *
-ctx_status_result(PyObject *_self, addrxlat_status status)
+/** Handle a possible exception raised by a callback.
+ * @param self    Context object
+ * @param status  Error status
+ * @returns       Negative if an exception was restored, zero otherwise.
+ *
+ * A special return code is used to pass Python exceptions from a callback
+ * to the caller. The exception is stored in the Context object in that
+ * case.
+ *
+ * However, the library code may decide to ignore any errors returned by
+ * the callback. If that happens, the exception must be cleared accordingly.
+ */
+static int
+handle_cb_exception(ctx_object *self, addrxlat_status status)
 {
-	ctx_object *self = (ctx_object*)_self;
 	if (status == STATUS_PYEXC && self->exc_type) {
 		PyErr_Restore(self->exc_type, self->exc_val, self->exc_tb);
 		self->exc_type = NULL;
 		self->exc_val = NULL;
 		self->exc_tb = NULL;
-		return NULL;
+		return -1;
 	}
-
 	ctx_set_exception(self, NULL, NULL, NULL);
-	return PyInt_FromLong(status);
+	return 0;
+}
+
+static PyObject *
+ctx_status_result(PyObject *_self, addrxlat_status status)
+{
+	ctx_object *self = (ctx_object*)_self;
+	return !handle_cb_exception(self, status)
+		? PyInt_FromLong(status)
+		: NULL;
 }
 
 /** Null callback function.
@@ -1249,6 +1268,20 @@ ctx_get_err(PyObject *_self, PyObject *args)
 		: (Py_INCREF(Py_None), Py_None);
 }
 
+static PyObject *
+cb_status_result(ctx_object *self, addrxlat_status status,
+		 unsigned long long value)
+{
+	if (self->next_cb.cb_hook == cb_hook &&
+	    handle_cb_exception((ctx_object*)self->next_cb.data, status))
+		return NULL;
+
+	if (status != ADDRXLAT_OK)
+		return raise_exception(self->ctx, status);
+
+	return PyLong_FromUnsignedLongLong(value);
+}
+
 PyDoc_STRVAR(ctx_next_cb_sym__doc__,
 "CTX.next_cb_sym(type, *args) -> value\n\
 \n\
@@ -1312,9 +1345,7 @@ ctx_next_cb_sym(PyObject *_self, PyObject *args)
 	}
 
 	status = self->next_cb.sym(self->next_cb.data, sym);
-	obj = (status == ADDRXLAT_OK)
-		? PyLong_FromUnsignedLongLong(sym->val)
-		: raise_exception(self->ctx, status);
+	obj = cb_status_result(self, status, sym->val);
 	free(sym);
 
 	return obj;
@@ -1345,9 +1376,7 @@ ctx_next_cb_read32(PyObject *_self, PyObject *args)
 		return NULL;
 
 	status = self->next_cb.read32(self->next_cb.data, addr, &val);
-	return (status == ADDRXLAT_OK)
-		? PyLong_FromUnsignedLongLong(val)
-		: raise_exception(self->ctx, status);
+	return cb_status_result(self, status, val);
 }
 
 PyDoc_STRVAR(ctx_next_cb_read64__doc__,
@@ -1375,9 +1404,7 @@ ctx_next_cb_read64(PyObject *_self, PyObject *args)
 		return NULL;
 
 	status = self->next_cb.read64(self->next_cb.data, addr, &val);
-	return (status == ADDRXLAT_OK)
-		? PyLong_FromUnsignedLongLong(val)
-		: raise_exception(self->ctx, status);
+	return cb_status_result(self, status, val);
 }
 
 static PyMethodDef ctx_methods[] = {
