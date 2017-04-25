@@ -1165,6 +1165,10 @@ ctx_dealloc(PyObject *_self)
 	PyObject_GC_UnTrack(_self);
 	Py_XDECREF(self->convert);
 
+	Py_XDECREF(self->cb_sym);
+	Py_XDECREF(self->cb_read32);
+	Py_XDECREF(self->cb_read64);
+
 	Py_XDECREF(self->exc_type);
 	Py_XDECREF(self->exc_val);
 	Py_XDECREF(self->exc_tb);
@@ -1183,6 +1187,10 @@ static int
 ctx_traverse(PyObject *_self, visitproc visit, void *arg)
 {
 	ctx_object *self = (ctx_object*)_self;
+
+	Py_VISIT(self->cb_sym);
+	Py_VISIT(self->cb_read32);
+	Py_VISIT(self->cb_read64);
 
 	Py_VISIT(self->exc_type);
 	Py_VISIT(self->exc_val);
