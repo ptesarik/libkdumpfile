@@ -3090,20 +3090,12 @@ map_dup(PyObject *_self, PyObject *args)
 {
 	map_object *self = (map_object*)_self;
 	addrxlat_map_t *map;
-	PyTypeObject *type;
-	map_object *result;
 
 	map = addrxlat_map_dup(self->map);
 	if (!map)
 		return PyErr_NoMemory();
 
-	type = &map_type;
-	result = (map_object*) type->tp_alloc(type, 0);
-	if (!result)
-		return NULL;
-	result->map = map;
-
-	return (PyObject*)result;
+	return map_FromPointer(self->convert, map);
 }
 
 static PyMethodDef map_methods[] = {
