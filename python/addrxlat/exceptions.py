@@ -15,10 +15,6 @@ _exceptions = (
     ('NoMethodError', _addrxlat.ERR_NOMETH),
 )
 
-def _check_kwargs(kwargs):
-    if 'status' in kwargs:
-        raise TypeError("'status' is an invalid keyword argument for this function")
-
 def new_exception(name, status, addbases=()):
     '''Create an addrxlat exception for a given status code.
     The new exception is derived from BaseException, but you may specify
@@ -26,7 +22,6 @@ def new_exception(name, status, addbases=()):
     '''
 
     def __init__(self, *args, **kwargs):
-        _check_kwargs(kwargs)
         BaseException.__init__(self, status, *args, **kwargs)
 
     def __repr__(self):
@@ -51,7 +46,6 @@ def get_exception(status, *args, **kwargs):
     Get an appropriate exception for the given status. If there is no
     specific exception, make an instance of BaseException.
     '''
-    _check_kwargs(kwargs)
     for exc in BaseException.__subclasses__():
         if status == exc.status:
             return exc(*args, **kwargs)
