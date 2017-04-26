@@ -22,7 +22,7 @@ def new_exception(name, status, addbases=()):
     '''
 
     def __init__(self, *args, **kwargs):
-        BaseException.__init__(self, status, *args, **kwargs)
+        super(cls, self).__init__(status, *args, **kwargs)
 
     def __repr__(self):
         "x.__repr__() <==> repr(x)"
@@ -38,7 +38,8 @@ def new_exception(name, status, addbases=()):
         '__repr__' : __repr__,
     }
 
-    return type(name, (BaseException,) + addbases, di)
+    cls = type(name, (BaseException,) + addbases, di)
+    return cls
 
 def get_exception(status, *args, **kwargs):
     '''get_exception(status[, message])
