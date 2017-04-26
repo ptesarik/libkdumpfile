@@ -45,4 +45,8 @@ dist_noinst_DATA = \
 noinst_HEADERS = \
 	addrxlatmod.h
 
+TESTS = \
+	test_addrxlat.py
+LOG_COMPILER = $(PYTHON)
+
 SUBDIRS = kdumpfile
