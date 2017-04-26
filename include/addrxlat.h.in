@@ -282,18 +282,19 @@ addrxlat_pteval_shift(addrxlat_pte_format_t fmt)
 	}
 }
 
-/** Maximum address translation levels.
+/** Maximum number of bit fields in the source address.
  * This is a theoretical limit, with enough reserve for future enhancements.
- * Currently, IBM z/Architecture has up to 5 levels, but only 4 are used
- * by the Linux kernel. All other architectures have less paging levels.
+ * Currently, IBM z/Architecture has up to 5-level paging (i.e. up to 6 fields
+ * in the virtual address), but only 4 are used by the Linux kernel. All other
+ * architectures have less paging levels.
  */
-#define ADDRXLAT_MAXLEVELS	8
+#define ADDRXLAT_FIELDS_MAX	8
 
 typedef struct _addrxlat_paging_form {
 	/** Format of each page table entry. */
 	addrxlat_pte_format_t pte_format;
 
-	/** Number of fields in the source address.
+	/** Number of bit fields in the source address.
 	 * With hierarchical page tables, a virtual address is split
 	 * into multiple fields, e.g. on x86_64 there are up to 5 fields:
 	 *  - bits 47:39 = PML4 index
@@ -309,7 +310,7 @@ typedef struct _addrxlat_paging_form {
 	 * The first element is the number of bits for the page offset
 	 * (also known as page shift).
 	 */
-	unsigned short fieldsz[ADDRXLAT_MAXLEVELS];
+	unsigned short fieldsz[ADDRXLAT_FIELDS_MAX];
 } addrxlat_paging_form_t;
 
 /** Parameters of page table translation. */
@@ -989,9 +990,11 @@ struct _addrxlat_step {
 	/** Table indices at individual levels.
 	 *
 	 * There is one extra index, which contains the remaining part
-	 * of the virtual address after all page table bits were used.
+	 * of the virtual address after all address fields were used.
+	 * For example, on x86_64, only bits 47:0 are used for paging,
+	 * the value of the bit field at 63:48 is put into the extra index.
 	 */
-	addrxlat_addr_t idx[ADDRXLAT_MAXLEVELS + 1];
+	addrxlat_addr_t idx[ADDRXLAT_FIELDS_MAX + 1];
 };
 
 /** Make the first translation step (launch a translation).

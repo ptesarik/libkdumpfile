@@ -94,7 +94,7 @@ struct pgt_extra_def {
 	unsigned short vaddr_bits;
 
 	/** Paging masks, pre-computed from paging form. */
-	addrxlat_addr_t pgt_mask[ADDRXLAT_MAXLEVELS];
+	addrxlat_addr_t pgt_mask[ADDRXLAT_FIELDS_MAX];
 };
 
 /** Internal definition of the address translation method.

@@ -264,7 +264,7 @@ parse_pgt_fields(const char *spec, addrxlat_paging_form_t *pf)
 	int i;
 
 	p = spec;
-	for (i = 0; i < ADDRXLAT_MAXLEVELS; ++i) {
+	for (i = 0; i < ADDRXLAT_FIELDS_MAX; ++i) {
 		char *endp;
 		pf->fieldsz[i] = strtoul(p, &endp, 0);
 		if (endp == p) {
@@ -285,7 +285,7 @@ parse_pgt_fields(const char *spec, addrxlat_paging_form_t *pf)
 			++p;
 	}
 
-	if (i >= ADDRXLAT_MAXLEVELS) {
+	if (i >= ADDRXLAT_FIELDS_MAX) {
 		fprintf(stderr, "Too many paging levels: %s\n", spec);
 		return TEST_ERR;
 	}

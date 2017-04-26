@@ -2157,10 +2157,10 @@ pgtdesc_set_fields(PyObject *_self, PyObject *value, void *data)
 	}
 
 	n = PySequence_Length(value);
-	if (n > ADDRXLAT_MAXLEVELS) {
+	if (n > ADDRXLAT_FIELDS_MAX) {
 		PyErr_Format(PyExc_ValueError,
 			     "cannot have more than %d address fields",
-			     ADDRXLAT_MAXLEVELS);
+			     ADDRXLAT_FIELDS_MAX);
 		return -1;
 	}
 
@@ -2185,7 +2185,7 @@ pgtdesc_set_fields(PyObject *_self, PyObject *value, void *data)
 	self->desc.param.pgt.pf.nfields = i;
 	memcpy(self->desc.param.pgt.pf.fieldsz, pf.fieldsz,
 	       i * sizeof(pf.fieldsz[0]));
-	while (i < ADDRXLAT_MAXLEVELS)
+	while (i < ADDRXLAT_FIELDS_MAX)
 		self->desc.param.pgt.pf.fieldsz[i++] = 0;
 
 	return 0;
@@ -3767,11 +3767,11 @@ step_get_idx(PyObject *_self, void *data)
 	PyObject *result;
 	unsigned i;
 
-	result = PyTuple_New(ADDRXLAT_MAXLEVELS + 1);
+	result = PyTuple_New(ADDRXLAT_FIELDS_MAX + 1);
 	if (!result)
 		return NULL;
 
-	for (i = 0; i < ADDRXLAT_MAXLEVELS + 1; ++i) {
+	for (i = 0; i < ADDRXLAT_FIELDS_MAX + 1; ++i) {
 		PyObject *obj;
 		obj = PyLong_FromUnsignedLongLong(self->step.idx[i]);
 		if (!obj) {
@@ -3794,7 +3794,7 @@ static int
 step_set_idx(PyObject *_self, PyObject *value, void *data)
 {
 	step_object *self = (step_object*)_self;
-	addrxlat_addr_t idx[ADDRXLAT_MAXLEVELS + 1];
+	addrxlat_addr_t idx[ADDRXLAT_FIELDS_MAX + 1];
 	Py_ssize_t n;
 	unsigned i;
 
@@ -3809,10 +3809,10 @@ step_set_idx(PyObject *_self, PyObject *value, void *data)
 	}
 
 	n = PySequence_Length(value);
-	if (n > ADDRXLAT_MAXLEVELS + 1) {
+	if (n > ADDRXLAT_FIELDS_MAX + 1) {
 		PyErr_Format(PyExc_ValueError,
 			     "cannot have more than %d indices",
-			     ADDRXLAT_MAXLEVELS + 1);
+			     ADDRXLAT_FIELDS_MAX + 1);
 		return -1;
 	}
 
@@ -3829,7 +3829,7 @@ step_set_idx(PyObject *_self, PyObject *value, void *data)
 		idx[i] = tmp;
 	}
 	memcpy(self->step.idx, idx, n * sizeof(idx[0]));
-	while (i < ADDRXLAT_MAXLEVELS)
+	while (i < ADDRXLAT_FIELDS_MAX)
 		self->step.idx[i++] = 0;
 
 	return 0;
