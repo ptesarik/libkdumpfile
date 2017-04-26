@@ -2163,9 +2163,8 @@ pgtdesc_set_fields(PyObject *_self, PyObject *value, void *data)
 			     ADDRXLAT_MAXLEVELS);
 		return -1;
 	}
-	pf.nfields = n;
 
-	for (i = 0; i < pf.nfields; ++i) {
+	for (i = 0; i < n; ++i) {
 		long bits = 0;
 		PyObject *obj = PySequence_GetItem(value, i);
 
@@ -2182,9 +2181,12 @@ pgtdesc_set_fields(PyObject *_self, PyObject *value, void *data)
 		}
 		pf.fieldsz[i] = bits;
 	}
+
+	self->desc.param.pgt.pf.nfields = i;
+	memcpy(self->desc.param.pgt.pf.fieldsz, pf.fieldsz,
+	       i * sizeof(pf.fieldsz[0]));
 	while (i < ADDRXLAT_MAXLEVELS)
-		pf.fieldsz[i++] = 0;
-	self->desc.param.pgt.pf = pf;
+		self->desc.param.pgt.pf.fieldsz[i++] = 0;
 
 	return 0;
 }
