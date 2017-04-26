@@ -46,15 +46,15 @@ def new_exception(name, status, addbases=()):
     return type(name, (BaseException,) + addbases, di)
 
 def get_exception(status, *args, **kwargs):
-    '''get_exception([message])
+    '''get_exception(status[, message])
 
     Get an appropriate exception for the given status. If there is no
     specific exception, make an instance of BaseException.
     '''
     _check_kwargs(kwargs)
-    for exc in _exceptions:
-        if status == exc[1]:
-            return sys.modules[__name__].__dict__[exc[0]](*args, **kwargs)
+    for exc in BaseException.__subclasses__():
+        if status == exc.status:
+            return exc(*args, **kwargs)
     return BaseException(status, *args, **kwargs)
 
 for _exc in _exceptions:
@@ -62,4 +62,4 @@ for _exc in _exceptions:
     sys.modules[__name__].__dict__[_cls.__name__] = _cls
 
 # Free up temporary variables
-del _exc, _cls
+del _exc, _cls, _exceptions
