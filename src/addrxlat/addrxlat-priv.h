@@ -238,7 +238,7 @@ INTERNAL_DECL(addrxlat_status, parse_opts,
 /* Translation system */
 
 /** Data used during translation system initialization. */
-struct sys_init_data {
+struct os_init_data {
 	/** Target translation system. */
 	addrxlat_sys_t *sys;
 
@@ -256,7 +256,7 @@ struct sys_init_data {
  * @param ctl    Initialization data.
  * @returns      Error status.
  */
-typedef addrxlat_status sys_arch_fn(struct sys_init_data *ctl);
+typedef addrxlat_status sys_arch_fn(struct os_init_data *ctl);
 
 INTERNAL_DECL(sys_arch_fn, sys_ia32, );
 
@@ -285,17 +285,17 @@ struct sys_region {
 #define SYS_REGION_END	{ 0, 0, ADDRXLAT_SYS_METH_NUM }
 
 INTERNAL_DECL(addrxlat_status, sys_ensure_meth,
-	      (struct sys_init_data *ctl, addrxlat_sys_meth_t idx));
+	      (struct os_init_data *ctl, addrxlat_sys_meth_t idx));
 
 INTERNAL_DECL(addrxlat_status, sys_set_layout,
-	      (struct sys_init_data *ctl, addrxlat_sys_map_t idx,
+	      (struct os_init_data *ctl, addrxlat_sys_map_t idx,
 	       const struct sys_region layout[]));
 
 INTERNAL_DECL(addrxlat_status, sys_set_physmaps,
-	      (struct sys_init_data *ctl, addrxlat_addr_t maxaddr));
+	      (struct os_init_data *ctl, addrxlat_addr_t maxaddr));
 
 INTERNAL_DECL(addrxlat_status, sys_sym_pgtroot,
-	      (struct sys_init_data *ctl, const char *reg, const char *sym));
+	      (struct os_init_data *ctl, const char *reg, const char *sym));
 
 /* internal aliases */
 

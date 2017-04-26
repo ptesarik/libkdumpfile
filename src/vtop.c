@@ -276,8 +276,8 @@ vtop_init(kdump_ctx_t *ctx)
 
 	rwlock_unlock(&ctx->shared->lock);
 
-	axres = addrxlat_sys_init(ctx->shared->xlatsys,
-				  ctx->xlatctx, &osdesc);
+	axres = addrxlat_sys_os_init(ctx->shared->xlatsys,
+				     ctx->xlatctx, &osdesc);
 	if (osdesc.opts)
 		free((void*)osdesc.opts);
 

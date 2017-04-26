@@ -479,7 +479,7 @@ os_map(void)
 		return TEST_ERR;
 	}
 
-	status = addrxlat_sys_init(data.sys, data.ctx, &desc);
+	status = addrxlat_sys_os_init(data.sys, data.ctx, &desc);
 	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "OS map failed: %s\n",
 			addrxlat_ctx_get_err(data.ctx));

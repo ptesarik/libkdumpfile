@@ -122,7 +122,7 @@ pgt_s390x(addrxlat_step_t *step)
  * @returns          Error status.
  */
 static addrxlat_status
-get_pgtroot(struct sys_init_data *ctl, addrxlat_fulladdr_t *root)
+get_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 {
 	addrxlat_status status;
 
@@ -149,7 +149,7 @@ get_pgtroot(struct sys_init_data *ctl, addrxlat_fulladdr_t *root)
  * @returns    Error status.
  */
 static addrxlat_status
-determine_pgttype(struct sys_init_data *ctl)
+determine_pgttype(struct os_init_data *ctl)
 {
 	addrxlat_step_t step =	/* step state surrogate */
 		{ .ctx = ctl->ctx, .sys = ctl->sys };
@@ -201,7 +201,7 @@ determine_pgttype(struct sys_init_data *ctl)
  * @returns    Error status.
  */
 addrxlat_status
-sys_s390x(struct sys_init_data *ctl)
+sys_s390x(struct os_init_data *ctl)
 {
 	addrxlat_map_t *newmap;
 	addrxlat_range_t range;

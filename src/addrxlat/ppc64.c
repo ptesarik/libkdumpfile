@@ -259,7 +259,7 @@ static const struct sys_region linux_layout[] = {
  * @returns    Error status.
  */
 static addrxlat_status
-get_vmemmap_desc(struct sys_init_data *ctl, addrxlat_desc_t *desc)
+get_vmemmap_desc(struct os_init_data *ctl, addrxlat_desc_t *desc)
 {
 	addrxlat_step_t step =	/* step state surrogate */
 		{ .ctx = ctl->ctx, .sys = ctl->sys };
@@ -342,7 +342,7 @@ get_vmemmap_desc(struct sys_init_data *ctl, addrxlat_desc_t *desc)
  * @returns       Error status.
  */
 static addrxlat_status
-map_linux_ppc64(struct sys_init_data *ctl)
+map_linux_ppc64(struct os_init_data *ctl)
 {
 	static const addrxlat_paging_form_t ppc64_pf_64k = {
 		.pte_format = ADDRXLAT_PTE_PPC64_LINUX_RPN30,
@@ -408,7 +408,7 @@ map_linux_ppc64(struct sys_init_data *ctl)
  * @returns    Error status.
  */
 addrxlat_status
-sys_ppc64(struct sys_init_data *ctl)
+sys_ppc64(struct os_init_data *ctl)
 {
 	switch (ctl->osdesc->type) {
 	case ADDRXLAT_OS_LINUX:

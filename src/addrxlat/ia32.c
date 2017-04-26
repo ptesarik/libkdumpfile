@@ -174,7 +174,7 @@ static const addrxlat_paging_form_t ia32_pf_pae = {
  * On successful return, this function sets @c OPT_pae accordingly.
  */
 static addrxlat_status
-check_pae(struct sys_init_data *ctl, const addrxlat_fulladdr_t *root,
+check_pae(struct os_init_data *ctl, const addrxlat_fulladdr_t *root,
 	  addrxlat_addr_t direct)
 {
 	addrxlat_step_t step;
@@ -242,7 +242,7 @@ check_pae(struct sys_init_data *ctl, const addrxlat_fulladdr_t *root,
  * @returns    PAE status, see @ref check_pae.
  */
 static addrxlat_status
-check_pae_sym(struct sys_init_data *ctl)
+check_pae_sym(struct os_init_data *ctl)
 {
 	addrxlat_fulladdr_t rootpgt;
 	addrxlat_status status;
@@ -264,7 +264,7 @@ check_pae_sym(struct sys_init_data *ctl)
  * @returns    Error status.
  */
 static addrxlat_status
-sys_ia32_nonpae(struct sys_init_data *ctl)
+sys_ia32_nonpae(struct os_init_data *ctl)
 {
 	addrxlat_meth_t *meth;
 	addrxlat_desc_t desc;
@@ -291,7 +291,7 @@ sys_ia32_nonpae(struct sys_init_data *ctl)
  * @returns    Error status.
  */
 static addrxlat_status
-sys_ia32_pae(struct sys_init_data *ctl)
+sys_ia32_pae(struct os_init_data *ctl)
 {
 	addrxlat_meth_t *meth;
 	addrxlat_desc_t desc;
@@ -319,7 +319,7 @@ sys_ia32_pae(struct sys_init_data *ctl)
  * @returns     Error status.
  */
 static addrxlat_status
-try_vmap_area_list(struct sys_init_data *ctl, addrxlat_addr_t *addr)
+try_vmap_area_list(struct os_init_data *ctl, addrxlat_addr_t *addr)
 {
 	addrxlat_fulladdr_t vmap_area_list;
 	addrxlat_addr_t va_start, va_list, list_next;
@@ -369,7 +369,7 @@ try_vmap_area_list(struct sys_init_data *ctl, addrxlat_addr_t *addr)
  * @returns     Error status.
  */
 static addrxlat_status
-try_vmlist(struct sys_init_data *ctl, addrxlat_addr_t *addr)
+try_vmlist(struct os_init_data *ctl, addrxlat_addr_t *addr)
 {
 	addrxlat_fulladdr_t vmlist;
 	addrxlat_addr_t vm_addr;
@@ -408,7 +408,7 @@ try_vmlist(struct sys_init_data *ctl, addrxlat_addr_t *addr)
  * @returns     Error status.
  */
 static addrxlat_status
-set_linux_directmap(struct sys_init_data *ctl, addrxlat_map_t *vtop)
+set_linux_directmap(struct os_init_data *ctl, addrxlat_map_t *vtop)
 {
 	addrxlat_addr_t vmalloc_start;
 	addrxlat_range_t range;
@@ -461,7 +461,7 @@ static const struct sys_region linux_directmap[] = {
  * @returns    Error status.
  */
 addrxlat_status
-sys_ia32(struct sys_init_data *ctl)
+sys_ia32(struct os_init_data *ctl)
 {
 	addrxlat_range_t range;
 	addrxlat_map_t *newmap;

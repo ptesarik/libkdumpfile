@@ -372,7 +372,7 @@ set_pgt_fallback(addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
  * @param region  Associated region definition.
  */
 static addrxlat_status
-linux_ktext_meth(struct sys_init_data *ctl)
+linux_ktext_meth(struct os_init_data *ctl)
 {
 	addrxlat_status status;
 
@@ -405,7 +405,7 @@ linux_ktext_meth(struct sys_init_data *ctl)
  * @returns    Error status.
  */
 static addrxlat_status
-linux_ktext_map(struct sys_init_data *ctl)
+linux_ktext_map(struct os_init_data *ctl)
 {
 	addrxlat_range_t range;
 	addrxlat_status status;
@@ -438,7 +438,7 @@ linux_ktext_map(struct sys_init_data *ctl)
  * @returns    Error status.
  */
 static addrxlat_status
-set_xen_mach2phys(struct sys_init_data *ctl, addrxlat_addr_t m2p)
+set_xen_mach2phys(struct os_init_data *ctl, addrxlat_addr_t m2p)
 {
 	addrxlat_meth_t *meth;
 	addrxlat_desc_t desc;
@@ -459,7 +459,7 @@ set_xen_mach2phys(struct sys_init_data *ctl, addrxlat_addr_t m2p)
  * @returns    Error status.
  */
 static addrxlat_status
-set_xen_p2m(struct sys_init_data *ctl)
+set_xen_p2m(struct os_init_data *ctl)
 {
 	static const addrxlat_paging_form_t xen_p2m_pf = {
 		.pte_format = ADDRXLAT_PTE_PFN64,
@@ -503,7 +503,7 @@ set_xen_p2m(struct sys_init_data *ctl)
  * @returns    Error status.
  */
 static addrxlat_status
-map_linux_x86_64(struct sys_init_data *ctl)
+map_linux_x86_64(struct os_init_data *ctl)
 {
 	const struct sys_region *layout;
 	addrxlat_status status;
@@ -580,7 +580,7 @@ map_linux_x86_64(struct sys_init_data *ctl)
  * @returns      Non-zero if the address maps to a 2M page.
  */
 static int
-is_xen_ktext(struct sys_init_data *ctl, addrxlat_addr_t addr)
+is_xen_ktext(struct os_init_data *ctl, addrxlat_addr_t addr)
 {
 	addrxlat_step_t step;
 	addrxlat_status status;
@@ -605,7 +605,7 @@ is_xen_ktext(struct sys_init_data *ctl, addrxlat_addr_t addr)
  * @returns    Error status.
  */
 static addrxlat_status
-setup_xen_pgt(struct sys_init_data *ctl)
+setup_xen_pgt(struct os_init_data *ctl)
 {
 	struct sys_region layout[2];
 	addrxlat_meth_t *meth;
@@ -652,7 +652,7 @@ setup_xen_pgt(struct sys_init_data *ctl)
  * @returns    Error status.
  */
 static addrxlat_status
-map_xen_x86_64(struct sys_init_data *ctl)
+map_xen_x86_64(struct os_init_data *ctl)
 {
 	struct sys_region layout[4];
 	addrxlat_status status;
@@ -743,7 +743,7 @@ static const struct sys_region layout_generic[] = {
  * @returns    Error status.
  */
 addrxlat_status
-sys_x86_64(struct sys_init_data *ctl)
+sys_x86_64(struct os_init_data *ctl)
 {
 	static const addrxlat_paging_form_t x86_64_pf = {
 		.pte_format = ADDRXLAT_PTE_X86_64,

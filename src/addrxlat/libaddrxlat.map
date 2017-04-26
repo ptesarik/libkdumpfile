@@ -29,7 +29,7 @@ LIBADDRXLAT_0 {
     addrxlat_sys_new;
     addrxlat_sys_incref;
     addrxlat_sys_decref;
-    addrxlat_sys_init;
+    addrxlat_sys_os_init;
     addrxlat_sys_set_map;
     addrxlat_sys_get_map;
     addrxlat_sys_set_meth;

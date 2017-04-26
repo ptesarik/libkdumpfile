@@ -820,7 +820,7 @@ unsigned long addrxlat_sys_decref(addrxlat_sys_t *sys);
  * determine the translation map and page-table translation for an
  * operating system.
  */
-addrxlat_status addrxlat_sys_init(
+addrxlat_status addrxlat_sys_os_init(
 	addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	const addrxlat_osdesc_t *osdesc);
 

@@ -85,10 +85,10 @@ addrxlat_sys_decref(addrxlat_sys_t *sys)
 }
 
 addrxlat_status
-addrxlat_sys_init(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
-		  const addrxlat_osdesc_t *osdesc)
+addrxlat_sys_os_init(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
+		     const addrxlat_osdesc_t *osdesc)
 {
-	struct sys_init_data ctl;
+	struct os_init_data ctl;
 	sys_arch_fn *arch_fn;
 	addrxlat_status status;
 
@@ -166,7 +166,7 @@ addrxlat_sys_get_meth(const addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
  * @returns    Error status.
  */
 addrxlat_status
-sys_ensure_meth(struct sys_init_data *ctl, addrxlat_sys_meth_t idx)
+sys_ensure_meth(struct os_init_data *ctl, addrxlat_sys_meth_t idx)
 {
 	if (ctl->sys->meth[idx])
 		return ADDRXLAT_OK;
@@ -188,7 +188,7 @@ sys_ensure_meth(struct sys_init_data *ctl, addrxlat_sys_meth_t idx)
  * maps the current region to kernel physical addresses starting at 0.
  */
 static addrxlat_status
-act_direct(struct sys_init_data *ctl,
+act_direct(struct os_init_data *ctl,
 	   addrxlat_meth_t *meth, const struct sys_region *region)
 {
 	struct sys_region layout[2] = {
@@ -257,7 +257,7 @@ act_ident_machphys(addrxlat_meth_t *meth)
  * @returns       Error status.
  */
 addrxlat_status
-sys_set_layout(struct sys_init_data *ctl, addrxlat_sys_map_t idx,
+sys_set_layout(struct os_init_data *ctl, addrxlat_sys_map_t idx,
 	       const struct sys_region layout[])
 {
 	const struct sys_region *region;
@@ -321,7 +321,7 @@ sys_set_layout(struct sys_init_data *ctl, addrxlat_sys_map_t idx,
  * @returns       Error status.
  */
 addrxlat_status
-sys_set_physmaps(struct sys_init_data *ctl, addrxlat_addr_t maxaddr)
+sys_set_physmaps(struct os_init_data *ctl, addrxlat_addr_t maxaddr)
 {
 	struct sys_region layout[2];
 	addrxlat_status status;
@@ -348,7 +348,7 @@ sys_set_physmaps(struct sys_init_data *ctl, addrxlat_addr_t maxaddr)
  * @returns    Error status.
  */
 addrxlat_status
-sys_sym_pgtroot(struct sys_init_data *ctl, const char *reg, const char *sym)
+sys_sym_pgtroot(struct os_init_data *ctl, const char *reg, const char *sym)
 {
 	addrxlat_meth_t *meth;
 	addrxlat_addr_t addr;

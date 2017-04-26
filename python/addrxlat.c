@@ -1154,7 +1154,7 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 }
 
 static int
-ctx__init(PyObject *self, PyObject *args, PyObject *kwargs)
+ctx_init(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	return c_pointer_super_init(&ctx_type, self, args, kwargs);
 }
@@ -1541,7 +1541,7 @@ static PyTypeObject ctx_type =
 	0,				/* tp_descr_get */
 	0,				/* tp_descr_set */
 	0,				/* tp_dictoffset */
-	ctx__init,			/* tp_init */
+	ctx_init,			/* tp_init */
 	0,				/* tp_alloc */
 	ctx_new,			/* tp_new */
 };
@@ -2623,7 +2623,7 @@ meth_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 }
 
 static int
-meth__init(PyObject *self, PyObject *args, PyObject *kwargs)
+meth_init(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	return c_pointer_super_init(&meth_type, self, args, kwargs);
 }
@@ -2763,7 +2763,7 @@ static PyTypeObject meth_type =
 	0,				/* tp_descr_get */
 	0,				/* tp_descr_set */
 	0,				/* tp_dictoffset */
-	meth__init,			/* tp_init */
+	meth_init,			/* tp_init */
 	0,				/* tp_alloc */
 	meth_new,			/* tp_new */
 };
@@ -2931,7 +2931,7 @@ map_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 }
 
 static int
-map__init(PyObject *self, PyObject *args, PyObject *kwargs)
+map_init(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	return c_pointer_super_init(&map_type, self, args, kwargs);
 }
@@ -3157,7 +3157,7 @@ static PyTypeObject map_type =
 	0,				/* tp_descr_get */
 	0,				/* tp_descr_set */
 	0,				/* tp_dictoffset */
-	map__init,			/* tp_init */
+	map_init,			/* tp_init */
 	0,				/* tp_alloc */
 	map_new,			/* tp_new */
 };
@@ -3204,7 +3204,7 @@ sys_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 }
 
 static int
-sys__init(PyObject *self, PyObject *args, PyObject *kwargs)
+sys_init(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	return c_pointer_super_init(&sys_type, self, args, kwargs);
 }
@@ -3252,13 +3252,13 @@ sys_richcompare(PyObject *v, PyObject *w, int op)
 	return result;
 }
 
-PyDoc_STRVAR(sys_init__doc__,
-"SYS.init(ctx, arch[, type[, ver[, opts]]]) -> status\n\
+PyDoc_STRVAR(sys_os_init__doc__,
+"SYS.os_init(ctx, arch[, type[, ver[, opts]]]) -> status\n\
 \n\
 Set up a translation system for a pre-defined operating system.");
 
 static PyObject *
-sys_init(PyObject *_self, PyObject *args, PyObject *kwargs)
+sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 {
 	sys_object *self = (sys_object*)_self;
 	static char *keywords[] = {
@@ -3284,7 +3284,7 @@ sys_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 		return NULL;
 
 	osdesc.type = type;
-	status = addrxlat_sys_init(self->sys, ctx, &osdesc);
+	status = addrxlat_sys_os_init(self->sys, ctx, &osdesc);
 	return ctx_status_result(ctxobj, status);
 }
 
@@ -3416,8 +3416,8 @@ sys_get_meth(PyObject *_self, PyObject *args, PyObject *kwargs)
 }
 
 static PyMethodDef sys_methods[] = {
-	{ "init", (PyCFunction)sys_init, METH_VARARGS | METH_KEYWORDS,
-	  sys_init__doc__ },
+	{ "os_init", (PyCFunction)sys_os_init, METH_VARARGS | METH_KEYWORDS,
+	  sys_os_init__doc__ },
 	{ "set_map", (PyCFunction)sys_set_map, METH_VARARGS | METH_KEYWORDS,
 	  sys_set_map__doc__ },
 	{ "get_map", (PyCFunction)sys_get_map, METH_VARARGS | METH_KEYWORDS,
@@ -3474,7 +3474,7 @@ static PyTypeObject sys_type =
 	0,				/* tp_descr_get */
 	0,				/* tp_descr_set */
 	0,				/* tp_dictoffset */
-	sys__init,			/* tp_init */
+	sys_init,			/* tp_init */
 	0,				/* tp_alloc */
 	sys_new,			/* tp_new */
 };
