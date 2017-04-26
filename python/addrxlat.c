@@ -5442,6 +5442,9 @@ init_addrxlat (void)
 	CONSTDEF(PTE_S390X);
 	CONSTDEF(PTE_PPC64_LINUX_RPN30);
 
+	/* Other paging form constants */
+	CONSTDEF(FIELDS_MAX);
+
 	/* OS types */
 	CONSTDEF(OS_UNKNOWN);
 	CONSTDEF(OS_LINUX);

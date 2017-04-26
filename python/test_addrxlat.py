@@ -187,6 +187,9 @@ class TestDescription(unittest.TestCase):
         self.assertEqual(desc.fields, (4, 5, 6))
         with self.assertRaisesRegexp(TypeError, 'not a sequence'):
             desc.fields = None
+        with self.assertRaisesRegexp(ValueError,
+                                     'more than [0-9]+ address fields'):
+            desc.fields = (0,) * (addrxlat.FIELDS_MAX + 1)
 
     def test_lookup_defaults(self):
         desc = addrxlat.LookupDescription()
