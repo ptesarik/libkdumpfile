@@ -3967,11 +3967,16 @@ static PyGetSetDef step_getset[] = {
 PyDoc_STRVAR(step_remain__doc__,
 "remaining steps");
 
+PyDoc_STRVAR(step_elemsz__doc__,
+"size of the indexed element");
+
 static PyMemberDef step_members[] = {
 	{ "convert", T_OBJECT, offsetof(step_object, convert), 0,
 	  attr_convert__doc__ },
 	{ "remain", T_USHORT, offsetof(step_object, step.remain),
 	  0, step_remain__doc__ },
+	{ "elemsz", T_UINT, offsetof(step_object, step.elemsz),
+	  0, step_elemsz__doc__ },
 	{ NULL }
 };
 
