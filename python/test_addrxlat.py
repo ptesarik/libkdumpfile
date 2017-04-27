@@ -687,5 +687,19 @@ class TestTranslation(unittest.TestCase):
         addr.conv(addrxlat.KVADDR, self.ctx, self.sys)
         self.assertEqual(addr, addrxlat.FullAddress(addrxlat.KVADDR, 0x1345))
 
+    def test_op_direct(self):
+        "Operator using directmap"
+        class hexop(addrxlat.Operator):
+            def __init__(self, prefix='', *args, **kwargs):
+                super(hexop, self).__init__(*args, **kwargs)
+                self.prefix = prefix
+
+            def callback(self, addr):
+                return '{}{:x}'.format(self.prefix, addr.addr)
+
+        myop = hexop(ctx=self.ctx, sys=self.sys, caps=addrxlat.CAPS(addrxlat.KPHYSADDR), prefix='0x')
+        result = myop(addrxlat.FullAddress(addrxlat.KVADDR, 0xabc))
+        self.assertEqual(result, '0x1abc')
+
 if __name__ == '__main__':
     unittest.main()
