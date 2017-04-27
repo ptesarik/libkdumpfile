@@ -140,6 +140,28 @@ Number_AsUnsignedLongLong(PyObject *num)
 	return -1LL;
 }
 
+/** Convert a PyLong or PyInt to a C unsigned long long with no overflow.
+ * @param num  a @c PyLong or @c PyInt object
+ * @returns    numeric value of @c num or -1
+ *
+ * Since all possible return values error are valid, error conditions
+ * must be detected by calling @c PyErr_Occurred.
+ */
+static unsigned long long
+Number_AsUnsignedLongLongMask(PyObject *num)
+{
+	if (PyLong_Check(num))
+		return PyLong_AsUnsignedLongLongMask(num);
+#if PY_MAJOR_VERSION < 3
+	else if (PyInt_Check(num))
+		return PyInt_AsLong(num);
+#endif
+
+	PyErr_Format(PyExc_TypeError, "'%.200s' object is not an integer",
+		     Py_TYPE(num)->tp_name);
+	return -1LL;
+}
+
 /** Convert a Python sequence of integers to a memory buffer.
  * @param seq     a Python sequence
  * @param buffer  buffer for the result
@@ -349,7 +371,7 @@ set_off(PyObject *self, PyObject *value, void *data)
 {
 	Py_ssize_t off = (intptr_t)data;
 	addrxlat_off_t *paddr = (addrxlat_off_t*)((char*)self + off);
-	unsigned long long addr = Number_AsUnsignedLongLong(value);
+	unsigned long long addr = Number_AsUnsignedLongLongMask(value);
 
 	if (PyErr_Occurred())
 		return -1;

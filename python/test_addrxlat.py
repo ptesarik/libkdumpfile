@@ -125,10 +125,16 @@ class TestDescription(unittest.TestCase):
         self.assertEqual(desc.off, 0)
 
     def test_linear_off(self):
-        desc = addrxlat.LinearDescription(off=0x1234)
+        desc = addrxlat.LinearDescription(off=addrxlat.ADDR_MAX - 0x1234)
         self.assertEqual(desc.kind, addrxlat.LINEAR)
         self.assertEqual(desc.target_as, addrxlat.NOADDR)
-        self.assertEqual(desc.off, 0x1234)
+        self.assertEqual(desc.off, addrxlat.ADDR_MAX - 0x1234)
+
+    def test_linear_neg_off(self):
+        desc = addrxlat.LinearDescription(off=-addrxlat.ADDR_MAX)
+        self.assertEqual(desc.kind, addrxlat.LINEAR)
+        self.assertEqual(desc.target_as, addrxlat.NOADDR)
+        self.assertEqual(desc.off, 1)
 
     def test_linear_param(self):
         desc = addrxlat.LinearDescription(off=0x1234)
