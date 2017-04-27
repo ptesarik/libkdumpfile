@@ -987,6 +987,7 @@ cb_sym(void *_self, addrxlat_sym_t *sym)
 	PyObject *obj;
 	PyObject *result;
 	int argc, i;
+	unsigned long long tmpval;
 
 	if (!self->cb_sym || self->cb_sym == Py_None)
 		return cb_null(self);
@@ -1017,20 +1018,12 @@ cb_sym(void *_self, addrxlat_sym_t *sym)
 	if (!result)
 		goto err;
 
-	if (PyLong_Check(result))
-		sym->val = PyLong_AsUnsignedLongLong(result);
-#if PY_MAJOR_VERSION < 3
-	else if (PyInt_Check(result))
-		sym->val = PyInt_AsLong(result);
-#endif
-	else
-		PyErr_Format(PyExc_TypeError,
-			     "need an integer as return value, not '%.200s'",
-			     Py_TYPE(result)->tp_name);
-
+	tmpval = Number_AsUnsignedLongLong(result);
+	Py_DECREF(result);
 	if (PyErr_Occurred())
 		goto err;
 
+	sym->val = tmpval;
 	return ADDRXLAT_OK;
 
  err_args:
@@ -1054,7 +1047,7 @@ cb_read32(void *_self, const addrxlat_fulladdr_t *addr, uint32_t *val)
 	if (!result)
 		return ctx_error_status(self);
 
-	tmpval = PyLong_AsUnsignedLongLong(result);
+	tmpval = Number_AsUnsignedLongLong(result);
 	Py_DECREF(result);
 	if (PyErr_Occurred())
 		return ctx_error_status(self);
@@ -1078,7 +1071,7 @@ cb_read64(void *_self, const addrxlat_fulladdr_t *addr, uint64_t *val)
 	if (!result)
 		return ctx_error_status(self);
 
-	tmpval = PyLong_AsUnsignedLongLong(result);
+	tmpval = Number_AsUnsignedLongLong(result);
 	Py_DECREF(result);
 	if (PyErr_Occurred())
 		return ctx_error_status(self);
