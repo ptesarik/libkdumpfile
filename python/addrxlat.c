@@ -228,22 +228,93 @@ check_null_attr(PyObject *obj, const char *name)
 	return -1;
 }
 
-/** Get the n-th argument in the list.
- * @param fname  function name (used in exception message)
- * @param args   positional arguments
- * @param n      parameter index (zero-based)
- * @returns      n-th argument, or @c NULL on failure
+/** Fetch positional and keyword arguments.
+ * @param kwds     NULL-terminated array of recognized keywords
+ * @param min      minimum required number of arguments
+ * @param pargs    positional arguments
+ * @param pkwargs  keyword arguments
+ * @returns        zero on success, -1 otherwise
+ *
+ * Fetch all arguments listed in @c kwds and put them into variables
+ * passed as variadic. The variables referenced by @c pargs and
+ * @c pkwargs are updated to hold a tuple and dictionary with unprocessed
+ * arguments.
+ *
+ * On failure, the variables referenced by @c pargs and @c pkwargs are not
+ * touched, but the values of argument variables (variadic) are undefined.
  */
-static PyObject *
-nth_arg(const char *fname, PyObject *args, Py_ssize_t n)
+static int
+fetch_args(const char *kwds[], Py_ssize_t min,
+	   PyObject **pargs, PyObject **pkwargs, ...)
 {
-	Py_ssize_t sz = PyTuple_GET_SIZE(args);
-	if (sz <= n) {
-		PyErr_Format(PyExc_TypeError, "%.200s() takes at least %ld argument%s (%ld given)",
-			     fname, (long) n + 1, n ? "s" : "", (long) sz);
-		return NULL;
+	const char **kw;
+	PyObject *args, *kwargs;
+	PyObject **argvar;
+	Py_ssize_t argc, n;
+	va_list ap;
+
+	args = *pargs;
+	if (*pkwargs) {
+		kwargs = PyDict_Copy(*pkwargs);
+		if (!kwargs)
+			return -1;
+	} else
+		kwargs = NULL;
+
+	va_start(ap, pkwargs);
+	argc = PyTuple_GET_SIZE(args);
+	for (n = 0, kw = kwds; n < argc; ++n, ++kw) {
+		if (!*kw)
+			break;
+		argvar = va_arg(ap, PyObject **);
+		*argvar = PyTuple_GET_ITEM(args, n);
 	}
-	return PyTuple_GET_ITEM(args, n);
+	min -= n;
+
+	if (kwargs) {
+		const char **kw2;
+		for (kw2 = kwds; kw2 < kw; ++kw2) {
+			if (PyDict_GetItemString(kwargs, *kw2)) {
+				/* arg present in tuple and in dict */
+				PyErr_Format(PyExc_TypeError,
+					     "Argument given by name ('%s') "
+					     "and position (%zd)",
+					     *kw2, kw2 - kwds);
+				goto err;
+			}
+			PyErr_Clear();
+		}
+	}
+
+	for ( ; *kw; ++kw, --min) {
+		argvar = va_arg(ap, PyObject **);
+		if (kwargs) {
+			*argvar = PyDict_GetItemString(kwargs, *kw);
+			if (*argvar)
+				PyDict_DelItemString(kwargs, *kw);
+		} else
+			*argvar = NULL;
+
+		if (!*argvar && min > 0) {
+			PyErr_Format(PyExc_TypeError,
+				     "Required argument '%s' missing", *kw);
+			goto err;
+		}
+	}
+	va_end(ap);
+
+	args = PyTuple_GetSlice(args, n, argc);
+	if (!args)
+		goto err;
+
+	*pargs = args;
+	*pkwargs = kwargs;
+	return 0;
+
+err:
+	Py_XDECREF(kwargs);
+	va_end(ap);
+	return -1;
 }
 
 /** Call a method by name
@@ -1699,13 +1770,15 @@ of a specific translation kind.");
 static PyObject *
 desc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
+	static const char *keywords[] = {"kind", NULL};
 	desc_object *self;
 	PyObject *value;
 	long kind;
 
-	value = nth_arg("Description", args, 0);
-	if (!value)
+	if (fetch_args(keywords, 1, &args, &kwargs, &value))
 		return NULL;
+	Py_DECREF(args);
+	Py_XDECREF(kwargs);
 	kind = Number_AsLong(value);
 	if (PyErr_Occurred())
 		return NULL;
@@ -3542,10 +3615,14 @@ PyDoc_STRVAR(step__doc__,
 static PyObject *
 step_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
+	static const char *keywords[] = {"ctx", NULL};
 	step_object *self;
 	PyObject *ctxobj;
 
-	ctxobj = nth_arg("Step", args, 0);
+	if (fetch_args(keywords, 1, &args, &kwargs, &ctxobj))
+		return NULL;
+	Py_DECREF(args);
+	Py_XDECREF(kwargs);
 	if (!ctxobj)
 		return NULL;
 
@@ -4108,10 +4185,14 @@ Base class for generic addrxlat operations.");
 static PyObject *
 op_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
+	static const char *keywords[] = {"ctx", NULL};
 	op_object *self;
 	PyObject *ctxobj;
 
-	ctxobj = nth_arg("Operator", args, 0);
+	if (fetch_args(keywords, 1, &args, &kwargs, &ctxobj))
+		return NULL;
+	Py_DECREF(args);
+	Py_XDECREF(kwargs);
 	if (!ctxobj)
 		return NULL;
 
