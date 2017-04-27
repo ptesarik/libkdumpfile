@@ -1001,6 +1001,17 @@ cb_null(ctx_object *self)
 				"NULL callback");
 }
 
+/** Callback function return on None return.
+ * @param self  Python Context object
+ * @returns     Always ADDRXLAT_ERR_NODATA
+ */
+static addrxlat_status
+cb_none(ctx_object *self)
+{
+	return addrxlat_ctx_err(self->ctx, ADDRXLAT_ERR_NODATA,
+				"Callback returned None");
+}
+
 static addrxlat_status
 cb_sym(void *_self, addrxlat_sym_t *sym)
 {
@@ -1039,6 +1050,10 @@ cb_sym(void *_self, addrxlat_sym_t *sym)
 	Py_DECREF(args);
 	if (!result)
 		goto err;
+	if (result == Py_None) {
+		Py_DECREF(result);
+		return cb_none(self);
+	}
 
 	tmpval = Number_AsUnsignedLongLong(result);
 	Py_DECREF(result);
@@ -1068,6 +1083,10 @@ cb_read32(void *_self, const addrxlat_fulladdr_t *addr, uint32_t *val)
 	Py_DECREF(addrobj);
 	if (!result)
 		return ctx_error_status(self);
+	if (result == Py_None) {
+		Py_DECREF(result);
+		return cb_none(self);
+	}
 
 	tmpval = Number_AsUnsignedLongLong(result);
 	Py_DECREF(result);
@@ -1092,6 +1111,10 @@ cb_read64(void *_self, const addrxlat_fulladdr_t *addr, uint64_t *val)
 	Py_DECREF(addrobj);
 	if (!result)
 		return ctx_error_status(self);
+	if (result == Py_None) {
+		Py_DECREF(result);
+		return cb_none(self);
+	}
 
 	tmpval = Number_AsUnsignedLongLong(result);
 	Py_DECREF(result);
