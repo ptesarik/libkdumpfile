@@ -384,13 +384,148 @@ class TestMap(unittest.TestCase):
         self.assertIs(map2[1].meth, None)
 
 class TestSystem(unittest.TestCase):
-    "TODO"
+    def test_sys_defaults(self):
+        sys = addrxlat.System()
+        for i in xrange(addrxlat.SYS_MAP_NUM):
+            map = sys.get_map(i)
+            self.assertIs(map, None)
+        for i in xrange(addrxlat.SYS_METH_NUM):
+            meth = sys.get_meth(i)
+            self.assertIs(meth, None)
+
+    def test_sys_map(self):
+        sys = addrxlat.System()
+        newmap = addrxlat.Map()
+        for mapidx in xrange(addrxlat.SYS_MAP_NUM):
+            sys.set_map(mapidx, newmap)
+            for i in xrange(mapidx + 1):
+                map = sys.get_map(i)
+                self.assertEqual(map, newmap)
+            for i in xrange(mapidx + 1, addrxlat.SYS_MAP_NUM):
+                map = sys.get_map(i)
+                self.assertIs(map, None)
+        for i in xrange(addrxlat.SYS_METH_NUM):
+            meth = sys.get_meth(i)
+            self.assertIs(meth, None)
+
+    def test_sys_meth(self):
+        sys = addrxlat.System()
+        newmeth = addrxlat.Method()
+        for i in xrange(addrxlat.SYS_MAP_NUM):
+            map = sys.get_map(i)
+            self.assertIs(map, None)
+        for methidx in xrange(addrxlat.SYS_METH_NUM):
+            sys.set_meth(methidx, newmeth)
+            for i in xrange(methidx):
+                meth = sys.get_meth(i)
+                self.assertEqual(meth, newmeth)
+            for i in xrange(methidx + 1, addrxlat.SYS_METH_NUM):
+                meth = sys.get_meth(i)
+                self.assertIs(meth, None)
 
 class TestStep(unittest.TestCase):
-    "TODO"
+    def setUp(self):
+        self.ctx = addrxlat.Context()
+
+    def test_step_defaults(self):
+        step = addrxlat.Step(self.ctx)
+        self.assertIs(step.ctx, self.ctx)
+        self.assertIs(step.sys, None)
+        self.assertIs(step.meth, None)
+        self.assertEqual(step.base, 0)
+        self.assertIs(step.raw, None)
+        idx = (0,) * (addrxlat.FIELDS_MAX + 1)
+        self.assertEqual(step.idx, idx)
+
+    def test_step_sys(self):
+        sys = addrxlat.System()
+        step = addrxlat.Step(self.ctx, sys=sys)
+        self.assertIs(step.ctx, self.ctx)
+        self.assertEqual(step.sys, sys)
+        self.assertIs(step.meth, None)
+        self.assertEqual(step.base, 0)
+        self.assertIs(step.raw, None)
+        idx = (0,) * (addrxlat.FIELDS_MAX + 1)
+        self.assertEqual(step.idx, idx)
+
+    def test_step_meth(self):
+        meth = addrxlat.Method()
+        step = addrxlat.Step(self.ctx, meth=meth)
+        self.assertIs(step.ctx, self.ctx)
+        self.assertIs(step.sys, None)
+        self.assertEqual(step.meth, meth)
+        self.assertEqual(step.base, 0)
+        self.assertIs(step.raw, None)
+        idx = (0,) * (addrxlat.FIELDS_MAX + 1)
+        self.assertEqual(step.idx, idx)
+
+    def test_step_base(self):
+        step = addrxlat.Step(self.ctx)
+        step.base = 0xabcd
+        self.assertIs(step.ctx, self.ctx)
+        self.assertIs(step.sys, None)
+        self.assertIs(step.meth, None)
+        self.assertEqual(step.base, 0xabcd)
+        self.assertIs(step.raw, None)
+        idx = (0,) * (addrxlat.FIELDS_MAX + 1)
+        self.assertEqual(step.idx, idx)
+
+    def test_step_raw(self):
+        step = addrxlat.Step(self.ctx)
+        with self.assertRaisesRegexp(TypeError, 'cannot be changed'):
+            step.raw = 0xabcd
+        meth = addrxlat.Method(addrxlat.PageTableDescription())
+        step.meth = meth
+        step.raw = 0xabcd
+        self.assertIs(step.ctx, self.ctx)
+        self.assertIs(step.sys, None)
+        self.assertEqual(step.meth, meth)
+        self.assertEqual(step.base, 0)
+        self.assertEqual(step.raw, 0xabcd)
+        idx = (0,) * (addrxlat.FIELDS_MAX + 1)
+        self.assertEqual(step.idx, idx)
+
+    def test_step_idx(self):
+        step = addrxlat.Step(self.ctx)
+        idx = (1, 2, 3, 4)
+        step.idx = idx
+        self.assertIs(step.ctx, self.ctx)
+        self.assertIs(step.sys, None)
+        self.assertIs(step.meth, None)
+        self.assertEqual(step.base, 0)
+        self.assertIs(step.raw, None)
+        idx = idx + (0,) * (addrxlat.FIELDS_MAX + 1 - len(idx))
+        self.assertEqual(step.idx, idx)
+
+        with self.assertRaisesRegexp(TypeError, 'not a sequence'):
+            step.idx = None
+        with self.assertRaisesRegexp(ValueError, 'more than [0-9]+ indices'):
+            step.idx = (0,) * (addrxlat.FIELDS_MAX + 2)
+        with self.assertRaisesRegexp(TypeError, 'not an integer'):
+            step.idx = (None,)
 
 class TestOperator(unittest.TestCase):
-    "TODO"
+    def setUp(self):
+        self.ctx = addrxlat.Context()
+
+    def test_op_defaults(self):
+        op = addrxlat.Operator(self.ctx)
+        self.assertIs(op.ctx, self.ctx)
+        self.assertIs(op.sys, None)
+        self.assertEqual(op.caps, 0)
+
+    def test_op_sys(self):
+        sys = addrxlat.System()
+        op = addrxlat.Operator(self.ctx, sys=sys)
+        self.assertIs(op.ctx, self.ctx)
+        self.assertEqual(op.sys, sys)
+        self.assertEqual(op.caps, 0)
+
+    def test_op_caps(self):
+        op = addrxlat.Operator(self.ctx, caps=addrxlat.CAPS(addrxlat.KVADDR))
+        self.assertIs(op.ctx, self.ctx)
+        self.assertIs(op.sys, None)
+        self.assertEqual(op.caps, addrxlat.CAPS(addrxlat.KVADDR))
 
 if __name__ == '__main__':
     unittest.main()
