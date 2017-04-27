@@ -40,18 +40,6 @@ class TestFullAddress(unittest.TestCase):
         addr2 = addrxlat.FullAddress(addrxlat.KVADDR, 0xabcd)
         self.assertNotEqual(addr1, addr2)
 
-    def test_fulladdr_conv(self):
-        ctx = addrxlat.Context()
-        desc = addrxlat.LinearDescription(addrxlat.KPHYSADDR, 0xf0000)
-        meth = addrxlat.Method(desc)
-        map = addrxlat.Map()
-        map.set(0, addrxlat.Range(0xffff, meth))
-        sys = addrxlat.System()
-        sys.set_map(addrxlat.SYS_MAP_KV_PHYS, map)
-        addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x1234)
-        addr.conv(addrxlat.KPHYSADDR, ctx, sys)
-        self.assertEqual(addr, addrxlat.FullAddress(addrxlat.KPHYSADDR, 0xf1234))
-
 class TestContext(unittest.TestCase):
     def test_err(self):
         ctx = addrxlat.Context()
@@ -532,6 +520,154 @@ class TestOperator(unittest.TestCase):
         self.assertIs(op.ctx, self.ctx)
         self.assertIs(op.sys, None)
         self.assertEqual(op.caps, addrxlat.CAPS(addrxlat.KVADDR))
+
+#
+# Test translation system has the following layout:
+#
+# MAP_HW:
+# 0-ffff: PGT root=MACHPHYSADDR:0
+# 10000-ffffffffffffffff: NONE
+#
+# MAP_KV_PHYS:
+# 0-1fff: DIRECT off=0x1000
+# 2000-3fff: LOOKUP
+# 4000-5fff: MEMARR base=KVADDR:0
+# 6000-ffff: PGT
+# 10000-ffffffffffffffff: NONE
+#
+# MAP_KPHYS_DIRECT:
+# 0-fff: NONE
+# 1000-2fff: RDIRECT
+# 3000-ffffffffffffffff: NONE
+#
+# MAP_MACHPHYS_KPHYS:
+# 0-ffff: NONE
+# 10000-1ffff: KPHYS_MACHPHYS
+# 20000-ffffffffffffffff: NONE
+#
+# MAP_KPHYS_MACHPHYS:
+# 0-ffff: MACHPHYS_KPHYS
+# 10000-ffffffffffffffff: NONE
+#
+class TestTranslation(unittest.TestCase):
+    def setUp(self):
+        def read32(addr):
+            # Page table level 2 @ 0
+            if addr.addr == 0x10000:
+                return 0x101
+            # Page table level 1 @ 0x65
+            if addr.addr == 0x10100 + 0x65 * 4:
+                return 0x1c0
+            # Page table level 1 @ 0x41
+            if addr.addr == 0x10100 + 0x41 * 4:
+                return 0x1a9
+            # Memory array at 0x40
+            if addr.addr == 0x11000 + 0x40 * 4:
+                return 0xaa
+
+        self.ctx = addrxlat.Context()
+        self.ctx.read_caps = addrxlat.CAPS(addrxlat.MACHPHYSADDR)
+        self.ctx.cb_read32 = read32
+        self.sys = addrxlat.System()
+
+        map = addrxlat.Map()
+        self.sys.set_map(addrxlat.SYS_MAP_HW, map)
+        desc = addrxlat.PageTableDescription(addrxlat.MACHPHYSADDR)
+        desc.root = addrxlat.FullAddress(addrxlat.MACHPHYSADDR, 0x10000)
+        desc.pte_format = addrxlat.PTE_PFN32
+        desc.fields = (8, 8, 8)
+        pgtmeth = addrxlat.Method(desc)
+        self.sys.set_meth(addrxlat.SYS_METH_PGT, pgtmeth)
+        map.set(0, addrxlat.Range(0xffff, pgtmeth))
+
+        map = addrxlat.Map()
+        self.sys.set_map(addrxlat.SYS_MAP_KV_PHYS, map)
+        desc = addrxlat.LinearDescription(addrxlat.KPHYSADDR, 0x1000)
+        meth = addrxlat.Method(desc)
+        self.sys.set_meth(addrxlat.SYS_METH_DIRECT, meth)
+        map.set(0, addrxlat.Range(0x1fff, meth))
+        desc = addrxlat.LookupDescription(addrxlat.KPHYSADDR)
+        desc.endoff = 0xff
+        desc.tbl = ((0x2000, 0xfa00), (0x3000, 0xfb00), (0x3100, 0xff00))
+        meth = addrxlat.Method(desc)
+        map.set(0x2000, addrxlat.Range(0x1fff, meth))
+        desc = addrxlat.MemoryArrayDescription(addrxlat.KPHYSADDR)
+        desc.base = addrxlat.FullAddress(addrxlat.KVADDR, 0)
+        desc.shift = 8
+        desc.elemsz = 4
+        desc.valsz = 4
+        meth = addrxlat.Method(desc)
+        map.set(0x4000, addrxlat.Range(0x1fff, meth))
+        map.set(0x6000, addrxlat.Range(0x9fff, pgtmeth))
+
+        map = addrxlat.Map()
+        self.sys.set_map(addrxlat.SYS_MAP_KPHYS_DIRECT, map)
+        desc = addrxlat.LinearDescription(addrxlat.KVADDR, -0x1000)
+        meth = addrxlat.Method(desc)
+        self.sys.set_meth(addrxlat.SYS_METH_RDIRECT, meth)
+        map.set(0x1000, addrxlat.Range(0x1fff, meth))
+
+        map = addrxlat.Map()
+        self.sys.set_map(addrxlat.SYS_MAP_MACHPHYS_KPHYS, map)
+        desc = addrxlat.LinearDescription(addrxlat.KPHYSADDR, -0x10000)
+        meth = addrxlat.Method(desc)
+        self.sys.set_meth(addrxlat.SYS_METH_MACHPHYS_KPHYS, meth)
+        map.set(0x10000, addrxlat.Range(0xffff, meth))
+
+        map = addrxlat.Map()
+        self.sys.set_map(addrxlat.SYS_MAP_KPHYS_MACHPHYS, map)
+        desc = addrxlat.LinearDescription(addrxlat.MACHPHYSADDR, 0x10000)
+        meth = addrxlat.Method(desc)
+        self.sys.set_meth(addrxlat.SYS_METH_KPHYS_MACHPHYS, meth)
+        map.set(0, addrxlat.Range(0xffff, meth))
+
+    def test_fulladdr_conv_kphys_machphys(self):
+        "KPHYS -> MACHPHYS using offset"
+        addr = addrxlat.FullAddress(addrxlat.KPHYSADDR, 0x2345)
+        addr.conv(addrxlat.MACHPHYSADDR, self.ctx, self.sys)
+        self.assertEqual(addr, addrxlat.FullAddress(addrxlat.MACHPHYSADDR, 0x12345))
+
+    def test_fulladdr_conv_machphys_kphys(self):
+        "MACHPHYS -> KPHYS using offset"
+        addr = addrxlat.FullAddress(addrxlat.MACHPHYSADDR, 0x1abcd)
+        addr.conv(addrxlat.KPHYSADDR, self.ctx, self.sys)
+        self.assertEqual(addr, addrxlat.FullAddress(addrxlat.KPHYSADDR, 0xabcd))
+
+    def test_fulladdr_conv_direct(self):
+        "KV -> KPHYS using directmap"
+        addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x1234)
+        addr.conv(addrxlat.KPHYSADDR, self.ctx, self.sys)
+        self.assertEqual(addr, addrxlat.FullAddress(addrxlat.KPHYSADDR, 0x2234))
+
+    def test_fulladdr_conv_lookup(self):
+        "KV -> KPHYS using lookup"
+        addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x2055)
+        addr.conv(addrxlat.KPHYSADDR, self.ctx, self.sys)
+        self.assertEqual(addr, addrxlat.FullAddress(addrxlat.KPHYSADDR, 0xfa55))
+
+    def test_fulladdr_conv_memarr(self):
+        "KV -> KPHYS using memory array"
+        addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x4055)
+        addr.conv(addrxlat.KPHYSADDR, self.ctx, self.sys)
+        self.assertEqual(addr, addrxlat.FullAddress(addrxlat.KPHYSADDR, 0xaa55))
+
+    def test_fulladdr_conv_memarr_pgt(self):
+        "KV -> KPHYS using fallback from memory array to page tables"
+        addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x4155)
+        addr.conv(addrxlat.KPHYSADDR, self.ctx, self.sys)
+        self.assertEqual(addr, addrxlat.FullAddress(addrxlat.KPHYSADDR, 0xa955))
+
+    def test_fulladdr_conv_pgt(self):
+        "KV -> KPHYS using page tables"
+        addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x6502)
+        addr.conv(addrxlat.KPHYSADDR, self.ctx, self.sys)
+        self.assertEqual(addr, addrxlat.FullAddress(addrxlat.KPHYSADDR, 0xc002))
+
+    def test_fulladdr_conv_rdirect(self):
+        "KPHYS -> KV using reverse directmap"
+        addr = addrxlat.FullAddress(addrxlat.KPHYSADDR, 0x2345)
+        addr.conv(addrxlat.KVADDR, self.ctx, self.sys)
+        self.assertEqual(addr, addrxlat.FullAddress(addrxlat.KVADDR, 0x1345))
 
 if __name__ == '__main__':
     unittest.main()
