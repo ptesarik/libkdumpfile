@@ -49,4 +49,4 @@ TESTS = \
 	test_addrxlat.py
 LOG_COMPILER = $(PYTHON)
 
-SUBDIRS = kdumpfile
+SUBDIRS = kdumpfile addrxlat
