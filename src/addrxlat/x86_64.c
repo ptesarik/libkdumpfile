@@ -206,6 +206,9 @@ pgt_x86_64(addrxlat_step_t *step)
 	}
 
 	step->base.addr &= pgt->pgt_mask[0];
+	if (step->remain == 1)
+		step->elemsz = 1;
+
 	return ADDRXLAT_OK;
 }
 

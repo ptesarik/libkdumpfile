@@ -221,6 +221,7 @@ pgt_ppc64_linux(addrxlat_step_t *step, unsigned rpn_shift)
 		step->base.addr =
 			(step->raw.pte >> rpn_shift) << pf->fieldsz[0];
 		step->base.as = step->meth->desc.target_as;
+		step->elemsz = 1;
 	}
 
 	return ADDRXLAT_OK;

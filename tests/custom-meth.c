@@ -47,6 +47,7 @@ first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 	printf("First step: 0x%"ADDRXLAT_PRIxADDR"\n", addr);
 	step->base.addr = addr ^ XOR_VALUE;
 	step->remain = STEPS;
+	step->elemsz = 1;
 	step->idx[0] = OFFSET;
 	step->idx[1] = 0;
 	return ADDRXLAT_OK;

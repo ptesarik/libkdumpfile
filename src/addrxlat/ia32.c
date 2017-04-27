@@ -98,6 +98,8 @@ pgt_ia32(addrxlat_step_t *step)
 	} else
 		step->base.addr = step->raw.pte & pgt->pgt_mask[0];
 	step->base.as = step->meth->desc.target_as;
+	if (step->remain == 1)
+		step->elemsz = 1;
 
 	return ADDRXLAT_OK;
 }
@@ -143,6 +145,8 @@ pgt_ia32_pae(addrxlat_step_t *step)
 	} else
 		step->base.addr &= pgt->pgt_mask[0];
 	step->base.as = step->meth->desc.target_as;
+	if (step->remain == 1)
+		step->elemsz = 1;
 
 	return ADDRXLAT_OK;
 }

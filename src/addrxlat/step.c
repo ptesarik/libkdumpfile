@@ -46,8 +46,6 @@ read_pte(addrxlat_step_t *step)
 	addrxlat_pte_t pte;
 	addrxlat_status status;
 
-	step->base.addr += step->idx[step->remain] << pgt->pte_shift;
-
 	switch(pgt->pte_shift) {
 	case 2:
 		status = read32(step, &step->base, &pte32, "PTE");
@@ -90,6 +88,7 @@ pgt_huge_page(addrxlat_step_t *step)
 		off |= step->idx[step->remain];
 		off <<= pgt->pf.fieldsz[step->remain - 1];
 	}
+	step->elemsz = 1;
 	step->idx[0] |= off;
 	return ADDRXLAT_OK;
 }
@@ -135,9 +134,10 @@ addrxlat_step(addrxlat_step_t *step)
 		return ADDRXLAT_OK;
 
 	--step->remain;
+	step->base.addr += step->idx[step->remain] * step->elemsz;
 	if (!step->remain) {
-		step->base.addr += step->idx[0];
 		step->base.as = meth->desc.target_as;
+		step->elemsz = 0;
 		return ADDRXLAT_OK;
 	}
 

@@ -132,6 +132,7 @@ first_step_linear(addrxlat_step_t *step, addrxlat_addr_t addr)
 	step->base.as = step->meth->desc.target_as;
 	step->base.addr = linear->off;
 	step->remain = 1;
+	step->elemsz = 1;
 	step->idx[0] = addr;
 
 	return ADDRXLAT_OK;
@@ -164,6 +165,9 @@ first_step_pgt(addrxlat_step_t *step, addrxlat_addr_t addr)
 
 	step->base = pgt->root;
 	step->remain = pgt->pf.nfields;
+	step->elemsz = step->remain > 1
+		? 1 << step->meth->extra.pgt.pte_shift
+		: 1;
 	for (i = 0; i < pgt->pf.nfields; ++i) {
 		unsigned short bits = pgt->pf.fieldsz[i];
 		addrxlat_addr_t mask = bits < sizeof(addrxlat_addr_t) * 8
@@ -267,6 +271,8 @@ next_step_pfn(addrxlat_step_t *step)
 		step->base.addr =
 			step->raw.pte << desc->param.pgt.pf.fieldsz[0];
 		step->base.as = desc->target_as;
+		if (step->remain == 1)
+			step->elemsz = 1;
 	}
 
 	return status;
@@ -335,6 +341,7 @@ first_step_lookup(addrxlat_step_t *step, addrxlat_addr_t addr)
 			step->base.as = step->meth->desc.target_as;
 			step->base.addr = elem->dest;
 			step->remain = 1;
+			step->elemsz = 1;
 			step->idx[0] = addr - elem->orig;
 			return ADDRXLAT_OK;
 		}
@@ -365,6 +372,7 @@ first_step_memarr(addrxlat_step_t *step, addrxlat_addr_t addr)
 
 	step->base = memarr->base;
 	step->remain = 2;
+	step->elemsz = memarr->elemsz;
 	step->idx[0] = addr & ((1ULL << memarr->shift) - 1);
 	step->idx[1] = addr >> memarr->shift;
 	return ADDRXLAT_OK;
@@ -382,7 +390,6 @@ next_step_memarr(addrxlat_step_t *step)
 	uint32_t val32;
 	addrxlat_status status;
 
-	step->base.addr += step->idx[step->remain] * memarr->elemsz;
 	switch (memarr->valsz) {
 	case 4:
 		status = read32(step, &step->base, &val32,
@@ -404,6 +411,7 @@ next_step_memarr(addrxlat_step_t *step)
 	if (status == ADDRXLAT_OK) {
 		step->base.addr = step->raw.addr << memarr->shift;
 		step->base.as = step->meth->desc.target_as;
+		step->elemsz = 1;
 	}
 
 	return status;

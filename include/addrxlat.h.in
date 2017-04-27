@@ -964,6 +964,15 @@ struct _addrxlat_step {
 	 */
 	unsigned short remain;
 
+	/** Size of the indexed element. The next level is found at:
+	 *
+	 *    @c base + @c idx [ @c remain - 1 ] * @c elemsz
+	 *
+	 * Note that @c base is updated using the above formula prior to
+	 * calling the @c next_step function.
+	 */
+	unsigned elemsz;
+
 	/** On input, base address of the page table.
 	 * On output base address of the lower-level page table or
 	 * the target physical address.
