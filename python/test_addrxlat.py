@@ -627,11 +627,23 @@ class TestTranslation(unittest.TestCase):
         addr.conv(addrxlat.MACHPHYSADDR, self.ctx, self.sys)
         self.assertEqual(addr, addrxlat.FullAddress(addrxlat.MACHPHYSADDR, 0x12345))
 
+    def test_fulladdr_fail_kphys_machphys(self):
+        "KPHYS -> MACHPHYS out of bounds"
+        addr = addrxlat.FullAddress(addrxlat.KPHYSADDR, 0xf4255)
+        with self.assertRaisesRegexp(addrxlat.NoMethodError, 'No translation method defined'):
+            addr.conv(addrxlat.MACHPHYSADDR, self.ctx, self.sys)
+
     def test_fulladdr_conv_machphys_kphys(self):
         "MACHPHYS -> KPHYS using offset"
         addr = addrxlat.FullAddress(addrxlat.MACHPHYSADDR, 0x1abcd)
         addr.conv(addrxlat.KPHYSADDR, self.ctx, self.sys)
         self.assertEqual(addr, addrxlat.FullAddress(addrxlat.KPHYSADDR, 0xabcd))
+
+    def test_fulladdr_fail_machphys_kphys(self):
+        "MACHPHYS -> KPHYS out of bounds"
+        addr = addrxlat.FullAddress(addrxlat.MACHPHYSADDR, 0xabcd)
+        with self.assertRaisesRegexp(addrxlat.NoMethodError, 'No translation method defined'):
+            addr.conv(addrxlat.KPHYSADDR, self.ctx, self.sys)
 
     def test_fulladdr_conv_direct(self):
         "KV -> KPHYS using directmap"
@@ -656,6 +668,12 @@ class TestTranslation(unittest.TestCase):
         addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x4155)
         addr.conv(addrxlat.KPHYSADDR, self.ctx, self.sys)
         self.assertEqual(addr, addrxlat.FullAddress(addrxlat.KPHYSADDR, 0xa955))
+
+    def test_fulladdr_fail_memarr(self):
+        "KV -> KPHYS using memory array returns None"
+        addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x4255)
+        with self.assertRaisesRegexp(addrxlat.NoMethodError, 'Callback returned None'):
+            addr.conv(addrxlat.KPHYSADDR, self.ctx, self.sys)
 
     def test_fulladdr_conv_pgt(self):
         "KV -> KPHYS using page tables"
