@@ -287,6 +287,12 @@ vtop_init(kdump_ctx_t *ctx)
 
 	if (!attr_isset(gattr(ctx, GKI_pteval_size)))
 		set_pteval_size(ctx);
+
+	if (ctx->shared->ops->post_addrxlat &&
+	    (status = ctx->shared->ops->post_addrxlat(ctx)) != KDUMP_OK)
+		return set_error(ctx, status,
+				 "Format late init failed");
+
 	return KDUMP_OK;
 }
 

@@ -230,6 +230,17 @@ struct format_ops {
 	 */
 	void (*unref_page)(kdump_ctx_t *ctx, struct page_io *pio);
 
+	/** Address translation post-hook.
+	 * @param ctx  Dump file object.
+	 * @returns    Status code.
+	 *
+	 * This routine is called whenever address translation is
+	 * (re-)initialized to allow format-specific adjustments to the
+	 * translation system (e.g. physical<->machine address translation
+	 * in a Xen DomU dump file).
+	 */
+	kdump_status (*post_addrxlat)(kdump_ctx_t *ctx);
+
 	/* Translate a machine frame number to physical frame number.
 	 *   ctx->fmtdata    initialized in probe()
 	 * Return:
