@@ -61,7 +61,7 @@ def vtop(addr, ctx, sys):
 
         try:
             step.step()
-            if step.remain:
+            if step.remain and step.raw is not None:
                 print(' => {:x}'.format(step.raw))
         except addrxlat.NotPresentError:
             print(' => {:x}  NOT PRESENT'.format(step.raw))
