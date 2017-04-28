@@ -1,7 +1,7 @@
 ## Process this file with automake to create Makefile.in
 ## Configure input file for libkdumpfile.
 ##
-## Copyright (C) 2015 Ales Novak <alnovak@suse.cz>
+## Copyright (C) 2017 Ales Novak <alnovak@suse.cz>
 ##
 ## This file is part of libkdumpfile.
 ##
