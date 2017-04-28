@@ -46,8 +46,14 @@ dist_noinst_DATA = \
 noinst_HEADERS = \
 	addrxlatmod.h
 
-TESTS = \
+test_scripts = \
 	test_addrxlat.py
+
+dist_check_SCRIPTS = \
+	$(test_scripts)
+
+TESTS = $(test_scripts)
+
 LOG_COMPILER = $(PYTHON)
 
 SUBDIRS = kdumpfile
