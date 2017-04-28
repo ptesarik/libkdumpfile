@@ -233,8 +233,14 @@ typedef addrxlat_status addrxlat_next_step_fn(addrxlat_step_t *step);
 
 /** Parameters of custom translation. */
 typedef struct _addrxlat_param_custom {
+	/** Function to perform the initial translation step. */
 	addrxlat_first_step_fn *first_step;
+
+	/** Function to perform further translation steps. */
 	addrxlat_next_step_fn *next_step;
+
+	/** Arbitrary user-supplied data. */
+	void *data;
 } addrxlat_param_custom_t;
 
 /** Parameters of linear translation. */
