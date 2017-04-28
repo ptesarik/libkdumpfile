@@ -299,6 +299,143 @@ xc_mfn_to_pfn(kdump_ctx_t *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 	return set_error(ctx, KDUMP_ERR_NODATA, "MFN not found");
 }
 
+/** xc_core physical-to-machine first step function.
+ * @param step  Step state.
+ * @param addr  Address to be translated.
+ * @returns     Error status.
+ */
+static addrxlat_status
+xc_p2m_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
+{
+	const addrxlat_desc_t *desc = addrxlat_meth_get_desc(step->meth);
+	struct kdump_shared *shared = desc->param.custom.data;
+	struct xen_p2m *p = shared->xen_map;
+	addrxlat_addr_t pfn = addr >> shared->page_shift.number;
+	unsigned long i;
+
+	for (i = 0; i < shared->xen_map_size; ++i, ++p)
+		if (p->pfn == pfn) {
+			step->base.addr = p->gmfn << shared->page_shift.number;
+			step->idx[0] = addr & (shared->page_size.number - 1);
+			step->remain = 1;
+			step->elemsz = 1;
+			return ADDRXLAT_OK;
+		}
+
+	return addrxlat_ctx_err(step->ctx, ADDRXLAT_ERR_NODATA,
+				"PFN not found");
+}
+
+/** xc_core machine-to-physical first step function.
+ * @param step  Step state.
+ * @param addr  Address to be translated.
+ * @returns     Error status.
+ */
+static addrxlat_status
+xc_m2p_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
+{
+	const addrxlat_desc_t *desc = addrxlat_meth_get_desc(step->meth);
+	struct kdump_shared *shared = desc->param.custom.data;
+	struct xen_p2m *p = shared->xen_map;
+	addrxlat_addr_t mfn = addr >> shared->page_shift.number;
+	unsigned long i;
+
+	for (i = 0; i < shared->xen_map_size; ++i, ++p)
+		if (p->gmfn == mfn) {
+			step->base.addr = p->pfn << shared->page_shift.number;
+			step->idx[0] = addr & (shared->page_size.number - 1);
+			step->remain = 1;
+			step->elemsz = 1;
+			return ADDRXLAT_OK;
+		}
+
+	return addrxlat_ctx_err(step->ctx, ADDRXLAT_ERR_NODATA,
+				"MFN not found");
+}
+
+/** Identity next step function.
+ * @param walk  Current step state.
+ * @returns     Error status.
+ *
+ * This method does not modify anything and always succeeds.
+ */
+static addrxlat_status
+next_step_ident(addrxlat_step_t *state)
+{
+	return ADDRXLAT_OK;
+}
+
+static kdump_status
+setup_custom_method(kdump_ctx_t *ctx, addrxlat_sys_meth_t methidx,
+		    addrxlat_sys_map_t mapidx, const addrxlat_desc_t *desc)
+{
+	addrxlat_meth_t *meth;
+	addrxlat_range_t range;
+	addrxlat_map_t *map;
+	addrxlat_status axstatus;
+
+	meth = addrxlat_meth_new();
+	if (!meth)
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot allocate translation method");
+
+	axstatus = addrxlat_meth_set_desc(meth, desc);
+	if (axstatus != ADDRXLAT_OK) {
+		addrxlat_meth_decref(meth);
+		return addrxlat2kdump(ctx, axstatus);
+	}
+	addrxlat_sys_set_meth(ctx->shared->xlatsys, methidx, meth);
+
+	map = addrxlat_map_new();
+	if (!map)
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot allocate translation map");
+
+	range.endoff = ADDRXLAT_ADDR_MAX;
+	range.meth = meth;
+	axstatus = addrxlat_map_set(map, 0, &range);
+	if (axstatus != ADDRXLAT_OK) {
+		addrxlat_map_decref(map);
+		return addrxlat2kdump(ctx, axstatus);
+	}
+	addrxlat_sys_set_map(ctx->shared->xlatsys, mapidx, map);
+
+	return KDUMP_OK;
+}
+
+static kdump_status
+xc_post_addrxlat(kdump_ctx_t *ctx)
+{
+	addrxlat_desc_t desc;
+	kdump_status status;
+
+	if (get_xen_xlat(ctx) != KDUMP_XEN_NONAUTO)
+		return KDUMP_OK;
+
+	/* common fields */
+	desc.kind = ADDRXLAT_CUSTOM;
+	desc.param.custom.next_step = next_step_ident;
+	desc.param.custom.data = ctx->shared;
+
+	/* p2m translation */
+	desc.target_as = ADDRXLAT_MACHPHYSADDR;
+	desc.param.custom.first_step = xc_p2m_first_step;
+	status = setup_custom_method(ctx, ADDRXLAT_SYS_METH_KPHYS_MACHPHYS,
+				     ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS, &desc);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Failed p2m setup");
+
+	/* m2p translation */
+	desc.target_as = ADDRXLAT_KPHYSADDR;
+	desc.param.custom.first_step = xc_m2p_first_step;
+	status = setup_custom_method(ctx, ADDRXLAT_SYS_METH_MACHPHYS_KPHYS,
+				     ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS, &desc);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Failed m2p setup");
+
+	return KDUMP_OK;
+}
+
 static kdump_status
 xc_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
@@ -801,6 +938,7 @@ static const struct format_ops xc_core_elf_ops = {
 	.name = "xc_core_elf",
 	.read_page = xc_read_page,
 	.unref_page = cache_unref_page,
+	.post_addrxlat = xc_post_addrxlat,
 	.mfn_to_pfn = xc_mfn_to_pfn,
 	.realloc_caches = def_realloc_caches,
 	.cleanup = elf_cleanup,
