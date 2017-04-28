@@ -56,4 +56,8 @@ TESTS = $(test_scripts)
 
 LOG_COMPILER = $(PYTHON)
 
+AM_TESTS_ENVIRONMENT = \
+eval " $$($(LIBTOOL) --config)"; \
+PYTHONPATH="$$srcdir:$$objdir"
+
 SUBDIRS = addrxlat kdumpfile
