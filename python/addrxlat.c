@@ -3792,6 +3792,39 @@ step_set_meth(PyObject *_self, PyObject *value, void *data)
 PyDoc_STRVAR(step_base__doc__,
 "base address for next translation step");
 
+/** Getter for the base attribute.
+ * @param _self  step object
+ * @param data   ignored
+ * @returns      FullAddress object (or @c NULL on failure)
+ */
+static PyObject *
+step_get_base(PyObject *_self, void *data)
+{
+	step_object *self = (step_object*)_self;
+
+	return fulladdr_FromPointer(self->convert, &self->step.base);
+}
+
+/** Setter for the base attribute.
+ * @param _self  step object
+ * @param value  new value (a @c FullAddress)
+ * @param data   ignored
+ * @returns      zero on success, -1 otherwise
+ */
+static int
+step_set_base(PyObject *_self, PyObject *value, void *data)
+{
+	step_object *self = (step_object*)_self;
+	const addrxlat_fulladdr_t *base;
+
+	base = fulladdr_AsPointer(value);
+	if (!base)
+		return -1;
+
+	self->step.base = *base;
+	return 0;
+}
+
 PyDoc_STRVAR(step_raw__doc__,
 "raw value from last step");
 
@@ -3955,8 +3988,7 @@ static PyGetSetDef step_getset[] = {
 	  OFFSETOF_PTR(step_object, ctx) },
 	{ "sys", step_get_sys, step_set_sys, step_sys__doc__ },
 	{ "meth", step_get_meth, step_set_meth, step_meth__doc__ },
-	{ "base", get_addr, set_addr, step_base__doc__,
-	  OFFSETOF_PTR(step_object, step.base) },
+	{ "base", step_get_base, step_set_base, step_base__doc__ },
 	{ "raw", step_get_raw, step_set_raw,
 	  step_raw__doc__ },
 	{ "idx", step_get_idx, step_set_idx,
