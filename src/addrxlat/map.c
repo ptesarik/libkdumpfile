@@ -224,15 +224,17 @@ DEFINE_ALIAS(map_search);
 addrxlat_meth_t *
 addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 {
-	const addrxlat_range_t *r = map->ranges;
-	addrxlat_addr_t raddr = 0;
-	size_t left = map ? map->n : 0;
+	if (map) {
+		const addrxlat_range_t *r = map->ranges;
+		addrxlat_addr_t raddr = 0;
+		size_t left = map->n;
 
-	while (left-- > 0) {
-		if (addr <= raddr + r->endoff)
-			return r->meth;
-		raddr += r->endoff + 1;
-		++r;
+		while (left-- > 0) {
+			if (addr <= raddr + r->endoff)
+				return r->meth;
+			raddr += r->endoff + 1;
+			++r;
+		}
 	}
 	return NULL;
 }
