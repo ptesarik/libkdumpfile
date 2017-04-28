@@ -123,7 +123,7 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 		goto fail;
 	}
 
-	self->fd = open (filepath, O_RDWR);
+	self->fd = open (filepath, O_RDONLY);
 	if (self->fd < 0) {
 		PyErr_Format(OSErrorException, "Couldn't open dump file");
 		goto fail;
