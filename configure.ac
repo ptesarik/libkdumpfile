@@ -99,6 +99,7 @@ AC_CONFIG_FILES([
 	src/Makefile
 	src/addrxlat/Makefile
 	python/Makefile
+	python/addrxlat/Makefile
 	python/kdumpfile/Makefile
 	tests/Makefile
 	libaddrxlat.pc

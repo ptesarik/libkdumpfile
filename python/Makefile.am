@@ -56,4 +56,4 @@ TESTS = $(test_scripts)
 
 LOG_COMPILER = $(PYTHON)
 
-SUBDIRS = kdumpfile
+SUBDIRS = addrxlat kdumpfile
