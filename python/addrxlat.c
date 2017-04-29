@@ -875,7 +875,7 @@ static PyGetSetDef fulladdr_getset[] = {
 PyDoc_STRVAR(fulladdr_conv__doc__,
 "FULLADDR.conv(addrspace, ctx, sys) -> status\n\
 \n\
-Clear the error message.");
+Convert a full address to a given target address space.");
 
 /** Wrapper for @ref addrxlat_fulladdr_conv
  * @param _self   step object
