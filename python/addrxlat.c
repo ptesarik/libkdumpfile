@@ -339,6 +339,27 @@ call_method(PyObject *obj, const char *name, PyObject *args, PyObject *kwargs)
 	return result;
 }
 
+/** Copy the value of an attribute to another attribute of the same object.
+ * @param obj      Python object
+ * @param srcname  Name of the source attribute.
+ * @param dstname  Name of the destination attribute.
+ * @returns        Zero on success, -1 on failure.
+ */
+static int
+copy_attr(PyObject *obj, const char *srcname, const char *dstname)
+{
+	PyObject *attr;
+	int result;
+
+	attr = PyObject_GetAttrString(obj, srcname);
+	if (!attr)
+		return 0;
+
+	result = PyObject_SetAttrString(obj, dstname, attr);
+	Py_DECREF(attr);
+	return result;
+}
+
 /** Call a cooperative superclass method
  * @param type    derived class type
  * @param obj     object
@@ -950,10 +971,6 @@ typedef struct tag_ctx_object {
 	addrxlat_ctx_t *ctx;
 	addrxlat_cb_t next_cb;
 
-	PyObject *cb_sym;
-	PyObject *cb_read32;
-	PyObject *cb_read64;
-
 	PyObject *exc_type, *exc_val, *exc_tb;
 
 	PyObject *convert;
@@ -1087,13 +1104,15 @@ static addrxlat_status
 cb_sym(void *_self, addrxlat_sym_t *sym)
 {
 	ctx_object *self = (ctx_object*)_self;
+	PyObject *cb_sym;
 	PyObject *args;
 	PyObject *obj;
 	PyObject *result;
 	int argc, i;
 	unsigned long long tmpval;
 
-	if (!self->cb_sym || self->cb_sym == Py_None)
+	cb_sym = PyObject_GetAttrString((PyObject*)self, "cb_sym");
+	if (!cb_sym || cb_sym == Py_None)
 		return cb_null(self);
 
 	argc = addrxlat_sym_argc(sym->type);
@@ -1117,7 +1136,7 @@ cb_sym(void *_self, addrxlat_sym_t *sym)
 		PyTuple_SET_ITEM(args, 1 + i, obj);
 	}
 
-	result = PyObject_Call(self->cb_sym, args, NULL);
+	result = PyObject_Call(cb_sym, args, NULL);
 	Py_DECREF(args);
 	if (!result)
 		goto err;
@@ -1150,7 +1169,8 @@ cb_read32(void *_self, const addrxlat_fulladdr_t *addr, uint32_t *val)
 	addrobj = fulladdr_FromPointer(self->convert, addr);
 	if (!addrobj)
 		return ctx_error_status(self);
-	result = PyObject_CallFunctionObjArgs(self->cb_read32, addrobj, NULL);
+	result = PyObject_CallMethod(
+		(PyObject*)self, "cb_read32", "O", addrobj);
 	Py_DECREF(addrobj);
 	if (!result)
 		return ctx_error_status(self);
@@ -1178,7 +1198,8 @@ cb_read64(void *_self, const addrxlat_fulladdr_t *addr, uint64_t *val)
 	addrobj = fulladdr_FromPointer(self->convert, addr);
 	if (!addrobj)
 		return ctx_error_status(self);
-	result = PyObject_CallFunctionObjArgs(self->cb_read64, addrobj, NULL);
+	result = PyObject_CallMethod(
+		(PyObject*)self, "cb_read64", "O", addrobj);
 	Py_DECREF(addrobj);
 	if (!result)
 		return ctx_error_status(self);
@@ -1244,22 +1265,27 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 			Py_DECREF(self);
 			return PyErr_NoMemory();
 		}
-	} else
+	} else {
 		addrxlat_ctx_incref(self->ctx);
 
-	addrxlat_ctx_install_cb_hook(self->ctx, cb_hook, self);
+		if (copy_attr((PyObject*)self, "next_cb_sym", "cb_sym"))
+			goto err;
+		if (copy_attr((PyObject*)self, "next_cb_read32", "cb_read32"))
+			goto err;
+		if (copy_attr((PyObject*)self, "next_cb_read64", "cb_read64"))
+			goto err;
+	}
 
-	self->cb_sym = PyObject_GetAttrString(
-		(PyObject*)self, "next_cb_sym");
-	self->cb_read32 = PyObject_GetAttrString(
-		(PyObject*)self, "next_cb_read32");
-	self->cb_read64 = PyObject_GetAttrString(
-		(PyObject*)self, "next_cb_read64");
+	addrxlat_ctx_install_cb_hook(self->ctx, cb_hook, self);
 
 	Py_INCREF(convert);
 	self->convert = convert;
 
 	return (PyObject*)self;
+
+ err:
+	Py_DECREF(self);
+	return NULL;
 }
 
 static int
@@ -1275,10 +1301,6 @@ ctx_dealloc(PyObject *_self)
 
 	PyObject_GC_UnTrack(_self);
 	Py_XDECREF(self->convert);
-
-	Py_XDECREF(self->cb_sym);
-	Py_XDECREF(self->cb_read32);
-	Py_XDECREF(self->cb_read64);
 
 	Py_XDECREF(self->exc_type);
 	Py_XDECREF(self->exc_val);
@@ -1298,10 +1320,6 @@ static int
 ctx_traverse(PyObject *_self, visitproc visit, void *arg)
 {
 	ctx_object *self = (ctx_object*)_self;
-
-	Py_VISIT(self->cb_sym);
-	Py_VISIT(self->cb_read32);
-	Py_VISIT(self->cb_read64);
 
 	Py_VISIT(self->exc_type);
 	Py_VISIT(self->exc_val);
@@ -1397,6 +1415,17 @@ cb_status_result(ctx_object *self, addrxlat_status status,
 	return PyLong_FromUnsignedLongLong(value);
 }
 
+PyDoc_STRVAR(ctx_cb_sym__doc__,
+"CTX.cb_sym(type, *args) -> value\n\
+\n\
+Callback function to resolve symbolic information. The function\n\
+can be called as:\n\
+\n\
+  - CTX.cb_sym(SYM_REG, regname) -> register value\n\
+  - CTX.cb_sym(SYM_VALUE, symname) -> symbol value\n\
+  - CTX.cb_sym(SYM_SIZEOF, symname) -> size\n\
+  - CTX.cb_sym(SYM_OFFSETOF, typename, member) -> offset");
+
 PyDoc_STRVAR(ctx_next_cb_sym__doc__,
 "CTX.next_cb_sym(type, *args) -> value\n\
 \n\
@@ -1466,6 +1495,11 @@ ctx_next_cb_sym(PyObject *_self, PyObject *args)
 	return obj;
 }
 
+PyDoc_STRVAR(ctx_cb_read32__doc__,
+"CTX.cb_read32(fulladdr) -> value\n\
+\n\
+Callback function to read a 32-bit integer from a given address.");
+
 PyDoc_STRVAR(ctx_next_cb_read32__doc__,
 "CTX.next_cb_read32(type, *args) -> value\n\
 \n\
@@ -1493,6 +1527,11 @@ ctx_next_cb_read32(PyObject *_self, PyObject *args)
 	status = self->next_cb.read32(self->next_cb.data, addr, &val);
 	return cb_status_result(self, status, val);
 }
+
+PyDoc_STRVAR(ctx_cb_read64__doc__,
+"CTX.cb_read64(fulladdr) -> value\n\
+\n\
+Callback function to read a 64-bit integer from a given address.");
 
 PyDoc_STRVAR(ctx_next_cb_read64__doc__,
 "CTX.next_cb_read64(type, *args) -> value\n\
@@ -1531,6 +1570,13 @@ static PyMethodDef ctx_methods[] = {
 	  ctx_get_err__doc__ },
 
 	/* Callbacks */
+	{ "cb_sym", ctx_next_cb_sym, METH_VARARGS,
+	  ctx_cb_sym__doc__ },
+	{ "cb_read32", ctx_next_cb_read32, METH_VARARGS,
+	  ctx_cb_read32__doc__ },
+	{ "cb_read64", ctx_next_cb_read64, METH_VARARGS,
+	  ctx_cb_read64__doc__ },
+
 	{ "next_cb_sym", ctx_next_cb_sym, METH_VARARGS,
 	  ctx_next_cb_sym__doc__ },
 	{ "next_cb_read32", ctx_next_cb_read32, METH_VARARGS,
@@ -1541,38 +1587,9 @@ static PyMethodDef ctx_methods[] = {
 	{ NULL }
 };
 
-PyDoc_STRVAR(ctx_cb_sym__doc__,
-"CTX.cb_sym(type, *args) -> value\n\
-\n\
-Callback function to resolve symbolic information. The function\n\
-can be called as:\n\
-\n\
-  - CTX.cb_sym(SYM_REG, regname) -> register value\n\
-  - CTX.cb_sym(SYM_VALUE, symname) -> symbol value\n\
-  - CTX.cb_sym(SYM_SIZEOF, symname) -> size\n\
-  - CTX.cb_sym(SYM_OFFSETOF, typename, member) -> offset");
-
-PyDoc_STRVAR(ctx_cb_read32__doc__,
-"CTX.cb_read32(fulladdr) -> value\n\
-\n\
-Callback function to read a 32-bit integer from a given address.");
-
-PyDoc_STRVAR(ctx_cb_read64__doc__,
-"CTX.cb_read64(fulladdr) -> value\n\
-\n\
-Callback function to read a 64-bit integer from a given address.");
-
 static PyMemberDef ctx_members[] = {
 	{ "convert", T_OBJECT, offsetof(ctx_object, convert), 0,
 	  attr_convert__doc__ },
-
-	/* Callbacks */
-	{ "cb_sym", T_OBJECT, offsetof(ctx_object, cb_sym), 0,
-	  ctx_cb_sym__doc__ },
-	{ "cb_read32", T_OBJECT, offsetof(ctx_object, cb_read32), 0,
-	  ctx_cb_read32__doc__ },
-	{ "cb_read64", T_OBJECT, offsetof(ctx_object, cb_read64), 0,
-	  ctx_cb_read64__doc__ },
 	{ NULL }
 };
 

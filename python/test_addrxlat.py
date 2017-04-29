@@ -742,5 +742,22 @@ class TestTranslation(unittest.TestCase):
         result = myop(addrxlat.FullAddress(addrxlat.KVADDR, 0xabc))
         self.assertEqual(result, '0x1abc')
 
+    def test_subclass_memarr(self):
+        "KV -> KPHYS using memory array and a subclass"
+
+        class mycontext(addrxlat.Context):
+            def __init__(self, *args, **kwargs):
+                super(mycontext, self).__init__(*args, **kwargs)
+                self.read_caps = addrxlat.CAPS(addrxlat.MACHPHYSADDR)
+            def cb_read32(self, addr):
+                # Memory array at 0x40
+                if addr.addr == 0x11000 + 0x40 * 4:
+                    return 0x12
+
+        ctx = mycontext()
+        addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x4034)
+        addr.conv(addrxlat.KPHYSADDR, ctx, self.sys)
+        self.assertEqual(addr, addrxlat.FullAddress(addrxlat.KPHYSADDR, 0x1234))
+
 if __name__ == '__main__':
     unittest.main()
