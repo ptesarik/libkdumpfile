@@ -18,6 +18,10 @@ class FullAddress(FullAddress):
         if status != OK:
             raise get_exception(status, ctx.get_err())
 
+    def copy(self):
+        "make a copy of self"
+        return type(self)(addrspace=self.addrspace, addr=self.addr)
+
 class Context(Context):
     def __init__(self, *args, **kwargs):
         super(Context, self).__init__(*args, **kwargs)

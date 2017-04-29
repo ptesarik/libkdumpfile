@@ -26,7 +26,7 @@ class kphysnote(object):
     def note(self, fulladdr, fmt='{}'):
         if self.ident or fulladdr.addrspace == addrxlat.KPHYSADDR:
             return ''
-        tmp = addrxlat.FullAddress(fulladdr.addrspace, fulladdr.addr)
+        tmp = fulladdr.copy()
         try:
             tmp.conv(addrxlat.KPHYSADDR, self.ctx, self.sys)
             return fmt.format('{:x}'.format(tmp.addr))
@@ -52,7 +52,7 @@ def vtop(addr, ctx, sys):
     while step.remain:
         tbl = tbl_names[step.remain - 1]
         if step.remain > 1:
-            addr = addrxlat.FullAddress(step.base.addrspace, step.base.addr)
+            addr = step.base.copy()
             addr.addr += step.idx[step.remain - 1] * step.elemsz
         else:
             addr = step.base

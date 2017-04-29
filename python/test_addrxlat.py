@@ -40,6 +40,21 @@ class TestFullAddress(unittest.TestCase):
         addr2 = addrxlat.FullAddress(addrxlat.KVADDR, 0xabcd)
         self.assertNotEqual(addr1, addr2)
 
+    def test_fulladdr_copy(self):
+        addr1 = addrxlat.FullAddress(addrxlat.KVADDR, 0x1234)
+        addr2 = addr1.copy()
+        self.assertIsInstance(addr2, addrxlat.FullAddress)
+        self.assertEqual(addr1.addrspace, addr2.addrspace)
+        self.assertEqual(addr1.addr, addr2.addr)
+
+    def test_fulladdr_copy_subclass(self):
+        class myfulladdr(addrxlat.FullAddress):
+            pass
+
+        addr1 = myfulladdr(addrxlat.KVADDR, 0x1234)
+        addr2 = addr1.copy()
+        self.assertIsInstance(addr2, myfulladdr)
+
 class TestContext(unittest.TestCase):
     def test_err(self):
         ctx = addrxlat.Context()
