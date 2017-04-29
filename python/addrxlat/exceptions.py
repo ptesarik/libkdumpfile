@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # vim:sw=4 ts=4 et
 
-import sys
-
 import _addrxlat
 from _addrxlat import BaseException
 
@@ -54,7 +52,7 @@ def get_exception(status, *args, **kwargs):
 
 for _exc in _exceptions:
     _cls = new_exception(*_exc)
-    sys.modules[__name__].__dict__[_cls.__name__] = _cls
+    globals()[_cls.__name__] = _cls
 
 # Free up temporary variables
 del _exc, _cls, _exceptions
