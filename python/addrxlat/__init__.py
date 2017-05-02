@@ -235,6 +235,7 @@ convert = TypeConvert()
 convert.FullAddress = FullAddress
 convert.Context = Context
 convert.Description = Description
+convert.CustomDescription = CustomDescription
 convert.LinearDescription = LinearDescription
 convert.PageTableDescription = PageTableDescription
 convert.LookupDescription = LookupDescription

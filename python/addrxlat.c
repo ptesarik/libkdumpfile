@@ -4744,6 +4744,8 @@ typedef struct {
 	PyTypeObject *ctx_type;
 	/** Target type for Description conversions. */
 	PyTypeObject *desc_type;
+	/** Target type for CustomDescription conversions. */
+	PyTypeObject *customdesc_type;
 	/** Target type for LinearDescription conversions. */
 	PyTypeObject *lineardesc_type;
 	/** Target type for PageTableDescription conversions. */
@@ -4790,6 +4792,8 @@ convert_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	Py_INCREF(self->ctx_type);
 	self->desc_type = &desc_type;
 	Py_INCREF(self->desc_type);
+	self->customdesc_type = &customdesc_type;
+	Py_INCREF(self->customdesc_type);
 	self->lineardesc_type = &lineardesc_type;
 	Py_INCREF(self->lineardesc_type);
 	self->pgtdesc_type = &pgtdesc_type;
@@ -4824,6 +4828,7 @@ convert_dealloc(PyObject *_self)
 	Py_XDECREF(self->fulladdr_type);
 	Py_XDECREF(self->ctx_type);
 	Py_XDECREF(self->desc_type);
+	Py_XDECREF(self->customdesc_type);
 	Py_XDECREF(self->lineardesc_type);
 	Py_XDECREF(self->pgtdesc_type);
 	Py_XDECREF(self->lookupdesc_type);
@@ -4844,6 +4849,7 @@ convert_traverse(PyObject *_self, visitproc visit, void *arg)
 	Py_VISIT(self->fulladdr_type);
 	Py_VISIT(self->ctx_type);
 	Py_VISIT(self->desc_type);
+	Py_VISIT(self->customdesc_type);
 	Py_VISIT(self->lineardesc_type);
 	Py_VISIT(self->pgtdesc_type);
 	Py_VISIT(self->lookupdesc_type);
@@ -4865,6 +4871,9 @@ PyDoc_STRVAR(convert_ctx__doc__,
 
 PyDoc_STRVAR(convert_desc__doc__,
 "Target type for Description conversions.");
+
+PyDoc_STRVAR(convert_customdesc__doc__,
+"Target type for CustomDescription conversions.");
 
 PyDoc_STRVAR(convert_lineardesc__doc__,
 "Target type for LinearDescription conversions.");
@@ -4903,6 +4912,9 @@ static PyMemberDef convert_members[] = {
 	  0, convert_ctx__doc__ },
 	{ "Description", T_OBJECT, offsetof(convert_object, desc_type),
 	  0, convert_desc__doc__ },
+	{ "CustomDescription", T_OBJECT,
+	  offsetof(convert_object, customdesc_type),
+	  0, convert_customdesc__doc__ },
 	{ "LinearDescription", T_OBJECT,
 	  offsetof(convert_object, lineardesc_type),
 	  0, convert_lineardesc__doc__ },
@@ -5071,6 +5083,10 @@ desc_FromPointer(PyObject *_conv, const addrxlat_desc_t *desc)
 	int res;
 
 	switch (desc->kind) {
+	case ADDRXLAT_CUSTOM:
+		type = conv->customdesc_type;
+		break;
+
 	case ADDRXLAT_LINEAR:
 		type = conv->lineardesc_type;
 		break;
