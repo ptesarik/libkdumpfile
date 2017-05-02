@@ -20,21 +20,19 @@
 ##
 
 AM_CPPFLAGS = -I$(top_builddir)/include
+AM_CFLAGS = $(PYTHON_CFLAGS)
+AM_LDFLAGS = -module -avoid-version
 
 pyexec_LTLIBRARIES = _addrxlat.la _kdumpfile.la
 
 _addrxlat_la_SOURCES = addrxlat.c
-_addrxlat_la_CFLAGS = $(PYTHON_CFLAGS)
-_addrxlat_la_LDFLAGS = -module -avoid-version -export-symbols $(srcdir)/addrxlat.sym
+_addrxlat_la_LDFLAGS = $(AM_LDFLAGS) -export-symbols $(srcdir)/addrxlat.sym
 _addrxlat_la_LIBADD = $(PYTHON_LIBS) $(top_builddir)/src/addrxlat/libaddrxlat.la
-
 EXTRA__addrxlat_la_DEPENDENCIES = addrxlat.sym
 
 _kdumpfile_la_SOURCES = kdumpfile.c
-_kdumpfile_la_CFLAGS = $(PYTHON_CFLAGS) -I$(top_srcdir)/src
-_kdumpfile_la_LDFLAGS = -module -avoid-version -export-symbols $(srcdir)/kdumpfile.sym
+_kdumpfile_la_LDFLAGS = $(AM_LDFLAGS) -export-symbols $(srcdir)/kdumpfile.sym
 _kdumpfile_la_LIBADD = $(PYTHON_LIBS) $(top_builddir)/src/libkdumpfile.la
-
 EXTRA__kdumpfile_la_DEPENDENCIES = kdumpfile.sym
 
 dist_noinst_DATA = \
