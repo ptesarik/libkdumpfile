@@ -234,7 +234,7 @@ sys_s390x(struct os_init_data *ctl)
 		return set_error(ctl->ctx, status,
 				 "Cannot set up hardware mapping");
 
-	newmap = internal_map_dup(ctl->sys->map[ADDRXLAT_SYS_MAP_HW]);
+	newmap = internal_map_copy(ctl->sys->map[ADDRXLAT_SYS_MAP_HW]);
 	if (!newmap)
 		return set_error(ctl->ctx, ADDRXLAT_ERR_NOMEM,
 				 "Cannot duplicate hardware mapping");

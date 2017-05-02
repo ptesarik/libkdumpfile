@@ -3208,20 +3208,20 @@ map_clear(PyObject *_self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
-PyDoc_STRVAR(map_dup__doc__,
-"M.dup() -> map\n\
+PyDoc_STRVAR(map_copy__doc__,
+"M.copy() -> map\n\
 \n\
 Return a shallow copy of a translation map.");
 
 static PyTypeObject map_type;
 
 static PyObject *
-map_dup(PyObject *_self, PyObject *args)
+map_copy(PyObject *_self, PyObject *args)
 {
 	map_object *self = (map_object*)_self;
 	addrxlat_map_t *map;
 
-	map = addrxlat_map_dup(self->map);
+	map = addrxlat_map_copy(self->map);
 	if (!map)
 		return PyErr_NoMemory();
 
@@ -3235,8 +3235,8 @@ static PyMethodDef map_methods[] = {
 	  map_search__doc__ },
 	{ "clear", map_clear, METH_NOARGS,
 	  map_clear__doc__ },
-	{ "dup", map_dup, METH_NOARGS,
-	  map_dup__doc__ },
+	{ "copy", map_copy, METH_NOARGS,
+	  map_copy__doc__ },
 	{ NULL }
 };
 

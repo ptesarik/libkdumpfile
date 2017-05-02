@@ -312,7 +312,7 @@ DECLARE_ALIAS(map_decref);
 DECLARE_ALIAS(map_set);
 DECLARE_ALIAS(map_search);
 DECLARE_ALIAS(map_clear);
-DECLARE_ALIAS(map_dup);
+DECLARE_ALIAS(map_copy);
 DECLARE_ALIAS(launch);
 DECLARE_ALIAS(launch_map);
 DECLARE_ALIAS(step);

@@ -738,7 +738,7 @@ void addrxlat_map_clear(addrxlat_map_t *map);
  * @param map  Source translation map.
  * @returns    Copy of @c map, or @c NULL on allocation failure.
  */
-addrxlat_map_t *addrxlat_map_dup(const addrxlat_map_t *map);
+addrxlat_map_t *addrxlat_map_copy(const addrxlat_map_t *map);
 
 /** Operating system type. */
 typedef enum _addrxlat_ostype {

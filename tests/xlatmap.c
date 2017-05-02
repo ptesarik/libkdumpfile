@@ -422,7 +422,7 @@ main(int argc, char **argv)
 	printmap(map[13]);
 
 	puts("\nduplicate punch hole:");
-	map[14] = addrxlat_map_dup(map[11]);
+	map[14] = addrxlat_map_copy(map[11]);
 	check_meth_ref(0, ref[0] += 2);
 	printmap(map[14]);
 

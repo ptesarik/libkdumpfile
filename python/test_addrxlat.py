@@ -379,12 +379,12 @@ class TestMap(unittest.TestCase):
         map.clear()
         self.assertEqual(len(map), 0)
 
-    def test_map_dup(self):
+    def test_map_copy(self):
         map = addrxlat.Map()
         meth = addrxlat.Method()
         map.set(0, addrxlat.Range(0xffff, meth))
         self.assertEqual(len(map), 2)
-        map2 = map.dup()
+        map2 = map.copy()
         self.assertNotEqual(map2, map)
         self.assertEqual(len(map2), 2)
         self.assertEqual(map2[0].endoff, map[0].endoff)

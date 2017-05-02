@@ -24,7 +24,7 @@ LIBADDRXLAT_0 {
     addrxlat_map_set;
     addrxlat_map_search;
     addrxlat_map_clear;
-    addrxlat_map_dup;
+    addrxlat_map_copy;
 
     addrxlat_sys_new;
     addrxlat_sys_incref;

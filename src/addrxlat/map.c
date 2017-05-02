@@ -254,10 +254,10 @@ addrxlat_map_clear(addrxlat_map_t *map)
 	map->n = 0;
 }
 
-DEFINE_ALIAS(map_dup);
+DEFINE_ALIAS(map_copy);
 
 addrxlat_map_t *
-addrxlat_map_dup(const addrxlat_map_t *map)
+addrxlat_map_copy(const addrxlat_map_t *map)
 {
 	const addrxlat_range_t *q;
 	addrxlat_range_t *r;

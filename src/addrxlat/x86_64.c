@@ -776,7 +776,7 @@ sys_x86_64(struct os_init_data *ctl)
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	map = internal_map_dup(ctl->sys->map[ADDRXLAT_SYS_MAP_HW]);
+	map = internal_map_copy(ctl->sys->map[ADDRXLAT_SYS_MAP_HW]);
 	if (!map)
 		return set_error(ctl->ctx, ADDRXLAT_ERR_NOMEM,
 				 "Cannot duplicate hardware mapping");
