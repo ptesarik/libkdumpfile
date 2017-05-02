@@ -813,6 +813,23 @@ raise_exception(addrxlat_ctx_t *ctx, addrxlat_status status)
 	return NULL;
 }
 
+/** Raise an NotImplemented exception.
+ * @param msg  Verbose message
+ * @returns    Always @c NULL
+ */
+static PyObject *
+raise_notimpl(const char *msg)
+{
+	PyObject *exc_val;
+
+	exc_val= Py_BuildValue("(is)", (int)ADDRXLAT_ERR_NOTIMPL, msg);
+	if (exc_val) {
+		PyErr_SetObject(BaseException, exc_val);
+		Py_DECREF(exc_val);
+	}
+	return NULL;
+}
+
 /** Python representation of @ref addrxlat_fulladdr_t.
  */
 typedef struct {
@@ -2157,6 +2174,238 @@ static PyTypeObject lineardesc_type =
 	0,				/* tp_init */
 	0,				/* tp_alloc */
 	lineardesc_new,			/* tp_new */
+};
+
+typedef struct {
+	desc_HEAD
+	addrxlat_param_custom_t origparam;
+} customdesc_object;
+
+static addrxlat_status
+desc_error_status(customdesc_object *self, addrxlat_step_t *step)
+{
+	PyObject *ctx;
+	addrxlat_status status;
+
+	ctx = ctx_FromPointer(self->convert, step->ctx);
+	if (!ctx) {
+		PyErr_Clear();
+		return addrxlat_ctx_err(step->ctx, ADDRXLAT_ERR_NOMEM,
+					"Cannot allocate context");
+	}
+
+	status = ctx_error_status((ctx_object*) ctx);
+	Py_DECREF(ctx);
+	return status;
+}
+
+PyDoc_STRVAR(customdesc__doc__,
+"CustomDescription() -> custom address translation description");
+
+static addrxlat_status
+cb_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
+{
+	const addrxlat_desc_t *desc = addrxlat_meth_get_desc(step->meth);
+	customdesc_object *self = desc->param.custom.data;
+	PyObject *func;
+	PyObject *stepobj;
+	PyObject *result;
+
+	func = PyObject_GetAttrString((PyObject*)self, "cb_first_step");
+	if (!func)
+		return addrxlat_ctx_err(step->ctx, ADDRXLAT_ERR_NOTIMPL,
+					"NULL callback");
+
+	stepobj = step_FromPointer(self->convert, step);
+	if (!stepobj) {
+		Py_DECREF(func);
+		return desc_error_status(self, step);
+	}
+
+	result = PyObject_CallFunction(func, "OK",
+				       stepobj, (unsigned PY_LONG_LONG) addr);
+	Py_DECREF(stepobj);
+	Py_DECREF(func);
+	if (!result)
+		return desc_error_status(self, step);
+
+	Py_DECREF(result);
+	return ADDRXLAT_OK;
+}
+
+static addrxlat_status
+cb_next_step(addrxlat_step_t *step)
+{
+	const addrxlat_desc_t *desc = addrxlat_meth_get_desc(step->meth);
+	customdesc_object *self = desc->param.custom.data;
+	PyObject *func;
+	PyObject *stepobj;
+	PyObject *result;
+
+	func = PyObject_GetAttrString((PyObject*)self, "cb_next_step");
+	if (!func)
+		return addrxlat_ctx_err(step->ctx, ADDRXLAT_ERR_NOTIMPL,
+					"NULL callback");
+
+	stepobj = step_FromPointer(self->convert, step);
+	if (!stepobj) {
+		Py_DECREF(func);
+		return desc_error_status(self, step);
+	}
+
+	result = PyObject_CallFunction(func, "O", stepobj);
+	Py_DECREF(stepobj);
+	Py_DECREF(func);
+	if (!result)
+		return desc_error_status(self, step);
+
+	Py_DECREF(result);
+	return ADDRXLAT_OK;
+}
+
+static PyObject *
+customdesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
+{
+	customdesc_object *self;
+
+	self = (customdesc_object*) make_desc(type, ADDRXLAT_CUSTOM, kwargs);
+	if (self) {
+		self->loc[0].len = sizeof(addrxlat_param_custom_t);
+
+		self->origparam = self->desc.param.custom;
+		self->desc.param.custom.first_step = cb_first_step;
+		self->desc.param.custom.next_step = cb_next_step;
+		self->desc.param.custom.data = self;
+	}
+
+	return (PyObject*)self;
+}
+
+PyDoc_STRVAR(customdesc_first_step__doc__,
+"DESC.cb_first_step(step, addr)\n\
+\n\
+Callback to perform the initial translation step.");
+
+static PyObject *
+customdesc_first_step(PyObject *_self, PyObject *args, PyObject *kwargs)
+{
+	static char *keywords[] = {"step", "addr", NULL};
+
+	customdesc_object *self = (customdesc_object*)_self;
+	PyObject *stepobj;
+	addrxlat_step_t *step;
+	PyObject *addrobj;
+	addrxlat_addr_t addr;
+	addrxlat_status status;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO:first_step",
+					 keywords, &stepobj, &addrobj))
+		return NULL;
+	step = step_AsPointer(stepobj);
+	addr = Number_AsUnsignedLongLong(addrobj);
+	if (PyErr_Occurred())
+		return NULL;
+
+	if (!self->origparam.first_step)
+		return raise_notimpl("NULL callback");
+
+	status = self->origparam.first_step(step, addr);
+	if (status != ADDRXLAT_OK)
+		return raise_exception(step->ctx, status);
+
+	Py_RETURN_NONE;
+}
+
+PyDoc_STRVAR(customdesc_next_step__doc__,
+"DESC.cb_next_step(step)\n\
+\n\
+Callback to perform further translation steps.");
+
+static PyObject *
+customdesc_next_step(PyObject *_self, PyObject *args, PyObject *kwargs)
+{
+	static char *keywords[] = {"step", NULL};
+
+	customdesc_object *self = (customdesc_object*)_self;
+	PyObject *stepobj;
+	addrxlat_step_t *step;
+	addrxlat_status status;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:next_step",
+					 keywords, &stepobj))
+		return NULL;
+	step = step_AsPointer(stepobj);
+
+	if (!self->origparam.next_step)
+		return raise_notimpl("NULL callback");
+
+	status = self->origparam.next_step(step);
+	if (status != ADDRXLAT_OK)
+		return raise_exception(step->ctx, status);
+
+	Py_RETURN_NONE;
+}
+
+static PyMethodDef customdesc_methods[] = {
+	{ "cb_first_step", (PyCFunction)customdesc_first_step,
+	  METH_VARARGS | METH_KEYWORDS,
+	  customdesc_first_step__doc__ },
+	{ "cb_next_step", (PyCFunction)customdesc_next_step,
+	  METH_VARARGS | METH_KEYWORDS,
+	  customdesc_next_step__doc__ },
+
+	{ NULL }
+};
+
+PyDoc_STRVAR(customdesc_kind__doc__,
+"translation kind (always ADDRXLAT_CUSTOM)");
+
+static PyGetSetDef customdesc_getset[] = {
+	{ "kind", desc_get_kind, 0, customdesc_kind__doc__ },
+	{ NULL }
+};
+
+static PyTypeObject customdesc_type =
+{
+	PyVarObject_HEAD_INIT(NULL, 0)
+	MOD_NAME ".CustomDescription",	/* tp_name */
+	sizeof (customdesc_object),	/* tp_basicsize */
+	0,				/* tp_itemsize */
+	0,				/* tp_dealloc */
+	0,				/* tp_print */
+	0,				/* tp_getattr */
+	0,				/* tp_setattr */
+	0,				/* tp_compare */
+	0,				/* tp_repr */
+	0,				/* tp_as_number */
+	0,				/* tp_as_sequence */
+	0,				/* tp_as_mapping */
+	0,				/* tp_hash */
+	0,				/* tp_call */
+	0,				/* tp_str */
+	0,				/* tp_getattro */
+	0,				/* tp_setattro */
+	0,				/* tp_as_buffer */
+	Py_TPFLAGS_DEFAULT
+	    | Py_TPFLAGS_BASETYPE,	/* tp_flags */
+	customdesc__doc__,		/* tp_doc */
+	0,				/* tp_traverse */
+	0,				/* tp_clear */
+	0,				/* tp_richcompare */
+	0,				/* tp_weaklistoffset */
+	0,				/* tp_iter */
+	0,				/* tp_iternext */
+	customdesc_methods,		/* tp_methods */
+	0,				/* tp_members */
+	customdesc_getset,		/* tp_getset */
+	&desc_type,			/* tp_base */
+	0,				/* tp_dict */
+	0,				/* tp_descr_get */
+	0,				/* tp_descr_set */
+	0,				/* tp_dictoffset */
+	0,				/* tp_init */
+	0,				/* tp_alloc */
+	customdesc_new,			/* tp_new */
 };
 
 typedef struct {
@@ -5447,6 +5696,9 @@ init_addrxlat (void)
 	if (PyType_Ready(&desc_type) < 0)
 		return MOD_ERROR_VAL;
 
+	if (PyType_Ready(&customdesc_type) < 0)
+		return MOD_ERROR_VAL;
+
 	if (PyType_Ready(&lineardesc_type) < 0)
 		return MOD_ERROR_VAL;
 
@@ -5512,11 +5764,17 @@ init_addrxlat (void)
 	if (ret)
 		goto err_ctx;
 
+	Py_INCREF((PyObject*)&customdesc_type);
+	ret = PyModule_AddObject(mod, "CustomDescription",
+				 (PyObject*)&customdesc_type);
+	if (ret)
+		goto err_desc;
+
 	Py_INCREF((PyObject*)&lineardesc_type);
 	ret = PyModule_AddObject(mod, "LinearDescription",
 				 (PyObject*)&lineardesc_type);
 	if (ret)
-		goto err_desc;
+		goto err_customdesc;
 
 	Py_INCREF((PyObject*)&pgtdesc_type);
 	ret = PyModule_AddObject(mod, "PageTableDescription",
@@ -5719,6 +5977,8 @@ init_addrxlat (void)
 	Py_DECREF((PyObject*)&pgtdesc_type);
  err_lineardesc:
 	Py_DECREF((PyObject*)&lineardesc_type);
+ err_customdesc:
+	Py_DECREF((PyObject*)&customdesc_type);
  err_desc:
 	Py_DECREF((PyObject*)&desc_type);
  err_ctx:

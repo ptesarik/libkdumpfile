@@ -110,6 +110,33 @@ class TestDescription(unittest.TestCase):
         with self.assertRaises(OverflowError):
             desc.param[0] = -1
 
+    def test_custom_defaults(self):
+        desc = addrxlat.CustomDescription()
+        self.assertEqual(desc.kind, addrxlat.CUSTOM)
+        self.assertEqual(desc.target_as, addrxlat.NOADDR)
+
+    def test_custom_readonly_kind(self):
+        desc = addrxlat.CustomDescription()
+        with self.assertRaises(AttributeError):
+            desc.kind = addrxlat.NOMETH
+
+    def test_custom_target_as(self):
+        desc = addrxlat.CustomDescription(addrxlat.MACHPHYSADDR)
+        self.assertEqual(desc.kind, addrxlat.CUSTOM)
+        self.assertEqual(desc.target_as, addrxlat.MACHPHYSADDR)
+
+    def test_custom_notimpl(self):
+        desc = addrxlat.CustomDescription(addrxlat.MACHPHYSADDR)
+        self.assertEqual(desc.kind, addrxlat.CUSTOM)
+        self.assertEqual(desc.target_as, addrxlat.MACHPHYSADDR)
+        ctx = addrxlat.Context()
+        meth = addrxlat.Method(desc)
+        step = addrxlat.Step(ctx=ctx, meth=meth)
+        with self.assertRaisesRegexp(BaseException, "NULL callback"):
+            desc.cb_first_step(step, 0x1234)
+        with self.assertRaisesRegexp(BaseException, "NULL callback"):
+            desc.cb_next_step(step)
+
     def test_linear_defaults(self):
         desc = addrxlat.LinearDescription()
         self.assertEqual(desc.kind, addrxlat.LINEAR)

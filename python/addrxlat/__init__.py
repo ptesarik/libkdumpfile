@@ -44,6 +44,17 @@ class Description(Description):
             self.target_as,
             self.param)
 
+class CustomDescription(CustomDescription):
+    def __init__(self, target_as=NOADDR, *args, **kwargs):
+        super(CustomDescription, self).__init__(*args, **kwargs)
+        self.convert = convert
+        self.target_as = target_as
+
+    def __repr__(self):
+        return '%s(%r)' % (
+            self.__class__.__name__,
+            self.target_as)
+
 class LinearDescription(LinearDescription):
     def __init__(self, target_as=NOADDR, off=0, *args, **kwargs):
         super(LinearDescription, self).__init__(*args, **kwargs)
