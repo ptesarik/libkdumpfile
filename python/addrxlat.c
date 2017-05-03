@@ -85,6 +85,7 @@ static PyObject *sys_FromPointer(PyObject *_conv, addrxlat_sys_t *sys);
 static addrxlat_step_t *step_AsPointer(PyObject *value);
 static PyObject *step_FromPointer(
 	PyObject *_conv, const addrxlat_step_t *step);
+static int step_Init(PyObject *self, const addrxlat_step_t *step);
 static addrxlat_op_ctl_t *op_AsPointer(PyObject *value);
 static PyObject *op_FromPointer(
 	PyObject *conv, const addrxlat_op_ctl_t *opctl);
@@ -5361,35 +5362,52 @@ step_AsPointer(PyObject *value)
 }
 
 /** Construct a step object from @c addrxlat_step_t.
- * @param _conv  convert object
+ * @param conv   convert object
  * @param step   libaddrxlat representation of a step
  * @returns      corresponding Python object (or @c NULL on failure)
  *
  * This function makes a new copy of the step.
  */
 static PyObject *
-step_FromPointer(PyObject *_conv, const addrxlat_step_t *step)
+step_FromPointer(PyObject *conv, const addrxlat_step_t *step)
 {
-	convert_object *conv = (convert_object *)_conv;
-	PyTypeObject *type = conv->step_type;
-	PyObject *ctx;
+	PyTypeObject *type = ((convert_object *)conv)->step_type;
 	PyObject *result;
 
 	result = type->tp_alloc(type, 0);
 	if (!result)
 		return NULL;
+	Py_INCREF(conv);
+	((step_object *)result)->convert = conv;
 
-	ctx = ctx_FromPointer((PyObject*)conv, step->ctx);
-	if (!ctx) {
+	if (step_Init(result, step)) {
 		Py_DECREF(result);
 		return NULL;
 	}
-	((step_object*)result)->ctx = ctx;
-	((step_object*)result)->step = *step;
-	Py_INCREF(conv);
-	((step_object*)result)->convert = (PyObject*)conv;
 
 	return result;
+}
+
+/** Initialize a Step object using a C @c addrxlat_step_t object.
+ * @param _self  Python Step object
+ * @param step   libaddrxlat representation of a step
+ * @returns      corresponding Python object (or @c NULL on failure)
+ */
+static int
+step_Init(PyObject *_self, const addrxlat_step_t *step)
+{
+	step_object *self = (step_object *)_self;
+	PyObject *obj, *oldobj;
+
+	obj = ctx_FromPointer(self->convert, step->ctx);
+	if (!obj)
+		return -1;
+	oldobj = self->ctx;
+	self->ctx = obj;
+	Py_XDECREF(oldobj);
+
+	self->step = *step;
+	return 0;
 }
 
 /** Get the libaddrxlat representation of a Python op object.
@@ -5951,6 +5969,7 @@ init_addrxlat (void)
 	CAPI.System_FromPointer = sys_FromPointer;
 	CAPI.Step_AsPointer = step_AsPointer;
 	CAPI.Step_FromPointer = step_FromPointer;
+	CAPI.Step_Init = step_Init;
 	CAPI.Operator_AsPointer = op_AsPointer;
 	CAPI.Operator_FromPointer = op_FromPointer;
 

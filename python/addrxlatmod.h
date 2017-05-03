@@ -73,6 +73,7 @@ struct addrxlat_CAPI {
 	addrxlat_step_t *(*Step_AsPointer)(PyObject *value);
 	PyObject *(*Step_FromPointer)(
 		PyObject *conv, const addrxlat_step_t *step);
+	int (*Step_Init)(PyObject *self, const addrxlat_step_t *step);
 
 	addrxlat_op_ctl_t *(*Operator_AsPointer)(PyObject *value);
 	PyObject *(*Operator_FromPointer)(
