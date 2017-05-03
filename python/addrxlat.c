@@ -3850,6 +3850,9 @@ static PyTypeObject sys_type =
 	sys_new,			/* tp_new */
 };
 
+/** Number of parameter locations in @ref step_object. */
+#define STEP_NLOC	2
+
 /** Python representation of @ref addrxlat_step_t.
  */
 typedef struct {
@@ -3859,6 +3862,12 @@ typedef struct {
 	PyObject *ctx;
 	/** Translation step in libaddrxlat format. */
 	addrxlat_step_t step;
+
+	/** FullAddress object for @c base. */
+	PyObject *base;
+
+	/** Location configuration for @c step. */
+	param_loc loc[STEP_NLOC];
 
 	PyObject *convert;
 } step_object;
@@ -3897,8 +3906,18 @@ step_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	}
 	Py_INCREF(ctxobj);
 	self->ctx = ctxobj;
+	Py_INCREF(Py_None);
+	self->base = Py_None;
 	Py_INCREF(convert);
 	self->convert = convert;
+
+	self->loc[0].ptr = &self->step;
+	self->loc[0].off = 0;
+	self->loc[0].len = sizeof(addrxlat_step_t);
+
+	self->loc[1].ptr = NULL;
+	self->loc[1].off = offsetof(addrxlat_step_t, base);
+	self->loc[1].len = sizeof(addrxlat_fulladdr_t);
 
 	return (PyObject*)self;
 }
@@ -4052,38 +4071,11 @@ step_set_meth(PyObject *_self, PyObject *value, void *data)
 PyDoc_STRVAR(step_base__doc__,
 "base address for next translation step");
 
-/** Getter for the base attribute.
- * @param _self  step object
- * @param data   ignored
- * @returns      FullAddress object (or @c NULL on failure)
- */
-static PyObject *
-step_get_base(PyObject *_self, void *data)
-{
-	step_object *self = (step_object*)_self;
-
-	return fulladdr_FromPointer(self->convert, &self->step.base);
-}
-
-/** Setter for the base attribute.
- * @param _self  step object
- * @param value  new value (a @c FullAddress)
- * @param data   ignored
- * @returns      zero on success, -1 otherwise
- */
-static int
-step_set_base(PyObject *_self, PyObject *value, void *data)
-{
-	step_object *self = (step_object*)_self;
-	const addrxlat_fulladdr_t *base;
-
-	base = fulladdr_AsPointer(value);
-	if (!base)
-		return -1;
-
-	self->step.base = *base;
-	return 0;
-}
+static fulladdr_loc step_base_loc = {
+	offsetof(step_object, base),
+	offsetof(step_object, loc[1]),
+	"base"
+};
 
 PyDoc_STRVAR(step_raw__doc__,
 "raw value from last step");
@@ -4248,7 +4240,8 @@ static PyGetSetDef step_getset[] = {
 	  OFFSETOF_PTR(step_object, ctx) },
 	{ "sys", step_get_sys, step_set_sys, step_sys__doc__ },
 	{ "meth", step_get_meth, step_set_meth, step_meth__doc__ },
-	{ "base", step_get_base, step_set_base, step_base__doc__ },
+	{ "base", get_fulladdr, set_fulladdr, step_base__doc__,
+	  &step_base_loc },
 	{ "raw", step_get_raw, step_set_raw,
 	  step_raw__doc__ },
 	{ "idx", step_get_idx, step_set_idx,
@@ -4946,7 +4939,7 @@ static PyMemberDef convert_members[] = {
  * structure embedded in the Python object, i.e. the pointer is
  * valid only as long as the containing Python object exists.
  *
- * If @c param is @c NULL, return a pointer to a null address singleton.
+ * If @c value is @c Py_None, return a pointer to a null address singleton.
  * This singleton should not be modified, as it would affect all other
  * @c None full addresses.
  */
@@ -5352,13 +5345,17 @@ sys_FromPointer(PyObject *_conv, addrxlat_sys_t *sys)
 static addrxlat_step_t *
 step_AsPointer(PyObject *value)
 {
+	step_object *stepobj;
+
 	if (!PyObject_TypeCheck(value, &step_type)) {
 		PyErr_Format(PyExc_TypeError, "need a Step, not '%.200s'",
 			     Py_TYPE(value)->tp_name);
 		return NULL;
 	}
 
-	return &((step_object*)value)->step;
+	stepobj = (step_object*)value;
+	loc_gather(stepobj->loc, STEP_NLOC, &stepobj->step);
+	return &stepobj->step;
 }
 
 /** Construct a step object from @c addrxlat_step_t.
@@ -5398,6 +5395,7 @@ step_Init(PyObject *_self, const addrxlat_step_t *step)
 {
 	step_object *self = (step_object *)_self;
 	PyObject *obj, *oldobj;
+	int result;
 
 	obj = ctx_FromPointer(self->convert, step->ctx);
 	if (!obj)
@@ -5406,7 +5404,15 @@ step_Init(PyObject *_self, const addrxlat_step_t *step)
 	self->ctx = obj;
 	Py_XDECREF(oldobj);
 
-	self->step = *step;
+	obj = fulladdr_FromPointer(self->convert, &step->base);
+	if (!obj)
+		return -1;
+	result = set_fulladdr((PyObject*)self, obj, &step_base_loc);
+	Py_DECREF(obj);
+	if (result)
+		return result;
+
+	loc_scatter(self->loc, STEP_NLOC, step);
 	return 0;
 }
 
