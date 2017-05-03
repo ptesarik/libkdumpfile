@@ -829,5 +829,38 @@ class TestTranslation(unittest.TestCase):
         addr.conv(addrxlat.KPHYSADDR, ctx, self.sys)
         self.assertEqual(addr, addrxlat.FullAddress(addrxlat.KPHYSADDR, 0x1234))
 
+class TestCustom(unittest.TestCase):
+    def setUp(self):
+        self.ctx = addrxlat.Context()
+
+        def first_step(step, addr):
+            step.base = addrxlat.FullAddress(addrxlat.NOADDR, 0xabcdef)
+            step.idx = (addr & 0xff, addr >> 8)
+            step.remain = 2
+
+        def next_step(step):
+            step.base.addr = 0x123456 + step.idx[1]
+            step.elemsz = 0x100
+
+        self.desc = addrxlat.CustomDescription()
+        self.desc.target_as = addrxlat.KPHYSADDR
+        self.desc.cb_first_step = first_step
+        self.desc.cb_next_step = next_step
+        self.meth = addrxlat.Method(self.desc)
+
+    def test_customdesc_cb(self):
+        step = addrxlat.Step(ctx=self.ctx, meth=self.meth)
+        self.assertIs(step.base, None)
+        self.desc.cb_first_step(step, 0x1234)
+        self.assertEqual(step.base.addrspace, addrxlat.NOADDR)
+        self.assertEqual(step.base.addr, 0xabcdef)
+        self.assertEqual(step.idx[0], 0x34)
+        self.assertEqual(step.idx[1], 0x12)
+        self.desc.cb_next_step(step)
+        self.assertEqual(step.base.addrspace, addrxlat.NOADDR)
+        self.assertEqual(step.base.addr, 0x123456 + 0x12)
+        self.assertEqual(step.idx[0], 0x34)
+        self.assertEqual(step.idx[1], 0x12)
+
 if __name__ == '__main__':
     unittest.main()
