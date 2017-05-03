@@ -1759,7 +1759,7 @@ set_fulladdr(PyObject *self, PyObject *value, void *data)
 	oldval = *pobj;
 	*pobj = value;
 	loc->ptr = (value == Py_None ? NULL : addr);
-	Py_DECREF(oldval);
+	Py_XDECREF(oldval);
 	return 0;
 }
 
