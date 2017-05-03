@@ -3936,11 +3936,11 @@ step_dealloc(PyObject *_self)
 	}
 	Py_XDECREF(self->ctx);
 	if (self->step.sys) {
-		addrxlat_sys_decref((addrxlat_sys_t*)self->step.sys);
+		addrxlat_sys_decref(self->step.sys);
 		self->step.sys = NULL;
 	}
 	if (self->step.meth) {
-		addrxlat_meth_decref((addrxlat_meth_t*)self->step.meth);
+		addrxlat_meth_decref(self->step.meth);
 		self->step.meth = NULL;
 	}
 
@@ -4021,7 +4021,7 @@ step_set_sys(PyObject *_self, PyObject *value, void *data)
 	if (PyErr_Occurred())
 		return -1;
 	if (self->step.sys)
-		addrxlat_sys_decref((addrxlat_sys_t*)self->step.sys);
+		addrxlat_sys_decref(self->step.sys);
 	self->step.sys = sys;
 
 	return 0;
@@ -4062,7 +4062,7 @@ step_set_meth(PyObject *_self, PyObject *value, void *data)
 	if (PyErr_Occurred())
 		return -1;
 	if (self->step.meth)
-		addrxlat_meth_decref((addrxlat_meth_t*)self->step.meth);
+		addrxlat_meth_decref(self->step.meth);
 	self->step.meth = meth;
 
 	return 0;
@@ -4521,7 +4521,7 @@ op_dealloc(PyObject *_self)
 	}
 	Py_XDECREF(self->ctx);
 	if (self->opctl.sys) {
-		addrxlat_sys_decref((addrxlat_sys_t*)self->opctl.sys);
+		addrxlat_sys_decref(self->opctl.sys);
 		self->opctl.sys = NULL;
 	}
 	Py_XDECREF(self->result);
@@ -4631,7 +4631,7 @@ op_set_sys(PyObject *_self, PyObject *value, void *data)
 	if (PyErr_Occurred())
 		return -1;
 	if (self->opctl.sys)
-		addrxlat_sys_decref((addrxlat_sys_t*)self->opctl.sys);
+		addrxlat_sys_decref(self->opctl.sys);
 	self->opctl.sys = sys;
 
 	return 0;

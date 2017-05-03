@@ -952,12 +952,12 @@ struct _addrxlat_step {
 	 * This field must be initialized for @ref addrxlat_launch
 	 * (it may be @c NULL, but not an undefined value).
 	 */
-	const addrxlat_sys_t *sys;
+	addrxlat_sys_t *sys;
 
 	/** Translation method used for this particular translation.
 	 * This field must be initialized for @ref addrxlat_launch.
 	 */
-	const addrxlat_meth_t *meth;
+	addrxlat_meth_t *meth;
 
 	/** Remaining steps.
 	 * This field is set on a successful return from @ref addrxlat_launch.
@@ -1066,7 +1066,7 @@ typedef struct _addrxlat_op_ctl {
 	addrxlat_ctx_t *ctx;
 
 	/** Address translation system. */
-	const addrxlat_sys_t *sys;
+	addrxlat_sys_t *sys;
 
 	/** Operation callback. */
 	addrxlat_op_fn *op;
@@ -1106,7 +1106,7 @@ addrxlat_status addrxlat_op(const addrxlat_op_ctl_t *ctl,
  */
 addrxlat_status addrxlat_fulladdr_conv(
 	addrxlat_fulladdr_t *faddr, addrxlat_addrspace_t as,
-	addrxlat_ctx_t *ctx, const addrxlat_sys_t *sys);
+	addrxlat_ctx_t *ctx, addrxlat_sys_t *sys);
 
 #ifdef  __cplusplus
 }

@@ -583,7 +583,7 @@ DEFINE_ALIAS(fulladdr_conv);
 
 addrxlat_status
 addrxlat_fulladdr_conv(addrxlat_fulladdr_t *faddr, addrxlat_addrspace_t as,
-		       addrxlat_ctx_t *ctx, const addrxlat_sys_t *sys)
+		       addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 {
 	addrxlat_op_ctl_t opctl;
 
