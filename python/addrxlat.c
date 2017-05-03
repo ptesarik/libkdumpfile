@@ -1253,13 +1253,6 @@ cb_hook(void *_self, addrxlat_cb_t *cb)
 	}
 }
 
-static void
-cb_unhook(void *_self, addrxlat_cb_t *cb)
-{
-	if (cb->cb_hook)
-		cb->cb_hook(cb->data, cb);
-}
-
 PyDoc_STRVAR(ctx__doc__,
 "Context() -> address translation context");
 
@@ -1326,7 +1319,7 @@ ctx_dealloc(PyObject *_self)
 	if (self->ctx) {
 		addrxlat_ctx_t *ctx = self->ctx;
 		self->ctx = NULL;
-		addrxlat_ctx_install_cb_hook(ctx, cb_unhook, self);
+		addrxlat_ctx_set_cb(ctx, addrxlat_ctx_get_cb(ctx));
 		addrxlat_ctx_decref(ctx);
 	}
 
