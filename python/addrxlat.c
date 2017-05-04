@@ -2193,6 +2193,28 @@ desc_error_status(customdesc_object *self, addrxlat_step_t *step)
 	return status;
 }
 
+/** Update an @c addrxlat_step_t using another object.
+ * @param step   Object to be updated.
+ * @param other  Desired new values for @c step.
+ */
+static void
+update_step(addrxlat_step_t *step, const addrxlat_step_t *other)
+{
+	if (step->ctx)
+		addrxlat_ctx_decref(step->ctx);
+	if (step->sys)
+		addrxlat_sys_decref(step->sys);
+	if (step->meth)
+		addrxlat_meth_decref(step->meth);
+	memcpy(step, other, sizeof(*step));
+	if (step->ctx)
+		addrxlat_ctx_incref(step->ctx);
+	if (step->sys)
+		addrxlat_sys_incref(step->sys);
+	if (step->meth)
+		addrxlat_meth_incref(step->meth);
+}
+
 PyDoc_STRVAR(customdesc__doc__,
 "CustomDescription() -> custom address translation description");
 
@@ -2218,6 +2240,8 @@ cb_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 
 	result = PyObject_CallFunction(func, "OK",
 				       stepobj, (unsigned PY_LONG_LONG) addr);
+	if (result)
+		update_step(step, step_AsPointer(stepobj));
 	Py_DECREF(stepobj);
 	Py_DECREF(func);
 	if (!result)
@@ -2248,6 +2272,8 @@ cb_next_step(addrxlat_step_t *step)
 	}
 
 	result = PyObject_CallFunction(func, "O", stepobj);
+	if (result)
+		update_step(step, step_AsPointer(stepobj));
 	Py_DECREF(stepobj);
 	Py_DECREF(func);
 	if (!result)
