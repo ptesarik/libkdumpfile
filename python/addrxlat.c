@@ -2200,19 +2200,25 @@ desc_error_status(customdesc_object *self, addrxlat_step_t *step)
 static void
 update_step(addrxlat_step_t *step, const addrxlat_step_t *other)
 {
-	if (step->ctx)
-		addrxlat_ctx_decref(step->ctx);
-	if (step->sys)
-		addrxlat_sys_decref(step->sys);
-	if (step->meth)
-		addrxlat_meth_decref(step->meth);
+	if (step->ctx != other->ctx) {
+		if (step->ctx)
+			addrxlat_ctx_decref(step->ctx);
+		if (other->ctx)
+			addrxlat_ctx_incref(other->ctx);
+	}
+	if (step->sys != other->sys) {
+		if (step->sys)
+			addrxlat_sys_decref(step->sys);
+		if (other->sys)
+			addrxlat_sys_incref(other->sys);
+	}
+	if (step->meth != other->meth) {
+		if (step->meth)
+			addrxlat_meth_decref(step->meth);
+		if (other->meth)
+			addrxlat_meth_incref(other->meth);
+	}
 	memcpy(step, other, sizeof(*step));
-	if (step->ctx)
-		addrxlat_ctx_incref(step->ctx);
-	if (step->sys)
-		addrxlat_sys_incref(step->sys);
-	if (step->meth)
-		addrxlat_meth_incref(step->meth);
 }
 
 PyDoc_STRVAR(customdesc__doc__,
