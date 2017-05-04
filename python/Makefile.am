@@ -35,9 +35,20 @@ _kdumpfile_la_LDFLAGS = $(AM_LDFLAGS) -export-symbols $(srcdir)/kdumpfile.sym
 _kdumpfile_la_LIBADD = $(PYTHON_LIBS) $(top_builddir)/src/libkdumpfile.la
 EXTRA__kdumpfile_la_DEPENDENCIES = kdumpfile.sym
 
+check_LTLIBRARIES = _test_addrxlat.la
+
+_test_addrxlat_la_SOURCES = test_addrxlat.c
+_test_addrxlat_la_LDFLAGS = \
+	$(AM_LDFLAGS) \
+	-export-symbols $(srcdir)/test_addrxlat.sym \
+	-rpath $(abs_builddir)
+_test_addrxlat_la_LIBADD = $(PYTHON_LIBS) $(top_builddir)/src/addrxlat/libaddrxlat.la
+EXTRA__test_addrxlat_la_DEPENDENCIES = test_addrxlat.sym
+
 dist_noinst_DATA = \
 	addrxlat.sym \
 	kdumpfile.sym \
+	test_addrxlat.sym \
 	showxlat.py \
 	vtop.py
 

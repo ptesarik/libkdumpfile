@@ -848,6 +848,13 @@ class TestCustom(unittest.TestCase):
         self.desc.cb_next_step = next_step
         self.meth = addrxlat.Method(self.desc)
 
+        import _test_addrxlat
+        self.desc_ext = _test_addrxlat.getCustomDescription()
+        self.assertEqual(self.desc_ext.kind, addrxlat.CUSTOM)
+        self.assertEqual(self.desc_ext.target_as, addrxlat.NOADDR)
+        self.desc_ext.target_as = addrxlat.KPHYSADDR
+        self.meth_ext = addrxlat.Method(self.desc_ext)
+
     def test_customdesc_cb(self):
         step = addrxlat.Step(ctx=self.ctx, meth=self.meth)
         self.assertIs(step.base, None)
@@ -871,6 +878,30 @@ class TestCustom(unittest.TestCase):
         addr.conv(addrxlat.KPHYSADDR, self.ctx, sys)
         self.assertEqual(addr.addrspace, addrxlat.KPHYSADDR)
         self.assertEqual(addr.addr, 0x123456 + 0x4523)
+
+    def test_customdesc_ext_cb(self):
+        step = addrxlat.Step(ctx=self.ctx, meth=self.meth_ext)
+        self.assertIs(step.base, None)
+        self.desc_ext.cb_first_step(step, 0x1234)
+        self.assertEqual(step.base.addrspace, addrxlat.NOADDR)
+        self.assertEqual(step.base.addr, 0x4d795f4d61676963)
+        self.assertEqual(step.idx[0], 0x34)
+        self.assertEqual(step.idx[1], 0x12)
+        self.desc_ext.cb_next_step(step)
+        self.assertEqual(step.base.addrspace, addrxlat.NOADDR)
+        self.assertEqual(step.base.addr, 0x4d61676963546f6f + 0x12)
+        self.assertEqual(step.idx[0], 0x34)
+        self.assertEqual(step.idx[1], 0x12)
+
+    def test_customdesc_ext_conv(self):
+        map = addrxlat.Map()
+        map.set(0, addrxlat.Range(0xffff, self.meth_ext))
+        sys = addrxlat.System()
+        sys.set_map(addrxlat.SYS_MAP_KV_PHYS, map)
+        addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x2345)
+        addr.conv(addrxlat.KPHYSADDR, self.ctx, sys)
+        self.assertEqual(addr.addrspace, addrxlat.KPHYSADDR)
+        self.assertEqual(addr.addr, 0x4d61676963546f6f + 0x4523)
 
 if __name__ == '__main__':
     unittest.main()
