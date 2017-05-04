@@ -77,22 +77,29 @@ magic_next_step(addrxlat_step_t *step)
 }
 
 PyDoc_STRVAR(get_custdesc__doc__,
-"Get description that translates to a magic value.");
+"getCustomDescription(conv) -> CustomDescription\n\
+\n\
+Get description that translates to a magic value.");
 
 static PyObject *
 get_custdesc(PyObject *self, PyObject *args)
 {
+	PyObject *conv;
 	addrxlat_desc_t desc;
+
+	if (!PyArg_ParseTuple(args, "O", &conv))
+		return NULL;
+
 	desc.kind = ADDRXLAT_CUSTOM;
 	desc.target_as = ADDRXLAT_NOADDR;
 	desc.param.custom.first_step = magic_first_step;
 	desc.param.custom.next_step = magic_next_step;
 	desc.param.custom.data = custom_magic_str;
-	return addrxlat_API->Description_FromPointer(addrxlat_API->convert, &desc);
+	return addrxlat_API->Description_FromPointer(conv, &desc);
 }
 
 static PyMethodDef test_methods[] = {
-	{ "getCustomDescription", (PyCFunction)get_custdesc, METH_NOARGS,
+	{ "getCustomDescription", (PyCFunction)get_custdesc, METH_VARARGS,
 	  get_custdesc__doc__ },
 	{ NULL }
 };

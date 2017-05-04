@@ -849,7 +849,7 @@ class TestCustom(unittest.TestCase):
         self.meth = addrxlat.Method(self.desc)
 
         import _test_addrxlat
-        self.desc_ext = _test_addrxlat.getCustomDescription()
+        self.desc_ext = _test_addrxlat.getCustomDescription(addrxlat.convert)
         self.assertEqual(self.desc_ext.kind, addrxlat.CUSTOM)
         self.assertEqual(self.desc_ext.target_as, addrxlat.NOADDR)
         self.desc_ext.target_as = addrxlat.KPHYSADDR
