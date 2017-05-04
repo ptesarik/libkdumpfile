@@ -92,28 +92,390 @@ pgt_huge_page(addrxlat_step_t *step)
 	return ADDRXLAT_OK;
 }
 
+/** Initialize step state for linear offset.
+ * @param walk  Page table walk state.
+ * @param addr  Address to be translated.
+ * @returns     Error status.
+ */
+static addrxlat_status
+first_step_linear(addrxlat_step_t *step, addrxlat_addr_t addr)
+{
+	const addrxlat_param_linear_t *linear = &step->desc->param.linear;
+
+	step->base.as = step->desc->target_as;
+	step->base.addr = linear->off;
+	step->remain = 1;
+	step->elemsz = 1;
+	step->idx[0] = addr;
+
+	return ADDRXLAT_OK;
+}
+
+/** Generic initialization of the step state for page table walk.
+ * @param step  Step state.
+ * @param addr  Address to be translated.
+ * @returns     Always returns success.
+ */
+static addrxlat_status
+first_step_pgt_generic(addrxlat_step_t *step, addrxlat_addr_t addr)
+{
+	const addrxlat_param_pgt_t *pgt = &step->desc->param.pgt;
+	unsigned short i;
+
+	if (pgt->root.as == ADDRXLAT_NOADDR)
+		return set_error(step->ctx, ADDRXLAT_ERR_NODATA,
+				 "Page table address not specified");
+
+	step->base = pgt->root;
+	step->remain = pgt->pf.nfields;
+	step->elemsz = step->remain > 1
+		? 1 << addrxlat_pteval_shift(pgt->pf.pte_format)
+		: 1;
+	for (i = 0; i < pgt->pf.nfields; ++i) {
+		unsigned short bits = pgt->pf.fieldsz[i];
+		addrxlat_addr_t mask = bits < sizeof(addrxlat_addr_t) * 8
+			? ((addrxlat_addr_t)1 << bits) - 1
+			: ~(addrxlat_addr_t)0;
+		step->idx[i] = addr & mask;
+		addr >>= bits;
+	}
+	step->idx[i] = addr;
+	return ADDRXLAT_OK;
+}
+
+/** Page frame number next step function.
+ * @param step  Current step state.
+ * @returns     Error status.
+ *
+ * This function handles page frame numbers in a table.
+ */
+static addrxlat_status
+next_step_pfn(addrxlat_step_t *step)
+{
+	addrxlat_status status;
+
+	status = read_pte(step);
+	if (status == ADDRXLAT_OK) {
+		const addrxlat_desc_t *desc = step->desc;
+		step->base.addr =
+			step->raw.pte << desc->param.pgt.pf.fieldsz[0];
+		step->base.as = desc->target_as;
+		if (step->remain == 1)
+			step->elemsz = 1;
+	}
+
+	return status;
+}
+
+/** Check unsigned address overflow.
+ * @param step  Current step state.
+ * @returns     Error status.
+ *
+ * This function is meant to be used by a first step function.
+ * It checks whether the input address is too big when interpreted
+ * as an unsigned integer.
+ */
+static addrxlat_status
+step_check_uaddr(addrxlat_step_t *step)
+{
+	return step->idx[step->desc->param.pgt.pf.nfields]
+		? set_error(step->ctx, ADDRXLAT_ERR_INVALID,
+			    "Virtual address too big")
+		: ADDRXLAT_OK;
+}
+
+/** Initialize step state for unsigned address page table walk.
+ * @param step  Step state.
+ * @param addr  Address to be translated.
+ * @returns     Error status.
+ */
+static addrxlat_status
+first_step_uaddr(addrxlat_step_t *step, addrxlat_addr_t addr)
+{
+	addrxlat_status status;
+	status = first_step_pgt_generic(step, addr);
+	if (status != ADDRXLAT_OK)
+		return status;
+	return step_check_uaddr(step);
+}
+
+/** Count total size of all address bitfields.
+ * @param pf  Paging form.
+ * @returns   Number of significant bits in the source address.
+*/
+static unsigned short
+vaddr_bits(const addrxlat_paging_form_t *pf)
+{
+	unsigned short i;
+	unsigned short result = 0;
+	for (i = 0; i < pf->nfields; ++i)
+		result += pf->fieldsz[i];
+	return result;
+}
+
+/** Check signed address overflow.
+ * @param step  Current step state.
+ * @returns     Error status.
+ *
+ * This function is meant to be used by a first step function.
+ * It checks whether the input address is too big when interpreted
+ * as a signed integer.
+ */
+static addrxlat_status
+step_check_saddr(addrxlat_step_t *step)
+{
+	const addrxlat_paging_form_t *pf = &step->desc->param.pgt.pf;
+	unsigned short lvl = pf->nfields;
+	struct {
+		int bit : 1;
+	} s;
+	addrxlat_addr_t signext;
+
+	s.bit = step->idx[lvl - 1] >> (pf->fieldsz[lvl - 1] - 1);
+	signext = s.bit & (ADDRXLAT_ADDR_MAX >> vaddr_bits(pf));
+	return step->idx[lvl] != signext
+		? set_error(step->ctx, ADDRXLAT_ERR_INVALID,
+			    "Virtual address too big")
+		: ADDRXLAT_OK;
+}
+
+/** Initialize step state for signed address page table walk.
+ * @param step  Step state.
+ * @param addr  Address to be translated.
+ * @returns     Error status.
+ */
+static addrxlat_status
+first_step_saddr(addrxlat_step_t *step, addrxlat_addr_t addr)
+{
+	addrxlat_status status;
+	status = first_step_pgt_generic(step, addr);
+	if (status != ADDRXLAT_OK)
+		return status;
+	return step_check_saddr(step);
+}
+
+/** Initialize step state for page table walk.
+ * @param step  Step state.
+ * @param addr  Address to be translated.
+ * @returns     Always returns success.
+ */
+static addrxlat_status
+first_step_pgt(addrxlat_step_t *step, addrxlat_addr_t addr)
+{
+	switch (step->desc->param.pgt.pf.pte_format) {
+	case ADDRXLAT_PTE_NONE:
+	case ADDRXLAT_PTE_PPC64_LINUX_RPN30:
+		return first_step_pgt_generic(step, addr);
+
+	case ADDRXLAT_PTE_PFN32:
+	case ADDRXLAT_PTE_PFN64:
+	case ADDRXLAT_PTE_IA32:
+	case ADDRXLAT_PTE_IA32_PAE:
+	case ADDRXLAT_PTE_S390X:
+		return first_step_uaddr(step, addr);
+
+	case ADDRXLAT_PTE_X86_64:
+		return first_step_saddr(step, addr);
+
+	default:
+		return set_error(step->ctx, ADDRXLAT_ERR_NOTIMPL,
+				 "Unknown PTE format");
+	};
+}
+
+/** Make one step in the page table walk.
+ * @param step  Step state.
+ * @param addr  Address to be translated.
+ * @returns     Always returns success.
+ */
+static addrxlat_status
+next_step_pgt(addrxlat_step_t *step)
+{
+	switch (step->desc->param.pgt.pf.pte_format) {
+	case ADDRXLAT_PTE_NONE:
+		return ADDRXLAT_OK;
+
+	case ADDRXLAT_PTE_PFN32:
+	case ADDRXLAT_PTE_PFN64:
+		return next_step_pfn(step);
+
+	case ADDRXLAT_PTE_IA32:
+		return pgt_ia32(step);
+
+	case ADDRXLAT_PTE_IA32_PAE:
+		return pgt_ia32_pae(step);
+
+	case ADDRXLAT_PTE_X86_64:
+		return pgt_x86_64(step);
+
+	case ADDRXLAT_PTE_S390X:
+		return pgt_s390x(step);
+
+	case ADDRXLAT_PTE_PPC64_LINUX_RPN30:
+		return pgt_ppc64_linux_rpn30(step);
+
+	default:
+		return set_error(step->ctx, ADDRXLAT_ERR_NOTIMPL,
+				 "Unknown PTE format");
+	};
+}
+
+/** Initialize step state for table lookup.
+ * @param step  Step state.
+ * @param addr  Address to be translated.
+ * @returns     Error status.
+ */
+static addrxlat_status
+first_step_lookup(addrxlat_step_t *step, addrxlat_addr_t addr)
+{
+	const addrxlat_param_lookup_t *lookup = &step->desc->param.lookup;
+	size_t i;
+
+	for (i = 0; i < lookup->nelem; ++i) {
+		const addrxlat_lookup_elem_t *elem = &lookup->tbl[i];
+		if (elem->orig <= addr &&
+		    addr <= elem->orig + lookup->endoff) {
+			step->base.as = step->desc->target_as;
+			step->base.addr = elem->dest;
+			step->remain = 1;
+			step->elemsz = 1;
+			step->idx[0] = addr - elem->orig;
+			return ADDRXLAT_OK;
+		}
+	}
+
+	return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT, "Not mapped");
+}
+
+/** Initialize step state for memory array lookup.
+ * @param step  Step state.
+ * @param addr  Address to be translated.
+ * @returns     Error status.
+ */
+static addrxlat_status
+first_step_memarr(addrxlat_step_t *step, addrxlat_addr_t addr)
+{
+	const addrxlat_param_memarr_t *memarr = &step->desc->param.memarr;
+
+	step->base = memarr->base;
+	step->remain = 2;
+	step->elemsz = memarr->elemsz;
+	step->idx[0] = addr & ((1ULL << memarr->shift) - 1);
+	step->idx[1] = addr >> memarr->shift;
+	return ADDRXLAT_OK;
+}
+
+/** Memory array next step function.
+ * @param walk  Current step state.
+ * @returns     Error status.
+ */
+static addrxlat_status
+next_step_memarr(addrxlat_step_t *step)
+{
+	const addrxlat_param_memarr_t *memarr = &step->desc->param.memarr;
+	uint64_t val64;
+	uint32_t val32;
+	addrxlat_status status;
+
+	switch (memarr->valsz) {
+	case 4:
+		status = read32(step, &step->base, &val32,
+				"memory array element");
+		step->raw.addr = val32;
+		break;
+
+	case 8:
+		status = read64(step, &step->base, &val64,
+				"memory array element");
+		step->raw.addr = val64;
+		break;
+
+	default:
+		return set_error(step->ctx, ADDRXLAT_ERR_NOTIMPL,
+				 "Unsupported value size: %u", memarr->valsz);
+	}
+
+	if (status == ADDRXLAT_OK) {
+		step->base.addr = step->raw.addr << memarr->shift;
+		step->base.as = step->desc->target_as;
+		step->elemsz = 1;
+	}
+
+	return status;
+}
+
+/** Initialize step state.
+ * @param step  Step state.
+ * @param addr  Address to be translated.
+ * @returns     Error status.
+ */
+static addrxlat_status
+first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
+{
+	switch (step->desc->kind) {
+	case ADDRXLAT_NOMETH:
+		return set_error(step->ctx, ADDRXLAT_ERR_NOMETH,
+				 "Null translation method");
+
+	case ADDRXLAT_CUSTOM:
+		return step->desc->param.custom.first_step(step, addr);
+
+	case ADDRXLAT_LINEAR:
+		return first_step_linear(step, addr);
+
+	case ADDRXLAT_PGT:
+		return first_step_pgt(step, addr);
+
+	case ADDRXLAT_LOOKUP:
+		return first_step_lookup(step, addr);
+
+	case ADDRXLAT_MEMARR:
+		return first_step_memarr(step, addr);
+
+	default:
+		return set_error(step->ctx, ADDRXLAT_ERR_NOTIMPL,
+				 "Unknown translation kind");
+	}
+}
+
+/** Make the next translation step.
+ * @param walk  Current step state.
+ * @returns     Error status.
+ */
+static addrxlat_status
+next_step(addrxlat_step_t *step)
+{
+	switch (step->desc->kind) {
+	case ADDRXLAT_NOMETH:
+		return set_error(step->ctx, ADDRXLAT_ERR_NOMETH,
+				 "Null translation method");
+
+	case ADDRXLAT_CUSTOM:
+		return step->desc->param.custom.next_step(step);
+
+	case ADDRXLAT_LINEAR:
+	case ADDRXLAT_LOOKUP:
+		return ADDRXLAT_OK;
+
+	case ADDRXLAT_PGT:
+		return next_step_pgt(step);
+
+	case ADDRXLAT_MEMARR:
+		return next_step_memarr(step);
+
+	default:
+		return set_error(step->ctx, ADDRXLAT_ERR_NOTIMPL,
+				 "Unknown translation kind");
+	}
+}
+
 DEFINE_ALIAS(launch);
 
 addrxlat_status
 addrxlat_launch(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	addrxlat_meth_t *meth;
-	addrxlat_status status;
-
 	clear_error(step->ctx);
-
-	meth = internal_meth_new();
-	if (!meth)
-		return set_error(step->ctx, ADDRXLAT_ERR_NOMEM,
-				 "Cannot allocate method");
-	status = addrxlat_meth_set_desc(meth, step->desc);
-	if (status != ADDRXLAT_OK)
-		return set_error(step->ctx, status,
-				 "Cannot set description");
-
-	status = meth->first_step(step, addr);
-	addrxlat_meth_decref(meth);
-	return status;
+	return first_step(step, addr);
 }
 
 DEFINE_ALIAS(launch_map);
@@ -123,7 +485,6 @@ addrxlat_launch_map(addrxlat_step_t *step, addrxlat_addr_t addr,
 		    const addrxlat_map_t *map)
 {
 	addrxlat_meth_t *meth;
-	addrxlat_status status;
 
 	clear_error(step->ctx);
 
@@ -133,8 +494,7 @@ addrxlat_launch_map(addrxlat_step_t *step, addrxlat_addr_t addr,
 				 "No translation method defined");
 
 	step->desc = &meth->desc;
-	status = meth->first_step(step, addr);
-	return status;
+	return first_step(step, addr);
 }
 
 DEFINE_ALIAS(step);
@@ -142,9 +502,6 @@ DEFINE_ALIAS(step);
 addrxlat_status
 addrxlat_step(addrxlat_step_t *step)
 {
-	addrxlat_meth_t *meth;
-	addrxlat_status status;
-
 	clear_error(step->ctx);
 
 	if (!step->remain)
@@ -158,18 +515,7 @@ addrxlat_step(addrxlat_step_t *step)
 		return ADDRXLAT_OK;
 	}
 
-	meth = internal_meth_new();
-	if (!meth)
-		return set_error(step->ctx, ADDRXLAT_ERR_NOMEM,
-				 "Cannot allocate method");
-	status = addrxlat_meth_set_desc(meth, step->desc);
-	if (status != ADDRXLAT_OK)
-		return set_error(step->ctx, status,
-				 "Cannot set description");
-
-	status = meth->next_step(step);
-	addrxlat_meth_decref(meth);
-	return status;
+	return next_step(step);
 }
 
 DEFINE_ALIAS(walk);
