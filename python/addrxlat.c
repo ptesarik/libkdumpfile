@@ -5175,19 +5175,9 @@ desc_FromPointer(PyObject *_conv, const addrxlat_desc_t *desc)
 			goto err;
 	}
 
-	val = PyInt_FromLong(desc->target_as);
-	if (!val)
-		goto err;
-	res = PyObject_SetAttrString(result, "target_as", val);
-	Py_DECREF(val);
-	if (res)
-		goto err;
-
 	descobj = (desc_object*)result;
 	descobj->desc.target_as = desc->target_as;
 	loc_scatter(descobj->loc, descobj->nloc, &desc->param);
-	Py_INCREF(conv);
-	descobj->convert = (PyObject*)conv;
 	return result;
 
  err:
