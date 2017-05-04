@@ -862,5 +862,15 @@ class TestCustom(unittest.TestCase):
         self.assertEqual(step.idx[0], 0x34)
         self.assertEqual(step.idx[1], 0x12)
 
+    def test_customdesc_conv(self):
+        map = addrxlat.Map()
+        map.set(0, addrxlat.Range(0xffff, self.meth))
+        sys = addrxlat.System()
+        sys.set_map(addrxlat.SYS_MAP_KV_PHYS, map)
+        addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x2345)
+        addr.conv(addrxlat.KPHYSADDR, self.ctx, sys)
+        self.assertEqual(addr.addrspace, addrxlat.KPHYSADDR)
+        self.assertEqual(addr.addr, 0x123456 + 0x4523)
+
 if __name__ == '__main__':
     unittest.main()
