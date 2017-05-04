@@ -1867,6 +1867,34 @@ desc_traverse(PyObject *_self, visitproc visit, void *arg)
 	return 0;
 }
 
+static PyTypeObject desc_type;
+
+static int
+desc_equal(desc_object *v, desc_object *w)
+{
+	return v->loc[0].len == w->loc[0].len &&
+		!memcmp(&v->desc, &w->desc, v->loc[0].len);
+}
+
+static PyObject *
+desc_richcompare(PyObject *v, PyObject *w, int op)
+{
+	PyObject *result;
+
+	if ((op == Py_EQ || op == Py_NE) &&
+	    PyObject_TypeCheck(v, &desc_type) &&
+	    PyObject_TypeCheck(w, &desc_type)) {
+		int cmp = desc_equal((desc_object*)v, (desc_object*)w);
+		result = (cmp == (op == Py_EQ))
+			? Py_True
+			: Py_False;
+	} else
+		result = Py_NotImplemented;
+
+	Py_INCREF(result);
+	return result;
+}
+
 static PyMemberDef desc_members[] = {
 	{ "convert", T_OBJECT, offsetof(desc_object, convert), 0,
 	  attr_convert__doc__ },
@@ -1942,7 +1970,7 @@ static PyTypeObject desc_type =
 	desc__doc__,			/* tp_doc */
 	desc_traverse,			/* tp_traverse */
 	0,				/* tp_clear */
-	0,				/* tp_richcompare */
+	desc_richcompare,		/* tp_richcompare */
 	0,				/* tp_weaklistoffset */
 	0,				/* tp_iter */
 	0,				/* tp_iternext */
