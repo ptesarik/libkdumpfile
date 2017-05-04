@@ -3872,6 +3872,35 @@ typedef struct {
 	PyObject *convert;
 } step_object;
 
+/** Create a new Step object with.
+ * @param type  Python type of the new object.
+ * @param conv  Type converter object.
+ * @returns     New object, or @c NULL on failure.
+ *
+ * This is the common code for brand new objects and objects created from
+ * a C pointer.
+ */
+static step_object *
+step_new_common(PyTypeObject *type, PyObject *conv)
+{
+	step_object *self;
+
+	self = (step_object*) type->tp_alloc(type, 0);
+	if (self) {
+		self->loc[0].ptr = &self->step;
+		self->loc[0].off = 0;
+		self->loc[0].len = sizeof(addrxlat_step_t);
+
+		self->loc[1].ptr = NULL;
+		self->loc[1].off = offsetof(addrxlat_step_t, base);
+		self->loc[1].len = sizeof(addrxlat_fulladdr_t);
+
+		Py_INCREF(conv);
+		self->convert = conv;
+	}
+	return self;
+}
+
 PyDoc_STRVAR(step__doc__,
 "Step(ctx) -> step");
 
@@ -3895,7 +3924,7 @@ step_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!ctxobj)
 		return NULL;
 
-	self = (step_object*) type->tp_alloc(type, 0);
+	self = step_new_common(type, convert);
 	if (!self)
 		return NULL;
 
@@ -3908,16 +3937,6 @@ step_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	self->ctx = ctxobj;
 	Py_INCREF(Py_None);
 	self->base = Py_None;
-	Py_INCREF(convert);
-	self->convert = convert;
-
-	self->loc[0].ptr = &self->step;
-	self->loc[0].off = 0;
-	self->loc[0].len = sizeof(addrxlat_step_t);
-
-	self->loc[1].ptr = NULL;
-	self->loc[1].off = offsetof(addrxlat_step_t, base);
-	self->loc[1].len = sizeof(addrxlat_fulladdr_t);
 
 	return (PyObject*)self;
 }
@@ -5371,11 +5390,9 @@ step_FromPointer(PyObject *conv, const addrxlat_step_t *step)
 	PyTypeObject *type = ((convert_object *)conv)->step_type;
 	PyObject *result;
 
-	result = type->tp_alloc(type, 0);
+	result = (PyObject*) step_new_common(type, conv);
 	if (!result)
 		return NULL;
-	Py_INCREF(conv);
-	((step_object *)result)->convert = conv;
 
 	if (step_Init(result, step)) {
 		Py_DECREF(result);
