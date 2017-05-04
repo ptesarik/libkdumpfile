@@ -467,7 +467,7 @@ class TestStep(unittest.TestCase):
         step = addrxlat.Step(self.ctx)
         self.assertIs(step.ctx, self.ctx)
         self.assertIs(step.sys, None)
-        self.assertIs(step.meth, None)
+        self.assertIs(step.desc, None)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 0)
         self.assertIs(step.base, None)
@@ -480,7 +480,7 @@ class TestStep(unittest.TestCase):
         step = addrxlat.Step(self.ctx, sys=sys)
         self.assertIs(step.ctx, self.ctx)
         self.assertEqual(step.sys, sys)
-        self.assertIs(step.meth, None)
+        self.assertIs(step.desc, None)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 0)
         self.assertIs(step.base, None)
@@ -488,12 +488,12 @@ class TestStep(unittest.TestCase):
         idx = (0,) * (addrxlat.FIELDS_MAX + 1)
         self.assertEqual(step.idx, idx)
 
-    def test_step_meth(self):
-        meth = addrxlat.Method()
-        step = addrxlat.Step(self.ctx, meth=meth)
+    def test_step_desc(self):
+        desc = addrxlat.LinearDescription()
+        step = addrxlat.Step(self.ctx, desc=desc)
         self.assertIs(step.ctx, self.ctx)
         self.assertIs(step.sys, None)
-        self.assertEqual(step.meth, meth)
+        self.assertEqual(step.desc, desc)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 0)
         self.assertIs(step.base, None)
@@ -507,7 +507,7 @@ class TestStep(unittest.TestCase):
         step.remain = 3
         self.assertIs(step.ctx, self.ctx)
         self.assertEqual(step.sys, sys)
-        self.assertIs(step.meth, None)
+        self.assertIs(step.desc, None)
         self.assertEqual(step.remain, 3)
         self.assertEqual(step.elemsz, 0)
         self.assertIs(step.base, None)
@@ -521,7 +521,7 @@ class TestStep(unittest.TestCase):
         step.elemsz = 8
         self.assertIs(step.ctx, self.ctx)
         self.assertEqual(step.sys, sys)
-        self.assertIs(step.meth, None)
+        self.assertIs(step.desc, None)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 8)
         self.assertIs(step.base, None)
@@ -535,7 +535,7 @@ class TestStep(unittest.TestCase):
         step.base = base
         self.assertIs(step.ctx, self.ctx)
         self.assertIs(step.sys, None)
-        self.assertIs(step.meth, None)
+        self.assertIs(step.desc, None)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 0)
         self.assertIs(step.base, base)
@@ -549,7 +549,7 @@ class TestStep(unittest.TestCase):
         step.base.addrspace = addrxlat.KVADDR
         self.assertIs(step.ctx, self.ctx)
         self.assertIs(step.sys, None)
-        self.assertIs(step.meth, None)
+        self.assertIs(step.desc, None)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 0)
         self.assertEqual(step.base, addrxlat.FullAddress(addrxlat.KVADDR, 0))
@@ -563,7 +563,7 @@ class TestStep(unittest.TestCase):
         step.base.addr = 0x1234
         self.assertIs(step.ctx, self.ctx)
         self.assertIs(step.sys, None)
-        self.assertIs(step.meth, None)
+        self.assertIs(step.desc, None)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 0)
         self.assertEqual(step.base, addrxlat.FullAddress(addrxlat.NOADDR, 0x1234))
@@ -575,12 +575,12 @@ class TestStep(unittest.TestCase):
         step = addrxlat.Step(self.ctx)
         with self.assertRaisesRegexp(TypeError, 'cannot be changed'):
             step.raw = 0xabcd
-        meth = addrxlat.Method(addrxlat.PageTableDescription())
-        step.meth = meth
+        desc = addrxlat.PageTableDescription()
+        step.desc = desc
         step.raw = 0xabcd
         self.assertIs(step.ctx, self.ctx)
         self.assertIs(step.sys, None)
-        self.assertEqual(step.meth, meth)
+        self.assertEqual(step.desc, desc)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 0)
         self.assertIs(step.base, None)
@@ -594,7 +594,7 @@ class TestStep(unittest.TestCase):
         step.idx = idx
         self.assertIs(step.ctx, self.ctx)
         self.assertIs(step.sys, None)
-        self.assertIs(step.meth, None)
+        self.assertIs(step.desc, None)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 0)
         self.assertIs(step.base, None)
@@ -846,22 +846,19 @@ class TestCustom(unittest.TestCase):
         self.desc.target_as = addrxlat.KPHYSADDR
         self.desc.cb_first_step = first_step
         self.desc.cb_next_step = next_step
-        self.meth = addrxlat.Method(self.desc)
 
         import _test_addrxlat
         self.desc_ext = _test_addrxlat.getCustomDescription(addrxlat.convert)
         self.assertEqual(self.desc_ext.kind, addrxlat.CUSTOM)
         self.assertEqual(self.desc_ext.target_as, addrxlat.NOADDR)
         self.desc_ext.target_as = addrxlat.KPHYSADDR
-        self.meth_ext = addrxlat.Method(self.desc_ext)
 
         self.desc_extmod = _test_addrxlat.getCustomDescription(addrxlat.convert)
         self.desc_extmod.target_as = addrxlat.KPHYSADDR
         self.desc_extmod.cb_next_step = next_step
-        self.meth_extmod = addrxlat.Method(self.desc_extmod)
 
     def test_customdesc_cb(self):
-        step = addrxlat.Step(ctx=self.ctx, meth=self.meth)
+        step = addrxlat.Step(ctx=self.ctx, desc=self.desc)
         self.assertIs(step.base, None)
         self.desc.cb_first_step(step, 0x1234)
         self.assertEqual(step.base.addrspace, addrxlat.NOADDR)
@@ -876,7 +873,8 @@ class TestCustom(unittest.TestCase):
 
     def test_customdesc_conv(self):
         map = addrxlat.Map()
-        map.set(0, addrxlat.Range(0xffff, self.meth))
+        meth = addrxlat.Method(self.desc)
+        map.set(0, addrxlat.Range(0xffff, meth))
         sys = addrxlat.System()
         sys.set_map(addrxlat.SYS_MAP_KV_PHYS, map)
         addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x2345)
@@ -885,7 +883,7 @@ class TestCustom(unittest.TestCase):
         self.assertEqual(addr.addr, 0x123456 + 0x4523)
 
     def test_customdesc_ext_cb(self):
-        step = addrxlat.Step(ctx=self.ctx, meth=self.meth_ext)
+        step = addrxlat.Step(ctx=self.ctx, desc=self.desc_ext)
         self.assertIs(step.base, None)
         self.desc_ext.cb_first_step(step, 0x1234)
         self.assertEqual(step.base.addrspace, addrxlat.NOADDR)
@@ -900,7 +898,8 @@ class TestCustom(unittest.TestCase):
 
     def test_customdesc_ext_conv(self):
         map = addrxlat.Map()
-        map.set(0, addrxlat.Range(0xffff, self.meth_ext))
+        meth = addrxlat.Method(self.desc_ext)
+        map.set(0, addrxlat.Range(0xffff, meth))
         sys = addrxlat.System()
         sys.set_map(addrxlat.SYS_MAP_KV_PHYS, map)
         addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x2345)
@@ -909,7 +908,7 @@ class TestCustom(unittest.TestCase):
         self.assertEqual(addr.addr, 0x4d61676963546f6f + 0x4523)
 
     def test_customdesc_extmod_cb(self):
-        step = addrxlat.Step(ctx=self.ctx, meth=self.meth_extmod)
+        step = addrxlat.Step(ctx=self.ctx, desc=self.desc_extmod)
         self.assertIs(step.base, None)
         self.desc_extmod.cb_first_step(step, 0x1234)
         self.assertEqual(step.base.addrspace, addrxlat.NOADDR)
@@ -924,7 +923,8 @@ class TestCustom(unittest.TestCase):
 
     def test_customdesc_extmod_conv(self):
         map = addrxlat.Map()
-        map.set(0, addrxlat.Range(0xffff, self.meth_ext))
+        meth = addrxlat.Method(self.desc_extmod)
+        map.set(0, addrxlat.Range(0xffff, meth))
         sys = addrxlat.System()
         sys.set_map(addrxlat.SYS_MAP_KV_PHYS, map)
         addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x2345)

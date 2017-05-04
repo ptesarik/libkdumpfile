@@ -118,7 +118,7 @@ hugepd_shift(addrxlat_pte_t hpde)
 static addrxlat_status
 huge_pd_linux(addrxlat_step_t *step)
 {
-	const addrxlat_paging_form_t *pf = &step->meth->desc.param.pgt.pf;
+	const addrxlat_paging_form_t *pf = &step->desc->param.pgt.pf;
 	addrxlat_addr_t off;
 	unsigned pdshift;
 	unsigned short i;
@@ -172,10 +172,10 @@ is_hugepte_linux(addrxlat_pte_t pte)
 static addrxlat_status
 huge_page_linux(addrxlat_step_t *step, unsigned rpn_shift)
 {
-	const addrxlat_paging_form_t *pf = &step->meth->desc.param.pgt.pf;
+	const addrxlat_paging_form_t *pf = &step->desc->param.pgt.pf;
 
 	step->base.addr = (step->raw.pte >> rpn_shift) << pf->fieldsz[0];
-	step->base.as = step->meth->desc.target_as;
+	step->base.as = step->desc->target_as;
 	return pgt_huge_page(step);
 }
 
@@ -193,7 +193,7 @@ pgt_ppc64_linux(addrxlat_step_t *step, unsigned rpn_shift)
 		"pud",
 		"pgd",
 	};
-	const addrxlat_paging_form_t *pf = &step->meth->desc.param.pgt.pf;
+	const addrxlat_paging_form_t *pf = &step->desc->param.pgt.pf;
 	addrxlat_status status;
 
 	status = read_pte(step);
@@ -222,7 +222,7 @@ pgt_ppc64_linux(addrxlat_step_t *step, unsigned rpn_shift)
 	} else {
 		step->base.addr =
 			(step->raw.pte >> rpn_shift) << pf->fieldsz[0];
-		step->base.as = step->meth->desc.target_as;
+		step->base.as = step->desc->target_as;
 		step->elemsz = 1;
 	}
 

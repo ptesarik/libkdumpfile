@@ -175,20 +175,20 @@ class System(System):
             raise get_exception(status, ctx.get_err())
 
 class Step(Step):
-    def __init__(self, ctx, sys=None, meth=None, *args, **kwargs):
+    def __init__(self, ctx, sys=None, desc=None, *args, **kwargs):
         super(Step, self).__init__(*args, **kwargs)
         self.convert = convert
         if sys is not None:
             self.sys = sys
-        if meth is not None:
-            self.meth = meth
+        if desc is not None:
+            self.desc = desc
 
     def __repr__(self):
         return '%s(%r, %r, %r)' % (
             self.__class__.__name__,
             self.ctx,
             self.sys,
-            self.meth)
+            self.desc)
 
     def launch(self, *args, **kwargs):
         status = super(Step, self).launch(*args, **kwargs)

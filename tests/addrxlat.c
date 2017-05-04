@@ -34,8 +34,6 @@
 
 #include "testutil.h"
 
-static addrxlat_meth_t *xlat;
-
 #define ALLOC_INC 32
 
 static size_t nentries;
@@ -272,14 +270,14 @@ set_memarr(addrxlat_param_memarr_t *ma, const char *spec)
 
 
 static int
-do_xlat(addrxlat_ctx_t *ctx, addrxlat_addr_t addr)
+do_xlat(addrxlat_ctx_t *ctx, addrxlat_desc_t *desc, addrxlat_addr_t addr)
 {
 	addrxlat_step_t step;
 	addrxlat_status status;
 
 	step.ctx = ctx;
 	step.sys = NULL;
-	step.meth = xlat;
+	step.desc = desc;
 	status = addrxlat_launch(&step, addr);
 	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot launch address translation: %s\n",
@@ -342,7 +340,6 @@ main(int argc, char **argv)
 	};
 	addrxlat_desc_t pgt, linear, lookup, memarr, *desc;
 	int opt;
-	addrxlat_status status;
 	unsigned long refcnt;
 	int rc;
 
@@ -438,23 +435,8 @@ main(int argc, char **argv)
 		return TEST_ERR;
 	}
 
-	xlat = addrxlat_meth_new();
-	if (!xlat) {
-		perror("Cannot allocate translation method");
-		rc = TEST_ERR;
-		goto out;
-	}
-
 	lookup.param.lookup.nelem = nentries;
 	lookup.param.lookup.tbl = entries;
-
-	status = addrxlat_meth_set_desc(xlat, desc);
-	if (status != ADDRXLAT_OK) {
-		fprintf(stderr, "Cannot set up address translation: %s\n",
-			addrxlat_strerror(status));
-		rc = TEST_ERR;
-		goto out;
-	}
 
 	ctx = addrxlat_ctx_new();
 	if (!ctx) {
@@ -465,13 +447,9 @@ main(int argc, char **argv)
 	cb.data = ctx;
 	addrxlat_ctx_set_cb(ctx, &cb);
 
-	rc = do_xlat(ctx, vaddr);
+	rc = do_xlat(ctx, desc, vaddr);
 
  out:
-	if (xlat && (refcnt = addrxlat_meth_decref(xlat)) != 0)
-		fprintf(stderr, "WARNING: Leaked %lu method references\n",
-			refcnt);
-
 	if (ctx && (refcnt = addrxlat_ctx_decref(ctx)) != 0)
 		fprintf(stderr, "WARNING: Leaked %lu addrxlat references\n",
 			refcnt);

@@ -210,7 +210,7 @@ pgt_x86_64(addrxlat_step_t *step)
 				 step->raw.pte);
 
 	step->base.addr = step->raw.pte & PHYSADDR_MASK;
-	step->base.as = step->meth->desc.target_as;
+	step->base.as = step->desc->target_as;
 
 	if (step->remain == 3 && (step->raw.pte & _PAGE_PSE)) {
 		step->base.addr &= ~PAGE_MASK_1G;
@@ -263,7 +263,7 @@ is_mapped(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 
 	step.ctx = ctx;
 	step.sys = sys;
-	step.meth = sys->meth[ADDRXLAT_SYS_METH_PGT];
+	step.desc = &sys->meth[ADDRXLAT_SYS_METH_PGT]->desc;
 	status = internal_launch(&step, addr);
 
 	if (status == ADDRXLAT_OK)
@@ -608,7 +608,7 @@ is_xen_ktext(struct os_init_data *ctl, addrxlat_addr_t addr)
 
 	step.ctx = ctl->ctx;
 	step.sys = ctl->sys;
-	step.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	step.desc = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT]->desc;
 	status = internal_launch(&step, addr);
 	while (status == ADDRXLAT_OK && step.remain) {
 		++steps;

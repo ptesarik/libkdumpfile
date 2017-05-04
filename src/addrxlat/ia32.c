@@ -105,7 +105,7 @@ pgt_ia32(addrxlat_step_t *step)
 				 step->raw.pte);
 
 	step->base.addr = step->raw.pte;
-	step->base.as = step->meth->desc.target_as;
+	step->base.as = step->desc->target_as;
 
 	if (step->remain == 2 && (step->raw.pte & _PAGE_PSE)) {
 		step->base.addr &= ~PAGE_MASK_4M;
@@ -152,7 +152,7 @@ pgt_ia32_pae(addrxlat_step_t *step)
 				 step->raw.pte);
 
 	step->base.addr = step->raw.pte & PHYSADDR_MASK_PAE;
-	step->base.as = step->meth->desc.target_as;
+	step->base.as = step->desc->target_as;
 
 	if (step->remain == 2 && (step->raw.pte & _PAGE_PSE)) {
 		step->base.addr &= ~PAGE_MASK_2M;
@@ -197,7 +197,6 @@ check_pae(struct os_init_data *ctl, const addrxlat_fulladdr_t *root,
 	  addrxlat_addr_t direct)
 {
 	addrxlat_step_t step;
-	addrxlat_meth_t meth;
 	addrxlat_desc_t desc;
 	addrxlat_status status;
 
@@ -206,10 +205,9 @@ check_pae(struct os_init_data *ctl, const addrxlat_fulladdr_t *root,
 	desc.param.pgt.root = *root;
 
 	desc.param.pgt.pf = ia32_pf_pae;
-	internal_meth_set_desc(&meth, &desc);
 	step.ctx = ctl->ctx;
 	step.sys = ctl->sys;
-	step.meth = &meth;
+	step.desc = &desc;
 	status = internal_launch(&step, direct);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
@@ -229,10 +227,9 @@ check_pae(struct os_init_data *ctl, const addrxlat_fulladdr_t *root,
 	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS]);
 
 	desc.param.pgt.pf = ia32_pf;
-	internal_meth_set_desc(&meth, &desc);
 	step.ctx = ctl->ctx;
 	step.sys = ctl->sys;
-	step.meth = &meth;
+	step.desc = &desc;
 	status = internal_launch(&step, direct);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,

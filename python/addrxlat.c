@@ -2255,12 +2255,6 @@ update_step(addrxlat_step_t *step, const addrxlat_step_t *other)
 		if (other->sys)
 			addrxlat_sys_incref(other->sys);
 	}
-	if (step->meth != other->meth) {
-		if (step->meth)
-			addrxlat_meth_decref(step->meth);
-		if (other->meth)
-			addrxlat_meth_incref(other->meth);
-	}
 	memcpy(step, other, sizeof(*step));
 }
 
@@ -2270,7 +2264,7 @@ PyDoc_STRVAR(customdesc__doc__,
 static addrxlat_status
 cb_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	const addrxlat_desc_t *desc = addrxlat_meth_get_desc(step->meth);
+	const addrxlat_desc_t *desc = step->desc;
 	customdesc_object *self = desc->param.custom.data;
 	PyObject *func;
 	PyObject *stepobj;
@@ -2303,7 +2297,7 @@ cb_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 static addrxlat_status
 cb_next_step(addrxlat_step_t *step)
 {
-	const addrxlat_desc_t *desc = addrxlat_meth_get_desc(step->meth);
+	const addrxlat_desc_t *desc = step->desc;
 	customdesc_object *self = desc->param.custom.data;
 	PyObject *func;
 	PyObject *stepobj;
@@ -4098,10 +4092,6 @@ step_dealloc(PyObject *_self)
 		addrxlat_sys_decref(self->step.sys);
 		self->step.sys = NULL;
 	}
-	if (self->step.meth) {
-		addrxlat_meth_decref(self->step.meth);
-		self->step.meth = NULL;
-	}
 
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -4186,43 +4176,40 @@ step_set_sys(PyObject *_self, PyObject *value, void *data)
 	return 0;
 }
 
-PyDoc_STRVAR(step_meth__doc__,
-"translation method for the next step");
+PyDoc_STRVAR(step_desc__doc__,
+"translation description for the next step");
 
-/** Getter for the meth attribute.
+/** Getter for the desc attribute.
  * @param _self  step object
  * @param data   ignored
- * @returns      meth object (or @c NULL on failure)
+ * @returns      Description object (or @c NULL on failure)
  */
 static PyObject *
-step_get_meth(PyObject *_self, void *data)
+step_get_desc(PyObject *_self, void *data)
 {
 	step_object *self = (step_object*)_self;
-	return meth_FromPointer(
-		self->convert, (addrxlat_meth_t*)self->step.meth);
+	return desc_FromPointer(self->convert, self->step.desc);
 }
 
-/** Setter for the meth type.
+/** Setter for the desc attribute.
  * @param self   any object
- * @param value  new value (a meth object)
+ * @param value  new value (a Description object)
  * @param data   ignored
  * @returns      zero on success, -1 otherwise
  */
 static int
-step_set_meth(PyObject *_self, PyObject *value, void *data)
+step_set_desc(PyObject *_self, PyObject *value, void *data)
 {
 	step_object *self = (step_object*)_self;
-	addrxlat_meth_t *meth;
+	addrxlat_desc_t *desc;
 
-	if (check_null_attr(value, "meth"))
+	if (check_null_attr(value, "desc"))
 		return -1;
 
-	meth = meth_AsPointer(value);
+	desc = desc_AsPointer(value);
 	if (PyErr_Occurred())
 		return -1;
-	if (self->step.meth)
-		addrxlat_meth_decref(self->step.meth);
-	self->step.meth = meth;
+	self->step.desc = desc;
 
 	return 0;
 }
@@ -4250,10 +4237,10 @@ step_get_raw(PyObject *_self, void *data)
 	step_object *self = (step_object*)_self;
 	const addrxlat_lookup_elem_t *elem;
 
-	if (!self->step.meth)
+	if (!self->step.desc)
 		Py_RETURN_NONE;
 
-	switch (addrxlat_meth_get_desc(self->step.meth)->kind) {
+	switch (self->step.desc->kind) {
 	case ADDRXLAT_PGT:
 		return PyLong_FromUnsignedLongLong(self->step.raw.pte);
 
@@ -4282,11 +4269,11 @@ step_set_raw(PyObject *_self, PyObject *value, void *data)
 {
 	step_object *self = (step_object*)_self;
 
-	if (self->step.meth) {
+	if (self->step.desc) {
 		addrxlat_pte_t pte;
 		addrxlat_addr_t addr;
 
-		switch (addrxlat_meth_get_desc(self->step.meth)->kind) {
+		switch (self->step.desc->kind) {
 		case ADDRXLAT_PGT:
 			pte = Number_AsUnsignedLongLong(value);
 			if (PyErr_Occurred())
@@ -4398,7 +4385,7 @@ static PyGetSetDef step_getset[] = {
 	{ "ctx", get_object, step_set_ctx, step_ctx__doc__,
 	  OFFSETOF_PTR(step_object, ctx) },
 	{ "sys", step_get_sys, step_set_sys, step_sys__doc__ },
-	{ "meth", step_get_meth, step_set_meth, step_meth__doc__ },
+	{ "desc", step_get_desc, step_set_desc, step_desc__doc__ },
 	{ "base", get_fulladdr, set_fulladdr, step_base__doc__,
 	  &step_base_loc },
 	{ "raw", step_get_raw, step_set_raw,
@@ -5225,6 +5212,9 @@ desc_FromPointer(PyObject *_conv, const addrxlat_desc_t *desc)
 	int (*init)(PyObject *, const addrxlat_desc_t *);
 	PyObject *result;
 
+	if (!desc)
+		Py_RETURN_NONE;
+
 	init = desc_Init;
 	switch (desc->kind) {
 	case ADDRXLAT_CUSTOM:
@@ -5544,8 +5534,6 @@ step_Init(PyObject *_self, const addrxlat_step_t *step)
 		addrxlat_ctx_decref(self->step.ctx);
 	if (self->step.sys)
 		addrxlat_sys_decref(self->step.sys);
-	if (self->step.meth)
-		addrxlat_meth_decref(self->step.meth);
 
 	loc_scatter(self->loc, STEP_NLOC, step);
 
@@ -5553,8 +5541,6 @@ step_Init(PyObject *_self, const addrxlat_step_t *step)
 		addrxlat_ctx_incref(self->step.ctx);
 	if (self->step.sys)
 		addrxlat_sys_incref(self->step.sys);
-	if (self->step.meth)
-		addrxlat_meth_incref(self->step.meth);
 
 	return 0;
 }

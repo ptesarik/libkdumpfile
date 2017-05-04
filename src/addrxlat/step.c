@@ -79,7 +79,7 @@ read_pte(addrxlat_step_t *step)
 addrxlat_status
 pgt_huge_page(addrxlat_step_t *step)
 {
-	const addrxlat_param_pgt_t *pgt = &step->meth->desc.param.pgt;
+	const addrxlat_param_pgt_t *pgt = &step->desc->param.pgt;
 	addrxlat_addr_t off = 0;
 
 	while (step->remain > 1) {
@@ -97,11 +97,23 @@ DEFINE_ALIAS(launch);
 addrxlat_status
 addrxlat_launch(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
+	addrxlat_meth_t *meth;
+	addrxlat_status status;
+
 	clear_error(step->ctx);
-	return step->meth
-		? step->meth->first_step(step, addr)
-		: set_error(step->ctx, ADDRXLAT_ERR_NOMETH,
-			    "Null translation method");
+
+	meth = internal_meth_new();
+	if (!meth)
+		return set_error(step->ctx, ADDRXLAT_ERR_NOMEM,
+				 "Cannot allocate method");
+	status = addrxlat_meth_set_desc(meth, step->desc);
+	if (status != ADDRXLAT_OK)
+		return set_error(step->ctx, status,
+				 "Cannot set description");
+
+	status = meth->first_step(step, addr);
+	addrxlat_meth_decref(meth);
+	return status;
 }
 
 DEFINE_ALIAS(launch_map);
@@ -110,14 +122,19 @@ addrxlat_status
 addrxlat_launch_map(addrxlat_step_t *step, addrxlat_addr_t addr,
 		    const addrxlat_map_t *map)
 {
+	addrxlat_meth_t *meth;
+	addrxlat_status status;
+
 	clear_error(step->ctx);
 
-	step->meth = internal_map_search(map, addr);
-	if (!step->meth)
+	meth = internal_map_search(map, addr);
+	if (!meth)
 		return set_error(step->ctx, ADDRXLAT_ERR_NOMETH,
 				 "No translation method defined");
 
-	return step->meth->first_step(step, addr);
+	step->desc = &meth->desc;
+	status = meth->first_step(step, addr);
+	return status;
 }
 
 DEFINE_ALIAS(step);
@@ -125,7 +142,8 @@ DEFINE_ALIAS(step);
 addrxlat_status
 addrxlat_step(addrxlat_step_t *step)
 {
-	const addrxlat_meth_t *meth = step->meth;
+	addrxlat_meth_t *meth;
+	addrxlat_status status;
 
 	clear_error(step->ctx);
 
@@ -135,12 +153,23 @@ addrxlat_step(addrxlat_step_t *step)
 	--step->remain;
 	step->base.addr += step->idx[step->remain] * step->elemsz;
 	if (!step->remain) {
-		step->base.as = meth->desc.target_as;
+		step->base.as = step->desc->target_as;
 		step->elemsz = 0;
 		return ADDRXLAT_OK;
 	}
 
-	return meth->next_step(step);
+	meth = internal_meth_new();
+	if (!meth)
+		return set_error(step->ctx, ADDRXLAT_ERR_NOMEM,
+				 "Cannot allocate method");
+	status = addrxlat_meth_set_desc(meth, step->desc);
+	if (status != ADDRXLAT_OK)
+		return set_error(step->ctx, status,
+				 "Cannot set description");
+
+	status = meth->next_step(step);
+	addrxlat_meth_decref(meth);
+	return status;
 }
 
 DEFINE_ALIAS(walk);

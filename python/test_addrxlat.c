@@ -46,7 +46,7 @@ static char custom_magic_str[] = "_test_addrxlat_custom";
 static addrxlat_status
 magic_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	const addrxlat_desc_t *desc = addrxlat_meth_get_desc(step->meth);
+	const addrxlat_desc_t *desc = step->desc;
 
 	if (desc->param.custom.data != custom_magic_str)
 		return addrxlat_ctx_err(step->ctx, ADDRXLAT_ERR_INVALID,
@@ -64,7 +64,7 @@ magic_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 static addrxlat_status
 magic_next_step(addrxlat_step_t *step)
 {
-	const addrxlat_desc_t *desc = addrxlat_meth_get_desc(step->meth);
+	const addrxlat_desc_t *desc = step->desc;
 
 	if (desc->param.custom.data != custom_magic_str)
 		return addrxlat_ctx_err(step->ctx, ADDRXLAT_ERR_INVALID,

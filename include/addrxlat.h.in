@@ -954,10 +954,12 @@ struct _addrxlat_step {
 	 */
 	addrxlat_sys_t *sys;
 
-	/** Translation method used for this particular translation.
+	/** Translation description for this particular translation.
 	 * This field must be initialized for @ref addrxlat_launch.
+	 * It is automatically initialized from the corresponding method
+	 * by @ref addrxlat_launch_map.
 	 */
-	addrxlat_meth_t *meth;
+	const addrxlat_desc_t *desc;
 
 	/** Remaining steps.
 	 * This field is set on a successful return from @ref addrxlat_launch.

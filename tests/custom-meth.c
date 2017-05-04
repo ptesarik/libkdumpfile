@@ -67,7 +67,6 @@ main(int argc, char **argv)
 {
 	addrxlat_desc_t desc;
 	addrxlat_ctx_t *ctx;
-	addrxlat_meth_t *meth;
 	addrxlat_step_t step;
 	addrxlat_status status;
 	int result;
@@ -78,31 +77,19 @@ main(int argc, char **argv)
 		return TEST_ERR;
 	}
 
-	meth = addrxlat_meth_new();
-	if (!meth) {
-		perror("Cannot allocate method");
-		goto err_ctx;
-	}
-
 	desc.kind = ADDRXLAT_CUSTOM;
 	desc.target_as = ADDRXLAT_NOADDR;
 	desc.param.custom.first_step = first_step;
 	desc.param.custom.next_step = next_step;
-	status = addrxlat_meth_set_desc(meth, &desc);
-	if (status != ADDRXLAT_OK) {
-		fprintf(stderr, "Cannot set translation description: %s\n",
-			addrxlat_strerror(status));
-		goto err_meth;
-	}
 
 	step.ctx = ctx;
 	step.sys = NULL;
-	step.meth = meth;
+	step.desc = &desc;
 	status = addrxlat_launch(&step, 0x123456);
 	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot launch translation: %s\n",
 			addrxlat_ctx_get_err(ctx));
-		goto err_meth;
+		goto err;
 	}
 
 	while (step.remain) {
@@ -110,7 +97,7 @@ main(int argc, char **argv)
 		if (status != ADDRXLAT_OK) {
 			fprintf(stderr, "Cannot step translation: %s\n",
 				addrxlat_ctx_get_err(ctx));
-			goto err_meth;
+			goto err;
 		}
 	}
 
@@ -121,13 +108,10 @@ main(int argc, char **argv)
 		       (unsigned long)EXPECT_ADDR);
 		result = TEST_FAIL;
 	}
-	addrxlat_meth_decref(meth);
 	addrxlat_ctx_decref(ctx);
 	return result;
 
- err_meth:
-	addrxlat_meth_decref(meth);
- err_ctx:
+ err:
 	addrxlat_ctx_decref(ctx);
 	return TEST_ERR;
 }

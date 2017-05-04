@@ -80,7 +80,7 @@ pgt_s390x(addrxlat_step_t *step)
 		"pgd",
 		"rg1",		/* Invented; does not exist in the wild. */
 	};
-	const addrxlat_paging_form_t *pf = &step->meth->desc.param.pgt.pf;
+	const addrxlat_paging_form_t *pf = &step->desc->param.pgt.pf;
 	addrxlat_status status;
 
 	status = read_pte(step);
@@ -102,7 +102,7 @@ pgt_s390x(addrxlat_step_t *step)
 				 pgt_full_name[step->remain]);
 
 	step->base.addr = step->raw.pte;
-	step->base.as = step->meth->desc.target_as;
+	step->base.as = step->desc->target_as;
 
 	if (step->remain == 3 && PTE_FC(step->raw.pte)) {
 		step->base.addr &= ~RFAA_MASK;

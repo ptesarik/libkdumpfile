@@ -307,7 +307,7 @@ xc_mfn_to_pfn(kdump_ctx_t *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 static addrxlat_status
 xc_p2m_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	const addrxlat_desc_t *desc = addrxlat_meth_get_desc(step->meth);
+	const addrxlat_desc_t *desc = step->desc;
 	struct kdump_shared *shared = desc->param.custom.data;
 	struct xen_p2m *p = shared->xen_map;
 	addrxlat_addr_t pfn = addr >> shared->page_shift.number;
@@ -334,7 +334,7 @@ xc_p2m_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 static addrxlat_status
 xc_m2p_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	const addrxlat_desc_t *desc = addrxlat_meth_get_desc(step->meth);
+	const addrxlat_desc_t *desc = step->desc;
 	struct kdump_shared *shared = desc->param.custom.data;
 	struct xen_p2m *p = shared->xen_map;
 	addrxlat_addr_t mfn = addr >> shared->page_shift.number;
