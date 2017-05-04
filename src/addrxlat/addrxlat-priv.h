@@ -79,6 +79,9 @@
 /** Number of elements in an array variable. */
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
+/** Use this to mask off address bits above @c bits. */
+#define ADDR_MASK(bits)		(((addrxlat_addr_t)1 << (bits)) - 1)
+
 /** Size of the fallback error buffer. */
 #define ERRBUF	64
 

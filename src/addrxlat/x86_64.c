@@ -34,8 +34,7 @@
 
 /* Maximum physical address bits (architectural limit) */
 #define PHYSADDR_BITS_MAX	52
-#define PHYSADDR_SIZE		((uint64_t)1 << PHYSADDR_BITS_MAX)
-#define PHYSADDR_MASK		(~(PHYSADDR_SIZE-1))
+#define PHYSADDR_MASK		ADDR_MASK(PHYSADDR_BITS_MAX)
 
 #define _PAGE_BIT_PRESENT	0
 #define _PAGE_BIT_PSE		7
@@ -196,7 +195,7 @@ pgt_x86_64(addrxlat_step_t *step)
 				 (unsigned) step->idx[step->remain],
 				 step->raw.pte);
 
-	step->base.addr = step->raw.pte & ~PHYSADDR_MASK;
+	step->base.addr = step->raw.pte & PHYSADDR_MASK;
 	step->base.as = step->meth->desc.target_as;
 
 	if (step->remain >= 2 && step->remain <= 3 &&
@@ -782,7 +781,7 @@ sys_x86_64(struct os_init_data *ctl)
 				 "Cannot duplicate hardware mapping");
 	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = map;
 
-	status = sys_set_physmaps(ctl, PHYSADDR_SIZE - 1);
+	status = sys_set_physmaps(ctl, PHYSADDR_MASK);
 	if (status != ADDRXLAT_OK)
 		return status;
 

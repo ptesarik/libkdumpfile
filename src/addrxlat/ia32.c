@@ -36,19 +36,17 @@
 
 #define PGD_PSE_HIGH_SHIFT	13
 #define PGD_PSE_HIGH_BITS	8
-#define PGD_PSE_HIGH_MASK	(((uint64_t)1 << PGD_PSE_HIGH_BITS)-1)
+#define PGD_PSE_HIGH_MASK	ADDR_MASK(PGD_PSE_HIGH_BITS)
 #define pgd_pse_high(pgd)	\
 	((((pgd) >> PGD_PSE_HIGH_SHIFT) & PGD_PSE_HIGH_MASK) << 32)
 
 /* Non-PAE maximum physical address bits (architectural limit) */
 #define PHYSADDR_BITS_MAX_NONPAE	32
-#define PHYSADDR_SIZE_NONPAE	((uint64_t)1 << PHYSADDR_BITS_MAX_NONPAE)
-#define PHYSADDR_MASK_NONPAE	(~(PHYSADDR_SIZE_NONPAE-1))
+#define PHYSADDR_MASK_NONPAE	ADDR_MASK(PHYSADDR_BITS_MAX_NONPAE)
 
 /* PAE maximum physical address bits (architectural limit) */
 #define PHYSADDR_BITS_MAX_PAE	52
-#define PHYSADDR_SIZE_PAE	((uint64_t)1 << PHYSADDR_BITS_MAX_PAE)
-#define PHYSADDR_MASK_PAE	(~(PHYSADDR_SIZE_PAE-1))
+#define PHYSADDR_MASK_PAE	ADDR_MASK(PHYSADDR_BITS_MAX_PAE)
 
 #define _PAGE_BIT_PRESENT	0
 #define _PAGE_BIT_PSE		7
@@ -137,7 +135,7 @@ pgt_ia32_pae(addrxlat_step_t *step)
 				 (unsigned) step->idx[step->remain],
 				 step->raw.pte);
 
-	step->base.addr = step->raw.pte & ~PHYSADDR_MASK_PAE;
+	step->base.addr = step->raw.pte & PHYSADDR_MASK_PAE;
 	if (step->remain == 2 && (step->raw.pte & _PAGE_PSE)) {
 		--step->remain;
 		step->base.addr &= pgt->pgt_mask[1];
@@ -199,7 +197,7 @@ check_pae(struct os_init_data *ctl, const addrxlat_fulladdr_t *root,
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot launch %s translation", "PAE");
-	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_PAE - 1);
+	status = sys_set_physmaps(ctl, PHYSADDR_MASK_PAE);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot set up physical mappings");
@@ -222,7 +220,7 @@ check_pae(struct os_init_data *ctl, const addrxlat_fulladdr_t *root,
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot launch %s translation", "non-PAE");
-	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_NONPAE - 1);
+	status = sys_set_physmaps(ctl, PHYSADDR_MASK_NONPAE);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot set up physical mappings");
@@ -274,7 +272,7 @@ sys_ia32_nonpae(struct os_init_data *ctl)
 	addrxlat_desc_t desc;
 	addrxlat_status status;
 
-	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_NONPAE - 1);
+	status = sys_set_physmaps(ctl, PHYSADDR_MASK_NONPAE);
 	if (status != ADDRXLAT_OK)
 		return status;
 
@@ -301,7 +299,7 @@ sys_ia32_pae(struct os_init_data *ctl)
 	addrxlat_desc_t desc;
 	addrxlat_status status;
 
-	status = sys_set_physmaps(ctl, PHYSADDR_SIZE_PAE - 1);
+	status = sys_set_physmaps(ctl, PHYSADDR_MASK_PAE);
 	if (status != ADDRXLAT_OK)
 		return status;
 
