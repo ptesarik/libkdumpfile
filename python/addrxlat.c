@@ -5494,13 +5494,6 @@ step_Init(PyObject *_self, const addrxlat_step_t *step)
 	PyObject *obj, *oldobj;
 	int result;
 
-	obj = ctx_FromPointer(self->convert, step->ctx);
-	if (!obj)
-		return -1;
-	oldobj = self->ctx;
-	self->ctx = obj;
-	Py_XDECREF(oldobj);
-
 	obj = fulladdr_FromPointer(self->convert, &step->base);
 	if (!obj)
 		return -1;
@@ -5508,6 +5501,19 @@ step_Init(PyObject *_self, const addrxlat_step_t *step)
 	Py_DECREF(obj);
 	if (result)
 		return result;
+
+	obj = ctx_FromPointer(self->convert, step->ctx);
+	if (!obj)
+		return -1;
+	oldobj = self->ctx;
+	self->ctx = obj;
+	Py_XDECREF(oldobj);
+	if (self->step.ctx)
+		addrxlat_ctx_decref(self->step.ctx);
+	if (self->step.sys)
+		addrxlat_sys_decref(self->step.sys);
+	if (self->step.meth)
+		addrxlat_meth_decref(self->step.meth);
 
 	loc_scatter(self->loc, STEP_NLOC, step);
 
