@@ -2367,6 +2367,9 @@ customdesc_first_step(PyObject *_self, PyObject *args, PyObject *kwargs)
 	if (status != ADDRXLAT_OK)
 		return raise_exception(step->ctx, status);
 
+	if (step_Init(stepobj, step))
+		return NULL;
+
 	Py_RETURN_NONE;
 }
 
@@ -2398,6 +2401,9 @@ customdesc_next_step(PyObject *_self, PyObject *args, PyObject *kwargs)
 	status = self->origparam.next_step(step);
 	if (status != ADDRXLAT_OK)
 		return raise_exception(step->ctx, status);
+
+	if (step_Init(stepobj, step))
+		return NULL;
 
 	Py_RETURN_NONE;
 }
