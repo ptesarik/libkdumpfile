@@ -2313,13 +2313,24 @@ customdesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (self) {
 		self->loc[0].len = sizeof(addrxlat_param_custom_t);
 
-		self->origparam = self->desc.param.custom;
 		self->desc.param.custom.first_step = cb_first_step;
 		self->desc.param.custom.next_step = cb_next_step;
 		self->desc.param.custom.data = self;
 	}
 
 	return (PyObject*)self;
+}
+
+static int
+customdesc_Init(PyObject *_self, const addrxlat_desc_t *desc)
+{
+	customdesc_object *self = (customdesc_object*)_self;
+
+	if (desc_Init(_self, desc))
+		return -1;
+
+	self->origparam = desc->param.custom;
+	return 0;
 }
 
 PyDoc_STRVAR(customdesc_first_step__doc__,
@@ -5180,6 +5191,7 @@ desc_FromPointer(PyObject *_conv, const addrxlat_desc_t *desc)
 	switch (desc->kind) {
 	case ADDRXLAT_CUSTOM:
 		type = conv->customdesc_type;
+		init = customdesc_Init;
 		break;
 
 	case ADDRXLAT_LINEAR:
