@@ -5430,6 +5430,14 @@ step_Init(PyObject *_self, const addrxlat_step_t *step)
 		return result;
 
 	loc_scatter(self->loc, STEP_NLOC, step);
+
+	if (self->step.ctx)
+		addrxlat_ctx_incref(self->step.ctx);
+	if (self->step.sys)
+		addrxlat_sys_incref(self->step.sys);
+	if (self->step.meth)
+		addrxlat_meth_incref(self->step.meth);
+
 	return 0;
 }
 
