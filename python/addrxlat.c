@@ -2330,6 +2330,10 @@ customdesc_Init(PyObject *_self, const addrxlat_desc_t *desc)
 		return -1;
 
 	self->origparam = desc->param.custom;
+	self->desc.param.custom.first_step = cb_first_step;
+	self->desc.param.custom.next_step = cb_next_step;
+	self->desc.param.custom.data = self;
+
 	return 0;
 }
 
