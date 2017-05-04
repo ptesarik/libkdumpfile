@@ -2296,6 +2296,8 @@ customdesc_first_step(PyObject *_self, PyObject *args, PyObject *kwargs)
 					 keywords, &stepobj, &addrobj))
 		return NULL;
 	step = step_AsPointer(stepobj);
+	if (!step)
+		return NULL;
 	addr = Number_AsUnsignedLongLong(addrobj);
 	if (PyErr_Occurred())
 		return NULL;
@@ -2329,6 +2331,8 @@ customdesc_next_step(PyObject *_self, PyObject *args, PyObject *kwargs)
 					 keywords, &stepobj))
 		return NULL;
 	step = step_AsPointer(stepobj);
+	if (!step)
+		return NULL;
 
 	if (!self->origparam.next_step)
 		return raise_notimpl("NULL callback");
