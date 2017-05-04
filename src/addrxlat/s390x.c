@@ -40,8 +40,20 @@
 #define PTE_TT(x)	PTE_VAL(x, 60, 2)
 #define PTE_TL(x)	PTE_VAL(x, 62, 2)
 
-/* Page-Table Origin has 2K granularity in hardware */
-#define PTO_MASK	(~(((uint64_t)1 << 11) - 1))
+/** Page shift (log2 4K). */
+#define PAGE_SHIFT		12
+
+/** Page mask. */
+#define PAGE_MASK		ADDR_MASK(PAGE_SHIFT)
+
+/** Page-Table Origin mask. */
+#define PTO_MASK	ADDR_MASK(11)
+
+/** Segment-Frame Absolute Address mask when FC=0 */
+#define SFAA_MASK	ADDR_MASK(20)
+
+/** Region-Frame Absolute Address mask when FC=0 */
+#define RFAA_MASK	ADDR_MASK(31)
 
 /* Maximum pointers in the root page table */
 #define ROOT_PGT_LEN	2048
@@ -69,7 +81,6 @@ pgt_s390x(addrxlat_step_t *step)
 		"rg1",		/* Invented; does not exist in the wild. */
 	};
 	const addrxlat_paging_form_t *pf = &step->meth->desc.param.pgt.pf;
-	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
 	addrxlat_status status;
 
 	status = read_pte(step);
@@ -93,9 +104,13 @@ pgt_s390x(addrxlat_step_t *step)
 	step->base.addr = step->raw.pte;
 	step->base.as = step->meth->desc.target_as;
 
-	if (step->remain >= 2 && step->remain <= 3 &&
-	    PTE_FC(step->raw.pte)) {
-		step->base.addr &= pgt->pgt_mask[step->remain - 1];
+	if (step->remain == 3 && PTE_FC(step->raw.pte)) {
+		step->base.addr &= ~RFAA_MASK;
+		return pgt_huge_page(step);
+	}
+
+	if (step->remain == 2 && PTE_FC(step->raw.pte)) {
+		step->base.addr &= ~SFAA_MASK;
 		return pgt_huge_page(step);
 	}
 
@@ -112,7 +127,7 @@ pgt_s390x(addrxlat_step_t *step)
 					 (unsigned) PTE_TL(step->raw.pte));
 	}
 
-	step->base.addr &= (step->remain == 2 ? PTO_MASK : pgt->pgt_mask[0]);
+	step->base.addr &= (step->remain == 2 ? ~PTO_MASK : ~PAGE_MASK);
 	if (step->remain == 1)
 		step->elemsz = 1;
 

@@ -166,7 +166,7 @@ first_step_pgt(addrxlat_step_t *step, addrxlat_addr_t addr)
 	step->base = pgt->root;
 	step->remain = pgt->pf.nfields;
 	step->elemsz = step->remain > 1
-		? 1 << step->meth->extra.pgt.pte_shift
+		? 1 << addrxlat_pteval_shift(pgt->pf.pte_format)
 		: 1;
 	for (i = 0; i < pgt->pf.nfields; ++i) {
 		unsigned short bits = pgt->pf.fieldsz[i];
@@ -212,6 +212,20 @@ first_step_uaddr(addrxlat_step_t *step, addrxlat_addr_t addr)
 	return step_check_uaddr(step);
 }
 
+/** Count total size of all address bitfields.
+ * @param pf  Paging form.
+ * @returns   Number of significant bits in the source address.
+*/
+static unsigned short
+vaddr_bits(const addrxlat_paging_form_t *pf)
+{
+	unsigned short i;
+	unsigned short result = 0;
+	for (i = 0; i < pf->nfields; ++i)
+		result += pf->fieldsz[i];
+	return result;
+}
+
 /** Check signed address overflow.
  * @param step  Current step state.
  * @returns     Error status.
@@ -224,7 +238,6 @@ static addrxlat_status
 step_check_saddr(addrxlat_step_t *step)
 {
 	const addrxlat_paging_form_t *pf = &step->meth->desc.param.pgt.pf;
-	const struct pgt_extra_def *extra = &step->meth->extra.pgt;
 	unsigned short lvl = pf->nfields;
 	struct {
 		int bit : 1;
@@ -232,7 +245,7 @@ step_check_saddr(addrxlat_step_t *step)
 	addrxlat_addr_t signext;
 
 	s.bit = step->idx[lvl - 1] >> (pf->fieldsz[lvl - 1] - 1);
-	signext = s.bit & (extra->pgt_mask[lvl - 1] >> extra->vaddr_bits);
+	signext = s.bit & (ADDRXLAT_ADDR_MAX >> vaddr_bits(pf));
 	return step->idx[lvl] != signext
 		? set_error(step->ctx, ADDRXLAT_ERR_INVALID,
 			    "Virtual address too big")
@@ -286,18 +299,13 @@ next_step_pfn(addrxlat_step_t *step)
 static addrxlat_status
 setup_pgt(addrxlat_meth_t *meth, const addrxlat_desc_t *desc)
 {
-	const addrxlat_paging_form_t *pf = &desc->param.pgt.pf;
-	struct pgt_extra_def *extra = &meth->extra.pgt;
-	addrxlat_addr_t mask;
-	unsigned short i;
-
 #define SETUP(fmt, first, next)			\
 	case fmt:				\
 		meth->first_step = first;	\
 		meth->next_step = next;		\
 		break
 
-	switch (pf->pte_format) {
+	switch (desc->param.pgt.pf.pte_format) {
 		SETUP(ADDRXLAT_PTE_NONE, first_step_pgt, next_step_ident);
 		SETUP(ADDRXLAT_PTE_PFN32, first_step_uaddr, next_step_pfn);
 		SETUP(ADDRXLAT_PTE_PFN64, first_step_uaddr, next_step_pfn);
@@ -310,15 +318,6 @@ setup_pgt(addrxlat_meth_t *meth, const addrxlat_desc_t *desc)
 	default:
 		return ADDRXLAT_ERR_NOTIMPL;
 	};
-
-	extra->pte_shift = addrxlat_pteval_shift(pf->pte_format);
-	extra->vaddr_bits = 0;
-	mask = 1;
-	for (i = 0; i < pf->nfields; ++i) {
-		extra->vaddr_bits += pf->fieldsz[i];
-		mask <<= pf->fieldsz[i];
-		extra->pgt_mask[i] = ~(mask - 1);
-	}
 
 	return ADDRXLAT_OK;
 }

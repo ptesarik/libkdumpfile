@@ -45,8 +45,23 @@
 /* Maximum virtual address bits (architecture limit) */
 #define VIRTADDR_BITS_MAX	48
 
-/** Page size in bits. */
+/** Page shift (log2 4K). */
 #define PAGE_SHIFT		12
+
+/** Page mask. */
+#define PAGE_MASK		ADDR_MASK(PAGE_SHIFT)
+
+/** 2M page shift (log2 2M). */
+#define PAGE_SHIFT_2M		21
+
+/** 2M page mask. */
+#define PAGE_MASK_2M		ADDR_MASK(PAGE_SHIFT_2M)
+
+/** 1G page shift (log2 1G). */
+#define PAGE_SHIFT_1G		30
+
+/** 1G page mask. */
+#define PAGE_MASK_1G		ADDR_MASK(PAGE_SHIFT_1G)
 
 #define NONCANONICAL_START	((uint64_t)1<<(VIRTADDR_BITS_MAX-1))
 #define NONCANONICAL_END	(~NONCANONICAL_START)
@@ -180,7 +195,6 @@ pgt_x86_64(addrxlat_step_t *step)
 		"pud",
 		"pgd",
 	};
-	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
 	addrxlat_status status;
 
 	status = read_pte(step);
@@ -198,13 +212,17 @@ pgt_x86_64(addrxlat_step_t *step)
 	step->base.addr = step->raw.pte & PHYSADDR_MASK;
 	step->base.as = step->meth->desc.target_as;
 
-	if (step->remain >= 2 && step->remain <= 3 &&
-	    (step->raw.pte & _PAGE_PSE)) {
-		step->base.addr &= pgt->pgt_mask[step->remain - 1];
+	if (step->remain == 3 && (step->raw.pte & _PAGE_PSE)) {
+		step->base.addr &= ~PAGE_MASK_1G;
 		return pgt_huge_page(step);
 	}
 
-	step->base.addr &= pgt->pgt_mask[0];
+	if (step->remain == 2 && (step->raw.pte & _PAGE_PSE)) {
+		step->base.addr &= ~PAGE_MASK_2M;
+		return pgt_huge_page(step);
+	}
+
+	step->base.addr &= ~PAGE_MASK;
 	if (step->remain == 1)
 		step->elemsz = 1;
 

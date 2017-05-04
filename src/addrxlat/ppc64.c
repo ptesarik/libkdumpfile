@@ -32,6 +32,9 @@
 
 #include <stdlib.h>
 
+/** PTE size in bits. */
+#define PTE_SHIFT	3
+
 /**  Page entry flag for a huge page directory.
  * The corresponding entry is huge if the most significant bit is zero.
  */
@@ -191,7 +194,6 @@ pgt_ppc64_linux(addrxlat_step_t *step, unsigned rpn_shift)
 		"pgd",
 	};
 	const addrxlat_paging_form_t *pf = &step->meth->desc.param.pgt.pf;
-	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
 	addrxlat_status status;
 
 	status = read_pte(step);
@@ -213,7 +215,7 @@ pgt_ppc64_linux(addrxlat_step_t *step, unsigned rpn_shift)
 		if (is_hugepd_linux(step->raw.pte))
 			return huge_pd_linux(step);
 
-		table_size = ((addrxlat_addr_t)1 << pgt->pte_shift <<
+		table_size = ((addrxlat_addr_t)1 << PTE_SHIFT <<
 			      pf->fieldsz[step->remain - 1]);
 		step->base.addr = step->raw.pte & ~(table_size - 1);
 		step->base.as = ADDRXLAT_KVADDR;

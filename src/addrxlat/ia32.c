@@ -57,6 +57,24 @@
 /* Maximum virtual address (architecture limit) */
 #define VIRTADDR_MAX		UINT32_MAX
 
+/** Page shift (log2 4K). */
+#define PAGE_SHIFT		12
+
+/** Page mask. */
+#define PAGE_MASK		ADDR_MASK(PAGE_SHIFT)
+
+/** 2M page shift (log2 2M). */
+#define PAGE_SHIFT_2M		21
+
+/** 2M page mask. */
+#define PAGE_MASK_2M		ADDR_MASK(PAGE_SHIFT_2M)
+
+/** 4M page shift (log2 4M). */
+#define PAGE_SHIFT_4M		22
+
+/** 4M page mask. */
+#define PAGE_MASK_4M		ADDR_MASK(PAGE_SHIFT_4M)
+
 /** IA32 page table step function.
  * @param step  Current step state.
  * @returns     Error status.
@@ -72,8 +90,6 @@ pgt_ia32(addrxlat_step_t *step)
 		"pte",
 		"pgd",
 	};
-	const addrxlat_paging_form_t *pf = &step->meth->desc.param.pgt.pf;
-	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
 	addrxlat_status status;
 
 	status = read_pte(step);
@@ -88,14 +104,16 @@ pgt_ia32(addrxlat_step_t *step)
 				 (unsigned) step->idx[step->remain],
 				 step->raw.pte);
 
-	if (step->remain == 2 && (step->raw.pte & _PAGE_PSE)) {
-		--step->remain;
-		step->base.addr = (step->raw.pte & pgt->pgt_mask[1]) |
-			pgd_pse_high(step->raw.pte);
-		step->idx[0] |= step->idx[1] << pf->fieldsz[0];
-	} else
-		step->base.addr = step->raw.pte & pgt->pgt_mask[0];
+	step->base.addr = step->raw.pte;
 	step->base.as = step->meth->desc.target_as;
+
+	if (step->remain == 2 && (step->raw.pte & _PAGE_PSE)) {
+		step->base.addr &= ~PAGE_MASK_4M;
+		step->base.addr |= pgd_pse_high(step->raw.pte);
+		return pgt_huge_page(step);
+	}
+
+	step->base.addr &= ~PAGE_MASK;
 	if (step->remain == 1)
 		step->elemsz = 1;
 
@@ -119,8 +137,6 @@ pgt_ia32_pae(addrxlat_step_t *step)
 		"pmd",
 		"pgd",
 	};
-	const addrxlat_paging_form_t *pf = &step->meth->desc.param.pgt.pf;
-	const struct pgt_extra_def *pgt = &step->meth->extra.pgt;
 	addrxlat_status status;
 
 	status = read_pte(step);
@@ -136,13 +152,14 @@ pgt_ia32_pae(addrxlat_step_t *step)
 				 step->raw.pte);
 
 	step->base.addr = step->raw.pte & PHYSADDR_MASK_PAE;
-	if (step->remain == 2 && (step->raw.pte & _PAGE_PSE)) {
-		--step->remain;
-		step->base.addr &= pgt->pgt_mask[1];
-		step->idx[0] |= step->idx[1] << pf->fieldsz[0];
-	} else
-		step->base.addr &= pgt->pgt_mask[0];
 	step->base.as = step->meth->desc.target_as;
+
+	if (step->remain == 2 && (step->raw.pte & _PAGE_PSE)) {
+		step->base.addr &= ~PAGE_MASK_2M;
+		return pgt_huge_page(step);
+	}
+
+	step->base.addr &= ~PAGE_MASK;
 	if (step->remain == 1)
 		step->elemsz = 1;
 

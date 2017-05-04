@@ -85,21 +85,6 @@
 /** Size of the fallback error buffer. */
 #define ERRBUF	64
 
-/** Extra definitions specific to pagetable translation.
- * Page table translation uses some pre-computed values, which are
- * stored in this structure on initialization.
- */
-struct pgt_extra_def {
-	/** PTE size as a log2 value. */
-	unsigned short pte_shift;
-
-	/** Size of virtual address space covered by page tables. */
-	unsigned short vaddr_bits;
-
-	/** Paging masks, pre-computed from paging form. */
-	addrxlat_addr_t pgt_mask[ADDRXLAT_FIELDS_MAX];
-};
-
 /** Internal definition of the address translation method.
  */
 struct _addrxlat_meth {
@@ -114,11 +99,6 @@ struct _addrxlat_meth {
 
 	/** Translation description. */
 	addrxlat_desc_t desc;
-
-	/** Extra kind-specific fields. */
-	union {
-		struct pgt_extra_def pgt;
-	} extra;
 };
 
 /**  In-flight translation. */
