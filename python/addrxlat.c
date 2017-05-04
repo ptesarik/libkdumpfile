@@ -1832,6 +1832,21 @@ desc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	return (PyObject*)self;
 }
 
+/** Initialize a Description object using a C @c addrxlat_desc_t object.
+ * @param _self  Python Description object
+ * @param step   libaddrxlat translation description
+ * @returns      zero on success, -1 otherwise
+ */
+static int
+desc_Init(PyObject *_self, const addrxlat_desc_t *desc)
+{
+	desc_object *self = (desc_object*)_self;
+
+	self->desc.target_as = desc->target_as;
+	loc_scatter(self->loc, self->nloc, &desc->param);
+	return 0;
+}
+
 static void
 desc_dealloc(PyObject *_self)
 {
@@ -2470,6 +2485,26 @@ pgtdesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	return (PyObject*)self;
 }
 
+static int
+pgtdesc_Init(PyObject *_self, const addrxlat_desc_t *desc)
+{
+	pgtdesc_object *self = (pgtdesc_object*)_self;
+	PyObject *addr, *oldaddr;
+
+	if (desc_Init(_self, desc))
+		return -1;
+
+	addr = fulladdr_FromPointer(self->convert, &desc->param.pgt.root);
+	if (!addr)
+		return -1;
+
+	oldaddr = self->root;
+	self->root = addr;
+	self->loc[DESC_NLOC].ptr = fulladdr_AsPointer(addr);
+	Py_DECREF(oldaddr);
+	return 0;
+}
+
 static void
 pgtdesc_dealloc(PyObject *_self)
 {
@@ -2886,6 +2921,26 @@ memarrdesc_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	}
 
 	return (PyObject*)self;
+}
+
+static int
+memarrdesc_Init(PyObject *_self, const addrxlat_desc_t *desc)
+{
+	memarrdesc_object *self = (memarrdesc_object*)_self;
+	PyObject *addr, *oldaddr;
+
+	if (desc_Init(_self, desc))
+		return -1;
+
+	addr = fulladdr_FromPointer(self->convert, &desc->param.memarr.base);
+	if (!addr)
+		return -1;
+
+	oldaddr = self->base;
+	self->base = addr;
+	self->loc[DESC_NLOC].ptr = fulladdr_AsPointer(addr);
+	Py_DECREF(oldaddr);
+	return 0;
 }
 
 static void
@@ -5117,13 +5172,11 @@ desc_FromPointer(PyObject *_conv, const addrxlat_desc_t *desc)
 {
 	convert_object *conv = (convert_object *)_conv;
 	PyTypeObject *type;
-	PyObject *args, *val;
-	PyObject *addr = NULL;
-	fulladdr_loc *addrloc = NULL;
+	PyObject *args;
+	int (*init)(PyObject *, const addrxlat_desc_t *);
 	PyObject *result;
-	desc_object *descobj;
-	int res;
 
+	init = desc_Init;
 	switch (desc->kind) {
 	case ADDRXLAT_CUSTOM:
 		type = conv->customdesc_type;
@@ -5135,10 +5188,7 @@ desc_FromPointer(PyObject *_conv, const addrxlat_desc_t *desc)
 
 	case ADDRXLAT_PGT:
 		type = conv->pgtdesc_type;
-		addr = fulladdr_FromPointer(_conv, &desc->param.pgt.root);
-		if (!addr)
-			return NULL;
-		addrloc = &pgtdesc_root_loc;
+		init = pgtdesc_Init;
 		break;
 
 	case ADDRXLAT_LOOKUP:
@@ -5147,10 +5197,7 @@ desc_FromPointer(PyObject *_conv, const addrxlat_desc_t *desc)
 
 	case ADDRXLAT_MEMARR:
 		type = conv->memarrdesc_type;
-		addr = fulladdr_FromPointer(_conv, &desc->param.memarr.base);
-		if (!addr)
-			return NULL;
-		addrloc = &memarrdesc_base_loc;
+		init = memarrdesc_Init;
 		break;
 
 	default:
@@ -5162,30 +5209,19 @@ desc_FromPointer(PyObject *_conv, const addrxlat_desc_t *desc)
 		? Py_BuildValue("(k)", desc->kind)
 		: PyTuple_New(0));
 	if (!args)
-		goto err_addr;
+		return NULL;
 	result = PyObject_Call((PyObject*)type, args, NULL);
 	Py_DECREF(args);
 	if (!result)
-		goto err_addr;
+		return NULL;
 
-	if (addr) {
-		res = set_fulladdr(result, addr, addrloc);
-		Py_DECREF(addr);
-		if (res)
-			goto err;
-	}
+	if (init(result, desc))
+		goto err;
 
-	descobj = (desc_object*)result;
-	descobj->desc.target_as = desc->target_as;
-	loc_scatter(descobj->loc, descobj->nloc, &desc->param);
 	return result;
 
  err:
 	Py_DECREF(result);
-	return NULL;
-
- err_addr:
-	Py_XDECREF(addr);
 	return NULL;
 }
 
@@ -5431,7 +5467,7 @@ step_FromPointer(PyObject *conv, const addrxlat_step_t *step)
 /** Initialize a Step object using a C @c addrxlat_step_t object.
  * @param _self  Python Step object
  * @param step   libaddrxlat representation of a step
- * @returns      corresponding Python object (or @c NULL on failure)
+ * @returns      zero on success, -1 otherwise
  */
 static int
 step_Init(PyObject *_self, const addrxlat_step_t *step)
