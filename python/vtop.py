@@ -16,9 +16,10 @@ class kphysnote(object):
         map = sys.get_map(addrxlat.SYS_MAP_MACHPHYS_KPHYS)
         self.ident = True
         for range in map:
-            if range.meth is None:
+            if range.meth == addrxlat.SYS_METH_NONE:
                 continue
-            desc = range.meth.get_desc()
+            meth = sys.get_meth(range.meth)
+            desc = meth.get_desc()
             if desc.kind != addrxlat.LINEAR or desc.off != 0:
                 self.ident = False
                 break
@@ -44,11 +45,14 @@ def vtop(addr, ctx, sys):
 
     step = addrxlat.Step(ctx, sys)
     meth = sys.get_map(addrxlat.SYS_MAP_HW).search(addr)
-    if meth is None:
+    if meth == addrxlat.SYS_METH_NONE:
         meth = sys.get_map(addrxlat.SYS_MAP_KV_PHYS).search(addr)
-    if meth is None:
+    if meth == addrxlat.SYS_METH_NONE:
         print('NO METHOD')
         return
+
+    step.desc = sys.get_meth(meth).get_desc()
+    step.launch(addr)
 
     note = kphysnote(ctx, sys)
     while step.remain:

@@ -330,20 +330,20 @@ static addrxlat_status
 set_ktext_offset(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 		 addrxlat_addr_t vaddr)
 {
-	addrxlat_meth_t *meth;
+	addrxlat_sys_meth_t meth;
 	addrxlat_step_t step;
 	addrxlat_desc_t desc;
 	addrxlat_status status;
 
 	meth = internal_map_search(sys->map[ADDRXLAT_SYS_MAP_HW], vaddr);
-	if (!meth)
+	if (meth == ADDRXLAT_SYS_METH_NONE)
 		return set_error(ctx, ADDRXLAT_ERR_NOMETH,
 				 "No translation for %"ADDRXLAT_PRIxADDR,
 				 vaddr);
 
 	step.ctx = ctx;
 	step.sys = sys;
-	step.desc = &meth->desc;
+	step.desc = &sys->meth[meth]->desc;
 	status = internal_launch(&step, vaddr);
 	if (status != ADDRXLAT_OK)
 		return status;
@@ -450,7 +450,7 @@ linux_ktext_map(struct os_init_data *ctl)
 	clear_error(ctl->ctx);
 
 	range.endoff = __END_KERNEL_map - __START_KERNEL_map;
-	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT];
+	range.meth = ADDRXLAT_SYS_METH_KTEXT;
 	status = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS],
 				  __START_KERNEL_map, &range);
 	if (status != ADDRXLAT_OK)
@@ -496,7 +496,7 @@ set_xen_p2m(struct os_init_data *ctl)
 
 	addrxlat_addr_t p2m_maddr;
 	addrxlat_map_t *map;
-	addrxlat_meth_t *meth;
+	addrxlat_sys_meth_t meth;
 	addrxlat_desc_t desc;
 	addrxlat_range_t range;
 	addrxlat_status status;
@@ -507,13 +507,13 @@ set_xen_p2m(struct os_init_data *ctl)
 		return ADDRXLAT_OK; /* leave undefined */
 	p2m_maddr = ctl->popt.val[OPT_xen_p2m_mfn].num << PAGE_SHIFT;
 
-	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_KPHYS_MACHPHYS];
+	meth = ADDRXLAT_SYS_METH_KPHYS_MACHPHYS;
 	desc.kind = ADDRXLAT_PGT;
 	desc.target_as = ADDRXLAT_MACHPHYSADDR;
 	desc.param.pgt.root.addr = p2m_maddr;
 	desc.param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
 	desc.param.pgt.pf = xen_p2m_pf;
-	internal_meth_set_desc(meth, &desc);
+	internal_meth_set_desc(ctl->sys->meth[meth], &desc);
 
 	range.endoff = paging_max_index(&xen_p2m_pf);
 	range.meth = meth;

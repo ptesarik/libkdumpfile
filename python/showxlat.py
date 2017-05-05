@@ -73,7 +73,14 @@ def print_memarr(desc):
     print('  elemsz={}'.format(desc.elemsz))
     print('  valsz={}'.format(desc.valsz))
 
-def print_desc(desc):
+def print_meth(system, name):
+    meth = system.get_meth(addrxlat.__dict__['SYS_METH_{}'.format(name)])
+    if meth is None:
+        return
+
+    print('METH_{}: '.format(name), end='')
+    desc = meth.get_desc()
+
     if desc.kind == addrxlat.NOMETH:
         print('NOMETH')
     elif desc.kind == addrxlat.CUSTOM:
@@ -89,61 +96,45 @@ def print_desc(desc):
     else:
         print('<desc kind {:d}>'.format(desc.kind))
 
-def add_meth(name, meth):
-    if meth is not None:
-        meths[name] = meth
-        print('METH_{}: '.format(name), end='')
-        print_desc(meth.get_desc())
-        print()
+    print()
 
-def print_meth(meth):
-    if meth is None:
-        print('NONE')
-        return
+def print_map(system, name):
+    print('MAP_{}:'.format(name))
 
-    for (k, v) in meths.items():
-        if v == meth:
-            print(k)
-            return
-
-    print(repr(meth), end=' ')
-    print_desc(meth.get_desc())
-
-def print_map(name, map):
-    print(format(name), end=':\n')
-
+    map = system.get_map(addrxlat.__dict__['SYS_MAP_{}'.format(name)])
     if map is None:
         return
 
     addr = 0
     for range in map:
-        print('{:x}-{:x}: '.format(addr, addr + range.endoff), end='')
-        print_meth(range.meth)
+        if range.meth in meth_names:
+            name = meth_names[range.meth]
+        else:
+            name = '{:d}'.format(range.meth)
+        print('{:x}-{:x}: {}'.format(addr, addr + range.endoff, name))
         addr += range.endoff + 1
 
 def dump_addrxlat(ctx):
     system = k.get_addrxlat_sys()
 
-    add_meth('PGT', system.get_meth(addrxlat.SYS_METH_PGT))
-    add_meth('UPGT', system.get_meth(addrxlat.SYS_METH_UPGT))
-    add_meth('DIRECT', system.get_meth(addrxlat.SYS_METH_DIRECT))
-    add_meth('KTEXT', system.get_meth(addrxlat.SYS_METH_KTEXT))
-    add_meth('VMEMMAP', system.get_meth(addrxlat.SYS_METH_VMEMMAP))
-    add_meth('RDIRECT', system.get_meth(addrxlat.SYS_METH_RDIRECT))
-    add_meth('MACHPHYS_KPHYS', system.get_meth(addrxlat.SYS_METH_MACHPHYS_KPHYS))
-    add_meth('KPHYS_MACHPHYS', system.get_meth(addrxlat.SYS_METH_KPHYS_MACHPHYS))
+    print_meth(system, 'PGT')
+    print_meth(system, 'UPGT')
+    print_meth(system, 'DIRECT')
+    print_meth(system, 'KTEXT')
+    print_meth(system, 'VMEMMAP')
+    print_meth(system, 'RDIRECT')
+    print_meth(system, 'MACHPHYS_KPHYS')
+    print_meth(system, 'KPHYS_MACHPHYS')
 
-    print_map('MAP_HW', system.get_map(addrxlat.SYS_MAP_HW))
+    print_map(system, 'HW')
     print()
-    print_map('MAP_KV_PHYS', system.get_map(addrxlat.SYS_MAP_KV_PHYS))
+    print_map(system, 'KV_PHYS')
     print()
-    print_map('MAP_KPHYS_DIRECT', system.get_map(addrxlat.SYS_MAP_KPHYS_DIRECT))
+    print_map(system, 'KPHYS_DIRECT')
     print()
-    print_map('MACHPHYS -> KPHYS', system.get_map(addrxlat.SYS_MAP_MACHPHYS_KPHYS))
+    print_map(system, 'MACHPHYS_KPHYS')
     print()
-    print_map('KPHYS -> MACHPHYS', system.get_map(addrxlat.SYS_MAP_KPHYS_MACHPHYS))
-
-meths = dict()
+    print_map(system, 'KPHYS_MACHPHYS')
 
 if __name__ == '__main__':
     if len(sys.argv) < 2 or len(sys.argv) > 3:
@@ -152,6 +143,11 @@ if __name__ == '__main__':
         exit(1)
 
     k = kdumpfile.kdumpfile(sys.argv[1])
+
+    meth_names = {}
+    for name, val in addrxlat.__dict__.items():
+        if name.startswith('SYS_METH_') and name != 'SYS_METH_NUM':
+            meth_names[val] = name[9:]
 
     if len(sys.argv) > 2:
         k.attr['addrxlat.ostype'] = sys.argv[2]

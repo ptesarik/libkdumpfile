@@ -281,21 +281,22 @@ sys_set_layout(struct os_init_data *ctl, addrxlat_sys_map_t idx,
 			return status;
 
 		range.endoff = region->last - region->first;
-		range.meth = ctl->sys->meth[region->meth];
+		range.meth = region->meth;
 
 		switch (region->act) {
 		case SYS_ACT_DIRECT:
-			status = act_direct(ctl, range.meth, region);
+			status = act_direct(ctl, ctl->sys->meth[range.meth],
+					    region);
 			if (status != ADDRXLAT_OK)
 				return status;
 			break;
 
 		case SYS_ACT_IDENT_KPHYS:
-			act_ident_kphys(range.meth);
+			act_ident_kphys(ctl->sys->meth[range.meth]);
 			break;
 
 		case SYS_ACT_IDENT_MACHPHYS:
-			act_ident_machphys(range.meth);
+			act_ident_machphys(ctl->sys->meth[range.meth]);
 			break;
 
 		default:
@@ -457,7 +458,7 @@ do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
 		for (j = 0; j < alt->num; ++j) {
 			addrxlat_sys_map_t mapidx = alt->map[j];
 			addrxlat_map_t *map;
-			addrxlat_meth_t *meth;
+			addrxlat_sys_meth_t meth;
 
 			if (paddr->as != map_expect_as[mapidx])
 				continue;
@@ -468,10 +469,11 @@ do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
 
 			clear_error(ctl->ctx);
 			meth = internal_map_search(map, paddr->addr);
-			if (!meth)
+			if (meth == ADDRXLAT_SYS_METH_NONE ||
+			    !ctl->sys->meth[meth])
 				continue;
 
-			step.desc = &meth->desc;
+			step.desc = &ctl->sys->meth[meth]->desc;
 			status = internal_launch(&step, paddr->addr);
 			if (status == ADDRXLAT_OK)
 				status = internal_walk(&step);

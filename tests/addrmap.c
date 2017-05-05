@@ -32,23 +32,6 @@
 
 #include "testutil.h"
 
-static addrxlat_meth_t **meths;
-static unsigned nmeth;
-
-static unsigned
-get_meth_idx(const addrxlat_meth_t *meth)
-{
-	unsigned i;
-
-	if (!meth)
-		return 0;
-
-	for (i = 0; i < nmeth; ++i)
-		if (meths[i] == meth)
-			return i;
-	return ~0U;
-}
-
 static void
 printmap(const addrxlat_map_t *map)
 {
@@ -60,9 +43,8 @@ printmap(const addrxlat_map_t *map)
 	addr = 0;
 	range = addrxlat_map_ranges(map);
 	for (i = 0; i < n; ++i) {
-		printf("0x%"ADDRXLAT_PRIxADDR "-0x%"ADDRXLAT_PRIxADDR ":%u\n",
-		       addr, addr + range->endoff,
-		       get_meth_idx(range->meth));
+		printf("0x%"ADDRXLAT_PRIxADDR "-0x%"ADDRXLAT_PRIxADDR ":%ld\n",
+		       addr, addr + range->endoff, (long) range->meth);
 		addr += range->endoff + 1;
 		++range;
 	}
@@ -78,14 +60,12 @@ main(int argc, char **argv)
 	unsigned long methidx;
 	char *endp;
 	int i;
-	int ret;
 
 	map = addrxlat_map_new();
 	if (!map) {
 		perror("Cannot allocate map");
 		return TEST_ERR;
 	}
-	nmeth = 0;
 	for (i = 1; i < argc; ++i) {
 		addr = strtoull(argv[i], &endp, 0);
 		if (*endp != '-') {
@@ -105,28 +85,8 @@ main(int argc, char **argv)
 			fprintf(stderr, "Invalid range spec: %s\n", argv[i]);
 			return TEST_ERR;
 		}
-		if (methidx >= nmeth) {
-			addrxlat_meth_t **newmeths;
-			newmeths = realloc(meths, ((methidx + 1) *
-						 sizeof(addrxlat_meth_t *)));
-			if (!newmeths) {
-				fprintf(stderr, "Cannot enlarge methods array"
-					" to %lu elements\n", methidx + 1);
-				return TEST_ERR;
-			}
-			meths = newmeths;
-			while (nmeth <= methidx)
-				meths[nmeth++] = NULL;
-		}
-		if (!meths[methidx])
-			meths[methidx] = addrxlat_meth_new();
-		if (!meths[methidx]) {
-			fprintf(stderr, "Cannot allocate method %lu\n",
-				methidx);
-			return TEST_ERR;
-		}
 
-		range.meth = meths[methidx];
+		range.meth = methidx;
 		status = addrxlat_map_set(map, addr, &range);
 		if (status != ADDRXLAT_OK) {
 			fprintf(stderr, "Cannot add range: %s\n",
@@ -140,20 +100,5 @@ main(int argc, char **argv)
 
 	addrxlat_map_clear(map);
 
-	ret = TEST_OK;
-	while (nmeth-- > 0) {
-		unsigned refcnt;
-
-		if (!meths[nmeth])
-			continue;
-
-		refcnt = addrxlat_meth_decref(meths[nmeth]);
-		if (refcnt) {
-			fprintf(stderr, "Leaked %u references to method %u\n",
-				refcnt, nmeth);
-			ret = TEST_FAIL;
-		}
-	}
-
-	return ret;
+	return TEST_OK;
 }

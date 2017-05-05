@@ -3280,8 +3280,6 @@ typedef struct {
 	PyObject_HEAD
 	/** Range in libaddrxlat format. */
 	addrxlat_range_t range;
-	/** Translation method object. */
-	PyObject *meth;
 } range_object;
 
 PyDoc_STRVAR(range__doc__,
@@ -3289,30 +3287,24 @@ PyDoc_STRVAR(range__doc__,
 \n\
 Construct an empty address range.");
 
-static void
-range_dealloc(PyObject *_self)
-{
-	range_object *self = (range_object*)_self;
-
-	PyObject_GC_UnTrack(_self);
-	Py_XDECREF(self->meth);
-	Py_TYPE(self)->tp_free((PyObject*)self);
-}
-
-static int
-range_traverse(PyObject *_self, visitproc visit, void *arg)
-{
-	range_object *self = (range_object*)_self;
-	Py_VISIT(self->meth);
-	return 0;
-}
-
 PyDoc_STRVAR(range_meth__doc__,
 "translation method for this range");
 
-/** Setter for the meth type.
- * @param self   any object
- * @param value  new value (a meth object)
+/** Getter for the meth attribute.
+ * @param self  Range object
+ * @param data  ignored
+ * @returns     PyLong object (or @c NULL on failure)
+ */
+static PyObject *
+range_get_meth(PyObject *_self, void *data)
+{
+	range_object *self = (range_object*)_self;
+	return PyInt_FromLong(self->range.meth);
+}
+
+/** Setter for the meth attribute.
+ * @param self   Range object
+ * @param value  new value (see @c SYS_METH_xxx)
  * @param data   ignored
  * @returns      zero on success, -1 otherwise
  */
@@ -3320,22 +3312,16 @@ static int
 range_set_meth(PyObject *_self, PyObject *value, void *data)
 {
 	range_object *self = (range_object*)_self;
-	addrxlat_meth_t *meth;
-	PyObject *oldval;
+	addrxlat_sys_meth_t meth;
 
 	if (check_null_attr(value, "meth"))
 		return -1;
 
-	meth = meth_AsPointer(value);
+	meth = Number_AsLong(value);
 	if (PyErr_Occurred())
 		return -1;
 
-	Py_INCREF(value);
-	oldval = self->meth;
-	self->meth = value;
 	self->range.meth = meth;
-	Py_XDECREF(oldval);
-
 	return 0;
 }
 
@@ -3345,8 +3331,7 @@ PyDoc_STRVAR(range_endoff__doc__,
 static PyGetSetDef range_getset[] = {
 	{ "endoff", get_addr, set_addr, range_endoff__doc__,
 	  OFFSETOF_PTR(range_object, range.endoff) },
-	{ "meth", get_object, range_set_meth, range_meth__doc__,
-	  OFFSETOF_PTR(range_object, meth) },
+	{ "meth", range_get_meth, range_set_meth, range_meth__doc__ },
 	{ NULL }
 };
 
@@ -3356,7 +3341,7 @@ static PyTypeObject range_type =
 	MOD_NAME ".Range",		/* tp_name */
 	sizeof (range_object),		/* tp_basicsize */
 	0,				/* tp_itemsize */
-	range_dealloc,			/* tp_dealloc */
+	0,				/* tp_dealloc */
 	0,				/* tp_print */
 	0,				/* tp_getattr */
 	0,				/* tp_setattr */
@@ -3372,10 +3357,9 @@ static PyTypeObject range_type =
 	0,				/* tp_setattro */
 	0,				/* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT
-	    | Py_TPFLAGS_HAVE_GC
 	    | Py_TPFLAGS_BASETYPE,	/* tp_flags */
 	range__doc__,			/* tp_doc */
-	range_traverse,			/* tp_traverse */
+	0,				/* tp_traverse */
 	0,				/* tp_clear */
 	0,				/* tp_richcompare */
 	0,				/* tp_weaklistoffset */
@@ -3567,8 +3551,7 @@ map_search(PyObject *_self, PyObject *args, PyObject *kwargs)
 					 keywords, &addr))
 		return NULL;
 
-	return meth_FromPointer(
-		self->convert, addrxlat_map_search(self->map, addr));
+	return PyInt_FromLong(addrxlat_map_search(self->map, addr));
 }
 
 PyDoc_STRVAR(map_clear__doc__,
@@ -5306,21 +5289,13 @@ range_FromPointer(PyObject *_conv, const addrxlat_range_t *range)
 {
 	convert_object *conv = (convert_object *)_conv;
 	PyTypeObject *type = conv->range_type;
-	PyObject *meth;
 	PyObject *result;
 
 	result = type->tp_alloc(type, 0);
 	if (!result)
 		return NULL;
 
-	meth = meth_FromPointer((PyObject*)conv, range->meth);
-	if (!meth) {
-		Py_DECREF(result);
-		return NULL;
-	}
-	((range_object*)result)->meth = meth;
 	((range_object*)result)->range = *range;
-
 	return result;
 }
 
@@ -6014,6 +5989,7 @@ init_addrxlat (void)
 	CONSTDEF(SYS_MAP_NUM);
 
 	/* system method indices */
+	CONSTDEF(SYS_METH_NONE);
 	CONSTDEF(SYS_METH_PGT);
 	CONSTDEF(SYS_METH_UPGT);
 	CONSTDEF(SYS_METH_DIRECT);

@@ -447,7 +447,7 @@ set_linux_directmap(struct os_init_data *ctl, addrxlat_map_t *vtop)
 				 "Invalid VMALLOC start: %"ADDRXLAT_PRIxADDR,
 				 vmalloc_start);
 
-	range.meth = NULL;
+	range.meth = ADDRXLAT_SYS_METH_NONE;
 	range.endoff = ADDRXLAT_ADDR_MAX - (vmalloc_start - LINUX_DIRECTMAP);
 	status = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_DIRECT],
 				  vmalloc_start - LINUX_DIRECTMAP, &range);
@@ -455,7 +455,7 @@ set_linux_directmap(struct os_init_data *ctl, addrxlat_map_t *vtop)
 		return set_error(ctl->ctx, status,
 				 "Cannot update reverse directmap");
 
-	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_DIRECT];
+	range.meth = ADDRXLAT_SYS_METH_DIRECT;
 	range.endoff = vmalloc_start - 1 - LINUX_DIRECTMAP;
 	status = internal_map_set(vtop, LINUX_DIRECTMAP, &range);
 	if (status != ADDRXLAT_OK)
@@ -516,7 +516,7 @@ sys_ia32(struct os_init_data *ctl)
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	range.meth = ADDRXLAT_SYS_METH_PGT;
 	range.endoff = VIRTADDR_MAX;
 	newmap = internal_map_new();
 	if (!newmap)

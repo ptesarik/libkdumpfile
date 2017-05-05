@@ -38,12 +38,13 @@ static int
 setup_pgt(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 {
 	addrxlat_range_t range;
+	addrxlat_meth_t *meth;
 	addrxlat_map_t *map;
 	addrxlat_desc_t desc;
 	addrxlat_status status;
 
-	range.meth = addrxlat_meth_new();
-	if (!range.meth) {
+	meth = addrxlat_meth_new();
+	if (!meth) {
 		fputs("Cannot allocate translation map", stderr);
 		return TEST_ERR;
 	}
@@ -55,14 +56,16 @@ setup_pgt(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 	desc.param.pgt.pf.nfields = 2;
 	desc.param.pgt.pf.fieldsz[0] = 12;
 	desc.param.pgt.pf.fieldsz[1] = 9;
-	status = addrxlat_meth_set_desc(range.meth, &desc);
+	status = addrxlat_meth_set_desc(meth, &desc);
 	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot set up translation map: %s",
 			addrxlat_strerror(status));
 		return TEST_ERR;
 	}
+	addrxlat_sys_set_meth(sys, ADDRXLAT_SYS_METH_PGT, meth);
 
 	range.endoff = 0xffffffff;
+	range.meth = ADDRXLAT_SYS_METH_PGT;
 	map = addrxlat_map_new();
 	if (!map) {
 		perror("Cannot allocate translation map");

@@ -613,11 +613,9 @@ add_map_entry(const char *spec, addrxlat_sys_t *sys, addrxlat_map_t **map)
 				       meth_names);
 		if (i == NOTFOUND)
 			return TEST_ERR;
-		range.meth = get_sys_meth(sys, i);
-		if (!range.meth)
-			return TEST_ERR;
+		range.meth = i;
 	} else if (!strcasecmp(p, "NONE")) {
-		range.meth = NULL;
+		range.meth = ADDRXLAT_SYS_METH_NONE;
 	} else {
 		fprintf(stderr, "Invalid method specifier: %s\n", p);
 		return TEST_ERR;

@@ -237,8 +237,8 @@ sys_s390x(struct os_init_data *ctl)
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	range.meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
-	range.endoff = paging_max_index(&range.meth->desc.param.pgt.pf);
+	range.meth = ADDRXLAT_SYS_METH_PGT;
+	range.endoff = paging_max_index(&ctl->sys->meth[range.meth]->desc.param.pgt.pf);
 	newmap = internal_map_new();
 	if (!newmap)
 		return set_error(ctl->ctx, ADDRXLAT_ERR_NOMEM,

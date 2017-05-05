@@ -362,18 +362,18 @@ class TestRange(unittest.TestCase):
     def test_range_defaults(self):
         range = addrxlat.Range()
         self.assertEqual(range.endoff, 0)
-        self.assertEqual(range.meth, None)
+        self.assertEqual(range.meth, addrxlat.SYS_METH_NONE)
 
     def test_range_endoff(self):
         range = addrxlat.Range(endoff=0x1234)
         self.assertEqual(range.endoff, 0x1234)
-        self.assertEqual(range.meth, None)
+        self.assertEqual(range.meth, addrxlat.SYS_METH_NONE)
 
     def test_range_meth(self):
-        meth = addrxlat.Method()
+        meth = addrxlat.SYS_METH_PGT
         range = addrxlat.Range(meth=meth)
         self.assertEqual(range.endoff, 0)
-        self.assertIs(range.meth, meth)
+        self.assertIs(range.meth, addrxlat.SYS_METH_PGT)
 
 class TestMap(unittest.TestCase):
     def test_map_defaults(self):
@@ -382,42 +382,38 @@ class TestMap(unittest.TestCase):
 
     def test_map_set(self):
         map = addrxlat.Map()
-        meth = addrxlat.Method()
-        map.set(0, addrxlat.Range(0xffff, meth))
+        map.set(0, addrxlat.Range(0xffff, addrxlat.SYS_METH_PGT))
         self.assertEqual(len(map), 2)
         self.assertEqual(map[0].endoff, 0xffff)
-        self.assertEqual(map[0].meth, meth)
-        self.assertIs(map[1].meth, None)
+        self.assertEqual(map[0].meth, addrxlat.SYS_METH_PGT)
+        self.assertEqual(map[1].meth, addrxlat.SYS_METH_NONE)
 
     def test_map_search(self):
         map = addrxlat.Map()
-        meth = addrxlat.Method()
-        map.set(0, addrxlat.Range(0xffff, meth))
+        map.set(0, addrxlat.Range(0xffff, addrxlat.SYS_METH_PGT))
         meth2 = map.search(0)
-        self.assertEqual(meth2, meth)
+        self.assertEqual(meth2, addrxlat.SYS_METH_PGT)
         meth2 = map.search(0x10000)
-        self.assertIs(meth2, None)
+        self.assertIs(meth2, addrxlat.SYS_METH_NONE)
 
     def test_map_clear(self):
         map = addrxlat.Map()
-        meth = addrxlat.Method()
-        map.set(0, addrxlat.Range(0xffff, meth))
+        map.set(0, addrxlat.Range(0xffff, addrxlat.SYS_METH_PGT))
         self.assertEqual(len(map), 2)
         map.clear()
         self.assertEqual(len(map), 0)
 
     def test_map_copy(self):
         map = addrxlat.Map()
-        meth = addrxlat.Method()
-        map.set(0, addrxlat.Range(0xffff, meth))
+        map.set(0, addrxlat.Range(0xffff, addrxlat.SYS_METH_PGT))
         self.assertEqual(len(map), 2)
         map2 = map.copy()
         self.assertNotEqual(map2, map)
         self.assertEqual(len(map2), 2)
-        self.assertEqual(map2[0].endoff, map[0].endoff)
-        self.assertEqual(map2[0].meth, map[0].meth)
+        self.assertEqual(map2[0].endoff, 0xffff)
+        self.assertEqual(map2[0].meth, addrxlat.SYS_METH_PGT)
         self.assertEqual(map2[1].endoff, map[1].endoff)
-        self.assertIs(map2[1].meth, None)
+        self.assertIs(map2[1].meth, addrxlat.SYS_METH_NONE)
 
 class TestSystem(unittest.TestCase):
     def test_sys_defaults(self):
@@ -689,48 +685,50 @@ class TestTranslation(unittest.TestCase):
         desc.fields = (8, 8, 8)
         pgtmeth = addrxlat.Method(desc)
         self.sys.set_meth(addrxlat.SYS_METH_PGT, pgtmeth)
-        map.set(0, addrxlat.Range(0xffff, pgtmeth))
+        map.set(0, addrxlat.Range(0xffff, addrxlat.SYS_METH_PGT))
 
         map = addrxlat.Map()
         self.sys.set_map(addrxlat.SYS_MAP_KV_PHYS, map)
         desc = addrxlat.LinearDescription(addrxlat.KPHYSADDR, 0x1000)
         meth = addrxlat.Method(desc)
         self.sys.set_meth(addrxlat.SYS_METH_DIRECT, meth)
-        map.set(0, addrxlat.Range(0x1fff, meth))
+        map.set(0, addrxlat.Range(0x1fff, addrxlat.SYS_METH_DIRECT))
         desc = addrxlat.LookupDescription(addrxlat.KPHYSADDR)
         desc.endoff = 0xff
         desc.tbl = ((0x2000, 0xfa00), (0x3000, 0xfb00), (0x3100, 0xff00))
         meth = addrxlat.Method(desc)
-        map.set(0x2000, addrxlat.Range(0x1fff, meth))
+        self.sys.set_meth(addrxlat.SYS_METH_CUSTOM, meth)
+        map.set(0x2000, addrxlat.Range(0x1fff, addrxlat.SYS_METH_CUSTOM))
         desc = addrxlat.MemoryArrayDescription(addrxlat.KPHYSADDR)
         desc.base = addrxlat.FullAddress(addrxlat.KVADDR, 0)
         desc.shift = 8
         desc.elemsz = 4
         desc.valsz = 4
         meth = addrxlat.Method(desc)
-        map.set(0x4000, addrxlat.Range(0x1fff, meth))
-        map.set(0x6000, addrxlat.Range(0x9fff, pgtmeth))
+        self.sys.set_meth(addrxlat.SYS_METH_CUSTOM + 1, meth)
+        map.set(0x4000, addrxlat.Range(0x1fff, addrxlat.SYS_METH_CUSTOM + 1))
+        map.set(0x6000, addrxlat.Range(0x9fff, addrxlat.SYS_METH_PGT))
 
         map = addrxlat.Map()
         self.sys.set_map(addrxlat.SYS_MAP_KPHYS_DIRECT, map)
         desc = addrxlat.LinearDescription(addrxlat.KVADDR, -0x1000)
         meth = addrxlat.Method(desc)
         self.sys.set_meth(addrxlat.SYS_METH_RDIRECT, meth)
-        map.set(0x1000, addrxlat.Range(0x1fff, meth))
+        map.set(0x1000, addrxlat.Range(0x1fff, addrxlat.SYS_METH_RDIRECT))
 
         map = addrxlat.Map()
         self.sys.set_map(addrxlat.SYS_MAP_MACHPHYS_KPHYS, map)
         desc = addrxlat.LinearDescription(addrxlat.KPHYSADDR, -0x10000)
         meth = addrxlat.Method(desc)
         self.sys.set_meth(addrxlat.SYS_METH_MACHPHYS_KPHYS, meth)
-        map.set(0x10000, addrxlat.Range(0xffff, meth))
+        map.set(0x10000, addrxlat.Range(0xffff, addrxlat.SYS_METH_MACHPHYS_KPHYS))
 
         map = addrxlat.Map()
         self.sys.set_map(addrxlat.SYS_MAP_KPHYS_MACHPHYS, map)
         desc = addrxlat.LinearDescription(addrxlat.MACHPHYSADDR, 0x10000)
         meth = addrxlat.Method(desc)
         self.sys.set_meth(addrxlat.SYS_METH_KPHYS_MACHPHYS, meth)
-        map.set(0, addrxlat.Range(0xffff, meth))
+        map.set(0, addrxlat.Range(0xffff, addrxlat.SYS_METH_KPHYS_MACHPHYS))
 
     def test_fulladdr_conv_kphys_machphys(self):
         "KPHYS -> MACHPHYS using offset"
@@ -872,10 +870,11 @@ class TestCustom(unittest.TestCase):
         self.assertEqual(step.idx[1], 0x12)
 
     def test_customdesc_conv(self):
+        sys = addrxlat.System()
         map = addrxlat.Map()
         meth = addrxlat.Method(self.desc)
-        map.set(0, addrxlat.Range(0xffff, meth))
-        sys = addrxlat.System()
+        sys.set_meth(addrxlat.SYS_METH_CUSTOM, meth)
+        map.set(0, addrxlat.Range(0xffff, addrxlat.SYS_METH_CUSTOM))
         sys.set_map(addrxlat.SYS_MAP_KV_PHYS, map)
         addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x2345)
         addr.conv(addrxlat.KPHYSADDR, self.ctx, sys)
@@ -897,10 +896,11 @@ class TestCustom(unittest.TestCase):
         self.assertEqual(step.idx[1], 0x12)
 
     def test_customdesc_ext_conv(self):
+        sys = addrxlat.System()
         map = addrxlat.Map()
         meth = addrxlat.Method(self.desc_ext)
-        map.set(0, addrxlat.Range(0xffff, meth))
-        sys = addrxlat.System()
+        sys.set_meth(addrxlat.SYS_METH_CUSTOM, meth)
+        map.set(0, addrxlat.Range(0xffff, addrxlat.SYS_METH_CUSTOM))
         sys.set_map(addrxlat.SYS_MAP_KV_PHYS, map)
         addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x2345)
         addr.conv(addrxlat.KPHYSADDR, self.ctx, sys)
@@ -922,10 +922,11 @@ class TestCustom(unittest.TestCase):
         self.assertEqual(step.idx[1], 0x12)
 
     def test_customdesc_extmod_conv(self):
+        sys = addrxlat.System()
         map = addrxlat.Map()
         meth = addrxlat.Method(self.desc_extmod)
-        map.set(0, addrxlat.Range(0xffff, meth))
-        sys = addrxlat.System()
+        sys.set_meth(addrxlat.SYS_METH_CUSTOM, meth)
+        map.set(0, addrxlat.Range(0xffff, addrxlat.SYS_METH_CUSTOM))
         sys.set_map(addrxlat.SYS_MAP_KV_PHYS, map)
         addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x2345)
         addr.conv(addrxlat.KPHYSADDR, self.ctx, sys)

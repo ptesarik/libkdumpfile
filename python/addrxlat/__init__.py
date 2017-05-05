@@ -137,7 +137,7 @@ class Method(Method):
             raise get_exception(status)
 
 class Range(Range):
-    def __init__(self, endoff=0, meth=None, *args, **kwargs):
+    def __init__(self, endoff=0, meth=SYS_METH_NONE, *args, **kwargs):
         super(Range, self).__init__(*args, **kwargs)
         self.endoff = endoff
         self.meth = meth

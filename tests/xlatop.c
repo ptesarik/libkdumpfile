@@ -299,7 +299,7 @@ unmap(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys,
 
 	map = addrxlat_sys_get_map(sys, mapidx);
 	range.endoff = endoff;
-	range.meth = NULL;
+	range.meth = ADDRXLAT_SYS_METH_NONE;
 	status = addrxlat_map_set(map, addr, &range);
 	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot allocate virt-to-phys map: %s\n",
@@ -312,28 +312,30 @@ unmap(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys,
 
 static int
 make_linear_map(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys,
-		addrxlat_sys_map_t mapidx, addrxlat_addr_t addr,
-		addrxlat_addr_t endoff, addrxlat_addrspace_t target_as,
-		addrxlat_off_t off)
+		addrxlat_sys_map_t mapidx, addrxlat_sys_meth_t methidx,
+		addrxlat_addr_t addr, addrxlat_addr_t endoff,
+		addrxlat_addrspace_t target_as, addrxlat_off_t off)
 {
 	addrxlat_range_t range;
+	addrxlat_meth_t *meth;
 	addrxlat_map_t *map;
 	addrxlat_desc_t desc;
 	addrxlat_status status;
 
-	range.meth = addrxlat_meth_new();
-	if (!range.meth) {
+	meth = addrxlat_meth_new();
+	if (!meth) {
 		fputs("Cannot allocate translation map", stderr);
 		return TEST_ERR;
 	}
 	desc.kind = ADDRXLAT_LINEAR;
 	desc.target_as = target_as;
 	desc.param.linear.off = off;
-	status = addrxlat_meth_set_desc(range.meth, &desc);
+	status = addrxlat_meth_set_desc(meth, &desc);
 	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot set up translation map: %s",
 			addrxlat_strerror(status));
 	}
+	addrxlat_sys_set_meth(sys, methidx, meth);
 
 	map = addrxlat_sys_get_map(sys, mapidx);
 	if (!map) {
@@ -345,6 +347,7 @@ make_linear_map(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys,
 		addrxlat_sys_set_map(sys, mapidx, map);
 	}
 	range.endoff = endoff;
+	range.meth = methidx;
 	status = addrxlat_map_set(map, addr, &range);
 	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot update virt-to-phys map: %s\n",
@@ -362,6 +365,7 @@ setup_linear_maps(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 
 	/* Set direct map at 0x10000000-0x1000ffff. */
 	res = make_linear_map(ctx, sys, ADDRXLAT_SYS_MAP_KV_PHYS,
+			      ADDRXLAT_SYS_METH_DIRECT,
 			      0x10000000, 0xffff,
 			      ADDRXLAT_KPHYSADDR, -0x10000000);
 	if (res != TEST_OK)
@@ -369,6 +373,7 @@ setup_linear_maps(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 
 	/* Set reverse direct map at 0-0xffff. */
 	res = make_linear_map(ctx, sys, ADDRXLAT_SYS_MAP_KPHYS_DIRECT,
+			      ADDRXLAT_SYS_METH_RDIRECT,
 			      0, 0xffff,
 			      ADDRXLAT_KVADDR, 0x10000000);
 	if (res != TEST_OK)
@@ -376,6 +381,7 @@ setup_linear_maps(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 
 	/* Direct virt-to-mach at 0x40000000-0x4000ffff */
 	res = make_linear_map(ctx, sys, ADDRXLAT_SYS_MAP_KV_PHYS,
+			      ADDRXLAT_SYS_METH_CUSTOM,
 			      0x40000000, 0xffff,
 			      ADDRXLAT_MACHPHYSADDR, -0x40000000 + 0x20000000);
 	if (res != TEST_OK)
@@ -383,6 +389,7 @@ setup_linear_maps(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 
 	/* Set kphys->machphys 0-0xfffffff. */
 	res = make_linear_map(ctx, sys, ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS,
+			      ADDRXLAT_SYS_METH_KPHYS_MACHPHYS,
 			      0, 0xfffffff,
 			      ADDRXLAT_MACHPHYSADDR, 0x20000000);
 	if (res != TEST_OK)
@@ -390,20 +397,23 @@ setup_linear_maps(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 
 	/* Bogus kphys->machphys 0x20000000-0x2fffffff (trap!). */
 	res = make_linear_map(ctx, sys, ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS,
+			      ADDRXLAT_SYS_METH_CUSTOM + 1,
 			      0x20000000, 0xfffffff,
 			      ADDRXLAT_MACHPHYSADDR, 0xbadbadbad);
 	if (res != TEST_OK)
 		return res;
 
-	/* Set kphys->machphys 0x20000000-0x2fffffff. */
+	/* Set machphys->kphys 0x20000000-0x2fffffff. */
 	res = make_linear_map(ctx, sys, ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS,
+			      ADDRXLAT_SYS_METH_MACHPHYS_KPHYS,
 			      0x20000000, 0xfffffff,
 			      ADDRXLAT_KPHYSADDR, -0x20000000);
 	if (res != TEST_OK)
 		return res;
 
-	/* Bogus kphys->machphys 0-0x2fffffff (trap!). */
+	/* Bogus machphys->kphys 0-0x2fffffff (trap!). */
 	res = make_linear_map(ctx, sys, ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS,
+			      ADDRXLAT_SYS_METH_CUSTOM + 2,
 			      0, 0xfffffff,
 			      ADDRXLAT_KPHYSADDR, 0xbadbadbad);
 	if (res != TEST_OK)
@@ -411,6 +421,7 @@ setup_linear_maps(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 
 	/* Distinct hw map at 0x18000000-0x1800ffff. */
 	res = make_linear_map(ctx, sys, ADDRXLAT_SYS_MAP_HW,
+			      ADDRXLAT_SYS_METH_CUSTOM + 3,
 			      0x18000000, 0xffff,
 			      ADDRXLAT_MACHPHYSADDR, -0x10000000 + 0x20000000);
 	if (res != TEST_OK)

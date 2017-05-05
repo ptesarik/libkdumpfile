@@ -91,7 +91,6 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 	addrxlat_addr_t extend;
 	size_t left;
 	int delta;
-	int i;
 
 	end = addr + range->endoff;
 
@@ -145,7 +144,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 		delta = 3;
 		left = 0;
 		first = last = NULL;
-		if (!range->meth) {
+		if (range->meth == ADDRXLAT_SYS_METH_NONE) {
 			extend = ADDRXLAT_ADDR_MAX - (end - addr);
 			raddr = addr;
 			rend = end;
@@ -171,7 +170,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 			map->n = 1;
 			first = last = newranges;
 			first->endoff = ADDRXLAT_ADDR_MAX;
-			first->meth = NULL;
+			first->meth = ADDRXLAT_SYS_METH_NONE;
 			++left;
 			--delta;
 		} else {
@@ -181,15 +180,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 		map->ranges = newranges;
 	}
 
-	/* drop references to overlapped regions */
-	for (i = delta; i < 0; ++i)
-		if (last[i].meth)
-			internal_meth_decref(last[i].meth);
 	if (delta) {
-		/* if a region is split, take an extra reference  */
-		if (delta > 1 && last->meth)
-			internal_meth_incref(last->meth);
-
 		memmove(last + delta, last, left * sizeof(*last));
 		last += delta;
 		map->n += delta;
@@ -205,15 +196,6 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 		--last;
 	}
 
-	/* take an extra reference to the new region */
-	if (range->meth)
-		internal_meth_incref(range->meth);
-
-	/* drop reference to the previous value, unless an unitialized
-	 * array entry is being inserted */
-	if (delta <= 0 && first->meth)
-		internal_meth_decref(first->meth);
-
 	first->endoff = range->endoff + extend;
 	first->meth = range->meth;
 	return ADDRXLAT_OK;
@@ -221,7 +203,7 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 
 DEFINE_ALIAS(map_search);
 
-addrxlat_meth_t *
+addrxlat_sys_meth_t
 addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 {
 	if (map) {
@@ -236,7 +218,7 @@ addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 			++r;
 		}
 	}
-	return NULL;
+	return ADDRXLAT_SYS_METH_NONE;
 }
 
 DEFINE_ALIAS(map_clear);
@@ -244,13 +226,6 @@ DEFINE_ALIAS(map_clear);
 void
 addrxlat_map_clear(addrxlat_map_t *map)
 {
-	const addrxlat_range_t *r = map->ranges;
-	size_t n = map->n;
-	while(n--) {
-		if (r->meth)
-			internal_meth_decref(r->meth);
-		++r;
-	}
 	map->n = 0;
 }
 
@@ -277,11 +252,8 @@ addrxlat_map_copy(const addrxlat_map_t *map)
 	q = map->ranges;
 	r = ret->ranges;
 	todo = ret->n = map->n;
-	while (todo--) {
-		if (q->meth)
-			internal_meth_incref(q->meth);
+	while (todo--)
 		*r++ = *q++;
-	}
 
 	return ret;
 }

@@ -220,40 +220,6 @@ static const struct params params = {
 	param_array
 };
 
-#define MAX_SYMBOLS	16
-
-static struct {
-	const void *p;
-	const char *name;
-} symbols[MAX_SYMBOLS];
-static unsigned num_symbols;
-
-static void
-add_symbol(const void *ptr, const char *name)
-{
-	if (ptr) {
-		symbols[num_symbols].p = ptr;
-		symbols[num_symbols].name = name;
-		++num_symbols;
-	}
-}
-
-static int
-print_ind(const void *ptr)
-{
-	unsigned i;
-
-	for (i = 0; i < num_symbols; ++i) {
-		if (symbols[i].p == ptr) {
-			printf("@%s", symbols[i].name);
-			return 0;
-		}
-	};
-
-	printf("@%p", ptr);
-	return -1;
-}
-
 static void
 print_addrspace(addrxlat_addrspace_t as)
 {
@@ -367,11 +333,29 @@ print_memarr(const addrxlat_desc_t *desc)
 	printf("  valsz=%u\n", desc->param.memarr.valsz);
 }
 
-static void
-print_meth(const addrxlat_meth_t *meth)
-{
-	const addrxlat_desc_t *desc = addrxlat_meth_get_desc(meth);
+static const char *const meth_names[] = {
+	[ADDRXLAT_SYS_METH_PGT] = "rootpgt",
+	[ADDRXLAT_SYS_METH_UPGT] = "userpgt",
+	[ADDRXLAT_SYS_METH_DIRECT] = "direct",
+	[ADDRXLAT_SYS_METH_KTEXT] = "ktext",
+	[ADDRXLAT_SYS_METH_VMEMMAP] = "vmemmap",
+	[ADDRXLAT_SYS_METH_RDIRECT] = "rdirect",
+	[ADDRXLAT_SYS_METH_MACHPHYS_KPHYS] = "machphys_kphys",
+	[ADDRXLAT_SYS_METH_KPHYS_MACHPHYS] = "kphys_machphys",
+};
 
+static void
+print_meth(const addrxlat_sys_t *sys, addrxlat_sys_meth_t methidx)
+{
+	const addrxlat_meth_t *meth = addrxlat_sys_get_meth(sys, methidx);
+	const addrxlat_desc_t *desc;
+
+	if (!meth)
+		return;
+
+	printf("@%s: ", meth_names[methidx]);
+
+	desc = addrxlat_meth_get_desc(meth);
 	switch (desc->kind) {
 	case ADDRXLAT_NOMETH:
 		puts("NOMETH");
@@ -397,38 +381,31 @@ print_meth(const addrxlat_meth_t *meth)
 		print_memarr(desc);
 		break;
 	}
+
+	putchar('\n');
 }
 
 static void
-add_meth(const addrxlat_meth_t *meth, const char *name)
+print_xlat(addrxlat_sys_meth_t methidx)
 {
-	if (meth) {
-		add_symbol(meth, name);
-		printf("@%s: ", name);
-		print_meth(meth);
-		putchar('\n');
-	}
-}
-
-static void
-print_xlat(const addrxlat_meth_t *meth)
-{
-	if (meth == NULL)
+	if (methidx == ADDRXLAT_SYS_METH_NONE)
 		puts("NONE");
-	else if (print_ind(meth)) {
-		putchar(' ');
-		print_meth(meth);
-	} else
-		putchar('\n');
+	else if (methidx >= 0 && methidx < ARRAY_SIZE(meth_names) &&
+		 meth_names[methidx])
+		printf("@%s\n", meth_names[methidx]);
+	else
+		printf("<%ld>\n", (long)methidx);
 }
 
 static void
-print_map(const addrxlat_map_t *map)
+print_map(const addrxlat_sys_t *sys, addrxlat_sys_map_t mapidx)
 {
+	addrxlat_map_t *map;
 	addrxlat_addr_t addr;
 	const addrxlat_range_t *range;
 	size_t i, n;
 
+	map = addrxlat_sys_get_map(sys, mapidx);
 	if (!map)
 		return;
 
@@ -457,7 +434,6 @@ os_map(void)
 		.sym = get_symdata
 	};
 	addrxlat_osdesc_t desc;
-	const addrxlat_meth_t *meth;
 	addrxlat_status status;
 
 	desc.type = ostype;
@@ -488,57 +464,37 @@ os_map(void)
 		return TEST_ERR;
 	}
 
-	meth = addrxlat_sys_get_meth(data.sys, ADDRXLAT_SYS_METH_PGT);
-	add_meth(meth, "rootpgt");
-
-	meth = addrxlat_sys_get_meth(data.sys, ADDRXLAT_SYS_METH_UPGT);
-	add_meth(meth, "userpgt");
-
-	meth = addrxlat_sys_get_meth(data.sys, ADDRXLAT_SYS_METH_DIRECT);
-	add_meth(meth, "direct");
-
-	meth = addrxlat_sys_get_meth(data.sys, ADDRXLAT_SYS_METH_KTEXT);
-	add_meth(meth, "ktext");
-
-	meth = addrxlat_sys_get_meth(data.sys, ADDRXLAT_SYS_METH_VMEMMAP);
-	add_meth(meth, "vmemmap");
-
-	meth = addrxlat_sys_get_meth(data.sys, ADDRXLAT_SYS_METH_RDIRECT);
-	add_meth(meth, "rdirect");
-
-	meth = addrxlat_sys_get_meth(data.sys,
-				     ADDRXLAT_SYS_METH_MACHPHYS_KPHYS);
-	add_meth(meth, "machphys_kphys");
-
-	meth = addrxlat_sys_get_meth(data.sys,
-				     ADDRXLAT_SYS_METH_KPHYS_MACHPHYS);
-	add_meth(meth, "kphys_machphys");
+	print_meth(data.sys, ADDRXLAT_SYS_METH_PGT);
+	print_meth(data.sys, ADDRXLAT_SYS_METH_UPGT);
+	print_meth(data.sys, ADDRXLAT_SYS_METH_DIRECT);
+	print_meth(data.sys, ADDRXLAT_SYS_METH_KTEXT);
+	print_meth(data.sys, ADDRXLAT_SYS_METH_VMEMMAP);
+	print_meth(data.sys, ADDRXLAT_SYS_METH_RDIRECT);
+	print_meth(data.sys, ADDRXLAT_SYS_METH_MACHPHYS_KPHYS);
+	print_meth(data.sys, ADDRXLAT_SYS_METH_KPHYS_MACHPHYS);
 
 	puts("KV -> HW:");
-	print_map(addrxlat_sys_get_map(data.sys, ADDRXLAT_SYS_MAP_HW));
+	print_map(data.sys, ADDRXLAT_SYS_MAP_HW);
 
 	putchar('\n');
 
 	puts("KV -> PHYS:");
-	print_map(addrxlat_sys_get_map(data.sys, ADDRXLAT_SYS_MAP_KV_PHYS));
+	print_map(data.sys, ADDRXLAT_SYS_MAP_KV_PHYS);
 
 	putchar('\n');
 
 	puts("KPHYS -> DIRECT:");
-	print_map(addrxlat_sys_get_map(data.sys,
-				       ADDRXLAT_SYS_MAP_KPHYS_DIRECT));
+	print_map(data.sys, ADDRXLAT_SYS_MAP_KPHYS_DIRECT);
 
 	putchar('\n');
 
 	puts("MACHPHYS -> KPHYS:");
-	print_map(addrxlat_sys_get_map(data.sys,
-				       ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS));
+	print_map(data.sys, ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS);
 
 	putchar('\n');
 
 	puts("KPHYS -> MACHPHYS:");
-	print_map(addrxlat_sys_get_map(data.sys,
-				       ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS));
+	print_map(data.sys, ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS);
 
 	addrxlat_sys_decref(data.sys);
 	addrxlat_ctx_decref(data.ctx);

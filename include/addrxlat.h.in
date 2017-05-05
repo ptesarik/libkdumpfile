@@ -650,14 +650,50 @@ const addrxlat_cb_t *addrxlat_ctx_get_cb(const addrxlat_ctx_t *ctx);
 void addrxlat_ctx_install_cb_hook(addrxlat_ctx_t *ctx,
 				  addrxlat_cb_hook_fn *hook, void *data);
 
+/** Translation system method index.
+ *
+ * A translation system uses a number of translation methods to do its job.
+ * Any of them can be obtained with
+ * @ref addrxlat_sys_get_meth or overridden with
+ * @ref addrxlat_sys_set_meth using one of these indices.
+ */
+typedef enum _addrxlat_sys_meth {
+	ADDRXLAT_SYS_METH_NONE = -1, /**< No method. */
+
+	ADDRXLAT_SYS_METH_PGT,	   /**< Kernel-space page table. */
+	ADDRXLAT_SYS_METH_UPGT,	   /**< User-space page table. */
+	ADDRXLAT_SYS_METH_DIRECT,  /**< Direct mapping. */
+	ADDRXLAT_SYS_METH_KTEXT,   /**< Kernel text mapping. */
+	ADDRXLAT_SYS_METH_VMEMMAP, /**< Fixed VMEMMAP (on IBM POWER). */
+
+	ADDRXLAT_SYS_METH_RDIRECT, /**< Reverse direct mapping. */
+
+	/** Default machine physical to kernel physical mapping. */
+	ADDRXLAT_SYS_METH_MACHPHYS_KPHYS,
+
+	/** Default kernel physical to machine physical mapping. */
+	ADDRXLAT_SYS_METH_KPHYS_MACHPHYS,
+
+	/** First custom method. */
+	ADDRXLAT_SYS_METH_CUSTOM
+
+} addrxlat_sys_meth_t;
+
+/** Number of custom methods. */
+#define ADDRXLAT_SYS_METH_CUSTOM_NUM	8
+
+/** Total number of system method indices. */
+#define ADDRXLAT_SYS_METH_NUM \
+	(ADDRXLAT_SYS_METH_CUSTOM + ADDRXLAT_SYS_METH_CUSTOM_NUM)
+
 /** Definition of an address range.
  */
 typedef struct _addrxlat_range {
 	/** Max address offset inside the range. */
 	addrxlat_addr_t endoff;
 
-	/** Translation method */
-	addrxlat_meth_t *meth;
+	/** Translation method index */
+	addrxlat_sys_meth_t meth;
 } addrxlat_range_t;
 
 /**  Address translation map. */
@@ -716,13 +752,16 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 /** Find an address translation method in a translation map.
  * @param map   Address translation map.
  * @param addr  Address to be translated.
- * @returns     Translation method, or @c NULL if not found.
+ * @returns     Translation method index.
+ *
+ * If no entry is found in the translation map, this function returns
+ * @c ADDRXLAT_SYS_METH_NONE.
  *
  * It is allowed to pass @c NULL as the translation map; the result
  * is the same as if an empty map was given, i.e. the function always
- * returns @c NULL.
+ * returns @c ADDRXLAT_SYS_METH_NONE.
  */
-addrxlat_meth_t *addrxlat_map_search(
+addrxlat_sys_meth_t addrxlat_map_search(
 	const addrxlat_map_t *map, addrxlat_addr_t addr);
 
 /** Clean up all data used by a translation map.
@@ -895,40 +934,6 @@ void addrxlat_sys_set_map(
  */
 addrxlat_map_t *addrxlat_sys_get_map(
 	const addrxlat_sys_t *sys, addrxlat_sys_map_t idx);
-
-/** Translation system method index.
- *
- * A translation system uses a number of translation methods to do its job.
- * Any of them can be obtained with
- * @ref addrxlat_sys_get_meth or overridden with
- * @ref addrxlat_sys_set_meth using one of these indices.
- */
-typedef enum _addrxlat_sys_meth {
-	ADDRXLAT_SYS_METH_PGT,	   /**< Kernel-space page table. */
-	ADDRXLAT_SYS_METH_UPGT,	   /**< User-space page table. */
-	ADDRXLAT_SYS_METH_DIRECT,  /**< Direct mapping. */
-	ADDRXLAT_SYS_METH_KTEXT,   /**< Kernel text mapping. */
-	ADDRXLAT_SYS_METH_VMEMMAP, /**< Fixed VMEMMAP (on IBM POWER). */
-
-	ADDRXLAT_SYS_METH_RDIRECT, /**< Reverse direct mapping. */
-
-	/** Default machine physical to kernel physical mapping. */
-	ADDRXLAT_SYS_METH_MACHPHYS_KPHYS,
-
-	/** Default kernel physical to machine physical mapping. */
-	ADDRXLAT_SYS_METH_KPHYS_MACHPHYS,
-
-	/** First custom method. */
-	ADDRXLAT_SYS_METH_CUSTOM
-
-} addrxlat_sys_meth_t;
-
-/** Number of custom methods. */
-#define ADDRXLAT_SYS_METH_CUSTOM_NUM	8
-
-/** Total number of system method indices. */
-#define ADDRXLAT_SYS_METH_NUM \
-	(ADDRXLAT_SYS_METH_CUSTOM + ADDRXLAT_SYS_METH_CUSTOM_NUM)
 
 /** Explicitly set an address translation method for a translation system.
  * @param sys     Translation system.

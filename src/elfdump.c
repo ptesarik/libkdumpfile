@@ -392,7 +392,7 @@ setup_custom_method(kdump_ctx_t *ctx, addrxlat_sys_meth_t methidx,
 				 "Cannot allocate translation map");
 
 	range.endoff = ADDRXLAT_ADDR_MAX;
-	range.meth = meth;
+	range.meth = methidx;
 	axstatus = addrxlat_map_set(map, 0, &range);
 	if (axstatus != ADDRXLAT_OK) {
 		addrxlat_map_decref(map);
