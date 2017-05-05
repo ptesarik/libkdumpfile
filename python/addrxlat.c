@@ -4435,6 +4435,7 @@ step_launch(PyObject *_self, PyObject *args, PyObject *kwargs)
 		return NULL;
 
 	status = addrxlat_launch(&self->step, addr);
+	step_Init((PyObject*)self, &self->step);
 	return ctx_status_result(self->ctx, status);
 }
 
@@ -4455,6 +4456,7 @@ step_step(PyObject *_self, PyObject *args)
 	addrxlat_status status;
 
 	status = addrxlat_step(&self->step);
+	step_Init((PyObject*)self, &self->step);
 	return ctx_status_result(self->ctx, status);
 }
 
