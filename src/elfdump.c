@@ -307,8 +307,8 @@ xc_mfn_to_pfn(kdump_ctx_t *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
 static addrxlat_status
 xc_p2m_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	const addrxlat_desc_t *desc = step->desc;
-	struct kdump_shared *shared = desc->param.custom.data;
+	const addrxlat_meth_t *meth = step->meth;
+	struct kdump_shared *shared = meth->param.custom.data;
 	struct xen_p2m *p = shared->xen_map;
 	addrxlat_addr_t pfn = addr >> shared->page_shift.number;
 	unsigned long i;
@@ -334,8 +334,8 @@ xc_p2m_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 static addrxlat_status
 xc_m2p_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	const addrxlat_desc_t *desc = step->desc;
-	struct kdump_shared *shared = desc->param.custom.data;
+	const addrxlat_meth_t *meth = step->meth;
+	struct kdump_shared *shared = meth->param.custom.data;
 	struct xen_p2m *p = shared->xen_map;
 	addrxlat_addr_t mfn = addr >> shared->page_shift.number;
 	unsigned long i;
@@ -367,7 +367,7 @@ next_step_ident(addrxlat_step_t *state)
 
 static kdump_status
 setup_custom_method(kdump_ctx_t *ctx, addrxlat_sys_meth_t methidx,
-		    addrxlat_sys_map_t mapidx, const addrxlat_desc_t *desc)
+		    addrxlat_sys_map_t mapidx, const addrxlat_meth_t *meth)
 {
 	addrxlat_range_t range;
 	addrxlat_map_t *map;
@@ -386,7 +386,7 @@ setup_custom_method(kdump_ctx_t *ctx, addrxlat_sys_meth_t methidx,
 		return addrxlat2kdump(ctx, axstatus);
 	}
 	addrxlat_sys_set_map(ctx->shared->xlatsys, mapidx, map);
-	addrxlat_sys_set_desc(ctx->shared->xlatsys, methidx, desc);
+	addrxlat_sys_set_meth(ctx->shared->xlatsys, methidx, meth);
 
 	return KDUMP_OK;
 }
@@ -394,30 +394,30 @@ setup_custom_method(kdump_ctx_t *ctx, addrxlat_sys_meth_t methidx,
 static kdump_status
 xc_post_addrxlat(kdump_ctx_t *ctx)
 {
-	addrxlat_desc_t desc;
+	addrxlat_meth_t meth;
 	kdump_status status;
 
 	if (get_xen_xlat(ctx) != KDUMP_XEN_NONAUTO)
 		return KDUMP_OK;
 
 	/* common fields */
-	desc.kind = ADDRXLAT_CUSTOM;
-	desc.param.custom.next_step = next_step_ident;
-	desc.param.custom.data = ctx->shared;
+	meth.kind = ADDRXLAT_CUSTOM;
+	meth.param.custom.next_step = next_step_ident;
+	meth.param.custom.data = ctx->shared;
 
 	/* p2m translation */
-	desc.target_as = ADDRXLAT_MACHPHYSADDR;
-	desc.param.custom.first_step = xc_p2m_first_step;
+	meth.target_as = ADDRXLAT_MACHPHYSADDR;
+	meth.param.custom.first_step = xc_p2m_first_step;
 	status = setup_custom_method(ctx, ADDRXLAT_SYS_METH_KPHYS_MACHPHYS,
-				     ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS, &desc);
+				     ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS, &meth);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Failed p2m setup");
 
 	/* m2p translation */
-	desc.target_as = ADDRXLAT_KPHYSADDR;
-	desc.param.custom.first_step = xc_m2p_first_step;
+	meth.target_as = ADDRXLAT_KPHYSADDR;
+	meth.param.custom.first_step = xc_m2p_first_step;
 	status = setup_custom_method(ctx, ADDRXLAT_SYS_METH_MACHPHYS_KPHYS,
-				     ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS, &desc);
+				     ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS, &meth);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Failed m2p setup");
 

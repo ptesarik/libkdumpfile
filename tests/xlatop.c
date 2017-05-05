@@ -318,13 +318,13 @@ make_linear_map(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys,
 {
 	addrxlat_range_t range;
 	addrxlat_map_t *map;
-	addrxlat_desc_t desc;
+	addrxlat_meth_t meth;
 	addrxlat_status status;
 
-	desc.kind = ADDRXLAT_LINEAR;
-	desc.target_as = target_as;
-	desc.param.linear.off = off;
-	addrxlat_sys_set_desc(sys, methidx, &desc);
+	meth.kind = ADDRXLAT_LINEAR;
+	meth.target_as = target_as;
+	meth.param.linear.off = off;
+	addrxlat_sys_set_meth(sys, methidx, &meth);
 
 	map = addrxlat_sys_get_map(sys, mapidx);
 	if (!map) {

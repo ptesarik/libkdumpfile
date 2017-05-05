@@ -66,279 +66,279 @@ class TestContext(unittest.TestCase):
         ctx.clear_err()
         self.assertIs(ctx.get_err(), None)
 
-class TestDescription(unittest.TestCase):
-    def test_desc_defaults(self):
-        desc = addrxlat.Description(addrxlat.NOMETH)
-        self.assertEqual(desc.kind, addrxlat.NOMETH)
-        self.assertEqual(desc.target_as, addrxlat.NOADDR)
-        for i in xrange(len(desc.param)):
-            self.assertEqual(desc.param[i], 0)
+class TestMethod(unittest.TestCase):
+    def test_meth_defaults(self):
+        meth = addrxlat.Method(addrxlat.NOMETH)
+        self.assertEqual(meth.kind, addrxlat.NOMETH)
+        self.assertEqual(meth.target_as, addrxlat.NOADDR)
+        for i in xrange(len(meth.param)):
+            self.assertEqual(meth.param[i], 0)
 
-    def test_desc_readonly_kind(self):
-        desc = addrxlat.Description(addrxlat.NOMETH)
+    def test_meth_readonly_kind(self):
+        meth = addrxlat.Method(addrxlat.NOMETH)
         with self.assertRaises(AttributeError):
-            desc.kind = addrxlat.LINEAR
+            meth.kind = addrxlat.LINEAR
 
-    def test_desc_target_as(self):
-        desc = addrxlat.Description(addrxlat.NOMETH, addrxlat.MACHPHYSADDR)
-        self.assertEqual(desc.kind, addrxlat.NOMETH)
-        self.assertEqual(desc.target_as, addrxlat.MACHPHYSADDR)
-        for i in xrange(len(desc.param)):
-            self.assertEqual(desc.param[i], 0)
+    def test_meth_target_as(self):
+        meth = addrxlat.Method(addrxlat.NOMETH, addrxlat.MACHPHYSADDR)
+        self.assertEqual(meth.kind, addrxlat.NOMETH)
+        self.assertEqual(meth.target_as, addrxlat.MACHPHYSADDR)
+        for i in xrange(len(meth.param)):
+            self.assertEqual(meth.param[i], 0)
 
-    def test_desc_param(self):
-        desc = addrxlat.Description(addrxlat.NOMETH, param=(0, 1, 2, 3))
-        self.assertGreaterEqual(len(desc.param), 4)
-        self.assertEqual(desc.kind, addrxlat.NOMETH)
-        self.assertEqual(desc.target_as, addrxlat.NOADDR)
+    def test_meth_param(self):
+        meth = addrxlat.Method(addrxlat.NOMETH, param=(0, 1, 2, 3))
+        self.assertGreaterEqual(len(meth.param), 4)
+        self.assertEqual(meth.kind, addrxlat.NOMETH)
+        self.assertEqual(meth.target_as, addrxlat.NOADDR)
         for i in xrange(4):
-            self.assertEqual(desc.param[i], i)
-        for i in xrange(4, len(desc.param)):
-            self.assertEqual(desc.param[i], 0)
+            self.assertEqual(meth.param[i], i)
+        for i in xrange(4, len(meth.param)):
+            self.assertEqual(meth.param[i], 0)
 
         for i in xrange(4):
-            desc.param[i] += 1
-        self.assertEqual(desc.kind, addrxlat.NOMETH)
-        self.assertEqual(desc.target_as, addrxlat.NOADDR)
+            meth.param[i] += 1
+        self.assertEqual(meth.kind, addrxlat.NOMETH)
+        self.assertEqual(meth.target_as, addrxlat.NOADDR)
         for i in xrange(4):
-            self.assertEqual(desc.param[i], i + 1)
-        for i in xrange(4, len(desc.param)):
-            self.assertEqual(desc.param[i], 0)
+            self.assertEqual(meth.param[i], i + 1)
+        for i in xrange(4, len(meth.param)):
+            self.assertEqual(meth.param[i], 0)
 
         with self.assertRaises(OverflowError):
-            desc.param[0] = 999
+            meth.param[0] = 999
         with self.assertRaises(OverflowError):
-            desc.param[0] = -1
+            meth.param[0] = -1
 
     def test_custom_defaults(self):
-        desc = addrxlat.CustomDescription()
-        self.assertEqual(desc.kind, addrxlat.CUSTOM)
-        self.assertEqual(desc.target_as, addrxlat.NOADDR)
+        meth = addrxlat.CustomMethod()
+        self.assertEqual(meth.kind, addrxlat.CUSTOM)
+        self.assertEqual(meth.target_as, addrxlat.NOADDR)
 
     def test_custom_readonly_kind(self):
-        desc = addrxlat.CustomDescription()
+        meth = addrxlat.CustomMethod()
         with self.assertRaises(AttributeError):
-            desc.kind = addrxlat.NOMETH
+            meth.kind = addrxlat.NOMETH
 
     def test_custom_target_as(self):
-        desc = addrxlat.CustomDescription(addrxlat.MACHPHYSADDR)
-        self.assertEqual(desc.kind, addrxlat.CUSTOM)
-        self.assertEqual(desc.target_as, addrxlat.MACHPHYSADDR)
+        meth = addrxlat.CustomMethod(addrxlat.MACHPHYSADDR)
+        self.assertEqual(meth.kind, addrxlat.CUSTOM)
+        self.assertEqual(meth.target_as, addrxlat.MACHPHYSADDR)
 
     def test_custom_notimpl(self):
-        desc = addrxlat.CustomDescription(addrxlat.MACHPHYSADDR)
-        self.assertEqual(desc.kind, addrxlat.CUSTOM)
-        self.assertEqual(desc.target_as, addrxlat.MACHPHYSADDR)
+        meth = addrxlat.CustomMethod(addrxlat.MACHPHYSADDR)
+        self.assertEqual(meth.kind, addrxlat.CUSTOM)
+        self.assertEqual(meth.target_as, addrxlat.MACHPHYSADDR)
         ctx = addrxlat.Context()
-        step = addrxlat.Step(ctx=ctx, desc=desc)
+        step = addrxlat.Step(ctx=ctx, meth=meth)
         with self.assertRaisesRegexp(BaseException, "NULL callback"):
-            desc.cb_first_step(step, 0x1234)
+            meth.cb_first_step(step, 0x1234)
         with self.assertRaisesRegexp(BaseException, "NULL callback"):
-            desc.cb_next_step(step)
+            meth.cb_next_step(step)
 
     def test_linear_defaults(self):
-        desc = addrxlat.LinearDescription()
-        self.assertEqual(desc.kind, addrxlat.LINEAR)
-        self.assertEqual(desc.target_as, addrxlat.NOADDR)
-        self.assertEqual(desc.off, 0)
+        meth = addrxlat.LinearMethod()
+        self.assertEqual(meth.kind, addrxlat.LINEAR)
+        self.assertEqual(meth.target_as, addrxlat.NOADDR)
+        self.assertEqual(meth.off, 0)
 
     def test_linear_readonly_kind(self):
-        desc = addrxlat.LinearDescription()
+        meth = addrxlat.LinearMethod()
         with self.assertRaises(AttributeError):
-            desc.kind = addrxlat.NOMETH
+            meth.kind = addrxlat.NOMETH
 
     def test_linear_target_as(self):
-        desc = addrxlat.LinearDescription(addrxlat.MACHPHYSADDR)
-        self.assertEqual(desc.kind, addrxlat.LINEAR)
-        self.assertEqual(desc.target_as, addrxlat.MACHPHYSADDR)
-        self.assertEqual(desc.off, 0)
+        meth = addrxlat.LinearMethod(addrxlat.MACHPHYSADDR)
+        self.assertEqual(meth.kind, addrxlat.LINEAR)
+        self.assertEqual(meth.target_as, addrxlat.MACHPHYSADDR)
+        self.assertEqual(meth.off, 0)
 
     def test_linear_off(self):
-        desc = addrxlat.LinearDescription(off=addrxlat.ADDR_MAX - 0x1234)
-        self.assertEqual(desc.kind, addrxlat.LINEAR)
-        self.assertEqual(desc.target_as, addrxlat.NOADDR)
-        self.assertEqual(desc.off, addrxlat.ADDR_MAX - 0x1234)
+        meth = addrxlat.LinearMethod(off=addrxlat.ADDR_MAX - 0x1234)
+        self.assertEqual(meth.kind, addrxlat.LINEAR)
+        self.assertEqual(meth.target_as, addrxlat.NOADDR)
+        self.assertEqual(meth.off, addrxlat.ADDR_MAX - 0x1234)
 
     def test_linear_neg_off(self):
-        desc = addrxlat.LinearDescription(off=-addrxlat.ADDR_MAX)
-        self.assertEqual(desc.kind, addrxlat.LINEAR)
-        self.assertEqual(desc.target_as, addrxlat.NOADDR)
-        self.assertEqual(desc.off, 1)
+        meth = addrxlat.LinearMethod(off=-addrxlat.ADDR_MAX)
+        self.assertEqual(meth.kind, addrxlat.LINEAR)
+        self.assertEqual(meth.target_as, addrxlat.NOADDR)
+        self.assertEqual(meth.off, 1)
 
     def test_linear_param(self):
-        desc = addrxlat.LinearDescription(off=0x1234)
-        param = tuple(desc.param)
-        self.assertLess(param.index(0x34), len(desc.param))
-        desc.param = (0xff,) * len(desc.param)
-        self.assertNotEqual(desc.off, 0x1234)
+        meth = addrxlat.LinearMethod(off=0x1234)
+        param = tuple(meth.param)
+        self.assertLess(param.index(0x34), len(meth.param))
+        meth.param = (0xff,) * len(meth.param)
+        self.assertNotEqual(meth.off, 0x1234)
 
     def test_pgt_defaults(self):
-        desc = addrxlat.PageTableDescription()
-        self.assertEqual(desc.kind, addrxlat.PGT)
-        self.assertEqual(desc.target_as, addrxlat.NOADDR)
-        self.assertIs(desc.root, None)
-        self.assertEqual(desc.pte_format, addrxlat.PTE_NONE)
-        self.assertEqual(desc.fields, tuple())
+        meth = addrxlat.PageTableMethod()
+        self.assertEqual(meth.kind, addrxlat.PGT)
+        self.assertEqual(meth.target_as, addrxlat.NOADDR)
+        self.assertIs(meth.root, None)
+        self.assertEqual(meth.pte_format, addrxlat.PTE_NONE)
+        self.assertEqual(meth.fields, tuple())
 
     def test_pgt_readonly_kind(self):
-        desc = addrxlat.PageTableDescription()
+        meth = addrxlat.PageTableMethod()
         with self.assertRaises(AttributeError):
-            desc.kind = addrxlat.NOMETH
+            meth.kind = addrxlat.NOMETH
 
     def test_pgt_target_as(self):
-        desc = addrxlat.PageTableDescription(addrxlat.MACHPHYSADDR)
-        self.assertEqual(desc.kind, addrxlat.PGT)
-        self.assertEqual(desc.target_as, addrxlat.MACHPHYSADDR)
-        self.assertIs(desc.root, None)
-        self.assertEqual(desc.pte_format, addrxlat.PTE_NONE)
-        self.assertEqual(desc.fields, tuple())
+        meth = addrxlat.PageTableMethod(addrxlat.MACHPHYSADDR)
+        self.assertEqual(meth.kind, addrxlat.PGT)
+        self.assertEqual(meth.target_as, addrxlat.MACHPHYSADDR)
+        self.assertIs(meth.root, None)
+        self.assertEqual(meth.pte_format, addrxlat.PTE_NONE)
+        self.assertEqual(meth.fields, tuple())
 
     def test_pgt_root(self):
         root = addrxlat.FullAddress(addrxlat.MACHPHYSADDR, 0x1000)
-        desc = addrxlat.PageTableDescription(root=root)
-        self.assertEqual(desc.kind, addrxlat.PGT)
-        self.assertEqual(desc.target_as, addrxlat.NOADDR)
-        self.assertEqual(desc.root, root)
-        self.assertEqual(desc.pte_format, addrxlat.PTE_NONE)
-        self.assertEqual(desc.fields, tuple())
+        meth = addrxlat.PageTableMethod(root=root)
+        self.assertEqual(meth.kind, addrxlat.PGT)
+        self.assertEqual(meth.target_as, addrxlat.NOADDR)
+        self.assertEqual(meth.root, root)
+        self.assertEqual(meth.pte_format, addrxlat.PTE_NONE)
+        self.assertEqual(meth.fields, tuple())
 
     def test_pgt_pte_format(self):
-        desc = addrxlat.PageTableDescription(pte_format=addrxlat.PTE_PFN32)
-        self.assertEqual(desc.kind, addrxlat.PGT)
-        self.assertEqual(desc.target_as, addrxlat.NOADDR)
-        self.assertIs(desc.root, None)
-        self.assertEqual(desc.pte_format, addrxlat.PTE_PFN32)
-        self.assertEqual(desc.fields, tuple())
+        meth = addrxlat.PageTableMethod(pte_format=addrxlat.PTE_PFN32)
+        self.assertEqual(meth.kind, addrxlat.PGT)
+        self.assertEqual(meth.target_as, addrxlat.NOADDR)
+        self.assertIs(meth.root, None)
+        self.assertEqual(meth.pte_format, addrxlat.PTE_PFN32)
+        self.assertEqual(meth.fields, tuple())
 
     def test_pgt_fields(self):
-        desc = addrxlat.PageTableDescription(fields=(1, 2, 3))
-        self.assertEqual(desc.kind, addrxlat.PGT)
-        self.assertEqual(desc.target_as, addrxlat.NOADDR)
-        self.assertIs(desc.root, None)
-        self.assertEqual(desc.pte_format, addrxlat.PTE_NONE)
-        self.assertEqual(desc.fields, (1, 2, 3))
+        meth = addrxlat.PageTableMethod(fields=(1, 2, 3))
+        self.assertEqual(meth.kind, addrxlat.PGT)
+        self.assertEqual(meth.target_as, addrxlat.NOADDR)
+        self.assertIs(meth.root, None)
+        self.assertEqual(meth.pte_format, addrxlat.PTE_NONE)
+        self.assertEqual(meth.fields, (1, 2, 3))
 
-        desc.fields = (4, 5, 6)
-        self.assertEqual(desc.fields, (4, 5, 6))
+        meth.fields = (4, 5, 6)
+        self.assertEqual(meth.fields, (4, 5, 6))
         with self.assertRaisesRegexp(TypeError, 'not a sequence'):
-            desc.fields = None
+            meth.fields = None
         with self.assertRaisesRegexp(ValueError,
                                      'more than [0-9]+ address fields'):
-            desc.fields = (0,) * (addrxlat.FIELDS_MAX + 1)
+            meth.fields = (0,) * (addrxlat.FIELDS_MAX + 1)
 
     def test_lookup_defaults(self):
-        desc = addrxlat.LookupDescription()
-        self.assertEqual(desc.kind, addrxlat.LOOKUP)
-        self.assertEqual(desc.target_as, addrxlat.NOADDR)
-        self.assertEqual(desc.endoff, 0)
-        self.assertEqual(desc.tbl, tuple())
+        meth = addrxlat.LookupMethod()
+        self.assertEqual(meth.kind, addrxlat.LOOKUP)
+        self.assertEqual(meth.target_as, addrxlat.NOADDR)
+        self.assertEqual(meth.endoff, 0)
+        self.assertEqual(meth.tbl, tuple())
 
     def test_lookup_readonly_kind(self):
-        desc = addrxlat.LookupDescription()
+        meth = addrxlat.LookupMethod()
         with self.assertRaises(AttributeError):
-            desc.kind = addrxlat.NOMETH
+            meth.kind = addrxlat.NOMETH
 
     def test_lookup_target_as(self):
-        desc = addrxlat.LookupDescription(addrxlat.MACHPHYSADDR)
-        self.assertEqual(desc.kind, addrxlat.LOOKUP)
-        self.assertEqual(desc.target_as, addrxlat.MACHPHYSADDR)
-        self.assertEqual(desc.endoff, 0)
-        self.assertEqual(desc.tbl, tuple())
+        meth = addrxlat.LookupMethod(addrxlat.MACHPHYSADDR)
+        self.assertEqual(meth.kind, addrxlat.LOOKUP)
+        self.assertEqual(meth.target_as, addrxlat.MACHPHYSADDR)
+        self.assertEqual(meth.endoff, 0)
+        self.assertEqual(meth.tbl, tuple())
 
     def test_lookup_endoff(self):
-        desc = addrxlat.LookupDescription(endoff=0x1234)
-        self.assertEqual(desc.kind, addrxlat.LOOKUP)
-        self.assertEqual(desc.target_as, addrxlat.NOADDR)
-        self.assertEqual(desc.endoff, 0x1234)
-        self.assertEqual(desc.tbl, tuple())
+        meth = addrxlat.LookupMethod(endoff=0x1234)
+        self.assertEqual(meth.kind, addrxlat.LOOKUP)
+        self.assertEqual(meth.target_as, addrxlat.NOADDR)
+        self.assertEqual(meth.endoff, 0x1234)
+        self.assertEqual(meth.tbl, tuple())
 
     def test_lookup_tbl(self):
-        desc = addrxlat.LookupDescription(tbl=((0, 100), (200, 300)))
-        self.assertEqual(desc.kind, addrxlat.LOOKUP)
-        self.assertEqual(desc.target_as, addrxlat.NOADDR)
-        self.assertEqual(desc.endoff, 0)
-        self.assertEqual(desc.tbl, ((0, 100), (200, 300)))
+        meth = addrxlat.LookupMethod(tbl=((0, 100), (200, 300)))
+        self.assertEqual(meth.kind, addrxlat.LOOKUP)
+        self.assertEqual(meth.target_as, addrxlat.NOADDR)
+        self.assertEqual(meth.endoff, 0)
+        self.assertEqual(meth.tbl, ((0, 100), (200, 300)))
 
         with self.assertRaisesRegexp(TypeError, 'not a sequence'):
-            desc.tbl = None
+            meth.tbl = None
         with self.assertRaisesRegexp(TypeError, 'not a sequence'):
-            desc.tbl = (None,)
+            meth.tbl = (None,)
         with self.assertRaisesRegexp(TypeError, 'not a sequence'):
-            desc.tbl = 1
+            meth.tbl = 1
         with self.assertRaisesRegexp(TypeError, 'not a sequence'):
-            desc.tbl = (1,)
+            meth.tbl = (1,)
         with self.assertRaisesRegexp(ValueError, 'must be integer pairs'):
-            desc.tbl = ((),)
+            meth.tbl = ((),)
         with self.assertRaisesRegexp(ValueError, 'must be integer pairs'):
-            desc.tbl = ((1,),)
+            meth.tbl = ((1,),)
         with self.assertRaisesRegexp(ValueError, 'must be integer pairs'):
-            desc.tbl = ((1, 2, 3),)
+            meth.tbl = ((1, 2, 3),)
         with self.assertRaisesRegexp(TypeError, 'not an integer'):
-            desc.tbl = ((None, None),)
+            meth.tbl = ((None, None),)
         with self.assertRaisesRegexp(TypeError, 'not an integer'):
-            desc.tbl = ((1, None),)
+            meth.tbl = ((1, None),)
         with self.assertRaisesRegexp(TypeError, 'not an integer'):
-            desc.tbl = ((None, 1),)
+            meth.tbl = ((None, 1),)
 
     def test_memarr_defaults(self):
-        desc = addrxlat.MemoryArrayDescription()
-        self.assertEqual(desc.kind, addrxlat.MEMARR)
-        self.assertEqual(desc.target_as, addrxlat.NOADDR)
-        self.assertEqual(desc.base, None)
-        self.assertEqual(desc.shift, 0)
-        self.assertEqual(desc.elemsz, 0)
-        self.assertEqual(desc.valsz, 0)
+        meth = addrxlat.MemoryArrayMethod()
+        self.assertEqual(meth.kind, addrxlat.MEMARR)
+        self.assertEqual(meth.target_as, addrxlat.NOADDR)
+        self.assertEqual(meth.base, None)
+        self.assertEqual(meth.shift, 0)
+        self.assertEqual(meth.elemsz, 0)
+        self.assertEqual(meth.valsz, 0)
 
     def test_memarr_readonly_kind(self):
-        desc = addrxlat.MemoryArrayDescription()
+        meth = addrxlat.MemoryArrayMethod()
         with self.assertRaises(AttributeError):
-            desc.kind = addrxlat.NOMETH
+            meth.kind = addrxlat.NOMETH
 
     def test_memarr_target_as(self):
-        desc = addrxlat.MemoryArrayDescription(addrxlat.MACHPHYSADDR)
-        self.assertEqual(desc.kind, addrxlat.MEMARR)
-        self.assertEqual(desc.target_as, addrxlat.MACHPHYSADDR)
-        self.assertEqual(desc.base, None)
-        self.assertEqual(desc.shift, 0)
-        self.assertEqual(desc.elemsz, 0)
-        self.assertEqual(desc.valsz, 0)
+        meth = addrxlat.MemoryArrayMethod(addrxlat.MACHPHYSADDR)
+        self.assertEqual(meth.kind, addrxlat.MEMARR)
+        self.assertEqual(meth.target_as, addrxlat.MACHPHYSADDR)
+        self.assertEqual(meth.base, None)
+        self.assertEqual(meth.shift, 0)
+        self.assertEqual(meth.elemsz, 0)
+        self.assertEqual(meth.valsz, 0)
 
     def test_memarr_base(self):
         base = addrxlat.FullAddress(addrxlat.MACHPHYSADDR, 0x1234)
-        desc = addrxlat.MemoryArrayDescription(base=base)
-        self.assertEqual(desc.kind, addrxlat.MEMARR)
-        self.assertEqual(desc.target_as, addrxlat.NOADDR)
-        self.assertEqual(desc.base, base)
-        self.assertEqual(desc.shift, 0)
-        self.assertEqual(desc.elemsz, 0)
-        self.assertEqual(desc.valsz, 0)
+        meth = addrxlat.MemoryArrayMethod(base=base)
+        self.assertEqual(meth.kind, addrxlat.MEMARR)
+        self.assertEqual(meth.target_as, addrxlat.NOADDR)
+        self.assertEqual(meth.base, base)
+        self.assertEqual(meth.shift, 0)
+        self.assertEqual(meth.elemsz, 0)
+        self.assertEqual(meth.valsz, 0)
 
     def test_memarr_shift(self):
-        desc = addrxlat.MemoryArrayDescription(shift=3)
-        self.assertEqual(desc.kind, addrxlat.MEMARR)
-        self.assertEqual(desc.target_as, addrxlat.NOADDR)
-        self.assertEqual(desc.base, None)
-        self.assertEqual(desc.shift, 3)
-        self.assertEqual(desc.elemsz, 0)
-        self.assertEqual(desc.valsz, 0)
+        meth = addrxlat.MemoryArrayMethod(shift=3)
+        self.assertEqual(meth.kind, addrxlat.MEMARR)
+        self.assertEqual(meth.target_as, addrxlat.NOADDR)
+        self.assertEqual(meth.base, None)
+        self.assertEqual(meth.shift, 3)
+        self.assertEqual(meth.elemsz, 0)
+        self.assertEqual(meth.valsz, 0)
 
     def test_memarr_elemsz(self):
-        desc = addrxlat.MemoryArrayDescription(elemsz=12)
-        self.assertEqual(desc.kind, addrxlat.MEMARR)
-        self.assertEqual(desc.target_as, addrxlat.NOADDR)
-        self.assertEqual(desc.base, None)
-        self.assertEqual(desc.shift, 0)
-        self.assertEqual(desc.elemsz, 12)
-        self.assertEqual(desc.valsz, 0)
+        meth = addrxlat.MemoryArrayMethod(elemsz=12)
+        self.assertEqual(meth.kind, addrxlat.MEMARR)
+        self.assertEqual(meth.target_as, addrxlat.NOADDR)
+        self.assertEqual(meth.base, None)
+        self.assertEqual(meth.shift, 0)
+        self.assertEqual(meth.elemsz, 12)
+        self.assertEqual(meth.valsz, 0)
 
     def test_memarr_valsz(self):
-        desc = addrxlat.MemoryArrayDescription(valsz=8)
-        self.assertEqual(desc.kind, addrxlat.MEMARR)
-        self.assertEqual(desc.target_as, addrxlat.NOADDR)
-        self.assertEqual(desc.base, None)
-        self.assertEqual(desc.shift, 0)
-        self.assertEqual(desc.elemsz, 0)
-        self.assertEqual(desc.valsz, 8)
+        meth = addrxlat.MemoryArrayMethod(valsz=8)
+        self.assertEqual(meth.kind, addrxlat.MEMARR)
+        self.assertEqual(meth.target_as, addrxlat.NOADDR)
+        self.assertEqual(meth.base, None)
+        self.assertEqual(meth.shift, 0)
+        self.assertEqual(meth.elemsz, 0)
+        self.assertEqual(meth.valsz, 8)
 
 class TestRange(unittest.TestCase):
     def test_range_defaults(self):
@@ -404,8 +404,8 @@ class TestSystem(unittest.TestCase):
             map = sys.get_map(i)
             self.assertIs(map, None)
         for i in xrange(addrxlat.SYS_METH_NUM):
-            desc = sys.get_desc(i)
-            self.assertEquals(desc.kind, addrxlat.NOMETH)
+            meth = sys.get_meth(i)
+            self.assertEquals(meth.kind, addrxlat.NOMETH)
 
     def test_sys_map(self):
         sys = addrxlat.System()
@@ -419,23 +419,23 @@ class TestSystem(unittest.TestCase):
                 map = sys.get_map(i)
                 self.assertIs(map, None)
         for i in xrange(addrxlat.SYS_METH_NUM):
-            desc = sys.get_desc(i)
-            self.assertEquals(desc.kind, addrxlat.NOMETH)
+            meth = sys.get_meth(i)
+            self.assertEquals(meth.kind, addrxlat.NOMETH)
 
     def test_sys_meth(self):
         sys = addrxlat.System()
-        newdesc = addrxlat.LinearDescription(0)
+        newdesc = addrxlat.LinearMethod(0)
         for i in xrange(addrxlat.SYS_MAP_NUM):
             map = sys.get_map(i)
             self.assertIs(map, None)
         for methidx in xrange(addrxlat.SYS_METH_NUM):
-            sys.set_desc(methidx, newdesc)
+            sys.set_meth(methidx, newdesc)
             for i in xrange(methidx):
-                desc = sys.get_desc(i)
-                self.assertEqual(desc, newdesc)
+                meth = sys.get_meth(i)
+                self.assertEqual(meth, newdesc)
             for i in xrange(methidx + 1, addrxlat.SYS_METH_NUM):
-                desc = sys.get_desc(i)
-                self.assertEquals(desc.kind, addrxlat.NOMETH)
+                meth = sys.get_meth(i)
+                self.assertEquals(meth.kind, addrxlat.NOMETH)
 
 class TestStep(unittest.TestCase):
     def setUp(self):
@@ -445,7 +445,7 @@ class TestStep(unittest.TestCase):
         step = addrxlat.Step(self.ctx)
         self.assertIs(step.ctx, self.ctx)
         self.assertIs(step.sys, None)
-        self.assertIs(step.desc, None)
+        self.assertIs(step.meth, None)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 0)
         self.assertIs(step.base, None)
@@ -458,7 +458,7 @@ class TestStep(unittest.TestCase):
         step = addrxlat.Step(self.ctx, sys=sys)
         self.assertIs(step.ctx, self.ctx)
         self.assertEqual(step.sys, sys)
-        self.assertIs(step.desc, None)
+        self.assertIs(step.meth, None)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 0)
         self.assertIs(step.base, None)
@@ -466,12 +466,12 @@ class TestStep(unittest.TestCase):
         idx = (0,) * (addrxlat.FIELDS_MAX + 1)
         self.assertEqual(step.idx, idx)
 
-    def test_step_desc(self):
-        desc = addrxlat.LinearDescription()
-        step = addrxlat.Step(self.ctx, desc=desc)
+    def test_step_meth(self):
+        meth = addrxlat.LinearMethod()
+        step = addrxlat.Step(self.ctx, meth=meth)
         self.assertIs(step.ctx, self.ctx)
         self.assertIs(step.sys, None)
-        self.assertEqual(step.desc, desc)
+        self.assertEqual(step.meth, meth)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 0)
         self.assertIs(step.base, None)
@@ -485,7 +485,7 @@ class TestStep(unittest.TestCase):
         step.remain = 3
         self.assertIs(step.ctx, self.ctx)
         self.assertEqual(step.sys, sys)
-        self.assertIs(step.desc, None)
+        self.assertIs(step.meth, None)
         self.assertEqual(step.remain, 3)
         self.assertEqual(step.elemsz, 0)
         self.assertIs(step.base, None)
@@ -499,7 +499,7 @@ class TestStep(unittest.TestCase):
         step.elemsz = 8
         self.assertIs(step.ctx, self.ctx)
         self.assertEqual(step.sys, sys)
-        self.assertIs(step.desc, None)
+        self.assertIs(step.meth, None)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 8)
         self.assertIs(step.base, None)
@@ -513,7 +513,7 @@ class TestStep(unittest.TestCase):
         step.base = base
         self.assertIs(step.ctx, self.ctx)
         self.assertIs(step.sys, None)
-        self.assertIs(step.desc, None)
+        self.assertIs(step.meth, None)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 0)
         self.assertIs(step.base, base)
@@ -527,7 +527,7 @@ class TestStep(unittest.TestCase):
         step.base.addrspace = addrxlat.KVADDR
         self.assertIs(step.ctx, self.ctx)
         self.assertIs(step.sys, None)
-        self.assertIs(step.desc, None)
+        self.assertIs(step.meth, None)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 0)
         self.assertEqual(step.base, addrxlat.FullAddress(addrxlat.KVADDR, 0))
@@ -541,7 +541,7 @@ class TestStep(unittest.TestCase):
         step.base.addr = 0x1234
         self.assertIs(step.ctx, self.ctx)
         self.assertIs(step.sys, None)
-        self.assertIs(step.desc, None)
+        self.assertIs(step.meth, None)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 0)
         self.assertEqual(step.base, addrxlat.FullAddress(addrxlat.NOADDR, 0x1234))
@@ -553,12 +553,12 @@ class TestStep(unittest.TestCase):
         step = addrxlat.Step(self.ctx)
         with self.assertRaisesRegexp(TypeError, 'cannot be changed'):
             step.raw = 0xabcd
-        desc = addrxlat.PageTableDescription()
-        step.desc = desc
+        meth = addrxlat.PageTableMethod()
+        step.meth = meth
         step.raw = 0xabcd
         self.assertIs(step.ctx, self.ctx)
         self.assertIs(step.sys, None)
-        self.assertEqual(step.desc, desc)
+        self.assertEqual(step.meth, meth)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 0)
         self.assertIs(step.base, None)
@@ -572,7 +572,7 @@ class TestStep(unittest.TestCase):
         step.idx = idx
         self.assertIs(step.ctx, self.ctx)
         self.assertIs(step.sys, None)
-        self.assertIs(step.desc, None)
+        self.assertIs(step.meth, None)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 0)
         self.assertIs(step.base, None)
@@ -661,48 +661,48 @@ class TestTranslation(unittest.TestCase):
 
         map = addrxlat.Map()
         self.sys.set_map(addrxlat.SYS_MAP_HW, map)
-        desc = addrxlat.PageTableDescription(addrxlat.MACHPHYSADDR)
-        desc.root = addrxlat.FullAddress(addrxlat.MACHPHYSADDR, 0x10000)
-        desc.pte_format = addrxlat.PTE_PFN32
-        desc.fields = (8, 8, 8)
-        self.sys.set_desc(addrxlat.SYS_METH_PGT, desc)
+        meth = addrxlat.PageTableMethod(addrxlat.MACHPHYSADDR)
+        meth.root = addrxlat.FullAddress(addrxlat.MACHPHYSADDR, 0x10000)
+        meth.pte_format = addrxlat.PTE_PFN32
+        meth.fields = (8, 8, 8)
+        self.sys.set_meth(addrxlat.SYS_METH_PGT, meth)
         map.set(0, addrxlat.Range(0xffff, addrxlat.SYS_METH_PGT))
 
         map = addrxlat.Map()
         self.sys.set_map(addrxlat.SYS_MAP_KV_PHYS, map)
-        desc = addrxlat.LinearDescription(addrxlat.KPHYSADDR, 0x1000)
-        self.sys.set_desc(addrxlat.SYS_METH_DIRECT, desc)
+        meth = addrxlat.LinearMethod(addrxlat.KPHYSADDR, 0x1000)
+        self.sys.set_meth(addrxlat.SYS_METH_DIRECT, meth)
         map.set(0, addrxlat.Range(0x1fff, addrxlat.SYS_METH_DIRECT))
-        desc = addrxlat.LookupDescription(addrxlat.KPHYSADDR)
-        desc.endoff = 0xff
-        desc.tbl = ((0x2000, 0xfa00), (0x3000, 0xfb00), (0x3100, 0xff00))
-        self.sys.set_desc(addrxlat.SYS_METH_CUSTOM, desc)
+        meth = addrxlat.LookupMethod(addrxlat.KPHYSADDR)
+        meth.endoff = 0xff
+        meth.tbl = ((0x2000, 0xfa00), (0x3000, 0xfb00), (0x3100, 0xff00))
+        self.sys.set_meth(addrxlat.SYS_METH_CUSTOM, meth)
         map.set(0x2000, addrxlat.Range(0x1fff, addrxlat.SYS_METH_CUSTOM))
-        desc = addrxlat.MemoryArrayDescription(addrxlat.KPHYSADDR)
-        desc.base = addrxlat.FullAddress(addrxlat.KVADDR, 0)
-        desc.shift = 8
-        desc.elemsz = 4
-        desc.valsz = 4
-        self.sys.set_desc(addrxlat.SYS_METH_CUSTOM + 1, desc)
+        meth = addrxlat.MemoryArrayMethod(addrxlat.KPHYSADDR)
+        meth.base = addrxlat.FullAddress(addrxlat.KVADDR, 0)
+        meth.shift = 8
+        meth.elemsz = 4
+        meth.valsz = 4
+        self.sys.set_meth(addrxlat.SYS_METH_CUSTOM + 1, meth)
         map.set(0x4000, addrxlat.Range(0x1fff, addrxlat.SYS_METH_CUSTOM + 1))
         map.set(0x6000, addrxlat.Range(0x9fff, addrxlat.SYS_METH_PGT))
 
         map = addrxlat.Map()
         self.sys.set_map(addrxlat.SYS_MAP_KPHYS_DIRECT, map)
-        desc = addrxlat.LinearDescription(addrxlat.KVADDR, -0x1000)
-        self.sys.set_desc(addrxlat.SYS_METH_RDIRECT, desc)
+        meth = addrxlat.LinearMethod(addrxlat.KVADDR, -0x1000)
+        self.sys.set_meth(addrxlat.SYS_METH_RDIRECT, meth)
         map.set(0x1000, addrxlat.Range(0x1fff, addrxlat.SYS_METH_RDIRECT))
 
         map = addrxlat.Map()
         self.sys.set_map(addrxlat.SYS_MAP_MACHPHYS_KPHYS, map)
-        desc = addrxlat.LinearDescription(addrxlat.KPHYSADDR, -0x10000)
-        self.sys.set_desc(addrxlat.SYS_METH_MACHPHYS_KPHYS, desc)
+        meth = addrxlat.LinearMethod(addrxlat.KPHYSADDR, -0x10000)
+        self.sys.set_meth(addrxlat.SYS_METH_MACHPHYS_KPHYS, meth)
         map.set(0x10000, addrxlat.Range(0xffff, addrxlat.SYS_METH_MACHPHYS_KPHYS))
 
         map = addrxlat.Map()
         self.sys.set_map(addrxlat.SYS_MAP_KPHYS_MACHPHYS, map)
-        desc = addrxlat.LinearDescription(addrxlat.MACHPHYSADDR, 0x10000)
-        self.sys.set_desc(addrxlat.SYS_METH_KPHYS_MACHPHYS, desc)
+        meth = addrxlat.LinearMethod(addrxlat.MACHPHYSADDR, 0x10000)
+        self.sys.set_meth(addrxlat.SYS_METH_KPHYS_MACHPHYS, meth)
         map.set(0, addrxlat.Range(0xffff, addrxlat.SYS_METH_KPHYS_MACHPHYS))
 
     def test_fulladdr_conv_kphys_machphys(self):
@@ -815,30 +815,30 @@ class TestCustom(unittest.TestCase):
             step.base.addr = 0x123456 + step.idx[1]
             step.elemsz = 0x100
 
-        self.desc = addrxlat.CustomDescription()
-        self.desc.target_as = addrxlat.KPHYSADDR
-        self.desc.cb_first_step = first_step
-        self.desc.cb_next_step = next_step
+        self.meth = addrxlat.CustomMethod()
+        self.meth.target_as = addrxlat.KPHYSADDR
+        self.meth.cb_first_step = first_step
+        self.meth.cb_next_step = next_step
 
         import _test_addrxlat
-        self.desc_ext = _test_addrxlat.getCustomDescription(addrxlat.convert)
-        self.assertEqual(self.desc_ext.kind, addrxlat.CUSTOM)
-        self.assertEqual(self.desc_ext.target_as, addrxlat.NOADDR)
-        self.desc_ext.target_as = addrxlat.KPHYSADDR
+        self.meth_ext = _test_addrxlat.getCustomMethod(addrxlat.convert)
+        self.assertEqual(self.meth_ext.kind, addrxlat.CUSTOM)
+        self.assertEqual(self.meth_ext.target_as, addrxlat.NOADDR)
+        self.meth_ext.target_as = addrxlat.KPHYSADDR
 
-        self.desc_extmod = _test_addrxlat.getCustomDescription(addrxlat.convert)
-        self.desc_extmod.target_as = addrxlat.KPHYSADDR
-        self.desc_extmod.cb_next_step = next_step
+        self.meth_extmod = _test_addrxlat.getCustomMethod(addrxlat.convert)
+        self.meth_extmod.target_as = addrxlat.KPHYSADDR
+        self.meth_extmod.cb_next_step = next_step
 
     def test_customdesc_cb(self):
-        step = addrxlat.Step(ctx=self.ctx, desc=self.desc)
+        step = addrxlat.Step(ctx=self.ctx, meth=self.meth)
         self.assertIs(step.base, None)
-        self.desc.cb_first_step(step, 0x1234)
+        self.meth.cb_first_step(step, 0x1234)
         self.assertEqual(step.base.addrspace, addrxlat.NOADDR)
         self.assertEqual(step.base.addr, 0xabcdef)
         self.assertEqual(step.idx[0], 0x34)
         self.assertEqual(step.idx[1], 0x12)
-        self.desc.cb_next_step(step)
+        self.meth.cb_next_step(step)
         self.assertEqual(step.base.addrspace, addrxlat.NOADDR)
         self.assertEqual(step.base.addr, 0x123456 + 0x12)
         self.assertEqual(step.idx[0], 0x34)
@@ -847,7 +847,7 @@ class TestCustom(unittest.TestCase):
     def test_customdesc_conv(self):
         sys = addrxlat.System()
         map = addrxlat.Map()
-        sys.set_desc(addrxlat.SYS_METH_CUSTOM, self.desc)
+        sys.set_meth(addrxlat.SYS_METH_CUSTOM, self.meth)
         map.set(0, addrxlat.Range(0xffff, addrxlat.SYS_METH_CUSTOM))
         sys.set_map(addrxlat.SYS_MAP_KV_PHYS, map)
         addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x2345)
@@ -856,14 +856,14 @@ class TestCustom(unittest.TestCase):
         self.assertEqual(addr.addr, 0x123456 + 0x4523)
 
     def test_customdesc_ext_cb(self):
-        step = addrxlat.Step(ctx=self.ctx, desc=self.desc_ext)
+        step = addrxlat.Step(ctx=self.ctx, meth=self.meth_ext)
         self.assertIs(step.base, None)
-        self.desc_ext.cb_first_step(step, 0x1234)
+        self.meth_ext.cb_first_step(step, 0x1234)
         self.assertEqual(step.base.addrspace, addrxlat.NOADDR)
         self.assertEqual(step.base.addr, 0x4d795f4d61676963)
         self.assertEqual(step.idx[0], 0x34)
         self.assertEqual(step.idx[1], 0x12)
-        self.desc_ext.cb_next_step(step)
+        self.meth_ext.cb_next_step(step)
         self.assertEqual(step.base.addrspace, addrxlat.NOADDR)
         self.assertEqual(step.base.addr, 0x4d61676963546f6f + 0x12)
         self.assertEqual(step.idx[0], 0x34)
@@ -872,7 +872,7 @@ class TestCustom(unittest.TestCase):
     def test_customdesc_ext_conv(self):
         sys = addrxlat.System()
         map = addrxlat.Map()
-        sys.set_desc(addrxlat.SYS_METH_CUSTOM, self.desc_ext)
+        sys.set_meth(addrxlat.SYS_METH_CUSTOM, self.meth_ext)
         map.set(0, addrxlat.Range(0xffff, addrxlat.SYS_METH_CUSTOM))
         sys.set_map(addrxlat.SYS_MAP_KV_PHYS, map)
         addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x2345)
@@ -881,14 +881,14 @@ class TestCustom(unittest.TestCase):
         self.assertEqual(addr.addr, 0x4d61676963546f6f + 0x4523)
 
     def test_customdesc_extmod_cb(self):
-        step = addrxlat.Step(ctx=self.ctx, desc=self.desc_extmod)
+        step = addrxlat.Step(ctx=self.ctx, meth=self.meth_extmod)
         self.assertIs(step.base, None)
-        self.desc_extmod.cb_first_step(step, 0x1234)
+        self.meth_extmod.cb_first_step(step, 0x1234)
         self.assertEqual(step.base.addrspace, addrxlat.NOADDR)
         self.assertEqual(step.base.addr, 0x4d795f4d61676963)
         self.assertEqual(step.idx[0], 0x34)
         self.assertEqual(step.idx[1], 0x12)
-        self.desc_extmod.cb_next_step(step)
+        self.meth_extmod.cb_next_step(step)
         self.assertEqual(step.base.addrspace, addrxlat.NOADDR)
         self.assertEqual(step.base.addr, 0x123456 + 0x12)
         self.assertEqual(step.idx[0], 0x34)
@@ -897,7 +897,7 @@ class TestCustom(unittest.TestCase):
     def test_customdesc_extmod_conv(self):
         sys = addrxlat.System()
         map = addrxlat.Map()
-        sys.set_desc(addrxlat.SYS_METH_CUSTOM, self.desc_extmod)
+        sys.set_meth(addrxlat.SYS_METH_CUSTOM, self.meth_extmod)
         map.set(0, addrxlat.Range(0xffff, addrxlat.SYS_METH_CUSTOM))
         sys.set_map(addrxlat.SYS_MAP_KV_PHYS, map)
         addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x2345)

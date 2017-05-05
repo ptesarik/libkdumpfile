@@ -218,15 +218,13 @@ static const struct attr_template tmpl_pid =
 static void
 set_ktext_off(kdump_ctx_t *ctx, kdump_addr_t phys_base)
 {
-	addrxlat_desc_t desc;
+	addrxlat_meth_t meth;
 
-	desc = *addrxlat_sys_get_desc(ctx->shared->xlatsys,
-				      ADDRXLAT_SYS_METH_KTEXT);
-	desc.kind = ADDRXLAT_LINEAR;
-	desc.target_as = ADDRXLAT_KPHYSADDR;
-	desc.param.linear.off = phys_base - __START_KERNEL_map;
-	addrxlat_sys_set_desc(
-		ctx->shared->xlatsys, ADDRXLAT_SYS_METH_KTEXT, &desc);
+	meth.kind = ADDRXLAT_LINEAR;
+	meth.target_as = ADDRXLAT_KPHYSADDR;
+	meth.param.linear.off = phys_base - __START_KERNEL_map;
+	addrxlat_sys_set_meth(
+		ctx->shared->xlatsys, ADDRXLAT_SYS_METH_KTEXT, &meth);
 }
 
 /** Update the physical base offfset.

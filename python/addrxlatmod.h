@@ -53,9 +53,9 @@ struct addrxlat_CAPI {
 	addrxlat_ctx_t *(*Context_AsPointer)(PyObject *value);
 	PyObject *(*Context_FromPointer)(PyObject *conv, addrxlat_ctx_t *ctx);
 
-	addrxlat_desc_t *(*Description_AsPointer)(PyObject *value);
-	PyObject *(*Description_FromPointer)(
-		PyObject *conv, const addrxlat_desc_t *desc);
+	addrxlat_meth_t *(*Method_AsPointer)(PyObject *value);
+	PyObject *(*Method_FromPointer)(
+		PyObject *conv, const addrxlat_meth_t *meth);
 
 	addrxlat_range_t *(*Range_AsPointer)(PyObject *value);
 	PyObject *(*Range_FromPointer)(

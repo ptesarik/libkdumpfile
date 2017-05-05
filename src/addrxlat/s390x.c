@@ -80,7 +80,7 @@ pgt_s390x(addrxlat_step_t *step)
 		"pgd",
 		"rg1",		/* Invented; does not exist in the wild. */
 	};
-	const addrxlat_paging_form_t *pf = &step->desc->param.pgt.pf;
+	const addrxlat_paging_form_t *pf = &step->meth->param.pgt.pf;
 	addrxlat_status status;
 
 	status = read_pte(step);
@@ -102,7 +102,7 @@ pgt_s390x(addrxlat_step_t *step)
 				 pgt_full_name[step->remain]);
 
 	step->base.addr = step->raw.pte;
-	step->base.as = step->desc->target_as;
+	step->base.as = step->meth->target_as;
 
 	if (step->remain == 3 && PTE_FC(step->raw.pte)) {
 		step->base.addr &= ~RFAA_MASK;
@@ -171,26 +171,26 @@ determine_pgttype(struct os_init_data *ctl)
 {
 	addrxlat_step_t step =	/* step state surrogate */
 		{ .ctx = ctl->ctx, .sys = ctl->sys };
-	addrxlat_desc_t *desc;
+	addrxlat_meth_t *meth;
 	addrxlat_fulladdr_t ptr;
 	uint64_t entry;
 	unsigned i;
 	addrxlat_status status;
 
-	desc = &ctl->sys->desc[ADDRXLAT_SYS_METH_PGT];
+	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 
 	if (ctl->popt.val[OPT_rootpgt].set)
-		desc->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
+		meth->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
 	else
-		desc->param.pgt.root.as = ADDRXLAT_NOADDR;
+		meth->param.pgt.root.as = ADDRXLAT_NOADDR;
 
-	if (desc->param.pgt.root.as == ADDRXLAT_NOADDR) {
-		status = get_pgtroot(ctl, &desc->param.pgt.root);
+	if (meth->param.pgt.root.as == ADDRXLAT_NOADDR) {
+		status = get_pgtroot(ctl, &meth->param.pgt.root);
 		if (status != ADDRXLAT_OK)
 			return status;
 	}
 
-	ptr = desc->param.pgt.root;
+	ptr = meth->param.pgt.root;
 	for (i = 0; i < ROOT_PGT_LEN; ++i) {
 		status = read64(&step, &ptr, &entry, "page table");
 		if (status != ADDRXLAT_OK)
@@ -201,10 +201,10 @@ determine_pgttype(struct os_init_data *ctl)
 				.fieldsz = { 12, 8, 11, 11, 11, 11 }
 			};
 
-			desc->kind = ADDRXLAT_PGT;
-			desc->target_as = ADDRXLAT_MACHPHYSADDR;
-			desc->param.pgt.pf = pf;
-			desc->param.pgt.pf.nfields = PTE_TT(entry) + 3;
+			meth->kind = ADDRXLAT_PGT;
+			meth->target_as = ADDRXLAT_MACHPHYSADDR;
+			meth->param.pgt.pf = pf;
+			meth->param.pgt.pf.nfields = PTE_TT(entry) + 3;
 			return ADDRXLAT_OK;
 		}
 		ptr.addr += sizeof(uint64_t);
@@ -234,7 +234,7 @@ sys_s390x(struct os_init_data *ctl)
 		return status;
 
 	range.meth = ADDRXLAT_SYS_METH_PGT;
-	range.endoff = paging_max_index(&ctl->sys->desc[range.meth].param.pgt.pf);
+	range.endoff = paging_max_index(&ctl->sys->meth[range.meth].param.pgt.pf);
 	newmap = internal_map_new();
 	if (!newmap)
 		return set_error(ctl->ctx, ADDRXLAT_ERR_NOMEM,

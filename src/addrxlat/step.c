@@ -109,7 +109,7 @@ read_pte(addrxlat_step_t *step)
 addrxlat_status
 pgt_huge_page(addrxlat_step_t *step)
 {
-	const addrxlat_param_pgt_t *pgt = &step->desc->param.pgt;
+	const addrxlat_param_pgt_t *pgt = &step->meth->param.pgt;
 	addrxlat_addr_t off = 0;
 
 	while (step->remain > 1) {
@@ -130,9 +130,9 @@ pgt_huge_page(addrxlat_step_t *step)
 static addrxlat_status
 first_step_linear(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	const addrxlat_param_linear_t *linear = &step->desc->param.linear;
+	const addrxlat_param_linear_t *linear = &step->meth->param.linear;
 
-	step->base.as = step->desc->target_as;
+	step->base.as = step->meth->target_as;
 	step->base.addr = linear->off;
 	step->remain = 1;
 	step->elemsz = 1;
@@ -149,7 +149,7 @@ first_step_linear(addrxlat_step_t *step, addrxlat_addr_t addr)
 static addrxlat_status
 first_step_pgt_generic(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	const addrxlat_param_pgt_t *pgt = &step->desc->param.pgt;
+	const addrxlat_param_pgt_t *pgt = &step->meth->param.pgt;
 	unsigned short i;
 
 	if (pgt->root.as == ADDRXLAT_NOADDR)
@@ -186,10 +186,10 @@ next_step_pfn(addrxlat_step_t *step)
 
 	status = read_pte(step);
 	if (status == ADDRXLAT_OK) {
-		const addrxlat_desc_t *desc = step->desc;
+		const addrxlat_meth_t *meth = step->meth;
 		step->base.addr =
-			step->raw.pte << desc->param.pgt.pf.fieldsz[0];
-		step->base.as = desc->target_as;
+			step->raw.pte << meth->param.pgt.pf.fieldsz[0];
+		step->base.as = meth->target_as;
 		if (step->remain == 1)
 			step->elemsz = 1;
 	}
@@ -208,7 +208,7 @@ next_step_pfn(addrxlat_step_t *step)
 static addrxlat_status
 step_check_uaddr(addrxlat_step_t *step)
 {
-	return step->idx[step->desc->param.pgt.pf.nfields]
+	return step->idx[step->meth->param.pgt.pf.nfields]
 		? set_error(step->ctx, ADDRXLAT_ERR_INVALID,
 			    "Virtual address too big")
 		: ADDRXLAT_OK;
@@ -240,7 +240,7 @@ first_step_uaddr(addrxlat_step_t *step, addrxlat_addr_t addr)
 static addrxlat_status
 step_check_saddr(addrxlat_step_t *step)
 {
-	const addrxlat_paging_form_t *pf = &step->desc->param.pgt.pf;
+	const addrxlat_paging_form_t *pf = &step->meth->param.pgt.pf;
 	unsigned short lvl = pf->nfields;
 	struct {
 		int bit : 1;
@@ -278,7 +278,7 @@ first_step_saddr(addrxlat_step_t *step, addrxlat_addr_t addr)
 static addrxlat_status
 first_step_pgt(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	switch (step->desc->param.pgt.pf.pte_format) {
+	switch (step->meth->param.pgt.pf.pte_format) {
 	case ADDRXLAT_PTE_NONE:
 	case ADDRXLAT_PTE_PPC64_LINUX_RPN30:
 		return first_step_pgt_generic(step, addr);
@@ -307,7 +307,7 @@ first_step_pgt(addrxlat_step_t *step, addrxlat_addr_t addr)
 static addrxlat_status
 next_step_pgt(addrxlat_step_t *step)
 {
-	switch (step->desc->param.pgt.pf.pte_format) {
+	switch (step->meth->param.pgt.pf.pte_format) {
 	case ADDRXLAT_PTE_NONE:
 		return ADDRXLAT_OK;
 
@@ -344,14 +344,14 @@ next_step_pgt(addrxlat_step_t *step)
 static addrxlat_status
 first_step_lookup(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	const addrxlat_param_lookup_t *lookup = &step->desc->param.lookup;
+	const addrxlat_param_lookup_t *lookup = &step->meth->param.lookup;
 	size_t i;
 
 	for (i = 0; i < lookup->nelem; ++i) {
 		const addrxlat_lookup_elem_t *elem = &lookup->tbl[i];
 		if (elem->orig <= addr &&
 		    addr <= elem->orig + lookup->endoff) {
-			step->base.as = step->desc->target_as;
+			step->base.as = step->meth->target_as;
 			step->base.addr = elem->dest;
 			step->remain = 1;
 			step->elemsz = 1;
@@ -371,7 +371,7 @@ first_step_lookup(addrxlat_step_t *step, addrxlat_addr_t addr)
 static addrxlat_status
 first_step_memarr(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	const addrxlat_param_memarr_t *memarr = &step->desc->param.memarr;
+	const addrxlat_param_memarr_t *memarr = &step->meth->param.memarr;
 
 	step->base = memarr->base;
 	step->remain = 2;
@@ -388,7 +388,7 @@ first_step_memarr(addrxlat_step_t *step, addrxlat_addr_t addr)
 static addrxlat_status
 next_step_memarr(addrxlat_step_t *step)
 {
-	const addrxlat_param_memarr_t *memarr = &step->desc->param.memarr;
+	const addrxlat_param_memarr_t *memarr = &step->meth->param.memarr;
 	uint64_t val64;
 	uint32_t val32;
 	addrxlat_status status;
@@ -413,7 +413,7 @@ next_step_memarr(addrxlat_step_t *step)
 
 	if (status == ADDRXLAT_OK) {
 		step->base.addr = step->raw.addr << memarr->shift;
-		step->base.as = step->desc->target_as;
+		step->base.as = step->meth->target_as;
 		step->elemsz = 1;
 	}
 
@@ -428,13 +428,13 @@ next_step_memarr(addrxlat_step_t *step)
 static addrxlat_status
 first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	switch (step->desc->kind) {
+	switch (step->meth->kind) {
 	case ADDRXLAT_NOMETH:
 		return set_error(step->ctx, ADDRXLAT_ERR_NOMETH,
 				 "Null translation method");
 
 	case ADDRXLAT_CUSTOM:
-		return step->desc->param.custom.first_step(step, addr);
+		return step->meth->param.custom.first_step(step, addr);
 
 	case ADDRXLAT_LINEAR:
 		return first_step_linear(step, addr);
@@ -461,13 +461,13 @@ first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 static addrxlat_status
 next_step(addrxlat_step_t *step)
 {
-	switch (step->desc->kind) {
+	switch (step->meth->kind) {
 	case ADDRXLAT_NOMETH:
 		return set_error(step->ctx, ADDRXLAT_ERR_NOMETH,
 				 "Null translation method");
 
 	case ADDRXLAT_CUSTOM:
-		return step->desc->param.custom.next_step(step);
+		return step->meth->param.custom.next_step(step);
 
 	case ADDRXLAT_LINEAR:
 	case ADDRXLAT_LOOKUP:
@@ -507,7 +507,7 @@ addrxlat_step(addrxlat_step_t *step)
 	--step->remain;
 	step->base.addr += step->idx[step->remain] * step->elemsz;
 	if (!step->remain) {
-		step->base.as = step->desc->target_as;
+		step->base.as = step->meth->target_as;
 		step->elemsz = 0;
 		return ADDRXLAT_OK;
 	}

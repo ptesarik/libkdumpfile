@@ -65,7 +65,7 @@ next_step(addrxlat_step_t *step)
 int
 main(int argc, char **argv)
 {
-	addrxlat_desc_t desc;
+	addrxlat_meth_t meth;
 	addrxlat_ctx_t *ctx;
 	addrxlat_step_t step;
 	addrxlat_status status;
@@ -77,14 +77,14 @@ main(int argc, char **argv)
 		return TEST_ERR;
 	}
 
-	desc.kind = ADDRXLAT_CUSTOM;
-	desc.target_as = ADDRXLAT_NOADDR;
-	desc.param.custom.first_step = first_step;
-	desc.param.custom.next_step = next_step;
+	meth.kind = ADDRXLAT_CUSTOM;
+	meth.target_as = ADDRXLAT_NOADDR;
+	meth.param.custom.first_step = first_step;
+	meth.param.custom.next_step = next_step;
 
 	step.ctx = ctx;
 	step.sys = NULL;
-	step.desc = &desc;
+	step.meth = &meth;
 	status = addrxlat_launch(&step, 0x123456);
 	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot launch translation: %s\n",

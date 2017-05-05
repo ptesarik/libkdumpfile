@@ -141,7 +141,7 @@ struct _addrxlat_sys {
 	addrxlat_map_t *map[ADDRXLAT_SYS_MAP_NUM];
 
 	/** Address translation methods. */
-	addrxlat_desc_t desc[ADDRXLAT_SYS_METH_NUM];
+	addrxlat_meth_t meth[ADDRXLAT_SYS_METH_NUM];
 };
 
 /* vtop */

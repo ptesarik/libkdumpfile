@@ -135,16 +135,16 @@ addrxlat_sys_get_map(const addrxlat_sys_t *sys, addrxlat_sys_map_t idx)
 }
 
 void
-addrxlat_sys_set_desc(addrxlat_sys_t *sys,
-		      addrxlat_sys_meth_t idx, const addrxlat_desc_t *desc)
+addrxlat_sys_set_meth(addrxlat_sys_t *sys,
+		      addrxlat_sys_meth_t idx, const addrxlat_meth_t *meth)
 {
-	sys->desc[idx] = *desc;
+	sys->meth[idx] = *meth;
 }
 
-const addrxlat_desc_t *
-addrxlat_sys_get_desc(const addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
+const addrxlat_meth_t *
+addrxlat_sys_get_meth(const addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
 {
-	return &sys->desc[idx];
+	return &sys->meth[idx];
 }
 
 /** Action function for @ref SYS_ACT_DIRECT.
@@ -162,17 +162,17 @@ act_direct(struct os_init_data *ctl, const struct sys_region *region)
 		  ADDRXLAT_SYS_METH_RDIRECT },
 		SYS_REGION_END
 	};
-	addrxlat_desc_t *desc;
+	addrxlat_meth_t *meth;
 
-	desc = &ctl->sys->desc[region->meth];
-	desc->kind = ADDRXLAT_LINEAR;
-	desc->target_as = ADDRXLAT_KPHYSADDR;
-	desc->param.linear.off = -region->first;
+	meth = &ctl->sys->meth[region->meth];
+	meth->kind = ADDRXLAT_LINEAR;
+	meth->target_as = ADDRXLAT_KPHYSADDR;
+	meth->param.linear.off = -region->first;
 
-	desc = &ctl->sys->desc[ADDRXLAT_SYS_METH_RDIRECT];
-	desc->kind = ADDRXLAT_LINEAR;
-	desc->target_as = ADDRXLAT_KVADDR;
-	desc->param.linear.off = region->first;
+	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_RDIRECT];
+	meth->kind = ADDRXLAT_LINEAR;
+	meth->target_as = ADDRXLAT_KVADDR;
+	meth->param.linear.off = region->first;
 
 	return sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KPHYS_DIRECT, layout);
 }
@@ -188,10 +188,10 @@ act_direct(struct os_init_data *ctl, const struct sys_region *region)
 static void
 act_ident_kphys(struct os_init_data *ctl, const struct sys_region *region)
 {
-	addrxlat_desc_t *desc = &ctl->sys->desc[region->meth];
-	desc->kind = ADDRXLAT_LINEAR;
-	desc->target_as = ADDRXLAT_KPHYSADDR;
-	desc->param.linear.off = 0;
+	addrxlat_meth_t *meth = &ctl->sys->meth[region->meth];
+	meth->kind = ADDRXLAT_LINEAR;
+	meth->target_as = ADDRXLAT_KPHYSADDR;
+	meth->param.linear.off = 0;
 }
 
 /** Action function for @ref SYS_ACT_IDENT_MACHPHYS.
@@ -205,10 +205,10 @@ act_ident_kphys(struct os_init_data *ctl, const struct sys_region *region)
 static void
 act_ident_machphys(struct os_init_data *ctl, const struct sys_region *region)
 {
-	addrxlat_desc_t *desc = &ctl->sys->desc[region->meth];
-	desc->kind = ADDRXLAT_LINEAR;
-	desc->target_as = ADDRXLAT_MACHPHYSADDR;
-	desc->param.linear.off = 0;
+	addrxlat_meth_t *meth = &ctl->sys->meth[region->meth];
+	meth->kind = ADDRXLAT_LINEAR;
+	meth->target_as = ADDRXLAT_MACHPHYSADDR;
+	meth->param.linear.off = 0;
 }
 
 /** Set memory map layout.
@@ -307,23 +307,23 @@ sys_set_physmaps(struct os_init_data *ctl, addrxlat_addr_t maxaddr)
 addrxlat_status
 sys_sym_pgtroot(struct os_init_data *ctl, const char *reg, const char *sym)
 {
-	addrxlat_desc_t *desc;
+	addrxlat_meth_t *meth;
 	addrxlat_addr_t addr;
 
-	desc = &ctl->sys->desc[ADDRXLAT_SYS_METH_PGT];
-	if (desc->param.pgt.root.as != ADDRXLAT_NOADDR)
+	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	if (meth->param.pgt.root.as != ADDRXLAT_NOADDR)
 		return ADDRXLAT_OK;
 
 	if (reg && get_reg(ctl->ctx, "cr3", &addr) == ADDRXLAT_OK) {
-		desc->param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
-		desc->param.pgt.root.addr = addr;
+		meth->param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
+		meth->param.pgt.root.addr = addr;
 		return ADDRXLAT_OK;
 	}
 	clear_error(ctl->ctx);
 
 	if (sym && get_symval(ctl->ctx, sym, &addr) == ADDRXLAT_OK) {
-		desc->param.pgt.root.as = ADDRXLAT_KVADDR;
-		desc->param.pgt.root.addr = addr;
+		meth->param.pgt.root.as = ADDRXLAT_KVADDR;
+		meth->param.pgt.root.addr = addr;
 		return ADDRXLAT_OK;
 	}
 	clear_error(ctl->ctx);
@@ -428,7 +428,7 @@ do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
 			if (meth == ADDRXLAT_SYS_METH_NONE)
 				continue;
 
-			step.desc = &ctl->sys->desc[meth];
+			step.meth = &ctl->sys->meth[meth];
 			status = internal_launch(&step, paddr->addr);
 			if (status == ADDRXLAT_OK)
 				status = internal_walk(&step);

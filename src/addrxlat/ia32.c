@@ -105,7 +105,7 @@ pgt_ia32(addrxlat_step_t *step)
 				 step->raw.pte);
 
 	step->base.addr = step->raw.pte;
-	step->base.as = step->desc->target_as;
+	step->base.as = step->meth->target_as;
 
 	if (step->remain == 2 && (step->raw.pte & _PAGE_PSE)) {
 		step->base.addr &= ~PAGE_MASK_4M;
@@ -152,7 +152,7 @@ pgt_ia32_pae(addrxlat_step_t *step)
 				 step->raw.pte);
 
 	step->base.addr = step->raw.pte & PHYSADDR_MASK_PAE;
-	step->base.as = step->desc->target_as;
+	step->base.as = step->meth->target_as;
 
 	if (step->remain == 2 && (step->raw.pte & _PAGE_PSE)) {
 		step->base.addr &= ~PAGE_MASK_2M;
@@ -197,17 +197,17 @@ check_pae(struct os_init_data *ctl, const addrxlat_fulladdr_t *root,
 	  addrxlat_addr_t direct)
 {
 	addrxlat_step_t step;
-	addrxlat_desc_t desc;
+	addrxlat_meth_t meth;
 	addrxlat_status status;
 
-	desc.kind = ADDRXLAT_PGT;
-	desc.target_as = ADDRXLAT_MACHPHYSADDR;
-	desc.param.pgt.root = *root;
+	meth.kind = ADDRXLAT_PGT;
+	meth.target_as = ADDRXLAT_MACHPHYSADDR;
+	meth.param.pgt.root = *root;
 
-	desc.param.pgt.pf = ia32_pf_pae;
+	meth.param.pgt.pf = ia32_pf_pae;
 	step.ctx = ctl->ctx;
 	step.sys = ctl->sys;
-	step.desc = &desc;
+	step.meth = &meth;
 	status = internal_launch(&step, direct);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
@@ -226,10 +226,10 @@ check_pae(struct os_init_data *ctl, const addrxlat_fulladdr_t *root,
 	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS]);
 	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS]);
 
-	desc.param.pgt.pf = ia32_pf;
+	meth.param.pgt.pf = ia32_pf;
 	step.ctx = ctl->ctx;
 	step.sys = ctl->sys;
-	step.desc = &desc;
+	step.meth = &meth;
 	status = internal_launch(&step, direct);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
@@ -282,21 +282,21 @@ check_pae_sym(struct os_init_data *ctl)
 static addrxlat_status
 sys_ia32_nonpae(struct os_init_data *ctl)
 {
-	addrxlat_desc_t *desc;
+	addrxlat_meth_t *meth;
 	addrxlat_status status;
 
 	status = sys_set_physmaps(ctl, PHYSADDR_MASK_NONPAE);
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	desc = &ctl->sys->desc[ADDRXLAT_SYS_METH_PGT];
-	desc->kind = ADDRXLAT_PGT;
-	desc->target_as = ADDRXLAT_MACHPHYSADDR;
+	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	meth->kind = ADDRXLAT_PGT;
+	meth->target_as = ADDRXLAT_MACHPHYSADDR;
 	if (ctl->popt.val[OPT_rootpgt].set)
-		desc->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
+		meth->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
 	else
-		desc->param.pgt.root.as = ADDRXLAT_NOADDR;
-	desc->param.pgt.pf = ia32_pf;
+		meth->param.pgt.root.as = ADDRXLAT_NOADDR;
+	meth->param.pgt.pf = ia32_pf;
 	return ADDRXLAT_OK;
 }
 
@@ -307,21 +307,21 @@ sys_ia32_nonpae(struct os_init_data *ctl)
 static addrxlat_status
 sys_ia32_pae(struct os_init_data *ctl)
 {
-	addrxlat_desc_t *desc;
+	addrxlat_meth_t *meth;
 	addrxlat_status status;
 
 	status = sys_set_physmaps(ctl, PHYSADDR_MASK_PAE);
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	desc = &ctl->sys->desc[ADDRXLAT_SYS_METH_PGT];
-	desc->kind = ADDRXLAT_PGT;
-	desc->target_as = ADDRXLAT_MACHPHYSADDR;
+	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	meth->kind = ADDRXLAT_PGT;
+	meth->target_as = ADDRXLAT_MACHPHYSADDR;
 	if (ctl->popt.val[OPT_rootpgt].set)
-		desc->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
+		meth->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
 	else
-		desc->param.pgt.root.as = ADDRXLAT_NOADDR;
-	desc->param.pgt.pf = ia32_pf_pae;
+		meth->param.pgt.root.as = ADDRXLAT_NOADDR;
+	meth->param.pgt.pf = ia32_pf_pae;
 	return ADDRXLAT_OK;
 }
 

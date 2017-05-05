@@ -357,8 +357,8 @@ typedef union _addrxlat_param {
 	addrxlat_param_memarr_t memarr; /**< For @ref ADDRXLAT_MEMARR. */
 } addrxlat_param_t;
 
-/** Address translation description. */
-typedef struct _addrxlat_desc {
+/** Address translation method. */
+typedef struct _addrxlat_meth {
 	/** Kind of translation method. */
 	addrxlat_kind_t kind;
 
@@ -367,7 +367,7 @@ typedef struct _addrxlat_desc {
 
 	/** Additional parameters. */
 	addrxlat_param_t param;
-} addrxlat_desc_t;
+} addrxlat_meth_t;
 
 typedef struct _addrxlat_ctx addrxlat_ctx_t;
 
@@ -610,8 +610,8 @@ void addrxlat_ctx_install_cb_hook(addrxlat_ctx_t *ctx,
  *
  * A translation system uses a number of translation methods to do its job.
  * Any of them can be obtained with
- * @ref addrxlat_sys_get_desc or overridden with
- * @ref addrxlat_sys_set_desc using one of these indices.
+ * @ref addrxlat_sys_get_meth or overridden with
+ * @ref addrxlat_sys_set_meth using one of these indices.
  */
 typedef enum _addrxlat_sys_meth {
 	ADDRXLAT_SYS_METH_NONE = -1, /**< No method. */
@@ -894,18 +894,18 @@ addrxlat_map_t *addrxlat_sys_get_map(
 /** Explicitly set an address translation method for a translation system.
  * @param sys     Translation system.
  * @param idx     Translation method index.
- * @param desc    New translation method.
+ * @param meth    New translation method.
  */
-void addrxlat_sys_set_desc(
+void addrxlat_sys_set_meth(
 	addrxlat_sys_t *sys, addrxlat_sys_meth_t idx,
-	const addrxlat_desc_t *desc);
+	const addrxlat_meth_t *meth);
 
 /** Get a specific translation method of a translation system.
  * @param sys     Translation system.
  * @param idx     Translation method index.
  * @returns       Associated translation method.
  */
-const addrxlat_desc_t *addrxlat_sys_get_desc(
+const addrxlat_meth_t *addrxlat_sys_get_meth(
 	const addrxlat_sys_t *sys, addrxlat_sys_meth_t idx);
 
 /** State of the current step in address translation. */
@@ -924,10 +924,10 @@ struct _addrxlat_step {
 	 */
 	addrxlat_sys_t *sys;
 
-	/** Translation description for this particular translation.
+	/** Translation method for this particular translation.
 	 * This field must be initialized for @ref addrxlat_launch.
 	 */
-	const addrxlat_desc_t *desc;
+	const addrxlat_meth_t *meth;
 
 	/** Remaining steps.
 	 * This field is set on a successful return from @ref addrxlat_launch.

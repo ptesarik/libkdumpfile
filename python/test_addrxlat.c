@@ -46,9 +46,9 @@ static char custom_magic_str[] = "_test_addrxlat_custom";
 static addrxlat_status
 magic_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
-	const addrxlat_desc_t *desc = step->desc;
+	const addrxlat_meth_t *meth = step->meth;
 
-	if (desc->param.custom.data != custom_magic_str)
+	if (meth->param.custom.data != custom_magic_str)
 		return addrxlat_ctx_err(step->ctx, ADDRXLAT_ERR_INVALID,
 					"Wrong magic");
 
@@ -64,9 +64,9 @@ magic_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 static addrxlat_status
 magic_next_step(addrxlat_step_t *step)
 {
-	const addrxlat_desc_t *desc = step->desc;
+	const addrxlat_meth_t *meth = step->meth;
 
-	if (desc->param.custom.data != custom_magic_str)
+	if (meth->param.custom.data != custom_magic_str)
 		return addrxlat_ctx_err(step->ctx, ADDRXLAT_ERR_INVALID,
 					"Wrong magic");
 
@@ -76,31 +76,31 @@ magic_next_step(addrxlat_step_t *step)
 	return ADDRXLAT_OK;
 }
 
-PyDoc_STRVAR(get_custdesc__doc__,
-"getCustomDescription(conv) -> CustomDescription\n\
+PyDoc_STRVAR(get_custmeth__doc__,
+"getCustomMethod(conv) -> CustomMethod\n\
 \n\
-Get description that translates to a magic value.");
+Get a custom method that translates to a magic value.");
 
 static PyObject *
-get_custdesc(PyObject *self, PyObject *args)
+get_custmeth(PyObject *self, PyObject *args)
 {
 	PyObject *conv;
-	addrxlat_desc_t desc;
+	addrxlat_meth_t meth;
 
 	if (!PyArg_ParseTuple(args, "O", &conv))
 		return NULL;
 
-	desc.kind = ADDRXLAT_CUSTOM;
-	desc.target_as = ADDRXLAT_NOADDR;
-	desc.param.custom.first_step = magic_first_step;
-	desc.param.custom.next_step = magic_next_step;
-	desc.param.custom.data = custom_magic_str;
-	return addrxlat_API->Description_FromPointer(conv, &desc);
+	meth.kind = ADDRXLAT_CUSTOM;
+	meth.target_as = ADDRXLAT_NOADDR;
+	meth.param.custom.first_step = magic_first_step;
+	meth.param.custom.next_step = magic_next_step;
+	meth.param.custom.data = custom_magic_str;
+	return addrxlat_API->Method_FromPointer(conv, &meth);
 }
 
 static PyMethodDef test_methods[] = {
-	{ "getCustomDescription", (PyCFunction)get_custdesc, METH_VARARGS,
-	  get_custdesc__doc__ },
+	{ "getCustomMethod", (PyCFunction)get_custmeth, METH_VARARGS,
+	  get_custmeth__doc__ },
 	{ NULL }
 };
 

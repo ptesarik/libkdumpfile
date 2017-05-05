@@ -31,13 +31,13 @@ def fulladdr_str(addr):
         result += ':0x{:x}'.format(addr.addr)
     return result
 
-def print_target_as(desc):
-    print('  target_as={}'.format(addrspace_str(desc.target_as)))
+def print_target_as(meth):
+    print('  target_as={}'.format(addrspace_str(meth.target_as)))
 
-def print_linear(desc):
+def print_linear(meth):
     print('LINEAR')
-    print_target_as(desc)
-    print('  off=0x{:x}'.format(desc.off))
+    print_target_as(meth)
+    print('  off=0x{:x}'.format(meth.off))
 
 pte_formats = {
     addrxlat.PTE_NONE: 'none',
@@ -50,48 +50,48 @@ pte_formats = {
     addrxlat.PTE_PPC64_LINUX_RPN30: 'ppc64_linux_rpn30',
 }
 
-def print_pgt(desc):
+def print_pgt(meth):
     print('PGT')
-    print_target_as(desc)
-    print('  root={}'.format(fulladdr_str(desc.root)))
-    fmt = pte_formats.get(desc.pte_format, desc.pte_format)
+    print_target_as(meth)
+    print('  root={}'.format(fulladdr_str(meth.root)))
+    fmt = pte_formats.get(meth.pte_format, meth.pte_format)
     print('  pte_format={}'.format(fmt))
-    print('  fields={}'.format(','.join(str(i) for i in desc.fields)))
+    print('  fields={}'.format(','.join(str(i) for i in meth.fields)))
 
-def print_lookup(desc):
+def print_lookup(meth):
     print('LOOKUP')
-    print_target_as(desc)
-    print('  endoff=0x{:x}'.format(desc.endoff))
-    for elem in desc.tbl:
+    print_target_as(meth)
+    print('  endoff=0x{:x}'.format(meth.endoff))
+    for elem in meth.tbl:
         print('  {:x} -> {:x}'.format(elem[0], elem[1]))
 
-def print_memarr(desc):
+def print_memarr(meth):
     print('MEMARR')
-    print_target_as(desc)
-    print('  base={}'.format(fulladdr_str(desc.base)))
-    print('  shift={}'.format(desc.shift))
-    print('  elemsz={}'.format(desc.elemsz))
-    print('  valsz={}'.format(desc.valsz))
+    print_target_as(meth)
+    print('  base={}'.format(fulladdr_str(meth.base)))
+    print('  shift={}'.format(meth.shift))
+    print('  elemsz={}'.format(meth.elemsz))
+    print('  valsz={}'.format(meth.valsz))
 
 def print_meth(system, name):
-    desc = system.get_desc(addrxlat.__dict__['SYS_METH_{}'.format(name)])
-    if desc.kind == addrxlat.NOMETH:
+    meth = system.get_meth(addrxlat.__dict__['SYS_METH_{}'.format(name)])
+    if meth.kind == addrxlat.NOMETH:
         return
 
     print('METH_{}: '.format(name), end='')
 
-    if desc.kind == addrxlat.CUSTOM:
+    if meth.kind == addrxlat.CUSTOM:
         print('CUSTOM')
-    elif desc.kind == addrxlat.LINEAR:
-        print_linear(desc)
-    elif desc.kind == addrxlat.PGT:
-        print_pgt(desc)
-    elif desc.kind == addrxlat.LOOKUP:
-        print_lookup(desc)
-    elif desc.kind == addrxlat.MEMARR:
-        print_memarr(desc)
+    elif meth.kind == addrxlat.LINEAR:
+        print_linear(meth)
+    elif meth.kind == addrxlat.PGT:
+        print_pgt(meth)
+    elif meth.kind == addrxlat.LOOKUP:
+        print_lookup(meth)
+    elif meth.kind == addrxlat.MEMARR:
+        print_memarr(meth)
     else:
-        print('<desc kind {:d}>'.format(desc.kind))
+        print('<meth kind {:d}>'.format(meth.kind))
 
     print()
 

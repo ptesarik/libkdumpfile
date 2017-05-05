@@ -118,7 +118,7 @@ hugepd_shift(addrxlat_pte_t hpde)
 static addrxlat_status
 huge_pd_linux(addrxlat_step_t *step)
 {
-	const addrxlat_paging_form_t *pf = &step->desc->param.pgt.pf;
+	const addrxlat_paging_form_t *pf = &step->meth->param.pgt.pf;
 	addrxlat_addr_t off;
 	unsigned pdshift;
 	unsigned short i;
@@ -172,10 +172,10 @@ is_hugepte_linux(addrxlat_pte_t pte)
 static addrxlat_status
 huge_page_linux(addrxlat_step_t *step, unsigned rpn_shift)
 {
-	const addrxlat_paging_form_t *pf = &step->desc->param.pgt.pf;
+	const addrxlat_paging_form_t *pf = &step->meth->param.pgt.pf;
 
 	step->base.addr = (step->raw.pte >> rpn_shift) << pf->fieldsz[0];
-	step->base.as = step->desc->target_as;
+	step->base.as = step->meth->target_as;
 	return pgt_huge_page(step);
 }
 
@@ -193,7 +193,7 @@ pgt_ppc64_linux(addrxlat_step_t *step, unsigned rpn_shift)
 		"pud",
 		"pgd",
 	};
-	const addrxlat_paging_form_t *pf = &step->desc->param.pgt.pf;
+	const addrxlat_paging_form_t *pf = &step->meth->param.pgt.pf;
 	addrxlat_status status;
 
 	status = read_pte(step);
@@ -222,7 +222,7 @@ pgt_ppc64_linux(addrxlat_step_t *step, unsigned rpn_shift)
 	} else {
 		step->base.addr =
 			(step->raw.pte >> rpn_shift) << pf->fieldsz[0];
-		step->base.as = step->desc->target_as;
+		step->base.as = step->meth->target_as;
 		step->elemsz = 1;
 	}
 
@@ -256,13 +256,13 @@ static const struct sys_region linux_layout[] = {
 	SYS_REGION_END
 };
 
-/** Get VMEMMAP translation description.
- * @param ctl  Initialization data.
- * @param desc Translation description.
- * @returns    Error status.
+/** Get VMEMMAP translation method parameters.
+ * @param ctl    Initialization data.
+ * @param param  Lookup method parameters.
+ * @returns      Error status.
  */
 static addrxlat_status
-get_vmemmap_desc(struct os_init_data *ctl, addrxlat_desc_t *desc)
+get_vmemmap_param(struct os_init_data *ctl, addrxlat_param_lookup_t *param)
 {
 	addrxlat_step_t step =	/* step state surrogate */
 		{ .ctx = ctl->ctx, .sys = ctl->sys };
@@ -306,12 +306,12 @@ get_vmemmap_desc(struct os_init_data *ctl, addrxlat_desc_t *desc)
 		elem = data;
 	}
 
-	desc->param.lookup.nelem = cnt;
+	param->nelem = cnt;
 	tblp = malloc(cnt * sizeof(addrxlat_lookup_elem_t));
 	if (!tblp)
 		return set_error(ctl->ctx, ADDRXLAT_ERR_NOMEM,
 				 "Cannot allocate VMEMMAP translation");
-	desc->param.lookup.tbl = tblp;
+	param->tbl = tblp;
 
 	for (elem = first_elem; elem != 0; ++tblp) {
 		readptr.addr = elem + off_phys;
@@ -336,7 +336,7 @@ get_vmemmap_desc(struct os_init_data *ctl, addrxlat_desc_t *desc)
 	return ADDRXLAT_OK;
 
  err_free:
-	free((void*)desc->param.lookup.tbl);
+	free((void*)param->tbl);
 	return status;
 }
 
@@ -354,7 +354,7 @@ map_linux_ppc64(struct os_init_data *ctl)
 	};
 
 	long pagesize;
-	addrxlat_desc_t *desc;
+	addrxlat_meth_t *meth;
 	addrxlat_status status;
 
 	pagesize = ctl->popt.val[OPT_pagesize].set
@@ -373,22 +373,22 @@ map_linux_ppc64(struct os_init_data *ctl)
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	desc = &ctl->sys->desc[ADDRXLAT_SYS_METH_UPGT];
-	desc->kind = ADDRXLAT_PGT;
-	desc->target_as = ADDRXLAT_MACHPHYSADDR;
-	desc->param.pgt.root.as = ADDRXLAT_NOADDR;
-	desc->param.pgt.pf = ppc64_pf_64k;
+	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT];
+	meth->kind = ADDRXLAT_PGT;
+	meth->target_as = ADDRXLAT_MACHPHYSADDR;
+	meth->param.pgt.root.as = ADDRXLAT_NOADDR;
+	meth->param.pgt.pf = ppc64_pf_64k;
 
-	desc = &ctl->sys->desc[ADDRXLAT_SYS_METH_PGT];
-	*desc = ctl->sys->desc[ADDRXLAT_SYS_METH_UPGT];
+	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	*meth = ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT];
 	if (get_symval(ctl->ctx, "swapper_pg_dir",
-		       &desc->param.pgt.root.addr) == ADDRXLAT_OK)
-		desc->param.pgt.root.as = ADDRXLAT_KVADDR;
+		       &meth->param.pgt.root.addr) == ADDRXLAT_OK)
+		meth->param.pgt.root.as = ADDRXLAT_KVADDR;
 	else
 		clear_error(ctl->ctx);
 
-	desc = &ctl->sys->desc[ADDRXLAT_SYS_METH_VMEMMAP];
-	status = get_vmemmap_desc(ctl, desc);
+	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_VMEMMAP];
+	status = get_vmemmap_param(ctl, &meth->param.lookup);
 	if (status == ADDRXLAT_ERR_NODATA) {
 		/* ignore (VMEMMAP addresses will be unresolvable) */
 		clear_error(ctl->ctx);
@@ -396,9 +396,9 @@ map_linux_ppc64(struct os_init_data *ctl)
 	}
 	if (status != ADDRXLAT_OK)
 		return status;
-	desc->kind = ADDRXLAT_LOOKUP;
-	desc->target_as = ADDRXLAT_KPHYSADDR;
-	desc->param.lookup.endoff = pagesize - 1;
+	meth->kind = ADDRXLAT_LOOKUP;
+	meth->target_as = ADDRXLAT_KPHYSADDR;
+	meth->param.lookup.endoff = pagesize - 1;
 
 	return ADDRXLAT_OK;
 }

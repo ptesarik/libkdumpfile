@@ -30,9 +30,9 @@ class Context(Context):
     def __repr__(self):
         return '%s()' % (self.__class__.__name__,)
 
-class Description(Description):
+class Method(Method):
     def __init__(self, kind, target_as=NOADDR, param=(), *args, **kwargs):
-        super(Description, self).__init__(*args, **kwargs)
+        super(Method, self).__init__(*args, **kwargs)
         self.convert = convert
         self.target_as = target_as
         self.param = param
@@ -44,9 +44,9 @@ class Description(Description):
             self.target_as,
             self.param)
 
-class CustomDescription(CustomDescription):
+class CustomMethod(CustomMethod):
     def __init__(self, target_as=NOADDR, *args, **kwargs):
-        super(CustomDescription, self).__init__(*args, **kwargs)
+        super(CustomMethod, self).__init__(*args, **kwargs)
         self.convert = convert
         self.target_as = target_as
 
@@ -55,9 +55,9 @@ class CustomDescription(CustomDescription):
             self.__class__.__name__,
             self.target_as)
 
-class LinearDescription(LinearDescription):
+class LinearMethod(LinearMethod):
     def __init__(self, target_as=NOADDR, off=0, *args, **kwargs):
-        super(LinearDescription, self).__init__(*args, **kwargs)
+        super(LinearMethod, self).__init__(*args, **kwargs)
         self.convert = convert
         self.target_as = target_as
         self.off = off
@@ -68,9 +68,9 @@ class LinearDescription(LinearDescription):
             self.target_as,
             self.off)
 
-class PageTableDescription(PageTableDescription):
+class PageTableMethod(PageTableMethod):
     def __init__(self, target_as=NOADDR, root=None, pte_format=PTE_NONE, fields=(), *args, **kwargs):
-        super(PageTableDescription, self).__init__(*args, **kwargs)
+        super(PageTableMethod, self).__init__(*args, **kwargs)
         self.convert = convert
         self.target_as = target_as
         self.root = root
@@ -85,9 +85,9 @@ class PageTableDescription(PageTableDescription):
             self.pte_format,
             self.fields)
 
-class LookupDescription(LookupDescription):
+class LookupMethod(LookupMethod):
     def __init__(self, target_as=NOADDR, endoff=0, tbl=(), *args, **kwargs):
-        super(LookupDescription, self).__init__(*args, **kwargs)
+        super(LookupMethod, self).__init__(*args, **kwargs)
         self.convert = convert
         self.target_as = target_as
         self.endoff = endoff
@@ -100,9 +100,9 @@ class LookupDescription(LookupDescription):
             self.endoff,
             self.tbl)
 
-class MemoryArrayDescription(MemoryArrayDescription):
+class MemoryArrayMethod(MemoryArrayMethod):
     def __init__(self, target_as=NOADDR, base=None, shift=0, elemsz=0, valsz=0, *args, **kwargs):
-        super(MemoryArrayDescription, self).__init__(*args, **kwargs)
+        super(MemoryArrayMethod, self).__init__(*args, **kwargs)
         self.convert = convert
         self.target_as = target_as
         self.base = base
@@ -158,20 +158,20 @@ class System(System):
             raise get_exception(status, ctx.get_err())
 
 class Step(Step):
-    def __init__(self, ctx, sys=None, desc=None, *args, **kwargs):
+    def __init__(self, ctx, sys=None, meth=None, *args, **kwargs):
         super(Step, self).__init__(*args, **kwargs)
         self.convert = convert
         if sys is not None:
             self.sys = sys
-        if desc is not None:
-            self.desc = desc
+        if meth is not None:
+            self.meth = meth
 
     def __repr__(self):
         return '%s(%r, %r, %r)' % (
             self.__class__.__name__,
             self.ctx,
             self.sys,
-            self.desc)
+            self.meth)
 
     def launch(self, *args, **kwargs):
         status = super(Step, self).launch(*args, **kwargs)
@@ -212,12 +212,12 @@ class Operator(Operator):
 convert = TypeConvert()
 convert.FullAddress = FullAddress
 convert.Context = Context
-convert.Description = Description
-convert.CustomDescription = CustomDescription
-convert.LinearDescription = LinearDescription
-convert.PageTableDescription = PageTableDescription
-convert.LookupDescription = LookupDescription
-convert.MemoryArrayDescription = MemoryArrayDescription
+convert.Method = Method
+convert.CustomMethod = CustomMethod
+convert.LinearMethod = LinearMethod
+convert.PageTableMethod = PageTableMethod
+convert.LookupMethod = LookupMethod
+convert.MemoryArrayMethod = MemoryArrayMethod
 convert.Range = Range
 convert.Map = Map
 convert.System = System

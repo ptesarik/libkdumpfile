@@ -39,18 +39,18 @@ setup_pgt(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 {
 	addrxlat_range_t range;
 	addrxlat_map_t *map;
-	addrxlat_desc_t desc;
+	addrxlat_meth_t meth;
 	addrxlat_status status;
 
-	desc.kind = ADDRXLAT_PGT;
-	desc.target_as = ADDRXLAT_MACHPHYSADDR;
-	desc.param.pgt.root.addr = 0xf000;
-	desc.param.pgt.root.as = ADDRXLAT_KVADDR;
-	desc.param.pgt.pf.pte_format = ADDRXLAT_PTE_PFN64;
-	desc.param.pgt.pf.nfields = 2;
-	desc.param.pgt.pf.fieldsz[0] = 12;
-	desc.param.pgt.pf.fieldsz[1] = 9;
-	addrxlat_sys_set_desc(sys, ADDRXLAT_SYS_METH_PGT, &desc);
+	meth.kind = ADDRXLAT_PGT;
+	meth.target_as = ADDRXLAT_MACHPHYSADDR;
+	meth.param.pgt.root.addr = 0xf000;
+	meth.param.pgt.root.as = ADDRXLAT_KVADDR;
+	meth.param.pgt.pf.pte_format = ADDRXLAT_PTE_PFN64;
+	meth.param.pgt.pf.nfields = 2;
+	meth.param.pgt.pf.fieldsz[0] = 12;
+	meth.param.pgt.pf.fieldsz[1] = 9;
+	addrxlat_sys_set_meth(sys, ADDRXLAT_SYS_METH_PGT, &meth);
 
 	range.endoff = 0xffffffff;
 	range.meth = ADDRXLAT_SYS_METH_PGT;

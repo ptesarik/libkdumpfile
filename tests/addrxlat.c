@@ -270,14 +270,14 @@ set_memarr(addrxlat_param_memarr_t *ma, const char *spec)
 
 
 static int
-do_xlat(addrxlat_ctx_t *ctx, addrxlat_desc_t *desc, addrxlat_addr_t addr)
+do_xlat(addrxlat_ctx_t *ctx, addrxlat_meth_t *meth, addrxlat_addr_t addr)
 {
 	addrxlat_step_t step;
 	addrxlat_status status;
 
 	step.ctx = ctx;
 	step.sys = NULL;
-	step.desc = desc;
+	step.meth = meth;
 	status = addrxlat_launch(&step, addr);
 	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Cannot launch address translation: %s\n",
@@ -338,13 +338,13 @@ main(int argc, char **argv)
 		.read_caps = (ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR) |
 			      ADDRXLAT_CAPS(ADDRXLAT_KVADDR))
 	};
-	addrxlat_desc_t pgt, linear, lookup, memarr, *desc;
+	addrxlat_meth_t pgt, linear, lookup, memarr, *meth;
 	int opt;
 	unsigned long refcnt;
 	int rc;
 
 	ctx = NULL;
-	desc = NULL;
+	meth = NULL;
 
 	pgt.kind = ADDRXLAT_PGT;
 	pgt.target_as = ADDRXLAT_MACHPHYSADDR;
@@ -367,15 +367,15 @@ main(int argc, char **argv)
 				  opts, NULL)) != -1) {
 		switch (opt) {
 		case 'f':
-			desc = &pgt;
-			rc = set_paging_form(&desc->param.pgt.pf, optarg);
+			meth = &pgt;
+			rc = set_paging_form(&meth->param.pgt.pf, optarg);
 			if (rc != TEST_OK)
 				return rc;
 			break;
 
 		case 'r':
-			desc = &pgt;
-			rc = set_root(&desc->param.pgt.root, optarg);
+			meth = &pgt;
+			rc = set_root(&meth->param.pgt.root, optarg);
 			if (rc != TEST_OK)
 				return rc;
 			break;
@@ -387,26 +387,26 @@ main(int argc, char **argv)
 			break;
 
 		case 'l':
-			desc = &linear;
-			rc = set_linear(&desc->param.linear.off, optarg);
+			meth = &linear;
+			rc = set_linear(&meth->param.linear.off, optarg);
 			if (rc != TEST_OK)
 				return rc;
 			break;
 
 		case 'm':
-			desc = &memarr;
-			rc = set_memarr(&desc->param.memarr, optarg);
+			meth = &memarr;
+			rc = set_memarr(&meth->param.memarr, optarg);
 			if (rc != TEST_OK)
 				return rc;
 			break;
 
 		case 'p':
-			desc = &pgt;
+			meth = &pgt;
 			break;
 
 		case 't':
-			desc = &lookup;
-			rc = set_lookup(&desc->param.lookup.endoff, optarg);
+			meth = &lookup;
+			rc = set_lookup(&meth->param.lookup.endoff, optarg);
 			if (rc != TEST_OK)
 				return rc;
 			break;
@@ -419,7 +419,7 @@ main(int argc, char **argv)
 		}
 	}
 
-	if (desc == NULL) {
+	if (meth == NULL) {
 		fputs("No translation method specified\n", stderr);
 		return TEST_ERR;
 	}
@@ -447,7 +447,7 @@ main(int argc, char **argv)
 	cb.data = ctx;
 	addrxlat_ctx_set_cb(ctx, &cb);
 
-	rc = do_xlat(ctx, desc, vaddr);
+	rc = do_xlat(ctx, meth, vaddr);
 
  out:
 	if (ctx && (refcnt = addrxlat_ctx_decref(ctx)) != 0)

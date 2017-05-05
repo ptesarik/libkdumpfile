@@ -41,13 +41,13 @@
 static void
 set_pteval_size(kdump_ctx_t *ctx)
 {
-	const addrxlat_desc_t *desc;
+	const addrxlat_meth_t *meth;
 
-	desc = addrxlat_sys_get_desc(ctx->shared->xlatsys,
+	meth = addrxlat_sys_get_meth(ctx->shared->xlatsys,
 				     ADDRXLAT_SYS_METH_PGT);
-	if (desc->kind == ADDRXLAT_PGT) {
+	if (meth->kind == ADDRXLAT_PGT) {
 		int shift = addrxlat_pteval_shift(
-			desc->param.pgt.pf.pte_format);
+			meth->param.pgt.pf.pte_format);
 		if (shift >= 0) {
 			struct attr_data *attr = gattr(ctx, GKI_pteval_size);
 			set_attr_number(ctx, attr, ATTR_DEFAULT, 1UL << shift);
