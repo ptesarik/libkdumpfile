@@ -915,11 +915,20 @@ typedef enum _addrxlat_sys_meth {
 	/** Default machine physical to kernel physical mapping. */
 	ADDRXLAT_SYS_METH_MACHPHYS_KPHYS,
 
-	/**< Default kernel physical to machine physical mapping. */
+	/** Default kernel physical to machine physical mapping. */
 	ADDRXLAT_SYS_METH_KPHYS_MACHPHYS,
 
-	ADDRXLAT_SYS_METH_NUM,	   /**< Total number of indices. */
+	/** First custom method. */
+	ADDRXLAT_SYS_METH_CUSTOM
+
 } addrxlat_sys_meth_t;
+
+/** Number of custom methods. */
+#define ADDRXLAT_SYS_METH_CUSTOM_NUM	8
+
+/** Total number of system method indices. */
+#define ADDRXLAT_SYS_METH_NUM \
+	(ADDRXLAT_SYS_METH_CUSTOM + ADDRXLAT_SYS_METH_CUSTOM_NUM)
 
 /** Explicitly set an address translation method for a translation system.
  * @param sys     Translation system.
