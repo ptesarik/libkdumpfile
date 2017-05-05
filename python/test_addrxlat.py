@@ -130,8 +130,7 @@ class TestDescription(unittest.TestCase):
         self.assertEqual(desc.kind, addrxlat.CUSTOM)
         self.assertEqual(desc.target_as, addrxlat.MACHPHYSADDR)
         ctx = addrxlat.Context()
-        meth = addrxlat.Method(desc)
-        step = addrxlat.Step(ctx=ctx, meth=meth)
+        step = addrxlat.Step(ctx=ctx, desc=desc)
         with self.assertRaisesRegexp(BaseException, "NULL callback"):
             desc.cb_first_step(step, 0x1234)
         with self.assertRaisesRegexp(BaseException, "NULL callback"):
@@ -340,23 +339,6 @@ class TestDescription(unittest.TestCase):
         self.assertEqual(desc.shift, 0)
         self.assertEqual(desc.elemsz, 0)
         self.assertEqual(desc.valsz, 8)
-
-class TestMethod(unittest.TestCase):
-    def test_method_defaults(self):
-        meth = addrxlat.Method()
-        desc = meth.get_desc()
-        self.assertEqual(desc.kind, 0)
-        self.assertEqual(desc.target_as, 0)
-        for i in xrange(len(desc.param)):
-            self.assertEqual(desc.param[i], 0)
-
-    def test_method_set(self):
-        desc = addrxlat.LinearDescription(addrxlat.MACHPHYSADDR, 0x1234)
-        meth = addrxlat.Method(desc)
-        desc2 = meth.get_desc()
-        self.assertEqual(desc2.kind, addrxlat.LINEAR)
-        self.assertEqual(desc2.target_as, addrxlat.MACHPHYSADDR)
-        self.assertEqual(desc2.off, 0x1234)
 
 class TestRange(unittest.TestCase):
     def test_range_defaults(self):

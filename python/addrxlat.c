@@ -73,8 +73,6 @@ static PyObject *ctx_FromPointer(PyObject *_conv, addrxlat_ctx_t *ctx);
 static addrxlat_desc_t *desc_AsPointer(PyObject *value);
 static PyObject *desc_FromPointer(
 	PyObject *_conv, const addrxlat_desc_t *desc);
-static addrxlat_meth_t *meth_AsPointer(PyObject *value);
-static PyObject *meth_FromPointer(PyObject *_conv, addrxlat_meth_t *meth);
 static addrxlat_range_t *range_AsPointer(PyObject *value);
 static PyObject *range_FromPointer(
 	PyObject *_conv, const addrxlat_range_t *range);
@@ -3086,193 +3084,6 @@ static PyTypeObject memarrdesc_type =
 	memarrdesc_new,			/* tp_new */
 };
 
-typedef struct {
-	PyObject_HEAD
-
-	addrxlat_meth_t *meth;
-
-	PyObject *convert;
-} meth_object;
-
-static PyTypeObject meth_type;
-
-PyDoc_STRVAR(meth__doc__,
-"Method() -> address translation method");
-
-static PyObject *
-meth_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
-{
-	meth_object *self;
-
-	self = (meth_object*) type->tp_alloc(type, 0);
-	if (!self)
-		return NULL;
-
-	self->meth = get_c_pointer(kwargs);
-	if (!self->meth) {
-		if (PyErr_Occurred())
-			return NULL;
-
-		self->meth = addrxlat_meth_new();
-		if (!self->meth) {
-			Py_DECREF(self);
-			return PyErr_NoMemory();
-		}
-	} else
-		addrxlat_meth_incref(self->meth);
-
-	Py_INCREF(convert);
-	self->convert = convert;
-
-	return (PyObject*)self;
-}
-
-static int
-meth_init(PyObject *self, PyObject *args, PyObject *kwargs)
-{
-	return c_pointer_super_init(&meth_type, self, args, kwargs);
-}
-
-static void
-meth_dealloc(PyObject *_self)
-{
-	meth_object *self = (meth_object*)_self;
-
-	PyObject_GC_UnTrack(_self);
-	Py_XDECREF(self->convert);
-
-	if (self->meth) {
-		addrxlat_meth_decref(self->meth);
-		self->meth = NULL;
-	}
-
-	Py_TYPE(self)->tp_free((PyObject*)self);
-}
-
-static int
-meth_traverse(PyObject *_self, visitproc visit, void *arg)
-{
-	meth_object *self = (meth_object*)_self;
-	Py_VISIT(self->convert);
-	return 0;
-}
-
-static PyObject *
-meth_richcompare(PyObject *v, PyObject *w, int op)
-{
-	PyObject *result;
-
-	if ((op == Py_EQ || op == Py_NE) &&
-	    PyObject_TypeCheck(v, &meth_type) &&
-	    PyObject_TypeCheck(w, &meth_type)) {
-		int cmp = (((meth_object*)v)->meth == ((meth_object*)w)->meth);
-		result = (cmp == (op == Py_EQ))
-			? Py_True
-			: Py_False;
-	} else
-		result = Py_NotImplemented;
-
-	Py_INCREF(result);
-	return result;
-}
-
-PyDoc_STRVAR(meth_set_desc__doc__,
-"METH.set_desc(desc) -> status\n\
-\n\
-Set up the method from a translation description.");
-
-static PyObject *
-meth_set_desc(PyObject *_self, PyObject *args, PyObject *kwargs)
-{
-	meth_object *self = (meth_object*)_self;
-	static char *keywords[] = {"desc", NULL};
-	PyObject *value;
-	const addrxlat_desc_t *desc;
-	addrxlat_status status;
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:set_desc",
-					 keywords, &value))
-		return NULL;
-
-	desc = desc_AsPointer(value);
-	if (!desc)
-		return NULL;
-
-	status = addrxlat_meth_set_desc(self->meth, desc);
-	return PyInt_FromLong(status);
-}
-
-PyDoc_STRVAR(meth_get_desc__doc__,
-"METH.get_desc() -> desc\n\
-\n\
-Get the translation description of a method.");
-
-static PyObject *
-meth_get_desc(PyObject *_self, PyObject *args)
-{
-	meth_object *self = (meth_object*)_self;
-	return desc_FromPointer(
-		self->convert, addrxlat_meth_get_desc(self->meth));
-}
-
-static PyMethodDef meth_methods[] = {
-	{ "set_desc", (PyCFunction)meth_set_desc, METH_VARARGS | METH_KEYWORDS,
-	  meth_set_desc__doc__ },
-	{ "get_desc", meth_get_desc, METH_NOARGS,
-	  meth_get_desc__doc__ },
-	{ NULL }
-};
-
-static PyMemberDef meth_members[] = {
-	{ "convert", T_OBJECT, offsetof(meth_object, convert), 0,
-	  attr_convert__doc__ },
-	{ NULL }
-};
-
-static PyTypeObject meth_type =
-{
-	PyVarObject_HEAD_INIT(NULL, 0)
-	MOD_NAME ".Method",		/* tp_name */
-	sizeof (meth_object),		/* tp_basicsize */
-	0,				/* tp_itemsize */
-	meth_dealloc,			/* tp_dealloc */
-	0,				/* tp_print */
-	0,				/* tp_getattr */
-	0,				/* tp_setattr */
-	0,				/* tp_compare */
-	0,				/* tp_repr */
-	0,				/* tp_as_number */
-	0,				/* tp_as_sequence */
-	0,				/* tp_as_mapping */
-	0,				/* tp_hash */
-	0,				/* tp_call */
-	0,				/* tp_str */
-	0,				/* tp_getattro */
-	0,				/* tp_setattro */
-	0,				/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT
-	    | Py_TPFLAGS_HAVE_GC
-	    | Py_TPFLAGS_BASETYPE,	/* tp_flags */
-	meth__doc__,			/* tp_doc */
-	meth_traverse,			/* tp_traverse */
-	0,				/* tp_clear */
-	meth_richcompare,		/* tp_richcompare */
-	0,				/* tp_weaklistoffset */
-	0,				/* tp_iter */
-	0,				/* tp_iternext */
-	meth_methods,			/* tp_methods */
-	meth_members,			/* tp_members */
-	0,				/* tp_getset */
-	0,				/* tp_base */
-	0,				/* tp_dict */
-	0,				/* tp_descr_get */
-	0,				/* tp_descr_set */
-	0,				/* tp_dictoffset */
-	meth_init,			/* tp_init */
-	0,				/* tp_alloc */
-	meth_new,			/* tp_new */
-};
-
 /** Python representation of @ref addrxlat_range_t.
  */
 typedef struct {
@@ -4830,8 +4641,6 @@ typedef struct {
 	PyTypeObject *lookupdesc_type;
 	/** Target type for MemoryArrayDescription conversions. */
 	PyTypeObject *memarrdesc_type;
-	/** Target type for Method conversions. */
-	PyTypeObject *meth_type;
 	/** Target type for Range conversions. */
 	PyTypeObject *range_type;
 	/** Target type for Map conversions. */
@@ -4878,8 +4687,6 @@ convert_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	Py_INCREF(self->lookupdesc_type);
 	self->memarrdesc_type = &memarrdesc_type;
 	Py_INCREF(self->memarrdesc_type);
-	self->meth_type = &meth_type;
-	Py_INCREF(self->meth_type);
 	self->range_type = &range_type;
 	Py_INCREF(self->range_type);
 	self->map_type = &map_type;
@@ -4909,7 +4716,6 @@ convert_dealloc(PyObject *_self)
 	Py_XDECREF(self->pgtdesc_type);
 	Py_XDECREF(self->lookupdesc_type);
 	Py_XDECREF(self->memarrdesc_type);
-	Py_XDECREF(self->meth_type);
 	Py_XDECREF(self->range_type);
 	Py_XDECREF(self->map_type);
 	Py_XDECREF(self->sys_type);
@@ -4930,7 +4736,6 @@ convert_traverse(PyObject *_self, visitproc visit, void *arg)
 	Py_VISIT(self->pgtdesc_type);
 	Py_VISIT(self->lookupdesc_type);
 	Py_VISIT(self->memarrdesc_type);
-	Py_VISIT(self->meth_type);
 	Py_VISIT(self->range_type);
 	Py_VISIT(self->map_type);
 	Py_VISIT(self->sys_type);
@@ -4962,9 +4767,6 @@ PyDoc_STRVAR(convert_lookupdesc__doc__,
 
 PyDoc_STRVAR(convert_memarrdesc__doc__,
 "Target type for MemoryArrayDescription conversions.");
-
-PyDoc_STRVAR(convert_meth__doc__,
-"Target type for Method conversions.");
 
 PyDoc_STRVAR(convert_range__doc__,
 "Target type for Range conversions.");
@@ -5003,8 +4805,6 @@ static PyMemberDef convert_members[] = {
 	{ "MemoryArrayDescription", T_OBJECT,
 	  offsetof(convert_object, memarrdesc_type),
 	  0, convert_memarrdesc__doc__ },
-	{ "Method", T_OBJECT, offsetof(convert_object, meth_type),
-	  0, convert_meth__doc__ },
 	{ "Range", T_OBJECT, offsetof(convert_object, range_type),
 	  0, convert_range__doc__ },
 	{ "Map", T_OBJECT, offsetof(convert_object, map_type),
@@ -5206,52 +5006,6 @@ desc_FromPointer(PyObject *_conv, const addrxlat_desc_t *desc)
  err:
 	Py_DECREF(result);
 	return NULL;
-}
-
-/** Get the libaddrxlat representation of a Python meth object.
- * @param value   a Python meth object
- * @returns       associated @c libaddrxlat_meth_t (new reference),
- *                or @c NULL if @c value is None
- *
- * Since all possible return values error are valid, error conditions
- * must be detected by calling @c PyErr_Occurred.
- */
-static addrxlat_meth_t *
-meth_AsPointer(PyObject *value)
-{
-	addrxlat_meth_t *meth;
-
-	if (value == Py_None)
-		return NULL;
-
-	if (!PyObject_TypeCheck(value, &meth_type)) {
-		PyErr_Format(PyExc_TypeError,
-			     "need a Method or None, not '%.200s'",
-			     Py_TYPE(value)->tp_name);
-		return NULL;
-	}
-
-	meth = ((meth_object*)value)->meth;
-	addrxlat_meth_incref(meth);
-	return meth;
-}
-
-/** Construct a meth object from @c addrxlat_meth_t.
- * @param _conv  convert object
- * @param meth  libaddrxlat translation method or @c NULL
- * @returns     corresponding Python object (or @c NULL on failure)
- *
- * The Python object contains a new reference to the translation method.
- */
-static PyObject *
-meth_FromPointer(PyObject *_conv, addrxlat_meth_t *meth)
-{
-	convert_object *conv = (convert_object *)_conv;
-
-	if (!meth)
-		Py_RETURN_NONE;
-
-	return object_FromPointer(conv->meth_type, meth);
 }
 
 /** Get the libaddrxlat representation of a Python range object.
@@ -5808,9 +5562,6 @@ init_addrxlat (void)
 	if (PyType_Ready(&memarrdesc_type) < 0)
 		return MOD_ERROR_VAL;
 
-	if (PyType_Ready(&meth_type) < 0)
-		return MOD_ERROR_VAL;
-
 	range_type.tp_new = PyType_GenericNew;
 	if (PyType_Ready(&range_type) < 0)
 		return MOD_ERROR_VAL;
@@ -5891,15 +5642,10 @@ init_addrxlat (void)
 	if (ret)
 		goto err_lookupdesc;
 
-	Py_INCREF((PyObject*)&meth_type);
-	ret = PyModule_AddObject(mod, "Method", (PyObject*)&meth_type);
-	if (ret)
-		goto err_memarrdesc;
-
 	Py_INCREF((PyObject*)&range_type);
 	ret = PyModule_AddObject(mod, "Range", (PyObject*)&range_type);
 	if (ret)
-		goto err_meth;
+		goto err_memarrdesc;
 
 	Py_INCREF((PyObject*)&map_type);
 	ret = PyModule_AddObject(mod, "Map", (PyObject*)&map_type);
@@ -6031,8 +5777,6 @@ init_addrxlat (void)
 	CAPI.Context_FromPointer = ctx_FromPointer;
 	CAPI.Description_AsPointer = desc_AsPointer;
 	CAPI.Description_FromPointer = desc_FromPointer;
-	CAPI.Method_AsPointer = meth_AsPointer;
-	CAPI.Method_FromPointer = meth_FromPointer;
 	CAPI.Range_AsPointer = range_AsPointer;
 	CAPI.Range_FromPointer = range_FromPointer;
 	CAPI.Map_AsPointer = map_AsPointer;
@@ -6067,8 +5811,6 @@ init_addrxlat (void)
 	Py_DECREF((PyObject*)&map_type);
  err_range:
 	Py_DECREF((PyObject*)&range_type);
- err_meth:
-	Py_DECREF((PyObject*)&meth_type);
  err_memarrdesc:
 	Py_DECREF((PyObject*)&memarrdesc_type);
  err_lookupdesc:

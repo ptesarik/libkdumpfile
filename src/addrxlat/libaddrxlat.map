@@ -1,11 +1,5 @@
 LIBADDRXLAT_0 {
   global:
-    addrxlat_meth_new;
-    addrxlat_meth_incref;
-    addrxlat_meth_decref;
-    addrxlat_meth_set_desc;
-    addrxlat_meth_get_desc;
-
     addrxlat_ctx_new;
     addrxlat_ctx_incref;
     addrxlat_ctx_decref;

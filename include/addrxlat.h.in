@@ -154,9 +154,6 @@ typedef struct _addrxlat_fulladdr {
 	addrxlat_addrspace_t as; /**< Address space for @c addr. */
 } addrxlat_fulladdr_t;
 
-/** Address translation method. */
-typedef struct _addrxlat_meth addrxlat_meth_t;
-
 /** Address translation kind.
  */
 typedef enum _addrxlat_kind {
@@ -178,29 +175,6 @@ typedef enum _addrxlat_kind {
 	/** Array in target memory. */
 	ADDRXLAT_MEMARR,
 } addrxlat_kind_t;
-
-/** Allocate a translation method.
- * @returns    New initialized object, or @c NULL on failure.
- *
- * This call can fail if and only if memory allocation fails.
- * The reference count of the newly created object is one.
- */
-addrxlat_meth_t *addrxlat_meth_new(void);
-
-/** Increment translation method reference counter.
- * @param meth  Translation method.
- * @returns     New reference count.
- */
-unsigned long addrxlat_meth_incref(addrxlat_meth_t *meth);
-
-/** Decrement translation method reference counter.
- * @param meth  Translation method.
- * @returns     New reference count.
- *
- * If the new reference count is zero, the underlying object is freed
- * and its address must not be used afterwards.
- */
-unsigned long addrxlat_meth_decref(addrxlat_meth_t *meth);
 
 typedef struct _addrxlat_step addrxlat_step_t;
 
@@ -394,24 +368,6 @@ typedef struct _addrxlat_desc {
 	/** Additional parameters. */
 	addrxlat_param_t param;
 } addrxlat_desc_t;
-
-/** Set up a translation description.
- * @param meth  Translation method.
- * @param desc  Translation description.
- * @returns     Error status.
- */
-addrxlat_status addrxlat_meth_set_desc(addrxlat_meth_t *meth,
-				      const addrxlat_desc_t *desc);
-
-/** Get the translation description.
- * @param meth  Translation method.
- * @returns     Translation description.
- *
- * The returned pointer is valid as long as you hold a reference to
- * the translation object. It does not change by subsequent calls to
- * @ref addrxlat_meth_set_desc (but the referenced value does).
- */
-const addrxlat_desc_t *addrxlat_meth_get_desc(const addrxlat_meth_t *meth);
 
 typedef struct _addrxlat_ctx addrxlat_ctx_t;
 

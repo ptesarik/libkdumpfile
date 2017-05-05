@@ -30,6 +30,36 @@
 
 #include "addrxlat-priv.h"
 
+/** Count total size of all address bitfields.
+ * @param pf  Paging form.
+ * @returns   Number of significant bits in the source address.
+*/
+static unsigned short
+vaddr_bits(const addrxlat_paging_form_t *pf)
+{
+	unsigned short i;
+	unsigned short result = 0;
+	for (i = 0; i < pf->nfields; ++i)
+		result += pf->fieldsz[i];
+	return result;
+}
+
+/* Calculate the maximum index into the page table hierarchy.
+ * @param pf  Paging form.
+ * @returns   Maximum mapped index.
+ *
+ * The maximum offset may not be the same as the maximum address that
+ * can be translated (e.g. x86_64 sign-extends the highest bit).
+ */
+addrxlat_addr_t
+paging_max_index(const addrxlat_paging_form_t *pf)
+{
+	unsigned bits = vaddr_bits(pf);
+	return (bits < 8 * sizeof(addrxlat_addr_t)
+		? ADDR_MASK(bits)
+		: ADDRXLAT_ADDR_MAX);
+}
+
 /** Read the raw PTE value.
  * @param step  Current step state.
  * @returns     Error status.
@@ -197,20 +227,6 @@ first_step_uaddr(addrxlat_step_t *step, addrxlat_addr_t addr)
 	if (status != ADDRXLAT_OK)
 		return status;
 	return step_check_uaddr(step);
-}
-
-/** Count total size of all address bitfields.
- * @param pf  Paging form.
- * @returns   Number of significant bits in the source address.
-*/
-static unsigned short
-vaddr_bits(const addrxlat_paging_form_t *pf)
-{
-	unsigned short i;
-	unsigned short result = 0;
-	for (i = 0; i < pf->nfields; ++i)
-		result += pf->fieldsz[i];
-	return result;
 }
 
 /** Check signed address overflow.

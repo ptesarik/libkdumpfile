@@ -85,22 +85,6 @@
 /** Size of the fallback error buffer. */
 #define ERRBUF	64
 
-/** Internal definition of the address translation method.
- */
-struct _addrxlat_meth {
-	/** Reference counter. */
-	unsigned long refcnt;
-
-	/** Function to make the first translation step. */
-	addrxlat_first_step_fn *first_step;
-
-	/** Function to make the next translation step. */
-	addrxlat_next_step_fn *next_step;
-
-	/** Translation description. */
-	addrxlat_desc_t desc;
-};
-
 /**  In-flight translation. */
 struct inflight;
 
@@ -282,10 +266,6 @@ INTERNAL_DECL(addrxlat_status, sys_sym_pgtroot,
 #define set_error internal_ctx_err
 DECLARE_ALIAS(ctx_err);
 
-DECLARE_ALIAS(meth_new);
-DECLARE_ALIAS(meth_incref);
-DECLARE_ALIAS(meth_decref);
-DECLARE_ALIAS(meth_set_desc);
 DECLARE_ALIAS(map_new);
 DECLARE_ALIAS(map_incref);
 DECLARE_ALIAS(map_decref);

@@ -119,23 +119,6 @@ class MemoryArrayDescription(MemoryArrayDescription):
             self.elemsz,
             self.valsz)
 
-class Method(Method):
-    def __init__(self, desc=None, *args, **kwargs):
-        super(Method, self).__init__(*args, **kwargs)
-        self.convert = convert
-        if desc is not None:
-            self.set_desc(desc)
-
-    def __repr__(self):
-        return '%s(%r)' % (
-            self.__class__.__name__,
-            self.get_desc())
-
-    def set_desc(self, desc):
-        status = super(Method, self).set_desc(desc)
-        if status != OK:
-            raise get_exception(status)
-
 class Range(Range):
     def __init__(self, endoff=0, meth=SYS_METH_NONE, *args, **kwargs):
         super(Range, self).__init__(*args, **kwargs)
@@ -235,7 +218,6 @@ convert.LinearDescription = LinearDescription
 convert.PageTableDescription = PageTableDescription
 convert.LookupDescription = LookupDescription
 convert.MemoryArrayDescription = MemoryArrayDescription
-convert.Method = Method
 convert.Range = Range
 convert.Map = Map
 convert.System = System
