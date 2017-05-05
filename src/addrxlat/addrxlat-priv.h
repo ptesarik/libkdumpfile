@@ -157,7 +157,7 @@ struct _addrxlat_sys {
 	addrxlat_map_t *map[ADDRXLAT_SYS_MAP_NUM];
 
 	/** Address translation methods. */
-	addrxlat_meth_t *meth[ADDRXLAT_SYS_METH_NUM];
+	addrxlat_desc_t desc[ADDRXLAT_SYS_METH_NUM];
 };
 
 /* vtop */
@@ -266,9 +266,6 @@ struct sys_region {
 
 /** OS-map layout table end marker. */
 #define SYS_REGION_END	{ 0, 0, ADDRXLAT_SYS_METH_NUM }
-
-INTERNAL_DECL(addrxlat_status, sys_ensure_meth,
-	      (struct os_init_data *ctl, addrxlat_sys_meth_t idx));
 
 INTERNAL_DECL(addrxlat_status, sys_set_layout,
 	      (struct os_init_data *ctl, addrxlat_sys_map_t idx,

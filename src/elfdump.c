@@ -369,22 +369,9 @@ static kdump_status
 setup_custom_method(kdump_ctx_t *ctx, addrxlat_sys_meth_t methidx,
 		    addrxlat_sys_map_t mapidx, const addrxlat_desc_t *desc)
 {
-	addrxlat_meth_t *meth;
 	addrxlat_range_t range;
 	addrxlat_map_t *map;
 	addrxlat_status axstatus;
-
-	meth = addrxlat_meth_new();
-	if (!meth)
-		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot allocate translation method");
-
-	axstatus = addrxlat_meth_set_desc(meth, desc);
-	if (axstatus != ADDRXLAT_OK) {
-		addrxlat_meth_decref(meth);
-		return addrxlat2kdump(ctx, axstatus);
-	}
-	addrxlat_sys_set_meth(ctx->shared->xlatsys, methidx, meth);
 
 	map = addrxlat_map_new();
 	if (!map)
@@ -399,6 +386,7 @@ setup_custom_method(kdump_ctx_t *ctx, addrxlat_sys_meth_t methidx,
 		return addrxlat2kdump(ctx, axstatus);
 	}
 	addrxlat_sys_set_map(ctx->shared->xlatsys, mapidx, map);
+	addrxlat_sys_set_desc(ctx->shared->xlatsys, methidx, desc);
 
 	return KDUMP_OK;
 }

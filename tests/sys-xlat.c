@@ -549,21 +549,6 @@ parse_map_header(const char *spec, addrxlat_sys_map_t *idx)
 	return TEST_OK;
 }
 
-static addrxlat_meth_t *
-get_sys_meth(addrxlat_sys_t *sys, addrxlat_sys_meth_t methidx)
-{
-	addrxlat_meth_t *meth = addrxlat_sys_get_meth(sys, methidx);
-
-	if (!meth) {
-		meth = addrxlat_meth_new();
-		if (meth)
-			addrxlat_sys_set_meth(sys, methidx, meth);
-		else
-			perror("Cannot add method");
-	}
-	return meth;
-}
-
 static int
 add_map_entry(const char *spec, addrxlat_sys_t *sys, addrxlat_map_t **map)
 {
@@ -651,23 +636,8 @@ cfg_block(enum cfg_state state, addrxlat_sys_t *sys,
 	  addrxlat_sys_meth_t methidx, addrxlat_desc_t *desc,
 	  addrxlat_sys_map_t mapidx, addrxlat_map_t *map)
 {
-	addrxlat_status status;
-
 	if (state == cfg_meth) {
-		addrxlat_meth_t *meth = get_sys_meth(sys, methidx);
-		if (!meth)
-			return TEST_ERR;
-
-		status = addrxlat_meth_set_desc(meth, desc);
-		if (status != ADDRXLAT_OK) {
-			fprintf(stderr, "Cannot define translation: %s\n",
-				addrxlat_strerror(status));
-			addrxlat_meth_decref(meth);
-			return TEST_ERR;
-		}
-
-		addrxlat_meth_decref(meth);
-
+		addrxlat_sys_set_desc(sys, methidx, desc);
 	} else if (state == cfg_map) {
 		addrxlat_sys_set_map(sys, mapidx, map);
 	}

@@ -218,15 +218,15 @@ static const struct attr_template tmpl_pid =
 static void
 set_ktext_off(kdump_ctx_t *ctx, kdump_addr_t phys_base)
 {
-	addrxlat_meth_t *meth;
 	addrxlat_desc_t desc;
 
-	meth = addrxlat_sys_get_meth(ctx->shared->xlatsys,
-				     ADDRXLAT_SYS_METH_KTEXT);
+	desc = *addrxlat_sys_get_desc(ctx->shared->xlatsys,
+				      ADDRXLAT_SYS_METH_KTEXT);
 	desc.kind = ADDRXLAT_LINEAR;
 	desc.target_as = ADDRXLAT_KPHYSADDR;
 	desc.param.linear.off = phys_base - __START_KERNEL_map;
-	addrxlat_meth_set_desc(meth, &desc);
+	addrxlat_sys_set_desc(
+		ctx->shared->xlatsys, ADDRXLAT_SYS_METH_KTEXT, &desc);
 }
 
 /** Update the physical base offfset.
@@ -255,23 +255,12 @@ static kdump_status
 x86_64_init(kdump_ctx_t *ctx)
 {
 	struct x86_64_data *archdata;
-	addrxlat_meth_t *ktext;
-	kdump_status ret;
 
 	archdata = calloc(1, sizeof(struct x86_64_data));
 	if (!archdata)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate x86_64 private data");
 	ctx->shared->archdata = archdata;
-
-	ktext = addrxlat_meth_new();
-	if (!ktext) {
-		ret = set_error(ctx, KDUMP_ERR_SYSTEM,
-				"Cannot allocate kernel text mapping");
-		goto err_arch;
-	}
-	addrxlat_sys_set_meth(ctx->shared->xlatsys,
-			      ADDRXLAT_SYS_METH_KTEXT, ktext);
 
 	if (isset_phys_base(ctx))
 		set_ktext_off(ctx, get_phys_base(ctx));
@@ -281,11 +270,6 @@ x86_64_init(kdump_ctx_t *ctx)
 	archdata->phys_base_override.ops.post_set = update_phys_base;
 
 	return KDUMP_OK;
-
- err_arch:
-	free(archdata);
-	ctx->shared->archdata = NULL;
-	return ret;
 }
 
 static kdump_status

@@ -64,13 +64,6 @@ sys_cleanup(addrxlat_sys_t *sys)
 			internal_map_decref(sys->map[i]);
 			sys->map[i] = NULL;
 		}
-
-
-	for (i = 0; i < ADDRXLAT_SYS_METH_NUM; ++i)
-		if (sys->meth[i]) {
-			internal_meth_decref(sys->meth[i]);
-			sys->meth[i] = NULL;
-		}
 }
 
 unsigned long
@@ -142,112 +135,80 @@ addrxlat_sys_get_map(const addrxlat_sys_t *sys, addrxlat_sys_map_t idx)
 }
 
 void
-addrxlat_sys_set_meth(addrxlat_sys_t *sys,
-		      addrxlat_sys_meth_t idx, addrxlat_meth_t *meth)
+addrxlat_sys_set_desc(addrxlat_sys_t *sys,
+		      addrxlat_sys_meth_t idx, const addrxlat_desc_t *desc)
 {
-	if (sys->meth[idx])
-		internal_meth_decref(sys->meth[idx]);
-	sys->meth[idx] = meth;
-	if (meth)
-		internal_meth_incref(meth);
+	sys->desc[idx] = *desc;
 }
 
-addrxlat_meth_t *
-addrxlat_sys_get_meth(const addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
+const addrxlat_desc_t *
+addrxlat_sys_get_desc(const addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
 {
-	if (sys->meth[idx])
-		internal_meth_incref(sys->meth[idx]);
-	return sys->meth[idx];
-}
-
-/** Allocate a translation method if needed.
- * @param ctl  Initialization data.
- * @parma idx  Method index
- * @returns    Error status.
- */
-addrxlat_status
-sys_ensure_meth(struct os_init_data *ctl, addrxlat_sys_meth_t idx)
-{
-	if (ctl->sys->meth[idx])
-		return ADDRXLAT_OK;
-
-	if ( (ctl->sys->meth[idx] = internal_meth_new()) )
-		return ADDRXLAT_OK;
-
-	return set_error(ctl->ctx, ADDRXLAT_ERR_NOMEM,
-			 "Cannot allocate translation method %u",
-			 (unsigned) idx);
+	return &sys->desc[idx];
 }
 
 /** Action function for @ref SYS_ACT_DIRECT.
  * @param ctl     Initialization data.
- * @param meth    Current directmap translation method.
  * @param region  Directmap region definition.
  *
  * This action sets up the direct mapping as a linear mapping that
  * maps the current region to kernel physical addresses starting at 0.
  */
 static addrxlat_status
-act_direct(struct os_init_data *ctl,
-	   addrxlat_meth_t *meth, const struct sys_region *region)
+act_direct(struct os_init_data *ctl, const struct sys_region *region)
 {
 	struct sys_region layout[2] = {
 		{ 0, region->last - region->first,
 		  ADDRXLAT_SYS_METH_RDIRECT },
 		SYS_REGION_END
 	};
-	addrxlat_desc_t desc;
-	addrxlat_status status;
+	addrxlat_desc_t *desc;
 
-	desc.kind = ADDRXLAT_LINEAR;
-	desc.target_as = ADDRXLAT_KPHYSADDR;
-	desc.param.linear.off = -region->first;
-	internal_meth_set_desc(meth, &desc);
+	desc = &ctl->sys->desc[region->meth];
+	desc->kind = ADDRXLAT_LINEAR;
+	desc->target_as = ADDRXLAT_KPHYSADDR;
+	desc->param.linear.off = -region->first;
 
-	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_RDIRECT);
-	if (status != ADDRXLAT_OK)
-		return status;
-
-	desc.target_as = ADDRXLAT_KVADDR;
-	desc.param.linear.off = region->first;
-	internal_meth_set_desc(
-		ctl->sys->meth[ADDRXLAT_SYS_METH_RDIRECT], &desc);
+	desc = &ctl->sys->desc[ADDRXLAT_SYS_METH_RDIRECT];
+	desc->kind = ADDRXLAT_LINEAR;
+	desc->target_as = ADDRXLAT_KVADDR;
+	desc->param.linear.off = region->first;
 
 	return sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KPHYS_DIRECT, layout);
 }
 
 /** Action function for @ref SYS_ACT_IDENT_KPHYS.
- * @param meth  Current translation method.
+ * @param ctl     Initialization data.
+ * @param region  Identity region definition.
  *
  * If the current method is @c ADDRXLAT_NOMETH, this action sets it up
  * as identity mapping to kernel physical addresses.
  * If the current method is not @c ADDRXLAT_NOMETH, nothing is done.
  */
 static void
-act_ident_kphys(addrxlat_meth_t *meth)
+act_ident_kphys(struct os_init_data *ctl, const struct sys_region *region)
 {
-	addrxlat_desc_t desc;
-	desc.kind = ADDRXLAT_LINEAR;
-	desc.target_as = ADDRXLAT_KPHYSADDR;
-	desc.param.linear.off = 0;
-	internal_meth_set_desc(meth, &desc);
+	addrxlat_desc_t *desc = &ctl->sys->desc[region->meth];
+	desc->kind = ADDRXLAT_LINEAR;
+	desc->target_as = ADDRXLAT_KPHYSADDR;
+	desc->param.linear.off = 0;
 }
 
 /** Action function for @ref SYS_ACT_IDENT_MACHPHYS.
- * @param meth  Current translation method.
+ * @param ctl     Initialization data.
+ * @param region  Identity region definition.
  *
  * If the current method is @c ADDRXLAT_NOMETH, this action sets it up
  * as identity mapping to machine physical addresses.
  * If the current method is not @c ADDRXLAT_NOMETH, nothing is done.
  */
 static void
-act_ident_machphys(addrxlat_meth_t *meth)
+act_ident_machphys(struct os_init_data *ctl, const struct sys_region *region)
 {
-	addrxlat_desc_t desc;
-	desc.kind = ADDRXLAT_LINEAR;
-	desc.target_as = ADDRXLAT_MACHPHYSADDR;
-	desc.param.linear.off = 0;
-	internal_meth_set_desc(meth, &desc);
+	addrxlat_desc_t *desc = &ctl->sys->desc[region->meth];
+	desc->kind = ADDRXLAT_LINEAR;
+	desc->target_as = ADDRXLAT_MACHPHYSADDR;
+	desc->param.linear.off = 0;
 }
 
 /** Set memory map layout.
@@ -276,27 +237,22 @@ sys_set_layout(struct os_init_data *ctl, addrxlat_sys_map_t idx,
 		addrxlat_range_t range;
 		addrxlat_status status;
 
-		status = sys_ensure_meth(ctl, region->meth);
-		if (status != ADDRXLAT_OK)
-			return status;
-
 		range.endoff = region->last - region->first;
 		range.meth = region->meth;
 
 		switch (region->act) {
 		case SYS_ACT_DIRECT:
-			status = act_direct(ctl, ctl->sys->meth[range.meth],
-					    region);
+			status = act_direct(ctl, region);
 			if (status != ADDRXLAT_OK)
 				return status;
 			break;
 
 		case SYS_ACT_IDENT_KPHYS:
-			act_ident_kphys(ctl->sys->meth[range.meth]);
+			act_ident_kphys(ctl, region);
 			break;
 
 		case SYS_ACT_IDENT_MACHPHYS:
-			act_ident_machphys(ctl->sys->meth[range.meth]);
+			act_ident_machphys(ctl, region);
 			break;
 
 		default:
@@ -351,23 +307,23 @@ sys_set_physmaps(struct os_init_data *ctl, addrxlat_addr_t maxaddr)
 addrxlat_status
 sys_sym_pgtroot(struct os_init_data *ctl, const char *reg, const char *sym)
 {
-	addrxlat_meth_t *meth;
+	addrxlat_desc_t *desc;
 	addrxlat_addr_t addr;
 
-	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
-	if (meth->desc.param.pgt.root.as != ADDRXLAT_NOADDR)
+	desc = &ctl->sys->desc[ADDRXLAT_SYS_METH_PGT];
+	if (desc->param.pgt.root.as != ADDRXLAT_NOADDR)
 		return ADDRXLAT_OK;
 
 	if (reg && get_reg(ctl->ctx, "cr3", &addr) == ADDRXLAT_OK) {
-		meth->desc.param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
-		meth->desc.param.pgt.root.addr = addr;
+		desc->param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
+		desc->param.pgt.root.addr = addr;
 		return ADDRXLAT_OK;
 	}
 	clear_error(ctl->ctx);
 
 	if (sym && get_symval(ctl->ctx, sym, &addr) == ADDRXLAT_OK) {
-		meth->desc.param.pgt.root.as = ADDRXLAT_KVADDR;
-		meth->desc.param.pgt.root.addr = addr;
+		desc->param.pgt.root.as = ADDRXLAT_KVADDR;
+		desc->param.pgt.root.addr = addr;
 		return ADDRXLAT_OK;
 	}
 	clear_error(ctl->ctx);
@@ -469,11 +425,10 @@ do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
 
 			clear_error(ctl->ctx);
 			meth = internal_map_search(map, paddr->addr);
-			if (meth == ADDRXLAT_SYS_METH_NONE ||
-			    !ctl->sys->meth[meth])
+			if (meth == ADDRXLAT_SYS_METH_NONE)
 				continue;
 
-			step.desc = &ctl->sys->meth[meth]->desc;
+			step.desc = &ctl->sys->desc[meth];
 			status = internal_launch(&step, paddr->addr);
 			if (status == ADDRXLAT_OK)
 				status = internal_walk(&step);

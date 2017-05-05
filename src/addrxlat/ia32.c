@@ -282,23 +282,21 @@ check_pae_sym(struct os_init_data *ctl)
 static addrxlat_status
 sys_ia32_nonpae(struct os_init_data *ctl)
 {
-	addrxlat_meth_t *meth;
-	addrxlat_desc_t desc;
+	addrxlat_desc_t *desc;
 	addrxlat_status status;
 
 	status = sys_set_physmaps(ctl, PHYSADDR_MASK_NONPAE);
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
-	desc.kind = ADDRXLAT_PGT;
-	desc.target_as = ADDRXLAT_MACHPHYSADDR;
+	desc = &ctl->sys->desc[ADDRXLAT_SYS_METH_PGT];
+	desc->kind = ADDRXLAT_PGT;
+	desc->target_as = ADDRXLAT_MACHPHYSADDR;
 	if (ctl->popt.val[OPT_rootpgt].set)
-		desc.param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
+		desc->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
 	else
-		desc.param.pgt.root.as = ADDRXLAT_NOADDR;
-	desc.param.pgt.pf = ia32_pf;
-	internal_meth_set_desc(meth, &desc);
+		desc->param.pgt.root.as = ADDRXLAT_NOADDR;
+	desc->param.pgt.pf = ia32_pf;
 	return ADDRXLAT_OK;
 }
 
@@ -309,23 +307,21 @@ sys_ia32_nonpae(struct os_init_data *ctl)
 static addrxlat_status
 sys_ia32_pae(struct os_init_data *ctl)
 {
-	addrxlat_meth_t *meth;
-	addrxlat_desc_t desc;
+	addrxlat_desc_t *desc;
 	addrxlat_status status;
 
 	status = sys_set_physmaps(ctl, PHYSADDR_MASK_PAE);
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
-	desc.kind = ADDRXLAT_PGT;
-	desc.target_as = ADDRXLAT_MACHPHYSADDR;
+	desc = &ctl->sys->desc[ADDRXLAT_SYS_METH_PGT];
+	desc->kind = ADDRXLAT_PGT;
+	desc->target_as = ADDRXLAT_MACHPHYSADDR;
 	if (ctl->popt.val[OPT_rootpgt].set)
-		desc.param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
+		desc->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
 	else
-		desc.param.pgt.root.as = ADDRXLAT_NOADDR;
-	desc.param.pgt.pf = ia32_pf_pae;
-	internal_meth_set_desc(meth, &desc);
+		desc->param.pgt.root.as = ADDRXLAT_NOADDR;
+	desc->param.pgt.pf = ia32_pf_pae;
 	return ADDRXLAT_OK;
 }
 
@@ -511,10 +507,6 @@ sys_ia32(struct os_init_data *ctl)
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot determine PAE state");
-
-	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_PGT);
-	if (status != ADDRXLAT_OK)
-		return status;
 
 	range.meth = ADDRXLAT_SYS_METH_PGT;
 	range.endoff = VIRTADDR_MAX;

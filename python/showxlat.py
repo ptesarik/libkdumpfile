@@ -74,16 +74,13 @@ def print_memarr(desc):
     print('  valsz={}'.format(desc.valsz))
 
 def print_meth(system, name):
-    meth = system.get_meth(addrxlat.__dict__['SYS_METH_{}'.format(name)])
-    if meth is None:
+    desc = system.get_desc(addrxlat.__dict__['SYS_METH_{}'.format(name)])
+    if desc.kind == addrxlat.NOMETH:
         return
 
     print('METH_{}: '.format(name), end='')
-    desc = meth.get_desc()
 
-    if desc.kind == addrxlat.NOMETH:
-        print('NOMETH')
-    elif desc.kind == addrxlat.CUSTOM:
+    if desc.kind == addrxlat.CUSTOM:
         print('CUSTOM')
     elif desc.kind == addrxlat.LINEAR:
         print_linear(desc)

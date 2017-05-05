@@ -171,24 +171,26 @@ determine_pgttype(struct os_init_data *ctl)
 {
 	addrxlat_step_t step =	/* step state surrogate */
 		{ .ctx = ctl->ctx, .sys = ctl->sys };
-	addrxlat_desc_t desc;
+	addrxlat_desc_t *desc;
 	addrxlat_fulladdr_t ptr;
 	uint64_t entry;
 	unsigned i;
 	addrxlat_status status;
 
-	if (ctl->popt.val[OPT_rootpgt].set)
-		desc.param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
-	else
-		desc.param.pgt.root.as = ADDRXLAT_NOADDR;
+	desc = &ctl->sys->desc[ADDRXLAT_SYS_METH_PGT];
 
-	if (desc.param.pgt.root.as == ADDRXLAT_NOADDR) {
-		status = get_pgtroot(ctl, &desc.param.pgt.root);
+	if (ctl->popt.val[OPT_rootpgt].set)
+		desc->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
+	else
+		desc->param.pgt.root.as = ADDRXLAT_NOADDR;
+
+	if (desc->param.pgt.root.as == ADDRXLAT_NOADDR) {
+		status = get_pgtroot(ctl, &desc->param.pgt.root);
 		if (status != ADDRXLAT_OK)
 			return status;
 	}
 
-	ptr = desc.param.pgt.root;
+	ptr = desc->param.pgt.root;
 	for (i = 0; i < ROOT_PGT_LEN; ++i) {
 		status = read64(&step, &ptr, &entry, "page table");
 		if (status != ADDRXLAT_OK)
@@ -198,14 +200,12 @@ determine_pgttype(struct os_init_data *ctl)
 				.pte_format = ADDRXLAT_PTE_S390X,
 				.fieldsz = { 12, 8, 11, 11, 11, 11 }
 			};
-			addrxlat_meth_t *pgtmeth =
-				ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 
-			desc.kind = ADDRXLAT_PGT;
-			desc.target_as = ADDRXLAT_MACHPHYSADDR;
-			desc.param.pgt.pf = pf;
-			desc.param.pgt.pf.nfields = PTE_TT(entry) + 3;
-			return internal_meth_set_desc(pgtmeth, &desc);
+			desc->kind = ADDRXLAT_PGT;
+			desc->target_as = ADDRXLAT_MACHPHYSADDR;
+			desc->param.pgt.pf = pf;
+			desc->param.pgt.pf.nfields = PTE_TT(entry) + 3;
+			return ADDRXLAT_OK;
 		}
 		ptr.addr += sizeof(uint64_t);
 	}
@@ -229,16 +229,12 @@ sys_s390x(struct os_init_data *ctl)
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	status = sys_ensure_meth(ctl, ADDRXLAT_SYS_METH_PGT);
-	if (status != ADDRXLAT_OK)
-		return status;
-
 	status = determine_pgttype(ctl);
 	if (status != ADDRXLAT_OK)
 		return status;
 
 	range.meth = ADDRXLAT_SYS_METH_PGT;
-	range.endoff = paging_max_index(&ctl->sys->meth[range.meth]->desc.param.pgt.pf);
+	range.endoff = paging_max_index(&ctl->sys->desc[range.meth].param.pgt.pf);
 	newmap = internal_map_new();
 	if (!newmap)
 		return set_error(ctl->ctx, ADDRXLAT_ERR_NOMEM,

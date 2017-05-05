@@ -41,15 +41,10 @@
 static void
 set_pteval_size(kdump_ctx_t *ctx)
 {
-	addrxlat_meth_t *meth;
 	const addrxlat_desc_t *desc;
 
-	meth = addrxlat_sys_get_meth(ctx->shared->xlatsys,
+	desc = addrxlat_sys_get_desc(ctx->shared->xlatsys,
 				     ADDRXLAT_SYS_METH_PGT);
-	if (!meth)
-		return;
-
-	desc = addrxlat_meth_get_desc(meth);
 	if (desc->kind == ADDRXLAT_PGT) {
 		int shift = addrxlat_pteval_shift(
 			desc->param.pgt.pf.pte_format);
@@ -58,7 +53,6 @@ set_pteval_size(kdump_ctx_t *ctx)
 			set_attr_number(ctx, attr, ATTR_DEFAULT, 1UL << shift);
 		}
 	}
-	addrxlat_meth_decref(meth);
 }
 
 static kdump_status

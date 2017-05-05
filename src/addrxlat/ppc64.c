@@ -354,8 +354,7 @@ map_linux_ppc64(struct os_init_data *ctl)
 	};
 
 	long pagesize;
-	addrxlat_meth_t *meth;
-	addrxlat_desc_t desc;
+	addrxlat_desc_t *desc;
 	addrxlat_status status;
 
 	pagesize = ctl->popt.val[OPT_pagesize].set
@@ -374,23 +373,22 @@ map_linux_ppc64(struct os_init_data *ctl)
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT];
-	desc.kind = ADDRXLAT_PGT;
-	desc.target_as = ADDRXLAT_MACHPHYSADDR;
-	desc.param.pgt.root.as = ADDRXLAT_NOADDR;
-	desc.param.pgt.pf = ppc64_pf_64k;
-	internal_meth_set_desc(meth, &desc);
+	desc = &ctl->sys->desc[ADDRXLAT_SYS_METH_UPGT];
+	desc->kind = ADDRXLAT_PGT;
+	desc->target_as = ADDRXLAT_MACHPHYSADDR;
+	desc->param.pgt.root.as = ADDRXLAT_NOADDR;
+	desc->param.pgt.pf = ppc64_pf_64k;
 
-	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	desc = &ctl->sys->desc[ADDRXLAT_SYS_METH_PGT];
+	*desc = ctl->sys->desc[ADDRXLAT_SYS_METH_UPGT];
 	if (get_symval(ctl->ctx, "swapper_pg_dir",
-		       &desc.param.pgt.root.addr) == ADDRXLAT_OK)
-		desc.param.pgt.root.as = ADDRXLAT_KVADDR;
+		       &desc->param.pgt.root.addr) == ADDRXLAT_OK)
+		desc->param.pgt.root.as = ADDRXLAT_KVADDR;
 	else
 		clear_error(ctl->ctx);
-	internal_meth_set_desc(meth, &desc);
 
-	meth = ctl->sys->meth[ADDRXLAT_SYS_METH_VMEMMAP];
-	status = get_vmemmap_desc(ctl, &desc);
+	desc = &ctl->sys->desc[ADDRXLAT_SYS_METH_VMEMMAP];
+	status = get_vmemmap_desc(ctl, desc);
 	if (status == ADDRXLAT_ERR_NODATA) {
 		/* ignore (VMEMMAP addresses will be unresolvable) */
 		clear_error(ctl->ctx);
@@ -398,10 +396,9 @@ map_linux_ppc64(struct os_init_data *ctl)
 	}
 	if (status != ADDRXLAT_OK)
 		return status;
-	desc.kind = ADDRXLAT_LOOKUP;
-	desc.target_as = ADDRXLAT_KPHYSADDR;
-	desc.param.lookup.endoff = pagesize - 1;
-	internal_meth_set_desc(meth, &desc);
+	desc->kind = ADDRXLAT_LOOKUP;
+	desc->target_as = ADDRXLAT_KPHYSADDR;
+	desc->param.lookup.endoff = pagesize - 1;
 
 	return ADDRXLAT_OK;
 }

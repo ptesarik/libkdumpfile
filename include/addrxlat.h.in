@@ -654,8 +654,8 @@ void addrxlat_ctx_install_cb_hook(addrxlat_ctx_t *ctx,
  *
  * A translation system uses a number of translation methods to do its job.
  * Any of them can be obtained with
- * @ref addrxlat_sys_get_meth or overridden with
- * @ref addrxlat_sys_set_meth using one of these indices.
+ * @ref addrxlat_sys_get_desc or overridden with
+ * @ref addrxlat_sys_set_desc using one of these indices.
  */
 typedef enum _addrxlat_sys_meth {
 	ADDRXLAT_SYS_METH_NONE = -1, /**< No method. */
@@ -938,18 +938,18 @@ addrxlat_map_t *addrxlat_sys_get_map(
 /** Explicitly set an address translation method for a translation system.
  * @param sys     Translation system.
  * @param idx     Translation method index.
- * @param meth    New translation method.
+ * @param desc    New translation method.
  */
-void addrxlat_sys_set_meth(
+void addrxlat_sys_set_desc(
 	addrxlat_sys_t *sys, addrxlat_sys_meth_t idx,
-	addrxlat_meth_t *meth);
+	const addrxlat_desc_t *desc);
 
 /** Get a specific translation method of a translation system.
  * @param sys     Translation system.
  * @param idx     Translation method index.
  * @returns       Associated translation method.
  */
-addrxlat_meth_t *addrxlat_sys_get_meth(
+const addrxlat_desc_t *addrxlat_sys_get_desc(
 	const addrxlat_sys_t *sys, addrxlat_sys_meth_t idx);
 
 /** State of the current step in address translation. */

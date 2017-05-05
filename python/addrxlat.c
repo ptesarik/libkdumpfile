@@ -3839,24 +3839,24 @@ sys_get_map(PyObject *_self, PyObject *args, PyObject *kwargs)
 		self->convert, addrxlat_sys_get_map(self->sys, idx));
 }
 
-PyDoc_STRVAR(sys_set_meth__doc__,
-"SYS.set_meth(idx, meth)\n\
+PyDoc_STRVAR(sys_set_desc__doc__,
+"SYS.set_desc(idx, desc)\n\
 \n\
 Explicitly set a pre-defined translation method of a translation\n\
 system.\n\
 See SYS_METH_xxx for valid values of idx.");
 
 static PyObject *
-sys_set_meth(PyObject *_self, PyObject *args, PyObject *kwargs)
+sys_set_desc(PyObject *_self, PyObject *args, PyObject *kwargs)
 {
 	sys_object *self = (sys_object*)_self;
-	static char *keywords[] = { "idx", "meth", NULL };
+	static char *keywords[] = { "idx", "desc", NULL };
 	unsigned long idx;
-	PyObject *methobj;
-	addrxlat_meth_t *meth;
+	PyObject *descobj;
+	addrxlat_desc_t *desc;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "kO:set_meth",
-					 keywords, &idx, &methobj))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "kO:set_desc",
+					 keywords, &idx, &descobj))
 		return NULL;
 
 	if (idx >= ADDRXLAT_SYS_METH_NUM) {
@@ -3865,31 +3865,29 @@ sys_set_meth(PyObject *_self, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 
-	meth = meth_AsPointer(methobj);
+	desc = desc_AsPointer(descobj);
 	if (PyErr_Occurred())
 		return NULL;
 
-	addrxlat_sys_set_meth(self->sys, idx, meth);
-	if (meth)
-		addrxlat_meth_decref(meth);
+	addrxlat_sys_set_desc(self->sys, idx, desc);
 
 	Py_RETURN_NONE;
 }
 
-PyDoc_STRVAR(sys_get_meth__doc__,
-"SYS.get_meth(idx) -> Method or None\n\
+PyDoc_STRVAR(sys_get_desc__doc__,
+"SYS.get_desc(idx) -> Description\n\
 \n\
 Get the given translation method of a translation system.\n\
 See SYS_METH_xxx for valid values of idx.");
 
 static PyObject *
-sys_get_meth(PyObject *_self, PyObject *args, PyObject *kwargs)
+sys_get_desc(PyObject *_self, PyObject *args, PyObject *kwargs)
 {
 	sys_object *self = (sys_object*)_self;
 	static char *keywords[] = { "idx", NULL };
 	unsigned long idx;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "k:get_meth",
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "k:get_desc",
 					 keywords, &idx))
 		return NULL;
 
@@ -3899,8 +3897,8 @@ sys_get_meth(PyObject *_self, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 
-	return meth_FromPointer(
-		self->convert, addrxlat_sys_get_meth(self->sys, idx));
+	return desc_FromPointer(
+		self->convert, addrxlat_sys_get_desc(self->sys, idx));
 }
 
 static PyMethodDef sys_methods[] = {
@@ -3910,10 +3908,10 @@ static PyMethodDef sys_methods[] = {
 	  sys_set_map__doc__ },
 	{ "get_map", (PyCFunction)sys_get_map, METH_VARARGS | METH_KEYWORDS,
 	  sys_get_map__doc__ },
-	{ "set_meth", (PyCFunction)sys_set_meth, METH_VARARGS | METH_KEYWORDS,
-	  sys_set_meth__doc__ },
-	{ "get_meth", (PyCFunction)sys_get_meth, METH_VARARGS | METH_KEYWORDS,
-	  sys_get_meth__doc__ },
+	{ "set_desc", (PyCFunction)sys_set_desc, METH_VARARGS | METH_KEYWORDS,
+	  sys_set_desc__doc__ },
+	{ "get_desc", (PyCFunction)sys_get_desc, METH_VARARGS | METH_KEYWORDS,
+	  sys_get_desc__doc__ },
 	{ NULL }
 };
 

@@ -347,18 +347,15 @@ static const char *const meth_names[] = {
 static void
 print_meth(const addrxlat_sys_t *sys, addrxlat_sys_meth_t methidx)
 {
-	const addrxlat_meth_t *meth = addrxlat_sys_get_meth(sys, methidx);
-	const addrxlat_desc_t *desc;
+	const addrxlat_desc_t *desc = addrxlat_sys_get_desc(sys, methidx);
 
-	if (!meth)
+	if (desc->kind == ADDRXLAT_NOMETH)
 		return;
 
 	printf("@%s: ", meth_names[methidx]);
 
-	desc = addrxlat_meth_get_desc(meth);
 	switch (desc->kind) {
 	case ADDRXLAT_NOMETH:
-		puts("NOMETH");
 		break;
 
 	case ADDRXLAT_CUSTOM:
