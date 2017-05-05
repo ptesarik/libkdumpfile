@@ -1694,7 +1694,7 @@ loc_scatter(const param_loc *loc, unsigned n, const void *buffer)
 {
 	unsigned i;
 	for (i = 0; i < n; ++i, ++loc)
-		if (loc->ptr)
+		if (loc->ptr && loc->ptr != buffer + loc->off)
 			memcpy(loc->ptr, buffer + loc->off, loc->len);
 }
 
@@ -1703,7 +1703,7 @@ loc_gather(const param_loc *loc, unsigned n, void *buffer)
 {
 	unsigned i;
 	for (i = 0; i < n; ++i, ++loc)
-		if (loc->ptr)
+		if (loc->ptr && loc->ptr != buffer + loc->off)
 			memcpy(buffer + loc->off, loc->ptr, loc->len);
 }
 
