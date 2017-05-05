@@ -330,14 +330,21 @@ static addrxlat_status
 set_ktext_offset(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 		 addrxlat_addr_t vaddr)
 {
+	addrxlat_meth_t *meth;
 	addrxlat_step_t step;
 	addrxlat_desc_t desc;
 	addrxlat_status status;
 
+	meth = internal_map_search(sys->map[ADDRXLAT_SYS_MAP_HW], vaddr);
+	if (!meth)
+		return set_error(ctx, ADDRXLAT_ERR_NOMETH,
+				 "No translation for %"ADDRXLAT_PRIxADDR,
+				 vaddr);
+
 	step.ctx = ctx;
 	step.sys = sys;
-	status = internal_launch_map(&step, vaddr,
-				     sys->map[ADDRXLAT_SYS_MAP_HW]);
+	step.desc = &meth->desc;
+	status = internal_launch(&step, vaddr);
 	if (status != ADDRXLAT_OK)
 		return status;
 

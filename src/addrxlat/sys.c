@@ -457,6 +457,7 @@ do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
 		for (j = 0; j < alt->num; ++j) {
 			addrxlat_sys_map_t mapidx = alt->map[j];
 			addrxlat_map_t *map;
+			addrxlat_meth_t *meth;
 
 			if (paddr->as != map_expect_as[mapidx])
 				continue;
@@ -466,7 +467,12 @@ do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
 				continue;
 
 			clear_error(ctl->ctx);
-			status = internal_launch_map(&step, paddr->addr, map);
+			meth = internal_map_search(map, paddr->addr);
+			if (!meth)
+				continue;
+
+			step.desc = &meth->desc;
+			status = internal_launch(&step, paddr->addr);
 			if (status == ADDRXLAT_OK)
 				status = internal_walk(&step);
 
@@ -481,9 +487,7 @@ do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
 		}
 	}
 
-	return ctl->ctx->err_str == NULL
-		? set_error(ctl->ctx, ADDRXLAT_ERR_NOMETH, "No way to translate")
-		: ADDRXLAT_ERR_NOMETH;
+	return set_error(ctl->ctx, ADDRXLAT_ERR_NOMETH, "No way to translate");
 }
 
 /** A version of @ref addrxlat_op for internal use.

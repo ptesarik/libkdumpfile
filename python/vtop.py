@@ -43,10 +43,12 @@ def vtop(addr, ctx, sys):
         print('{:<16x}  {:<16}\n'.format(addr, '---'))
 
     step = addrxlat.Step(ctx, sys)
-    try:
-        step.launch_map(addr, sys.get_map(addrxlat.SYS_MAP_HW))
-    except addrxlat.NoMethodError:
-        step.launch_map(addr, sys.get_map(addrxlat.SYS_MAP_KV_PHYS))
+    meth = sys.get_map(addrxlat.SYS_MAP_HW).search(addr)
+    if meth is None:
+        meth = sys.get_map(addrxlat.SYS_MAP_KV_PHYS).search(addr)
+    if meth is None:
+        print('NO METHOD')
+        return
 
     note = kphysnote(ctx, sys)
     while step.remain:

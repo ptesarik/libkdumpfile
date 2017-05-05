@@ -478,25 +478,6 @@ addrxlat_launch(addrxlat_step_t *step, addrxlat_addr_t addr)
 	return first_step(step, addr);
 }
 
-DEFINE_ALIAS(launch_map);
-
-addrxlat_status
-addrxlat_launch_map(addrxlat_step_t *step, addrxlat_addr_t addr,
-		    const addrxlat_map_t *map)
-{
-	addrxlat_meth_t *meth;
-
-	clear_error(step->ctx);
-
-	meth = internal_map_search(map, addr);
-	if (!meth)
-		return set_error(step->ctx, ADDRXLAT_ERR_NOMETH,
-				 "No translation method defined");
-
-	step->desc = &meth->desc;
-	return first_step(step, addr);
-}
-
 DEFINE_ALIAS(step);
 
 addrxlat_status

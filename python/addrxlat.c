@@ -4438,43 +4438,6 @@ step_launch(PyObject *_self, PyObject *args, PyObject *kwargs)
 	return ctx_status_result(self->ctx, status);
 }
 
-PyDoc_STRVAR(step_launch_map__doc__,
-"STEP.launch_map(addr, map) -> status\n\
-\n\
-Launch the translation using a translation map.");
-
-/** Wrapper for @ref addrxlat_launch_map
- * @param _self   step object
- * @param args    positional arguments
- * @param kwargs  keyword arguments
- * @returns       status code (or @c NULL on failure)
- */
-static PyObject *
-step_launch_map(PyObject *_self, PyObject *args, PyObject *kwargs)
-{
-	step_object *self = (step_object*)_self;
-	static char *keywords[] = { "addr", "map", NULL };
-	unsigned long long addr;
-	PyObject *mapobj;
-	addrxlat_map_t *map;
-	addrxlat_status status;
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "KO:launch_map",
-					 keywords, &addr, &mapobj))
-		return NULL;
-
-	map = map_AsPointer(mapobj);
-	if (PyErr_Occurred())
-		return NULL;
-
-	status = addrxlat_launch_map(&self->step, addr, map);
-
-	if (map)
-		addrxlat_map_decref(map);
-
-	return ctx_status_result(self->ctx, status);
-}
-
 PyDoc_STRVAR(step_step__doc__,
 "STEP.step() -> status\n\
 \n\
@@ -4518,9 +4481,6 @@ step_walk(PyObject *_self, PyObject *args)
 static PyMethodDef step_methods[] = {
 	{ "launch", (PyCFunction)step_launch, METH_VARARGS | METH_KEYWORDS,
 	  step_launch__doc__ },
-	{ "launch_map", (PyCFunction)step_launch_map,
-	  METH_VARARGS | METH_KEYWORDS,
-	  step_launch_map__doc__ },
 	{ "step", step_step, METH_NOARGS, step_step__doc__ },
 	{ "walk", step_walk, METH_NOARGS, step_walk__doc__ },
 	{ NULL }

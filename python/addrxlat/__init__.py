@@ -195,11 +195,6 @@ class Step(Step):
         if status != OK:
             raise get_exception(status, self.ctx.get_err())
 
-    def launch_map(self, *args, **kwargs):
-        status = super(Step, self).launch_map(*args, **kwargs)
-        if status != OK:
-            raise get_exception(status, self.ctx.get_err())
-
     def step(self, *args, **kwargs):
         status = super(Step, self).step(*args, **kwargs)
         if status != OK:

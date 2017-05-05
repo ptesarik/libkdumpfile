@@ -741,7 +741,7 @@ class TestTranslation(unittest.TestCase):
     def test_fulladdr_fail_kphys_machphys(self):
         "KPHYS -> MACHPHYS out of bounds"
         addr = addrxlat.FullAddress(addrxlat.KPHYSADDR, 0xf4255)
-        with self.assertRaisesRegexp(addrxlat.NoMethodError, 'No translation method defined'):
+        with self.assertRaisesRegexp(addrxlat.NoMethodError, 'No way to translate'):
             addr.conv(addrxlat.MACHPHYSADDR, self.ctx, self.sys)
 
     def test_fulladdr_conv_machphys_kphys(self):
@@ -753,7 +753,7 @@ class TestTranslation(unittest.TestCase):
     def test_fulladdr_fail_machphys_kphys(self):
         "MACHPHYS -> KPHYS out of bounds"
         addr = addrxlat.FullAddress(addrxlat.MACHPHYSADDR, 0xabcd)
-        with self.assertRaisesRegexp(addrxlat.NoMethodError, 'No translation method defined'):
+        with self.assertRaisesRegexp(addrxlat.NoMethodError, 'No way to translate'):
             addr.conv(addrxlat.KPHYSADDR, self.ctx, self.sys)
 
     def test_fulladdr_conv_direct(self):

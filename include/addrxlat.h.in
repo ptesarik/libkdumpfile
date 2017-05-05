@@ -956,8 +956,6 @@ struct _addrxlat_step {
 
 	/** Translation description for this particular translation.
 	 * This field must be initialized for @ref addrxlat_launch.
-	 * It is automatically initialized from the corresponding method
-	 * by @ref addrxlat_launch_map.
 	 */
 	const addrxlat_desc_t *desc;
 
@@ -1023,22 +1021,6 @@ struct _addrxlat_step {
  * be initialized prior to calling this function.
  */
 addrxlat_status addrxlat_launch(addrxlat_step_t *step, addrxlat_addr_t addr);
-
-/** Launch the translation using a translation map.
- * @param step  (Semi-initialized) translation step state.
- * @param addr  Address to be translated.
- * @param map   Translation map.
- * @returns     Error status.
- *
- * This function uses an address translation map to determine the translation
- * method for the given address, fills this method into the step state and
- * calls @ref addrxlat_launch.
- * Except for @c meth, all other fields in @c step must be initialized just
- * like with @ref addrxlat_launch.
- */
-addrxlat_status addrxlat_launch_map(
-	addrxlat_step_t *step, addrxlat_addr_t addr,
-	const addrxlat_map_t *map);
 
 /** Perform one translation step.
  * @param step  Current step state.
