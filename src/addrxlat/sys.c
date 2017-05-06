@@ -119,18 +119,16 @@ void
 addrxlat_sys_set_map(addrxlat_sys_t *sys, addrxlat_sys_map_t idx,
 		      addrxlat_map_t *map)
 {
+	if (map)
+		internal_map_incref(map);
 	if (sys->map[idx])
 		internal_map_decref(sys->map[idx]);
 	sys->map[idx] = map;
-	if (map)
-		internal_map_incref(map);
 }
 
 addrxlat_map_t *
 addrxlat_sys_get_map(const addrxlat_sys_t *sys, addrxlat_sys_map_t idx)
 {
-	if (sys->map[idx])
-		internal_map_incref(sys->map[idx]);
 	return sys->map[idx];
 }
 

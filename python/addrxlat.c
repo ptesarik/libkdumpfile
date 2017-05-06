@@ -4196,7 +4196,6 @@ sys_get_map(PyObject *_self, PyObject *args, PyObject *kwargs)
 	static char *keywords[] = { "idx", NULL };
 	unsigned long idx;
 	addrxlat_map_t *map;
-	PyObject *result;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "k:get_map",
 					 keywords, &idx))
@@ -4209,10 +4208,7 @@ sys_get_map(PyObject *_self, PyObject *args, PyObject *kwargs)
 	}
 
 	map = addrxlat_sys_get_map(self->sys, idx);
-	result = map_FromPointer(self->convert, map);
-	if (map)
-		addrxlat_map_decref(map);
-	return result;
+	return map_FromPointer(self->convert, map);
 }
 
 PyDoc_STRVAR(sys_set_meth__doc__,
