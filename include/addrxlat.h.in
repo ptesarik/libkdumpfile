@@ -82,6 +82,12 @@ typedef enum _addrxlat_status {
 	ADDRXLAT_ERR_CUSTOM_BASE = -1
 } addrxlat_status;
 
+/**  Return the string describing a given error status.
+ * @param status  Error status.
+ * @returns       Description of the error.
+ */
+const char *addrxlat_strerror(addrxlat_status status);
+
 /**  Type of a physical or virtual address.
  *
  * This type is large enough to hold any possible address type on any
@@ -134,7 +140,7 @@ typedef uint_fast64_t addrxlat_pte_t;
  *
  * This type is used to specify the kind of address.
  *
- * The difference between @c KDUMP_KPHYSADDR and @c KDUMP_MACHPHYSADDR
+ * The difference between @c ADDRXLAT_KPHYSADDR and @c ADDRXLAT_MACHPHYSADDR
  * matters only in environments where the kernel has a different view
  * of physical address space than the CPU, e.g. paravirtualized kernels
  * under Xen.
@@ -153,6 +159,237 @@ typedef struct _addrxlat_fulladdr {
 	addrxlat_addr_t addr;	 /**< Raw address. */
 	addrxlat_addrspace_t as; /**< Address space for @c addr. */
 } addrxlat_fulladdr_t;
+
+typedef struct _addrxlat_ctx addrxlat_ctx_t;
+
+/** Allocate and initialize a new address translation context.
+ * @returns    New initialized context, or @c NULL on failure.
+ *
+ * This call can fail if and only if memory allocation fails.
+ * The reference count of the newly created object is one.
+ */
+addrxlat_ctx_t *addrxlat_ctx_new(void);
+
+/** Increment the reference counter.
+ * @param ctx  Address translation context.
+ * @returns    New reference count.
+ */
+unsigned long addrxlat_ctx_incref(addrxlat_ctx_t *ctx);
+
+/** Decrement the reference counter.
+ * @param ctx  Address translation context.
+ * @returns    New reference count.
+ *
+ * If the new reference count is zero, the underlying object is freed
+ * and its address must not be used afterwards.
+ */
+unsigned long addrxlat_ctx_decref(addrxlat_ctx_t *ctx);
+
+/** Prepend an error message.
+ * @param ctx     Address translation context.
+ * @param status  Error status.
+ * @param msgfmt  Message format string (@c printf style).
+ * @returns       The error status which was passed as argument.
+ *
+ * This function prepends the new error message to the existing
+ * content of the error buffer, resulting in a kind of error
+ * backtrace.
+ */
+addrxlat_status addrxlat_ctx_err(
+	addrxlat_ctx_t *ctx, addrxlat_status status,
+	const char *msgfmt, ...)
+	__attribute__ ((format (printf, 3, 4)));
+
+/** Clear the error message.
+ * @param ctx  Address translation context.
+ */
+void addrxlat_ctx_clear_err(addrxlat_ctx_t *ctx);
+
+/**  Get a detailed error string.
+ * @param ctx  Address translation context.
+ * @returns    Last error string.
+ *
+ * If an error status is returned, this function can be used to get
+ * a human-readable description of the error. The error string is not
+ * reset by calling this function, but it is reset by calling any
+ * library function that returns @ref addrxlat_status.
+ */
+const char *addrxlat_ctx_get_err(const addrxlat_ctx_t *ctx);
+
+/* Forward declaration to solve circular reference. */
+typedef struct _addrxlat_cb addrxlat_cb_t;
+
+/** Type of the callback hook function.
+ * @param data  Arbitrary user-supplied data.
+ * @param cb    New callbacks (already installed).
+ *
+ * This callback is called after installing new callbacks. This function
+ * may change the new callbacks, and the modified version will then be
+ * used instead of the original values.
+ */
+typedef void addrxlat_cb_hook_fn(void *data, addrxlat_cb_t *cb);
+
+/** Type of symbolic information. */
+typedef enum _addrxlat_sym_type {
+	/** Register value.
+	 * Input:
+	 * - @c args[0] = register name
+	 * Output:
+	 * - @c val = register value
+	 */
+	ADDRXLAT_SYM_REG,
+
+	/** Symbol value.
+	 * Input:
+	 * - @c args[0] = symbol name
+	 * Output:
+	 * - @c val = symbol value (e.g. address of a variable)
+	 */
+	ADDRXLAT_SYM_VALUE,
+
+	/** Size of an object.
+	 * Input:
+	 * - @c args[0] = name of symbol or data type
+	 * Output:
+	 * - @c val = @c sizeof(args[0])
+	 */
+	ADDRXLAT_SYM_SIZEOF,
+
+	/** Offset of a member within a structure.
+	 * Input:
+	 * - @c args[0] = container name (e.g. of a @c struct)
+	 * - @c args[1] = element name (e.g. a structure member)
+	 * Output:
+	 * - @c val = @c offsetof(args[0],args[1])
+	 */
+	ADDRXLAT_SYM_OFFSETOF,
+} addrxlat_sym_type_t;
+
+/** Get the number of arguments for a given type.
+ * @param type  Type of symbolic information.
+ * @returns     Number of arguments, or -1 if unknown.
+*/
+static inline int
+addrxlat_sym_argc(addrxlat_sym_type_t type)
+{
+	switch (type) {
+	case ADDRXLAT_SYM_REG:
+	case ADDRXLAT_SYM_VALUE:
+	case ADDRXLAT_SYM_SIZEOF:
+		return 1;
+
+	case ADDRXLAT_SYM_OFFSETOF:
+		return 2;
+	}
+	return -1;
+}
+
+/** Data structure used to hold symbolic information. */
+typedef struct _addrxlat_sym {
+	/** [out] Resolved value. */
+	addrxlat_addr_t val;
+
+	/** [in] Type of information. */
+	addrxlat_sym_type_t type;
+
+	/** [in] Symbolic arguments. */
+	const char *args[];
+} addrxlat_sym_t;
+
+/** Type of the symbolic information callback.
+ * @param data  Arbitrary user-supplied data.
+ * @param sym   Symbolic information, updated on success.
+ * @returns     Error status.
+ *
+ * The callback function should check the information type and fill in
+ * the output fields in @c sym. If it is called for a type that is not
+ * handled (including an unknown type, not listed above), it must return
+ * @ref ADDRXLAT_ERR_NOTIMPL.
+ */
+typedef addrxlat_status addrxlat_sym_fn(void *data, addrxlat_sym_t *sym);
+
+/** Type of the read callback for 32-bit integers.
+ * @param data      Arbitrary user-supplied data.
+ * @param[in] addr  Address of the 32-bit integer.
+ * @param[out] val  Value in host byte order.
+ * @returns         Error status.
+ */
+typedef addrxlat_status addrxlat_read32_fn(
+	void *data, const addrxlat_fulladdr_t *addr, uint32_t *val);
+
+/** Type of the read callback for 64-bit integers.
+ * @param data      Arbitrary user-supplied data.
+ * @param[in] addr  Address of the 64-bit integer.
+ * @param[out] val  Value in host byte order.
+ * @returns         Error status.
+ */
+typedef addrxlat_status addrxlat_read64_fn(
+	void *data, const addrxlat_fulladdr_t *addr, uint64_t *val);
+
+/** Callback function pointers and data. */
+struct _addrxlat_cb {
+	/** Arbitrary callback data, passed to callback functions. */
+	void *data;
+
+	/** Callback update hook. */
+	addrxlat_cb_hook_fn *cb_hook;
+
+	/** Symbolic information callback. */
+	addrxlat_sym_fn *sym;
+
+	/** Callback for 32-bit integers. */
+	addrxlat_read32_fn *read32;
+
+	/** Callback for 64-bit integers. */
+	addrxlat_read64_fn *read64;
+
+	/** Read capabilities.
+	 * This is a bit mask of address spaces that can be read
+	 * directly by the read callbacks. Bits are enumerated by
+	 * @ref addrxlat_addrspace_t (least significant bit first).
+	 * @sa ADDRXLAT_CAPS
+	 */
+	unsigned long read_caps;
+};
+
+/** Translate an enum value into a capability bitmask. */
+#define ADDRXLAT_CAPS(val)	(1UL << (unsigned)(val))
+
+/** Set callback information.
+ * @param ctx  Address translation context.
+ * @param cb   New callback settings.
+ */
+void addrxlat_ctx_set_cb(addrxlat_ctx_t *ctx, const addrxlat_cb_t *cb);
+
+/** Get the callback information.
+ * @param ctx  Address translation context.
+ * @returns    Pointer to callback settings.
+ *
+ * Note that this function returns a pointer into context private data.
+ * The location of this data does not change (i.e. when called with the
+ * same translation context, this function always returns the same value).
+ * However, the referenced data may change non-atomically during a call
+ * to @ref addrxlat_ctx_set_cb.
+ */
+const addrxlat_cb_t *addrxlat_ctx_get_cb(const addrxlat_ctx_t *ctx);
+
+/** Install the callback hook.
+ * @param ctx   Address translation context.
+ * @param hook  New hook function.
+ * @param data  Data for the new hook function.
+ *
+ * The callback hook cannot be installed through @ref addrxlat_ctx_set_cb,
+ * because that would call the existing hook on it instead of letting the
+ * new hook decide if it wants to override the behaviour.
+ *
+ * This function simply runs the hook function once with the currently
+ * active callback settings (but with the provided @c data pointer) and
+ * then installs the resulting callback settings.
+ *
+ * @sa addrxlat_cb_hook_fn
+ */
+void addrxlat_ctx_install_cb_hook(addrxlat_ctx_t *ctx,
+				  addrxlat_cb_hook_fn *hook, void *data);
 
 /** Address translation kind.
  */
@@ -176,6 +413,7 @@ typedef enum _addrxlat_kind {
 	ADDRXLAT_MEMARR,
 } addrxlat_kind_t;
 
+/* Forward declaration to solve circular reference. */
 typedef struct _addrxlat_step addrxlat_step_t;
 
 /** Type of function to initialize the first translation step.
@@ -225,15 +463,15 @@ typedef struct _addrxlat_param_linear {
 /** Page table entry format.
  */
 typedef enum _addrxlat_pte_format {
-	ADDRXLAT_PTE_NONE,	/**< Undefined */
-	ADDRXLAT_PTE_PFN32,	/**< 32-bit page frame number */
-	ADDRXLAT_PTE_PFN64,	/**< 64-bit page frame number */
-	ADDRXLAT_PTE_IA32,	/**< Original 32-bit Intel */
-	ADDRXLAT_PTE_IA32_PAE,	/**< Intel IA32 with PAE */
-	ADDRXLAT_PTE_X86_64,	/**< AMD64 (Intel 64)  */
-	ADDRXLAT_PTE_S390X,	/**< IBM z/Architecture (64-bit) */
+	ADDRXLAT_PTE_NONE,	/**< Undefined. */
+	ADDRXLAT_PTE_PFN32,	/**< 32-bit page frame number. */
+	ADDRXLAT_PTE_PFN64,	/**< 64-bit page frame number. */
+	ADDRXLAT_PTE_IA32,	/**< Original 32-bit Intel. */
+	ADDRXLAT_PTE_IA32_PAE,	/**< Intel IA32 with PAE. */
+	ADDRXLAT_PTE_X86_64,	/**< AMD64 (Intel 64).  */
+	ADDRXLAT_PTE_S390X,	/**< IBM z/Architecture (64-bit). */
 
-	/** IBM POWER (64-bit) running Linux with RPN shift 30 (64k pages) */
+	/** IBM POWER (64-bit) running Linux with RPN shift 30 (64k pages). */
 	ADDRXLAT_PTE_PPC64_LINUX_RPN30,
 } addrxlat_pte_format_t;
 
@@ -368,243 +606,6 @@ typedef struct _addrxlat_meth {
 	/** Additional parameters. */
 	addrxlat_param_t param;
 } addrxlat_meth_t;
-
-typedef struct _addrxlat_ctx addrxlat_ctx_t;
-
-/** Allocate and initialize a new address translation context.
- * @returns    New initialized context, or @c NULL on failure.
- *
- * This call can fail if and only if memory allocation fails.
- * The reference count of the newly created object is one.
- */
-addrxlat_ctx_t *addrxlat_ctx_new(void);
-
-/** Increment the reference counter.
- * @param ctx  Address translation context.
- * @returns    New reference count.
- */
-unsigned long addrxlat_ctx_incref(addrxlat_ctx_t *ctx);
-
-/** Decrement the reference counter.
- * @param ctx  Address translation context.
- * @returns    New reference count.
- *
- * If the new reference count is zero, the underlying object is freed
- * and its address must not be used afterwards.
- */
-unsigned long addrxlat_ctx_decref(addrxlat_ctx_t *ctx);
-
-/** Prepend an error message.
- * @param ctx     Address translation context.
- * @param status  Error status.
- * @param msgfmt  Message format string (@c printf style).
- * @returns       The error status which was passed as argument.
- *
- * This function prepends the new error message to the existing
- * content of the error buffer, resulting in a kind of error
- * backtrace.
- */
-addrxlat_status addrxlat_ctx_err(
-	addrxlat_ctx_t *ctx, addrxlat_status status,
-	const char *msgfmt, ...)
-	__attribute__ ((format (printf, 3, 4)));
-
-/** Clear the error message.
- * @param ctx  Address translation context.
- */
-void addrxlat_ctx_clear_err(addrxlat_ctx_t *ctx);
-
-/**  Get a detailed error string.
- * @param ctx  Address translation context.
- * @returns    Last error string.
- *
- * If an error status is returned, this function can be used to get
- * a human-readable description of the error. The error string is not
- * reset by calling this function, but it is reset by calling any
- * library function that returns @ref addrxlat_status.
- */
-const char *addrxlat_ctx_get_err(const addrxlat_ctx_t *ctx);
-
-/**  Return the string describing a given error status.
- * @param status  Error status
- * @returns       Description of the error.
- */
-const char *addrxlat_strerror(addrxlat_status status);
-
-/* Forward declaration to solve circular reference. */
-typedef struct _addrxlat_cb addrxlat_cb_t;
-
-/** Type of the callback hook function.
- * @param data  Arbitrary user-supplied data.
- * @param cb    New callbacks (already installed).
- *
- * This callback is called after installing new callbacks. This function
- * may change the new callbacks, and the modified version will then be
- * used instead of the original values.
- */
-typedef void addrxlat_cb_hook_fn(void *data, addrxlat_cb_t *cb);
-
-/** Type of symbolic information. */
-typedef enum _addrxlat_sym_type {
-	/** Register value.
-	 * Input:
-	 * - @c args[0] = register name
-	 * Output:
-	 * - @c val = register value
-	 */
-	ADDRXLAT_SYM_REG,
-
-	/** Symbol value.
-	 * Input:
-	 * - @c args[0] = symbol name
-	 * Output:
-	 * - @c val = symbol value (e.g. address of a variable)
-	 */
-	ADDRXLAT_SYM_VALUE,
-
-	/** Size of an object.
-	 * Input:
-	 * - @c args[0] = name of symbol or data type
-	 * Output:
-	 * - @c val = @c sizeof(args[0])
-	 */
-	ADDRXLAT_SYM_SIZEOF,
-
-	/** Offset of a member within a structure.
-	 * Input:
-	 * - @c args[0] = container name (e.g. of a @c struct)
-	 * - @c args[1] = element name (e.g. a structure member)
-	 * Output:
-	 * - @c val = @c offsetof(args[0],args[1])
-	 */
-	ADDRXLAT_SYM_OFFSETOF,
-} addrxlat_sym_type_t;
-
-/** Get the number of arguments for a given type.
- * @param type  Type of symbolic information.
- * @returns     Number of arguments, or -1 if unknown.
-*/
-static inline int
-addrxlat_sym_argc(addrxlat_sym_type_t type)
-{
-	switch (type) {
-	case ADDRXLAT_SYM_REG:
-	case ADDRXLAT_SYM_VALUE:
-	case ADDRXLAT_SYM_SIZEOF:
-		return 1;
-
-	case ADDRXLAT_SYM_OFFSETOF:
-		return 2;
-	}
-	return -1;
-}
-
-/** Data structure used to hold symbolic information. */
-typedef struct _addrxlat_sym {
-	/** [out] Resolved value. */
-	addrxlat_addr_t val;
-
-	/** [in] Type of information. */
-	addrxlat_sym_type_t type;
-
-	/** [in] Symbolic arguments. */
-	const char *args[];
-} addrxlat_sym_t;
-
-/** Type of the symbolic information callback.
- * @param data  Arbitrary user-supplied data.
- * @param sym   Symbolic information, updated on success.
- * @returns     Error status.
- *
- * The callback function should check the information type and fill in
- * the output fields in @c sym. If it is called for a type that is not
- * handled (including an unknown type, not listed above), it must return
- * @ref ADDRXLAT_ERR_NOTIMPL,
- */
-typedef addrxlat_status addrxlat_sym_fn(void *data, addrxlat_sym_t *sym);
-
-/** Type of the read callback for 32-bit integers.
- * @param data      Arbitrary user-supplied data.
- * @param[in] addr  Address of the 32-bit integer.
- * @param[out] val  Value in host byte order.
- * @returns         Error status.
- */
-typedef addrxlat_status addrxlat_read32_fn(
-	void *data, const addrxlat_fulladdr_t *addr, uint32_t *val);
-
-/** Type of the read callback for 64-bit integers.
- * @param data      Arbitrary user-supplied data.
- * @param[in] addr  Address of the 64-bit integer.
- * @param[out] val  Value in host byte order.
- * @returns         Error status.
- */
-typedef addrxlat_status addrxlat_read64_fn(
-	void *data, const addrxlat_fulladdr_t *addr, uint64_t *val);
-
-/** Callback function pointers and data. */
-struct _addrxlat_cb {
-	/** Arbitrary callback data, passed to callback functions. */
-	void *data;
-
-	/** Callback update hook. */
-	addrxlat_cb_hook_fn *cb_hook;
-
-	/** Symbolic information callback. */
-	addrxlat_sym_fn *sym;
-
-	/** Callback for 32-bit integers. */
-	addrxlat_read32_fn *read32;
-
-	/** Callback for 64-bit integers. */
-	addrxlat_read64_fn *read64;
-
-	/** Read capabilities.
-	 * This is a bit mask of address spaces that can be read
-	 * directly by the read callbacks. Bits are enumerated by
-	 * @ref addrxlat_addrspace_t (least significant bit first).
-	 * @sa ADDRXLAT_CAPS
-	 */
-	unsigned long read_caps;
-};
-
-/** Translate an enum value into a capability bitmask. */
-#define ADDRXLAT_CAPS(val)	(1UL << (unsigned)(val))
-
-/** Set callback information.
- * @param ctx  Address translation context.
- * @param cb   New callback settings.
- */
-void addrxlat_ctx_set_cb(addrxlat_ctx_t *ctx, const addrxlat_cb_t *cb);
-
-/** Get the callback information.
- * @param ctx  Address translation context.
- * @returns    Pointer to callback settings.
- *
- * Note that this function returns a pointer into context private data.
- * The location of this data does not change (i.e. when called with the
- * same translation context, this function always returns the same value).
- * However, the referenced data may change non-atomically during a call
- * to @ref addrxlat_ctx_set_cb.
- */
-const addrxlat_cb_t *addrxlat_ctx_get_cb(const addrxlat_ctx_t *ctx);
-
-/** Install the callback hook.
- * @param ctx   Address translation context.
- * @param hook  New hook function.
- * @param data  Data for the new hook function.
- *
- * The callback hook cannot be installed through @ref addrxlat_ctx_set_cb,
- * because that would call the existing hook on it instead of letting the
- * new hook decide if it wants to override the behaviour.
- *
- * This function simply runs the hook function once with the currently
- * active callback settings (but with the provided @c data pointer) and
- * then installs the resulting callback settings.
- *
- * @sa addrxlat_cb_hook_fn
- */
-void addrxlat_ctx_install_cb_hook(addrxlat_ctx_t *ctx,
-				  addrxlat_cb_hook_fn *hook, void *data);
 
 /** Translation system method index.
  *
