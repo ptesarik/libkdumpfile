@@ -3889,6 +3889,7 @@ step_dealloc(PyObject *_self)
 	}
 
 	Py_XDECREF(self->meth);
+	Py_XDECREF(self->base);
 
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -3899,6 +3900,7 @@ step_traverse(PyObject *_self, visitproc visit, void *arg)
 	step_object *self = (step_object*)_self;
 	Py_VISIT(self->ctx);
 	Py_VISIT(self->meth);
+	Py_VISIT(self->base);
 	Py_VISIT(self->convert);
 	return 0;
 }
