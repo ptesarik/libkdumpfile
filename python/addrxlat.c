@@ -2760,6 +2760,8 @@ custommeth_first_step(PyObject *_self, PyObject *args, PyObject *kwargs)
 	custommeth_object *self = (custommeth_object*)_self;
 	PyObject *stepobj;
 	addrxlat_step_t *step;
+	const addrxlat_meth_t *origmeth;
+	addrxlat_meth_t tmpmeth;
 	PyObject *addrobj;
 	addrxlat_addr_t addr;
 	addrxlat_status status;
@@ -2777,7 +2779,14 @@ custommeth_first_step(PyObject *_self, PyObject *args, PyObject *kwargs)
 	if (!self->origparam.first_step)
 		return raise_notimpl("NULL callback");
 
+	origmeth = step->meth;
+	tmpmeth.kind = step->meth->kind;
+	tmpmeth.target_as = step->meth->target_as;
+	tmpmeth.param.custom = self->origparam;
+	step->meth = &tmpmeth;
 	status = self->origparam.first_step(step, addr);
+	self->origparam = step->meth->param.custom;
+	step->meth = origmeth;
 	if (status != ADDRXLAT_OK)
 		return raise_exception(step->ctx, status);
 
@@ -2800,6 +2809,8 @@ custommeth_next_step(PyObject *_self, PyObject *args, PyObject *kwargs)
 	custommeth_object *self = (custommeth_object*)_self;
 	PyObject *stepobj;
 	addrxlat_step_t *step;
+	const addrxlat_meth_t *origmeth;
+	addrxlat_meth_t tmpmeth;
 	addrxlat_status status;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:next_step",
@@ -2812,7 +2823,14 @@ custommeth_next_step(PyObject *_self, PyObject *args, PyObject *kwargs)
 	if (!self->origparam.next_step)
 		return raise_notimpl("NULL callback");
 
+	origmeth = step->meth;
+	tmpmeth.kind = step->meth->kind;
+	tmpmeth.target_as = step->meth->target_as;
+	tmpmeth.param.custom = self->origparam;
+	step->meth = &tmpmeth;
 	status = self->origparam.next_step(step);
+	self->origparam = step->meth->param.custom;
+	step->meth = origmeth;
 	if (status != ADDRXLAT_OK)
 		return raise_exception(step->ctx, status);
 
