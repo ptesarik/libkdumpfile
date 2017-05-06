@@ -3784,11 +3784,13 @@ static PyTypeObject sys_type =
 typedef struct {
 	/** Standard Python object header.  */
 	PyObject_HEAD
-	/** Translation context. */
-	PyObject *ctx;
 	/** Translation step in libaddrxlat format. */
 	addrxlat_step_t step;
 
+	/** Translation context. */
+	PyObject *ctx;
+	/** Translation method. */
+	PyObject *meth;
 	/** FullAddress object for @c base. */
 	PyObject *base;
 
@@ -3880,10 +3882,13 @@ step_dealloc(PyObject *_self)
 		self->step.ctx = NULL;
 	}
 	Py_XDECREF(self->ctx);
+
 	if (self->step.sys) {
 		addrxlat_sys_decref(self->step.sys);
 		self->step.sys = NULL;
 	}
+
+	Py_XDECREF(self->meth);
 
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -3893,6 +3898,7 @@ step_traverse(PyObject *_self, visitproc visit, void *arg)
 {
 	step_object *self = (step_object*)_self;
 	Py_VISIT(self->ctx);
+	Py_VISIT(self->meth);
 	Py_VISIT(self->convert);
 	return 0;
 }
@@ -3911,6 +3917,7 @@ step_set_ctx(PyObject *_self, PyObject *value, void *data)
 {
 	step_object *self = (step_object*)_self;
 	addrxlat_ctx_t *ctx;
+	PyObject *oldval;
 
 	if (check_null_attr(value, "ctx"))
 		return -1;
@@ -3922,7 +3929,9 @@ step_set_ctx(PyObject *_self, PyObject *value, void *data)
 		addrxlat_ctx_decref(self->step.ctx);
 	self->step.ctx = ctx;
 	Py_INCREF(value);
+	oldval = self->ctx;
 	self->ctx = value;
+	Py_XDECREF(oldval);
 
 	return 0;
 }
@@ -3971,18 +3980,6 @@ step_set_sys(PyObject *_self, PyObject *value, void *data)
 PyDoc_STRVAR(step_meth__doc__,
 "translation method for the next step");
 
-/** Getter for the meth attribute.
- * @param _self  step object
- * @param data   ignored
- * @returns      Method object (or @c NULL on failure)
- */
-static PyObject *
-step_get_meth(PyObject *_self, void *data)
-{
-	step_object *self = (step_object*)_self;
-	return meth_FromPointer(self->convert, self->step.meth);
-}
-
 /** Setter for the meth attribute.
  * @param self   any object
  * @param value  new value (a Method object)
@@ -3994,6 +3991,7 @@ step_set_meth(PyObject *_self, PyObject *value, void *data)
 {
 	step_object *self = (step_object*)_self;
 	addrxlat_meth_t *meth;
+	PyObject *oldval;
 
 	if (check_null_attr(value, "meth"))
 		return -1;
@@ -4002,6 +4000,10 @@ step_set_meth(PyObject *_self, PyObject *value, void *data)
 	if (PyErr_Occurred())
 		return -1;
 	self->step.meth = meth;
+	Py_INCREF(value);
+	oldval = self->meth;
+	self->meth = value;
+	Py_XDECREF(oldval);
 
 	return 0;
 }
@@ -4177,7 +4179,8 @@ static PyGetSetDef step_getset[] = {
 	{ "ctx", get_object, step_set_ctx, step_ctx__doc__,
 	  OFFSETOF_PTR(step_object, ctx) },
 	{ "sys", step_get_sys, step_set_sys, step_sys__doc__ },
-	{ "meth", step_get_meth, step_set_meth, step_meth__doc__ },
+	{ "meth", get_object, step_set_meth, step_meth__doc__,
+	  OFFSETOF_PTR(step_object, meth) },
 	{ "base", get_fulladdr, set_fulladdr, step_base__doc__,
 	  &step_base_loc },
 	{ "raw", step_get_raw, step_set_raw,

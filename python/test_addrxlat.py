@@ -471,7 +471,7 @@ class TestStep(unittest.TestCase):
         step = addrxlat.Step(self.ctx, meth=meth)
         self.assertIs(step.ctx, self.ctx)
         self.assertIs(step.sys, None)
-        self.assertEqual(step.meth, meth)
+        self.assertIs(step.meth, meth)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 0)
         self.assertIs(step.base, None)
@@ -558,7 +558,7 @@ class TestStep(unittest.TestCase):
         step.raw = 0xabcd
         self.assertIs(step.ctx, self.ctx)
         self.assertIs(step.sys, None)
-        self.assertEqual(step.meth, meth)
+        self.assertIs(step.meth, meth)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 0)
         self.assertIs(step.base, None)
