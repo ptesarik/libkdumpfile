@@ -4373,7 +4373,8 @@ replace_sys(PyObject **psysobj, addrxlat_sys_t **psys, PyObject *newval)
 	if (PyErr_Occurred())
 		return -1;
 
-	addrxlat_sys_incref(sys);
+	if (sys)
+		addrxlat_sys_incref(sys);
 	if (*psys)
 		addrxlat_sys_decref(*psys);
 	*psys = sys;
