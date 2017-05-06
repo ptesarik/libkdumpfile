@@ -3789,6 +3789,8 @@ typedef struct {
 
 	/** Translation context. */
 	PyObject *ctx;
+	/** Translation system. */
+	PyObject *sys;
 	/** Translation method. */
 	PyObject *meth;
 	/** FullAddress object for @c base. */
@@ -3887,6 +3889,7 @@ step_dealloc(PyObject *_self)
 		addrxlat_sys_decref(self->step.sys);
 		self->step.sys = NULL;
 	}
+	Py_XDECREF(self->sys);
 
 	Py_XDECREF(self->meth);
 	Py_XDECREF(self->base);
@@ -3899,6 +3902,7 @@ step_traverse(PyObject *_self, visitproc visit, void *arg)
 {
 	step_object *self = (step_object*)_self;
 	Py_VISIT(self->ctx);
+	Py_VISIT(self->sys);
 	Py_VISIT(self->meth);
 	Py_VISIT(self->base);
 	Py_VISIT(self->convert);
@@ -3941,19 +3945,6 @@ step_set_ctx(PyObject *_self, PyObject *value, void *data)
 PyDoc_STRVAR(step_sys__doc__,
 "translation system for the next step");
 
-/** Getter for the sys attribute.
- * @param _self  step object
- * @param data   ignored
- * @returns      sys object (or @c NULL on failure)
- */
-static PyObject *
-step_get_sys(PyObject *_self, void *data)
-{
-	step_object *self = (step_object*)_self;
-	return sys_FromPointer(
-		self->convert, (addrxlat_sys_t*)self->step.sys);
-}
-
 /** Setter for the sys type.
  * @param self   any object
  * @param value  new value (a sys object)
@@ -3965,6 +3956,7 @@ step_set_sys(PyObject *_self, PyObject *value, void *data)
 {
 	step_object *self = (step_object*)_self;
 	addrxlat_sys_t *sys;
+	PyObject *oldval;
 
 	if (check_null_attr(value, "sys"))
 		return -1;
@@ -3975,6 +3967,10 @@ step_set_sys(PyObject *_self, PyObject *value, void *data)
 	if (self->step.sys)
 		addrxlat_sys_decref(self->step.sys);
 	self->step.sys = sys;
+	Py_INCREF(value);
+	oldval = self->sys;
+	self->sys = value;
+	Py_XDECREF(oldval);
 
 	return 0;
 }
@@ -4180,7 +4176,8 @@ step_set_idx(PyObject *_self, PyObject *value, void *data)
 static PyGetSetDef step_getset[] = {
 	{ "ctx", get_object, step_set_ctx, step_ctx__doc__,
 	  OFFSETOF_PTR(step_object, ctx) },
-	{ "sys", step_get_sys, step_set_sys, step_sys__doc__ },
+	{ "sys", get_object, step_set_sys, step_sys__doc__,
+	  OFFSETOF_PTR(step_object, sys) },
 	{ "meth", get_object, step_set_meth, step_meth__doc__,
 	  OFFSETOF_PTR(step_object, meth) },
 	{ "base", get_fulladdr, set_fulladdr, step_base__doc__,

@@ -457,7 +457,7 @@ class TestStep(unittest.TestCase):
         sys = addrxlat.System()
         step = addrxlat.Step(self.ctx, sys=sys)
         self.assertIs(step.ctx, self.ctx)
-        self.assertEqual(step.sys, sys)
+        self.assertIs(step.sys, sys)
         self.assertIs(step.meth, None)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 0)
@@ -480,11 +480,10 @@ class TestStep(unittest.TestCase):
         self.assertEqual(step.idx, idx)
 
     def test_step_remain(self):
-        sys = addrxlat.System()
-        step = addrxlat.Step(self.ctx, sys=sys)
+        step = addrxlat.Step(self.ctx)
         step.remain = 3
         self.assertIs(step.ctx, self.ctx)
-        self.assertEqual(step.sys, sys)
+        self.assertIs(step.sys, None)
         self.assertIs(step.meth, None)
         self.assertEqual(step.remain, 3)
         self.assertEqual(step.elemsz, 0)
@@ -494,11 +493,10 @@ class TestStep(unittest.TestCase):
         self.assertEqual(step.idx, idx)
 
     def test_step_elemsz(self):
-        sys = addrxlat.System()
-        step = addrxlat.Step(self.ctx, sys=sys)
+        step = addrxlat.Step(self.ctx)
         step.elemsz = 8
         self.assertIs(step.ctx, self.ctx)
-        self.assertEqual(step.sys, sys)
+        self.assertIs(step.sys, None)
         self.assertIs(step.meth, None)
         self.assertEqual(step.remain, 0)
         self.assertEqual(step.elemsz, 8)
