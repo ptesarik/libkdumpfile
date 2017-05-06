@@ -75,6 +75,7 @@ struct addrxlat_CAPI {
 	addrxlat_op_ctl_t *(*Operator_AsPointer)(PyObject *value);
 	PyObject *(*Operator_FromPointer)(
 		PyObject *conv, const addrxlat_op_ctl_t *opctl);
+	int (*Operator_Init)(PyObject *self, const addrxlat_op_ctl_t *opctl);
 
 };
 

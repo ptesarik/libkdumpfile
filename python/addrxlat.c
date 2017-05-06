@@ -87,6 +87,7 @@ static int step_Init(PyObject *self, const addrxlat_step_t *step);
 static addrxlat_op_ctl_t *op_AsPointer(PyObject *value);
 static PyObject *op_FromPointer(
 	PyObject *conv, const addrxlat_op_ctl_t *opctl);
+static int op_Init(PyObject *self, const addrxlat_op_ctl_t *opctl);
 
 /** Capsule data. */
 static struct addrxlat_CAPI CAPI;
@@ -916,18 +917,14 @@ fulladdr_conv(PyObject *_self, PyObject *args, PyObject *kwargs)
 		return NULL;
 
 	ctx = ctx_AsPointer(ctxobj);
-	if (PyErr_Occurred())
+	if (!ctx)
 		return NULL;
 
 	sys = sys_AsPointer(sysobj);
-	if (PyErr_Occurred()) {
-		addrxlat_ctx_decref(ctx);
+	if (PyErr_Occurred())
 		return NULL;
-	}
 
 	status = addrxlat_fulladdr_conv(&self->faddr, addrspace, ctx, sys);
-	addrxlat_ctx_decref(ctx);
-	addrxlat_sys_decref(sys);
 	return ctx_status_result(ctxobj, status);
 }
 
@@ -1680,6 +1677,28 @@ static PyTypeObject ctx_type =
 	0,				/* tp_alloc */
 	ctx_new,			/* tp_new */
 };
+
+static int
+replace_ctx(PyObject **pctxobj, addrxlat_ctx_t **pctx, PyObject *newval)
+{
+	addrxlat_ctx_t *ctx;
+	PyObject *oldval;
+
+	ctx = ctx_AsPointer(newval);
+	if (!ctx)
+		return -1;
+
+	addrxlat_ctx_incref(ctx);
+	if (*pctx)
+		addrxlat_ctx_decref(*pctx);
+	*pctx = ctx;
+
+	Py_INCREF(newval);
+	oldval = *pctxobj;
+	*pctxobj = newval;
+	Py_XDECREF(oldval);
+	return 0;
+}
 
 typedef struct {
 	void *ptr;
@@ -3391,12 +3410,15 @@ map_copy(PyObject *_self, PyObject *args)
 {
 	map_object *self = (map_object*)_self;
 	addrxlat_map_t *map;
+	PyObject *result;
 
 	map = addrxlat_map_copy(self->map);
 	if (!map)
 		return PyErr_NoMemory();
 
-	return map_FromPointer(self->convert, map);
+	result = map_FromPointer(self->convert, map);
+	addrxlat_map_decref(map);
+	return result;
 }
 
 static PyMethodDef map_methods[] = {
@@ -3617,9 +3639,6 @@ sys_set_map(PyObject *_self, PyObject *args, PyObject *kwargs)
 		return NULL;
 
 	addrxlat_sys_set_map(self->sys, idx, map);
-	if (map)
-		addrxlat_map_decref(map);
-
 	Py_RETURN_NONE;
 }
 
@@ -3635,6 +3654,8 @@ sys_get_map(PyObject *_self, PyObject *args, PyObject *kwargs)
 	sys_object *self = (sys_object*)_self;
 	static char *keywords[] = { "idx", NULL };
 	unsigned long idx;
+	addrxlat_map_t *map;
+	PyObject *result;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "k:get_map",
 					 keywords, &idx))
@@ -3646,8 +3667,11 @@ sys_get_map(PyObject *_self, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 
-	return map_FromPointer(
-		self->convert, addrxlat_sys_get_map(self->sys, idx));
+	map = addrxlat_sys_get_map(self->sys, idx);
+	result = map_FromPointer(self->convert, map);
+	if (map)
+		addrxlat_map_decref(map);
+	return result;
 }
 
 PyDoc_STRVAR(sys_set_meth__doc__,
@@ -3697,6 +3721,7 @@ sys_get_meth(PyObject *_self, PyObject *args, PyObject *kwargs)
 	sys_object *self = (sys_object*)_self;
 	static char *keywords[] = { "idx", NULL };
 	unsigned long idx;
+	const addrxlat_meth_t *meth;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "k:get_meth",
 					 keywords, &idx))
@@ -3708,8 +3733,8 @@ sys_get_meth(PyObject *_self, PyObject *args, PyObject *kwargs)
 		return NULL;
 	}
 
-	return meth_FromPointer(
-		self->convert, addrxlat_sys_get_meth(self->sys, idx));
+	meth = addrxlat_sys_get_meth(self->sys, idx);
+	return meth_FromPointer(self->convert, meth);
 }
 
 static PyMethodDef sys_methods[] = {
@@ -3775,6 +3800,28 @@ static PyTypeObject sys_type =
 	0,				/* tp_alloc */
 	sys_new,			/* tp_new */
 };
+
+static int
+replace_sys(PyObject **psysobj, addrxlat_sys_t **psys, PyObject *newval)
+{
+	addrxlat_sys_t *sys;
+	PyObject *oldval;
+
+	sys = sys_AsPointer(newval);
+	if (PyErr_Occurred())
+		return -1;
+
+	addrxlat_sys_incref(sys);
+	if (*psys)
+		addrxlat_sys_decref(*psys);
+	*psys = sys;
+
+	Py_INCREF(newval);
+	oldval = *psysobj;
+	*psysobj = newval;
+	Py_XDECREF(oldval);
+	return 0;
+}
 
 /** Number of parameter locations in @ref step_object. */
 #define STEP_NLOC	2
@@ -3858,13 +3905,11 @@ step_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->step.ctx = ctx_AsPointer(ctxobj);
-	if (PyErr_Occurred()) {
+	if (replace_ctx(&self->ctx, &self->step.ctx, ctxobj)) {
 		Py_DECREF(self);
 		return NULL;
 	}
-	Py_INCREF(ctxobj);
-	self->ctx = ctxobj;
+
 	Py_INCREF(Py_None);
 	self->base = Py_None;
 
@@ -3922,24 +3967,11 @@ static int
 step_set_ctx(PyObject *_self, PyObject *value, void *data)
 {
 	step_object *self = (step_object*)_self;
-	addrxlat_ctx_t *ctx;
-	PyObject *oldval;
 
 	if (check_null_attr(value, "ctx"))
 		return -1;
 
-	ctx = ctx_AsPointer(value);
-	if (PyErr_Occurred())
-		return -1;
-	if (self->step.ctx)
-		addrxlat_ctx_decref(self->step.ctx);
-	self->step.ctx = ctx;
-	Py_INCREF(value);
-	oldval = self->ctx;
-	self->ctx = value;
-	Py_XDECREF(oldval);
-
-	return 0;
+	return replace_ctx(&self->ctx, &self->step.ctx, value);
 }
 
 PyDoc_STRVAR(step_sys__doc__,
@@ -3955,24 +3987,11 @@ static int
 step_set_sys(PyObject *_self, PyObject *value, void *data)
 {
 	step_object *self = (step_object*)_self;
-	addrxlat_sys_t *sys;
-	PyObject *oldval;
 
 	if (check_null_attr(value, "sys"))
 		return -1;
 
-	sys = sys_AsPointer(value);
-	if (PyErr_Occurred())
-		return -1;
-	if (self->step.sys)
-		addrxlat_sys_decref(self->step.sys);
-	self->step.sys = sys;
-	Py_INCREF(value);
-	oldval = self->sys;
-	self->sys = value;
-	Py_XDECREF(oldval);
-
-	return 0;
+	return replace_sys(&self->sys, &self->step.sys, value);
 }
 
 PyDoc_STRVAR(step_meth__doc__,
@@ -4333,6 +4352,8 @@ typedef struct {
 	PyObject_HEAD
 	/** Translation context. */
 	PyObject *ctx;
+	/** Translation system. */
+	PyObject *sys;
 	/** Translation op in libaddrxlat format. */
 	addrxlat_op_ctl_t opctl;
 	/** Result of the last callback. */
@@ -4392,13 +4413,10 @@ op_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if (!self)
 		return NULL;
 
-	self->opctl.ctx = ctx_AsPointer(ctxobj);
-	if (PyErr_Occurred()) {
+	if (replace_ctx(&self->ctx, &self->opctl.ctx, ctxobj)) {
 		Py_DECREF(self);
 		return NULL;
 	}
-	Py_INCREF(ctxobj);
-	self->ctx = ctxobj;
 
 	self->opctl.op = cb_op;
 	self->opctl.data = self;
@@ -4422,10 +4440,13 @@ op_dealloc(PyObject *_self)
 		self->opctl.ctx = NULL;
 	}
 	Py_XDECREF(self->ctx);
+
 	if (self->opctl.sys) {
 		addrxlat_sys_decref(self->opctl.sys);
 		self->opctl.sys = NULL;
 	}
+	Py_XDECREF(self->sys);
+
 	Py_XDECREF(self->result);
 
 	Py_TYPE(self)->tp_free((PyObject*)self);
@@ -4436,6 +4457,7 @@ op_traverse(PyObject *_self, visitproc visit, void *arg)
 {
 	op_object *self = (op_object*)_self;
 	Py_VISIT(self->ctx);
+	Py_VISIT(self->sys);
 	Py_VISIT(self->result);
 	Py_VISIT(self->convert);
 	return 0;
@@ -4481,38 +4503,15 @@ static int
 op_set_ctx(PyObject *_self, PyObject *value, void *data)
 {
 	op_object *self = (op_object*)_self;
-	addrxlat_ctx_t *ctx;
 
 	if (check_null_attr(value, "ctx"))
 		return -1;
 
-	ctx = ctx_AsPointer(value);
-	if (PyErr_Occurred())
-		return -1;
-	if (self->opctl.ctx)
-		addrxlat_ctx_decref(self->opctl.ctx);
-	self->opctl.ctx = ctx;
-	Py_INCREF(value);
-	self->ctx = value;
-
-	return 0;
+	return replace_ctx(&self->ctx, &self->opctl.ctx, value);
 }
 
 PyDoc_STRVAR(op_sys__doc__,
 "translation system");
-
-/** Getter for the sys attribute.
- * @param _self  op object
- * @param data   ignored
- * @returns      sys object (or @c NULL on failure)
- */
-static PyObject *
-op_get_sys(PyObject *_self, void *data)
-{
-	op_object *self = (op_object*)_self;
-	return sys_FromPointer(
-		self->convert, (addrxlat_sys_t*)self->opctl.sys);
-}
 
 /** Setter for the sys type.
  * @param self   any object
@@ -4524,25 +4523,18 @@ static int
 op_set_sys(PyObject *_self, PyObject *value, void *data)
 {
 	op_object *self = (op_object*)_self;
-	addrxlat_sys_t *sys;
 
 	if (check_null_attr(value, "sys"))
 		return -1;
 
-	sys = sys_AsPointer(value);
-	if (PyErr_Occurred())
-		return -1;
-	if (self->opctl.sys)
-		addrxlat_sys_decref(self->opctl.sys);
-	self->opctl.sys = sys;
-
-	return 0;
+	return replace_sys(&self->sys, &self->opctl.sys, value);
 }
 
 static PyGetSetDef op_getset[] = {
 	{ "ctx", get_object, op_set_ctx, op_ctx__doc__,
 	  OFFSETOF_PTR(op_object, ctx) },
-	{ "sys", op_get_sys, op_set_sys, op_sys__doc__ },
+	{ "sys", get_object, op_set_sys, op_sys__doc__,
+	  OFFSETOF_PTR(op_object, sys) },
 	{ NULL }
 };
 
@@ -4872,16 +4864,17 @@ fulladdr_FromPointer(PyObject *_conv, const addrxlat_fulladdr_t *faddr)
 	return result;
 }
 
-/** Get the libaddrxlat representation of a Python ctx object.
- * @param value  a Python ctx object
- * @returns      associated @c libaddrxlat_ctx_t (new reference),
- *               or @c NULL on error
+/** Get the libaddrxlat representation of a Context object.
+ * @param value  Context object
+ * @returns      associated @c libaddrxlat_ctx_t, or @c NULL on error
+ *
+ * This function does not increment the reference count of the returned
+ * C object. It is assumed that the caller holds a reference to the Python
+ * object, which in turn holds a reference to the C object.
  */
 static addrxlat_ctx_t *
 ctx_AsPointer(PyObject *value)
 {
-	addrxlat_ctx_t *ctx;
-
 	if (!PyObject_TypeCheck(value, &ctx_type)) {
 		PyErr_Format(PyExc_TypeError,
 			     "need a Context, not '%.200s'",
@@ -4889,9 +4882,7 @@ ctx_AsPointer(PyObject *value)
 		return NULL;
 	}
 
-	ctx = ((ctx_object*)value)->ctx;
-	addrxlat_ctx_incref(ctx);
-	return ctx;
+	return ((ctx_object*)value)->ctx;
 }
 
 /** Construct a context object from @c addrxlat_ctx_t.
@@ -5055,8 +5046,12 @@ range_FromPointer(PyObject *_conv, const addrxlat_range_t *range)
 
 /** Get the libaddrxlat representation of a Python map object.
  * @param value   a Python map object
- * @returns       associated @c libaddrxlat_map_t (new reference),
- *                or @c NULL if @c value is None
+ * @returns       associated @c libaddrxlat_map_t,
+ *                @c NULL if @c value is None or on failure
+ *
+ * This function does not increment the reference count of the returned
+ * C object. It is assumed that the caller holds a reference to the Python
+ * object, which in turn holds a reference to the C object.
  *
  * Since all possible return values error are valid, error conditions
  * must be detected by calling @c PyErr_Occurred.
@@ -5064,8 +5059,6 @@ range_FromPointer(PyObject *_conv, const addrxlat_range_t *range)
 static addrxlat_map_t *
 map_AsPointer(PyObject *value)
 {
-	map_object *mapobj;
-
 	if (value == Py_None)
 		return NULL;
 
@@ -5076,9 +5069,7 @@ map_AsPointer(PyObject *value)
 		return NULL;
 	}
 
-	mapobj = (map_object*)value;
-	addrxlat_map_incref(mapobj->map);
-	return mapobj->map;
+	return ((map_object*)value)->map;
 }
 
 /** Construct a map object from @c addrxlat_map_t.
@@ -5101,8 +5092,8 @@ map_FromPointer(PyObject *_conv, addrxlat_map_t *map)
 
 /** Get the libaddrxlat representation of a Python sys object.
  * @param value   a Python sys object
- * @returns       associated @c libaddrxlat_sys_t (new reference),
- *                or @c NULL if @c value is None
+ * @returns       associated @c libaddrxlat_sys_t,
+ *                @c NULL if @c value is None or on failure
  *
  * Since all possible return values error are valid, error conditions
  * must be detected by calling @c PyErr_Occurred.
@@ -5110,8 +5101,6 @@ map_FromPointer(PyObject *_conv, addrxlat_map_t *map)
 static addrxlat_sys_t *
 sys_AsPointer(PyObject *value)
 {
-	addrxlat_sys_t *sys;
-
 	if (value == Py_None)
 		return NULL;
 
@@ -5122,9 +5111,7 @@ sys_AsPointer(PyObject *value)
 		return NULL;
 	}
 
-	sys = ((sys_object*)value)->sys;
-	addrxlat_sys_incref(sys);
-	return sys;
+	return ((sys_object*)value)->sys;
 }
 
 /** Construct a sys object from @c addrxlat_sys_t.
@@ -5204,7 +5191,7 @@ static int
 step_Init(PyObject *_self, const addrxlat_step_t *step)
 {
 	step_object *self = (step_object *)_self;
-	PyObject *obj, *oldobj;
+	PyObject *obj;
 	int result;
 
 	obj = fulladdr_FromPointer(self->convert, &step->base);
@@ -5218,20 +5205,16 @@ step_Init(PyObject *_self, const addrxlat_step_t *step)
 	obj = ctx_FromPointer(self->convert, step->ctx);
 	if (!obj)
 		return -1;
-	oldobj = self->ctx;
-	self->ctx = obj;
-	Py_XDECREF(oldobj);
-	if (self->step.ctx)
-		addrxlat_ctx_decref(self->step.ctx);
-	if (self->step.sys)
-		addrxlat_sys_decref(self->step.sys);
+	if (replace_ctx(&self->ctx, &self->step.ctx, obj))
+		return -1;
+
+	obj = sys_FromPointer(self->convert, step->sys);
+	if (!obj)
+		return -1;
+	if (replace_sys(&self->sys, &self->step.sys, obj))
+		return -1;
 
 	loc_scatter(self->loc, STEP_NLOC, step);
-
-	if (self->step.ctx)
-		addrxlat_ctx_incref(self->step.ctx);
-	if (self->step.sys)
-		addrxlat_sys_incref(self->step.sys);
 
 	return 0;
 }
@@ -5269,24 +5252,47 @@ op_FromPointer(PyObject *_conv, const addrxlat_op_ctl_t *opctl)
 {
 	convert_object *conv = (convert_object *)_conv;
 	PyTypeObject *type = conv->op_type;
-	PyObject *ctx;
 	PyObject *result;
 
 	result = type->tp_alloc(type, 0);
 	if (!result)
 		return NULL;
-
-	ctx = ctx_FromPointer((PyObject*)conv, opctl->ctx);
-	if (!ctx) {
-		Py_DECREF(result);
-		return NULL;
-	}
-	((op_object*)result)->ctx = ctx;
-	((op_object*)result)->opctl = *opctl;
 	Py_INCREF(conv);
 	((op_object*)result)->convert = (PyObject*)conv;
 
+	if (op_Init(result, opctl)) {
+		Py_DECREF(result);
+		return NULL;
+	}
+
 	return result;
+}
+
+/** Initialize an Operator object using a C @c addrxlat_op_ctl_t object.
+ * @param _self  Python Operator object
+ * @param step   libaddrxlat representation of an operator
+ * @returns      zero on success, -1 otherwise
+ */
+static int
+op_Init(PyObject *_self, const addrxlat_op_ctl_t *opctl)
+{
+	op_object *self = (op_object *)_self;
+	PyObject *obj;
+
+	obj = ctx_FromPointer(self->convert, opctl->ctx);
+	if (!obj)
+		return -1;
+	if (replace_ctx(&self->ctx, &self->opctl.ctx, obj))
+		return -1;
+
+	obj = sys_FromPointer(self->convert, opctl->sys);
+	if (!obj)
+		return -1;
+	if (replace_sys(&self->sys, &self->opctl.sys, obj))
+		return -1;
+
+	self->opctl = *opctl;
+	return 0;
 }
 
 static PyTypeObject convert_type =
@@ -5790,6 +5796,7 @@ init_addrxlat (void)
 	CAPI.Step_Init = step_Init;
 	CAPI.Operator_AsPointer = op_AsPointer;
 	CAPI.Operator_FromPointer = op_FromPointer;
+	CAPI.Operator_Init = op_Init;
 
 	obj = PyCapsule_New(&CAPI, addrxlat_CAPSULE_NAME, NULL);
 	if (!obj)
