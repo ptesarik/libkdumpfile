@@ -46,36 +46,36 @@ struct addrxlat_CAPI {
 
 	PyObject *convert;	/**< Default conversion object. */
 
-	addrxlat_fulladdr_t *(*FullAddress_AsPointer)(PyObject *value);
 	PyObject *(*FullAddress_FromPointer)(
 		PyObject *conv, const addrxlat_fulladdr_t *faddr);
+	addrxlat_fulladdr_t *(*FullAddress_AsPointer)(PyObject *self);
 
-	addrxlat_ctx_t *(*Context_AsPointer)(PyObject *value);
 	PyObject *(*Context_FromPointer)(PyObject *conv, addrxlat_ctx_t *ctx);
+	addrxlat_ctx_t *(*Context_AsPointer)(PyObject *self);
 
-	addrxlat_meth_t *(*Method_AsPointer)(PyObject *value);
 	PyObject *(*Method_FromPointer)(
 		PyObject *conv, const addrxlat_meth_t *meth);
+	addrxlat_meth_t *(*Method_AsPointer)(PyObject *self);
 
-	addrxlat_range_t *(*Range_AsPointer)(PyObject *value);
 	PyObject *(*Range_FromPointer)(
 		PyObject *conv, const addrxlat_range_t *range);
+	addrxlat_range_t *(*Range_AsPointer)(PyObject *self);
 
-	addrxlat_map_t *(*Map_AsPointer)(PyObject *value);
 	PyObject *(*Map_FromPointer)(PyObject *conv, addrxlat_map_t *map);
+	addrxlat_map_t *(*Map_AsPointer)(PyObject *self);
 
-	addrxlat_sys_t *(*System_AsPointer)(PyObject *value);
 	PyObject *(*System_FromPointer)(PyObject *conv, addrxlat_sys_t *sys);
+	addrxlat_sys_t *(*System_AsPointer)(PyObject *self);
 
-	addrxlat_step_t *(*Step_AsPointer)(PyObject *value);
 	PyObject *(*Step_FromPointer)(
 		PyObject *conv, const addrxlat_step_t *step);
 	int (*Step_Init)(PyObject *self, const addrxlat_step_t *step);
+	addrxlat_step_t *(*Step_AsPointer)(PyObject *self);
 
-	addrxlat_op_ctl_t *(*Operator_AsPointer)(PyObject *value);
 	PyObject *(*Operator_FromPointer)(
 		PyObject *conv, const addrxlat_op_ctl_t *opctl);
 	int (*Operator_Init)(PyObject *self, const addrxlat_op_ctl_t *opctl);
+	addrxlat_op_ctl_t *(*Operator_AsPointer)(PyObject *self);
 
 };
 
