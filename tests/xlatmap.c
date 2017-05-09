@@ -329,10 +329,14 @@ main(int argc, char **argv)
 	map_set(&map[15], 0, &range);
 	printmap(map[15]);
 
-	/* Cleanup must not crash */
+	/* Cleanup must not crash and reference count must drop to zero */
 	for (i = 0; i < NMAPS; ++i) {
-		addrxlat_map_clear(map[i]);
-		free(map[i]);
+		unsigned long refcnt = addrxlat_map_decref(map[i]);
+		if (refcnt) {
+			printf("Leaked %lu references to map #%d\n",
+			       refcnt, i);
+			result = TEST_FAIL;
+		}
 	}
 
 	return result;

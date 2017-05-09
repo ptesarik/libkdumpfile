@@ -95,10 +95,10 @@ main(int argc, char **argv)
 		}
 	}
 
-	if (map)
+	if (map) {
 		printmap(map);
-
-	addrxlat_map_clear(map);
+		addrxlat_map_decref(map);
+	}
 
 	return TEST_OK;
 }
