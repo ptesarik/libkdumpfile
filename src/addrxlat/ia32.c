@@ -223,8 +223,8 @@ check_pae(struct os_init_data *ctl, const addrxlat_fulladdr_t *root,
 	}
 
 	clear_error(ctl->ctx);
-	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS]);
-	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS]);
+	map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS]);
+	map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS]);
 
 	meth.param.pgt.pf = ia32_pf;
 	step.ctx = ctl->ctx;
@@ -245,8 +245,8 @@ check_pae(struct os_init_data *ctl, const addrxlat_fulladdr_t *root,
 	}
 
 	clear_error(ctl->ctx);
-	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS]);
-	internal_map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS]);
+	map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS]);
+	map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS]);
 
 	return set_error(ctl->ctx, ADDRXLAT_ERR_NOTIMPL,
 			 "Neither %s nor %s directmap found",

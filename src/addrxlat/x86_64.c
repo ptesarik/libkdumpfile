@@ -491,7 +491,7 @@ set_xen_p2m(struct os_init_data *ctl)
 	addrxlat_status status;
 
 	map = ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS];
-	internal_map_clear(map);
+	map_clear(map);
 	if (!ctl->popt.val[OPT_xen_p2m_mfn].set)
 		return ADDRXLAT_OK; /* leave undefined */
 	p2m_maddr = ctl->popt.val[OPT_xen_p2m_mfn].num << PAGE_SHIFT;

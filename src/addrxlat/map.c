@@ -61,7 +61,7 @@ addrxlat_map_decref(addrxlat_map_t *map)
 {
 	unsigned long refcnt = --map->refcnt;
 	if (!refcnt) {
-		internal_map_clear(map);
+		map_clear(map);
 		if (map->ranges)
 			free(map->ranges);
 		free(map);
@@ -223,12 +223,10 @@ addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 	return ADDRXLAT_SYS_METH_NONE;
 }
 
-DEFINE_ALIAS(map_clear);
-
 void
 addrxlat_map_clear(addrxlat_map_t *map)
 {
-	map->n = 0;
+	map_clear(map);
 }
 
 DEFINE_ALIAS(map_copy);
