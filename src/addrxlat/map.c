@@ -223,12 +223,6 @@ addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 	return ADDRXLAT_SYS_METH_NONE;
 }
 
-void
-addrxlat_map_clear(addrxlat_map_t *map)
-{
-	map_clear(map);
-}
-
 DEFINE_ALIAS(map_copy);
 
 addrxlat_map_t *

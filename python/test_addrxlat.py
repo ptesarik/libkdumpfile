@@ -378,13 +378,6 @@ class TestMap(unittest.TestCase):
         meth2 = map.search(0x10000)
         self.assertIs(meth2, addrxlat.SYS_METH_NONE)
 
-    def test_map_clear(self):
-        map = addrxlat.Map()
-        map.set(0, addrxlat.Range(0xffff, addrxlat.SYS_METH_PGT))
-        self.assertEqual(len(map), 2)
-        map.clear()
-        self.assertEqual(len(map), 0)
-
     def test_map_copy(self):
         map = addrxlat.Map()
         map.set(0, addrxlat.Range(0xffff, addrxlat.SYS_METH_PGT))

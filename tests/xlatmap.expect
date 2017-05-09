@@ -106,7 +106,3 @@ duplicate punch hole:
 18000-18fff: NULL
 19000-1ffff: #0
 20000-ffffffffffffffff: NULL
-
-no merge with stale data:
-0-1ffff: #0
-20000-ffffffffffffffff: NULL

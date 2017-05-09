@@ -721,15 +721,6 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
 addrxlat_sys_meth_t addrxlat_map_search(
 	const addrxlat_map_t *map, addrxlat_addr_t addr);
 
-/** Clean up all data used by a translation map.
- * @param map  Address translation map.
- *
- * This function re-initializes the translation map, freeing up all
- * associated resources. The resulting empty map may be reused after
- * calling this function.
- */
-void addrxlat_map_clear(addrxlat_map_t *map);
-
 /** Duplicate a translation map.
  * @param map  Source translation map.
  * @returns    Copy of @c map, or @c NULL on allocation failure.

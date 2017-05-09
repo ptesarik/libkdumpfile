@@ -3901,20 +3901,6 @@ map_search(PyObject *_self, PyObject *args, PyObject *kwargs)
 	return PyInt_FromLong(addrxlat_map_search(self->map, addr));
 }
 
-PyDoc_STRVAR(map_clear__doc__,
-"MAP.clear()\n\
-\n\
-Remove all entries from a translation map.");
-
-static PyObject *
-map_clear(PyObject *_self, PyObject *args)
-{
-	map_object *self = (map_object*)_self;
-
-	addrxlat_map_clear(self->map);
-	Py_RETURN_NONE;
-}
-
 PyDoc_STRVAR(map_copy__doc__,
 "M.copy() -> map\n\
 \n\
@@ -3941,8 +3927,6 @@ static PyMethodDef map_methods[] = {
 	  map_set__doc__ },
 	{ "search", (PyCFunction)map_search, METH_VARARGS | METH_KEYWORDS,
 	  map_search__doc__ },
-	{ "clear", map_clear, METH_NOARGS,
-	  map_clear__doc__ },
 	{ "copy", map_copy, METH_NOARGS,
 	  map_copy__doc__ },
 	{ NULL }

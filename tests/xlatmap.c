@@ -36,7 +36,7 @@
 
 #include "testutil.h"
 
-#define NMAPS 16
+#define NMAPS 15
 static addrxlat_map_t *map[NMAPS];
 
 #define CANARY	-100
@@ -319,15 +319,6 @@ main(int argc, char **argv)
 	puts("\nduplicate punch hole:");
 	map[14] = addrxlat_map_copy(map[11]);
 	printmap(map[14]);
-
-	puts("\nno merge with stale data:");
-	range.endoff = 0xffff;
-	range.meth = 0;
-	map_set(&map[15], 0, &range);
-	addrxlat_map_clear(map[15]);
-	range.endoff = 0x1ffff;
-	map_set(&map[15], 0, &range);
-	printmap(map[15]);
 
 	/* Cleanup must not crash and reference count must drop to zero */
 	for (i = 0; i < NMAPS; ++i) {
