@@ -62,6 +62,8 @@ addrxlat_map_decref(addrxlat_map_t *map)
 	unsigned long refcnt = --map->refcnt;
 	if (!refcnt) {
 		internal_map_clear(map);
+		if (map->ranges)
+			free(map->ranges);
 		free(map);
 	}
 	return refcnt;
