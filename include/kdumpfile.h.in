@@ -96,13 +96,6 @@ typedef kdump_addr_t kdump_paddr_t;
  */
 typedef kdump_addr_t kdump_vaddr_t;
 
-/**  Type of a Xen machine address.
- *
- * Use this type instead of @ref kdump_addr_t if the entity is always
- * known to be a Xen machine address.
- */
-typedef kdump_addr_t kdump_maddr_t;
-
 /**  Representation of a dump file.
  *
  * The context contains all information needed to work with a dump file.
