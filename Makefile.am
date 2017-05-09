@@ -33,6 +33,7 @@ dist_noinst_DATA = \
 	Doxyfile \
 	NEWS \
 	README.md \
+	objects.md \
 	threads.md
 
 pkgconfigdir=$(libdir)/pkgconfig
