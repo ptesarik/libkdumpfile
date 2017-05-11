@@ -578,13 +578,8 @@ struct _kdump_ctx {
 	/** Node of the @c ctx list in @c struct @ref kdump_shared. */
 	struct list_head list;
 
-	void *priv;		/**< User private data. */
-
 	/** Address translation context. */
 	addrxlat_ctx_t *xlatctx;
-
-	/* callbacks */
-	kdump_get_symbol_val_fn *cb_get_symbol_val;
 
 	/** Per-context data. */
 	void *data[PER_CTX_SLOTS];

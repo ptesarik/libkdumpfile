@@ -45,7 +45,6 @@ alloc_ctx(void)
 	ctx = calloc(1, sizeof (kdump_ctx_t));
 	if (!ctx)
 		return ctx;
-	ctx->cb_get_symbol_val = kdump_vmcoreinfo_symbol;
 
 	ctx->xlatctx = init_addrxlat(ctx);
 	if (!ctx->xlatctx) {
@@ -138,8 +137,6 @@ kdump_clone(const kdump_ctx_t *orig)
 	list_add(&ctx->list, &orig->shared->ctx);
 	rwlock_unlock(&orig->shared->lock);
 
-	ctx->priv = orig->priv;
-	ctx->cb_get_symbol_val = orig->cb_get_symbol_val;
 	return ctx;
 }
 
@@ -173,26 +170,6 @@ kdump_get_addrxlat_sys(const kdump_ctx_t *ctx)
 	rwlock_unlock(&ctx->shared->lock);
 
 	return ret;
-}
-
-kdump_get_symbol_val_fn *
-kdump_cb_get_symbol_val(kdump_ctx_t *ctx, kdump_get_symbol_val_fn *cb)
-{
-	kdump_get_symbol_val_fn *ret = ctx->cb_get_symbol_val;
-	ctx->cb_get_symbol_val = cb ?: kdump_vmcoreinfo_symbol;
-	return ret;
-}
-
-void
-kdump_set_priv(kdump_ctx_t *ctx, void *data)
-{
-	ctx->priv = data;
-}
-
-void *
-kdump_get_priv(kdump_ctx_t *ctx)
-{
-	return ctx->priv;
 }
 
 /**  Allocate per-context data.

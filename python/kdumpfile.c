@@ -23,7 +23,6 @@ typedef struct {
 	PyObject_HEAD
 	kdump_ctx_t *ctx;
 	int fd;
-	PyObject *cb_get_symbol;
 	PyObject *attr;
 	PyObject *addrxlat_convert;
 } kdumpfile_object;
@@ -72,33 +71,6 @@ exception_map(kdump_status status)
 	};
 }
 
-static kdump_status
-cb_get_symbol(kdump_ctx_t *ctx, const char *name, kdump_addr_t *addr)
-{
-	kdumpfile_object *self = (kdumpfile_object*)kdump_get_priv(ctx);
-	PyObject *ret;
-	kdump_status status;
-
-	self = (kdumpfile_object*)kdump_get_priv(ctx);
-	ret = PyObject_CallFunction(self->cb_get_symbol, "s", name);
-	if (!ret) {
-		PyErr_Clear();
-		return KDUMP_ERR_NODATA;
-	}
-
-	status = KDUMP_OK;
-	if (!PyLong_Check(ret)) {
-		PyErr_Format(PyExc_TypeError,
-			     "get_symbol: cannot convert '%.200s' to address",
-			     Py_TYPE(ret)->tp_name);
-		status = KDUMP_ERR_INVALID;
-	} else
-		*addr = PyLong_AsUnsignedLongLong(ret);
-
-	Py_XDECREF(ret);
-	return status;
-}
-
 static PyObject *
 kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 {
@@ -136,9 +108,6 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 			     "Cannot open dump: %s", kdump_get_err(self->ctx));
 		goto fail;
 	}
-
-	kdump_set_priv(self->ctx, self);
-	self->cb_get_symbol = NULL;
 
 	status = kdump_attr_ref(self->ctx, NULL, &rootref);
 	if (status != KDUMP_OK) {
@@ -341,42 +310,6 @@ kdumpfile_getattr(PyObject *_self, void *_data)
 	return self->attr;
 }
 
-static PyObject *kdumpfile_get_symbol_func (PyObject *_self, void *_data)
-{
-	kdumpfile_object *self = (kdumpfile_object*)_self;
-	PyObject *result = self->cb_get_symbol;
-
-	if (!result)
-		result = Py_None;
-
-	Py_INCREF(result);
-	return result;
-}
-
-int kdumpfile_set_symbol_func(PyObject *_self, PyObject *value, void *_data)
-{
-	kdumpfile_object *self = (kdumpfile_object*)_self;
-	PyObject *oldval;
-
-	if (!value || value == Py_None) {
-		kdump_cb_get_symbol_val(self->ctx, NULL);
-	} else if (!PyCallable_Check(value)) {
-		PyErr_Format(PyExc_TypeError,
-			     "'%.200s' object is not callable",
-			     Py_TYPE(value)->tp_name);
-		return -1;
-	} else {
-		kdump_cb_get_symbol_val(self->ctx, cb_get_symbol);
-	}
-
-	oldval = self->cb_get_symbol;
-	Py_XINCREF(value);
-	self->cb_get_symbol = value;
-	Py_XDECREF(oldval);
-
-	return 0;
-}
-
 static void
 cleanup_exceptions(void)
 {
@@ -463,11 +396,7 @@ fail:
 
 static PyGetSetDef kdumpfile_object_getset[] = {
 	{ "attr", kdumpfile_getattr, NULL,
-	  "Access to libkdumpfile attributes",
-	  NULL },
-	{ "symbol_func", kdumpfile_get_symbol_func, kdumpfile_set_symbol_func,
-	  "Callback function called by libkdumpfile for symbol resolving",
-	  NULL },
+	  "Access to libkdumpfile attributes" },
 	{ NULL }
 };
 

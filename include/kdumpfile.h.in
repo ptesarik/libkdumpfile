@@ -172,8 +172,7 @@ kdump_ctx_t *kdump_new(void);
  * in one of the objects are also seen by the other object.
  *
  * The following fields are *not* shared:
- * - private data (see @ref kdump_set_priv, @ref kdump_get_priv),
- * - callbacks (see @ref kdump_cb_get_symbol_val).
+ * - address translation context (see @ref kdump_get_addrxlat_ctx),
  * - error string (see @ref kdump_get_err),
  *
  * Private data and callbacks are initialized to their values from the
@@ -732,44 +731,6 @@ const char *kdump_vmcoreinfo_row(kdump_ctx_t *ctx, const char *key);
  */
 kdump_status kdump_vmcoreinfo_symbol(kdump_ctx_t *ctx, const char *symname,
 				     kdump_addr_t *symvalue);
-
-/**  Type for the get_symbol_val callback function.
- * @param ctx      Dump file object of the caller.
- * @param[in] name Name of the symbol.
- * @param[out] val Symbol value.
- * @returns        Error status.
- *
- * This type is used for @ref kdump_cb_get_symbol_val.
- */
-typedef kdump_status kdump_get_symbol_val_fn(
-	kdump_ctx_t *ctx, const char *name, kdump_addr_t *val);
-
-/**  Set the get_symbol_val callback
- * @param ctx  Dump file object.
- * @param cb   New callback function.
- * @return the Previous callback function.
- */
-kdump_get_symbol_val_fn *
-kdump_cb_get_symbol_val(kdump_ctx_t *ctx, kdump_get_symbol_val_fn *cb);
-
-/**  Set pointer to user private data.
- * @param ctx  Dump file object.
- * @param data Generic data pointer.
- *
- * A private pointer can be used to associate the dump file object with
- * arbitrary data. The libkdumpfile library does not use the pointer in
- * any way, but it can be retrieved later from a @ref kdump_ctx_t pointer
- * with @ref kdump_get_priv.
- */
-void
-kdump_set_priv(kdump_ctx_t *ctx, void *data);
-
-/**  Get pointer to user private data.
- * @param ctx  Dump file object.
- * @returns    The data pointer stored previously with @ref kdump_set_priv.
- */
-void *
-kdump_get_priv(kdump_ctx_t *ctx);
 
 /**  Return the string describing a given error status.
  * @param status  Error status
