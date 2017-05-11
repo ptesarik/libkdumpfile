@@ -373,23 +373,19 @@ void addrxlat_ctx_set_cb(addrxlat_ctx_t *ctx, const addrxlat_cb_t *cb);
  */
 const addrxlat_cb_t *addrxlat_ctx_get_cb(const addrxlat_ctx_t *ctx);
 
-/** Install the callback hook.
- * @param ctx   Address translation context.
- * @param hook  New hook function.
- * @param data  Data for the new hook function.
+/** Get the effective callback information.
+ * @param ctx  Address translation context.
+ * @returns    Pointer to effective callback settings.
+ *
+ * This function returns a pointer to the effective callback information,
+ * i.e. after modifications by callback hook(s). The effective callbacks
+ * may be modified by the caller, e.g. to install a new hook.
  *
  * The callback hook cannot be installed through @ref addrxlat_ctx_set_cb,
  * because that would call the existing hook on it instead of letting the
  * new hook decide if it wants to override the behaviour.
- *
- * This function simply runs the hook function once with the currently
- * active callback settings (but with the provided @c data pointer) and
- * then installs the resulting callback settings.
- *
- * @sa addrxlat_cb_hook_fn
  */
-void addrxlat_ctx_install_cb_hook(addrxlat_ctx_t *ctx,
-				  addrxlat_cb_hook_fn *hook, void *data);
+addrxlat_cb_t *addrxlat_ctx_get_ecb(addrxlat_ctx_t *ctx);
 
 /** Address translation kind.
  */

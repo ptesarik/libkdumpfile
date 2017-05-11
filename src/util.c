@@ -732,25 +732,6 @@ cksum32(void *buffer, size_t size, uint32_t csum)
 	return csum;
 }
 
-struct sym_info {
-	addrxlat_ctx_t *ctx;
-	struct {
-		addrxlat_sym_t sym;
-		const char *name;
-	} sym;
-	addrxlat_status status;
-};
-
-static void
-get_sym_info(void *data, addrxlat_cb_t *cb)
-{
-	struct sym_info *info = (struct sym_info *) data;
-	info->status = cb->sym
-		? cb->sym(cb->data, &info->sym.sym)
-		: addrxlat_ctx_err(info->ctx, ADDRXLAT_ERR_NODATA,
-				   "NULL callback");
-}
-
 /**  Get a symbol value.
  * @param      ctx   Dump object.
  * @param      name  Linux symbol name.
@@ -764,17 +745,25 @@ get_sym_info(void *data, addrxlat_cb_t *cb)
 kdump_status
 get_symbol_val(kdump_ctx_t *ctx, const char *name, kdump_addr_t *val)
 {
-	struct sym_info info;
+	struct {
+		addrxlat_sym_t sym;
+		const char *name;
+	} info;
+	addrxlat_cb_t *cb;
+	addrxlat_status status;
 
-	info.ctx = ctx->xlatctx;
-	info.sym.sym.type = ADDRXLAT_SYM_VALUE;
-	info.sym.name = name;
-	addrxlat_ctx_install_cb_hook(ctx->xlatctx, get_sym_info, &info);
-	if (info.status != ADDRXLAT_OK)
-		return set_error(ctx, addrxlat2kdump(ctx, info.status),
-				 "Cannot resolve \"%s\"", info.sym.name);
+	cb = addrxlat_ctx_get_ecb(ctx->xlatctx);
+	if (!cb->sym)
+		return set_error(ctx, KDUMP_ERR_NODATA, "NULL callback");
 
-	*val = info.sym.sym.val;
+	info.sym.type = ADDRXLAT_SYM_VALUE;
+	info.name = name;
+	status = cb->sym(cb->data, &info.sym);
+	if (status != ADDRXLAT_OK)
+		return set_error(ctx, addrxlat2kdump(ctx, status),
+				 "Cannot resolve \"%s\"", info.name);
+
+	*val = info.sym.val;
 	return KDUMP_OK;
 }
 

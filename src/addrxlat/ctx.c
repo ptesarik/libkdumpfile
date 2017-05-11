@@ -90,11 +90,10 @@ addrxlat_ctx_get_cb(const addrxlat_ctx_t *ctx)
 	return &ctx->orig_cb;
 }
 
-void
-addrxlat_ctx_install_cb_hook(addrxlat_ctx_t *ctx,
-			     addrxlat_cb_hook_fn *hook, void *data)
+addrxlat_cb_t *
+addrxlat_ctx_get_ecb(addrxlat_ctx_t *ctx)
 {
-	hook(data, &ctx->cb);
+	return &ctx->cb;
 }
 
 /** Get the (string) name of an address space.

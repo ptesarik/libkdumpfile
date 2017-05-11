@@ -1535,6 +1535,20 @@ cb_read64(void *_self, const addrxlat_fulladdr_t *addr, uint64_t *val)
 	return ADDRXLAT_OK;
 }
 
+static void cb_hook(void *_self, addrxlat_cb_t *cb);
+
+static void
+install_cb_hook(ctx_object *self, addrxlat_cb_t *cb)
+{
+	self->next_cb = *cb;
+
+	cb->data = self;
+	cb->cb_hook = cb_hook;
+	cb->sym = cb_sym;
+	cb->read32 = cb_read32;
+	cb->read64 = cb_read64;
+}
+
 static void
 cb_hook(void *_self, addrxlat_cb_t *cb)
 {
@@ -1543,15 +1557,8 @@ cb_hook(void *_self, addrxlat_cb_t *cb)
 	if (self->next_cb.cb_hook)
 		self->next_cb.cb_hook(self->next_cb.data, cb);
 
-	if (self->ctx) {
-		self->next_cb = *cb;
-
-		cb->data = self;
-		cb->cb_hook = cb_hook;
-		cb->sym = cb_sym;
-		cb->read32 = cb_read32;
-		cb->read64 = cb_read64;
-	}
+	if (self->ctx)
+		install_cb_hook(self, cb);
 }
 
 PyDoc_STRVAR(ctx__doc__,
@@ -1587,7 +1594,7 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 			goto err;
 	}
 
-	addrxlat_ctx_install_cb_hook(self->ctx, cb_hook, self);
+	install_cb_hook(self, addrxlat_ctx_get_ecb(self->ctx));
 
 	Py_INCREF(convert);
 	self->convert = convert;
