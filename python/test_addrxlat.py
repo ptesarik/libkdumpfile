@@ -273,11 +273,11 @@ class TestMethod(unittest.TestCase):
             meth.tbl = ((1,),)
         with self.assertRaisesRegexp(ValueError, 'must be integer pairs'):
             meth.tbl = ((1, 2, 3),)
-        with self.assertRaisesRegexp(TypeError, 'not an integer'):
+        with self.assertRaisesRegexp(TypeError, 'must be.* a number'):
             meth.tbl = ((None, None),)
-        with self.assertRaisesRegexp(TypeError, 'not an integer'):
+        with self.assertRaisesRegexp(TypeError, 'must be.* a number'):
             meth.tbl = ((1, None),)
-        with self.assertRaisesRegexp(TypeError, 'not an integer'):
+        with self.assertRaisesRegexp(TypeError, 'must be.* a number'):
             meth.tbl = ((None, 1),)
 
     def test_memarr_defaults(self):
@@ -575,7 +575,7 @@ class TestStep(unittest.TestCase):
             step.idx = None
         with self.assertRaisesRegexp(ValueError, 'more than [0-9]+ indices'):
             step.idx = (0,) * (addrxlat.FIELDS_MAX + 2)
-        with self.assertRaisesRegexp(TypeError, 'not an integer'):
+        with self.assertRaisesRegexp(TypeError, 'must be.* a number'):
             step.idx = (None,)
 
 class TestOperator(unittest.TestCase):

@@ -106,6 +106,8 @@ PyDoc_STRVAR(attr_convert__doc__,
 static long
 Number_AsLong(PyObject *num)
 {
+	unsigned long long result;
+
 	if (PyLong_Check(num))
 		return PyLong_AsLong(num);
 #if PY_MAJOR_VERSION < 3
@@ -113,9 +115,12 @@ Number_AsLong(PyObject *num)
 		return PyInt_AsLong(num);
 #endif
 
-	PyErr_Format(PyExc_TypeError, "'%.200s' object is not an integer",
-		     Py_TYPE(num)->tp_name);
-	return -1;
+	num = PyNumber_Long(num);
+	if (!num)
+		return -1L;
+	result = PyLong_AsLong(num);
+	Py_DECREF(num);
+	return result;
 }
 
 /** Convert a PyLong or PyInt to a C unsigned long long.
@@ -128,6 +133,8 @@ Number_AsLong(PyObject *num)
 static unsigned long long
 Number_AsUnsignedLongLong(PyObject *num)
 {
+	unsigned long long result;
+
 	if (PyLong_Check(num))
 		return PyLong_AsUnsignedLongLong(num);
 #if PY_MAJOR_VERSION < 3
@@ -135,9 +142,12 @@ Number_AsUnsignedLongLong(PyObject *num)
 		return PyInt_AsLong(num);
 #endif
 
-	PyErr_Format(PyExc_TypeError, "'%.200s' object is not an integer",
-		     Py_TYPE(num)->tp_name);
-	return -1LL;
+	num = PyNumber_Long(num);
+	if (!num)
+		return -1LL;
+	result = PyLong_AsUnsignedLongLong(num);
+	Py_DECREF(num);
+	return result;
 }
 
 /** Convert a PyLong or PyInt to a C unsigned long long with no overflow.
@@ -150,6 +160,8 @@ Number_AsUnsignedLongLong(PyObject *num)
 static unsigned long long
 Number_AsUnsignedLongLongMask(PyObject *num)
 {
+	unsigned long long result;
+
 	if (PyLong_Check(num))
 		return PyLong_AsUnsignedLongLongMask(num);
 #if PY_MAJOR_VERSION < 3
@@ -157,9 +169,12 @@ Number_AsUnsignedLongLongMask(PyObject *num)
 		return PyInt_AsLong(num);
 #endif
 
-	PyErr_Format(PyExc_TypeError, "'%.200s' object is not an integer",
-		     Py_TYPE(num)->tp_name);
-	return -1LL;
+	num = PyNumber_Long(num);
+	if (!num)
+		return -1LL;
+	result = PyLong_AsUnsignedLongLongMask(num);
+	Py_DECREF(num);
+	return result;
 }
 
 /** Convert a Python sequence of integers to a memory buffer.
