@@ -1,20 +1,15 @@
-0.2.1
+0.3.0
 -----
+  * Complete API re-design:
+    - split libaddrxlat from libkdumpfile
+    - attribute references
+    - attribute iterators
+    - addrxlat callbacks and callback hook
   * Python bindings.
+  * Comprehensive test suite for libaddrxlat.
   * Caching of dump pages.
   * Thread safety (see threads.md).
   * Improved Doxygen documentation (run 'make doxygen-doc').
-  * Private pointer API (kdump_set_priv, kdump_get_priv).
-  * Attribute references.
-  * Attribute iterators.
-  * API and ABI changed:
-    - REMOVED callback enumeration.
-    - REMOVED kdump_read_reg (use attributes).
-    - REMOVED kdump_fdopen
-    - RENAMED kdump_alloc_ctx to kdump_alloc
-    - RENAMED kdump_init to kdump_new
-    - RENAMED kdump_init_ctx to kdump_init
-    - CHANGED the canonical architecture name from "i386" to "ia32".
 
 0.2.0
 -----
