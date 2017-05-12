@@ -51,7 +51,7 @@ xlat_pio_op(void *data, const addrxlat_fulladdr_t *addr)
  * is included in @c xlat_caps. The resulting page I/O object can be
  * directly passed to a @c read_page method.
  */
-kdump_status
+static kdump_status
 xlat_pio(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	addrxlat_op_ctl_t ctl;
