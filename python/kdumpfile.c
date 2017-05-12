@@ -210,58 +210,6 @@ attr_new(kdumpfile_object *kdumpfile, kdump_attr_ref_t *ref, kdump_attr_t *attr)
 	}
 }
 
-PyDoc_STRVAR(vtop_init__doc__,
-"Initialize virtual memory mapping");
-
-static PyObject *kdumpfile_vtop_init(PyObject *_self, PyObject *args)
-{
-	kdumpfile_object *self = (kdumpfile_object*)_self;
-	kdump_status status;
-
-	status = kdump_set_string_attr(self->ctx, KDUMP_ATTR_OSTYPE, "linux");
-	if (status != KDUMP_OK) {
-		PyErr_SetString(exception_map(status),
-				kdump_get_err(self->ctx));
-		return NULL;
-	}
-
-	Py_RETURN_NONE;
-}
-
-PyDoc_STRVAR(vtop__doc__,
-"K.vtop(vaddr) -> corresponding physical address");
-
-static PyObject *
-kdumpfile_vtop(PyObject *_self, PyObject *args)
-{
-	kdumpfile_object *self = (kdumpfile_object*)_self;
-	unsigned PY_LONG_LONG vaddr;
-	addrxlat_fulladdr_t faddr;
-	addrxlat_ctx_t *axctx;
-	addrxlat_sys_t *axsys;
-	addrxlat_status axstatus;
-
-	if (!PyArg_ParseTuple(args, "K:vtop", &vaddr))
-		return NULL;
-
-	axctx = kdump_get_addrxlat_ctx(self->ctx);
-	axsys = kdump_get_addrxlat_sys(self->ctx);
-	faddr.addr = vaddr;
-	faddr.as = ADDRXLAT_KVADDR;
-	axstatus = addrxlat_fulladdr_conv(&faddr, ADDRXLAT_KPHYSADDR,
-					  axctx, axsys);
-	addrxlat_sys_decref(axsys);
-	if (axstatus != ADDRXLAT_OK) {
-		PyErr_SetString(AddressTranslationException,
-				addrxlat_ctx_get_err(axctx));
-		addrxlat_ctx_decref(axctx);
-		return NULL;
-	}
-
-	addrxlat_ctx_decref(axctx);
-	return PyLong_FromUnsignedLongLong(faddr.addr);
-}
-
 PyDoc_STRVAR(get_addrxlat_ctx__doc__,
 "K.get_addrxlat_ctx() -> addrxlat.Context");
 
@@ -287,10 +235,6 @@ get_addrxlat_sys(PyObject *_self, PyObject *args)
 static PyMethodDef kdumpfile_object_methods[] = {
 	{"read",      (PyCFunction) kdumpfile_read, METH_VARARGS | METH_KEYWORDS,
 		read__doc__},
-	{"vtop_init", (PyCFunction) kdumpfile_vtop_init, METH_NOARGS,
-		vtop_init__doc__},
-	{"vtop",	kdumpfile_vtop,			METH_VARARGS,
-	 vtop__doc__},
 	{ "get_addrxlat_ctx", get_addrxlat_ctx, METH_NOARGS,
 	  get_addrxlat_ctx__doc__ },
 	{ "get_addrxlat_sys", get_addrxlat_sys, METH_NOARGS,
