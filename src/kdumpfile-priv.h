@@ -241,16 +241,6 @@ struct format_ops {
 	 */
 	kdump_status (*post_addrxlat)(kdump_ctx_t *ctx);
 
-	/* Translate a machine frame number to physical frame number.
-	 *   ctx->fmtdata    initialized in probe()
-	 * Return:
-	 *   KDUMP_OK          output variable contains translated PFN
-	 *   KDUMP_ERR_NODATA  given MFN was not found
-	 *
-	 * This function should be used for single domain dumps.
-	 */
-	kdump_status (*mfn_to_pfn)(kdump_ctx_t *, kdump_pfn_t, kdump_pfn_t *);
-
 	/** Reallocate any format-specific caches.
 	 * @param ctx  Dump file object.
 	 * @returns    Status (@ref KDUMP_OK on success).

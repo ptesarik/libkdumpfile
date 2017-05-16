@@ -280,25 +280,6 @@ mfn_to_idx(kdump_ctx_t *ctx, kdump_pfn_t mfn)
 	return ~0UL;
 }
 
-static kdump_status
-xc_mfn_to_pfn(kdump_ctx_t *ctx, kdump_pfn_t mfn, kdump_pfn_t *pfn)
-{
-	struct xen_p2m *p = ctx->shared->xen_map;
-	unsigned long i;
-
-	if (get_xen_xlat(ctx) != KDUMP_XEN_NONAUTO) {
-		*pfn = mfn;
-		return KDUMP_OK;
-	}
-
-	for (i = 0; i < ctx->shared->xen_map_size; ++i, ++p)
-		if (p->gmfn == mfn) {
-			*pfn = p->pfn;
-			return KDUMP_OK;
-		}
-	return set_error(ctx, KDUMP_ERR_NODATA, "MFN not found");
-}
-
 /** xc_core physical-to-machine first step function.
  * @param step  Step state.
  * @param addr  Address to be translated.
@@ -927,7 +908,6 @@ static const struct format_ops xc_core_elf_ops = {
 	.read_page = xc_read_page,
 	.unref_page = cache_unref_page,
 	.post_addrxlat = xc_post_addrxlat,
-	.mfn_to_pfn = xc_mfn_to_pfn,
 	.realloc_caches = def_realloc_caches,
 	.cleanup = elf_cleanup,
 };
