@@ -81,7 +81,7 @@ set_fd(kdump_ctx_t *ctx, void *buf)
 
 		ctx->shared->ops = NULL;
 		if (ctx->shared->cache) {
-			cache_unref(ctx->shared->cache);
+			cache_free(ctx->shared->cache);
 			ctx->shared->cache = NULL;
 		}
 		clear_volatile_attrs(ctx);
@@ -436,7 +436,7 @@ kdump_free(kdump_ctx_t *ctx)
 		if (shared->arch_ops && shared->arch_ops->cleanup)
 			shared->arch_ops->cleanup(shared);
 		if (shared->cache)
-			cache_unref(shared->cache);
+			cache_free(shared->cache);
 		if (shared->xen_map)
 			free(shared->xen_map);
 		if (shared->xlatsys)

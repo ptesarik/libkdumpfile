@@ -73,7 +73,6 @@
  */
 struct cache {
 	mutex_t mutex;		 /**< Lock for changes to struct cache. */
-	unsigned refcnt;	 /**< Reference count. */
 
 	unsigned split;		 /**< Split point between probed and precious
 				  *   entries (index of MRU probed entry) */
@@ -756,7 +755,6 @@ cache_alloc(unsigned n, size_t size)
 		return NULL;
 	}
 
-	cache->refcnt = 1;
 	cache->elemsize = size;
 	cache->cap = n;
 	cache->hits.number = 0;
@@ -772,38 +770,19 @@ cache_alloc(unsigned n, size_t size)
 	return cache;
 }
 
-/**  Increase cache reference count.
- * @param cache  Cache object.
- * @returns      Referenced cache object (equal to @p cache)
- */
-struct cache *
-cache_ref(struct cache *cache)
-{
-	mutex_lock(&cache->mutex);
-	++cache->refcnt;
-	mutex_unlock(&cache->mutex);
-	return cache;
-}
-
-/**  Decrease cache reference count.
+/**  Free a cache object.
  * @param cache  Cache object.
  *
- * If the reference count drops to zero, the cache object is freed.
+ * All resources used by the cache object are freed. Any cache entry
+ * pointers into the cache and returned by @c cache_get_entry are invalid
+ * and must not be used after calling this function.
  */
 void
-cache_unref(struct cache *cache)
+cache_free(struct cache *cache)
 {
-	unsigned refcnt;
-
-	mutex_lock(&cache->mutex);
-	refcnt = --cache->refcnt;
-	mutex_unlock(&cache->mutex);
-
-	if (!refcnt) {
-		mutex_destroy(&cache->mutex);
-		free(cache->data);
-		free(cache);
-	}
+	mutex_destroy(&cache->mutex);
+	free(cache->data);
+	free(cache);
 }
 
 /**  Default way to handle cached reads.
@@ -821,13 +800,11 @@ def_read_cache(kdump_ctx_t *ctx, struct page_io *pio,
 	struct cache_entry *entry;
 	kdump_status ret;
 
-	pio->cache = cache_ref(ctx->shared->cache);
+	pio->cache = ctx->shared->cache;
 	entry = cache_get_entry(pio->cache, idx);
-	if (!entry) {
-		cache_unref(pio->cache);
+	if (!entry)
 		return set_error(ctx, KDUMP_ERR_BUSY,
 				 "Cache is fully utilized");
-	}
 
 	pio->ce = entry;
 	if (cache_entry_valid(entry))
@@ -838,10 +815,8 @@ def_read_cache(kdump_ctx_t *ctx, struct page_io *pio,
 		if (pio->precious)
 			cache_make_precious(pio->cache, entry);
 		cache_insert(pio->cache, entry);
-	} else {
+	} else
 		cache_discard(pio->cache, entry);
-		cache_unref(pio->cache);
-	}
 	return ret;
 }
 
@@ -853,7 +828,6 @@ void
 cache_unref_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	put_entry(pio->cache, pio->ce);
-	cache_unref(pio->cache);
 }
 
 /**  Get the configured cache size.
@@ -898,7 +872,7 @@ def_realloc_caches(kdump_ctx_t *ctx)
 		 ATTR_INDIRECT, &cache->misses);
 
 	if (ctx->shared->cache)
-		cache_unref(ctx->shared->cache);
+		cache_free(ctx->shared->cache);
 	ctx->shared->cache = cache;
 
 	return KDUMP_OK;
