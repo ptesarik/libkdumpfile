@@ -161,7 +161,6 @@ devmem_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	struct devmem_priv *dmp = ctx->shared->fmtdata;
 	struct cache_entry *ce;
-	cache_key_t pfn = pio->addr.addr >> get_page_shift(ctx);
 	ssize_t rd;
 	unsigned i;
 
@@ -169,7 +168,7 @@ devmem_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 	for (i = 0; i < dmp->cache_size; ++i) {
 		if (dmp->ce[i].refcnt == 0) {
 			ce = &dmp->ce[i];
-		} else if (dmp->ce[i].key == pfn) {
+		} else if (dmp->ce[i].key == pio->addr.addr) {
 			ce = &dmp->ce[i];
 			break;
 		}
@@ -179,7 +178,7 @@ devmem_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 				 "Cache is fully utilized");
 	++ce->refcnt;
 
-	ce->key = pfn;
+	ce->key = pio->addr.addr;
 	rd = pread(get_file_fd(ctx), ce->data, get_page_size(ctx),
 		   pio->addr.addr);
 	if (rd != get_page_size(ctx)) {

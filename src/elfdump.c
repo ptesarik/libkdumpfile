@@ -136,16 +136,13 @@ find_closest_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
 }
 
 static kdump_status
-elf_read_cache(kdump_ctx_t *ctx, cache_key_t pfn, struct cache_entry *ce)
+elf_read_cache(kdump_ctx_t *ctx, cache_key_t addr, struct cache_entry *ce)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	struct load_segment *pls;
-	kdump_paddr_t addr;
 	void *p, *endp;
 	off_t pos;
 	ssize_t size, rd;
-
-	addr = pfn << get_page_shift(ctx);
 
 	p = ce->data;
 	endp = p + get_page_size(ctx);
@@ -196,8 +193,7 @@ elf_read_cache(kdump_ctx_t *ctx, cache_key_t pfn, struct cache_entry *ce)
 static kdump_status
 elf_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
-	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
-	return def_read_cache(ctx, pio, elf_read_cache, pfn);
+	return def_read_cache(ctx, pio, elf_read_cache, pio->addr.addr);
 }
 
 static void

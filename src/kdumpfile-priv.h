@@ -949,12 +949,14 @@ kphys_is_machphys(kdump_ctx_t *ctx)
  * a key in the cache:
  *  - PFN (used by most file handlers)
  *  - unsigned long (used by xc_core)
+ *  - kdump_addr_t (used by devmem)
  *
  * An unsigned long cannot be bigger than a PFN (because then the PFN
- * would have to be bigger on such architecture), it is safe to define
- * this type as an alias for @ref kdump_pfn_t.
+ * would have to be bigger on such architecture).
+ * A PFN cannot be bigger than an address.
+ * So, it is safe to define this type as an alias for @ref kdump_addr_t.
  */
-typedef kdump_pfn_t	cache_key_t;
+typedef kdump_addr_t	cache_key_t;
 
 /** Default cache size.
  * The size is chosen to give some performance boost during crash analysis.
