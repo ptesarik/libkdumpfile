@@ -950,38 +950,19 @@ kphys_is_machphys(kdump_ctx_t *ctx)
  */
 #define DEFAULT_CACHE_SIZE	1024
 
-/** Number of bits used for cache flags.
- * Cache flags are stored in the high bits of a cached PFN.
- * This number must be big enough to hold all possible flags
- * and small enough to leave enough bits for the actual PFN.
- *
- * Since @ref kdump_pfn_t is the same size as @ref kdump_addr_t,
- * this number must be smaller than the minimum page shift.
+/**  Cache entry state.
  */
-#define CF_BITS			2
-#define CF_MASK			(((kdump_pfn_t)1 << CF_BITS) - 1)
-#define CF_SHIFT		(PFN_BITS - CF_BITS)
-#define CACHE_FLAGS_PFN(f)	((kdump_pfn_t)(f) << CF_SHIFT)
-#define CACHE_PFN_FLAGS(pfn)	(((pfn) >> CF_SHIFT) & CF_MASK)
-#define CACHE_PFN(pfn)		((pfn) & ~(CACHE_FLAGS_PFN(CF_MASK)))
-
-/**  Cache flags.
- *
- * These flags are stored in the top 2 bits of the @c pfn field.
- * Note that @ref cf_valid is zero, so the PFN for valid entries can
- * be used directly (without masking off any bits).
- */
-enum cache_flags {
-	cf_valid,		/**< Valid (active) cache entry */
-	cf_probe,		/**< In flight, target probe list */
-	cf_precious,		/**< In flight, target precious list */
+enum cache_state {
+	cs_valid,		/**< Valid (active) cache entry */
+	cs_probe,		/**< In flight, target probe list */
+	cs_precious,		/**< In flight, target precious list */
 };
 
 /**  Cache entry.
  */
 struct cache_entry {
-	kdump_pfn_t pfn;	/**< PFN in the cache; highest @ref CF_BITS
-				 *   are used for cache flags. */
+	kdump_pfn_t pfn;	/**< PFN in the cache. */
+	enum cache_state state;	/**< Cache entry state. */
 	unsigned next;		/**< Index of next entry in evict list. */
 	unsigned prev;		/**< Index of previous entry in evict list. */
 	unsigned refcnt;	/**< Reference count. */
@@ -1026,7 +1007,7 @@ INTERNAL_DECL(kdump_status, def_realloc_caches, (kdump_ctx_t *ctx));
 static inline int
 cache_entry_valid(struct cache_entry *entry)
 {
-	return CACHE_PFN_FLAGS(entry->pfn) == cf_valid;
+	return entry->state == cs_valid;
 }
 
 /* Inline utility functions */

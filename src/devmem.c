@@ -167,11 +167,12 @@ devmem_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 
 	ce = NULL;
 	for (i = 0; i < dmp->cache_size; ++i) {
-		if (dmp->ce[i].pfn == pfn) {
+		if (dmp->ce[i].refcnt == 0) {
+			ce = &dmp->ce[i];
+		} else if (dmp->ce[i].pfn == pfn) {
 			ce = &dmp->ce[i];
 			break;
-		} else if (dmp->ce[i].refcnt == 0)
-			ce = &dmp->ce[i];
+		}
 	}
 	if (!ce)
 		return set_error(ctx, KDUMP_ERR_BUSY,
@@ -218,11 +219,8 @@ devmem_realloc_caches(kdump_ctx_t *ctx)
 		return KDUMP_ERR_SYSTEM;
 	}
 
-	ce[0].pfn = CACHE_FLAGS_PFN(-1);
-	for (i = 1; i < cache_size; ++i) {
-		ce[i].pfn = CACHE_FLAGS_PFN(-1);
+	for (i = 1; i < cache_size; ++i)
 		ce[i].data = ce[i-1].data + get_page_size(ctx);
-	}
 
 	dmp->cache_size = cache_size;
 	if (dmp->ce) {

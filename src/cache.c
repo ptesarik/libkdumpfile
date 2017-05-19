@@ -202,10 +202,9 @@ add_inflight(struct cache *cache, struct cache_entry *entry, unsigned idx)
 static void
 locked_cache_make_precious(struct cache *cache, struct cache_entry *entry)
 {
-	if (CACHE_PFN_FLAGS(entry->pfn) == cf_probe) {
+	if (entry->state == cs_probe) {
 		--cache->nprobetotal;
-		entry->pfn = CACHE_PFN(entry->pfn) |
-			CACHE_FLAGS_PFN(cf_precious);
+		entry->state = cs_precious;
 	}
 }
 
@@ -354,7 +353,7 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
 
 	remove_entry(cache, entry);
 	add_inflight(cache, entry, idx);
-	entry->pfn |= CACHE_FLAGS_PFN(cf_precious);
+	entry->state = cs_precious;
 }
 
 /**  Search the cache for an entry.
@@ -536,7 +535,7 @@ get_inflight_entry(struct cache *cache, kdump_pfn_t pfn)
 	idx = cache->inflight;
 	for (n = cache->ninflight; n; --n) {
 		entry = &cache->ce[idx];
-		if (CACHE_PFN(entry->pfn) == pfn) {
+		if (entry->pfn == pfn) {
 			locked_cache_make_precious(cache, entry);
 			return entry;
 		}
@@ -584,7 +583,8 @@ get_missed_entry(struct cache *cache, kdump_pfn_t pfn,
 
 	remove_entry(cache, entry);
 	add_inflight(cache, entry, idx);
-	entry->pfn = pfn | CACHE_FLAGS_PFN(cf_probe);
+	entry->pfn = pfn;
+	entry->state = cs_probe;
 
 	return entry;
 }
@@ -615,17 +615,20 @@ cache_insert(struct cache *cache, struct cache_entry *entry)
 	}
 	add_entry_after(cache, entry, idx, cache->split);
 
-	switch (CACHE_PFN_FLAGS(entry->pfn)) {
-	case cf_probe:
+	switch (entry->state) {
+	case cs_probe:
 		++cache->nprobe;
 		cache->split = idx;
 		break;
 
-	case cf_precious:
+	case cs_precious:
 		++cache->nprec;
 		break;
+
+	default:		/* Make -Wswitch happy. */
+		break;
 	}
-	entry->pfn &= ~CACHE_FLAGS_PFN(CF_MASK);
+	entry->state = cs_valid;
 
  unlock:
 	mutex_unlock(&cache->mutex);
@@ -678,7 +681,7 @@ cache_discard(struct cache *cache, struct cache_entry *entry)
 		goto unlock;
 	if (cache_entry_valid(entry))
 		goto unlock;
-	if (CACHE_PFN_FLAGS(entry->pfn) == cf_probe)
+	if (entry->state == cs_probe)
 		--cache->nprobetotal;
 
 	idx = entry - cache->ce;
