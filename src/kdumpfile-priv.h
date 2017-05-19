@@ -944,6 +944,18 @@ kphys_is_machphys(kdump_ctx_t *ctx)
 
 /* Caching */
 
+/** Type of a cache entry key.
+ * This type must be big enough to hold anything that is used as
+ * a key in the cache:
+ *  - PFN (used by most file handlers)
+ *  - unsigned long (used by xc_core)
+ *
+ * An unsigned long cannot be bigger than a PFN (because then the PFN
+ * would have to be bigger on such architecture), it is safe to define
+ * this type as an alias for @ref kdump_pfn_t.
+ */
+typedef kdump_pfn_t	cache_key_t;
+
 /** Default cache size.
  * The size is chosen to give some performance boost during crash analysis.
  * Constrained environments (e.g. kdump kernel) should use a lower value.
@@ -961,12 +973,12 @@ enum cache_state {
 /**  Cache entry.
  */
 struct cache_entry {
-	kdump_pfn_t pfn;	/**< PFN in the cache. */
+	cache_key_t key;	/**< Cache entry key. */
 	enum cache_state state;	/**< Cache entry state. */
 	unsigned next;		/**< Index of next entry in evict list. */
 	unsigned prev;		/**< Index of previous entry in evict list. */
 	unsigned refcnt;	/**< Reference count. */
-	void *data;		/**< Pointer to page data. */
+	void *data;		/**< Pointer to data. */
 };
 
 INTERNAL_DECL(unsigned, get_cache_size, (kdump_ctx_t *ctx));
@@ -974,7 +986,7 @@ INTERNAL_DECL(struct cache *, cache_alloc, (unsigned n, size_t size));
 INTERNAL_DECL(void, cache_free, (struct cache *));
 INTERNAL_DECL(void, cache_flush, (struct cache *));
 INTERNAL_DECL(struct cache_entry *, cache_get_entry,
-	      (struct cache *, kdump_pfn_t));
+	      (struct cache *, cache_key_t));
 INTERNAL_DECL(void, cache_put_entry,
 	      (struct cache *cache, struct cache_entry *entry));
 INTERNAL_DECL(void, cache_insert, (struct cache *, struct cache_entry *));
@@ -983,11 +995,11 @@ INTERNAL_DECL(void, cache_make_precious,
 	      (struct cache *cache, struct cache_entry *entry));
 
 typedef kdump_status read_cache_fn(
-	kdump_ctx_t *ctx, kdump_pfn_t pfn, struct cache_entry *entry);
+	kdump_ctx_t *ctx, cache_key_t idx, struct cache_entry *entry);
 
 INTERNAL_DECL(kdump_status, def_read_cache,
 	      (kdump_ctx_t *ctx, struct page_io *pio,
-	       read_cache_fn *fn, kdump_pfn_t idx));
+	       read_cache_fn *fn, cache_key_t idx));
 INTERNAL_DECL(void, cache_unref_page,
 	      (kdump_ctx_t *ctx, struct page_io *pio));
 

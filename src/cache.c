@@ -113,12 +113,12 @@ struct cache_search {
 };
 
 static struct cache_entry *get_ghost_entry(
-	struct cache *cache, kdump_pfn_t pfn,
+	struct cache *cache, cache_key_t key,
 	struct cache_search *cs);
 static struct cache_entry *get_inflight_entry(
-	struct cache *cache, kdump_pfn_t pfn);
+	struct cache *cache, cache_key_t key);
 static struct cache_entry *get_missed_entry(
-	struct cache *cache, kdump_pfn_t pfn,
+	struct cache *cache, cache_key_t key,
 	struct cache_search *cs);
 
 /**  Add an entry to the list after a given point.
@@ -281,7 +281,7 @@ evict_prec(struct cache *cache, struct cache_search *cs)
 	return entry;
 }
 
-/**  Re-initialize an entry for a different page.
+/**  Re-initialize an entry for different data.
  *
  * @param cache  Cache object.
  * @param entry  Entry to be reinitialized.
@@ -359,11 +359,11 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
 /**  Search the cache for an entry.
  *
  * @param cache  Cache object.
- * @param pfn    PFN to be searched.
+ * @param key    Key to be searched.
  * @returns      Pointer to a cache entry, or @c NULL if cache is full.
  */
 static struct cache_entry *
-cache_get_entry_noref(struct cache *cache, kdump_pfn_t pfn)
+cache_get_entry_noref(struct cache *cache, cache_key_t key)
 {
 	struct cache_search cs;
 	struct cache_entry *entry;
@@ -377,7 +377,7 @@ cache_get_entry_noref(struct cache *cache, kdump_pfn_t pfn)
 	idx = cache->ce[cache->split].next;
 	while (n--) {
 		entry = &cache->ce[idx];
-		if (entry->pfn == pfn) {
+		if (entry->key == key) {
 			reuse_cached_entry(cache, entry, idx);
 			return entry;
 		}
@@ -394,7 +394,7 @@ cache_get_entry_noref(struct cache *cache, kdump_pfn_t pfn)
 	idx = cache->split;
 	while (n--) {
 		entry = &cache->ce[idx];
-		if (entry->pfn == pfn) {
+		if (entry->key == key) {
 			--cache->nprobe;
 			++cache->nprec;
 			--cache->nprobetotal;
@@ -409,7 +409,7 @@ cache_get_entry_noref(struct cache *cache, kdump_pfn_t pfn)
 	}
 	cs.gprobe = idx;
 
-	entry = get_inflight_entry(cache, pfn);
+	entry = get_inflight_entry(cache, key);
 
 	if (!entry) {
 		unsigned inuse = (cache->nprec - cs.nuprec) +
@@ -420,35 +420,35 @@ cache_get_entry_noref(struct cache *cache, kdump_pfn_t pfn)
 	}
 
 	if (!entry)
-		entry = get_ghost_entry(cache, pfn, &cs);
+		entry = get_ghost_entry(cache, key, &cs);
 	if (!entry)
-		entry = get_missed_entry(cache, pfn, &cs);
+		entry = get_missed_entry(cache, key, &cs);
 
 	++cache->misses.number;
 
 	return entry;
 }
 
-/**  Get the cache entry for a given PFN.
+/**  Get the cache entry for a given key.
  *
  * @param cache  Cache object.
- * @param pfn    PFN to be searched.
+ * @param key    Key to be searched.
  * @returns      Pointer to a cache entry, or @c NULL if cache is full.
  *
- * On a cache hit (page data is found in the cache), the returned entry
- * denotes the cached page data.
+ * On a cache hit (corresponding entry is found in the cache), the returned
+ * entry denotes the cached data.
  * On a cache miss, the returned entry can be used to load data into the
  * cache and store it for later use with @ref cache_insert.
  *
  * The reference count of the returned entry is incremented.
  */
 struct cache_entry *
-cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
+cache_get_entry(struct cache *cache, cache_key_t key)
 {
 	struct cache_entry *entry;
 
 	mutex_lock(&cache->mutex);
-	entry = cache_get_entry_noref(cache, pfn);
+	entry = cache_get_entry_noref(cache, key);
 	if (entry)
 		++entry->refcnt;
 	mutex_unlock(&cache->mutex);
@@ -456,10 +456,10 @@ cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
 	return entry;
 }
 
-/**  Get the ghost entry for a given PFN.
+/**  Get the ghost entry for a given key.
  *
  * @param cache  Cache object.
- * @param pfn    PFN to be searched.
+ * @param key    Key to be searched.
  * @param cs     Cache search info.
  * @returns      Ghost entry, or @c NULL if not found.
  *
@@ -468,7 +468,7 @@ cache_get_entry(struct cache *cache, kdump_pfn_t pfn)
  * found), their values are undefined.
  */
 static struct cache_entry *
-get_ghost_entry(struct cache *cache, kdump_pfn_t pfn,
+get_ghost_entry(struct cache *cache, cache_key_t key,
 		struct cache_search *cs)
 {
 	struct cache_entry *entry;
@@ -479,7 +479,7 @@ get_ghost_entry(struct cache *cache, kdump_pfn_t pfn,
 	idx = cs->gprec;
 	while (n--) {
 		entry = &cache->ce[idx];
-		if (entry->pfn == pfn) {
+		if (entry->key == key) {
 			int delta = cache->ngprobe > cache->ngprec
 				? cache->ngprobe / cache->ngprec
 				: 1;
@@ -500,7 +500,7 @@ get_ghost_entry(struct cache *cache, kdump_pfn_t pfn,
 	idx = cs->gprobe;
 	while (n--) {
 		entry = &cache->ce[idx];
-		if (entry->pfn == pfn) {
+		if (entry->key == key) {
 			int delta = cache->ngprec > cache->ngprobe
 				? cache->ngprec / cache->ngprobe
 				: 1;
@@ -520,14 +520,14 @@ get_ghost_entry(struct cache *cache, kdump_pfn_t pfn,
 	return NULL;
 }
 
-/**  Get the in-flight entry for a given PFN.
+/**  Get the in-flight entry for a given key.
  *
  * @param cache  Cache object.
- * @param pfn    PFN to be searched.
- * @returns      In-flight entry, or @c NULL if not found.
+ * @param key    Key to be searched.
+ * @returns      In-flight entry, or @c NULL if there is none.
  */
 static struct cache_entry *
-get_inflight_entry(struct cache *cache, kdump_pfn_t pfn)
+get_inflight_entry(struct cache *cache, cache_key_t key)
 {
 	struct cache_entry *entry;
 	unsigned idx, n;
@@ -535,7 +535,7 @@ get_inflight_entry(struct cache *cache, kdump_pfn_t pfn)
 	idx = cache->inflight;
 	for (n = cache->ninflight; n; --n) {
 		entry = &cache->ce[idx];
-		if (entry->pfn == pfn) {
+		if (entry->key == key) {
 			locked_cache_make_precious(cache, entry);
 			return entry;
 		}
@@ -545,15 +545,15 @@ get_inflight_entry(struct cache *cache, kdump_pfn_t pfn)
 	return NULL;
 }
 
-/**  Get a cache entry for a given missed PFN.
+/**  Get a cache entry for a given missed key.
  *
  * @param cache  Cache object.
- * @param pfn    Requested PFN.
+ * @param key    Requested key.
  * @param cs     Cache search info.
  * @returns      A new cache entry.
  */
 static struct cache_entry *
-get_missed_entry(struct cache *cache, kdump_pfn_t pfn,
+get_missed_entry(struct cache *cache, cache_key_t key,
 		 struct cache_search *cs)
 {
 	struct cache_entry *entry;
@@ -583,7 +583,7 @@ get_missed_entry(struct cache *cache, kdump_pfn_t pfn,
 
 	remove_entry(cache, entry);
 	add_inflight(cache, entry, idx);
-	entry->pfn = pfn;
+	entry->key = key;
 	entry->state = cs_probe;
 
 	return entry;
@@ -798,7 +798,7 @@ cache_free(struct cache *cache)
  */
 kdump_status
 def_read_cache(kdump_ctx_t *ctx, struct page_io *pio,
-	       read_cache_fn *fn, kdump_pfn_t idx)
+	       read_cache_fn *fn, cache_key_t idx)
 {
 	struct cache_entry *entry;
 	kdump_status ret;

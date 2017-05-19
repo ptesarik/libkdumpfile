@@ -229,7 +229,7 @@ pfn_to_pdpos(struct disk_dump_priv *ddp, unsigned long pfn)
 }
 
 static kdump_status
-diskdump_read_cache(kdump_ctx_t *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
+diskdump_read_cache(kdump_ctx_t *ctx, cache_key_t pfn, struct cache_entry *ce)
 {
 	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	struct page_desc pd;

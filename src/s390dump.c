@@ -96,7 +96,7 @@ struct s390dump_priv {
 static void s390_cleanup(struct kdump_shared *shared);
 
 static kdump_status
-s390_read_cache(kdump_ctx_t *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
+s390_read_cache(kdump_ctx_t *ctx, cache_key_t pfn, struct cache_entry *ce)
 {
 	struct s390dump_priv *sdp = ctx->shared->fmtdata;
 	kdump_paddr_t addr = pfn << get_page_shift(ctx);

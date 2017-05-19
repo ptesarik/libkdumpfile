@@ -136,7 +136,7 @@ find_closest_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
 }
 
 static kdump_status
-elf_read_cache(kdump_ctx_t *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
+elf_read_cache(kdump_ctx_t *ctx, cache_key_t pfn, struct cache_entry *ce)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	struct load_segment *pls;
@@ -250,7 +250,7 @@ pfn_to_idx(kdump_ctx_t *ctx, kdump_pfn_t pfn)
 }
 
 static kdump_status
-xc_read_cache(kdump_ctx_t *ctx, kdump_pfn_t idx, struct cache_entry *ce)
+xc_read_cache(kdump_ctx_t *ctx, cache_key_t idx, struct cache_entry *ce)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	off_t offset;

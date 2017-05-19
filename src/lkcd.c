@@ -732,7 +732,7 @@ lkcd_max_pfn_validate(kdump_ctx_t *ctx, struct attr_data *attr)
 }
 
 static kdump_status
-lkcd_read_cache(kdump_ctx_t *ctx, kdump_pfn_t pfn, struct cache_entry *ce)
+lkcd_read_cache(kdump_ctx_t *ctx, cache_key_t pfn, struct cache_entry *ce)
 {
 	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 	struct dump_page dp;
