@@ -1362,7 +1362,7 @@ ctx_error_status(ctx_object *self)
 		Py_DECREF(obj);
 		goto err;
 	}
-	addrxlat_ctx_err(self->ctx, status, msg);
+	addrxlat_ctx_err(self->ctx, status, "%s", msg);
 	Py_DECREF(obj);
 
 	Py_DECREF(exc_type);
