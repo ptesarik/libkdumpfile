@@ -1,0 +1,9 @@
+# Test binaries
+test-fcache
+
+# Test results
+*.log
+*.trs
+
+# Test output files
+tmp.fcache

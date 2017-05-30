@@ -35,6 +35,7 @@ libkdumpfile_la_SOURCES = \
 	devmem.c \
 	diskdump.c \
 	elfdump.c \
+	fcache.c \
 	ia32.c \
 	lkcd.c \
 	notes.c \
@@ -71,3 +72,13 @@ noinst_HEADERS = \
 
 dist_noinst_DATA = \
 	libkdumpfile.map
+
+check_PROGRAMS = test-fcache
+test_fcache_LDFLAGS = -static
+test_fcache_LDADD = libkdumpfile.la -ldl
+
+TESTS = \
+	test-fcache
+
+clean-local:
+	-rm -f tmp.fcache

@@ -1033,6 +1033,56 @@ cache_entry_valid(struct cache_entry *entry)
 	return entry->state == cs_valid;
 }
 
+/* File cache */
+
+/** File cache entry.
+ */
+struct fcache_entry {
+	/** Data start. */
+	void *data;
+
+	/** Data length. */
+	size_t len;
+
+	/** Entry in the underlying cache. */
+	struct cache_entry *ce;
+
+	/** Main cache or fallback cache. */
+	struct cache *cache;
+};
+
+/** File cache.
+ */
+struct fcache {
+	/** Open file descriptor. */
+	int fd;
+
+	/** Page size (in bytes). */
+	size_t pgsz;
+
+	/** Size of mmap'ed regions. */
+	size_t mmapsz;
+
+	/** Main cache (for mmap'ed regions). */
+	struct cache *cache;
+
+	/** Fallback cache (for read regions). */
+	struct cache *fbcache;
+};
+
+INTERNAL_DECL(struct fcache *, fcache_new,
+	      (int fd, unsigned n, unsigned order));
+INTERNAL_DECL(void, fcache_free,
+	      (struct fcache *fc));
+
+INTERNAL_DECL(kdump_status, fcache_get,
+	      (struct fcache *fc, struct fcache_entry *fce, off_t pos));
+static inline void
+fcache_put(struct fcache_entry *fce)
+{
+	cache_put_entry(fce->cache, fce->ce);
+}
+
 /* Inline utility functions */
 
 static inline unsigned
