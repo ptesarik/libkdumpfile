@@ -92,6 +92,10 @@ struct cache {
 
 	size_t elemsize;	 /**< Element data size */
 	void *data;		 /**< Actual cache data */
+
+	/** Cache entry destructor. */
+	cache_entry_cleanup_fn *entry_cleanup;
+	void *cleanup_data;	 /**< User-supplied data for the destructor. */
 	struct cache_entry ce[]; /**< Cache entries */
 };
 
@@ -311,6 +315,8 @@ reinit_entry(struct cache *cache, struct cache_entry *entry,
 		evict = evict_probe(cache, cs);
 	else
 		evict = evict_prec(cache, cs);
+	if (cache->entry_cleanup)
+		cache->entry_cleanup(cache->cleanup_data, evict);
 
 	entry->data = evict->data;
 	evict->data = NULL;
@@ -345,6 +351,9 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
 		evict = evict_probe(cache, cs);
 	else
 		evict = evict_prec(cache, cs);
+	if (cache->entry_cleanup)
+		cache->entry_cleanup(cache->cleanup_data, evict);
+
 	entry->data = evict->data;
 	evict->data = NULL;
 
@@ -705,6 +714,40 @@ cache_discard(struct cache *cache, struct cache_entry *entry)
 	mutex_unlock(&cache->mutex);
 }
 
+/**  Clean up all cache entries.
+ *
+ * @param cache  Cache object.
+ *
+ * Call the entry destructor on all active entries in the cache.
+ */
+static void
+cleanup_entries(struct cache *cache)
+{
+	unsigned n, idx;
+	struct cache_entry *entry;
+
+	if (!cache->entry_cleanup)
+		return;
+
+	/* Clean up precious entries */
+	n = cache->nprec;
+	idx = cache->ce[cache->split].next;
+	while (n--) {
+		entry = &cache->ce[idx];
+		cache->entry_cleanup(cache->cleanup_data, entry);
+		idx = entry->next;
+	}
+
+	/* Clean up probed entries */
+	n = cache->nprobe;
+	idx = cache->split;
+	while (n--) {
+		entry = &cache->ce[idx];
+		cache->entry_cleanup(cache->cleanup_data, entry);
+		idx = entry->prev;
+	}
+}
+
 /**  Flush all cache entries.
  *
  * @param cache  Cache object.
@@ -713,6 +756,8 @@ void
 cache_flush(struct cache *cache)
 {
 	unsigned i, n;
+
+	cleanup_entries(cache);
 
 	n = 2 * cache->cap;
 	for (i = 0; i < n; ++i) {
@@ -762,6 +807,7 @@ cache_alloc(unsigned n, size_t size)
 	cache->cap = n;
 	cache->hits.number = 0;
 	cache->misses.number = 0;
+	cache->entry_cleanup = NULL;
 
 	if (cache->elemsize) {
 		cache->data = malloc(cache->cap * cache->elemsize);
@@ -776,6 +822,26 @@ cache_alloc(unsigned n, size_t size)
 	return cache;
 }
 
+/** Set cache entry destructor.
+ * @param cache  Cache object.
+ * @param fn     Entry destructor, or @c NULL.
+ * @param data   User-supplied data, passed as an argument to the destructor.
+ *
+ * The destructor is called whenever a cache entry is invalidated, that is
+ * either when the entry is evicted, or when the whole cache is freed.
+ * It should free any resources associated with the data pointer of the
+ * respective entry.
+ */
+void
+set_cache_entry_cleanup(struct cache *cache, cache_entry_cleanup_fn *fn,
+			void *data)
+{
+	mutex_lock(&cache->mutex);
+	cache->entry_cleanup = fn;
+	cache->cleanup_data = data;
+	mutex_unlock(&cache->mutex);
+}
+
 /**  Free a cache object.
  * @param cache  Cache object.
  *
@@ -787,6 +853,7 @@ void
 cache_free(struct cache *cache)
 {
 	mutex_destroy(&cache->mutex);
+	cleanup_entries(cache);
 	if (cache->data != cache)
 		free(cache->data);
 	free(cache);

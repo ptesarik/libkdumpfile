@@ -983,8 +983,17 @@ struct cache_entry {
 	void *data;		/**< Pointer to data. */
 };
 
+/** Cache entry destructor.
+ * @param data  User-supplied data pointer.
+ * @param ce    Cache entry.
+ * @sa set_cache_entry_cleanup
+ */
+typedef void cache_entry_cleanup_fn(void *data, struct cache_entry *ce);
+
 INTERNAL_DECL(unsigned, get_cache_size, (kdump_ctx_t *ctx));
 INTERNAL_DECL(struct cache *, cache_alloc, (unsigned n, size_t size));
+INTERNAL_DECL(void, set_cache_entry_cleanup,
+	      (struct cache *, cache_entry_cleanup_fn *, void *));
 INTERNAL_DECL(void, cache_free, (struct cache *));
 INTERNAL_DECL(void, cache_flush, (struct cache *));
 INTERNAL_DECL(struct cache_entry *, cache_get_entry,
