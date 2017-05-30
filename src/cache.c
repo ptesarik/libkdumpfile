@@ -763,11 +763,14 @@ cache_alloc(unsigned n, size_t size)
 	cache->hits.number = 0;
 	cache->misses.number = 0;
 
-	cache->data = malloc(cache->cap * cache->elemsize);
-	if (!cache->data) {
-		free(cache);
-		return NULL;
-	}
+	if (cache->elemsize) {
+		cache->data = malloc(cache->cap * cache->elemsize);
+		if (!cache->data) {
+			free(cache);
+			return NULL;
+		}
+	} else
+		cache->data = cache; /* Any non-NULL pointer */
 
 	cache_flush(cache);
 	return cache;
@@ -784,7 +787,8 @@ void
 cache_free(struct cache *cache)
 {
 	mutex_destroy(&cache->mutex);
-	free(cache->data);
+	if (cache->data != cache)
+		free(cache->data);
 	free(cache);
 }
 
