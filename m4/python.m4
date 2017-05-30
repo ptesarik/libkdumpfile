@@ -17,7 +17,7 @@ AS_IF([test "x$withval" != xno],[dnl
       ])
       ;;
   esac
-  AM_PATH_PYTHON([$1],[have_python=yes])
+  AM_PATH_PYTHON([$1],[have_python=yes],[:])
 ])
 AS_IF([test "$have_python" = yes],[dnl
   PYTHON_CONFIG="$PYTHON-config"
