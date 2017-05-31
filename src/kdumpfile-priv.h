@@ -529,6 +529,7 @@ struct kdump_shared {
 	int arch_init_done;	/**< Non-zero if arch init has been called. */
 
 	struct cache *cache;	/**< Page cache. */
+	struct fcache *fcache;	/**< File cache. */
 
 	addrxlat_ostype_t ostype; /**< OS for address translation. */
 	addrxlat_sys_t *xlatsys;  /**< Address translation system. */

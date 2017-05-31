@@ -37,6 +37,26 @@
 #include <unistd.h>
 #include <linux/version.h>
 
+/** File cache size.
+ * This number should be big enough to cover page table lookups with a
+ * scattered page table hierarchy, including a possible Xen mtop lookup
+ * in a separate hierarchy. The worst case seems to be 4-level paging with
+ * a subsequent lookup (4-level paging again, plus the lookup page) and
+ * a data page. That is 4 + 1 + 4 + 1 = 10. Let's add some reserve and use
+ * a beautirul power of two.
+ */
+#define FCACHE_SIZE	16
+
+/** File cache page order.
+ * This number should be high enough to leverage transparent huge pages in
+ * the kernel (if possible), but small enough not to exhaust the virtual
+ * address space (especially on 32-bit platforms).
+ * Choosing 10 here results in 4M blocks on architectures with 4K pages
+ * and 64M blocks on architectures with 64K pages. In the latter case,
+ * virtual address space may a bit tight on a 32-bit platform.
+ */
+#define FCACHE_ORDER	10
+
 static kdump_status kdump_open_known(kdump_ctx_t *pctx);
 
 static const struct format_ops *formats[] = {
@@ -65,6 +85,14 @@ set_fd(kdump_ctx_t *ctx, void *buf)
 	ssize_t rd;
 	kdump_status ret;
 	int i;
+
+	if (ctx->shared->fcache)
+		fcache_free(ctx->shared->fcache);
+	ctx->shared->fcache = fcache_new(get_file_fd(ctx),
+					 FCACHE_SIZE, FCACHE_ORDER);
+	if (!ctx->shared->fcache)
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot allocate file cache");
 
 	rd = paged_read(get_file_fd(ctx), buf, MAX_PAGE_SIZE);
 	if (rd < 0)
@@ -441,6 +469,8 @@ kdump_free(kdump_ctx_t *ctx)
 			free(shared->xen_map);
 		if (shared->xlatsys)
 			addrxlat_sys_decref(shared->xlatsys);
+		if (shared->fcache)
+			fcache_free(shared->fcache);
 		cleanup_attr(shared);
 		rwlock_destroy(&shared->lock);
 		free(shared);
