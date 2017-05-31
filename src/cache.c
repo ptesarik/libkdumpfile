@@ -762,15 +762,15 @@ cache_flush(struct cache *cache)
 	n = 2 * cache->cap;
 	for (i = 0; i < n; ++i) {
 		struct cache_entry *entry = &cache->ce[i];
-		entry->next = (i < n - 1) ? (i + 1) : 0;
-		entry->prev = (i > 0) ? (i - 1) : (n - 1);
+		entry->next = (i > 0) ? (i - 1) : (n - 1);
+		entry->prev = (i < n - 1) ? (i + 1) : 0;
 		entry->refcnt = 0;
 		entry->data = i < cache->cap
 			? cache->data + i * cache->elemsize
 			: NULL;
 	}
 
-	cache->split = cache->cap - 1;
+	cache->split = 0;
 	cache->nprec = 0;
 	cache->ngprec = 0;
 	cache->nprobe = 0;
