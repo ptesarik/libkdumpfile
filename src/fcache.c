@@ -151,3 +151,141 @@ fcache_get(struct fcache *fc, struct fcache_entry *fce, off_t pos)
 	fce->cache = fc->fbcache;
 	return KDUMP_OK;
 }
+
+/** Free an array of file cache entries.
+ * @param fces  Array of file cache entries.
+ * @param n     Number of entries in the array.
+ */
+static void
+free_fces(struct fcache_entry *fces, size_t n)
+{
+	if (fces) {
+		while (n--)
+			fcache_put(&fces[n]);
+		free(fces);
+	}
+}
+
+/** Copy data out of an array of file cache entries.
+ * @param data  Pre-allocated buffer.
+ * @param fces  Array of file cache entries.
+ * @param n     Number of entries in the array.
+ * @returns     Pointer past end of buffer.
+ */
+static void *
+copy_data(void *data, struct fcache_entry *fces, size_t n)
+{
+	size_t i;
+	for (i = 0; i < n; ++i) {
+		memcpy(data, fces[i].data, fces[i].len);
+		data += fces[i].len;
+	}
+	return data;
+}
+
+/** Get a contiguous data chunk using a file cache.
+ * @param fc   File cache.
+ * @param fch  File cache chunk, updated on success.
+ * @param pos  File position.
+ * @param len  Length of data.
+ * @returns    Error status.
+ */
+kdump_status
+fcache_get_chunk(struct fcache *fc, struct fcache_chunk *fch,
+		 off_t pos, size_t len)
+{
+	off_t first, last;
+	struct fcache_entry fce;
+	struct fcache_entry *fces, *curfce;
+	void *data, *curdata;
+	size_t remain;
+	size_t nent;
+	kdump_status status;
+
+	first = pos & ~(fc->pgsz - 1);
+	last = (pos + len - 1) & ~(fc->pgsz - 1);
+	if (last != first) {
+		fces = malloc(((last - first) / fc->pgsz + 1) * sizeof(*fces));
+		if (!fces)
+			return KDUMP_ERR_SYSTEM;
+		curfce = fces;
+	} else {
+		fces = NULL;
+		curfce = &fce;
+	}
+
+	nent = 0;
+	data = NULL;
+	remain = len;
+	while (remain) {
+		status = fcache_get(fc, curfce, pos);
+		if (status != KDUMP_OK) {
+			free_fces(fces, nent);
+			return status;
+		}
+
+		if (curfce->len > remain)
+			curfce->len = remain;
+
+		if (!nent)
+			curdata = curfce->data;
+		else if (curfce->data != curdata) {
+			if (!data) {
+				data = malloc(len);
+				if (!data) {
+					free_fces(fces, nent + 1);
+					return KDUMP_ERR_SYSTEM;
+				}
+				curdata = copy_data(data, fces, nent);
+
+				fce = *curfce;
+				curfce = &fce;
+				free_fces(fces, nent);
+			}
+			memcpy(curdata, curfce->data, curfce->len);
+		}
+
+		curdata += curfce->len;
+		pos += curfce->len;
+		remain -= curfce->len;
+
+		if (data)
+			fcache_put(curfce);
+		else
+			++curfce;
+		++nent;
+	}
+
+	fch->nent = nent;
+	if (nent > 1) {
+		if (data) {
+			fch->data = data;
+			fch->nent = 0;
+		} else {
+			fch->data = fces->data;
+			fch->fces = fces;
+		}
+	} else if (nent) {
+		--curfce;
+		fch->data = curfce->data;
+		fch->fce = *curfce;
+		if (fces)
+			free(fces);
+	}
+
+	return KDUMP_OK;
+}
+
+/** Return a no longer needed file cache chunk.
+ * @param fch  File cache chunk.
+ */
+void
+fcache_put_chunk(struct fcache_chunk *fch)
+{
+	if (fch->nent > 1)
+		free_fces(fch->fces, fch->nent);
+	else if (fch->nent)
+		fcache_put(&fch->fce);
+	else
+		free(fch->data);
+}

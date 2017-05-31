@@ -97,7 +97,7 @@ prepare_buf(unsigned startpg, unsigned numpg)
 }
 
 static int
-test_fcache(struct fcache *fc)
+test_basic(struct fcache *fc)
 {
 	off_t pos;
 	struct fcache_entry ent, ent2;
@@ -243,6 +243,109 @@ test_fcache(struct fcache *fc)
 	fcache_put(&ent);
 
 	return exitcode;
+}
+
+static int
+test_chunks(struct fcache *fc)
+{
+	off_t pos;
+	size_t len;
+	struct fcache_chunk fch;
+	kdump_status status;
+
+	/* Check a single-block chunk. */
+	pos = 0;
+	len = 16;
+	status = fcache_get_chunk(fc, &fch, pos, len);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot get %zd-byte chunk at %ld: %s\n",
+			len, (long)pos, kdump_strerror(status));
+		return TEST_ERR;
+	}
+	prepare_buf(0, 1);
+	if (memcmp(fch.data, mmapbuf + pos, len)) {
+		printf("data mismatch at %ld\n", (long)pos);
+		exitcode = TEST_FAIL;
+	}
+	fcache_put_chunk(&fch);
+
+	/* Check a single-block chunk at non-zero block offset. */
+	pos = 8;
+	len = 16;
+	status = fcache_get_chunk(fc, &fch, pos, len);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot get %zd-byte chunk at %ld: %s\n",
+			len, (long)pos, kdump_strerror(status));
+		return TEST_ERR;
+	}
+	prepare_buf(0, 1);
+	if (memcmp(fch.data, mmapbuf + pos, len)) {
+		printf("data mismatch at %ld\n", (long)pos);
+		exitcode = TEST_FAIL;
+	}
+	fcache_put_chunk(&fch);
+
+	/* Check a small chunk that crosses a block boundary. */
+	pos = (pagesize << CACHE_ORDER) - 8;
+	len = 16;
+	status = fcache_get_chunk(fc, &fch, pos, len);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot get %zd-byte chunk at %ld: %s\n",
+			len, (long)pos, kdump_strerror(status));
+		return TEST_ERR;
+	}
+	prepare_buf((1UL << CACHE_ORDER) - 1, 2);
+	if (memcmp(fch.data, mmapbuf + pagesize - 8, len)) {
+		printf("data mismatch at %ld\n", (long)pos);
+		exitcode = TEST_FAIL;
+	}
+	fcache_put_chunk(&fch);
+
+	/* Check a small combined chunk. */
+	pos = (pagesize << CACHE_ORDER) + pagesize - 8;
+	len = 16;
+	status = fcache_get_chunk(fc, &fch, pos, len);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot get %zd-byte chunk at %ld: %s\n",
+			len, (long)pos, kdump_strerror(status));
+		return TEST_ERR;
+	}
+	prepare_buf((1UL << CACHE_ORDER), 2);
+	if (memcmp(fch.data, mmapbuf + pagesize - 8, len)) {
+		printf("data mismatch at %ld\n", (long)pos);
+		exitcode = TEST_FAIL;
+	}
+	fcache_put_chunk(&fch);
+
+	/* Check a large combined chunk. */
+	pos = (pagesize << CACHE_ORDER) + pagesize - 8;
+	len = pagesize + 16;
+	status = fcache_get_chunk(fc, &fch, pos, len);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot get %zd-byte chunk at %ld: %s\n",
+			len, (long)pos, kdump_strerror(status));
+		return TEST_ERR;
+	}
+	prepare_buf((1UL << CACHE_ORDER), 3);
+	if (memcmp(fch.data, mmapbuf + pagesize - 8, len)) {
+		printf("data mismatch at %ld\n", (long)pos);
+		exitcode = TEST_FAIL;
+	}
+	fcache_put_chunk(&fch);
+
+	return exitcode;
+}
+
+static int
+test_fcache(struct fcache *fc)
+{
+	int ret, ret2;
+
+	ret = test_basic(fc);
+	ret2 = test_chunks(fc);
+	if (ret < ret2)
+		ret = ret2;
+	return ret;
 }
 
 static int

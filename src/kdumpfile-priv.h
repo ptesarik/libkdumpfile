@@ -1083,6 +1083,29 @@ fcache_put(struct fcache_entry *fce)
 	cache_put_entry(fce->cache, fce->ce);
 }
 
+/** A contiguous cached data chunk.
+ */
+struct fcache_chunk {
+	/** Actual file data. */
+	void *data;
+
+	/** Number of cache entries. */
+	size_t nent;
+
+	union {
+		/** File cache entry (if @c nent is one). */
+		struct fcache_entry fce;
+
+		/** File cache entries (if @c nent >= 1). */
+		struct fcache_entry *fces;
+	};
+};
+
+INTERNAL_DECL(kdump_status, fcache_get_chunk,
+	      (struct fcache *fc, struct fcache_chunk *fch,
+	       off_t pos, size_t len));
+INTERNAL_DECL(void, fcache_put_chunk, (struct fcache_chunk *fch));
+
 /* Inline utility functions */
 
 static inline unsigned
