@@ -229,7 +229,7 @@ pfn_to_pdpos(struct disk_dump_priv *ddp, unsigned long pfn)
 }
 
 static kdump_status
-diskdump_read_cache(kdump_ctx_t *ctx, cache_key_t pfn, struct cache_entry *ce)
+diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
 {
 	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	struct page_desc pd;
@@ -240,7 +240,7 @@ diskdump_read_cache(kdump_ctx_t *ctx, cache_key_t pfn, struct cache_entry *ce)
 
 	pd_pos = pfn_to_pdpos(ddp, pfn);
 	if (pd_pos == (off_t)-1) {
-		memset(ce->data, 0, get_page_size(ctx));
+		memset(pio->data, 0, get_page_size(ctx));
 		return KDUMP_OK;
 	}
 
@@ -266,7 +266,7 @@ diskdump_read_cache(kdump_ctx_t *ctx, cache_key_t pfn, struct cache_entry *ce)
 			return set_error(ctx, KDUMP_ERR_CORRUPT,
 					 "Wrong page size: %lu",
 					 (unsigned long)pd.size);
-		buf = ce->data;
+		buf = pio->data;
 	}
 
 	/* read page data */
@@ -277,14 +277,14 @@ diskdump_read_cache(kdump_ctx_t *ctx, cache_key_t pfn, struct cache_entry *ce)
 				 (unsigned long long) pd.offset);
 
 	if (pd.flags & DUMP_DH_COMPRESSED_ZLIB) {
-		ret = uncompress_page_gzip(ctx, ce->data, buf, pd.size);
+		ret = uncompress_page_gzip(ctx, pio->data, buf, pd.size);
 		if (ret != KDUMP_OK)
 			return ret;
 	} else if (pd.flags & DUMP_DH_COMPRESSED_LZO) {
 #if USE_LZO
 		lzo_uint retlen = get_page_size(ctx);
 		int ret = lzo1x_decompress_safe((lzo_bytep)buf, pd.size,
-						(lzo_bytep)ce->data, &retlen,
+						(lzo_bytep)pio->data, &retlen,
 						LZO1X_MEM_DECOMPRESS);
 		if (ret != LZO_E_OK)
 			return set_error(ctx, KDUMP_ERR_CORRUPT,
@@ -303,7 +303,7 @@ diskdump_read_cache(kdump_ctx_t *ctx, cache_key_t pfn, struct cache_entry *ce)
 		size_t retlen = get_page_size(ctx);
 		snappy_status ret;
 		ret = snappy_uncompress((char *)buf, pd.size,
-					(char *)ce->data, &retlen);
+					(char *)pio->data, &retlen);
 		if (ret != SNAPPY_OK)
 			return set_error(ctx, KDUMP_ERR_CORRUPT,
 					 "Decompression failed: %d",
@@ -330,7 +330,7 @@ diskdump_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 	if (pfn >= get_max_pfn(ctx))
 		return set_error(ctx, KDUMP_ERR_NODATA, "Out-of-bounds PFN");
 
-	return cache_get_page(ctx, pio, diskdump_read_cache, pfn);
+	return cache_get_page(ctx, pio, diskdump_read_page, pfn);
 }
 
 /** Reallocate buffer for compressed data.

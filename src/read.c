@@ -48,7 +48,7 @@
  */
 kdump_status
 cache_get_page(kdump_ctx_t *ctx, struct page_io *pio,
-	       read_cache_fn *fn, cache_key_t idx)
+	       read_page_fn *fn, cache_key_t idx)
 {
 	struct cache_entry *entry;
 	kdump_status ret;
@@ -64,7 +64,7 @@ cache_get_page(kdump_ctx_t *ctx, struct page_io *pio,
 	if (cache_entry_valid(entry))
 		return KDUMP_OK;
 
-	ret = fn(ctx, idx, entry);
+	ret = fn(ctx, pio, idx);
 	if (ret == KDUMP_OK) {
 		if (pio->precious)
 			cache_make_precious(pio->cache, entry);

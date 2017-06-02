@@ -732,7 +732,7 @@ lkcd_max_pfn_validate(kdump_ctx_t *ctx, struct attr_data *attr)
 }
 
 static kdump_status
-lkcd_read_cache(kdump_ctx_t *ctx, cache_key_t pfn, struct cache_entry *ce)
+lkcd_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
 {
 	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
 	struct dump_page dp;
@@ -761,7 +761,7 @@ lkcd_read_cache(kdump_ctx_t *ctx, cache_key_t pfn, struct cache_entry *ce)
 			return set_error(ctx, KDUMP_ERR_CORRUPT,
 					 "Wrong page size: %lu",
 					 (unsigned long) dp.dp_size);
-		buf = ce->data;
+		buf = pio->data;
 		break;
 	default:
 		return set_error(ctx, KDUMP_ERR_NOTIMPL,
@@ -780,7 +780,7 @@ lkcd_read_cache(kdump_ctx_t *ctx, cache_key_t pfn, struct cache_entry *ce)
 
 	if (lkcdp->compression == DUMP_COMPRESS_RLE) {
 		size_t retlen = get_page_size(ctx);
-		int ret = uncompress_rle(ce->data, &retlen, buf, dp.dp_size);
+		int ret = uncompress_rle(pio->data, &retlen, buf, dp.dp_size);
 		if (ret)
 			return set_error(ctx, KDUMP_ERR_CORRUPT,
 					 "Decompression failed: %d", ret);
@@ -789,7 +789,7 @@ lkcd_read_cache(kdump_ctx_t *ctx, cache_key_t pfn, struct cache_entry *ce)
 					 "Wrong uncompressed size: %lu",
 					 (unsigned long) retlen);
 	} else if (lkcdp->compression == DUMP_COMPRESS_GZIP) {
-		ret = uncompress_page_gzip(ctx, ce->data, buf, dp.dp_size);
+		ret = uncompress_page_gzip(ctx, pio->data, buf, dp.dp_size);
 		if (ret != KDUMP_OK)
 			return ret;
 	} else
@@ -804,7 +804,7 @@ static kdump_status
 lkcd_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
-	return cache_get_page(ctx, pio, lkcd_read_cache, pfn);
+	return cache_get_page(ctx, pio, lkcd_read_page, pfn);
 }
 
 /** Reallocate buffer for compressed data.

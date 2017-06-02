@@ -136,7 +136,7 @@ find_closest_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
 }
 
 static kdump_status
-elf_read_cache(kdump_ctx_t *ctx, cache_key_t addr, struct cache_entry *ce)
+elf_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t addr)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	struct load_segment *pls;
@@ -144,7 +144,7 @@ elf_read_cache(kdump_ctx_t *ctx, cache_key_t addr, struct cache_entry *ce)
 	off_t pos;
 	ssize_t size, rd;
 
-	p = ce->data;
+	p = pio->data;
 	endp = p + get_page_size(ctx);
 	while (p < endp) {
 		pls = find_closest_load(edp, addr, endp - p);
@@ -182,7 +182,7 @@ elf_read_cache(kdump_ctx_t *ctx, cache_key_t addr, struct cache_entry *ce)
 		}
 	}
 
-	if (p == ce->data)
+	if (p == pio->data)
 		return set_error(ctx, KDUMP_ERR_NODATA, "Page not found");
 	else if (p < endp)
 		memset(p, 0, endp - p);
@@ -193,7 +193,7 @@ elf_read_cache(kdump_ctx_t *ctx, cache_key_t addr, struct cache_entry *ce)
 static kdump_status
 elf_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
-	return cache_get_page(ctx, pio, elf_read_cache, pio->addr.addr);
+	return cache_get_page(ctx, pio, elf_read_page, pio->addr.addr);
 }
 
 static void
@@ -246,14 +246,14 @@ pfn_to_idx(kdump_ctx_t *ctx, kdump_pfn_t pfn)
 }
 
 static kdump_status
-xc_read_cache(kdump_ctx_t *ctx, cache_key_t idx, struct cache_entry *ce)
+xc_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t idx)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	off_t offset;
 	ssize_t rd;
 
 	offset = edp->xen_pages_offset + ((off_t)idx << get_page_shift(ctx));
-	rd = pread(get_file_fd(ctx), ce->data, get_page_size(ctx), offset);
+	rd = pread(get_file_fd(ctx), pio->data, get_page_size(ctx), offset);
 	if (rd != get_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu",
@@ -413,7 +413,7 @@ xc_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 	if (idx == ~0UL)
 		return set_error(ctx, KDUMP_ERR_NODATA, "Page not found");
 
-	return cache_get_page(ctx, pio, xc_read_cache, idx);
+	return cache_get_page(ctx, pio, xc_read_page, idx);
 }
 
 static kdump_status

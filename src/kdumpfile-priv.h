@@ -1004,12 +1004,12 @@ INTERNAL_DECL(void, cache_discard, (struct cache *, struct cache_entry *));
 INTERNAL_DECL(void, cache_make_precious,
 	      (struct cache *cache, struct cache_entry *entry));
 
-typedef kdump_status read_cache_fn(
-	kdump_ctx_t *ctx, cache_key_t idx, struct cache_entry *entry);
+typedef kdump_status read_page_fn(
+	kdump_ctx_t *ctx, struct page_io *pio, cache_key_t idx);
 
 INTERNAL_DECL(kdump_status, cache_get_page,
 	      (kdump_ctx_t *ctx, struct page_io *pio,
-	       read_cache_fn *fn, cache_key_t idx));
+	       read_page_fn *fn, cache_key_t idx));
 INTERNAL_DECL(void, cache_put_page,
 	      (kdump_ctx_t *ctx, struct page_io *pio));
 
