@@ -880,6 +880,7 @@ def_read_cache(kdump_ctx_t *ctx, struct page_io *pio,
 		return set_error(ctx, KDUMP_ERR_BUSY,
 				 "Cache is fully utilized");
 
+	pio->data = entry->data;
 	pio->ce = entry;
 	if (cache_entry_valid(entry))
 		return KDUMP_OK;

@@ -177,6 +177,7 @@ struct cache_entry;
  */
 struct page_io {
 	addrxlat_fulladdr_t addr; /**< Address of page under I/O. */
+	void *data;		/**< Page data. */
 	struct cache *cache;	/**< Referenced cache. */
 	struct cache_entry *ce;	/**< Buffer cache entry. */
 	int precious;		/**< Is this page precious? */
