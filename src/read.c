@@ -35,6 +35,52 @@
 #include <string.h>
 #include <stdlib.h>
 
+/**  Default way to handle cached reads.
+ *
+ * @param ctx  Dump file object.
+ * @param pio  Page I/O control.
+ * @param fn   Read function.
+ * @param idx  Page index passed to @p fn (usually PFN).
+ * @returns    Error status.
+ */
+kdump_status
+def_read_cache(kdump_ctx_t *ctx, struct page_io *pio,
+	       read_cache_fn *fn, cache_key_t idx)
+{
+	struct cache_entry *entry;
+	kdump_status ret;
+
+	pio->cache = ctx->shared->cache;
+	entry = cache_get_entry(pio->cache, idx);
+	if (!entry)
+		return set_error(ctx, KDUMP_ERR_BUSY,
+				 "Cache is fully utilized");
+
+	pio->data = entry->data;
+	pio->ce = entry;
+	if (cache_entry_valid(entry))
+		return KDUMP_OK;
+
+	ret = fn(ctx, idx, entry);
+	if (ret == KDUMP_OK) {
+		if (pio->precious)
+			cache_make_precious(pio->cache, entry);
+		cache_insert(pio->cache, entry);
+	} else
+		cache_discard(pio->cache, entry);
+	return ret;
+}
+
+/**  Drop a reference to an I/O page from the default cache.
+ * @param ctx  Dump file object.
+ * @param pio  Page I/O control.
+ */
+void
+cache_unref_page(kdump_ctx_t *ctx, struct page_io *pio)
+{
+	cache_put_entry(pio->cache, pio->ce);
+}
+
 static addrxlat_status
 xlat_pio_op(void *data, const addrxlat_fulladdr_t *addr)
 {
