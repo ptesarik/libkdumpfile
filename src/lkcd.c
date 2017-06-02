@@ -801,10 +801,10 @@ lkcd_read_cache(kdump_ctx_t *ctx, cache_key_t pfn, struct cache_entry *ce)
 }
 
 static kdump_status
-lkcd_read_page(kdump_ctx_t *ctx, struct page_io *pio)
+lkcd_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
-	return def_read_cache(ctx, pio, lkcd_read_cache, pfn);
+	return cache_get_page(ctx, pio, lkcd_read_cache, pfn);
 }
 
 /** Reallocate buffer for compressed data.
@@ -1055,8 +1055,8 @@ lkcd_cleanup(struct kdump_shared *shared)
 const struct format_ops lkcd_ops = {
 	.name = "lkcd",
 	.probe = lkcd_probe,
-	.read_page = lkcd_read_page,
-	.unref_page = cache_unref_page,
+	.get_page = lkcd_get_page,
+	.put_page = cache_put_page,
 	.realloc_caches = def_realloc_caches,
 	.cleanup = lkcd_cleanup,
 };

@@ -157,7 +157,7 @@ linux_iomem_kcode(kdump_ctx_t *ctx, kdump_paddr_t *paddr)
 }
 
 static kdump_status
-devmem_read_page(kdump_ctx_t *ctx, struct page_io *pio)
+devmem_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	struct devmem_priv *dmp = ctx->shared->fmtdata;
 	struct cache_entry *ce;
@@ -192,7 +192,7 @@ devmem_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 }
 
 static void
-devmem_unref_page(kdump_ctx_t *ctx, struct page_io *pio)
+devmem_put_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	--pio->ce->refcnt;
 }
@@ -312,8 +312,8 @@ devmem_cleanup(struct kdump_shared *shared)
 const struct format_ops devmem_ops = {
 	.name = "memory",
 	.probe = devmem_probe,
-	.read_page = devmem_read_page,
-	.unref_page = devmem_unref_page,
+	.get_page = devmem_get_page,
+	.put_page = devmem_put_page,
 	.realloc_caches = devmem_realloc_caches,
 	.cleanup = devmem_cleanup,
 };

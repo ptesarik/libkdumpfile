@@ -35,16 +35,19 @@
 #include <string.h>
 #include <stdlib.h>
 
-/**  Default way to handle cached reads.
+/** Get a page from the default cache.
  *
  * @param ctx  Dump file object.
  * @param pio  Page I/O control.
  * @param fn   Read function.
  * @param idx  Page index passed to @p fn (usually PFN).
  * @returns    Error status.
+ *
+ * If the page is not currently found in the cache, read it using
+ * the read function.
  */
 kdump_status
-def_read_cache(kdump_ctx_t *ctx, struct page_io *pio,
+cache_get_page(kdump_ctx_t *ctx, struct page_io *pio,
 	       read_cache_fn *fn, cache_key_t idx)
 {
 	struct cache_entry *entry;
@@ -76,7 +79,7 @@ def_read_cache(kdump_ctx_t *ctx, struct page_io *pio,
  * @param pio  Page I/O control.
  */
 void
-cache_unref_page(kdump_ctx_t *ctx, struct page_io *pio)
+cache_put_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	cache_put_entry(pio->cache, pio->ce);
 }
@@ -95,7 +98,7 @@ xlat_pio_op(void *data, const addrxlat_fulladdr_t *addr)
  *
  * This function translates the page I/O address to an address space that
  * is included in @c xlat_caps. The resulting page I/O object can be
- * directly passed to a @c read_page method.
+ * directly passed to a @c get_page method.
  */
 static kdump_status
 xlat_pio(kdump_ctx_t *ctx, struct page_io *pio)
@@ -110,12 +113,12 @@ xlat_pio(kdump_ctx_t *ctx, struct page_io *pio)
 	return addrxlat2kdump(ctx, addrxlat_op(&ctl, &pio->addr));
 }
 
-/**  Raw interface to read_page().
+/**  Raw interface to get_page().
  * @param ctx  Dump file object.
  * @param pio  Page I/O control.
  */
 static kdump_status
-raw_read_page(kdump_ctx_t *ctx, struct page_io *pio)
+get_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	kdump_status status;
 
@@ -124,7 +127,7 @@ raw_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 		return set_error(ctx, status,
 				 "Cannot get page I/O address");
 
-	return ctx->shared->ops->read_page(ctx, pio);
+	return ctx->shared->ops->get_page(ctx, pio);
 }
 
 /**  Internal version of @ref kdump_read
@@ -156,7 +159,7 @@ read_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 
 		pio.addr.as = as;
 		pio.addr.addr = page_align(ctx, addr);
-		ret = raw_read_page(ctx, &pio);
+		ret = get_page(ctx, &pio);
 		if (ret != KDUMP_OK)
 			break;
 
@@ -165,7 +168,7 @@ read_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		if (partlen > remain)
 			partlen = remain;
 		memcpy(buffer, pio.data + off, partlen);
-		unref_page(ctx, &pio);
+		put_page(ctx, &pio);
 		addr += partlen;
 		buffer += partlen;
 		remain -= partlen;
@@ -215,7 +218,7 @@ read_string_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 
 		pio.addr.as = as;
 		pio.addr.addr = page_align(ctx, addr);
-		ret = raw_read_page(ctx, &pio);
+		ret = get_page(ctx, &pio);
 		if (ret != KDUMP_OK)
 			return ret;
 
@@ -228,7 +231,7 @@ read_string_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		newlength = length + partlen;
 		newstr = realloc(str, newlength + 1);
 		if (!newstr) {
-			unref_page(ctx, &pio);
+			put_page(ctx, &pio);
 			if (str)
 				free(str);
 			return set_error(ctx, KDUMP_ERR_SYSTEM,
@@ -236,7 +239,7 @@ read_string_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 					 newlength + 1);
 		}
 		memcpy(newstr + length, pio.data + off, partlen);
-		unref_page(ctx, &pio);
+		put_page(ctx, &pio);
 		length = newlength;
 		str = newstr;
 
@@ -283,7 +286,7 @@ read_u32(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	pio.addr.addr = page_align(ctx, addr);
 	pio.addr.as = as;
 	pio.precious = precious;
-	ret = raw_read_page(ctx, &pio);
+	ret = get_page(ctx, &pio);
 	if (ret != KDUMP_OK)
 		return what
 			? set_error(ctx, ret,
@@ -293,7 +296,7 @@ read_u32(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 
 	p = pio.data + (addr & (get_page_size(ctx) - 1));
 	*result = dump32toh(ctx, *p);
-	unref_page(ctx, &pio);
+	put_page(ctx, &pio);
 	return KDUMP_OK;
 }
 
@@ -319,7 +322,7 @@ read_u64(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	pio.addr.addr = page_align(ctx, addr);
 	pio.addr.as = as;
 	pio.precious = precious;
-	ret = raw_read_page(ctx, &pio);
+	ret = get_page(ctx, &pio);
 	if (ret != KDUMP_OK)
 		return what
 			? set_error(ctx, ret,
@@ -329,7 +332,7 @@ read_u64(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 
 	p = pio.data + (addr & (get_page_size(ctx) - 1));
 	*result = dump64toh(ctx, *p);
-	unref_page(ctx, &pio);
+	put_page(ctx, &pio);
 	return KDUMP_OK;
 }
 

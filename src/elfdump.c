@@ -191,9 +191,9 @@ elf_read_cache(kdump_ctx_t *ctx, cache_key_t addr, struct cache_entry *ce)
 }
 
 static kdump_status
-elf_read_page(kdump_ctx_t *ctx, struct page_io *pio)
+elf_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
-	return def_read_cache(ctx, pio, elf_read_cache, pio->addr.addr);
+	return cache_get_page(ctx, pio, elf_read_cache, pio->addr.addr);
 }
 
 static void
@@ -402,7 +402,7 @@ xc_post_addrxlat(kdump_ctx_t *ctx)
 }
 
 static kdump_status
-xc_read_page(kdump_ctx_t *ctx, struct page_io *pio)
+xc_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
 	unsigned long idx;
@@ -413,7 +413,7 @@ xc_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 	if (idx == ~0UL)
 		return set_error(ctx, KDUMP_ERR_NODATA, "Page not found");
 
-	return def_read_cache(ctx, pio, xc_read_cache, idx);
+	return cache_get_page(ctx, pio, xc_read_cache, idx);
 }
 
 static kdump_status
@@ -893,16 +893,16 @@ elf_cleanup(struct kdump_shared *shared)
 const struct format_ops elfdump_ops = {
 	.name = "elf",
 	.probe = elf_probe,
-	.read_page = elf_read_page,
-	.unref_page = cache_unref_page,
+	.get_page = elf_get_page,
+	.put_page = cache_put_page,
 	.realloc_caches = def_realloc_caches,
 	.cleanup = elf_cleanup,
 };
 
 static const struct format_ops xc_core_elf_ops = {
 	.name = "xc_core_elf",
-	.read_page = xc_read_page,
-	.unref_page = cache_unref_page,
+	.get_page = xc_get_page,
+	.put_page = cache_put_page,
 	.post_addrxlat = xc_post_addrxlat,
 	.realloc_caches = def_realloc_caches,
 	.cleanup = elf_cleanup,

@@ -211,25 +211,22 @@ struct format_ops {
 	 */
 	kdump_status (*probe)(kdump_ctx_t *ctx, void *hdr);
 
-	/* Read a page from the dump file.
-	 * Input:
-	 *   ctx->fd         core dump file descriptor open for reading
-	 * Return:
-	 *   KDUMP_OK          buffer is filled with page data
-	 *   KDUMP_ERR_NODATA  data for the given page is not present
+	/** Get page data.
+	 * @param ctx  Dump file object.
+	 * @param pio  Page I/O control.
 	 *
 	 * Note: The requested address space is specified in @c pio.
 	 * It is always an address space specified by @c xlat_caps.
-	 * Since most file formats will specify only one, their read_page
-	 * method does not have to care.
+	 * Since most file formats specify only one capability, their
+	 * get_page methods do not have to care.
 	 */
-	kdump_status (*read_page)(kdump_ctx_t *ctx, struct page_io *pio);
+	kdump_status (*get_page)(kdump_ctx_t *ctx, struct page_io *pio);
 
 	/** Drop a reference to a page.
 	 * @param ctx  Dump file object.
 	 * @param pio  Page I/O control.
 	 */
-	void (*unref_page)(kdump_ctx_t *ctx, struct page_io *pio);
+	void (*put_page)(kdump_ctx_t *ctx, struct page_io *pio);
 
 	/** Address translation post-hook.
 	 * @param ctx  Dump file object.
@@ -1010,16 +1007,16 @@ INTERNAL_DECL(void, cache_make_precious,
 typedef kdump_status read_cache_fn(
 	kdump_ctx_t *ctx, cache_key_t idx, struct cache_entry *entry);
 
-INTERNAL_DECL(kdump_status, def_read_cache,
+INTERNAL_DECL(kdump_status, cache_get_page,
 	      (kdump_ctx_t *ctx, struct page_io *pio,
 	       read_cache_fn *fn, cache_key_t idx));
-INTERNAL_DECL(void, cache_unref_page,
+INTERNAL_DECL(void, cache_put_page,
 	      (kdump_ctx_t *ctx, struct page_io *pio));
 
 static inline
-void unref_page(kdump_ctx_t *ctx, struct page_io *pio)
+void put_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
-	ctx->shared->ops->unref_page(ctx, pio);
+	ctx->shared->ops->put_page(ctx, pio);
 }
 
 INTERNAL_DECL(kdump_status, def_realloc_caches, (kdump_ctx_t *ctx));

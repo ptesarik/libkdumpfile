@@ -323,14 +323,14 @@ diskdump_read_cache(kdump_ctx_t *ctx, cache_key_t pfn, struct cache_entry *ce)
 }
 
 static kdump_status
-diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
+diskdump_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
 
 	if (pfn >= get_max_pfn(ctx))
 		return set_error(ctx, KDUMP_ERR_NODATA, "Out-of-bounds PFN");
 
-	return def_read_cache(ctx, pio, diskdump_read_cache, pfn);
+	return cache_get_page(ctx, pio, diskdump_read_cache, pfn);
 }
 
 /** Reallocate buffer for compressed data.
@@ -830,8 +830,8 @@ diskdump_cleanup(struct kdump_shared *shared)
 const struct format_ops diskdump_ops = {
 	.name = "diskdump",
 	.probe = diskdump_probe,
-	.read_page = diskdump_read_page,
-	.unref_page = cache_unref_page,
+	.get_page = diskdump_get_page,
+	.put_page = cache_put_page,
 	.realloc_caches = def_realloc_caches,
 	.cleanup = diskdump_cleanup,
 };
