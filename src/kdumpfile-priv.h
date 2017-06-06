@@ -169,20 +169,7 @@ enum kdump_arch {
 	ARCH_X86_64,
 };
 
-struct cache_entry;
-
-/**  Page I/O information.
- * This structure is used to pass information between @ref kdump_read
- * and the format-specific I/O methods.
- */
-struct page_io {
-	addrxlat_fulladdr_t addr; /**< Address of page under I/O. */
-	void *data;		/**< Page data. */
-	struct cache *cache;	/**< Referenced cache. */
-	struct cache_entry *ce;	/**< Buffer cache entry. */
-	int precious;		/**< Is this page precious? */
-};
-
+struct page_io;
 struct kdump_shared;
 
 struct format_ops {
@@ -1004,21 +991,6 @@ INTERNAL_DECL(void, cache_discard, (struct cache *, struct cache_entry *));
 INTERNAL_DECL(void, cache_make_precious,
 	      (struct cache *cache, struct cache_entry *entry));
 
-typedef kdump_status read_page_fn(
-	kdump_ctx_t *ctx, struct page_io *pio, cache_key_t idx);
-
-INTERNAL_DECL(kdump_status, cache_get_page,
-	      (kdump_ctx_t *ctx, struct page_io *pio,
-	       read_page_fn *fn, cache_key_t idx));
-INTERNAL_DECL(void, cache_put_page,
-	      (kdump_ctx_t *ctx, struct page_io *pio));
-
-static inline
-void put_page(kdump_ctx_t *ctx, struct page_io *pio)
-{
-	ctx->shared->ops->put_page(ctx, pio);
-}
-
 INTERNAL_DECL(kdump_status, def_realloc_caches, (kdump_ctx_t *ctx));
 
 /**  Check if a cache entry is valid.
@@ -1104,6 +1076,33 @@ INTERNAL_DECL(kdump_status, fcache_get_chunk,
 	      (struct fcache *fc, struct fcache_chunk *fch,
 	       off_t pos, size_t len));
 INTERNAL_DECL(void, fcache_put_chunk, (struct fcache_chunk *fch));
+
+/**  Page I/O information.
+ * This structure is used to pass information between @ref kdump_read
+ * and the format-specific I/O methods.
+ */
+struct page_io {
+	addrxlat_fulladdr_t addr; /**< Address of page under I/O. */
+	void *data;		/**< Page data. */
+	struct cache *cache;	/**< Referenced cache. */
+	struct cache_entry *ce;	/**< Buffer cache entry. */
+	int precious;		/**< Is this page precious? */
+};
+
+typedef kdump_status read_page_fn(
+	kdump_ctx_t *ctx, struct page_io *pio, cache_key_t idx);
+
+INTERNAL_DECL(kdump_status, cache_get_page,
+	      (kdump_ctx_t *ctx, struct page_io *pio,
+	       read_page_fn *fn, cache_key_t idx));
+INTERNAL_DECL(void, cache_put_page,
+	      (kdump_ctx_t *ctx, struct page_io *pio));
+
+static inline
+void put_page(kdump_ctx_t *ctx, struct page_io *pio)
+{
+	ctx->shared->ops->put_page(ctx, pio);
+}
 
 /* Inline utility functions */
 
