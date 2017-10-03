@@ -240,7 +240,7 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
 
 	pd_pos = pfn_to_pdpos(ddp, pfn);
 	if (pd_pos == (off_t)-1) {
-		memset(pio->data, 0, get_page_size(ctx));
+		memset(pio->chunk.data, 0, get_page_size(ctx));
 		return KDUMP_OK;
 	}
 
@@ -266,7 +266,7 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
 			return set_error(ctx, KDUMP_ERR_CORRUPT,
 					 "Wrong page size: %lu",
 					 (unsigned long)pd.size);
-		buf = pio->data;
+		buf = pio->chunk.data;
 	}
 
 	/* read page data */
@@ -277,14 +277,15 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
 				 (unsigned long long) pd.offset);
 
 	if (pd.flags & DUMP_DH_COMPRESSED_ZLIB) {
-		ret = uncompress_page_gzip(ctx, pio->data, buf, pd.size);
+		ret = uncompress_page_gzip(ctx, pio->chunk.data, buf, pd.size);
 		if (ret != KDUMP_OK)
 			return ret;
 	} else if (pd.flags & DUMP_DH_COMPRESSED_LZO) {
 #if USE_LZO
 		lzo_uint retlen = get_page_size(ctx);
 		int ret = lzo1x_decompress_safe((lzo_bytep)buf, pd.size,
-						(lzo_bytep)pio->data, &retlen,
+						(lzo_bytep)pio->chunk.data,
+						&retlen,
 						LZO1X_MEM_DECOMPRESS);
 		if (ret != LZO_E_OK)
 			return set_error(ctx, KDUMP_ERR_CORRUPT,
@@ -303,7 +304,7 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
 		size_t retlen = get_page_size(ctx);
 		snappy_status ret;
 		ret = snappy_uncompress((char *)buf, pd.size,
-					(char *)pio->data, &retlen);
+					(char *)pio->chunk.data, &retlen);
 		if (ret != SNAPPY_OK)
 			return set_error(ctx, KDUMP_ERR_CORRUPT,
 					 "Decompression failed: %d",

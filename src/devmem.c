@@ -187,14 +187,16 @@ devmem_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 				 "Cannot read memory device");
 	}
 
-	pio->ce = ce;
+	pio->chunk.data = ce->data;
+	pio->chunk.nent = 1;
+	pio->chunk.fce.ce = ce;
 	return KDUMP_OK;
 }
 
 static void
 devmem_put_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
-	--pio->ce->refcnt;
+	--pio->chunk.fce.ce->refcnt;
 }
 
 static kdump_status

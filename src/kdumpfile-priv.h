@@ -1082,11 +1082,9 @@ INTERNAL_DECL(void, fcache_put_chunk, (struct fcache_chunk *fch));
  * and the format-specific I/O methods.
  */
 struct page_io {
-	addrxlat_fulladdr_t addr; /**< Address of page under I/O. */
-	void *data;		/**< Page data. */
-	struct cache *cache;	/**< Referenced cache. */
-	struct cache_entry *ce;	/**< Buffer cache entry. */
-	int precious;		/**< Is this page precious? */
+	addrxlat_fulladdr_t addr;  /**< Address of page under I/O. */
+	struct fcache_chunk chunk; /**< File cache chunk. */
+	int precious;		   /**< Is this page precious? */
 };
 
 typedef kdump_status read_page_fn(

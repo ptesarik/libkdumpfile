@@ -53,24 +53,25 @@ cache_get_page(kdump_ctx_t *ctx, struct page_io *pio,
 	struct cache_entry *entry;
 	kdump_status ret;
 
-	pio->cache = ctx->shared->cache;
-	entry = cache_get_entry(pio->cache, idx);
+	pio->chunk.nent = 1;
+	pio->chunk.fce.cache = ctx->shared->cache;
+	entry = cache_get_entry(pio->chunk.fce.cache, idx);
 	if (!entry)
 		return set_error(ctx, KDUMP_ERR_BUSY,
 				 "Cache is fully utilized");
 
-	pio->data = entry->data;
-	pio->ce = entry;
+	pio->chunk.data = entry->data;
+	pio->chunk.fce.ce = entry;
 	if (cache_entry_valid(entry))
 		return KDUMP_OK;
 
 	ret = fn(ctx, pio, idx);
 	if (ret == KDUMP_OK) {
 		if (pio->precious)
-			cache_make_precious(pio->cache, entry);
-		cache_insert(pio->cache, entry);
+			cache_make_precious(pio->chunk.fce.cache, entry);
+		cache_insert(pio->chunk.fce.cache, entry);
 	} else
-		cache_discard(pio->cache, entry);
+		cache_discard(pio->chunk.fce.cache, entry);
 	return ret;
 }
 
@@ -81,7 +82,7 @@ cache_get_page(kdump_ctx_t *ctx, struct page_io *pio,
 void
 cache_put_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
-	cache_put_entry(pio->cache, pio->ce);
+	fcache_put_chunk(&pio->chunk);
 }
 
 static addrxlat_status
@@ -167,7 +168,7 @@ read_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		partlen = get_page_size(ctx) - off;
 		if (partlen > remain)
 			partlen = remain;
-		memcpy(buffer, pio.data + off, partlen);
+		memcpy(buffer, pio.chunk.data + off, partlen);
 		put_page(ctx, &pio);
 		addr += partlen;
 		buffer += partlen;
@@ -224,9 +225,9 @@ read_string_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 
 		off = addr % get_page_size(ctx);
 		partlen = get_page_size(ctx) - off;
-		endp = memchr(pio.data + off, 0, partlen);
+		endp = memchr(pio.chunk.data + off, 0, partlen);
 		if (endp)
-			partlen = endp - ((char*)pio.data + off);
+			partlen = endp - ((char*)pio.chunk.data + off);
 
 		newlength = length + partlen;
 		newstr = realloc(str, newlength + 1);
@@ -238,7 +239,7 @@ read_string_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 					 "Cannot enlarge string to %zu bytes",
 					 newlength + 1);
 		}
-		memcpy(newstr + length, pio.data + off, partlen);
+		memcpy(newstr + length, pio.chunk.data + off, partlen);
 		put_page(ctx, &pio);
 		length = newlength;
 		str = newstr;
@@ -294,7 +295,7 @@ read_u32(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 				    what, (unsigned long long) addr)
 			: ret;
 
-	p = pio.data + (addr & (get_page_size(ctx) - 1));
+	p = pio.chunk.data + (addr & (get_page_size(ctx) - 1));
 	*result = dump32toh(ctx, *p);
 	put_page(ctx, &pio);
 	return KDUMP_OK;
@@ -330,7 +331,7 @@ read_u64(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 				    what, (unsigned long long) addr)
 			: ret;
 
-	p = pio.data + (addr & (get_page_size(ctx) - 1));
+	p = pio.chunk.data + (addr & (get_page_size(ctx) - 1));
 	*result = dump64toh(ctx, *p);
 	put_page(ctx, &pio);
 	return KDUMP_OK;

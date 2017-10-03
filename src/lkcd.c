@@ -761,7 +761,7 @@ lkcd_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
 			return set_error(ctx, KDUMP_ERR_CORRUPT,
 					 "Wrong page size: %lu",
 					 (unsigned long) dp.dp_size);
-		buf = pio->data;
+		buf = pio->chunk.data;
 		break;
 	default:
 		return set_error(ctx, KDUMP_ERR_NOTIMPL,
@@ -780,7 +780,7 @@ lkcd_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
 
 	if (lkcdp->compression == DUMP_COMPRESS_RLE) {
 		size_t retlen = get_page_size(ctx);
-		int ret = uncompress_rle(pio->data, &retlen, buf, dp.dp_size);
+		int ret = uncompress_rle(pio->chunk.data, &retlen, buf, dp.dp_size);
 		if (ret)
 			return set_error(ctx, KDUMP_ERR_CORRUPT,
 					 "Decompression failed: %d", ret);
@@ -789,7 +789,7 @@ lkcd_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
 					 "Wrong uncompressed size: %lu",
 					 (unsigned long) retlen);
 	} else if (lkcdp->compression == DUMP_COMPRESS_GZIP) {
-		ret = uncompress_page_gzip(ctx, pio->data, buf, dp.dp_size);
+		ret = uncompress_page_gzip(ctx, pio->chunk.data, buf, dp.dp_size);
 		if (ret != KDUMP_OK)
 			return ret;
 	} else

@@ -104,7 +104,7 @@ s390_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
 	ssize_t rd;
 
 	pos = (off_t)addr + (off_t)sdp->dataoff;
-	rd = pread(get_file_fd(ctx), pio->data, get_page_size(ctx), pos);
+	rd = pread(get_file_fd(ctx), pio->chunk.data, get_page_size(ctx), pos);
 	if (rd != get_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu",

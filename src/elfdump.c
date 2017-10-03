@@ -144,7 +144,7 @@ elf_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t addr)
 	off_t pos;
 	ssize_t size, rd;
 
-	p = pio->data;
+	p = pio->chunk.data;
 	endp = p + get_page_size(ctx);
 	while (p < endp) {
 		pls = find_closest_load(edp, addr, endp - p);
@@ -182,7 +182,7 @@ elf_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t addr)
 		}
 	}
 
-	if (p == pio->data)
+	if (p == pio->chunk.data)
 		return set_error(ctx, KDUMP_ERR_NODATA, "Page not found");
 	else if (p < endp)
 		memset(p, 0, endp - p);
@@ -253,7 +253,7 @@ xc_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t idx)
 	ssize_t rd;
 
 	offset = edp->xen_pages_offset + ((off_t)idx << get_page_shift(ctx));
-	rd = pread(get_file_fd(ctx), pio->data, get_page_size(ctx), offset);
+	rd = pread(get_file_fd(ctx), pio->chunk.data, get_page_size(ctx), offset);
 	if (rd != get_page_size(ctx))
 		return set_error(ctx, read_error(rd),
 				 "Cannot read page data at %llu",
