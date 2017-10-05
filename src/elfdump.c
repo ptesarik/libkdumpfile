@@ -797,13 +797,12 @@ open_common(kdump_ctx_t *ctx)
 }
 
 static kdump_status
-elf_probe(kdump_ctx_t *ctx, void *hdr)
+do_probe(kdump_ctx_t *ctx, void *hdr)
 {
 	unsigned char *eheader = hdr;
 	Elf32_Ehdr *elf32 = hdr;
 	Elf64_Ehdr *elf64 = hdr;
 	struct elfdump_priv *edp;
-	kdump_status ret;
 
 	if (memcmp(eheader, ELFMAG, SELFMAG))
 		return set_error(ctx, kdump_noprobe,
@@ -836,21 +835,34 @@ elf_probe(kdump_ctx_t *ctx, void *hdr)
 	    (dump32toh(ctx, elf32->e_version) == EV_CURRENT)) {
 		edp->elfclass = ELFCLASS32;
 		set_file_description(ctx, "ELF32 dump");
-		ret = init_elf32(ctx, elf32);
-		if (ret == KDUMP_OK)
-			ret = open_common(ctx);
+		return init_elf32(ctx, elf32);
 	} else if ((elf64->e_ident[EI_CLASS] == ELFCLASS64) &&
 		   (dump16toh(ctx, elf64->e_type) == ET_CORE) &&
 		   (dump32toh(ctx, elf64->e_version) == EV_CURRENT)) {
 		edp->elfclass = ELFCLASS64;
 		set_file_description(ctx, "ELF64 dump");
-		ret = init_elf64(ctx, elf64);
-		if (ret == KDUMP_OK)
-			ret = open_common(ctx);
-	} else
-		ret = set_error(ctx, KDUMP_ERR_NOTIMPL,
-				"Unsupported ELF class: %u",
-				elf32->e_ident[EI_CLASS]);
+		return init_elf64(ctx, elf64);
+	}
+
+	return set_error(ctx, KDUMP_ERR_NOTIMPL,
+			 "Unsupported ELF class: %u", elf32->e_ident[EI_CLASS]);
+}
+
+static kdump_status
+elf_probe(kdump_ctx_t *ctx, void *hdr)
+{
+	struct fcache_chunk fch;
+	kdump_status ret;
+
+	ret = fcache_get_chunk(ctx->shared->fcache, &fch, 0, sizeof(Elf64_Ehdr));
+	if (ret != KDUMP_OK)
+		return set_error(ctx, ret, "Cannot read dump header");
+
+	ret = do_probe(ctx, fch.data);
+	fcache_put_chunk(&fch);
+
+	if (ret == KDUMP_OK)
+		ret = open_common(ctx);
 
 	if (ret != KDUMP_OK)
 		elf_cleanup(ctx->shared);
