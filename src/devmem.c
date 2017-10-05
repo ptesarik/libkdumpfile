@@ -161,8 +161,8 @@ devmem_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	struct devmem_priv *dmp = ctx->shared->fmtdata;
 	struct cache_entry *ce;
-	ssize_t rd;
 	unsigned i;
+	kdump_status ret;
 
 	ce = NULL;
 	for (i = 0; i < dmp->cache_size; ++i) {
@@ -179,17 +179,14 @@ devmem_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 	++ce->refcnt;
 
 	ce->key = pio->addr.addr;
-	rd = pread(get_file_fd(ctx), ce->data, get_page_size(ctx),
-		   pio->addr.addr);
-	if (rd != get_page_size(ctx)) {
+	ret = fcache_get_chunk(ctx->shared->fcache, &pio->chunk,
+			       pio->addr.addr, get_page_size(ctx));
+	if (ret != KDUMP_OK) {
 		--ce->refcnt;
-		return set_error(ctx, read_error(rd),
+		return set_error(ctx, ret,
 				 "Cannot read memory device");
 	}
 
-	pio->chunk.data = ce->data;
-	pio->chunk.nent = 1;
-	pio->chunk.fce.ce = ce;
 	return KDUMP_OK;
 }
 
