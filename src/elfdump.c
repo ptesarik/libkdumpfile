@@ -148,8 +148,10 @@ elf_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t addr)
 	endp = p + get_page_size(ctx);
 	while (p < endp) {
 		pls = find_closest_load(edp, addr, endp - p);
-		if (!pls)
+		if (!pls) {
+			memset(p, 0, endp - p);
 			break;
+		}
 
 		if (pls->phys > addr) {
 			memset(p, 0, pls->phys - addr);
@@ -182,11 +184,6 @@ elf_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t addr)
 		}
 	}
 
-	if (p == pio->chunk.data)
-		return set_error(ctx, KDUMP_ERR_NODATA, "Page not found");
-	else if (p < endp)
-		memset(p, 0, endp - p);
-
 	return KDUMP_OK;
 }
 
@@ -195,19 +192,19 @@ elf_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	struct load_segment *pls;
+	kdump_paddr_t addr;
+	size_t sz;
 
 	pls = find_closest_load(edp, pio->addr.addr, get_page_size(ctx));
-	if (pls) {
-		kdump_paddr_t addr = pio->addr.addr;
-		size_t sz = get_page_size(ctx);
+	if (!pls)
+		return set_error(ctx, KDUMP_ERR_NODATA, "Page not found");
 
-		if (pls->phys <= addr && pls->filesz >= addr - pls->phys + sz)
-			return fcache_get_chunk(
-				ctx->shared->fcache, &pio->chunk,
-				pls->file_offset + addr - pls->phys, sz);
-	}
-
-	return cache_get_page(ctx, pio, elf_read_page, pio->addr.addr);
+	addr = pio->addr.addr;
+	sz = get_page_size(ctx);
+	return (pls->phys <= addr && pls->filesz >= addr - pls->phys + sz)
+		? fcache_get_chunk(ctx->shared->fcache, &pio->chunk,
+				   pls->file_offset + addr - pls->phys, sz)
+		: cache_get_page(ctx, pio, elf_read_page, addr);
 }
 
 static void
