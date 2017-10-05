@@ -96,31 +96,17 @@ struct s390dump_priv {
 static void s390_cleanup(struct kdump_shared *shared);
 
 static kdump_status
-s390_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
-{
-	struct s390dump_priv *sdp = ctx->shared->fmtdata;
-	kdump_paddr_t addr = pfn << get_page_shift(ctx);
-	off_t pos;
-	ssize_t rd;
-
-	pos = (off_t)addr + (off_t)sdp->dataoff;
-	rd = pread(get_file_fd(ctx), pio->chunk.data, get_page_size(ctx), pos);
-	if (rd != get_page_size(ctx))
-		return set_error(ctx, read_error(rd),
-				 "Cannot read page data at %llu",
-				 (unsigned long long) pos);
-
-	return KDUMP_OK;
-}
-
-static kdump_status
 s390_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
-	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
-	if (pfn >= get_max_pfn(ctx))
+	struct s390dump_priv *sdp = ctx->shared->fmtdata;
+	off_t pos;
+
+	if ((pio->addr.addr >> get_page_shift(ctx)) >= get_max_pfn(ctx))
 		return set_error(ctx, KDUMP_ERR_NODATA, "Out-of-bounds PFN");
 
-	return cache_get_page(ctx, pio, s390_read_page, pfn);
+	pos = (off_t)pio->addr.addr + (off_t)sdp->dataoff;
+	return fcache_get_chunk(ctx->shared->fcache, &pio->chunk,
+				pos, get_page_size(ctx));
 }
 
 static kdump_status
