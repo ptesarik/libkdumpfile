@@ -193,6 +193,20 @@ elf_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t addr)
 static kdump_status
 elf_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
+	struct elfdump_priv *edp = ctx->shared->fmtdata;
+	struct load_segment *pls;
+
+	pls = find_closest_load(edp, pio->addr.addr, get_page_size(ctx));
+	if (pls) {
+		kdump_paddr_t addr = pio->addr.addr;
+		size_t sz = get_page_size(ctx);
+
+		if (pls->phys <= addr && pls->filesz >= addr - pls->phys + sz)
+			return fcache_get_chunk(
+				ctx->shared->fcache, &pio->chunk,
+				pls->file_offset + addr - pls->phys, sz);
+	}
+
 	return cache_get_page(ctx, pio, elf_read_page, pio->addr.addr);
 }
 
