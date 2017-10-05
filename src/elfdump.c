@@ -259,22 +259,6 @@ pfn_to_idx(kdump_ctx_t *ctx, kdump_pfn_t pfn)
 	return ~0UL;
 }
 
-static kdump_status
-xc_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t idx)
-{
-	struct elfdump_priv *edp = ctx->shared->fmtdata;
-	off_t offset;
-	ssize_t rd;
-
-	offset = edp->xen_pages_offset + ((off_t)idx << get_page_shift(ctx));
-	rd = pread(get_file_fd(ctx), pio->chunk.data, get_page_size(ctx), offset);
-	if (rd != get_page_size(ctx))
-		return set_error(ctx, read_error(rd),
-				 "Cannot read page data at %llu",
-				 (unsigned long long) offset);
-	return KDUMP_OK;
-}
-
 static unsigned long
 mfn_to_idx(kdump_ctx_t *ctx, kdump_pfn_t mfn)
 {
@@ -418,8 +402,10 @@ xc_post_addrxlat(kdump_ctx_t *ctx)
 static kdump_status
 xc_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
+	struct elfdump_priv *edp;
 	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
 	unsigned long idx;
+	off_t offset;
 
 	idx = (pio->addr.as == ADDRXLAT_KPHYSADDR
 	       ? pfn_to_idx(ctx, pfn)
@@ -427,7 +413,10 @@ xc_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 	if (idx == ~0UL)
 		return set_error(ctx, KDUMP_ERR_NODATA, "Page not found");
 
-	return cache_get_page(ctx, pio, xc_read_page, idx);
+	edp = ctx->shared->fmtdata;
+	offset = edp->xen_pages_offset + ((off_t)idx << get_page_shift(ctx));
+	return fcache_get_chunk(ctx->shared->fcache, &pio->chunk,
+				offset, get_page_size(ctx));
 }
 
 static kdump_status
