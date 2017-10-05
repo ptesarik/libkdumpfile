@@ -110,13 +110,12 @@ s390_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 }
 
 static kdump_status
-s390_probe(kdump_ctx_t *ctx, void *hdr)
+do_probe(kdump_ctx_t *ctx, struct dump_header *dh)
 {
-	struct dump_header *dh = hdr;
 	struct s390dump_priv *sdp;
-	struct end_marker marker;
+	struct fcache_chunk fch;
+	struct end_marker *marker;
 	off_t pos;
-	ssize_t rd;
 	kdump_status ret;
 
 	if (be64toh(dh->h1.magic) != S390_MAGIC)
@@ -128,14 +127,19 @@ s390_probe(kdump_ctx_t *ctx, void *hdr)
 
 	pos = dump32toh(ctx, dh->h1.hdr_size) +
 		dump64toh(ctx, dh->h1.mem_size);
-	rd = pread(get_file_fd(ctx), &marker, sizeof marker, pos);
-	if (rd != sizeof marker)
-		return set_error(ctx, read_error(rd),
+	ret = fcache_get_chunk(ctx->shared->fcache, &fch, pos, sizeof *marker);
+	if (ret != KDUMP_OK)
+		return set_error(ctx, ret,
 				 "Cannot read end marker at %llu",
 				 (unsigned long long) pos);
-	if (memcmp(marker.str, END_MARKER, sizeof END_MARKER - 1) ||
-	    dump64toh(ctx, marker.tod) < dump64toh(ctx, dh->h1.tod))
-		return set_error(ctx, KDUMP_ERR_CORRUPT, "End marker not found");
+	marker = fch.data;
+	if (memcmp(marker->str, END_MARKER, sizeof END_MARKER - 1) ||
+	    dump64toh(ctx, marker->tod) < dump64toh(ctx, dh->h1.tod)) {
+		fcache_put_chunk(&fch);
+		return set_error(ctx, KDUMP_ERR_CORRUPT,
+				 "End marker not found");
+	}
+	fcache_put_chunk(&fch);
 
 	sdp = calloc(1, sizeof *sdp);
 	if (!sdp)
@@ -172,6 +176,23 @@ s390_probe(kdump_ctx_t *ctx, void *hdr)
 
  err:
 	s390_cleanup(ctx->shared);
+	return ret;
+}
+
+static kdump_status
+s390_probe(kdump_ctx_t *ctx, void *hdr)
+{
+	struct fcache_chunk fch;
+	kdump_status ret;
+
+	ret = fcache_get_chunk(ctx->shared->fcache, &fch,
+			       0, sizeof(struct dump_header));
+	if (ret != KDUMP_OK)
+		return set_error(ctx, ret, "Cannot read dump header");
+
+	ret = do_probe(ctx, (struct dump_header*)fch.data);
+	fcache_put_chunk(&fch);
+
 	return ret;
 }
 
