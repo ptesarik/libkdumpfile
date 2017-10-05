@@ -667,47 +667,28 @@ init_elf64(kdump_ctx_t *ctx, Elf64_Ehdr *ehdr)
 	return ret;
 }
 
+typedef kdump_status walk_notes_fn(kdump_ctx_t *, void *, size_t);
+
 static kdump_status
-process_elf_notes(kdump_ctx_t *ctx, void *notes)
+walk_elf_notes(kdump_ctx_t *ctx, walk_notes_fn *fn)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
-	void *p;
 	unsigned i;
-	ssize_t rd;
+	struct fcache_chunk fch;
 	kdump_status ret;
 
-	p = notes;
 	for (i = 0; i < edp->num_note_segments; ++i) {
 		struct load_segment *seg = edp->note_segments + i;
 
-		rd = pread(get_file_fd(ctx), p, seg->filesz, seg->file_offset);
-		if (rd != seg->filesz)
-			return set_error(ctx, read_error(rd),
+		ret = fcache_get_chunk(ctx->shared->fcache, &fch,
+				       seg->file_offset, seg->filesz);
+		if (ret != KDUMP_OK)
+			return set_error(ctx, ret,
 					 "Cannot read ELF notes at %llu",
 					 (unsigned long long) seg->file_offset);
 
-		ret = process_noarch_notes(ctx, p, seg->filesz);
-		if (ret != KDUMP_OK)
-			return ret;
-
-		p += seg->filesz;
-	}
-
-	if (!isset_arch_name(ctx)) {
-		uint_fast16_t mach = get_arch_machine(ctx);
-		const char *arch = mach2arch(mach, edp->elfclass);
-		if (arch) {
-			ret = set_arch_name(ctx, arch);
-			if (ret != KDUMP_OK)
-				return ret;
-		}
-	}
-
-	p = notes;
-	for (i = 0; i < edp->num_note_segments; ++i) {
-		struct load_segment *seg = edp->note_segments + i;
-
-		ret = process_arch_notes(ctx, p, seg->filesz);
+		ret = fn(ctx, fch.data, seg->filesz);
+		fcache_put_chunk(&fch);
 		if (ret != KDUMP_OK)
 			return ret;
 	}
@@ -719,24 +700,28 @@ static kdump_status
 open_common(kdump_ctx_t *ctx)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
-	size_t notesz;
-	void *notes;
 	kdump_status ret;
 	int i;
 
 	if (!edp->num_load_segments && !edp->num_sections)
 		return set_error(ctx, KDUMP_ERR_NOTIMPL, "No content found");
 
-	/* read notes */
-	notesz = 0;
-	for (i = 0; i < edp->num_note_segments; ++i)
-		notesz += edp->note_segments[i].filesz;
-	notes = ctx_malloc(notesz, ctx, "ELF notes");
-	if (!notes)
-		return KDUMP_ERR_SYSTEM;
+	/* process NOTE segments */
+	ret = walk_elf_notes(ctx, process_noarch_notes);
+	if (ret != KDUMP_OK)
+		return ret;
 
-	ret = process_elf_notes(ctx, notes);
-	free(notes);
+	if (!isset_arch_name(ctx)) {
+		uint_fast16_t mach = get_arch_machine(ctx);
+		const char *arch = mach2arch(mach, edp->elfclass);
+		if (arch) {
+			ret = set_arch_name(ctx, arch);
+			if (ret != KDUMP_OK)
+				return ret;
+		}
+	}
+
+	ret = walk_elf_notes(ctx, process_arch_notes);
 	if (ret != KDUMP_OK)
 		return ret;
 
@@ -776,7 +761,7 @@ open_common(kdump_ctx_t *ctx)
 			set_xen_xlat(ctx, KDUMP_XEN_AUTO);
 			get_max_pfn_xen_auto(ctx);
 		} else if (!strcmp(name, ".note.Xen")) {
-			notes = read_elf_sect(ctx, sect);
+			void *notes = read_elf_sect(ctx, sect);
 			if (!notes)
 				return KDUMP_ERR_SYSTEM;
 			ret = process_notes(ctx, notes, sect->size);
