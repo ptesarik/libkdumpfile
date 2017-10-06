@@ -557,8 +557,7 @@ read_sub_hdr_32(struct setup_data *sdp, int32_t header_version)
 {
 	kdump_ctx_t *ctx = sdp->ctx;
 	struct kdump_sub_header_32 subhdr;
-	ssize_t rd;
-	kdump_status ret = KDUMP_OK;
+	kdump_status ret;
 
 	if (header_version < 0)
 		return set_error(ctx, KDUMP_ERR_CORRUPT,
@@ -568,10 +567,10 @@ read_sub_hdr_32(struct setup_data *sdp, int32_t header_version)
 	if (header_version < 1)
 		return KDUMP_OK;
 
-	rd = pread(get_file_fd(ctx), &subhdr, sizeof subhdr,
-		   get_page_size(ctx));
-	if (rd != sizeof subhdr)
-		return set_error(ctx, read_error(rd),
+	ret = fcache_pread(ctx->shared->fcache, &subhdr, sizeof subhdr,
+			   get_page_size(ctx));
+	if (ret != KDUMP_OK)
+		return set_error(ctx, ret,
 				 "Cannot read subheader");
 
 	set_phys_base(ctx, dump32toh(ctx, subhdr.phys_base));
@@ -579,15 +578,18 @@ read_sub_hdr_32(struct setup_data *sdp, int32_t header_version)
 	if (header_version >= 4) {
 		sdp->note_off = dump64toh(ctx, subhdr.offset_note);
 		sdp->note_sz = dump32toh(ctx, subhdr.size_note);
-	} else if (header_version >= 3)
+	} else if (header_version >= 3) {
 		ret = read_vmcoreinfo(ctx,
 				      dump64toh(ctx, subhdr.offset_vmcoreinfo),
 				      dump32toh(ctx, subhdr.size_vmcoreinfo));
+		if (ret != KDUMP_OK)
+			return ret;
+	}
 
 	if (header_version >= 6)
 		set_max_pfn(ctx, dump64toh(ctx, subhdr.max_mapnr_64));
 
-	return ret;
+	return KDUMP_OK;
 }
 
 static kdump_status
@@ -638,8 +640,7 @@ read_sub_hdr_64(struct setup_data *sdp, int32_t header_version)
 {
 	kdump_ctx_t *ctx = sdp->ctx;
 	struct kdump_sub_header_64 subhdr;
-	ssize_t rd;
-	kdump_status ret = KDUMP_OK;
+	kdump_status ret;
 
 	if (header_version < 0)
 		return set_error(ctx, KDUMP_ERR_CORRUPT,
@@ -649,10 +650,10 @@ read_sub_hdr_64(struct setup_data *sdp, int32_t header_version)
 	if (header_version < 1)
 		return KDUMP_OK;
 
-	rd = pread(get_file_fd(ctx), &subhdr, sizeof subhdr,
-		   get_page_size(ctx));
-	if (rd != sizeof subhdr)
-		return set_error(ctx, read_error(rd),
+	ret = fcache_pread(ctx->shared->fcache, &subhdr, sizeof subhdr,
+			   get_page_size(ctx));
+	if (ret != KDUMP_OK)
+		return set_error(ctx, ret,
 				 "Cannot read subheader");
 
 	set_phys_base(ctx, dump64toh(ctx, subhdr.phys_base));
@@ -660,15 +661,18 @@ read_sub_hdr_64(struct setup_data *sdp, int32_t header_version)
 	if (header_version >= 4) {
 		sdp->note_off = dump64toh(ctx, subhdr.offset_note);
 		sdp->note_sz = dump64toh(ctx, subhdr.size_note);
-	} else if (header_version >= 3)
+	} else if (header_version >= 3) {
 		ret = read_vmcoreinfo(ctx,
 				      dump64toh(ctx, subhdr.offset_vmcoreinfo),
 				      dump64toh(ctx, subhdr.size_vmcoreinfo));
+		if (ret != KDUMP_OK)
+			return ret;
+	}
 
 	if (header_version >= 6)
 		set_max_pfn(ctx, dump64toh(ctx, subhdr.max_mapnr_64));
 
-	return ret;
+	return KDUMP_OK;
 }
 
 static kdump_status
