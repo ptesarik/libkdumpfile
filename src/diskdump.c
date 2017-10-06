@@ -369,29 +369,22 @@ diskdump_realloc_compressed(kdump_ctx_t *ctx, struct attr_data *attr)
 static kdump_status
 read_vmcoreinfo(kdump_ctx_t *ctx, off_t off, size_t size)
 {
-	void *info;
-	ssize_t rd;
-	kdump_status ret = KDUMP_OK;
+	struct fcache_chunk fch;
+	kdump_status ret;
 
-	info = ctx_malloc(size, ctx, "VMCOREINFO buffer");
-	if (!info)
-		return KDUMP_ERR_SYSTEM;
+	ret = fcache_get_chunk(ctx->shared->fcache, &fch, off, size);
+	if (ret != KDUMP_OK)
+		return set_error(ctx, ret,
+				 "Cannot read %zu VMCOREINFO bytes at %llu",
+				 size, (unsigned long long) off);
 
-	rd = pread(get_file_fd(ctx), info, size, off);
-	if (rd != size)
-		ret = set_error(ctx, read_error(rd),
-				"Cannot read %zu VMCOREINFO bytes at %llu",
-				size, (unsigned long long) off);
+	ret = set_attr_sized_string(
+		ctx, gattr(ctx, GKI_linux_vmcoreinfo_raw),
+		ATTR_DEFAULT, fch.data, size);
+	if (ret != KDUMP_OK)
+		ret = set_error(ctx, ret, "Cannot set VMCOREINFO");
 
-	if (ret == KDUMP_OK) {
-		ret = set_attr_sized_string(
-			ctx, gattr(ctx, GKI_linux_vmcoreinfo_raw),
-			ATTR_DEFAULT, info, size);
-		if (ret != KDUMP_OK)
-			ret = set_error(ctx, ret, "Cannot set VMCOREINFO");
-	}
-
-	free(info);
+	fcache_put_chunk(&fch);
 	return ret;
 }
 
