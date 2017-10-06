@@ -106,7 +106,7 @@ s390_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 
 	pos = (off_t)pio->addr.addr + (off_t)sdp->dataoff;
 	return fcache_get_chunk(ctx->shared->fcache, &pio->chunk,
-				pos, get_page_size(ctx));
+				get_page_size(ctx), pos);
 }
 
 static kdump_status
@@ -127,7 +127,7 @@ do_probe(kdump_ctx_t *ctx, struct dump_header *dh)
 
 	pos = dump32toh(ctx, dh->h1.hdr_size) +
 		dump64toh(ctx, dh->h1.mem_size);
-	ret = fcache_get_chunk(ctx->shared->fcache, &fch, pos, sizeof *marker);
+	ret = fcache_get_chunk(ctx->shared->fcache, &fch, sizeof *marker, pos);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read end marker at %llu",
@@ -186,7 +186,7 @@ s390_probe(kdump_ctx_t *ctx, void *hdr)
 	kdump_status ret;
 
 	ret = fcache_get_chunk(ctx->shared->fcache, &fch,
-			       0, sizeof(struct dump_header));
+			       sizeof(struct dump_header), 0);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret, "Cannot read dump header");
 

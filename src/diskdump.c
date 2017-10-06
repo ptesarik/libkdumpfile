@@ -372,7 +372,7 @@ read_vmcoreinfo(kdump_ctx_t *ctx, off_t off, size_t size)
 	struct fcache_chunk fch;
 	kdump_status ret;
 
-	ret = fcache_get_chunk(ctx->shared->fcache, &fch, off, size);
+	ret = fcache_get_chunk(ctx->shared->fcache, &fch, size, off);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read %zu VMCOREINFO bytes at %llu",
@@ -395,7 +395,7 @@ read_notes(kdump_ctx_t *ctx, off_t off, size_t size)
 	struct fcache_chunk fch;
 	kdump_status ret;
 
-	ret = fcache_get_chunk(ctx->shared->fcache, &fch, off, size);
+	ret = fcache_get_chunk(ctx->shared->fcache, &fch, size, off);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read %zu note bytes at %llu",
@@ -492,7 +492,7 @@ read_bitmap(kdump_ctx_t *ctx, int32_t sub_hdr_size,
 	if (get_max_pfn(ctx) > max_bitmap_pfn)
 		set_max_pfn(ctx, max_bitmap_pfn);
 
-	ret = fcache_get_chunk(ctx->shared->fcache, &fch, off, bitmapsize);
+	ret = fcache_get_chunk(ctx->shared->fcache, &fch, bitmapsize, off);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read %zu bytes of page bitmap"

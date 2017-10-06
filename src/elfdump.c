@@ -202,8 +202,8 @@ elf_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 	addr = pio->addr.addr;
 	sz = get_page_size(ctx);
 	return (pls->phys <= addr && pls->filesz >= addr - pls->phys + sz)
-		? fcache_get_chunk(ctx->shared->fcache, &pio->chunk,
-				   pls->file_offset + addr - pls->phys, sz)
+		? fcache_get_chunk(ctx->shared->fcache, &pio->chunk, sz,
+				   pls->file_offset + addr - pls->phys)
 		: cache_get_page(ctx, pio, elf_read_page, addr);
 }
 
@@ -413,7 +413,7 @@ xc_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 	edp = ctx->shared->fmtdata;
 	offset = edp->xen_pages_offset + ((off_t)idx << get_page_shift(ctx));
 	return fcache_get_chunk(ctx->shared->fcache, &pio->chunk,
-				offset, get_page_size(ctx));
+				get_page_size(ctx), offset);
 }
 
 static kdump_status
@@ -681,7 +681,7 @@ walk_elf_notes(kdump_ctx_t *ctx, walk_notes_fn *fn)
 		struct load_segment *seg = edp->note_segments + i;
 
 		ret = fcache_get_chunk(ctx->shared->fcache, &fch,
-				       seg->file_offset, seg->filesz);
+				       seg->filesz, seg->file_offset);
 		if (ret != KDUMP_OK)
 			return set_error(ctx, ret,
 					 "Cannot read ELF notes at %llu",
@@ -854,7 +854,8 @@ elf_probe(kdump_ctx_t *ctx, void *hdr)
 	struct fcache_chunk fch;
 	kdump_status ret;
 
-	ret = fcache_get_chunk(ctx->shared->fcache, &fch, 0, sizeof(Elf64_Ehdr));
+	ret = fcache_get_chunk(ctx->shared->fcache, &fch,
+			       sizeof(Elf64_Ehdr), 0);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret, "Cannot read dump header");
 

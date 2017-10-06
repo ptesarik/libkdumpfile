@@ -155,8 +155,8 @@ fcache_get(struct fcache *fc, struct fcache_entry *fce, off_t pos)
 /** Read file cache content into a pre-allocated buffer.
  * @param fc   File cache object.
  * @param buf  Target buffer.
- * @param len  Length of data.
  * @param pos  File position.
+ * @param len  Length of data.
  * @returns    Error status.
  */
 kdump_status
@@ -218,13 +218,13 @@ copy_data(void *data, struct fcache_entry *fces, size_t n)
 /** Get a contiguous data chunk using a file cache.
  * @param fc   File cache.
  * @param fch  File cache chunk, updated on success.
- * @param pos  File position.
  * @param len  Length of data.
+ * @param pos  File position.
  * @returns    Error status.
  */
 kdump_status
 fcache_get_chunk(struct fcache *fc, struct fcache_chunk *fch,
-		 off_t pos, size_t len)
+		 size_t len, off_t pos)
 {
 	off_t first, last;
 	struct fcache_entry fce;

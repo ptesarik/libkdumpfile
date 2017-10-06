@@ -256,7 +256,7 @@ test_chunks(struct fcache *fc)
 	/* Check a single-block chunk. */
 	pos = 0;
 	len = 16;
-	status = fcache_get_chunk(fc, &fch, pos, len);
+	status = fcache_get_chunk(fc, &fch, len, pos);
 	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot get %zd-byte chunk at %ld: %s\n",
 			len, (long)pos, kdump_strerror(status));
@@ -272,7 +272,7 @@ test_chunks(struct fcache *fc)
 	/* Check a single-block chunk at non-zero block offset. */
 	pos = 8;
 	len = 16;
-	status = fcache_get_chunk(fc, &fch, pos, len);
+	status = fcache_get_chunk(fc, &fch, len, pos);
 	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot get %zd-byte chunk at %ld: %s\n",
 			len, (long)pos, kdump_strerror(status));
@@ -288,7 +288,7 @@ test_chunks(struct fcache *fc)
 	/* Check a small chunk that crosses a block boundary. */
 	pos = (pagesize << CACHE_ORDER) - 8;
 	len = 16;
-	status = fcache_get_chunk(fc, &fch, pos, len);
+	status = fcache_get_chunk(fc, &fch, len, pos);
 	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot get %zd-byte chunk at %ld: %s\n",
 			len, (long)pos, kdump_strerror(status));
@@ -304,7 +304,7 @@ test_chunks(struct fcache *fc)
 	/* Check a small combined chunk. */
 	pos = (pagesize << CACHE_ORDER) + pagesize - 8;
 	len = 16;
-	status = fcache_get_chunk(fc, &fch, pos, len);
+	status = fcache_get_chunk(fc, &fch, len, pos);
 	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot get %zd-byte chunk at %ld: %s\n",
 			len, (long)pos, kdump_strerror(status));
@@ -320,7 +320,7 @@ test_chunks(struct fcache *fc)
 	/* Check a large combined chunk. */
 	pos = (pagesize << CACHE_ORDER) + pagesize - 8;
 	len = pagesize + 16;
-	status = fcache_get_chunk(fc, &fch, pos, len);
+	status = fcache_get_chunk(fc, &fch, len, pos);
 	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot get %zd-byte chunk at %ld: %s\n",
 			len, (long)pos, kdump_strerror(status));

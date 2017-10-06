@@ -1078,7 +1078,7 @@ struct fcache_chunk {
 
 INTERNAL_DECL(kdump_status, fcache_get_chunk,
 	      (struct fcache *fc, struct fcache_chunk *fch,
-	       off_t pos, size_t len));
+	       size_t len, off_t pos));
 INTERNAL_DECL(void, fcache_put_chunk, (struct fcache_chunk *fch));
 
 /**  Page I/O information.

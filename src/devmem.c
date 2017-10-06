@@ -180,7 +180,7 @@ devmem_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 
 	ce->key = pio->addr.addr;
 	ret = fcache_get_chunk(ctx->shared->fcache, &pio->chunk,
-			       pio->addr.addr, get_page_size(ctx));
+			       get_page_size(ctx), pio->addr.addr);
 	if (ret != KDUMP_OK) {
 		--ce->refcnt;
 		return set_error(ctx, ret,
