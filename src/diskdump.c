@@ -235,7 +235,6 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
 	struct page_desc pd;
 	off_t pd_pos;
 	void *buf;
-	ssize_t rd;
 	kdump_status ret;
 
 	pd_pos = pfn_to_pdpos(ddp, pfn);
@@ -244,9 +243,9 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
 		return KDUMP_OK;
 	}
 
-	rd = pread(get_file_fd(ctx), &pd, sizeof pd, pd_pos);
-	if (rd != sizeof pd)
-		return set_error(ctx, read_error(rd),
+	ret = fcache_pread(ctx->shared->fcache, &pd, sizeof pd, pd_pos);
+	if (ret != KDUMP_OK)
+		return set_error(ctx, ret,
 				 "Cannot read page descriptor at %llu",
 				 (unsigned long long) pd_pos);
 
@@ -270,9 +269,9 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
 	}
 
 	/* read page data */
-	rd = pread(get_file_fd(ctx), buf, pd.size, pd.offset);
-	if (rd != pd.size)
-		return set_error(ctx, read_error(rd),
+	ret = fcache_pread(ctx->shared->fcache, buf, pd.size, pd.offset);
+	if (ret != KDUMP_OK)
+		return set_error(ctx, ret,
 				 "Cannot read page data at %llu",
 				 (unsigned long long) pd.offset);
 
