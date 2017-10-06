@@ -544,9 +544,11 @@ idx_fits_block(unsigned idx, struct pfn_block *block)
 static kdump_status
 read_page_desc(kdump_ctx_t *ctx, struct dump_page *dp, off_t off)
 {
-	ssize_t rd = pread(get_file_fd(ctx), dp, sizeof *dp, off);
-	if (rd != sizeof *dp)
-		return set_error(ctx, read_error(rd),
+	kdump_status ret;
+
+	ret = fcache_pread(ctx->shared->fcache, dp, sizeof *dp, off);
+	if (ret != KDUMP_OK)
+		return set_error(ctx, ret,
 				 "Cannot read page descriptor at %llu",
 				 (unsigned long long) off);
 
@@ -738,7 +740,6 @@ lkcd_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
 	struct dump_page dp;
 	unsigned type;
 	off_t off;
-	ssize_t rd;
 	void *buf;
 	kdump_status ret;
 
@@ -769,9 +770,9 @@ lkcd_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
 	}
 
 	/* read page data */
-	rd = pread(get_file_fd(ctx), buf, dp.dp_size, off);
-	if (rd != dp.dp_size)
-		return set_error(ctx, read_error(rd),
+	ret = fcache_pread(ctx->shared->fcache, buf, dp.dp_size, off);
+	if (ret != KDUMP_OK)
+		return set_error(ctx, ret,
 				 "Cannot read page data at %llu",
 				 (unsigned long long) off);
 
