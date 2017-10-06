@@ -202,6 +202,12 @@ fcache_get_chunk(struct fcache *fc, struct fcache_chunk *fch,
 	size_t nent;
 	kdump_status status;
 
+	if (!len) {
+		fch->data = NULL;
+		fch->nent = 0;
+		return KDUMP_OK;
+	}
+
 	first = pos & ~(fc->pgsz - 1);
 	last = (pos + len - 1) & ~(fc->pgsz - 1);
 	if (last != first) {
