@@ -470,12 +470,11 @@ read_bitmap(kdump_ctx_t *ctx, int32_t sub_hdr_size,
 {
 	off_t off = (1 + sub_hdr_size) * get_page_size(ctx);
 	off_t descoff;
-	unsigned char *bitmap;
 	size_t bitmapsize;
 	kdump_pfn_t max_bitmap_pfn;
 	kdump_pfn_t pfn;
 	struct pfn_rgn rgn;
-	ssize_t rd;
+	struct fcache_chunk fch;
 	kdump_status ret;
 
 	descoff = off + bitmap_blocks * get_page_size(ctx);
@@ -493,36 +492,31 @@ read_bitmap(kdump_ctx_t *ctx, int32_t sub_hdr_size,
 	if (get_max_pfn(ctx) > max_bitmap_pfn)
 		set_max_pfn(ctx, max_bitmap_pfn);
 
-	if (! (bitmap = ctx_malloc(bitmapsize, ctx, "page bitmap")) )
-		return KDUMP_ERR_SYSTEM;
-
-	rd = pread(get_file_fd(ctx), bitmap, bitmapsize, off);
-	if (rd != bitmapsize) {
-		ret = set_error(ctx, read_error(rd),
+	ret = fcache_get_chunk(ctx->shared->fcache, &fch, off, bitmapsize);
+	if (ret != KDUMP_OK)
+		return set_error(ctx, ret,
 				 "Cannot read %zu bytes of page bitmap"
 				 " at %llu",
 				 bitmapsize, (unsigned long long) off);
-		goto out_free;
-	}
 
 	rgn.pos = descoff;
 	pfn = 0;
 	while (pfn < max_bitmap_pfn) {
-		rgn.pfn = skip_clear(bitmap, bitmapsize, pfn);
-		pfn = skip_set(bitmap, bitmapsize, rgn.pfn);
+		rgn.pfn = skip_clear(fch.data, bitmapsize, pfn);
+		pfn = skip_set(fch.data, bitmapsize, rgn.pfn);
 		rgn.cnt = pfn - rgn.pfn;
 		if (rgn.cnt) {
 			ret = add_pfn_rgn(ctx, &rgn);
 			if (ret != KDUMP_OK)
-				goto out_free;
+				goto out;
 			rgn.pos += rgn.cnt * sizeof(struct page_desc);
 		}
 	}
 
 	ret = KDUMP_OK;
 
- out_free:
-	free(bitmap);
+ out:
+	fcache_put_chunk(&fch);
 	return ret;
 }
 
