@@ -1048,11 +1048,15 @@ INTERNAL_DECL(void, fcache_free,
 
 INTERNAL_DECL(kdump_status, fcache_get,
 	      (struct fcache *fc, struct fcache_entry *fce, off_t pos));
+
 static inline void
 fcache_put(struct fcache_entry *fce)
 {
 	cache_put_entry(fce->cache, fce->ce);
 }
+
+INTERNAL_DECL(kdump_status, fcache_pread,
+	      (struct fcache *fc, void *buf, size_t len, off_t pos));
 
 /** A contiguous cached data chunk.
  */

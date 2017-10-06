@@ -152,6 +152,38 @@ fcache_get(struct fcache *fc, struct fcache_entry *fce, off_t pos)
 	return KDUMP_OK;
 }
 
+/** Read file cache content into a pre-allocated buffer.
+ * @param fc   File cache object.
+ * @param buf  Target buffer.
+ * @param len  Length of data.
+ * @param pos  File position.
+ * @returns    Error status.
+ */
+kdump_status
+fcache_pread(struct fcache *fc, void *buf, size_t len, off_t pos)
+{
+	struct fcache_entry fce;
+	kdump_status ret;
+
+	while (len) {
+		size_t partlen;
+
+		ret = fcache_get(fc, &fce, pos);
+		if (ret != KDUMP_OK)
+			return ret;
+
+		partlen = (fce.len < len) ? fce.len : len;
+		memcpy(buf, fce.data, partlen);
+		fcache_put(&fce);
+
+		buf += partlen;
+		pos += partlen;
+		len -= partlen;
+	}
+
+	return KDUMP_OK;
+}
+
 /** Free an array of file cache entries.
  * @param fces  Array of file cache entries.
  * @param n     Number of entries in the array.
