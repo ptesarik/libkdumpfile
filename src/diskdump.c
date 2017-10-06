@@ -392,37 +392,29 @@ read_vmcoreinfo(kdump_ctx_t *ctx, off_t off, size_t size)
 static kdump_status
 read_notes(kdump_ctx_t *ctx, off_t off, size_t size)
 {
-	void *notes;
-	ssize_t rd;
-	kdump_status ret = KDUMP_OK;
+	struct fcache_chunk fch;
+	kdump_status ret;
 
-	notes = ctx_malloc(size, ctx, "notes");
-	if (!notes)
-		return KDUMP_ERR_SYSTEM;
+	ret = fcache_get_chunk(ctx->shared->fcache, &fch, off, size);
+	if (ret != KDUMP_OK)
+		return set_error(ctx, ret,
+				 "Cannot read %zu note bytes at %llu",
+				 size, (unsigned long long) off);
 
-	rd = pread(get_file_fd(ctx), notes, size, off);
-	if (rd != size) {
-		ret = set_error(ctx, read_error(rd),
-				"Cannot read %zu note bytes at %llu",
-				size, (unsigned long long) off);
-		goto out;
-	}
-
-	ret = process_noarch_notes(ctx, notes, size);
+	ret = process_noarch_notes(ctx, fch.data, size);
 	if (ret != KDUMP_OK) {
 		ret = set_error(ctx, ret, "Cannot process noarch notes");
 		goto out;
 	}
 
 	if (isset_arch_name(ctx)) {
-		ret = process_arch_notes(ctx, notes, size);
+		ret = process_arch_notes(ctx, fch.data, size);
 		if (ret != KDUMP_OK)
 			ret = set_error(ctx, ret, "Cannot process arch notes");
 	}
 
  out:
-	free(notes);
-
+	fcache_put_chunk(&fch);
 	return ret;
 }
 
