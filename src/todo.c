@@ -35,10 +35,17 @@
 #include <string.h>
 
 static kdump_status
-qemu_probe(kdump_ctx_t *ctx, void *hdr)
+qemu_probe(kdump_ctx_t *ctx)
 {
 	static const char magic[] =
 		{ 'Q', 'E', 'V', 'M' };
+
+	char hdr[sizeof magic];
+	kdump_status status;
+
+	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Cannot read dump header");
 
 	if (memcmp(hdr, magic, sizeof magic))
 		return kdump_noprobe;
@@ -54,10 +61,17 @@ const struct format_ops qemu_ops = {
 };
 
 static kdump_status
-libvirt_probe(kdump_ctx_t *ctx, void *hdr)
+libvirt_probe(kdump_ctx_t *ctx)
 {
 	static const char magic[] =
 		{ 'L', 'i', 'b', 'v' };
+
+	char hdr[sizeof magic];
+	kdump_status status;
+
+	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Cannot read dump header");
 
 	if (memcmp(hdr, magic, sizeof magic))
 		return kdump_noprobe;
@@ -73,11 +87,18 @@ const struct format_ops libvirt_ops = {
 };
 
 static kdump_status
-xc_save_probe(kdump_ctx_t *ctx, void *hdr)
+xc_save_probe(kdump_ctx_t *ctx)
 {
 	static const char magic[] =
 		{ 'L', 'i', 'n', 'u', 'x', 'G', 'u', 'e',
 		  's', 't', 'R', 'e', 'c', 'o', 'r', 'd' };
+
+	char hdr[sizeof magic];
+	kdump_status status;
+
+	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Cannot read dump header");
 
 	if (memcmp(hdr, magic, sizeof magic))
 		return kdump_noprobe;
@@ -93,19 +114,24 @@ const struct format_ops xc_save_ops = {
 };
 
 static kdump_status
-xc_core_probe(kdump_ctx_t *ctx, void *hdr)
+xc_core_probe(kdump_ctx_t *ctx)
 {
 	static const char magic[] =
 		{ 0xeb, 0x0f, 0xf0 };
-	unsigned char firstbyte;
+
+	char hdr[sizeof magic + 1];
+	kdump_status status;
+
+	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Cannot read dump header");
 
 	if (memcmp(hdr + 1, magic, sizeof magic))
 		return kdump_noprobe;
 
-	firstbyte = *(unsigned char*)hdr;
-	if (firstbyte == 0xed)
+	if (hdr[0] == 0xed)
 		set_file_description(ctx, "Xen xc_core");
-	else if (firstbyte == 0xee)
+	else if (hdr[0] == 0xee)
 		set_file_description(ctx, "Xen xc_core (HVM)");
 	else
 		return kdump_noprobe;
@@ -120,10 +146,17 @@ const struct format_ops xc_core_ops = {
 };
 
 static kdump_status
-mclxcd_probe(kdump_ctx_t *ctx, void *hdr)
+mclxcd_probe(kdump_ctx_t *ctx)
 {
 	static const char magic[] =
 		{ 0xdd, 0xcc, 0x8b, 0x9a };
+
+	char hdr[sizeof magic + 1];
+	kdump_status status;
+
+	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Cannot read dump header");
 
 	if (memcmp(hdr, magic, sizeof magic))
 		return kdump_noprobe;

@@ -74,15 +74,13 @@ static const struct format_ops *formats[] = {
 
 /**  Set dump file descriptor.
  * @param ctx   Dump file object.
- * @param buf   Temporary buffer.
  * @returns     Error status.
  *
  * Probe the given file for known file formats and initialize it for use.
  */
 static kdump_status
-set_fd(kdump_ctx_t *ctx, void *buf)
+file_fd_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
-	ssize_t rd;
 	kdump_status ret;
 	int i;
 
@@ -94,14 +92,9 @@ set_fd(kdump_ctx_t *ctx, void *buf)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate file cache");
 
-	rd = paged_read(get_file_fd(ctx), buf, MAX_PAGE_SIZE);
-	if (rd < 0)
-		return set_error(ctx, KDUMP_ERR_SYSTEM, "Cannot read file header");
-	memset(buf + rd, 0, MAX_PAGE_SIZE - rd);
-
 	for (i = 0; i < ARRAY_SIZE(formats); ++i) {
 		ctx->shared->ops = formats[i];
-		ret = ctx->shared->ops->probe(ctx, buf);
+		ret = ctx->shared->ops->probe(ctx);
 		if (ret == KDUMP_OK)
 			return kdump_open_known(ctx);
 		if (ret != kdump_noprobe)
@@ -131,22 +124,6 @@ kdump_open_known(kdump_ctx_t *ctx)
 	}
 
 	return KDUMP_OK;
-}
-
-static kdump_status
-file_fd_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
-{
-	void *buffer;
-	kdump_status ret;
-
-	buffer = ctx_malloc(MAX_PAGE_SIZE, ctx, "file header buffer");
-	if (!buffer)
-		return KDUMP_ERR_SYSTEM;
-
-	ret = set_fd(ctx, buffer);
-
-	free(buffer);
-	return ret;
 }
 
 const struct attr_ops file_fd_ops = {

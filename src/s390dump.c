@@ -180,7 +180,7 @@ do_probe(kdump_ctx_t *ctx, struct dump_header *dh)
 }
 
 static kdump_status
-s390_probe(kdump_ctx_t *ctx, void *hdr)
+s390_probe(kdump_ctx_t *ctx)
 {
 	struct fcache_chunk fch;
 	kdump_status ret;

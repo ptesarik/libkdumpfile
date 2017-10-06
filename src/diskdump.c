@@ -775,12 +775,19 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 }
 
 static kdump_status
-diskdump_probe(kdump_ctx_t *ctx, void *hdr)
+diskdump_probe(kdump_ctx_t *ctx)
 {
 	static const char magic_diskdump[] =
 		{ 'D', 'I', 'S', 'K', 'D', 'U', 'M', 'P' };
 	static const char magic_kdump[] =
 		{ 'K', 'D', 'U', 'M', 'P', ' ', ' ', ' ' };
+
+	char hdr[sizeof(struct disk_dump_header_64)];
+	kdump_status status;
+
+	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Cannot read dump header");
 
 	if (!memcmp(hdr, magic_diskdump, sizeof magic_diskdump))
 		set_file_description(ctx, "Diskdump");

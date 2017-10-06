@@ -985,12 +985,18 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 }
 
 static kdump_status
-lkcd_probe(kdump_ctx_t *ctx, void *hdr)
+lkcd_probe(kdump_ctx_t *ctx)
 {
 	static const char magic_le[] =
 		{ 0xed, 0x23, 0x8f, 0x61, 0x73, 0x01, 0x19, 0xa8 };
 	static const char magic_be[] =
 		{ 0xa8, 0x19, 0x01, 0x73, 0x61, 0x8f, 0x23, 0xed };
+	char hdr[sizeof(struct dump_header_v8)];
+	kdump_status status;
+
+	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Cannot read dump header");
 
 	if (!memcmp(hdr, magic_le, sizeof magic_le))
 		set_byte_order(ctx, KDUMP_LITTLE_ENDIAN);

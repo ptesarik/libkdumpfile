@@ -849,7 +849,7 @@ do_probe(kdump_ctx_t *ctx, void *hdr)
 }
 
 static kdump_status
-elf_probe(kdump_ctx_t *ctx, void *hdr)
+elf_probe(kdump_ctx_t *ctx)
 {
 	struct fcache_chunk fch;
 	kdump_status ret;

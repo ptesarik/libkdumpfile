@@ -196,7 +196,7 @@ struct format_ops {
 	 *   kdump_noprobe   cannot be handled by these ops
 	 *   or any other kdump_* error status
 	 */
-	kdump_status (*probe)(kdump_ctx_t *ctx, void *hdr);
+	kdump_status (*probe)(kdump_ctx_t *ctx);
 
 	/** Get page data.
 	 * @param ctx  Dump file object.
