@@ -48,7 +48,7 @@ qemu_probe(kdump_ctx_t *ctx)
 		return set_error(ctx, status, "Cannot read dump header");
 
 	if (memcmp(hdr, magic, sizeof magic))
-		return kdump_noprobe;
+		return KDUMP_NOPROBE;
 
 	set_file_description(ctx, "QEMU snapshot");
 	return set_error(ctx, KDUMP_ERR_NOTIMPL,
@@ -74,7 +74,7 @@ libvirt_probe(kdump_ctx_t *ctx)
 		return set_error(ctx, status, "Cannot read dump header");
 
 	if (memcmp(hdr, magic, sizeof magic))
-		return kdump_noprobe;
+		return KDUMP_NOPROBE;
 
 	set_file_description(ctx, "Libvirt core dump");
 	return set_error(ctx, KDUMP_ERR_NOTIMPL,
@@ -101,7 +101,7 @@ xc_save_probe(kdump_ctx_t *ctx)
 		return set_error(ctx, status, "Cannot read dump header");
 
 	if (memcmp(hdr, magic, sizeof magic))
-		return kdump_noprobe;
+		return KDUMP_NOPROBE;
 
 	set_file_description(ctx, "Xen xc_save");
 	return set_error(ctx, KDUMP_ERR_NOTIMPL,
@@ -127,14 +127,14 @@ xc_core_probe(kdump_ctx_t *ctx)
 		return set_error(ctx, status, "Cannot read dump header");
 
 	if (memcmp(hdr + 1, magic, sizeof magic))
-		return kdump_noprobe;
+		return KDUMP_NOPROBE;
 
 	if (hdr[0] == 0xed)
 		set_file_description(ctx, "Xen xc_core");
 	else if (hdr[0] == 0xee)
 		set_file_description(ctx, "Xen xc_core (HVM)");
 	else
-		return kdump_noprobe;
+		return KDUMP_NOPROBE;
 
 	return set_error(ctx, KDUMP_ERR_NOTIMPL,
 			 "%s files not yet implemented", "Xen xc_core");
@@ -159,7 +159,7 @@ mclxcd_probe(kdump_ctx_t *ctx)
 		return set_error(ctx, status, "Cannot read dump header");
 
 	if (memcmp(hdr, magic, sizeof magic))
-		return kdump_noprobe;
+		return KDUMP_NOPROBE;
 
 	set_file_description(ctx, "Mision Critical Linux Crash Dump");
 	return set_error(ctx, KDUMP_ERR_NOTIMPL,

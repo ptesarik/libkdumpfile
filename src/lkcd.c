@@ -1003,7 +1003,7 @@ lkcd_probe(kdump_ctx_t *ctx)
 	else if (!memcmp(hdr, magic_be, sizeof magic_be))
 		set_byte_order(ctx, KDUMP_BIG_ENDIAN);
 	else
-		return set_error(ctx, kdump_noprobe,
+		return set_error(ctx, KDUMP_NOPROBE,
 				 "Unrecognized LKCD signature");
 
 	return open_common(ctx, hdr);

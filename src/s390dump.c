@@ -119,7 +119,7 @@ do_probe(kdump_ctx_t *ctx, struct dump_header *dh)
 	kdump_status ret;
 
 	if (be64toh(dh->h1.magic) != S390_MAGIC)
-		return set_error(ctx, kdump_noprobe,
+		return set_error(ctx, KDUMP_NOPROBE,
 				 "Invalid S390DUMP signature");
 
 	set_file_description(ctx, "S390 Dump");

@@ -794,7 +794,7 @@ diskdump_probe(kdump_ctx_t *ctx)
 	else if (!memcmp(hdr, magic_kdump, sizeof magic_kdump))
 		set_file_description(ctx, "Compressed KDUMP");
 	else
-		return set_error(ctx, kdump_noprobe,
+		return set_error(ctx, KDUMP_NOPROBE,
 				 "Unrecognized diskdump signature");
 
 	return open_common(ctx, hdr);

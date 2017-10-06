@@ -152,7 +152,7 @@ typedef kdump_addr_t kdump_pfn_t;
  * be handled by the current format operations, but it is not really
  * an error.
  */
-#define kdump_noprobe	((kdump_status)-1)
+#define KDUMP_NOPROBE	((kdump_status)-1)
 
 enum kdump_arch {
 	ARCH_UNKNOWN = 0,
@@ -193,7 +193,7 @@ struct format_ops {
 	 *   ctx->ops        possibly modified
 	 * Return:
 	 *   KDUMP_OK        can be handled by these ops
-	 *   kdump_noprobe   cannot be handled by these ops
+	 *   KDUMP_NOPROBE   cannot be handled by these ops
 	 *   or any other kdump_* error status
 	 */
 	kdump_status (*probe)(kdump_ctx_t *ctx);

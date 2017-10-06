@@ -97,7 +97,7 @@ file_fd_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 		ret = ctx->shared->ops->probe(ctx);
 		if (ret == KDUMP_OK)
 			return kdump_open_known(ctx);
-		if (ret != kdump_noprobe)
+		if (ret != KDUMP_NOPROBE)
 			return ret;
 
 		ctx->shared->ops = NULL;
