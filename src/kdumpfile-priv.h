@@ -646,8 +646,6 @@ INTERNAL_DECL(kdump_status, uncompress_page_gzip,
 	      (kdump_ctx_t *ctx, unsigned char *dst,
 	       unsigned char *src, size_t srclen));
 
-INTERNAL_DECL(ssize_t, paged_read, (int fd, void *buffer, size_t size));
-
 INTERNAL_DECL(uint32_t, cksum32, (void *buffer, size_t size, uint32_t csum));
 
 INTERNAL_DECL(kdump_status, get_symbol_val,

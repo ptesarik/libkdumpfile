@@ -683,28 +683,6 @@ uncompress_page_gzip(kdump_ctx_t *ctx, unsigned char *dst,
 #endif
 }
 
-/* /dev/crash cannot handle reads larger than page size */
-ssize_t
-paged_read(int fd, void *buffer, size_t size)
-{
-	long page_size = sysconf(_SC_PAGESIZE);
-	size_t todo = size;
-	while (todo) {
-		size_t chunksize = (todo > page_size)
-			? page_size
-			: todo;
-		ssize_t rd = read(fd, buffer, chunksize);
-		if (rd < 0)
-			return rd;
-
-		buffer += rd;
-		todo -= rd;
-		if (rd != chunksize)
-			break;
-	}
-	return size - todo;
-}
-
 uint32_t
 cksum32(void *buffer, size_t size, uint32_t csum)
 {
