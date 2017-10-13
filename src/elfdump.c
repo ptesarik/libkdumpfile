@@ -44,6 +44,12 @@
 
 static const struct format_ops xc_core_elf_ops;
 
+/** Invalid Xen page index.
+ * This constant is used to denote that there is no valid index value,
+ * e.g. to indicate search failure.
+ */
+#define IDX_NONE	~0UL
+
 struct xen_p2m {
 	uint64_t pfn;
 	uint64_t gmfn;
@@ -253,7 +259,7 @@ pfn_to_idx(kdump_ctx_t *ctx, kdump_pfn_t pfn)
 				return i;
 	}
 
-	return ~0UL;
+	return IDX_NONE;
 }
 
 static unsigned long
@@ -268,7 +274,7 @@ mfn_to_idx(kdump_ctx_t *ctx, kdump_pfn_t mfn)
 				return i;
 	}
 
-	return ~0UL;
+	return IDX_NONE;
 }
 
 /** xc_core physical-to-machine first step function.
@@ -407,7 +413,7 @@ xc_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 	idx = (pio->addr.as == ADDRXLAT_KPHYSADDR
 	       ? pfn_to_idx(ctx, pfn)
 	       : mfn_to_idx(ctx, pfn));
-	if (idx == ~0UL)
+	if (idx == IDX_NONE)
 		return set_error(ctx, KDUMP_ERR_NODATA, "Page not found");
 
 	edp = ctx->shared->fmtdata;
