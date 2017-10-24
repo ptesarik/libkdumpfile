@@ -1017,9 +1017,6 @@ open_common(kdump_ctx_t *ctx)
 			edp->xen_pages_offset = sect->file_offset;
 		else if (!strcmp(name, ".xen_p2m")) {
 			edp->xen_map_offset = sect->file_offset;
-			ctx->shared->xen_map = read_elf_sect(ctx, sect);
-			if (!ctx->shared->xen_map)
-				return KDUMP_ERR_SYSTEM;
 			ctx->shared->xen_map_size = sect->size /sizeof(struct xen_p2m);
 			set_xen_xlat(ctx, KDUMP_XEN_NONAUTO);
 			ret = make_xen_pfn_map_nonauto(ctx);
@@ -1028,9 +1025,6 @@ open_common(kdump_ctx_t *ctx)
 						 "Cannot create Xen P2M map");
 		} else if (!strcmp(name, ".xen_pfn")) {
 			edp->xen_map_offset = sect->file_offset;
-			ctx->shared->xen_map = read_elf_sect(ctx, sect);
-			if (!ctx->shared->xen_map)
-				return KDUMP_ERR_SYSTEM;
 			ctx->shared->xen_map_size = sect->size / sizeof(uint64_t);
 			set_xen_xlat(ctx, KDUMP_XEN_AUTO);
 			ret = make_xen_pfn_map_auto(ctx);
@@ -1061,7 +1055,7 @@ open_common(kdump_ctx_t *ctx)
 
 	if (edp->xen_pages_offset) {
 		set_xen_type(ctx, KDUMP_XEN_DOMAIN);
-		if (!ctx->shared->xen_map)
+		if (!edp->xen_map_offset)
 			return set_error(ctx, KDUMP_ERR_NOTIMPL,
 					 "Missing Xen P2M mapping");
 		ctx->shared->ops = &xc_core_elf_ops;

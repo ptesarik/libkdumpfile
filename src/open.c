@@ -442,8 +442,6 @@ kdump_free(kdump_ctx_t *ctx)
 			shared->arch_ops->cleanup(shared);
 		if (shared->cache)
 			cache_free(shared->cache);
-		if (shared->xen_map)
-			free(shared->xen_map);
 		if (shared->xlatsys)
 			addrxlat_sys_decref(shared->xlatsys);
 		if (shared->fcache)

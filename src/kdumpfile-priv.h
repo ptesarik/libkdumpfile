@@ -531,8 +531,6 @@ struct kdump_shared {
 #include "static-attr.def"
 #undef ATTR
 
-	/** Xen p2m map. */
-	void *xen_map;
 	/** Xen map size. */
 	unsigned long xen_map_size;
 
