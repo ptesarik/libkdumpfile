@@ -398,30 +398,57 @@ make_xen_pfn_map_auto(kdump_ctx_t *ctx)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	kdump_pfn_t max_pfn = 0;
-	uint64_t *p;
+	uint64_t pfn, *p;
 	struct pfn2idx_range range;
-	unsigned long i;
+	off_t pos, endpos;
+	struct fcache_entry fce;
 	kdump_status status;
 
 	pfn2idx_map_start(&edp->xen_pfnmap, &range);
-	for (i = 0, p = ctx->shared->xen_map; i < ctx->shared->xen_map_size; ++i, ++p) {
+	pos = edp->xen_map_offset;
+	endpos = pos + ctx->shared->xen_map_size * sizeof *p;
+	fce.len = 0;
+	fce.cache = NULL;
+	while (pos < endpos) {
+		if (fce.len < sizeof *p) {
+			fcache_put(&fce);
+			status = fcache_get_fb(ctx->shared->fcache, &fce,
+					       pos, &pfn, sizeof pfn);
+			if (status != KDUMP_OK)
+				goto err_read;
+		}
+		p = fce.data;
+
 		if (*p >= max_pfn)
 			max_pfn = *p + 1;
 
 		status = pfn2idx_map_add(&edp->xen_pfnmap, &range, *p);
 		if (status != KDUMP_OK)
 			goto err_pfn;
+
+		fce.data += sizeof *p;
+		fce.len -= sizeof *p;
+		pos += sizeof *p;
 	}
 	status = pfn2idx_map_end(&edp->xen_pfnmap, &range);
 	if (status != KDUMP_OK)
 		goto err_pfn;
 
+	fcache_put(&fce);
+
 	set_max_pfn(ctx, max_pfn);
 	return status;
 
-err_pfn:
-	return set_error(ctx, status, "Cannot map %s 0x%"PRIx64" -> 0x%lx",
-			 "PFN", *p, i);
+ err_pfn:
+	p = fce.data;
+	set_error(ctx, status, "Cannot map %s 0x%"PRIx64" -> 0x%"PRIxFAST64,
+		  "PFN", *p, range.idx);
+	fcache_put(&fce);
+	return status;
+
+ err_read:
+	return set_error(ctx, status, "Cannot read Xen map at %llu",
+			 (unsigned long long)pos);
 }
 
 static kdump_status
@@ -429,14 +456,28 @@ make_xen_pfn_map_nonauto(kdump_ctx_t *ctx)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	kdump_pfn_t max_pfn = 0;
-	struct xen_p2m *p;
+	struct xen_p2m p2m, *p;
 	struct pfn2idx_range pfnrange, mfnrange;
-	unsigned long i;
+	off_t pos, endpos;
+	struct fcache_entry fce;
 	kdump_status status;
 
 	pfn2idx_map_start(&edp->xen_pfnmap, &pfnrange);
 	pfn2idx_map_start(&edp->xen_mfnmap, &mfnrange);
-	for (i = 0, p = ctx->shared->xen_map; i < ctx->shared->xen_map_size; ++i, ++p) {
+	pos = edp->xen_map_offset;
+	endpos = pos + ctx->shared->xen_map_size * sizeof *p;
+	fce.len = 0;
+	fce.cache = NULL;
+	while (pos < endpos) {
+		if (fce.len < sizeof *p) {
+			fcache_put(&fce);
+			status = fcache_get_fb(ctx->shared->fcache, &fce,
+					       pos, &p2m, sizeof p2m);
+			if (status != KDUMP_OK)
+				goto err_read;
+		}
+		p = fce.data;
+
 		if (p->pfn >= max_pfn)
 			max_pfn = p->pfn + 1;
 
@@ -446,6 +487,10 @@ make_xen_pfn_map_nonauto(kdump_ctx_t *ctx)
 		status = pfn2idx_map_add(&edp->xen_mfnmap, &mfnrange, p->gmfn);
 		if (status != KDUMP_OK)
 			goto err_mfn;
+
+		fce.data += sizeof *p;
+		fce.len -= sizeof *p;
+		pos += sizeof *p;
 	}
 	status = pfn2idx_map_end(&edp->xen_pfnmap, &pfnrange);
 	if (status != KDUMP_OK)
@@ -454,15 +499,28 @@ make_xen_pfn_map_nonauto(kdump_ctx_t *ctx)
 	if (status != KDUMP_OK)
 			goto err_mfn;
 
+	fcache_put(&fce);
+
 	set_max_pfn(ctx, max_pfn);
 	return status;
 
  err_pfn:
-	return set_error(ctx, status, "Cannot map %s 0x%"PRIx64" -> 0x%lx",
-			 "PFN", p->pfn, i);
- err_mfn:
-	return set_error(ctx, status, "Cannot map %s 0x%"PRIx64" -> 0x%lx",
-			 "MFN", p->gmfn, i);
+	p = fce.data;
+	set_error(ctx, status, "Cannot map %s 0x%"PRIx64" -> 0x%"PRIxFAST64,
+		  "PFN", p->pfn, pfnrange.idx);
+	fcache_put(&fce);
+	return status;
+
+err_mfn:
+	p = fce.data;
+	set_error(ctx, status, "Cannot map %s 0x%"PRIx64" -> 0x%"PRIxFAST64,
+			 "MFN", p->gmfn, mfnrange.idx);
+	fcache_put(&fce);
+	return status;
+
+ err_read:
+	return set_error(ctx, status, "Cannot read Xen map at %llu",
+			 (unsigned long long)pos);
 }
 
 /** xc_core physical-to-machine first step function.
