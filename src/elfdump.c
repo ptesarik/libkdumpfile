@@ -126,6 +126,9 @@ struct elfdump_priv {
 
 	/** Map GMFN to page index in .xen_pages. */
 	struct pfn2idx_map xen_mfnmap;
+
+	/** File offset of Xen page map (xc_core) */
+	off_t xen_map_offset;
 };
 
 static void elf_cleanup(struct kdump_shared *shared);
@@ -472,21 +475,30 @@ xc_p2m_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
 	const addrxlat_meth_t *meth = step->meth;
 	struct kdump_shared *shared = meth->param.custom.data;
-	struct xen_p2m *p = shared->xen_map;
-	addrxlat_addr_t pfn = addr >> shared->page_shift.number;
-	unsigned long i;
+	struct elfdump_priv *edp = shared->fmtdata;
+	struct xen_p2m p2m;
+	uint_fast64_t idx;
+	off_t pos;
+	kdump_status status;
 
-	for (i = 0; i < shared->xen_map_size; ++i, ++p)
-		if (p->pfn == pfn) {
-			step->base.addr = p->gmfn << shared->page_shift.number;
-			step->idx[0] = addr & (shared->page_size.number - 1);
-			step->remain = 1;
-			step->elemsz = 1;
-			return ADDRXLAT_OK;
-		}
+	idx = pfn2idx_map_search(&edp->xen_pfnmap,
+				 addr >> shared->page_shift.number);
+	if (idx == IDX_NONE)
+		return addrxlat_ctx_err(step->ctx, ADDRXLAT_ERR_NODATA,
+					"PFN not found");
 
-	return addrxlat_ctx_err(step->ctx, ADDRXLAT_ERR_NODATA,
-				"PFN not found");
+	pos = edp->xen_map_offset + idx * sizeof(struct xen_p2m);
+	status = fcache_pread(shared->fcache, &p2m, sizeof p2m, pos);
+	if (status != KDUMP_OK)
+		return addrxlat_ctx_err(step->ctx, ADDRXLAT_ERR_NODATA,
+					"Cannot read p2m entry at %llu",
+					(unsigned long long)pos);
+
+	step->base.addr = p2m.gmfn << shared->page_shift.number;
+	step->idx[0] = addr & (shared->page_size.number - 1);
+	step->remain = 1;
+	step->elemsz = 1;
+	return ADDRXLAT_OK;
 }
 
 /** xc_core machine-to-physical first step function.
@@ -499,21 +511,30 @@ xc_m2p_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
 	const addrxlat_meth_t *meth = step->meth;
 	struct kdump_shared *shared = meth->param.custom.data;
-	struct xen_p2m *p = shared->xen_map;
-	addrxlat_addr_t mfn = addr >> shared->page_shift.number;
-	unsigned long i;
+	struct elfdump_priv *edp = shared->fmtdata;
+	struct xen_p2m p2m;
+	uint_fast64_t idx;
+	off_t pos;
+	kdump_status status;
 
-	for (i = 0; i < shared->xen_map_size; ++i, ++p)
-		if (p->gmfn == mfn) {
-			step->base.addr = p->pfn << shared->page_shift.number;
-			step->idx[0] = addr & (shared->page_size.number - 1);
-			step->remain = 1;
-			step->elemsz = 1;
-			return ADDRXLAT_OK;
-		}
+	idx = pfn2idx_map_search(&edp->xen_mfnmap,
+				 addr >> shared->page_shift.number);
+	if (idx == IDX_NONE)
+		return addrxlat_ctx_err(step->ctx, ADDRXLAT_ERR_NODATA,
+					"MFN not found");
 
-	return addrxlat_ctx_err(step->ctx, ADDRXLAT_ERR_NODATA,
-				"MFN not found");
+	pos = edp->xen_map_offset + idx * sizeof(struct xen_p2m);
+	status = fcache_pread(shared->fcache, &p2m, sizeof p2m, pos);
+	if (status != KDUMP_OK)
+		return addrxlat_ctx_err(step->ctx, ADDRXLAT_ERR_NODATA,
+					"Cannot read p2m entry at %llu",
+					(unsigned long long)pos);
+
+	step->base.addr = p2m.pfn << shared->page_shift.number;
+	step->idx[0] = addr & (shared->page_size.number - 1);
+	step->remain = 1;
+	step->elemsz = 1;
+	return ADDRXLAT_OK;
 }
 
 /** Identity next step function.
@@ -937,6 +958,7 @@ open_common(kdump_ctx_t *ctx)
 		if (!strcmp(name, ".xen_pages"))
 			edp->xen_pages_offset = sect->file_offset;
 		else if (!strcmp(name, ".xen_p2m")) {
+			edp->xen_map_offset = sect->file_offset;
 			ctx->shared->xen_map = read_elf_sect(ctx, sect);
 			if (!ctx->shared->xen_map)
 				return KDUMP_ERR_SYSTEM;
@@ -947,6 +969,7 @@ open_common(kdump_ctx_t *ctx)
 				return set_error(ctx, ret,
 						 "Cannot create Xen P2M map");
 		} else if (!strcmp(name, ".xen_pfn")) {
+			edp->xen_map_offset = sect->file_offset;
 			ctx->shared->xen_map = read_elf_sect(ctx, sect);
 			if (!ctx->shared->xen_map)
 				return KDUMP_ERR_SYSTEM;
