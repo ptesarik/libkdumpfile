@@ -256,35 +256,6 @@ elf_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 }
 
 static void
-get_max_pfn_xen_auto(kdump_ctx_t *ctx)
-{
-	uint64_t *p;
-	unsigned long i;
-	kdump_pfn_t max_pfn = 0;
-
-	for (i = 0, p = ctx->shared->xen_map; i < ctx->shared->xen_map_size; ++i, ++p)
-		if (*p >= max_pfn)
-			max_pfn = *p + 1;
-
-	set_max_pfn(ctx, max_pfn);
-}
-
-static void
-get_max_pfn_xen_nonauto(kdump_ctx_t *ctx)
-{
-	struct xen_p2m *p;
-	unsigned long i;
-	kdump_pfn_t max_pfn = 0;
-
-	for (i = 0, p = ctx->shared->xen_map; i < ctx->shared->xen_map_size;
-	     ++i, ++p)
-		if (p->pfn >= max_pfn)
-			max_pfn = p->pfn + 1;
-
-	set_max_pfn(ctx, max_pfn);
-}
-
-static void
 pfn2idx_map_start(struct pfn2idx_map *map, struct pfn2idx_range *cur)
 {
 	map->nranges = 0;
@@ -423,6 +394,7 @@ static kdump_status
 make_xen_pfn_map_auto(kdump_ctx_t *ctx)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
+	kdump_pfn_t max_pfn = 0;
 	uint64_t *p;
 	struct pfn2idx_range range;
 	unsigned long i;
@@ -430,6 +402,9 @@ make_xen_pfn_map_auto(kdump_ctx_t *ctx)
 
 	pfn2idx_map_start(&edp->xen_pfnmap, &range);
 	for (i = 0, p = ctx->shared->xen_map; i < ctx->shared->xen_map_size; ++i, ++p) {
+		if (*p >= max_pfn)
+			max_pfn = *p + 1;
+
 		status = pfn2idx_map_add(&edp->xen_pfnmap, &range, *p);
 		if (status != KDUMP_OK)
 			goto err_pfn;
@@ -438,6 +413,7 @@ make_xen_pfn_map_auto(kdump_ctx_t *ctx)
 	if (status != KDUMP_OK)
 		goto err_pfn;
 
+	set_max_pfn(ctx, max_pfn);
 	return status;
 
 err_pfn:
@@ -449,6 +425,7 @@ static kdump_status
 make_xen_pfn_map_nonauto(kdump_ctx_t *ctx)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
+	kdump_pfn_t max_pfn = 0;
 	struct xen_p2m *p;
 	struct pfn2idx_range pfnrange, mfnrange;
 	unsigned long i;
@@ -457,6 +434,9 @@ make_xen_pfn_map_nonauto(kdump_ctx_t *ctx)
 	pfn2idx_map_start(&edp->xen_pfnmap, &pfnrange);
 	pfn2idx_map_start(&edp->xen_mfnmap, &mfnrange);
 	for (i = 0, p = ctx->shared->xen_map; i < ctx->shared->xen_map_size; ++i, ++p) {
+		if (p->pfn >= max_pfn)
+			max_pfn = p->pfn + 1;
+
 		status = pfn2idx_map_add(&edp->xen_pfnmap, &pfnrange, p->pfn);
 		if (status != KDUMP_OK)
 			goto err_pfn;
@@ -471,6 +451,7 @@ make_xen_pfn_map_nonauto(kdump_ctx_t *ctx)
 	if (status != KDUMP_OK)
 			goto err_mfn;
 
+	set_max_pfn(ctx, max_pfn);
 	return status;
 
  err_pfn:
@@ -961,7 +942,6 @@ open_common(kdump_ctx_t *ctx)
 				return KDUMP_ERR_SYSTEM;
 			ctx->shared->xen_map_size = sect->size /sizeof(struct xen_p2m);
 			set_xen_xlat(ctx, KDUMP_XEN_NONAUTO);
-			get_max_pfn_xen_nonauto(ctx);
 			ret = make_xen_pfn_map_nonauto(ctx);
 			if (ret != KDUMP_OK)
 				return set_error(ctx, ret,
@@ -972,7 +952,6 @@ open_common(kdump_ctx_t *ctx)
 				return KDUMP_ERR_SYSTEM;
 			ctx->shared->xen_map_size = sect->size / sizeof(uint64_t);
 			set_xen_xlat(ctx, KDUMP_XEN_AUTO);
-			get_max_pfn_xen_auto(ctx);
 			ret = make_xen_pfn_map_auto(ctx);
 			if (ret != KDUMP_OK)
 				return set_error(ctx, ret,
