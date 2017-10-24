@@ -48,7 +48,7 @@ static const struct format_ops xc_core_elf_ops;
  * This constant is used to denote that there is no valid index value,
  * e.g. to indicate search failure.
  */
-#define IDX_NONE	~0UL
+#define IDX_NONE	(~(uint_fast64_t)0)
 
 struct xen_p2m {
 	uint64_t pfn;
@@ -69,6 +69,42 @@ struct section {
 	int name_index;
 };
 
+/** Translation of a single PFN to an index.
+ */
+struct pfn2idx {
+	kdump_pfn_t pfn;	/**< PFN to be translated. */
+	uint_fast64_t idx;	/**< Page index in .xen_pages.  */
+};
+
+/** Translation of a PFN range to an index.
+ */
+struct pfn2idx_range {
+	kdump_pfn_t pfn;	/**< PFN to be translated. */
+	uint_fast64_t idx;	/**< Page index in .xen_pages.  */
+
+	/** Length of the range.
+	 * If the number is negative, then PFNs are mapped in descending
+	 * order (i.e. while PFN increases, the index decreases),
+	 * otherwise in ascending order.
+	 */
+	int_fast64_t len;
+};
+
+/** Complete mapping of all PFNs to indices.
+ */
+struct pfn2idx_map {
+	size_t nranges;		      /**< Number of ranges. */
+	struct pfn2idx_range *ranges; /**< Page ranges (longer than 1). */
+
+	size_t nsingles;	 /**< Number of single pages. */
+	struct pfn2idx *singles; /**< Single pages outside of any range. */
+};
+
+/** PFN-to-index vector allocation increment.
+ * For optimal performance, this should be a power of two.
+ */
+#define PFN2IDX_ALLOC_INC    16
+
 struct elfdump_priv {
 	int num_load_segments;
 	struct load_segment *load_segments;
@@ -84,6 +120,12 @@ struct elfdump_priv {
 	off_t xen_pages_offset;
 
 	int elfclass;
+
+	/** Map PFN to page index in .xen_pages. */
+	struct pfn2idx_map xen_pfnmap;
+
+	/** Map GMFN to page index in .xen_pages. */
+	struct pfn2idx_map xen_mfnmap;
 };
 
 static void elf_cleanup(struct kdump_shared *shared);
@@ -242,39 +284,201 @@ get_max_pfn_xen_nonauto(kdump_ctx_t *ctx)
 	set_max_pfn(ctx, max_pfn);
 }
 
-static unsigned long
-pfn_to_idx(kdump_ctx_t *ctx, kdump_pfn_t pfn)
+static void
+pfn2idx_map_start(struct pfn2idx_map *map, struct pfn2idx_range *cur)
 {
-	unsigned long i;
+	map->nranges = 0;
+	map->ranges = NULL;
+	map->nsingles = 0;
+	map->singles = NULL;
 
-	if (get_xen_xlat(ctx) == KDUMP_XEN_AUTO) {
-		uint64_t *p = ctx->shared->xen_map;
-		for (i = 0; i < ctx->shared->xen_map_size; ++i, ++p)
-			if (*p == pfn)
-				return i;
-	} else {
-		struct xen_p2m *p = ctx->shared->xen_map;
-		for (i = 0; i < ctx->shared->xen_map_size; ++i, ++p)
-			if (p->pfn == pfn)
-				return i;
+	cur->idx = 0;
+	cur->len = 0;
+}
+
+static void
+pfn2idx_map_free(struct pfn2idx_map *map)
+{
+	free(map->ranges);
+	free(map->singles);
+}
+
+static kdump_status
+pfn2idx_map_addrange(struct pfn2idx_map *map, struct pfn2idx_range *range)
+{
+	if (range->len > 1 || range->len < -1) {
+		if (map->nranges % PFN2IDX_ALLOC_INC == 0) {
+			struct pfn2idx_range *newranges;
+			size_t newsz = (map->nranges + PFN2IDX_ALLOC_INC) *
+				sizeof *newranges;
+			newranges = realloc(map->ranges, newsz);
+			if (!newranges)
+				return KDUMP_ERR_SYSTEM;
+			map->ranges = newranges;
+		}
+
+		map->ranges[map->nranges].pfn = range->pfn;
+		map->ranges[map->nranges].idx = range->idx - 1;
+		map->ranges[map->nranges].len = range->len;
+		map->nranges++;
+	} else if (range->len) {
+		if (map->nsingles % PFN2IDX_ALLOC_INC == 0) {
+			struct pfn2idx *newsingles;
+			size_t newsz = (map->nsingles + PFN2IDX_ALLOC_INC) *
+				sizeof *newsingles;
+			newsingles = realloc(map->singles, newsz);
+			if (!newsingles)
+				return KDUMP_ERR_SYSTEM;
+			map->singles = newsingles;
+		}
+		map->singles[map->nsingles].pfn = range->pfn;
+		map->singles[map->nsingles].idx = range->idx - 1;
+		map->nsingles++;
 	}
+
+	return KDUMP_OK;
+}
+
+static kdump_status
+pfn2idx_map_add(struct pfn2idx_map *map, struct pfn2idx_range *range,
+		kdump_pfn_t pfn)
+{
+	kdump_status status;
+
+	if (range->len > 0 && pfn == range->pfn + 1)
+		++range->len;
+	else if (range->len < 0 && pfn == range->pfn - 1)
+		--range->len;
+	else if (range->len == 1 && pfn == range->pfn - 1)
+		range->len = -2;
+	else {
+		status = pfn2idx_map_addrange(map, range);
+		if (status != KDUMP_OK)
+			return status;
+		range->len = 1;
+	}
+	range->pfn = pfn;
+	++range->idx;
+	return KDUMP_OK;
+}
+
+static int
+pfn2idx_range_cmp(const void *a, const void *b)
+{
+	const struct pfn2idx_range *ra = a, *rb = b;
+	return ra->pfn != rb->pfn ? (ra->pfn > rb->pfn ? 1 : -1) : 0;
+}
+
+static int
+pfn2idx_single_cmp(const void *a, const void *b)
+{
+	const struct pfn2idx *sa = a, *sb = b;
+	return sa->pfn != sb->pfn ? (sa->pfn > sb->pfn ? 1 : -1) : 0;
+}
+
+static kdump_status
+pfn2idx_map_end(struct pfn2idx_map *map, struct pfn2idx_range *range)
+{
+	kdump_status status;
+
+	status = pfn2idx_map_addrange(map, range);
+	if (status != KDUMP_OK)
+		return status;
+
+	qsort(map->ranges, map->nranges, sizeof *map->ranges,
+	      pfn2idx_range_cmp);
+	qsort(map->singles, map->nsingles, sizeof *map->singles,
+	      pfn2idx_single_cmp);
+
+	return KDUMP_OK;
+}
+
+static uint_fast64_t
+pfn2idx_map_search(struct pfn2idx_map *map, kdump_pfn_t pfn)
+{
+	size_t i;
+	for (i = 0; i < map->nranges; ++i) {
+		struct pfn2idx_range *r = &map->ranges[i];
+		if (r->len >= 0) {
+			if (pfn < r->pfn - r->len + 1)
+				break;
+			if (pfn <= r->pfn)
+				return r->idx + pfn - r->pfn;
+		} else {
+			if (pfn < r->pfn)
+				break;
+			if (pfn <= r->pfn - r->len - 1)
+				return r->idx + r->pfn - pfn;
+		}
+	}
+
+	for (i = 0; i < map->nsingles && pfn <= map->singles[i].pfn; ++i)
+		if (map->singles[i].pfn == pfn)
+			return map->singles[i].idx;
 
 	return IDX_NONE;
 }
 
-static unsigned long
-mfn_to_idx(kdump_ctx_t *ctx, kdump_pfn_t mfn)
+static kdump_status
+make_xen_pfn_map_auto(kdump_ctx_t *ctx)
 {
+	struct elfdump_priv *edp = ctx->shared->fmtdata;
+	uint64_t *p;
+	struct pfn2idx_range range;
 	unsigned long i;
+	kdump_status status;
 
-	if (get_xen_xlat(ctx) == KDUMP_XEN_NONAUTO) {
-		struct xen_p2m *p = ctx->shared->xen_map;
-		for (i = 0; i < ctx->shared->xen_map_size; ++i, ++p)
-			if (p->gmfn == mfn)
-				return i;
+	pfn2idx_map_start(&edp->xen_pfnmap, &range);
+	for (i = 0, p = ctx->shared->xen_map; i < ctx->shared->xen_map_size; ++i, ++p) {
+		status = pfn2idx_map_add(&edp->xen_pfnmap, &range, *p);
+		if (status != KDUMP_OK)
+			goto err_pfn;
 	}
+	status = pfn2idx_map_end(&edp->xen_pfnmap, &range);
+	if (status != KDUMP_OK)
+		goto err_pfn;
 
-	return IDX_NONE;
+	return status;
+
+err_pfn:
+	return set_error(ctx, status, "Cannot map %s 0x%"PRIx64" -> 0x%lx",
+			 "PFN", *p, i);
+}
+
+static kdump_status
+make_xen_pfn_map_nonauto(kdump_ctx_t *ctx)
+{
+	struct elfdump_priv *edp = ctx->shared->fmtdata;
+	struct xen_p2m *p;
+	struct pfn2idx_range pfnrange, mfnrange;
+	unsigned long i;
+	kdump_status status;
+
+	pfn2idx_map_start(&edp->xen_pfnmap, &pfnrange);
+	pfn2idx_map_start(&edp->xen_mfnmap, &mfnrange);
+	for (i = 0, p = ctx->shared->xen_map; i < ctx->shared->xen_map_size; ++i, ++p) {
+		status = pfn2idx_map_add(&edp->xen_pfnmap, &pfnrange, p->pfn);
+		if (status != KDUMP_OK)
+			goto err_pfn;
+		status = pfn2idx_map_add(&edp->xen_mfnmap, &mfnrange, p->gmfn);
+		if (status != KDUMP_OK)
+			goto err_mfn;
+	}
+	status = pfn2idx_map_end(&edp->xen_pfnmap, &pfnrange);
+	if (status != KDUMP_OK)
+			goto err_pfn;
+	status = pfn2idx_map_end(&edp->xen_mfnmap, &mfnrange);
+	if (status != KDUMP_OK)
+			goto err_mfn;
+
+	return status;
+
+ err_pfn:
+	return set_error(ctx, status, "Cannot map %s 0x%"PRIx64" -> 0x%lx",
+			 "PFN", p->pfn, i);
+ err_mfn:
+	return set_error(ctx, status, "Cannot map %s 0x%"PRIx64" -> 0x%lx",
+			 "MFN", p->gmfn, i);
 }
 
 /** xc_core physical-to-machine first step function.
@@ -405,18 +609,17 @@ xc_post_addrxlat(kdump_ctx_t *ctx)
 static kdump_status
 xc_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
-	struct elfdump_priv *edp;
+	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
-	unsigned long idx;
+	uint_fast64_t idx;
 	off_t offset;
 
 	idx = (pio->addr.as == ADDRXLAT_KPHYSADDR
-	       ? pfn_to_idx(ctx, pfn)
-	       : mfn_to_idx(ctx, pfn));
+	       ? pfn2idx_map_search(&edp->xen_pfnmap, pfn)
+	       : pfn2idx_map_search(&edp->xen_mfnmap, pfn));
 	if (idx == IDX_NONE)
 		return set_error(ctx, KDUMP_ERR_NODATA, "Page not found");
 
-	edp = ctx->shared->fmtdata;
 	offset = edp->xen_pages_offset + ((off_t)idx << get_page_shift(ctx));
 	return fcache_get_chunk(ctx->shared->fcache, &pio->chunk,
 				get_page_size(ctx), offset);
@@ -759,6 +962,10 @@ open_common(kdump_ctx_t *ctx)
 			ctx->shared->xen_map_size = sect->size /sizeof(struct xen_p2m);
 			set_xen_xlat(ctx, KDUMP_XEN_NONAUTO);
 			get_max_pfn_xen_nonauto(ctx);
+			ret = make_xen_pfn_map_nonauto(ctx);
+			if (ret != KDUMP_OK)
+				return set_error(ctx, ret,
+						 "Cannot create Xen P2M map");
 		} else if (!strcmp(name, ".xen_pfn")) {
 			ctx->shared->xen_map = read_elf_sect(ctx, sect);
 			if (!ctx->shared->xen_map)
@@ -766,6 +973,10 @@ open_common(kdump_ctx_t *ctx)
 			ctx->shared->xen_map_size = sect->size / sizeof(uint64_t);
 			set_xen_xlat(ctx, KDUMP_XEN_AUTO);
 			get_max_pfn_xen_auto(ctx);
+			ret = make_xen_pfn_map_auto(ctx);
+			if (ret != KDUMP_OK)
+				return set_error(ctx, ret,
+						 "Cannot create Xen PFN map");
 		} else if (!strcmp(name, ".note.Xen")) {
 			void *notes = read_elf_sect(ctx, sect);
 			if (!notes)
@@ -889,6 +1100,8 @@ elf_cleanup(struct kdump_shared *shared)
 			free(edp->sections);
 		if (edp->strtab)
 			free(edp->strtab);
+		pfn2idx_map_free(&edp->xen_pfnmap);
+		pfn2idx_map_free(&edp->xen_mfnmap);
 		free(edp);
 		shared->fmtdata = NULL;
 	}
