@@ -394,7 +394,7 @@ pfn2idx_map_search(struct pfn2idx_map *map, kdump_pfn_t pfn)
 }
 
 static kdump_status
-make_xen_pfn_map_auto(kdump_ctx_t *ctx)
+make_xen_pfn_map_auto(kdump_ctx_t *ctx, const struct section *sect)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	kdump_pfn_t max_pfn = 0;
@@ -405,11 +405,12 @@ make_xen_pfn_map_auto(kdump_ctx_t *ctx)
 	kdump_status status;
 
 	pfn2idx_map_start(&edp->xen_pfnmap, &range);
-	pos = edp->xen_map_offset;
-	endpos = pos + ctx->shared->xen_map_size * sizeof *p;
+
+	pos = edp->xen_map_offset = sect->file_offset;
+	endpos = pos + sect->size - sizeof *p;
 	fce.len = 0;
 	fce.cache = NULL;
-	while (pos < endpos) {
+	while (pos <= endpos) {
 		if (fce.len < sizeof *p) {
 			fcache_put(&fce);
 			status = fcache_get_fb(ctx->shared->fcache, &fce,
@@ -434,6 +435,8 @@ make_xen_pfn_map_auto(kdump_ctx_t *ctx)
 	if (status != KDUMP_OK)
 		goto err_pfn;
 
+	/* TODO: Warn if endpos - pos < sizeof *p */
+
 	fcache_put(&fce);
 
 	set_max_pfn(ctx, max_pfn);
@@ -452,7 +455,7 @@ make_xen_pfn_map_auto(kdump_ctx_t *ctx)
 }
 
 static kdump_status
-make_xen_pfn_map_nonauto(kdump_ctx_t *ctx)
+make_xen_pfn_map_nonauto(kdump_ctx_t *ctx, const struct section *sect)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	kdump_pfn_t max_pfn = 0;
@@ -464,11 +467,12 @@ make_xen_pfn_map_nonauto(kdump_ctx_t *ctx)
 
 	pfn2idx_map_start(&edp->xen_pfnmap, &pfnrange);
 	pfn2idx_map_start(&edp->xen_mfnmap, &mfnrange);
-	pos = edp->xen_map_offset;
-	endpos = pos + ctx->shared->xen_map_size * sizeof *p;
+
+	pos = edp->xen_map_offset = sect->file_offset;
+	endpos = pos + sect->size - sizeof *p;
 	fce.len = 0;
 	fce.cache = NULL;
-	while (pos < endpos) {
+	while (pos <= endpos) {
 		if (fce.len < sizeof *p) {
 			fcache_put(&fce);
 			status = fcache_get_fb(ctx->shared->fcache, &fce,
@@ -498,6 +502,8 @@ make_xen_pfn_map_nonauto(kdump_ctx_t *ctx)
 	status = pfn2idx_map_end(&edp->xen_mfnmap, &mfnrange);
 	if (status != KDUMP_OK)
 			goto err_mfn;
+
+	/* TODO: Warn if endpos - pos < sizeof *p */
 
 	fcache_put(&fce);
 
@@ -1016,18 +1022,14 @@ open_common(kdump_ctx_t *ctx)
 		if (!strcmp(name, ".xen_pages"))
 			edp->xen_pages_offset = sect->file_offset;
 		else if (!strcmp(name, ".xen_p2m")) {
-			edp->xen_map_offset = sect->file_offset;
-			ctx->shared->xen_map_size = sect->size /sizeof(struct xen_p2m);
 			set_xen_xlat(ctx, KDUMP_XEN_NONAUTO);
-			ret = make_xen_pfn_map_nonauto(ctx);
+			ret = make_xen_pfn_map_nonauto(ctx, sect);
 			if (ret != KDUMP_OK)
 				return set_error(ctx, ret,
 						 "Cannot create Xen P2M map");
 		} else if (!strcmp(name, ".xen_pfn")) {
-			edp->xen_map_offset = sect->file_offset;
-			ctx->shared->xen_map_size = sect->size / sizeof(uint64_t);
 			set_xen_xlat(ctx, KDUMP_XEN_AUTO);
-			ret = make_xen_pfn_map_auto(ctx);
+			ret = make_xen_pfn_map_auto(ctx, sect);
 			if (ret != KDUMP_OK)
 				return set_error(ctx, ret,
 						 "Cannot create Xen PFN map");

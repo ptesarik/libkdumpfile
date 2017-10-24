@@ -531,9 +531,6 @@ struct kdump_shared {
 #include "static-attr.def"
 #undef ATTR
 
-	/** Xen map size. */
-	unsigned long xen_map_size;
-
 	/** Size of per-context data. Zero means unallocated. */
 	size_t per_ctx_size[PER_CTX_SLOTS];
 };
