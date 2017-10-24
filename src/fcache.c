@@ -152,6 +152,39 @@ fcache_get(struct fcache *fc, struct fcache_entry *fce, off_t pos)
 	return KDUMP_OK;
 }
 
+/** Get file cache content with a fallback buffer.
+ * @param fc   File cache object.
+ * @param fce  File cache entry, updated on success.
+ * @param pos  File position.
+ * @param fb   Fallback buffer.
+ * @param sz   Minimum buffer size.
+ * @returns    Error status.
+ *
+ * On a successful return, @c fce->data points to at least @sz bytes of data
+ * at file position @c pos. This is normally a pointer directly into a cache
+ * entry, but if the corresponding file chunk crosses a cache entry boundary,
+ * data is read into the fallback buffer instead. In that case, @c fce->cache
+ * is set to @c NULL.
+ */
+kdump_status
+fcache_get_fb(struct fcache *fc, struct fcache_entry *fce, off_t pos,
+	      void *fb, size_t sz)
+{
+	kdump_status ret;
+
+	ret = fcache_get(fc, fce, pos);
+	if (ret != KDUMP_OK)
+		return ret;
+	if (fce->len < sz) {
+		fcache_put(fce);
+		fce->data = fb;
+		fce->len = sz;
+		fce->cache = NULL;
+		ret = fcache_pread(fc, fb, sz, pos);
+	}
+	return ret;
+}
+
 /** Read file cache content into a pre-allocated buffer.
  * @param fc   File cache object.
  * @param buf  Target buffer.

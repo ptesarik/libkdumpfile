@@ -1047,10 +1047,16 @@ INTERNAL_DECL(void, fcache_free,
 INTERNAL_DECL(kdump_status, fcache_get,
 	      (struct fcache *fc, struct fcache_entry *fce, off_t pos));
 
+INTERNAL_DECL(kdump_status, fcache_get_fb,
+	      (struct fcache *fc, struct fcache_entry *fce, off_t pos,
+	       void *fb, size_t sz));
+
 static inline void
 fcache_put(struct fcache_entry *fce)
 {
-	cache_put_entry(fce->cache, fce->ce);
+	/* Cache may be NULL after a call to fcache_get_fb. */
+	if (fce->cache)
+		cache_put_entry(fce->cache, fce->ce);
 }
 
 INTERNAL_DECL(kdump_status, fcache_pread,
