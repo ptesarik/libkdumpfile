@@ -257,12 +257,12 @@ dump_addrxlat(kdump_ctx_t *ctx)
 
 	putchar('\n');
 
-	puts("MACHPHYS -> KPHYS:");
+	puts("MAP_MACHPHYS_KPHYS:");
 	print_map(sys, ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS);
 
 	putchar('\n');
 
-	puts("KPHYS -> MACHPHYS:");
+	puts("MAP_KPHYS_MACHPHYS:");
 	print_map(sys, ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS);
 
 	addrxlat_sys_decref(sys);
