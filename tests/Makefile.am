@@ -213,6 +213,7 @@ test_scripts = \
 	xlat-linux-s390x-2l \
 	xlat-linux-s390x-3l \
 	xlat-linux-s390x-4l \
+	xlat-linux-x86_64-ktext-pgt \
 	xlat-linux-x86_64-old \
 	xlat-linux-x86_64-old-nover \
 	xlat-linux-x86_64-2.6.11 \
@@ -284,6 +285,8 @@ dist_check_DATA = \
 	xlat-linux-s390x-4l.data \
 	xlat-linux-s390x-4l.expect \
 	xlat-linux-s390x-4l.sym \
+	xlat-linux-x86_64-ktext-pgt.expect \
+	xlat-linux-x86_64-ktext-pgt.sym \
 	xlat-linux-x86_64-old.expect \
 	xlat-linux-x86_64-old-nover.data \
 	xlat-linux-x86_64-old-nover.expect \

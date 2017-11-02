@@ -542,12 +542,11 @@ map_linux_x86_64(struct os_init_data *ctl)
 
 	if (!layout && ctl->osdesc->ver)
 		layout = linux_layout_by_ver(ctl->osdesc->ver);
-	if (!layout)
-		return ADDRXLAT_OK;
-
-	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, layout);
-	if (status != ADDRXLAT_OK)
-		return status;
+	if (layout) {
+		status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, layout);
+		if (status != ADDRXLAT_OK)
+			return status;
+	}
 
 	set_pgt_fallback(ctl->sys, ADDRXLAT_SYS_METH_KTEXT);
 
