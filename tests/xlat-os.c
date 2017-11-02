@@ -35,13 +35,6 @@
 
 #include "testutil.h"
 
-enum read_status {
-	read_ok = ADDRXLAT_OK,
-	read_notfound,
-	read_vtop_failed,
-	read_unknown_as,
-};
-
 struct cbdata {
 	addrxlat_ctx_t *ctx;
 	addrxlat_sys_t *sys;
@@ -89,7 +82,8 @@ read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 
 	ent = find_entry(addr->addr, sizeof(uint32_t));
 	if (!ent)
-		return addrxlat_ctx_err(cbd->ctx, -read_notfound, "No data");
+		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_ERR_NODATA,
+					"No data");
 	p = (uint32_t*)(ent->buf + addr->addr - ent->addr);
 	*val = *p;
 	return ADDRXLAT_OK;
@@ -109,7 +103,8 @@ read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 
 	ent = find_entry(addr->addr, sizeof(uint64_t));
 	if (!ent)
-		return addrxlat_ctx_err(cbd->ctx, -read_notfound, "No data");
+		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_ERR_NODATA,
+					"No data");
 	p = (uint64_t*)(ent->buf + addr->addr - ent->addr);
 	*val = *p;
 	return ADDRXLAT_OK;
