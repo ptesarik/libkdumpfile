@@ -4160,7 +4160,7 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 	type = ADDRXLAT_OS_UNKNOWN;
 	osdesc.ver = 0;
 	osdesc.opts = NULL;
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Os|lkz:init",
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Os|lkz:os_init",
 					 keywords, &ctxobj, &osdesc.arch,
 					 &type, &osdesc.ver, &osdesc.opts))
 		return NULL;
