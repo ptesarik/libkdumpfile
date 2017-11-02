@@ -379,6 +379,61 @@ set_pgt_fallback(addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
 		*meth = sys->meth[ADDRXLAT_SYS_METH_PGT];
 }
 
+/** Set up Linux kernel reverse direct mapping on x86_64.
+ * @param ctl  Initialization data.
+ * @returns    Error status.
+ */
+addrxlat_status
+linux_rdirect_map(struct os_init_data *ctl)
+{
+	static const struct {
+		addrxlat_addr_t first;
+		addrxlat_addr_t last;
+	} ranges[] = {
+		{ 0x0000010000000000, 0x000001ffffffffff },
+		{ 0xffff810000000000, 0xffffc0ffffffffff },
+		{ 0xffff880000000000, 0xffffc0ffffffffff },
+		{ 0xffff880000000000, 0xffffc7ffffffffff },
+	};
+
+	int i;
+
+	if (!ctl->ctx->cb.read64 ||
+	    !(ctl->ctx->cb.read_caps & ADDRXLAT_CAPS(ADDRXLAT_KVADDR)))
+		return ADDRXLAT_ERR_NOMETH;
+
+	for (i = 0; i < ARRAY_SIZE(ranges); ++i) {
+		struct sys_region layout[2];
+		addrxlat_status status;
+
+		ctl->sys->meth[ADDRXLAT_SYS_METH_DIRECT].param.linear.off =
+			-ranges[i].first;
+
+		layout[0].first = 0;
+		layout[0].last = ranges[i].last - ranges[i].first;
+		layout[0].meth = ADDRXLAT_SYS_METH_RDIRECT;
+		layout[0].act = SYS_ACT_RDIRECT;
+		layout[1].meth = ADDRXLAT_SYS_METH_NUM;
+		status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KPHYS_DIRECT,
+					layout);
+		if (status != ADDRXLAT_OK)
+			return set_error(ctl->ctx, status,
+					 "Cannot set up Linux kernel direct mapping");
+
+		if (is_directmap(ctl->sys, ctl->ctx, ranges[i].first))
+			return ADDRXLAT_OK;
+
+		/* rollback */
+		ctl->sys->meth[ADDRXLAT_SYS_METH_RDIRECT].kind =
+			ADDRXLAT_NOMETH;
+		internal_map_decref(
+			ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_DIRECT]);
+		ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_DIRECT] = NULL;
+	}
+
+	return ADDRXLAT_NOMETH;
+}
+
 /** The beginning of the kernel text virtual mapping may not be mapped
  * for various reasons. Let's use an offset of 16M to be safe.
  */
@@ -532,6 +587,18 @@ map_linux_x86_64(struct os_init_data *ctl)
 			return status;
 
 		set_xen_mach2phys(ctl, XEN_MACH2PHYS_ADDR);
+	}
+
+	if (!(ctl->ctx->cb.read_caps & ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR)) &&
+	    !(ctl->ctx->cb.read_caps & ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR))) {
+		status = linux_rdirect_map(ctl);
+		if (status != ADDRXLAT_OK &&
+		    status != ADDRXLAT_ERR_NOMETH &&
+		    status != ADDRXLAT_ERR_NODATA &&
+		    status != ADDRXLAT_ERR_NOTPRESENT)
+			return status;
+
+		clear_error(ctl->ctx);
 	}
 
 	status = linux_ktext_map(ctl);
