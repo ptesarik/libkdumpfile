@@ -148,6 +148,7 @@ addrxlat_sys_get_meth(const addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
 /** Action function for @ref SYS_ACT_DIRECT.
  * @param ctl     Initialization data.
  * @param region  Directmap region definition.
+ * @returns       Error status.
  *
  * This action sets up the direct mapping as a linear mapping that
  * maps the current region to kernel physical addresses starting at 0.
@@ -157,7 +158,7 @@ act_direct(struct os_init_data *ctl, const struct sys_region *region)
 {
 	struct sys_region layout[2] = {
 		{ 0, region->last - region->first,
-		  ADDRXLAT_SYS_METH_RDIRECT },
+		  ADDRXLAT_SYS_METH_RDIRECT, SYS_ACT_RDIRECT },
 		SYS_REGION_END
 	};
 	addrxlat_meth_t *meth;
@@ -167,12 +168,25 @@ act_direct(struct os_init_data *ctl, const struct sys_region *region)
 	meth->target_as = ADDRXLAT_KPHYSADDR;
 	meth->param.linear.off = -region->first;
 
-	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_RDIRECT];
+	return sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KPHYS_DIRECT, layout);
+}
+
+/** Action function for @ref SYS_ACT_RDIRECT.
+ * @param ctl     Initialization data.
+ * @param region  Reverse directmap region definition.
+ *
+ * This action sets up the reverse direct mapping as a linear mapping
+ * that maps the current region to kernel virtual addresses, using
+ * offset from the direct mapping method.
+ */
+static void
+act_rdirect(struct os_init_data *ctl, const struct sys_region *region)
+{
+	addrxlat_meth_t *meth = &ctl->sys->meth[region->meth];
 	meth->kind = ADDRXLAT_LINEAR;
 	meth->target_as = ADDRXLAT_KVADDR;
-	meth->param.linear.off = region->first;
-
-	return sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KPHYS_DIRECT, layout);
+	meth->param.linear.off =
+		-ctl->sys->meth[ADDRXLAT_SYS_METH_DIRECT].param.linear.off;
 }
 
 /** Action function for @ref SYS_ACT_IDENT_KPHYS.
@@ -243,6 +257,10 @@ sys_set_layout(struct os_init_data *ctl, addrxlat_sys_map_t idx,
 			status = act_direct(ctl, region);
 			if (status != ADDRXLAT_OK)
 				return status;
+			break;
+
+		case SYS_ACT_RDIRECT:
+			act_rdirect(ctl, region);
 			break;
 
 		case SYS_ACT_IDENT_KPHYS:
