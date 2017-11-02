@@ -16,6 +16,8 @@ symspec=
 test -f "$symfile" && symspec="SYM=$symfile"
 dataspec=
 test -f "$datafile" && dataspec="DATA=$datafile"
+test -n "$data_as" && dataspec="data_as=$data_as
+$dataspec"
 
 echo -n "Checking... "
 ./xlat-os >"$resultfile" <<EOF

@@ -56,6 +56,7 @@ struct entry {
 	char buf[];
 };
 
+static unsigned long long entry_as = ADDRXLAT_MACHPHYSADDR;
 static struct entry *entry_list;
 
 struct entry*
@@ -75,7 +76,7 @@ read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 	struct entry *ent;
 	uint32_t *p;
 
-	if (addr->as != ADDRXLAT_MACHPHYSADDR)
+	if (addr->as != entry_as)
 		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_ERR_INVALID,
 					"Unexpected address space: %ld",
 					(long)addr->as);
@@ -96,7 +97,7 @@ read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 	struct entry *ent;
 	uint64_t *p;
 
-	if (addr->as != ADDRXLAT_MACHPHYSADDR)
+	if (addr->as != entry_as)
 		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_ERR_INVALID,
 					"Unexpected address space: %ld",
 					(long)addr->as);
@@ -205,6 +206,7 @@ static const struct param param_array[] = {
 	PARAM_NUMBER("osver", osver),
 	PARAM_STRING("arch", arch),
 	PARAM_STRING("opts", opts),
+	PARAM_NUMBER("data_as", entry_as),
 
 	PARAM_STRING("SYM", sym_file),
 	PARAM_STRING("DATA", data_file)
@@ -422,7 +424,7 @@ os_map(void)
 		.data = &data,
 		.read32 = read32,
 		.read64 = read64,
-		.read_caps = ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR),
+		.read_caps = ADDRXLAT_CAPS(entry_as),
 		.sym = get_symdata
 	};
 	addrxlat_osdesc_t meth;
