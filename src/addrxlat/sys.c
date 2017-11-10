@@ -316,35 +316,24 @@ sys_set_physmaps(struct os_init_data *ctl, addrxlat_addr_t maxaddr)
 
 /** Get page table root address using symbolic information.
  * @param ctl  Initialization data.
- * @param reg  Page table register name.
- * @param sym  Symbol name of the page table.
+ * @param spec Symbolic name specifiers.
  * @returns    Error status.
+ *
+ * @sa get_first_sym
  */
 addrxlat_status
-sys_sym_pgtroot(struct os_init_data *ctl, const char *reg, const char *sym)
+sys_sym_pgtroot(struct os_init_data *ctl, const struct sym_spec *spec)
 {
 	addrxlat_meth_t *meth;
-	addrxlat_addr_t addr;
+	addrxlat_status status;
 
 	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	if (meth->param.pgt.root.as != ADDRXLAT_NOADDR)
 		return ADDRXLAT_OK;
 
-	if (reg && get_reg(ctl->ctx, "cr3", &addr) == ADDRXLAT_OK) {
-		meth->param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
-		meth->param.pgt.root.addr = addr;
-		return ADDRXLAT_OK;
-	}
+	status = get_first_sym(ctl->ctx, spec, &meth->param.pgt.root);
 	clear_error(ctl->ctx);
-
-	if (sym && get_symval(ctl->ctx, sym, &addr) == ADDRXLAT_OK) {
-		meth->param.pgt.root.as = ADDRXLAT_KVADDR;
-		meth->param.pgt.root.addr = addr;
-		return ADDRXLAT_OK;
-	}
-	clear_error(ctl->ctx);
-
-	return ADDRXLAT_ERR_NODATA;
+	return status;
 }
 
 #define MAX_ALT_NUM	2

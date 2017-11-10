@@ -475,6 +475,12 @@ static const struct sys_region linux_directmap[] = {
 addrxlat_status
 sys_ia32(struct os_init_data *ctl)
 {
+	static const struct sym_spec pgtspec[] = {
+		{ ADDRXLAT_SYM_REG, ADDRXLAT_MACHPHYSADDR, "cr3" },
+		{ ADDRXLAT_SYM_VALUE, ADDRXLAT_KVADDR, "swapper_pg_dir" },
+		{ ADDRXLAT_SYM_NONE }
+	};
+
 	addrxlat_range_t range;
 	addrxlat_map_t *newmap;
 	struct optval *rootpgtopt;
@@ -539,7 +545,7 @@ sys_ia32(struct os_init_data *ctl)
 	}
 
 	if (ctl->osdesc->type == ADDRXLAT_OS_LINUX)  {
-		sys_sym_pgtroot(ctl, "cr3", "swapper_pg_dir");
+		sys_sym_pgtroot(ctl, pgtspec);
 
 		status = set_linux_directmap(ctl, newmap);
 		if (status != ADDRXLAT_OK) {

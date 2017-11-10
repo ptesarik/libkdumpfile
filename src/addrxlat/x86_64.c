@@ -575,10 +575,16 @@ set_xen_p2m(struct os_init_data *ctl)
 static addrxlat_status
 map_linux_x86_64(struct os_init_data *ctl)
 {
+	static const struct sym_spec pgtspec[] = {
+		{ ADDRXLAT_SYM_REG, ADDRXLAT_MACHPHYSADDR, "cr3" },
+		{ ADDRXLAT_SYM_VALUE, ADDRXLAT_KVADDR, "init_level4_pgt" },
+		{ ADDRXLAT_SYM_NONE }
+	};
+
 	const struct sys_region *layout;
 	addrxlat_status status;
 
-	sys_sym_pgtroot(ctl, "cr3", "init_level4_pgt");
+	sys_sym_pgtroot(ctl, pgtspec);
 
 	if (ctl->popt.val[OPT_xen_xlat].set &&
 	    ctl->popt.val[OPT_xen_xlat].num) {
@@ -686,13 +692,19 @@ is_xen_ktext(struct os_init_data *ctl, addrxlat_addr_t addr)
 static addrxlat_status
 setup_xen_pgt(struct os_init_data *ctl)
 {
+	static const struct sym_spec pgtspec[] = {
+		{ ADDRXLAT_SYM_REG, ADDRXLAT_MACHPHYSADDR, "cr3" },
+		{ ADDRXLAT_SYM_VALUE, ADDRXLAT_KVADDR, "pgd_l4" },
+		{ ADDRXLAT_SYM_NONE }
+	};
+
 	struct sys_region layout[2];
 	addrxlat_meth_t *meth;
 	addrxlat_addr_t pgt;
 	addrxlat_off_t off;
 	addrxlat_status status;
 
-	status = sys_sym_pgtroot(ctl, "cr3", "pgd_l4");
+	status = sys_sym_pgtroot(ctl, pgtspec);
 	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	if (meth->param.pgt.root.as != ADDRXLAT_KVADDR)
 		return status;	/* either unset or physical */

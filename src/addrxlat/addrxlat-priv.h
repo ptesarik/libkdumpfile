@@ -319,7 +319,7 @@ INTERNAL_DECL(addrxlat_status, sys_set_physmaps,
 	      (struct os_init_data *ctl, addrxlat_addr_t maxaddr));
 
 INTERNAL_DECL(addrxlat_status, sys_sym_pgtroot,
-	      (struct os_init_data *ctl, const char *reg, const char *sym));
+	      (struct os_init_data *ctl, const struct sym_spec *spec));
 
 /* internal aliases */
 
