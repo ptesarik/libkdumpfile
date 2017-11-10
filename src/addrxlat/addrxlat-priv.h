@@ -114,6 +114,53 @@ struct _addrxlat_ctx {
 	char err_buf[ERRBUF];	/**< Fallback buffer for the error string. */
 };
 
+/* utils */
+
+INTERNAL_DECL(addrxlat_status, read32,
+	      (addrxlat_step_t *step, const addrxlat_fulladdr_t *addr,
+	       uint32_t *val, const char *what));
+
+INTERNAL_DECL(addrxlat_status, read64,
+	      (addrxlat_step_t *step, const addrxlat_fulladdr_t *addr,
+	       uint64_t *val, const char *what));
+
+INTERNAL_DECL(addrxlat_status, get_reg,
+	      (addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val));
+
+INTERNAL_DECL(addrxlat_status, get_symval,
+	      (addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val));
+
+INTERNAL_DECL(addrxlat_status, get_sizeof,
+	      (addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *sz));
+
+INTERNAL_DECL(addrxlat_status, get_offsetof,
+	      (addrxlat_ctx_t *ctx, const char *type, const char *memb,
+	       addrxlat_addr_t *off));
+
+/** Symbolic type specifier.
+ * @sa get_first_sym
+ */
+struct sym_spec {
+	/** Type of information.
+	 * Use @ref ADDRXLAT_SYM_NONE to terminate a vector.
+	 */
+	addrxlat_sym_type_t type;
+
+	/** Symbol address space. */
+	addrxlat_addrspace_t as;
+
+	/** Symbolic name.
+	 */
+	const char *name;
+};
+
+/** Non-existent type of symbolic information. */
+#define ADDRXLAT_SYM_NONE	((addrxlat_sym_type_t)-1)
+
+INTERNAL_DECL(addrxlat_status, get_first_sym,
+	      (addrxlat_ctx_t *ctx, const struct sym_spec *spec,
+	       addrxlat_fulladdr_t *addr));
+
 /**  Internal definition of an address translation map.
  * Note that the start address does not have to be stored in the
  * structure. The first range in a map starts at address 0, and
@@ -295,53 +342,6 @@ DECLARE_ALIAS(fulladdr_conv);
 INTERNAL_DECL(addrxlat_status, xlat_op,
 	      (const addrxlat_op_ctl_t *ctl,
 	       const addrxlat_fulladdr_t *paddr));
-
-/* utils */
-
-INTERNAL_DECL(addrxlat_status, read32,
-	      (addrxlat_step_t *step, const addrxlat_fulladdr_t *addr,
-	       uint32_t *val, const char *what));
-
-INTERNAL_DECL(addrxlat_status, read64,
-	      (addrxlat_step_t *step, const addrxlat_fulladdr_t *addr,
-	       uint64_t *val, const char *what));
-
-INTERNAL_DECL(addrxlat_status, get_reg,
-	      (addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val));
-
-INTERNAL_DECL(addrxlat_status, get_symval,
-	      (addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val));
-
-INTERNAL_DECL(addrxlat_status, get_sizeof,
-	      (addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *sz));
-
-INTERNAL_DECL(addrxlat_status, get_offsetof,
-	      (addrxlat_ctx_t *ctx, const char *type, const char *memb,
-	       addrxlat_addr_t *off));
-
-/** Symbolic type specifier.
- * @sa get_first_sym
- */
-struct sym_spec {
-	/** Type of information.
-	 * Use @ref ADDRXLAT_SYM_NONE to terminate a vector.
-	 */
-	addrxlat_sym_type_t type;
-
-	/** Symbol address space. */
-	addrxlat_addrspace_t as;
-
-	/** Symbolic name.
-	 */
-	const char *name;
-};
-
-/** Non-existent type of symbolic information. */
-#define ADDRXLAT_SYM_NONE	((addrxlat_sym_type_t)-1)
-
-INTERNAL_DECL(addrxlat_status, get_first_sym,
-	      (addrxlat_ctx_t *ctx, const struct sym_spec *spec,
-	       addrxlat_fulladdr_t *addr));
 
 /** Clear the error message.
  * @param ctx     Address translation context.
