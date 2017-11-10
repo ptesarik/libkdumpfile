@@ -577,6 +577,7 @@ map_linux_x86_64(struct os_init_data *ctl)
 {
 	static const struct sym_spec pgtspec[] = {
 		{ ADDRXLAT_SYM_REG, ADDRXLAT_MACHPHYSADDR, "cr3" },
+		{ ADDRXLAT_SYM_VALUE, ADDRXLAT_KVADDR, "init_top_pgt" },
 		{ ADDRXLAT_SYM_VALUE, ADDRXLAT_KVADDR, "init_level4_pgt" },
 		{ ADDRXLAT_SYM_NONE }
 	};
