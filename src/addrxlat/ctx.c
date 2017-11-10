@@ -341,6 +341,47 @@ get_offsetof(addrxlat_ctx_t *ctx, const char *type, const char *memb,
 	return status;
 }
 
+/** Get the first successfuly resolved value from a specifier list.
+ * @param      ctx   Address translation context.
+ * @param      spec  Vector of specifiers.
+ * @param[out] addr  Symbol full address, returned on sucess.
+ * @returns          Error status.
+ *
+ * The symbol is resolved using a user-supplied callback.
+ */
+addrxlat_status
+get_first_sym(addrxlat_ctx_t *ctx, const struct sym_spec *spec,
+	      addrxlat_fulladdr_t *addr)
+{
+	struct {
+		addrxlat_sym_t sym;
+		const char *name;
+	} info;
+	addrxlat_status status = ADDRXLAT_ERR_NODATA;
+
+	if (!ctx->cb.sym)
+		return set_error(ctx, status,
+				 "No symbolic information callback");
+
+	while (spec->type != ADDRXLAT_SYM_NONE) {
+		info.sym.type = spec->type;
+		info.name = spec->name;
+		status = ctx->cb.sym(ctx->cb.data, (addrxlat_sym_t*)&info);
+		if (status == ADDRXLAT_OK) {
+			addr->addr = info.sym.val;
+			addr->as = spec->as;
+			return status;
+		} else if (status != ADDRXLAT_ERR_NODATA)
+			break;
+
+		clear_error(ctx);
+		++spec;
+	}
+
+	return set_error(ctx, status,
+			 "Cannot resolve \"%s\"", info.name);
+}
+
 DEFINE_ALIAS(ctx_err);
 
 addrxlat_status

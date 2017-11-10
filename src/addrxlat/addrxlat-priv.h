@@ -319,6 +319,30 @@ INTERNAL_DECL(addrxlat_status, get_offsetof,
 	      (addrxlat_ctx_t *ctx, const char *type, const char *memb,
 	       addrxlat_addr_t *off));
 
+/** Symbolic type specifier.
+ * @sa get_first_sym
+ */
+struct sym_spec {
+	/** Type of information.
+	 * Use @ref ADDRXLAT_SYM_NONE to terminate a vector.
+	 */
+	addrxlat_sym_type_t type;
+
+	/** Symbol address space. */
+	addrxlat_addrspace_t as;
+
+	/** Symbolic name.
+	 */
+	const char *name;
+};
+
+/** Non-existent type of symbolic information. */
+#define ADDRXLAT_SYM_NONE	((addrxlat_sym_type_t)-1)
+
+INTERNAL_DECL(addrxlat_status, get_first_sym,
+	      (addrxlat_ctx_t *ctx, const struct sym_spec *spec,
+	       addrxlat_fulladdr_t *addr));
+
 /** Clear the error message.
  * @param ctx     Address translation context.
  */
