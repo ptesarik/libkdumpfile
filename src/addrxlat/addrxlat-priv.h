@@ -137,6 +137,9 @@ INTERNAL_DECL(addrxlat_status, get_offsetof,
 	      (addrxlat_ctx_t *ctx, const char *type, const char *memb,
 	       addrxlat_addr_t *off));
 
+/** Maximum symbol specifier name length. */
+#define SYM_SPEC_NAMELEN 24
+
 /** Symbolic type specifier.
  * @sa get_first_sym
  */
@@ -151,7 +154,7 @@ struct sym_spec {
 
 	/** Symbolic name.
 	 */
-	const char *name;
+	const char name[SYM_SPEC_NAMELEN];
 };
 
 /** Non-existent type of symbolic information. */
