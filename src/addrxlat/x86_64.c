@@ -461,7 +461,7 @@ linux_ktext_meth(struct os_init_data *ctl)
 
 		meth->kind = ADDRXLAT_LINEAR;
 		meth->target_as = ADDRXLAT_KPHYSADDR;
-		meth->param.linear.off = ctl->popt.val[OPT_physbase].num -
+		meth->param.linear.off = ctl->popt.val[OPT_physbase].addr -
 			__START_KERNEL_map;
 		return ADDRXLAT_OK;
 	}
@@ -715,7 +715,7 @@ setup_xen_pgt(struct os_init_data *ctl)
 		off = -XEN_DIRECTMAP;
 	} else if (ctl->popt.val[OPT_physbase].set) {
 		addrxlat_addr_t xen_virt_start = pgt & ~(XEN_TEXT_SIZE - 1);
-		off = ctl->popt.val[OPT_physbase].num - xen_virt_start;
+		off = ctl->popt.val[OPT_physbase].addr - xen_virt_start;
 	} else
 		return ADDRXLAT_ERR_NODATA;
 

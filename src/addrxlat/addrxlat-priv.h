@@ -245,6 +245,7 @@ struct optval {
 	union {
 		const char *str;	/**< String(-like) values. */
 		long num;		/**< Number(-like) values. */
+		addrxlat_addr_t addr;  /**< Simple address or offset. */
 
 		/** Full address (with address space).*/
 		addrxlat_fulladdr_t fulladdr;

@@ -174,6 +174,7 @@ enum opttype {
 	opt_string,		/**< Unparsed string option */
 	opt_number,		/**< Signed number */
 	opt_bool,		/**< Boolean value */
+	opt_addr,		/**< Simple address or offset */
 	opt_fulladdr,		/**< Full address */
 };
 
@@ -215,7 +216,7 @@ static const struct {
 	char name[9];
 } opt8[] = {
 	DEF(pagesize, number),
-	DEF(physbase, number),
+	DEF(physbase, addr),
 	DEF(xen_xlat, bool),
 	END
 };
@@ -279,6 +280,16 @@ parse_val(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 			goto err_noval;
 
 		optval->num = strtol(val, &endp, 0);
+		if (!*val || *endp)
+			goto err_badval;
+
+		break;
+
+	case opt_addr:
+		if (!val)
+			goto err_noval;
+
+		optval->addr = strtoull(val, &endp, 0);
 		if (!*val || *endp)
 			goto err_badval;
 
