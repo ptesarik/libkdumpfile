@@ -453,6 +453,7 @@ linux_rdirect_map(struct os_init_data *ctl)
 static addrxlat_status
 linux_ktext_meth(struct os_init_data *ctl)
 {
+	addrxlat_addr_t stext;
 	addrxlat_status status;
 
 	if (ctl->popt.val[OPT_physbase].set) {
@@ -466,13 +467,18 @@ linux_ktext_meth(struct os_init_data *ctl)
 		return ADDRXLAT_OK;
 	}
 
-	status = set_ktext_offset(ctl->sys, ctl->ctx,
-				  __START_KERNEL_map + LINUX_KTEXT_SKIP);
-	if (status == ADDRXLAT_ERR_NOTPRESENT || status == ADDRXLAT_ERR_NODATA) {
+	status = get_symval(ctl->ctx, "_stext", &stext);
+	if (status == ADDRXLAT_ERR_NODATA)
+		stext = __START_KERNEL_map + LINUX_KTEXT_SKIP;
+	else if (status != ADDRXLAT_OK)
+		return status;
+
+	status = set_ktext_offset(ctl->sys, ctl->ctx, stext);
+	if (status == ADDRXLAT_ERR_NOTPRESENT ||
+	    status == ADDRXLAT_ERR_NODATA) {
 		clear_error(ctl->ctx);
-		status = set_ktext_offset(ctl->sys, ctl->ctx,
-					  __START_KERNEL_map +
-					  LINUX_KTEXT_SKIP_alt);
+		stext = __START_KERNEL_map + LINUX_KTEXT_SKIP_alt;
+		status = set_ktext_offset(ctl->sys, ctl->ctx, stext);
 	}
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status, "Cannot translate ktext");
