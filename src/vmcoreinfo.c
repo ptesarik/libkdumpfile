@@ -35,6 +35,16 @@
 #include <string.h>
 #include <stdlib.h>
 
+static kdump_status
+phys_base_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	return set_phys_base(ctx, attr_value(attr)->number);
+}
+
+static const struct attr_ops phys_base_ops = {
+	.post_set = phys_base_post_hook,
+};
+
 static const struct attr_ops vmcoreinfo_lines_ops;
 
 /**  De-allocate parsed VMCOREINFO.
@@ -172,6 +182,8 @@ lines_post_hook(kdump_ctx_t *ctx, struct attr_data *lineattr)
 		if (*p)
 			/* invalid format -> ignore */
 			return KDUMP_OK;
+		if (!strcmp(type, "NUMBER") && !strcmp(sym, "phys_base"))
+			tmpl.ops = &phys_base_ops;
 		tmpl.type = KDUMP_NUMBER;
 	} else
 		return KDUMP_OK;
