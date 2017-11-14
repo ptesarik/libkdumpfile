@@ -12,9 +12,9 @@ list="KVADDR:0xffff880012345678:KPHYSADDR"
 list="$list KVADDR:0xffff880012345678:MACHPHYSADDR"
 
 # kernel text
-list="$list KVADDR:0xffffffff80001234:KPHYSADDR"
+list="$list KVADDR:0xffffffff81e10123:KPHYSADDR"
 # dtto including identity mapping to machine physical
-list="$list KVADDR:0xffffffff80001234:MACHPHYSADDR"
+list="$list KVADDR:0xffffffff81e10123:MACHPHYSADDR"
 
 # VMEMMAP using page tables
 list="$list KVADDR:0xffffea000000abcd:MACHPHYSADDR"

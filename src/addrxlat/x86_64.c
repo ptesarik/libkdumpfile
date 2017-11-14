@@ -71,11 +71,10 @@
 #define XEN_MACH2PHYS_ADDR	0xffff800000000000ULL
 
 /** Kernel text mapping (virtual addresses).
- * Note that this mapping has never changed, so these constants
- * apply to all kernel versions.
+ * Note that the start address of this mapping has never changed, so this
+ * constant applies to all kernel versions.
  */
-#define __START_KERNEL_map	0xffffffff80000000ULL
-#define __END_KERNEL_map	0xffffffff827fffffULL
+#define LINUX_KTEXT_START	0xffffffff80000000ULL
 
 /* Original Linux layout (before 2.6.11) */
 static const struct sys_region linux_layout_2_6_0[] = {
@@ -129,8 +128,7 @@ static const struct sys_region linux_layout_2_6_27[] = {
 	/* 0xffffc20000000000 - 0xffffe1ffffffffff     vmalloc/ioremap  */
 	/* 0xffffe20000000000 - 0xffffe2ffffffffff     VMEMMAP          */
 	/* 0xffffe30000000000 - 0xffffffff7fffffff     unused hole      */
-	/* 0xffffffff80000000 - 0xffffffff827fffff     kernel text      */
-	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
+	/* 0xffffffff80000000 - 0xffffffff87ffffff     kernel text      */
 	/* 0xffffffff88000000 - 0xffffffffffdfffff     modules and      */
 	/*					        fixmap/vsyscall */
 	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
@@ -155,9 +153,8 @@ static const struct sys_region linux_layout_2_6_31[] = {
 	/* 0xffffffef00000000 - 0xfffffffeffffffff     EFI runtime      */
 	/*						   (3.14+ only) */
 	/* 0xffffffff00000000 - 0xffffffff7fffffff     guard hole       */
-	/* 0xffffffff80000000 - 0xffffffff827fffff     kernel text      */
-	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
-	/* 0xffffffff88000000 - 0xffffffffffdfffff     modules and      */
+	/* 0xffffffff80000000 - 0xffffffff9fffffff     kernel text      */
+	/* 0xffffffffa0000000 - 0xffffffffffdfffff     modules and      */
 	/*					        fixmap/vsyscall */
 	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
 	SYS_REGION_END
@@ -463,13 +460,13 @@ linux_ktext_meth(struct os_init_data *ctl)
 		meth->kind = ADDRXLAT_LINEAR;
 		meth->target_as = ADDRXLAT_KPHYSADDR;
 		meth->param.linear.off = ctl->popt.val[OPT_physbase].addr -
-			__START_KERNEL_map;
+			LINUX_KTEXT_START;
 		return ADDRXLAT_OK;
 	}
 
 	status = get_symval(ctl->ctx, "_stext", &stext);
 	if (status == ADDRXLAT_ERR_NODATA)
-		stext = __START_KERNEL_map + LINUX_KTEXT_SKIP;
+		stext = LINUX_KTEXT_START + LINUX_KTEXT_SKIP;
 	else if (status != ADDRXLAT_OK)
 		return status;
 
@@ -477,7 +474,7 @@ linux_ktext_meth(struct os_init_data *ctl)
 	if (status == ADDRXLAT_ERR_NOTPRESENT ||
 	    status == ADDRXLAT_ERR_NODATA) {
 		clear_error(ctl->ctx);
-		stext = __START_KERNEL_map + LINUX_KTEXT_SKIP_alt;
+		stext = LINUX_KTEXT_START + LINUX_KTEXT_SKIP_alt;
 		status = set_ktext_offset(ctl->sys, ctl->ctx, stext);
 	}
 	if (status != ADDRXLAT_OK)
@@ -493,6 +490,7 @@ static addrxlat_status
 linux_ktext_map(struct os_init_data *ctl)
 {
 	addrxlat_range_t range;
+	addrxlat_meth_t *meth;
 	addrxlat_status status;
 
 	status = linux_ktext_meth(ctl);
@@ -503,13 +501,20 @@ linux_ktext_map(struct os_init_data *ctl)
 		return status;
 	clear_error(ctl->ctx);
 
-	range.endoff = __END_KERNEL_map - __START_KERNEL_map;
-	range.meth = ADDRXLAT_SYS_METH_KTEXT;
-	status = internal_map_set(ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS],
-				  __START_KERNEL_map, &range);
-	if (status != ADDRXLAT_OK)
-		return set_error(ctl->ctx, status,
-				 "Cannot set up Linux kernel text mapping");
+	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	if (meth->kind == ADDRXLAT_PGT &&
+	    meth->param.pgt.root.as == ADDRXLAT_KVADDR) {
+		/* minimal ktext mapping for the root page table */
+		range.endoff = PAGE_MASK;
+		range.meth = ADDRXLAT_SYS_METH_KTEXT;
+		status = internal_map_set(
+			ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS],
+			meth->param.pgt.root.addr, &range);
+		if (status != ADDRXLAT_OK)
+			return set_error(ctl->ctx, status, "Cannot set up %s",
+					 "minimal Linux kernel text mapping");
+	}
+
 	return ADDRXLAT_OK;
 }
 
