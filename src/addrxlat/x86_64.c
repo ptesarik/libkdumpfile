@@ -307,6 +307,37 @@ linux_layout_by_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx)
 	return NULL;
 }
 
+/** Translate a virtual address using page tables.
+ * @param sys    Translation system object.
+ * @param ctx    Address translation object.
+ * @param addr   Address to be translated.
+ * @returns      Error status.
+ */
+static addrxlat_status
+vtop_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx, addrxlat_addr_t *addr)
+{
+	addrxlat_step_t step;
+	addrxlat_status status;
+
+	step.ctx = ctx;
+	step.sys = sys;
+	step.meth = &sys->meth[ADDRXLAT_SYS_METH_PGT];
+	status = internal_launch(&step, *addr);
+	if (status != ADDRXLAT_OK)
+		return status;
+
+	status = internal_walk(&step);
+	if (status != ADDRXLAT_OK)
+		return status;
+
+	status = internal_fulladdr_conv(&step.base, ADDRXLAT_KPHYSADDR,
+					ctx, sys);
+	if (status == ADDRXLAT_OK)
+		*addr = step.base.addr;
+
+	return status;
+}
+
 /** Set Linux kernel text mapping offset.
  * @param sys    Translation system object.
  * @param ctx    Address translation object.
@@ -317,37 +348,19 @@ static addrxlat_status
 set_ktext_offset(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 		 addrxlat_addr_t vaddr)
 {
-	addrxlat_sys_meth_t methidx;
-	addrxlat_step_t step;
+	addrxlat_addr_t paddr;
 	addrxlat_meth_t *meth;
 	addrxlat_status status;
 
-	methidx = internal_map_search(sys->map[ADDRXLAT_SYS_MAP_HW], vaddr);
-	if (methidx == ADDRXLAT_SYS_METH_NONE)
-		return set_error(ctx, ADDRXLAT_ERR_NOMETH,
-				 "No translation for %"ADDRXLAT_PRIxADDR,
-				 vaddr);
-
-	step.ctx = ctx;
-	step.sys = sys;
-	step.meth = &sys->meth[methidx];
-	status = internal_launch(&step, vaddr);
-	if (status != ADDRXLAT_OK)
-		return status;
-
-	status = internal_walk(&step);
-	if (status != ADDRXLAT_OK)
-		return status;
-
-	status = internal_fulladdr_conv(&step.base, ADDRXLAT_KPHYSADDR,
-					ctx, sys);
+	paddr = vaddr;
+	status = vtop_pgt(sys, ctx, &paddr);
 	if (status != ADDRXLAT_OK)
 		return status;
 
 	meth = &sys->meth[ADDRXLAT_SYS_METH_KTEXT];
 	meth->kind = ADDRXLAT_LINEAR;
 	meth->target_as = ADDRXLAT_KPHYSADDR;
-	meth->param.linear.off = step.base.addr - vaddr;
+	meth->param.linear.off = paddr - vaddr;
 	return ADDRXLAT_OK;
 }
 
