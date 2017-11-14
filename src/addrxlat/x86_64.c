@@ -79,99 +79,86 @@
 
 /* Original Linux layout (before 2.6.11) */
 static const struct sys_region linux_layout_2_6_0[] = {
-	{  0x0000000000000000,  0x0000007fffffffff, /* user space       */
-	   ADDRXLAT_SYS_METH_PGT },
+	/* 0x0000000000000000 - 0x0000007fffffffff     user space       */
 	/* 0x0000008000000000 - 0x000000ffffffffff     guard hole       */
 	{  0x0000010000000000,  0x000001ffffffffff, /* direct mapping   */
 	   ADDRXLAT_SYS_METH_DIRECT, SYS_ACT_DIRECT },
 	/* 0x0000020000000000 - 0x00007fffffffffff     unused hole      */
 	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
 	/* 0xffff800000000000 - 0xfffffeffffffffff     unused hole      */
-	{  0xffffff0000000000,  0xffffff7fffffffff, /* vmalloc/ioremap  */
-	   ADDRXLAT_SYS_METH_PGT },
+	/* 0xffffff0000000000 - 0xffffff7fffffffff     vmalloc/ioremap  */
 	/* 0xffffff8000000000 - 0xffffffff7fffffff     unused hole      */
 	/* 0xffffffff80000000 - 0xffffffff827fffff     kernel text      */
 	/* 0xffffffff82800000 - 0xffffffff9fffffff     unused hole      */
-	{  0xffffffffa0000000,  0xffffffffafffffff, /* modules          */
-	   ADDRXLAT_SYS_METH_PGT },
+	/* 0xffffffffa0000000 - 0xffffffffafffffff     modules          */
 	/* 0xffffffffb0000000 - 0xffffffffff5exxxx     unused hole      */
-	{  0xffffffffff5ed000,  0xffffffffffdfffff, /* fixmap/vsyscalls */
-	   ADDRXLAT_SYS_METH_PGT },
+	/* 0xffffffffff5ed000 - 0xffffffffffdfffff     fixmap/vsyscalls */
 	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
 	SYS_REGION_END
 };
 
 /* Linux layout introduced in 2.6.11 */
 static const struct sys_region linux_layout_2_6_11[] = {
-	{  0x0000000000000000,  0x00007fffffffffff, /* user space       */
-	   ADDRXLAT_SYS_METH_PGT },
+	/* 0x0000000000000000 - 0x00007fffffffffff     user space       */
 	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
 	/* 0xffff800000000000 - 0xffff80ffffffffff     guard hole       */
 	{  0xffff810000000000,  0xffffc0ffffffffff, /* direct mapping   */
 	   ADDRXLAT_SYS_METH_DIRECT, SYS_ACT_DIRECT },
 	/* 0xffffc10000000000 - 0xffffc1ffffffffff     guard hole       */
-	{  0xffffc20000000000,  0xffffe1ffffffffff, /* vmalloc/ioremap  */
-	   ADDRXLAT_SYS_METH_PGT },
-	{  0xffffe20000000000,  0xffffe2ffffffffff, /* VMEMMAP          */
-	   ADDRXLAT_SYS_METH_PGT },		    /*   (2.6.24+ only) */
+	/* 0xffffc20000000000 - 0xffffe1ffffffffff     vmalloc/ioremap  */
+	/* 0xffffe20000000000 - 0xffffe2ffffffffff     VMEMMAP          */
+	/*					         (2.6.24+ only) */
 	/* 0xffffe30000000000 - 0xffffffff7fffffff     unused hole      */
 	/* 0xffffffff80000000 - 0xffffffff827fffff     kernel text      */
 	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
-	{  0xffffffff88000000,  0xffffffffffdfffff, /* modules and      */
-	   ADDRXLAT_SYS_METH_PGT },		    /*  fixmap/vsyscall */
+	/* 0xffffffff88000000 - 0xffffffffffdfffff     modules and      */
+	/*					        fixmap/vsyscall */
 	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
 	SYS_REGION_END
 };
 
 /** Linux layout with hypervisor area, introduced in 2.6.27 */
 static const struct sys_region linux_layout_2_6_27[] = {
-	{  0x0000000000000000,  0x00007fffffffffff, /* user space       */
-	   ADDRXLAT_SYS_METH_PGT },
+	/* 0x0000000000000000 - 0x00007fffffffffff     user space       */
 	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
 	/* 0xffff800000000000 - 0xffff80ffffffffff     guard hole       */
 	/* 0xffff810000000000 - 0xffff87ffffffffff     hypervisor area  */
 	{  0xffff880000000000,  0xffffc0ffffffffff, /* direct mapping   */
 	   ADDRXLAT_SYS_METH_DIRECT, SYS_ACT_DIRECT },
 	/* 0xffffc10000000000 - 0xffffc1ffffffffff     guard hole       */
-	{  0xffffc20000000000,  0xffffe1ffffffffff, /* vmalloc/ioremap  */
-	   ADDRXLAT_SYS_METH_PGT },
-	{  0xffffe20000000000,  0xffffe2ffffffffff, /* VMEMMAP          */
-	   ADDRXLAT_SYS_METH_PGT },
+	/* 0xffffc20000000000 - 0xffffe1ffffffffff     vmalloc/ioremap  */
+	/* 0xffffe20000000000 - 0xffffe2ffffffffff     VMEMMAP          */
 	/* 0xffffe30000000000 - 0xffffffff7fffffff     unused hole      */
 	/* 0xffffffff80000000 - 0xffffffff827fffff     kernel text      */
 	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
-	{  0xffffffff88000000,  0xffffffffffdfffff, /* modules and      */
-	   ADDRXLAT_SYS_METH_PGT },		    /*  fixmap/vsyscall */
+	/* 0xffffffff88000000 - 0xffffffffffdfffff     modules and      */
+	/*					        fixmap/vsyscall */
 	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
 	SYS_REGION_END
 };
 
 /** Linux layout with 64T direct mapping, introduced in 2.6.31 */
 static const struct sys_region linux_layout_2_6_31[] = {
-	{  0x0000000000000000,  0x00007fffffffffff, /* user space       */
-	   ADDRXLAT_SYS_METH_PGT },
+	/* 0x0000000000000000 - 0x00007fffffffffff     user space       */
 	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
 	/* 0xffff800000000000 - 0xffff80ffffffffff     guard hole       */
 	/* 0xffff810000000000 - 0xffff87ffffffffff     hypervisor area  */
 	{  0xffff880000000000,  0xffffc7ffffffffff, /* direct mapping   */
 	   ADDRXLAT_SYS_METH_DIRECT, SYS_ACT_DIRECT },
 	/* 0xffffc80000000000 - 0xffffc8ffffffffff     guard hole       */
-	{  0xffffc90000000000,  0xffffe8ffffffffff, /* vmalloc/ioremap  */
-	   ADDRXLAT_SYS_METH_PGT },
+	/* 0xffffc90000000000 - 0xffffe8ffffffffff     vmalloc/ioremap  */
 	/* 0xffffe90000000000 - 0xffffe9ffffffffff     guard hole       */
-	{  0xffffea0000000000,  0xffffeaffffffffff, /* VMEMMAP          */
-	   ADDRXLAT_SYS_METH_PGT },
+	/* 0xffffea0000000000 - 0xffffeaffffffffff     VMEMMAP          */
 	/* 0xffffeb0000000000 - 0xffffffeeffffffff     unused hole      */
-	{  0xffffff0000000000,  0xffffff7fffffffff, /* %esp fixup stack */
-	   ADDRXLAT_SYS_METH_PGT },
+	/* 0xffffff0000000000 - 0xffffff7fffffffff     %esp fixup stack */
 	/* 0xffffff8000000000 - 0xffffffeeffffffff     unused hole      */
-	{  0xffffffef00000000,  0xfffffffeffffffff, /* EFI runtime      */
-	   ADDRXLAT_SYS_METH_PGT },		    /*     (3.14+ only) */
+	/* 0xffffffef00000000 - 0xfffffffeffffffff     EFI runtime      */
+	/*						   (3.14+ only) */
 	/* 0xffffffff00000000 - 0xffffffff7fffffff     guard hole       */
 	/* 0xffffffff80000000 - 0xffffffff827fffff     kernel text      */
 	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
-	{  0xffffffff88000000,  0xffffffffffdfffff, /* modules and      */
-	   ADDRXLAT_SYS_METH_PGT },		    /*  fixmap/vsyscall */
+	/* 0xffffffff88000000 - 0xffffffffffdfffff     modules and      */
+	/*					        fixmap/vsyscall */
 	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
 	SYS_REGION_END
 };
