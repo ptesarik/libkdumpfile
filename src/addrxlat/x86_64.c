@@ -439,18 +439,6 @@ linux_rdirect_map(struct os_init_data *ctl)
 	return ADDRXLAT_NOMETH;
 }
 
-/** The beginning of the kernel text virtual mapping may not be mapped
- * for various reasons. Let's use an offset of 16M to be safe.
- */
-#define LINUX_KTEXT_SKIP		(16ULL << 20)
-
-/** Xen kernels are loaded low in memory. The ktext mapping may not go up
- * to 16M then. Let's use 1M, because Xen kernel should take up at least
- * 1M of RAM, and this value also covers kernels loaded at 1M (so this code
- * may be potentially reused for ia32).
- */
-#define LINUX_KTEXT_SKIP_alt		(1ULL << 20)
-
 /** Set up Linux kernel text translation method.
  * @param ctl  Initialization data.
  * @returns    Error status.
@@ -458,13 +446,12 @@ linux_rdirect_map(struct os_init_data *ctl)
 static addrxlat_status
 linux_ktext_meth(struct os_init_data *ctl)
 {
+	addrxlat_meth_t *meth;
 	addrxlat_addr_t stext;
 	addrxlat_status status;
 
 	if (ctl->popt.val[OPT_physbase].set) {
-		addrxlat_meth_t *meth =
-			&ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT];
-
+		meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT];
 		meth->kind = ADDRXLAT_LINEAR;
 		meth->target_as = ADDRXLAT_KPHYSADDR;
 		meth->param.linear.off = ctl->popt.val[OPT_physbase].addr -
@@ -473,18 +460,32 @@ linux_ktext_meth(struct os_init_data *ctl)
 	}
 
 	status = get_symval(ctl->ctx, "_stext", &stext);
-	if (status == ADDRXLAT_ERR_NODATA)
-		stext = LINUX_KTEXT_START + LINUX_KTEXT_SKIP;
-	else if (status != ADDRXLAT_OK)
-		return status;
+	if (status == ADDRXLAT_ERR_NODATA) {
+		addrxlat_step_t step;
 
-	status = set_ktext_offset(ctl->sys, ctl->ctx, stext);
-	if (status == ADDRXLAT_ERR_NOTPRESENT ||
-	    status == ADDRXLAT_ERR_NODATA) {
-		clear_error(ctl->ctx);
-		stext = LINUX_KTEXT_START + LINUX_KTEXT_SKIP_alt;
+		step.ctx = ctl->ctx;
+		step.sys = ctl->sys;
+		step.meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+		stext = LINUX_KTEXT_START;
+		status = lowest_mapped(
+			&step, &stext,
+			linux_ktext_ends[ARRAY_SIZE(linux_ktext_ends) - 1]);
+		if (status != ADDRXLAT_OK)
+			return status;
+
+		status = internal_fulladdr_conv(&step.base, ADDRXLAT_KPHYSADDR,
+						step.ctx, step.sys);
+		if (status != ADDRXLAT_OK)
+			return status;
+
+		meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT];
+		meth->kind = ADDRXLAT_LINEAR;
+		meth->target_as = ADDRXLAT_KPHYSADDR;
+		meth->param.linear.off = step.base.addr - stext;
+		return ADDRXLAT_OK;
+	} else if (status == ADDRXLAT_OK)
 		status = set_ktext_offset(ctl->sys, ctl->ctx, stext);
-	}
+
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status, "Cannot translate ktext");
 	return status;
