@@ -225,6 +225,14 @@ INTERNAL_DECL(addrxlat_next_step_fn, pgt_ppc64_linux_rpn30, );
 INTERNAL_DECL(addrxlat_addr_t, paging_max_index,
 	      (const addrxlat_paging_form_t *pf));
 
+INTERNAL_DECL(addrxlat_status, lowest_mapped,
+	      (addrxlat_step_t *step, addrxlat_addr_t *addr,
+	       addrxlat_addr_t limit));
+
+INTERNAL_DECL(addrxlat_status, highest_mapped,
+	      (addrxlat_step_t *step, addrxlat_addr_t *addr,
+	       addrxlat_addr_t limit));
+
 /* Option parsing. */
 
 /** All options recognized by @ref parse_opts. */

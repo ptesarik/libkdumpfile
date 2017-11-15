@@ -28,6 +28,8 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <string.h>
+
 #include "addrxlat-priv.h"
 
 /** Count total size of all address bitfields.
@@ -531,4 +533,168 @@ addrxlat_walk(addrxlat_step_t *step)
 	}
 
 	return status;
+}
+
+/** Get the page size for a given paging form.
+ * @param pf  Paging form.
+ * @returns   Page size.
+ */
+static inline addrxlat_addr_t
+pf_page_size(const addrxlat_paging_form_t *pf)
+{
+	return (addrxlat_addr_t)1 << pf->fieldsz[0];
+}
+
+/** Get the page mask for a given paging form.
+ * @param pf  Paging form.
+ * @returns   Page mask.
+ *
+ * When applied to an address, page mask gives the offset within a page.
+ */
+static inline addrxlat_addr_t
+pf_page_mask(const addrxlat_paging_form_t *pf)
+{
+	return pf_page_size(pf) - 1;
+}
+
+/** Find the lowest mapped virtual address in a given page table.
+ * @param step   Current step state.
+ * @param addr   First address to try; updated on return.
+ * @param limit  Last address to try.
+ * @returns      Error status.
+ */
+static addrxlat_status
+lowest_mapped_tbl(addrxlat_step_t *step,
+		  addrxlat_addr_t *addr, addrxlat_addr_t limit)
+{
+	int i;
+	addrxlat_addr_t addrspan;
+	addrxlat_step_t mystep;
+	addrxlat_status status;
+
+	addrspan = 1;
+	for (i = 0; i < step->remain - 1; ++i)
+		addrspan <<= step->meth->param.pgt.pf.fieldsz[i];
+
+	memcpy(&mystep, step, sizeof *step);
+	while (*addr <= limit) {
+		status = internal_step(step);
+		if (status == ADDRXLAT_OK) {
+			if (step->remain <= 1)
+				return internal_step(step);
+
+			status = lowest_mapped_tbl(step, addr, limit);
+			if (status != ADDRXLAT_ERR_NOTPRESENT)
+				return status;
+		} else if (status == ADDRXLAT_ERR_NOTPRESENT) {
+			clear_error(step->ctx);
+			*addr += addrspan;
+		} else
+			return status;
+
+		i = mystep.remain - 1;
+		if (++mystep.idx[i] >=
+		    1U << mystep.meth->param.pgt.pf.fieldsz[i])
+			return ADDRXLAT_ERR_NOTPRESENT;
+		memcpy(step, &mystep, sizeof *step);
+	}
+
+	return ADDRXLAT_ERR_NOTPRESENT;
+}
+
+/** Find the lowest mapped virtual address in a given range.
+ * @param step   Initial step state.
+ * @param addr   First address to try; updated on return.
+ * @param limit  Last address to try.
+ * @returns      Error status.
+ *
+ * The initial step state must be initialized same way as for a call
+ * to @ref addrxlat_launch.
+ */
+addrxlat_status
+lowest_mapped(addrxlat_step_t *step,
+	      addrxlat_addr_t *addr, addrxlat_addr_t limit)
+{
+	addrxlat_addr_t page_mask;
+	addrxlat_status status;
+
+	page_mask = pf_page_mask(&step->meth->param.pgt.pf);
+	*addr &= ~page_mask;
+	limit |= page_mask;
+
+	status = internal_launch(step, *addr);
+	if (status != ADDRXLAT_OK)
+		return status;
+
+	return lowest_mapped_tbl(step, addr, limit);
+}
+
+/** Find the highest mapped virtual address in a given page table.
+ * @param step   Current step state.
+ * @param addr   First address to try; updated on return.
+ * @param limit  Last address to try.
+ * @returns      Error status.
+ */
+static addrxlat_status
+highest_mapped_tbl(addrxlat_step_t *step,
+		   addrxlat_addr_t *addr, addrxlat_addr_t limit)
+{
+	int i;
+	addrxlat_addr_t addrspan;
+	addrxlat_step_t mystep;
+	addrxlat_status status;
+
+	addrspan = 1;
+	for (i = 0; i < step->remain - 1; ++i)
+		addrspan <<= step->meth->param.pgt.pf.fieldsz[i];
+
+	memcpy(&mystep, step, sizeof *step);
+	while (*addr >= limit) {
+		status = internal_step(step);
+		if (status == ADDRXLAT_OK) {
+			if (step->remain <= 1)
+				return internal_step(step);
+
+			status = highest_mapped_tbl(step, addr, limit);
+			if (status != ADDRXLAT_ERR_NOTPRESENT)
+				return status;
+		} else if (status == ADDRXLAT_ERR_NOTPRESENT) {
+			clear_error(step->ctx);
+			*addr -= addrspan;
+		} else
+			return status;
+
+		if (!mystep.idx[mystep.remain - 1]--)
+			return ADDRXLAT_ERR_NOTPRESENT;
+		memcpy(step, &mystep, sizeof *step);
+	}
+
+	return ADDRXLAT_ERR_NOTPRESENT;
+}
+
+/** Find the highest mapped virtual address in a given range.
+ * @param step   Initial step state.
+ * @param addr   First address to try; updated on return.
+ * @param limit  Last address to try.
+ * @returns      Error status.
+ *
+ * The initial step state must be initialized same way as for a call
+ * to @ref addrxlat_launch.
+ */
+addrxlat_status
+highest_mapped(addrxlat_step_t *step,
+	       addrxlat_addr_t *addr, addrxlat_addr_t limit)
+{
+	addrxlat_addr_t page_mask;
+	addrxlat_status status;
+
+	page_mask = pf_page_mask(&step->meth->param.pgt.pf);
+	*addr |= page_mask;
+	limit &= ~page_mask;
+
+	status = internal_launch(step, *addr);
+	if (status != ADDRXLAT_OK)
+		return status;
+
+	return highest_mapped_tbl(step, addr, limit);
 }
