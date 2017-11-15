@@ -76,6 +76,14 @@
  */
 #define LINUX_KTEXT_START	0xffffffff80000000
 
+/** Possible ends of Linux kernel text mapping, in ascending order. */
+static const addrxlat_addr_t linux_ktext_ends[] = {
+	0xffffffff827fffff, /* 40M mapping (original) */
+	0xffffffff87ffffff, /* 128M mapping (2.6.25+) */
+	0xffffffff9fffffff, /* 512M mapping (2.6.26+) */
+	0xffffffffbfffffff, /* 1G mapping with kASLR */
+};
+
 /* Original Linux layout (before 2.6.11) */
 static const struct sys_region linux_layout_2_6_0[] = {
 	/* 0x0000000000000000 - 0x0000007fffffffff     user space       */
@@ -492,14 +500,6 @@ addrxlat_status
 linux_ktext_extents(struct os_init_data *ctl,
 		    addrxlat_addr_t *low, addrxlat_addr_t *high)
 {
-	/* Possible ends of kernel text mapping, in ascending order. */
-	static const addrxlat_addr_t limits[] = {
-		0xffffffff827fffff, /* 40M mapping (original) */
-		0xffffffff87ffffff, /* 128M mapping (2.6.25+) */
-		0xffffffff9fffffff, /* 512M mapping (2.6.26+) */
-		0xffffffffbfffffff, /* 1G mapping with kASLR */
-	};
-
 	addrxlat_addr_t linearoff;
 	addrxlat_step_t step;
 	unsigned i;
@@ -509,7 +509,9 @@ linux_ktext_extents(struct os_init_data *ctl,
 	step.sys = ctl->sys;
 	step.meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	*low = LINUX_KTEXT_START;
-	status = lowest_mapped(&step, low, limits[ARRAY_SIZE(limits) - 1]);
+	status = lowest_mapped(
+		&step, low,
+		linux_ktext_ends[ARRAY_SIZE(linux_ktext_ends) - 1]);
 	if (status != ADDRXLAT_OK)
 		return status;
 	status = internal_fulladdr_conv(&step.base, ADDRXLAT_KPHYSADDR,
@@ -527,10 +529,10 @@ linux_ktext_extents(struct os_init_data *ctl,
 					 ctl->popt.val[OPT_physbase].addr,
 					 linearoff + LINUX_KTEXT_START);
 
-	for (i = 0; i < ARRAY_SIZE(limits); ++i) {
-		if (limits[i] < *low)
+	for (i = 0; i < ARRAY_SIZE(linux_ktext_ends); ++i) {
+		if (linux_ktext_ends[i] < *low)
 			continue;
-		*high = limits[i];
+		*high = linux_ktext_ends[i];
 		status = highest_mapped(&step, high, *low);
 		if (status != ADDRXLAT_OK)
 			return status;
@@ -543,7 +545,7 @@ linux_ktext_extents(struct os_init_data *ctl,
 			if (step.base.addr - *high != linearoff)
 				*high = linux_ktext_ends[i - 1];
 		}
-		if (*high < limits[i])
+		if (*high < linux_ktext_ends[i])
 			break;
 	}
 	return ADDRXLAT_OK;
