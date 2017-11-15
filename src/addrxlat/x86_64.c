@@ -482,6 +482,73 @@ linux_ktext_meth(struct os_init_data *ctl)
 	return status;
 }
 
+/** Find the kernel text mapping extents.
+ * @param ctl   Initialization data.
+ * @param low   Lowest ktext address (set on successful return).
+ * @param high  Highest ktext address (set on successful return).
+ * @returns     Error status.
+ */
+addrxlat_status
+linux_ktext_extents(struct os_init_data *ctl,
+		    addrxlat_addr_t *low, addrxlat_addr_t *high)
+{
+	/* Possible ends of kernel text mapping, in ascending order. */
+	static const addrxlat_addr_t limits[] = {
+		0xffffffff827fffff, /* 40M mapping (original) */
+		0xffffffff87ffffff, /* 128M mapping (2.6.25+) */
+		0xffffffff9fffffff, /* 512M mapping (2.6.26+) */
+		0xffffffffbfffffff, /* 1G mapping with kASLR */
+	};
+
+	addrxlat_addr_t linearoff;
+	addrxlat_step_t step;
+	unsigned i;
+	addrxlat_status status;
+
+	step.ctx = ctl->ctx;
+	step.sys = ctl->sys;
+	step.meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	*low = LINUX_KTEXT_START;
+	status = lowest_mapped(&step, low, limits[ARRAY_SIZE(limits) - 1]);
+	if (status != ADDRXLAT_OK)
+		return status;
+	status = internal_fulladdr_conv(&step.base, ADDRXLAT_KPHYSADDR,
+					step.ctx, step.sys);
+	if (status != ADDRXLAT_OK)
+		return status;
+
+	linearoff = step.base.addr - *low;
+	if (ctl->popt.val[OPT_physbase].set &&
+	    ctl->popt.val[OPT_physbase].addr !=
+	    linearoff + LINUX_KTEXT_START)
+			return set_error(ctl->ctx, ADDRXLAT_ERR_INVALID,
+					 "physbase=0x%"ADDRXLAT_PRIxADDR
+					 " actual=0x%"ADDRXLAT_PRIxADDR,
+					 ctl->popt.val[OPT_physbase].addr,
+					 linearoff + LINUX_KTEXT_START);
+
+	for (i = 0; i < ARRAY_SIZE(limits); ++i) {
+		if (limits[i] < *low)
+			continue;
+		*high = limits[i];
+		status = highest_mapped(&step, high, *low);
+		if (status != ADDRXLAT_OK)
+			return status;
+		if (i) {
+			status = internal_fulladdr_conv(
+				&step.base, ADDRXLAT_KPHYSADDR,
+				step.ctx, step.sys);
+			if (status != ADDRXLAT_OK)
+				return status;
+			if (step.base.addr - *high != linearoff)
+				*high = linux_ktext_ends[i - 1];
+		}
+		if (*high < limits[i])
+			break;
+	}
+	return ADDRXLAT_OK;
+}
+
 /** Set up Linux kernel text mapping on x86_64.
  * @param ctl  Initialization data.
  * @returns    Error status.
@@ -491,6 +558,7 @@ linux_ktext_map(struct os_init_data *ctl)
 {
 	addrxlat_range_t range;
 	addrxlat_meth_t *meth;
+	addrxlat_addr_t low, high;
 	addrxlat_status status;
 
 	status = linux_ktext_meth(ctl);
@@ -514,6 +582,23 @@ linux_ktext_map(struct os_init_data *ctl)
 			return set_error(ctl->ctx, status, "Cannot set up %s",
 					 "minimal Linux kernel text mapping");
 	}
+
+	status = linux_ktext_extents(ctl, &low, &high);
+	if (status == ADDRXLAT_ERR_NOMETH ||
+	    status == ADDRXLAT_ERR_NODATA ||
+	    status == ADDRXLAT_ERR_NOTPRESENT)
+		return ADDRXLAT_OK; /* Non-fatal here. */
+	else if (status != ADDRXLAT_OK)
+		return set_error(ctl->ctx, status,
+				 "Linux kernel text search failed");
+
+	range.meth = ADDRXLAT_SYS_METH_KTEXT;
+	range.endoff = high - low;
+	status = internal_map_set(
+		ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS], low, &range);
+	if (status != ADDRXLAT_OK)
+		return set_error(ctl->ctx, status, "Cannot set up %s",
+				 "Linux kernel text mapping");
 
 	return ADDRXLAT_OK;
 }

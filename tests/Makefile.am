@@ -213,7 +213,17 @@ test_scripts = \
 	xlat-linux-s390x-2l \
 	xlat-linux-s390x-3l \
 	xlat-linux-s390x-4l \
+	xlat-linux-x86_64-ktext-crosspage \
 	xlat-linux-x86_64-ktext-pgt \
+	xlat-linux-x86_64-ktext-1G \
+	xlat-linux-x86_64-ktext-128M \
+	xlat-linux-x86_64-ktext-130M \
+	xlat-linux-x86_64-ktext-130M-nonlinear \
+	xlat-linux-x86_64-ktext-40M \
+	xlat-linux-x86_64-ktext-42M \
+	xlat-linux-x86_64-ktext-42M-nonlinear \
+	xlat-linux-x86_64-ktext-512M \
+	xlat-linux-x86_64-ktext-520M \
 	xlat-linux-x86_64-old \
 	xlat-linux-x86_64-old-nover \
 	xlat-linux-x86_64-2.6.11 \
@@ -287,8 +297,38 @@ dist_check_DATA = \
 	xlat-linux-s390x-4l.data \
 	xlat-linux-s390x-4l.expect \
 	xlat-linux-s390x-4l.sym \
+	xlat-linux-x86_64-ktext-crosspage.data \
+	xlat-linux-x86_64-ktext-crosspage.expect \
+	xlat-linux-x86_64-ktext-crosspage.sym \
 	xlat-linux-x86_64-ktext-pgt.expect \
 	xlat-linux-x86_64-ktext-pgt.sym \
+	xlat-linux-x86_64-ktext-1G.data \
+	xlat-linux-x86_64-ktext-1G.expect \
+	xlat-linux-x86_64-ktext-1G.sym \
+	xlat-linux-x86_64-ktext-128M.data \
+	xlat-linux-x86_64-ktext-128M.expect \
+	xlat-linux-x86_64-ktext-128M.sym \
+	xlat-linux-x86_64-ktext-130M.data \
+	xlat-linux-x86_64-ktext-130M.expect \
+	xlat-linux-x86_64-ktext-130M.sym \
+	xlat-linux-x86_64-ktext-130M-nonlinear.data \
+	xlat-linux-x86_64-ktext-130M-nonlinear.expect \
+	xlat-linux-x86_64-ktext-130M-nonlinear.sym \
+	xlat-linux-x86_64-ktext-40M.data \
+	xlat-linux-x86_64-ktext-40M.expect \
+	xlat-linux-x86_64-ktext-40M.sym \
+	xlat-linux-x86_64-ktext-42M.data \
+	xlat-linux-x86_64-ktext-42M.expect \
+	xlat-linux-x86_64-ktext-42M.sym \
+	xlat-linux-x86_64-ktext-42M-nonlinear.data \
+	xlat-linux-x86_64-ktext-42M-nonlinear.expect \
+	xlat-linux-x86_64-ktext-42M-nonlinear.sym \
+	xlat-linux-x86_64-ktext-512M.data \
+	xlat-linux-x86_64-ktext-512M.expect \
+	xlat-linux-x86_64-ktext-512M.sym \
+	xlat-linux-x86_64-ktext-520M.data \
+	xlat-linux-x86_64-ktext-520M.expect \
+	xlat-linux-x86_64-ktext-520M.sym \
 	xlat-linux-x86_64-old.expect \
 	xlat-linux-x86_64-old-nover.data \
 	xlat-linux-x86_64-old-nover.expect \
