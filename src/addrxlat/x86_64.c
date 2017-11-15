@@ -68,13 +68,13 @@
 #define VIRTADDR_MAX		UINT64_MAX
 
 /** Virtual address of the Xen machine-to-physical map. */
-#define XEN_MACH2PHYS_ADDR	0xffff800000000000ULL
+#define XEN_MACH2PHYS_ADDR	0xffff800000000000
 
-/** Kernel text mapping (virtual addresses).
+/** Kernel text mapping (virtual address).
  * Note that the start address of this mapping has never changed, so this
  * constant applies to all kernel versions.
  */
-#define LINUX_KTEXT_START	0xffffffff80000000ULL
+#define LINUX_KTEXT_START	0xffffffff80000000
 
 /* Original Linux layout (before 2.6.11) */
 static const struct sys_region linux_layout_2_6_0[] = {
@@ -444,8 +444,8 @@ linux_rdirect_map(struct os_init_data *ctl)
 #define LINUX_KTEXT_SKIP_alt		(1ULL << 20)
 
 /** Set up Linux kernel text translation method.
- * @param ctl     Initialization data.
- * @param region  Associated region definition.
+ * @param ctl  Initialization data.
+ * @returns    Error status.
  */
 static addrxlat_status
 linux_ktext_meth(struct os_init_data *ctl)
