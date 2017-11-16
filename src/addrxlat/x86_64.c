@@ -197,6 +197,9 @@ vtop_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx, addrxlat_addr_t *addr)
 static const int
 linux_directmap_by_ver(unsigned version_code)
 {
+	if (version_code >= ADDRXLAT_VER_LINUX(4, 8, 0))
+		return -1;
+
 #define LINUX_DIRECTMAP_BY_VER(a, b, c)			\
 	if (version_code >= ADDRXLAT_VER_LINUX(a, b, c))	\
 		return LINUX_DIRECTMAP_ ## a ## _ ## b ## _ ## c
