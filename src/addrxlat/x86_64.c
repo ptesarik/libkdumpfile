@@ -682,8 +682,10 @@ map_linux_x86_64(struct os_init_data *ctl)
 	const struct sys_region *layout;
 	addrxlat_status status;
 
+	/* Set up page table translation. */
 	sys_sym_pgtroot(ctl, pgtspec);
 
+	/* Take care of machine physical <-> kernel physical mapping. */
 	if (ctl->popt.val[OPT_xen_xlat].set &&
 	    ctl->popt.val[OPT_xen_xlat].num) {
 		status = set_xen_p2m(ctl);
@@ -693,6 +695,9 @@ map_linux_x86_64(struct os_init_data *ctl)
 		set_xen_mach2phys(ctl, XEN_MACH2PHYS_ADDR);
 	}
 
+	/* Make sure physical addresses can be accessed.
+	 * This is crucial for page table translation.
+	 */
 	if (!(ctl->ctx->cb.read_caps & ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR)) &&
 	    !(ctl->ctx->cb.read_caps & ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR))) {
 		status = linux_rdirect_map(ctl);
@@ -705,10 +710,13 @@ map_linux_x86_64(struct os_init_data *ctl)
 		clear_error(ctl->ctx);
 	}
 
+	/* Set up kernel text mapping. */
 	status = linux_ktext_map(ctl);
 	if (status != ADDRXLAT_OK)
 		return status;
+	set_pgt_fallback(ctl->sys, ADDRXLAT_SYS_METH_KTEXT);
 
+	/* Set up direct mapping. */
 	layout = linux_layout_by_pgt(ctl->sys, ctl->ctx);
 
 	if (!layout && ctl->osdesc->ver)
@@ -718,8 +726,6 @@ map_linux_x86_64(struct os_init_data *ctl)
 		if (status != ADDRXLAT_OK)
 			return status;
 	}
-
-	set_pgt_fallback(ctl->sys, ADDRXLAT_SYS_METH_KTEXT);
 
 	return ADDRXLAT_OK;
 }
