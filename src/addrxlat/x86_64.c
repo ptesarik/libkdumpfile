@@ -343,6 +343,19 @@ vtop_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx, addrxlat_addr_t *addr)
 	return status;
 }
 
+/** Set the kernel text mapping offset.
+ * @param sys  Translation system object.
+ * @param off  Offset from physical to virtual addresses.
+ */
+static void
+set_ktext_offset(addrxlat_sys_t *sys, addrxlat_addr_t off)
+{
+	addrxlat_meth_t *meth = &sys->meth[ADDRXLAT_SYS_METH_KTEXT];
+	meth->kind = ADDRXLAT_LINEAR;
+	meth->target_as = ADDRXLAT_KPHYSADDR;
+	meth->param.linear.off = off;
+}
+
 /** Calculate Linux kernel text mapping offset using page tables.
  * @param sys    Translation system object.
  * @param ctx    Address translation object.
@@ -354,7 +367,6 @@ calc_ktext_offset(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 		  addrxlat_addr_t vaddr)
 {
 	addrxlat_addr_t paddr;
-	addrxlat_meth_t *meth;
 	addrxlat_status status;
 
 	paddr = vaddr;
@@ -362,10 +374,7 @@ calc_ktext_offset(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	meth = &sys->meth[ADDRXLAT_SYS_METH_KTEXT];
-	meth->kind = ADDRXLAT_LINEAR;
-	meth->target_as = ADDRXLAT_KPHYSADDR;
-	meth->param.linear.off = paddr - vaddr;
+	set_ktext_offset(sys, paddr - vaddr);
 	return ADDRXLAT_OK;
 }
 
@@ -447,16 +456,12 @@ linux_rdirect_map(struct os_init_data *ctl)
 static addrxlat_status
 linux_ktext_meth(struct os_init_data *ctl)
 {
-	addrxlat_meth_t *meth;
 	addrxlat_addr_t stext;
 	addrxlat_status status;
 
 	if (ctl->popt.val[OPT_physbase].set) {
-		meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT];
-		meth->kind = ADDRXLAT_LINEAR;
-		meth->target_as = ADDRXLAT_KPHYSADDR;
-		meth->param.linear.off = ctl->popt.val[OPT_physbase].addr -
-			LINUX_KTEXT_START;
+		set_ktext_offset(ctl->sys, (ctl->popt.val[OPT_physbase].addr -
+					    LINUX_KTEXT_START));
 		return ADDRXLAT_OK;
 	}
 
@@ -479,10 +484,7 @@ linux_ktext_meth(struct os_init_data *ctl)
 		if (status != ADDRXLAT_OK)
 			return status;
 
-		meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT];
-		meth->kind = ADDRXLAT_LINEAR;
-		meth->target_as = ADDRXLAT_KPHYSADDR;
-		meth->param.linear.off = step.base.addr - stext;
+		set_ktext_offset(ctl->sys, step.base.addr - stext);
 		return ADDRXLAT_OK;
 	} else if (status == ADDRXLAT_OK)
 		status = calc_ktext_offset(ctl->sys, ctl->ctx, stext);
@@ -831,10 +833,7 @@ setup_xen_pgt(struct os_init_data *ctl)
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT];
-	meth->kind = ADDRXLAT_LINEAR;
-	meth->target_as = ADDRXLAT_KPHYSADDR;
-	meth->param.linear.off = off;
+	set_ktext_offset(ctl->sys, off);
 	return ADDRXLAT_OK;
 }
 
