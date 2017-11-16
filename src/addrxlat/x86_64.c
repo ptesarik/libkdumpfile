@@ -343,15 +343,15 @@ vtop_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx, addrxlat_addr_t *addr)
 	return status;
 }
 
-/** Set Linux kernel text mapping offset.
+/** Calculate Linux kernel text mapping offset using page tables.
  * @param sys    Translation system object.
  * @param ctx    Address translation object.
  * @param vaddr  Any valid kernel text virtual address.
  * @returns      Error status.
  */
 static addrxlat_status
-set_ktext_offset(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
-		 addrxlat_addr_t vaddr)
+calc_ktext_offset(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
+		  addrxlat_addr_t vaddr)
 {
 	addrxlat_addr_t paddr;
 	addrxlat_meth_t *meth;
@@ -485,7 +485,7 @@ linux_ktext_meth(struct os_init_data *ctl)
 		meth->param.linear.off = step.base.addr - stext;
 		return ADDRXLAT_OK;
 	} else if (status == ADDRXLAT_OK)
-		status = set_ktext_offset(ctl->sys, ctl->ctx, stext);
+		status = calc_ktext_offset(ctl->sys, ctl->ctx, stext);
 
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status, "Cannot translate ktext");
@@ -911,7 +911,7 @@ map_xen_x86_64(struct os_init_data *ctl)
 		return status;
 
 	if (layout[1].meth == ADDRXLAT_SYS_METH_KTEXT) {
-		set_ktext_offset(ctl->sys, ctl->ctx, layout[1].first);
+		calc_ktext_offset(ctl->sys, ctl->ctx, layout[1].first);
 		clear_error(ctl->ctx);
 		set_pgt_fallback(ctl->sys, ADDRXLAT_SYS_METH_KTEXT);
 	}
