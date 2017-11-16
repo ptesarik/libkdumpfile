@@ -221,6 +221,37 @@ pgt_x86_64(addrxlat_step_t *step)
 	return ADDRXLAT_OK;
 }
 
+/** Translate virtual to kernel physical using page tables.
+ * @param sys    Translation system object.
+ * @param ctx    Address translation object.
+ * @param addr   Address to be translated.
+ * @returns      Error status.
+ */
+static addrxlat_status
+vtop_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx, addrxlat_addr_t *addr)
+{
+	addrxlat_step_t step;
+	addrxlat_status status;
+
+	step.ctx = ctx;
+	step.sys = sys;
+	step.meth = &sys->meth[ADDRXLAT_SYS_METH_PGT];
+	status = internal_launch(&step, *addr);
+	if (status != ADDRXLAT_OK)
+		return status;
+
+	status = internal_walk(&step);
+	if (status != ADDRXLAT_OK)
+		return status;
+
+	status = internal_fulladdr_conv(&step.base, ADDRXLAT_KPHYSADDR,
+					ctx, sys);
+	if (status == ADDRXLAT_OK)
+		*addr = step.base.addr;
+
+	return status;
+}
+
 /** Get Linux virtual memory layout by kernel version.
  * @param ver  Version code.
  * @returns    Layout definition, or @c NULL.
@@ -275,14 +306,9 @@ static int
 is_directmap(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	     addrxlat_addr_t addr)
 {
-	addrxlat_fulladdr_t faddr;
-	addrxlat_status status;
-
-	faddr.addr = addr;
-	faddr.as = ADDRXLAT_KVADDR;
-	status = internal_fulladdr_conv(&faddr, ADDRXLAT_KPHYSADDR, ctx, sys);
+	addrxlat_status status = vtop_pgt(sys, ctx, &addr);
 	clear_error(ctx);
-	return status == ADDRXLAT_OK && faddr.addr == 0;
+	return status == ADDRXLAT_OK && addr == 0;
 }
 
 /** Get virtual memory layout by walking page tables.
@@ -310,37 +336,6 @@ linux_layout_by_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx)
 		return linux_layout_2_6_27;
 
 	return NULL;
-}
-
-/** Translate a virtual address using page tables.
- * @param sys    Translation system object.
- * @param ctx    Address translation object.
- * @param addr   Address to be translated.
- * @returns      Error status.
- */
-static addrxlat_status
-vtop_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx, addrxlat_addr_t *addr)
-{
-	addrxlat_step_t step;
-	addrxlat_status status;
-
-	step.ctx = ctx;
-	step.sys = sys;
-	step.meth = &sys->meth[ADDRXLAT_SYS_METH_PGT];
-	status = internal_launch(&step, *addr);
-	if (status != ADDRXLAT_OK)
-		return status;
-
-	status = internal_walk(&step);
-	if (status != ADDRXLAT_OK)
-		return status;
-
-	status = internal_fulladdr_conv(&step.base, ADDRXLAT_KPHYSADDR,
-					ctx, sys);
-	if (status == ADDRXLAT_OK)
-		*addr = step.base.addr;
-
-	return status;
 }
 
 /** Set the kernel text mapping offset.
