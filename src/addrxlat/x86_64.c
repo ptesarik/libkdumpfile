@@ -106,90 +106,6 @@ static const struct {
 	{ 0xffff880000000000, 0xffffc7ffffffffff },
 };
 
-/* Original Linux layout (before 2.6.11) */
-static const struct sys_region linux_layout_2_6_0[] = {
-	/* 0x0000000000000000 - 0x0000007fffffffff     user space       */
-	/* 0x0000008000000000 - 0x000000ffffffffff     guard hole       */
-	{  0x0000010000000000,  0x000001ffffffffff, /* direct mapping   */
-	   ADDRXLAT_SYS_METH_DIRECT, SYS_ACT_DIRECT },
-	/* 0x0000020000000000 - 0x00007fffffffffff     unused hole      */
-	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
-	/* 0xffff800000000000 - 0xfffffeffffffffff     unused hole      */
-	/* 0xffffff0000000000 - 0xffffff7fffffffff     vmalloc/ioremap  */
-	/* 0xffffff8000000000 - 0xffffffff7fffffff     unused hole      */
-	/* 0xffffffff80000000 - 0xffffffff827fffff     kernel text      */
-	/* 0xffffffff82800000 - 0xffffffff9fffffff     unused hole      */
-	/* 0xffffffffa0000000 - 0xffffffffafffffff     modules          */
-	/* 0xffffffffb0000000 - 0xffffffffff5exxxx     unused hole      */
-	/* 0xffffffffff5ed000 - 0xffffffffffdfffff     fixmap/vsyscalls */
-	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
-	SYS_REGION_END
-};
-
-/* Linux layout introduced in 2.6.11 */
-static const struct sys_region linux_layout_2_6_11[] = {
-	/* 0x0000000000000000 - 0x00007fffffffffff     user space       */
-	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
-	/* 0xffff800000000000 - 0xffff80ffffffffff     guard hole       */
-	{  0xffff810000000000,  0xffffc0ffffffffff, /* direct mapping   */
-	   ADDRXLAT_SYS_METH_DIRECT, SYS_ACT_DIRECT },
-	/* 0xffffc10000000000 - 0xffffc1ffffffffff     guard hole       */
-	/* 0xffffc20000000000 - 0xffffe1ffffffffff     vmalloc/ioremap  */
-	/* 0xffffe20000000000 - 0xffffe2ffffffffff     VMEMMAP          */
-	/*					         (2.6.24+ only) */
-	/* 0xffffe30000000000 - 0xffffffff7fffffff     unused hole      */
-	/* 0xffffffff80000000 - 0xffffffff827fffff     kernel text      */
-	/* 0xffffffff82800000 - 0xffffffff87ffffff     unused hole      */
-	/* 0xffffffff88000000 - 0xffffffffffdfffff     modules and      */
-	/*					        fixmap/vsyscall */
-	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
-	SYS_REGION_END
-};
-
-/** Linux layout with hypervisor area, introduced in 2.6.27 */
-static const struct sys_region linux_layout_2_6_27[] = {
-	/* 0x0000000000000000 - 0x00007fffffffffff     user space       */
-	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
-	/* 0xffff800000000000 - 0xffff80ffffffffff     guard hole       */
-	/* 0xffff810000000000 - 0xffff87ffffffffff     hypervisor area  */
-	{  0xffff880000000000,  0xffffc0ffffffffff, /* direct mapping   */
-	   ADDRXLAT_SYS_METH_DIRECT, SYS_ACT_DIRECT },
-	/* 0xffffc10000000000 - 0xffffc1ffffffffff     guard hole       */
-	/* 0xffffc20000000000 - 0xffffe1ffffffffff     vmalloc/ioremap  */
-	/* 0xffffe20000000000 - 0xffffe2ffffffffff     VMEMMAP          */
-	/* 0xffffe30000000000 - 0xffffffff7fffffff     unused hole      */
-	/* 0xffffffff80000000 - 0xffffffff87ffffff     kernel text      */
-	/* 0xffffffff88000000 - 0xffffffffffdfffff     modules and      */
-	/*					        fixmap/vsyscall */
-	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
-	SYS_REGION_END
-};
-
-/** Linux layout with 64T direct mapping, introduced in 2.6.31 */
-static const struct sys_region linux_layout_2_6_31[] = {
-	/* 0x0000000000000000 - 0x00007fffffffffff     user space       */
-	/* 0x0000800000000000 - 0xffff7fffffffffff     non-canonical    */
-	/* 0xffff800000000000 - 0xffff80ffffffffff     guard hole       */
-	/* 0xffff810000000000 - 0xffff87ffffffffff     hypervisor area  */
-	{  0xffff880000000000,  0xffffc7ffffffffff, /* direct mapping   */
-	   ADDRXLAT_SYS_METH_DIRECT, SYS_ACT_DIRECT },
-	/* 0xffffc80000000000 - 0xffffc8ffffffffff     guard hole       */
-	/* 0xffffc90000000000 - 0xffffe8ffffffffff     vmalloc/ioremap  */
-	/* 0xffffe90000000000 - 0xffffe9ffffffffff     guard hole       */
-	/* 0xffffea0000000000 - 0xffffeaffffffffff     VMEMMAP          */
-	/* 0xffffeb0000000000 - 0xffffffeeffffffff     unused hole      */
-	/* 0xffffff0000000000 - 0xffffff7fffffffff     %esp fixup stack */
-	/* 0xffffff8000000000 - 0xffffffeeffffffff     unused hole      */
-	/* 0xffffffef00000000 - 0xfffffffeffffffff     EFI runtime      */
-	/*						   (3.14+ only) */
-	/* 0xffffffff00000000 - 0xffffffff7fffffff     guard hole       */
-	/* 0xffffffff80000000 - 0xffffffff9fffffff     kernel text      */
-	/* 0xffffffffa0000000 - 0xffffffffffdfffff     modules and      */
-	/*					        fixmap/vsyscall */
-	/* 0xffffffffffe00000 - 0xffffffffffffffff     guard hole       */
-	SYS_REGION_END
-};
-
 /** AMD64 (Intel 64) page table step function.
  * @param step  Current step state.
  * @returns     Error status.
@@ -274,23 +190,23 @@ vtop_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx, addrxlat_addr_t *addr)
 	return status;
 }
 
-/** Get Linux virtual memory layout by kernel version.
+/** Get Linux directmap layout by kernel version.
  * @param ver  Version code.
- * @returns    Layout definition, or @c NULL.
+ * @returns    Index into @ref linux_directmap_ranges, or -1.
  */
-static const struct sys_region *
-linux_layout_by_ver(unsigned version_code)
+static const int
+linux_directmap_by_ver(unsigned version_code)
 {
-#define LINUX_LAYOUT_BY_VER(a, b, c)			\
+#define LINUX_DIRECTMAP_BY_VER(a, b, c)			\
 	if (version_code >= ADDRXLAT_VER_LINUX(a, b, c))	\
-		return linux_layout_ ## a ## _ ## b ## _ ## c
+		return LINUX_DIRECTMAP_ ## a ## _ ## b ## _ ## c
 
-	LINUX_LAYOUT_BY_VER(2, 6, 31);
-	LINUX_LAYOUT_BY_VER(2, 6, 27);
-	LINUX_LAYOUT_BY_VER(2, 6, 11);
-	LINUX_LAYOUT_BY_VER(2, 6, 0);
+	LINUX_DIRECTMAP_BY_VER(2, 6, 31);
+	LINUX_DIRECTMAP_BY_VER(2, 6, 27);
+	LINUX_DIRECTMAP_BY_VER(2, 6, 11);
+	LINUX_DIRECTMAP_BY_VER(2, 6, 0);
 
-	return NULL;
+	return -1;
 }
 
 /** Check whether a virtual address is mapped to a physical address.
@@ -333,31 +249,31 @@ is_directmap(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	return status == ADDRXLAT_OK && addr == 0;
 }
 
-/** Get virtual memory layout by walking page tables.
- * @param sys    Translation system object.
- * @param ctx    Address translation context.
- * @returns      Memory layout, or @c NULL if undetermined.
+/** Get directmap location by walking page tables.
+ * @param sys  Translation system object.
+ * @param ctx  Address translation context.
+ * @returns    Index into @ref linux_directmap_ranges, or -1.
  */
-static const struct sys_region *
-linux_layout_by_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx)
+static int
+linux_directmap_by_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx)
 {
 	/* Only pre-2.6.11 kernels had this direct mapping */
 	if (is_directmap(sys, ctx, 0x0000010000000000))
-		return linux_layout_2_6_0;
+		return LINUX_DIRECTMAP_2_6_0;
 
 	/* Only kernels between 2.6.11 and 2.6.27 had this direct mapping */
 	if (is_directmap(sys, ctx, 0xffff810000000000))
-		return linux_layout_2_6_11;
+		return LINUX_DIRECTMAP_2_6_11;
 
 	/* Only 2.6.31+ kernels map VMEMMAP at this address */
 	if (is_mapped(sys, ctx, 0xffffea0000000000))
-		return linux_layout_2_6_31;
+		return LINUX_DIRECTMAP_2_6_31;
 
 	/* Sanity check for 2.6.27+ direct mapping */
 	if (is_directmap(sys, ctx, 0xffff880000000000))
-		return linux_layout_2_6_27;
+		return LINUX_DIRECTMAP_2_6_27;
 
-	return NULL;
+	return -1;
 }
 
 /** Set the kernel text mapping offset.
@@ -693,7 +609,8 @@ map_linux_x86_64(struct os_init_data *ctl)
 		{ ADDRXLAT_SYM_NONE }
 	};
 
-	const struct sys_region *layout;
+	int idx;
+	struct sys_region layout[2];
 	addrxlat_status status;
 
 	/* Set up page table translation. */
@@ -731,11 +648,16 @@ map_linux_x86_64(struct os_init_data *ctl)
 	set_pgt_fallback(ctl->sys, ADDRXLAT_SYS_METH_KTEXT);
 
 	/* Set up direct mapping. */
-	layout = linux_layout_by_pgt(ctl->sys, ctl->ctx);
+	idx = linux_directmap_by_pgt(ctl->sys, ctl->ctx);
 
-	if (!layout && ctl->osdesc->ver)
-		layout = linux_layout_by_ver(ctl->osdesc->ver);
-	if (layout) {
+	if (idx < 0 && ctl->osdesc->ver)
+		idx = linux_directmap_by_ver(ctl->osdesc->ver);
+	if (idx >= 0) {
+		layout[0].first = linux_directmap_ranges[idx].first;
+		layout[0].last = linux_directmap_ranges[idx].last;
+		layout[0].meth = ADDRXLAT_SYS_METH_DIRECT;
+		layout[0].act = SYS_ACT_DIRECT;
+		layout[1].meth = ADDRXLAT_SYS_METH_NUM;
 		status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, layout);
 		if (status != ADDRXLAT_OK)
 			return status;
