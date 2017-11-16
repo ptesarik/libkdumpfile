@@ -423,7 +423,8 @@ linux_rdirect_map(struct os_init_data *ctl)
 					layout);
 		if (status != ADDRXLAT_OK)
 			return set_error(ctl->ctx, status,
-					 "Cannot set up Linux kernel direct mapping");
+					 "Cannot set up %s",
+					 "Linux kernel direct mapping");
 
 		if (is_directmap(ctl->sys, ctl->ctx, ranges[i].first))
 			return ADDRXLAT_OK;
