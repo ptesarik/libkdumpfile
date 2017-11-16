@@ -276,6 +276,33 @@ linux_directmap_by_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx)
 	return -1;
 }
 
+/** Set up Linux direct mapping on x86_64.
+ * @param ctl  Initialization data.
+ * @returns    Error status.
+ */
+static addrxlat_status
+linux_directmap(struct os_init_data *ctl)
+{
+	struct sys_region layout[2];
+	int idx;
+	addrxlat_status status;
+
+	idx  = linux_directmap_by_pgt(ctl->sys, ctl->ctx);
+	if (idx < 0 && ctl->osdesc->ver)
+		idx = linux_directmap_by_ver(ctl->osdesc->ver);
+	if (idx >= 0) {
+		layout[0].first = linux_directmap_ranges[idx].first;
+		layout[0].last = linux_directmap_ranges[idx].last;
+		layout[0].meth = ADDRXLAT_SYS_METH_DIRECT;
+		layout[0].act = SYS_ACT_DIRECT;
+		layout[1].meth = ADDRXLAT_SYS_METH_NUM;
+		status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, layout);
+		if (status != ADDRXLAT_OK)
+			return status;
+	}
+	return ADDRXLAT_OK;
+}
+
 /** Set the kernel text mapping offset.
  * @param sys  Translation system object.
  * @param off  Offset from physical to virtual addresses.
@@ -609,8 +636,6 @@ map_linux_x86_64(struct os_init_data *ctl)
 		{ ADDRXLAT_SYM_NONE }
 	};
 
-	int idx;
-	struct sys_region layout[2];
 	addrxlat_status status;
 
 	/* Set up page table translation. */
@@ -648,20 +673,9 @@ map_linux_x86_64(struct os_init_data *ctl)
 	set_pgt_fallback(ctl->sys, ADDRXLAT_SYS_METH_KTEXT);
 
 	/* Set up direct mapping. */
-	idx = linux_directmap_by_pgt(ctl->sys, ctl->ctx);
-
-	if (idx < 0 && ctl->osdesc->ver)
-		idx = linux_directmap_by_ver(ctl->osdesc->ver);
-	if (idx >= 0) {
-		layout[0].first = linux_directmap_ranges[idx].first;
-		layout[0].last = linux_directmap_ranges[idx].last;
-		layout[0].meth = ADDRXLAT_SYS_METH_DIRECT;
-		layout[0].act = SYS_ACT_DIRECT;
-		layout[1].meth = ADDRXLAT_SYS_METH_NUM;
-		status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, layout);
-		if (status != ADDRXLAT_OK)
-			return status;
-	}
+	status = linux_directmap(ctl);
+	if (status != ADDRXLAT_OK)
+		return status;
 
 	return ADDRXLAT_OK;
 }
