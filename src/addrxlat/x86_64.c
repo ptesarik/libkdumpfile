@@ -84,6 +84,28 @@ static const addrxlat_addr_t linux_ktext_ends[] = {
 	0xffffffffbfffffff, /* 1G mapping with kASLR */
 };
 
+/** Possible direct mapping locations (if not randomized). */
+static const struct {
+	addrxlat_addr_t first;
+	addrxlat_addr_t last;
+} linux_directmap_ranges[] = {
+#define LINUX_DIRECTMAP_2_6_0	0
+	/* Original Linux layout (before 2.6.11) */
+	{ 0x0000010000000000, 0x000001ffffffffff },
+
+#define LINUX_DIRECTMAP_2_6_11	1
+	/* Linux layout introduced in 2.6.11 */
+	{ 0xffff810000000000, 0xffffc0ffffffffff },
+
+#define LINUX_DIRECTMAP_2_6_27	2
+	/** Linux layout with hypervisor area, introduced in 2.6.27 */
+	{ 0xffff880000000000, 0xffffc0ffffffffff },
+
+#define LINUX_DIRECTMAP_2_6_31	3
+	/** Linux layout with 64T direct mapping, introduced in 2.6.31 */
+	{ 0xffff880000000000, 0xffffc7ffffffffff },
+};
+
 /* Original Linux layout (before 2.6.11) */
 static const struct sys_region linux_layout_2_6_0[] = {
 	/* 0x0000000000000000 - 0x0000007fffffffff     user space       */
@@ -395,31 +417,22 @@ set_pgt_fallback(addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
 addrxlat_status
 linux_rdirect_map(struct os_init_data *ctl)
 {
-	static const struct {
-		addrxlat_addr_t first;
-		addrxlat_addr_t last;
-	} ranges[] = {
-		{ 0x0000010000000000, 0x000001ffffffffff },
-		{ 0xffff810000000000, 0xffffc0ffffffffff },
-		{ 0xffff880000000000, 0xffffc0ffffffffff },
-		{ 0xffff880000000000, 0xffffc7ffffffffff },
-	};
-
 	int i;
 
 	if (!ctl->ctx->cb.read64 ||
 	    !(ctl->ctx->cb.read_caps & ADDRXLAT_CAPS(ADDRXLAT_KVADDR)))
 		return ADDRXLAT_ERR_NOMETH;
 
-	for (i = 0; i < ARRAY_SIZE(ranges); ++i) {
+	for (i = 0; i < ARRAY_SIZE(linux_directmap_ranges); ++i) {
 		struct sys_region layout[2];
 		addrxlat_status status;
 
 		ctl->sys->meth[ADDRXLAT_SYS_METH_DIRECT].param.linear.off =
-			-ranges[i].first;
+			-linux_directmap_ranges[i].first;
 
 		layout[0].first = 0;
-		layout[0].last = ranges[i].last - ranges[i].first;
+		layout[0].last = linux_directmap_ranges[i].last -
+			linux_directmap_ranges[i].first;
 		layout[0].meth = ADDRXLAT_SYS_METH_RDIRECT;
 		layout[0].act = SYS_ACT_RDIRECT;
 		layout[1].meth = ADDRXLAT_SYS_METH_NUM;
@@ -430,7 +443,8 @@ linux_rdirect_map(struct os_init_data *ctl)
 					 "Cannot set up %s",
 					 "Linux kernel direct mapping");
 
-		if (is_directmap(ctl->sys, ctl->ctx, ranges[i].first))
+		if (is_directmap(ctl->sys, ctl->ctx,
+				 linux_directmap_ranges[i].first))
 			return ADDRXLAT_OK;
 
 		/* rollback */
