@@ -76,13 +76,11 @@
  */
 #define LINUX_KTEXT_START	0xffffffff80000000
 
-/** Possible ends of Linux kernel text mapping, in ascending order. */
-static const addrxlat_addr_t linux_ktext_ends[] = {
-	0xffffffff827fffff, /* 40M mapping (original) */
-	0xffffffff87ffffff, /* 128M mapping (2.6.25+) */
-	0xffffffff9fffffff, /* 512M mapping (2.6.26+) */
-	0xffffffffbfffffff, /* 1G mapping with kASLR */
-};
+/** Maximum end of kernel text mapping (virtual address).
+ * The kernel text may be smaller, but it must never span beyond this
+ * address.
+ */
+#define LINUX_KTEXT_END		0xffffffffbfffffff
 
 /** Possible direct mapping locations (if not randomized). */
 static const struct {
@@ -428,9 +426,7 @@ linux_ktext_meth(struct os_init_data *ctl)
 		step.sys = ctl->sys;
 		step.meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 		stext = LINUX_KTEXT_START;
-		status = lowest_mapped(
-			&step, &stext,
-			linux_ktext_ends[ARRAY_SIZE(linux_ktext_ends) - 1]);
+		status = lowest_mapped(&step, &stext, LINUX_KTEXT_END);
 		if (status != ADDRXLAT_OK)
 			return status;
 
@@ -461,16 +457,13 @@ linux_ktext_extents(struct os_init_data *ctl,
 {
 	addrxlat_addr_t linearoff;
 	addrxlat_step_t step;
-	unsigned i;
 	addrxlat_status status;
 
 	step.ctx = ctl->ctx;
 	step.sys = ctl->sys;
 	step.meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	*low = LINUX_KTEXT_START;
-	status = lowest_mapped(
-		&step, low,
-		linux_ktext_ends[ARRAY_SIZE(linux_ktext_ends) - 1]);
+	status = lowest_mapped(&step, low, LINUX_KTEXT_END);
 	if (status != ADDRXLAT_OK)
 		return status;
 	status = internal_fulladdr_conv(&step.base, ADDRXLAT_KPHYSADDR,
@@ -488,26 +481,13 @@ linux_ktext_extents(struct os_init_data *ctl,
 					 ctl->popt.val[OPT_physbase].addr,
 					 linearoff + LINUX_KTEXT_START);
 
-	for (i = 0; i < ARRAY_SIZE(linux_ktext_ends); ++i) {
-		if (linux_ktext_ends[i] < *low)
-			continue;
-		*high = linux_ktext_ends[i];
+	*high = *low;
+	status = lowest_nonlinear(&step, high, LINUX_KTEXT_END, linearoff);
+	--*high;
+	if (status == ADDRXLAT_OK ||
+	    status == ADDRXLAT_ERR_NOTPRESENT)
 		status = highest_mapped(&step, high, *low);
-		if (status != ADDRXLAT_OK)
-			return status;
-		if (i) {
-			status = internal_fulladdr_conv(
-				&step.base, ADDRXLAT_KPHYSADDR,
-				step.ctx, step.sys);
-			if (status != ADDRXLAT_OK)
-				return status;
-			if (step.base.addr - *high != linearoff)
-				*high = linux_ktext_ends[i - 1];
-		}
-		if (*high < linux_ktext_ends[i])
-			break;
-	}
-	return ADDRXLAT_OK;
+	return status;
 }
 
 /** Set up Linux kernel text mapping on x86_64.
