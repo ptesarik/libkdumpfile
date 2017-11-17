@@ -721,3 +721,90 @@ highest_mapped(addrxlat_step_t *step,
 
 	return highest_mapped_tbl(step, addr, limit);
 }
+
+/** Find the lowest non-linear mapping in a given page table.
+ * @param step   Current step state.
+ * @param addr   First address to try; updated on return.
+ * @param limit  Last address to try.
+ * @param off    Required virtual-to-kernel-physical offset.
+ * @returns      Error status.
+ */
+static addrxlat_status
+lowest_nonlinear_tbl(addrxlat_step_t *step,
+		     addrxlat_addr_t *addr, addrxlat_addr_t limit,
+		     addrxlat_addr_t off)
+{
+	int i;
+	addrxlat_addr_t tblmask;
+	addrxlat_step_t mystep;
+	addrxlat_status status;
+
+	tblmask = pf_table_mask(&step->meth->param.pgt.pf, step->remain - 1);
+	memcpy(&mystep, step, sizeof *step);
+	while (*addr <= limit) {
+		status = internal_step(step);
+		if (status == ADDRXLAT_OK) {
+			if (step->remain <= 1) {
+				status = internal_step(step);
+				if (status != ADDRXLAT_OK)
+					return status;
+
+				status = internal_fulladdr_conv(
+					&step->base, ADDRXLAT_KPHYSADDR,
+					step->ctx, step->sys);
+				if (status != ADDRXLAT_OK ||
+				    step->base.addr - *addr != off) {
+					return status;
+				}
+				*addr = (*addr | tblmask) + 1;
+			} else {
+				status = lowest_nonlinear_tbl(
+					step, addr, limit, off);
+				if (status != ADDRXLAT_ERR_NOTPRESENT)
+					return status;
+			}
+		} else if (status == ADDRXLAT_ERR_NOTPRESENT) {
+			clear_error(step->ctx);
+			*addr = (*addr | tblmask) + 1;
+		} else
+			return status;
+
+		for (i = 0; i < mystep.remain - 1; ++i)
+			mystep.idx[i] = 0;
+		if (++mystep.idx[i] >=
+		    1U << mystep.meth->param.pgt.pf.fieldsz[i])
+			return ADDRXLAT_ERR_NOTPRESENT;
+		memcpy(step, &mystep, sizeof *step);
+	}
+
+	return ADDRXLAT_ERR_NOTPRESENT;
+}
+
+/** Find the lowest non-linear mapping in a given range.
+ * @param step   Initial step state.
+ * @param addr   First address to try; updated on return.
+ * @param limit  Last address to try.
+ * @param off    Required virtual-to-kernel-physical offset.
+ * @returns      Error status.
+ *
+ * The initial step state must be initialized same way as for a call
+ * to @ref addrxlat_launch.
+ */
+addrxlat_status
+lowest_nonlinear(addrxlat_step_t *step,
+		 addrxlat_addr_t *addr, addrxlat_addr_t limit,
+		 addrxlat_addr_t off)
+{
+	addrxlat_addr_t page_mask;
+	addrxlat_status status;
+
+	page_mask = pf_page_mask(&step->meth->param.pgt.pf);
+	*addr &= ~page_mask;
+	limit |= page_mask;
+
+	status = internal_launch(step, *addr);
+	if (status != ADDRXLAT_OK)
+		return status;
+
+	return lowest_nonlinear_tbl(step, addr, limit, off);
+}

@@ -233,6 +233,10 @@ INTERNAL_DECL(addrxlat_status, highest_mapped,
 	      (addrxlat_step_t *step, addrxlat_addr_t *addr,
 	       addrxlat_addr_t limit));
 
+INTERNAL_DECL(addrxlat_status, lowest_nonlinear,
+	      (addrxlat_step_t *step, addrxlat_addr_t *addr,
+	       addrxlat_addr_t limit, addrxlat_addr_t off));
+
 /* Option parsing. */
 
 /** All options recognized by @ref parse_opts. */
