@@ -557,6 +557,31 @@ pf_page_mask(const addrxlat_paging_form_t *pf)
 	return pf_page_size(pf) - 1;
 }
 
+/** Get the number of addresses covered by a page table at a given level.
+ * @param pf     Paging form.
+ * @param level  Page table level.
+ * @returns      Page mask.
+ */
+static inline addrxlat_addr_t
+pf_table_span(const addrxlat_paging_form_t *pf, unsigned short level)
+{
+	addrxlat_addr_t ret = 1;
+	while (level--)
+		ret <<= pf->fieldsz[level];
+	return ret;
+}
+
+/** Get the address mask for a page table at a given level.
+ * @param pf     Paging form.
+ * @param level  Page table level.
+ * @returns      Page mask.
+ */
+static inline addrxlat_addr_t
+pf_table_mask(const addrxlat_paging_form_t *pf, unsigned short level)
+{
+	return pf_table_span(pf, level) - 1;
+}
+
 /** Find the lowest mapped virtual address in a given page table.
  * @param step   Current step state.
  * @param addr   First address to try; updated on return.
@@ -568,14 +593,11 @@ lowest_mapped_tbl(addrxlat_step_t *step,
 		  addrxlat_addr_t *addr, addrxlat_addr_t limit)
 {
 	int i;
-	addrxlat_addr_t addrspan;
+	addrxlat_addr_t tblmask;
 	addrxlat_step_t mystep;
 	addrxlat_status status;
 
-	addrspan = 1;
-	for (i = 0; i < step->remain - 1; ++i)
-		addrspan <<= step->meth->param.pgt.pf.fieldsz[i];
-
+	tblmask = pf_table_mask(&step->meth->param.pgt.pf, step->remain - 1);
 	memcpy(&mystep, step, sizeof *step);
 	while (*addr <= limit) {
 		status = internal_step(step);
@@ -588,11 +610,12 @@ lowest_mapped_tbl(addrxlat_step_t *step,
 				return status;
 		} else if (status == ADDRXLAT_ERR_NOTPRESENT) {
 			clear_error(step->ctx);
-			*addr += addrspan;
+			*addr = (*addr | tblmask) + 1;
 		} else
 			return status;
 
-		i = mystep.remain - 1;
+		for (i = 0; i < mystep.remain - 1; ++i)
+			mystep.idx[i] = 0;
 		if (++mystep.idx[i] >=
 		    1U << mystep.meth->param.pgt.pf.fieldsz[i])
 			return ADDRXLAT_ERR_NOTPRESENT;
@@ -640,14 +663,11 @@ highest_mapped_tbl(addrxlat_step_t *step,
 		   addrxlat_addr_t *addr, addrxlat_addr_t limit)
 {
 	int i;
-	addrxlat_addr_t addrspan;
+	addrxlat_addr_t tblmask;
 	addrxlat_step_t mystep;
 	addrxlat_status status;
 
-	addrspan = 1;
-	for (i = 0; i < step->remain - 1; ++i)
-		addrspan <<= step->meth->param.pgt.pf.fieldsz[i];
-
+	tblmask = pf_table_mask(&step->meth->param.pgt.pf, step->remain - 1);
 	memcpy(&mystep, step, sizeof *step);
 	while (*addr >= limit) {
 		status = internal_step(step);
@@ -660,11 +680,14 @@ highest_mapped_tbl(addrxlat_step_t *step,
 				return status;
 		} else if (status == ADDRXLAT_ERR_NOTPRESENT) {
 			clear_error(step->ctx);
-			*addr -= addrspan;
+			*addr = (*addr & ~tblmask) - 1;
 		} else
 			return status;
 
-		if (!mystep.idx[mystep.remain - 1]--)
+		for (i = 0; i < mystep.remain - 1; ++i)
+			mystep.idx[i] =
+				(1U << mystep.meth->param.pgt.pf.fieldsz[i]) - 1;
+		if (!mystep.idx[i]--)
 			return ADDRXLAT_ERR_NOTPRESENT;
 		memcpy(step, &mystep, sizeof *step);
 	}
