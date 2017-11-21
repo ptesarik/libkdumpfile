@@ -205,25 +205,34 @@ vtop_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx, addrxlat_addr_t *addr)
 }
 
 /** Get Linux directmap layout by kernel version.
+ * @param rgn  Directmap region; updated on success.
  * @param ver  Version code.
- * @returns    Index into @ref linux_directmap_ranges, or -1.
+ * @returns    Error status.
+ *
+ * The @c first and @c last fields of @c rgn are set according to
+ * the Linux kernel version if this function returns @ref ADDRXLAT_OK.
+ * No error message is set if this function fails, so the caller need
+ * not clear it with @ref clear_error.
  */
-static const int
-linux_directmap_by_ver(unsigned version_code)
+static addrxlat_status
+linux_directmap_by_ver(struct sys_region *rgn, unsigned ver)
 {
-	if (version_code >= ADDRXLAT_VER_LINUX(4, 8, 0))
-		return -1;
+	if (ver >= ADDRXLAT_VER_LINUX(4, 8, 0))
+		return ADDRXLAT_ERR_NOMETH;
 
 #define LINUX_DIRECTMAP_BY_VER(a, b, c)			\
-	if (version_code >= ADDRXLAT_VER_LINUX(a, b, c))	\
-		return LINUX_DIRECTMAP_ ## a ## _ ## b ## _ ## c
+	if (ver >= ADDRXLAT_VER_LINUX(a, b, c)) {		\
+		rgn->first = LINUX_DIRECTMAP_START_ ##a##_##b##_##c;	\
+		rgn->last = LINUX_DIRECTMAP_END_ ##a##_##b##_##c;	\
+		return ADDRXLAT_OK;					\
+	}
 
 	LINUX_DIRECTMAP_BY_VER(2, 6, 31);
 	LINUX_DIRECTMAP_BY_VER(2, 6, 27);
 	LINUX_DIRECTMAP_BY_VER(2, 6, 11);
 	LINUX_DIRECTMAP_BY_VER(2, 6, 0);
 
-	return -1;
+	return ADDRXLAT_ERR_NOTIMPL;
 }
 
 /** Check whether a virtual address is mapped to a physical address.
@@ -267,30 +276,47 @@ is_directmap(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 }
 
 /** Get directmap location by walking page tables.
+ * @param rgn  Directmap region; updated on success.
  * @param sys  Translation system object.
  * @param ctx  Address translation context.
- * @returns    Index into @ref linux_directmap_ranges, or -1.
+ * @returns    Error status.
+ *
+ * No error message is set if this function fails, so the caller need
+ * not clear it with @ref clear_error.
  */
-static int
-linux_directmap_by_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx)
+static addrxlat_status
+linux_directmap_by_pgt(struct sys_region *rgn,
+		       addrxlat_sys_t *sys, addrxlat_ctx_t *ctx)
 {
 	/* Only pre-2.6.11 kernels had this direct mapping */
-	if (is_directmap(sys, ctx, LINUX_DIRECTMAP_START_2_6_0))
-		return LINUX_DIRECTMAP_2_6_0;
+	if (is_directmap(sys, ctx, LINUX_DIRECTMAP_START_2_6_0)) {
+		rgn->first = LINUX_DIRECTMAP_START_2_6_0;
+		rgn->last = LINUX_DIRECTMAP_END_2_6_0;
+		return ADDRXLAT_OK;
+	}
 
 	/* Only kernels between 2.6.11 and 2.6.27 had this direct mapping */
-	if (is_directmap(sys, ctx, LINUX_DIRECTMAP_START_2_6_11))
-		return LINUX_DIRECTMAP_2_6_11;
+	if (is_directmap(sys, ctx, LINUX_DIRECTMAP_START_2_6_11)) {
+		rgn->first = LINUX_DIRECTMAP_START_2_6_11;
+		rgn->last = LINUX_DIRECTMAP_END_2_6_11;
+		return ADDRXLAT_OK;
+	}
 
 	/* Only 2.6.31+ kernels map VMEMMAP at this address */
-	if (is_mapped(sys, ctx, 0xffffea0000000000))
-		return LINUX_DIRECTMAP_2_6_31;
+	if (is_mapped(sys, ctx, 0xffffea0000000000)) {
+		rgn->first = LINUX_DIRECTMAP_START_2_6_31;
+		rgn->last = LINUX_DIRECTMAP_END_2_6_31;
+		return ADDRXLAT_OK;
+	}
 
 	/* Sanity check for 2.6.27+ direct mapping */
-	if (is_directmap(sys, ctx, LINUX_DIRECTMAP_START_2_6_27))
-		return LINUX_DIRECTMAP_2_6_27;
+	if (is_directmap(sys, ctx, LINUX_DIRECTMAP_START_2_6_27)) {
+		rgn->first = LINUX_DIRECTMAP_START_2_6_27;
+		rgn->last = LINUX_DIRECTMAP_END_2_6_27;
+		return ADDRXLAT_OK;
+	}
 
-	return -1;
+	return ADDRXLAT_ERR_NOTIMPL;
 }
 
 /** Set up Linux direct mapping on x86_64.
@@ -301,15 +327,12 @@ static addrxlat_status
 linux_directmap(struct os_init_data *ctl)
 {
 	struct sys_region layout[2];
-	int idx;
 	addrxlat_status status;
 
-	idx  = linux_directmap_by_pgt(ctl->sys, ctl->ctx);
-	if (idx < 0 && ctl->osdesc->ver)
-		idx = linux_directmap_by_ver(ctl->osdesc->ver);
-	if (idx >= 0) {
-		layout[0].first = linux_directmap_ranges[idx].first;
-		layout[0].last = linux_directmap_ranges[idx].last;
+	status = linux_directmap_by_pgt(&layout[0], ctl->sys, ctl->ctx);
+	if (status != ADDRXLAT_OK && ctl->osdesc->ver)
+		status = linux_directmap_by_ver(&layout[0], ctl->osdesc->ver);
+	if (status == ADDRXLAT_OK) {
 		layout[0].meth = ADDRXLAT_SYS_METH_DIRECT;
 		layout[0].act = SYS_ACT_DIRECT;
 		layout[1].meth = ADDRXLAT_SYS_METH_NUM;
