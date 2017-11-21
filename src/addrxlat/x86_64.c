@@ -482,12 +482,7 @@ linux_ktext_extents(struct os_init_data *ctl,
 					 linearoff + LINUX_KTEXT_START);
 
 	*high = *low;
-	status = lowest_nonlinear(&step, high, LINUX_KTEXT_END, linearoff);
-	--*high;
-	if (status == ADDRXLAT_OK ||
-	    status == ADDRXLAT_ERR_NOTPRESENT)
-		status = highest_mapped(&step, high, *low);
-	return status;
+	return highest_linear(&step, high, LINUX_KTEXT_END, linearoff);
 }
 
 /** Set up Linux kernel text mapping on x86_64.
