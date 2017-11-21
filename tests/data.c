@@ -61,7 +61,7 @@ add_page_data(struct page_data *pg, char *p)
 {
 	char *endp;
 	unsigned char *bufp, c;
-	unsigned long len, sz, rep, i;
+	unsigned long len, sz, rep, i, j;
 	int rc;
 
 	while (*p) {
@@ -109,7 +109,8 @@ add_page_data(struct page_data *pg, char *p)
 		while (*p && isspace(*p))
 			++p;
 		rep = strtoul(p, &endp, 0);
-		if (!*p || (*endp && !isspace(*endp))) {
+		if (!*p || (*endp && !isspace(*endp) &&
+			    *endp != '+' && *endp != '-')) {
 			fprintf(stderr, "Invalid repeat: %s\n", p);
 			return TEST_FAIL;
 		}
@@ -118,12 +119,83 @@ add_page_data(struct page_data *pg, char *p)
 		rc = make_room(pg, sz * rep);
 		if (rc != TEST_OK)
 			return rc;
+		--rep;
+		pg->len += sz * rep;
+		memset(pg->buf + pg->len, 0, sz);
 
-		bufp = pg->buf + pg->len - sz;
-		for (i = 1; i < rep; ++i) {
-			memcpy(pg->buf + pg->len, bufp, sz);
+		while (*p && isspace(*p))
+			++p;
+		if (*p == '+' || *p == '-') {
+			unsigned char sign = *p;
+
+			++p;
+			while (*p && isspace(*p))
+				++p;
+
+			endp = p;
+			while (*endp && isxdigit(*endp))
+				++endp;
+			len = endp - p;
+			if (len > 2 * sz) {
+				p += len - 2 * sz;
+				len = 2 * sz;
+			}
+
+			c = 0;
+			bufp = pg->buf + pg->len;
+			if (pg->endian == data_le)
+				bufp += (len + (len & 1)) / 2;
+			for (i = len; i > 0; --i) {
+				c |= unhex(*p++);
+				if (i & 1) {
+					if (pg->endian == data_le)
+						--bufp;
+					*bufp = c;
+					if (pg->endian == data_be)
+						++bufp;
+					c = 0;
+				} else
+					c <<= 4;
+			}
+			p = endp;
+
+			if (sign == '-') {
+				bufp = pg->buf + pg->len;
+				for (i = 0; i < sz; ++i)
+					bufp[i] = ~bufp[i];
+				if (pg->endian == data_le)
+					for (i = 0; i < sz; ++i)
+						if (++bufp[i])
+							break;
+				if (pg->endian == data_be)
+					while (i--)
+						if (++bufp[i])
+							break;
+			}
+		}
+
+		bufp = pg->buf + pg->len - sz * rep;
+		for (i = 0; i < rep; ++i) {
+			memcpy(bufp, bufp - sz, sz);
+			if (pg->endian == data_le) {
+				unsigned sum = 0;
+				for (j = 0; j < sz; ++j) {
+					sum += bufp[j] + pg->buf[pg->len + j];
+					bufp[j] = sum;
+					sum >>= 8;
+				}
+			}
+			if (pg->endian == data_be) {
+				unsigned sum = 0;
+				j = sz;
+				while (j--) {
+					sum += bufp[j] + pg->buf[pg->len + j];
+					bufp[j] = sum;
+					sum >>= 8;
+				}
+			}
+
 			bufp += sz;
-			pg->len += sz;
 		}
 	}
 
