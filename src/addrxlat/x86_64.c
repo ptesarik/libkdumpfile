@@ -82,26 +82,42 @@
  */
 #define LINUX_KTEXT_END		0xffffffffbfffffff
 
+/** Start of direct physical mapping in Linux before 2.6.11 */
+#define LINUX_DIRECTMAP_START_2_6_0	0x0000010000000000
+/** End of direct physical mapping in Linux before 2.6.11 */
+#define LINUX_DIRECTMAP_END_2_6_0	0x000001ffffffffff
+
+/** Start of direct physical mapping in Linux between 2.6.11 and 2.6.27 */
+#define LINUX_DIRECTMAP_START_2_6_11	0xffff810000000000
+/** End of direct physical mapping in Linux between 2.6.11 and 2.6.27 */
+#define LINUX_DIRECTMAP_END_2_6_11	0xffffc0ffffffffff
+
+/** Start of direct physical mapping in Linux 2.6.27+ */
+#define LINUX_DIRECTMAP_START_2_6_27	0xffff880000000000
+/** End of direct physical mapping in Linux between 2.6.27 and 2.6.31 */
+#define LINUX_DIRECTMAP_END_2_6_27	0xffffc0ffffffffff
+
+/** Start of direct physical mapping in Linux 2.6.31+ */
+#define LINUX_DIRECTMAP_START_2_6_31	LINUX_DIRECTMAP_START_2_6_27
+/** End of direct physical mapping in Linux 2.6.31+ */
+#define LINUX_DIRECTMAP_END_2_6_31	0xffffc7ffffffffff
+
 /** Possible direct mapping locations (if not randomized). */
 static const struct {
 	addrxlat_addr_t first;
 	addrxlat_addr_t last;
 } linux_directmap_ranges[] = {
 #define LINUX_DIRECTMAP_2_6_0	0
-	/* Original Linux layout (before 2.6.11) */
-	{ 0x0000010000000000, 0x000001ffffffffff },
+	{ LINUX_DIRECTMAP_START_2_6_0, LINUX_DIRECTMAP_END_2_6_0 },
 
 #define LINUX_DIRECTMAP_2_6_11	1
-	/* Linux layout introduced in 2.6.11 */
-	{ 0xffff810000000000, 0xffffc0ffffffffff },
+	{ LINUX_DIRECTMAP_START_2_6_11, LINUX_DIRECTMAP_END_2_6_11 },
 
 #define LINUX_DIRECTMAP_2_6_27	2
-	/** Linux layout with hypervisor area, introduced in 2.6.27 */
-	{ 0xffff880000000000, 0xffffc0ffffffffff },
+	{ LINUX_DIRECTMAP_START_2_6_27, LINUX_DIRECTMAP_END_2_6_27 },
 
 #define LINUX_DIRECTMAP_2_6_31	3
-	/** Linux layout with 64T direct mapping, introduced in 2.6.31 */
-	{ 0xffff880000000000, 0xffffc7ffffffffff },
+	{ LINUX_DIRECTMAP_START_2_6_31, LINUX_DIRECTMAP_END_2_6_31 },
 };
 
 /** AMD64 (Intel 64) page table step function.
@@ -259,11 +275,11 @@ static int
 linux_directmap_by_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx)
 {
 	/* Only pre-2.6.11 kernels had this direct mapping */
-	if (is_directmap(sys, ctx, 0x0000010000000000))
+	if (is_directmap(sys, ctx, LINUX_DIRECTMAP_START_2_6_0))
 		return LINUX_DIRECTMAP_2_6_0;
 
 	/* Only kernels between 2.6.11 and 2.6.27 had this direct mapping */
-	if (is_directmap(sys, ctx, 0xffff810000000000))
+	if (is_directmap(sys, ctx, LINUX_DIRECTMAP_START_2_6_11))
 		return LINUX_DIRECTMAP_2_6_11;
 
 	/* Only 2.6.31+ kernels map VMEMMAP at this address */
@@ -271,7 +287,7 @@ linux_directmap_by_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx)
 		return LINUX_DIRECTMAP_2_6_31;
 
 	/* Sanity check for 2.6.27+ direct mapping */
-	if (is_directmap(sys, ctx, 0xffff880000000000))
+	if (is_directmap(sys, ctx, LINUX_DIRECTMAP_START_2_6_27))
 		return LINUX_DIRECTMAP_2_6_27;
 
 	return -1;
