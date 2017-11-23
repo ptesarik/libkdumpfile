@@ -44,24 +44,6 @@
 
 #define __START_KERNEL_map	0xffffffff80000000ULL
 
-/* This constant is not the maximum physical load offset. This is the
- * maximum expected value of the PHYSICAL_START config option, which
- * defaults to 0x1000000. A relocatable kernel can be loaded anywhere
- * regardless of this config option. It is useful only for non-relocatable
- * kernels, and it moves the kernel text both in physical and virtual
- * address spaces. That means, the kernel must never overlap with the
- * following area in virtual address space (kernel modules). The virtual
- * memory layout has changed several times, but the minimum distance from
- * kernel modules has been 128M (the following constants). On kernel
- * versions where the distance is 512M, PHYSICAL_START can be higher than
- * this value. The check in process_load() will fail in such configurations.
- *
- * In other words, this constant is a safe value that will prevent
- * mistaking a kernel module LOAD for kernel text even on kernels
- * where the gap is only 128M.
- */
-#define MAX_PHYSICAL_START	0x0000000008000000ULL
-
 /** Minimum Linux kernel text alignment. */
 #define LINUX_TEXT_ALIGN	0x200000ULL
 
@@ -70,6 +52,12 @@
 struct x86_64_data {
 	/** Overridden methods for linux.phys_base attribute. */
 	struct attr_override phys_base_override;
+
+	/** Kernel text load virtual start. */
+	addrxlat_addr_t ktext_vaddr;
+
+	/** Kernel text load virtual start. */
+	addrxlat_addr_t ktext_paddr;
 };
 
 /** @cond TARGET_ABI */
@@ -258,6 +246,7 @@ x86_64_init(kdump_ctx_t *ctx)
 	if (!archdata)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate x86_64 private data");
+	archdata->ktext_vaddr = ADDRXLAT_ADDR_MAX;
 	ctx->shared->archdata = archdata;
 
 	if (isset_phys_base(ctx))
@@ -295,7 +284,14 @@ calc_linux_phys_base(kdump_ctx_t *ctx, kdump_paddr_t paddr)
 static kdump_status
 set_linux_phys_base(kdump_ctx_t *ctx)
 {
+	struct x86_64_data *archdata = ctx->shared->archdata;
 	kdump_paddr_t paddr;
+
+	if (archdata->ktext_vaddr < ADDRXLAT_ADDR_MAX) {
+		set_phys_base(ctx, archdata->ktext_paddr -
+			      (archdata->ktext_vaddr - __START_KERNEL_map));
+		return KDUMP_OK;
+	}
 
 	if (ctx->shared->ops == &devmem_ops) {
 		kdump_status status = linux_iomem_kcode(ctx, &paddr);
@@ -413,10 +409,15 @@ process_x86_64_xen_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
 static kdump_status
 x86_64_process_load(kdump_ctx_t *ctx, kdump_vaddr_t vaddr, kdump_paddr_t paddr)
 {
-	if (!isset_phys_base(ctx) &&
+	struct x86_64_data *archdata = ctx->shared->archdata;
+
+	if (paddr != ADDRXLAT_ADDR_MAX &&
 	    vaddr >= __START_KERNEL_map &&
-	    vaddr < __START_KERNEL_map + MAX_PHYSICAL_START)
-		set_phys_base(ctx, paddr - (vaddr - __START_KERNEL_map));
+	    vaddr < archdata->ktext_vaddr) {
+		archdata->ktext_vaddr = vaddr;
+		archdata->ktext_paddr = paddr;
+	}
+
 	return KDUMP_OK;
 }
 
