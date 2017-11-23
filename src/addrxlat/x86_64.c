@@ -235,31 +235,6 @@ linux_directmap_by_ver(struct sys_region *rgn, unsigned ver)
 	return ADDRXLAT_ERR_NOTIMPL;
 }
 
-/** Check whether a virtual address is mapped to a physical address.
- * @param sys    Translation system object.
- * @param ctx    Address translation context.
- * @param addr   Address to be checked.
- * @returns      Non-zero if the address can be translated.
- */
-static int
-is_mapped(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
-	  addrxlat_addr_t addr)
-{
-	addrxlat_step_t step;
-	addrxlat_status status;
-
-	step.ctx = ctx;
-	step.sys = sys;
-	step.meth = &sys->meth[ADDRXLAT_SYS_METH_PGT];
-	status = internal_launch(&step, addr);
-
-	if (status == ADDRXLAT_OK)
-		status = internal_walk(&step);
-
-	clear_error(ctx);
-	return status == ADDRXLAT_OK;
-}
-
 /** Check whether an address looks like start of direct mapping.
  * @param sys    Translation system.
  * @param ctx    Address translation context.
