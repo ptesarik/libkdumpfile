@@ -842,6 +842,8 @@ init_elf32(kdump_ctx_t *ctx, Elf32_Ehdr *ehdr)
 			pls->file_offset = dump32toh(ctx, prog.p_offset);
 			pls->filesz = dump32toh(ctx, prog.p_filesz);
 			pls->phys = dump32toh(ctx, prog.p_paddr);
+			if (pls->phys == UINT32_MAX)
+				pls->phys = ADDRXLAT_ADDR_MAX;
 			pls->memsz = dump32toh(ctx, prog.p_memsz);
 			pls->virt = dump32toh(ctx, prog.p_vaddr);
 		}
@@ -912,6 +914,8 @@ init_elf64(kdump_ctx_t *ctx, Elf64_Ehdr *ehdr)
 			pls->file_offset = dump64toh(ctx, prog.p_offset);
 			pls->filesz = dump64toh(ctx, prog.p_filesz);
 			pls->phys = dump64toh(ctx, prog.p_paddr);
+			if (pls->phys == UINT64_MAX)
+				pls->phys = ADDRXLAT_ADDR_MAX;
 			pls->memsz = dump64toh(ctx, prog.p_memsz);
 			pls->virt = dump64toh(ctx, prog.p_vaddr);
 		}
