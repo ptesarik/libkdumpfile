@@ -183,11 +183,11 @@ set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 
 	if (isset_phys_base(ctx)) {
 		len = asprintf(&opts->str[opts->n],
-			       "physbase=0x%"ADDRXLAT_PRIxADDR,
+			       "phys_base=0x%"ADDRXLAT_PRIxADDR,
 			       get_phys_base(ctx));
 		if (len < 0)
 			return set_error(ctx, KDUMP_ERR_SYSTEM,
-					 "Cannot make %s option", "physbase");
+					 "Cannot make %s option", "phys_base");
 		++opts->n;
 	}
 
@@ -223,11 +223,11 @@ set_xen_opts(kdump_ctx_t *ctx, struct opts *opts)
 	attr = gattr(ctx, GKI_xen_phys_start);
 	if (validate_attr(ctx, attr) == KDUMP_OK) {
 		len = asprintf(&opts->str[opts->n],
-			       "physbase=0x%"ADDRXLAT_PRIxADDR,
+			       "phys_base=0x%"ADDRXLAT_PRIxADDR,
 			       attr_value(attr)->address);
 		if (len < 0)
 			return set_error(ctx, KDUMP_ERR_SYSTEM,
-					 "Cannot make %s option", "physbase");
+					 "Cannot make %s option", "phys_base");
 		++opts->n;
 	}
 

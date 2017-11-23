@@ -8,6 +8,6 @@
 arch=x86_64
 ostype=1
 osver=0
-opts=physbase=0
+opts=phys_base=0
 
 . "$srcdir"/xlat-os-common

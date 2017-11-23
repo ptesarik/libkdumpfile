@@ -270,7 +270,7 @@ highest_linear(addrxlat_step_t *step,
 enum optidx {
 	OPT_pae,		/**< [ia32] PAE state (boolean). */
 	OPT_pagesize,		/**< Page size (number). */
-	OPT_physbase,		/**< [x86-64] Linux physical base address. */
+	OPT_phys_base,		/**< [x86-64] Linux physical base address. */
 	OPT_rootpgt,		/**< Root page table address. */
 	OPT_xen_p2m_mfn,	/**< Xen p2m root machine frame number. */
 	OPT_xen_xlat,		/**< Use Xen m2p and p2m translation. */

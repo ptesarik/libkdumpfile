@@ -448,8 +448,8 @@ linux_ktext_meth(struct os_init_data *ctl)
 	addrxlat_addr_t stext;
 	addrxlat_status status;
 
-	if (ctl->popt.val[OPT_physbase].set) {
-		set_ktext_offset(ctl->sys, (ctl->popt.val[OPT_physbase].addr -
+	if (ctl->popt.val[OPT_phys_base].set) {
+		set_ktext_offset(ctl->sys, (ctl->popt.val[OPT_phys_base].addr -
 					    LINUX_KTEXT_START));
 		return ADDRXLAT_OK;
 	}
@@ -508,13 +508,13 @@ linux_ktext_extents(struct os_init_data *ctl,
 		return status;
 
 	linearoff = step.base.addr - *low;
-	if (ctl->popt.val[OPT_physbase].set &&
-	    ctl->popt.val[OPT_physbase].addr !=
+	if (ctl->popt.val[OPT_phys_base].set &&
+	    ctl->popt.val[OPT_phys_base].addr !=
 	    linearoff + LINUX_KTEXT_START)
 			return set_error(ctl->ctx, ADDRXLAT_ERR_INVALID,
-					 "physbase=0x%"ADDRXLAT_PRIxADDR
+					 "phys_base=0x%"ADDRXLAT_PRIxADDR
 					 " actual=0x%"ADDRXLAT_PRIxADDR,
-					 ctl->popt.val[OPT_physbase].addr,
+					 ctl->popt.val[OPT_phys_base].addr,
 					 linearoff + LINUX_KTEXT_START);
 
 	*high = *low;
@@ -780,9 +780,9 @@ setup_xen_pgt(struct os_init_data *ctl)
 	pgt = meth->param.pgt.root.addr;
 	if (pgt >= XEN_DIRECTMAP) {
 		off = -XEN_DIRECTMAP;
-	} else if (ctl->popt.val[OPT_physbase].set) {
+	} else if (ctl->popt.val[OPT_phys_base].set) {
 		addrxlat_addr_t xen_virt_start = pgt & ~(XEN_TEXT_SIZE - 1);
-		off = ctl->popt.val[OPT_physbase].addr - xen_virt_start;
+		off = ctl->popt.val[OPT_phys_base].addr - xen_virt_start;
 	} else
 		return ADDRXLAT_ERR_NODATA;
 

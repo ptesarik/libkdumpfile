@@ -216,8 +216,16 @@ static const struct {
 	char name[9];
 } opt8[] = {
 	DEF(pagesize, number),
-	DEF(physbase, addr),
 	DEF(xen_xlat, bool),
+	END
+};
+
+/** Nine-character options. */
+static const struct {
+	struct optdesc opt;
+	char name[10];
+} opt9[] = {
+	DEF(phys_base, addr),
 	END
 };
 
@@ -240,6 +248,7 @@ static const struct {
 	DEFPTR(3),
 	DEFPTR(7),
 	DEFPTR(8),
+	DEFPTR(9),
 	DEFPTR(11),
 };
 
