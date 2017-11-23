@@ -102,21 +102,6 @@
 /** End of direct physical mapping in Linux 2.6.31+ */
 #define LINUX_DIRECTMAP_END_2_6_31	0xffffc7ffffffffff
 
-/** Possible direct mapping locations (if not randomized). */
-static const struct {
-	addrxlat_addr_t first;
-	addrxlat_addr_t last;
-} linux_directmap_ranges[] = {
-#define LINUX_DIRECTMAP_2_6_0	0
-	{ LINUX_DIRECTMAP_START_2_6_0, LINUX_DIRECTMAP_END_2_6_0 },
-
-#define LINUX_DIRECTMAP_2_6_11	1
-	{ LINUX_DIRECTMAP_START_2_6_11, LINUX_DIRECTMAP_END_2_6_11 },
-
-#define LINUX_DIRECTMAP_2_6_31	3
-	{ LINUX_DIRECTMAP_START_2_6_31, LINUX_DIRECTMAP_END_2_6_31 },
-};
-
 /** AMD64 (Intel 64) page table step function.
  * @param step  Current step state.
  * @returns     Error status.
@@ -388,22 +373,28 @@ set_pgt_fallback(addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
 addrxlat_status
 linux_rdirect_map(struct os_init_data *ctl)
 {
+	/** Possible direct mapping locations (if not randomized). */
+	static const addrxlat_addr_t fixed_loc[] = {
+		LINUX_DIRECTMAP_START_2_6_0,
+		LINUX_DIRECTMAP_START_2_6_11,
+		LINUX_DIRECTMAP_START_2_6_31,
+	};
+
 	int i;
 
 	if (!ctl->ctx->cb.read64 ||
 	    !(ctl->ctx->cb.read_caps & ADDRXLAT_CAPS(ADDRXLAT_KVADDR)))
 		return ADDRXLAT_ERR_NOMETH;
 
-	for (i = 0; i < ARRAY_SIZE(linux_directmap_ranges); ++i) {
+	for (i = 0; i < ARRAY_SIZE(fixed_loc); ++i) {
 		struct sys_region layout[2];
 		addrxlat_status status;
 
 		ctl->sys->meth[ADDRXLAT_SYS_METH_DIRECT].param.linear.off =
-			-linux_directmap_ranges[i].first;
+			-fixed_loc[i];
 
 		layout[0].first = 0;
-		layout[0].last = linux_directmap_ranges[i].last -
-			linux_directmap_ranges[i].first;
+		layout[0].last = PHYSADDR_MASK;
 		layout[0].meth = ADDRXLAT_SYS_METH_RDIRECT;
 		layout[0].act = SYS_ACT_RDIRECT;
 		layout[1].meth = ADDRXLAT_SYS_METH_NUM;
@@ -414,8 +405,7 @@ linux_rdirect_map(struct os_init_data *ctl)
 					 "Cannot set up %s",
 					 "Linux kernel direct mapping");
 
-		if (is_directmap(ctl->sys, ctl->ctx,
-				 linux_directmap_ranges[i].first))
+		if (is_directmap(ctl->sys, ctl->ctx, fixed_loc[i]))
 			return ADDRXLAT_OK;
 
 		remove_rdirect(ctl->sys);
