@@ -288,32 +288,31 @@ static addrxlat_status
 linux_directmap_by_pgt(struct sys_region *rgn,
 		       addrxlat_sys_t *sys, addrxlat_ctx_t *ctx)
 {
-	/* Only pre-2.6.11 kernels had this direct mapping */
+	addrxlat_step_t step;
+	addrxlat_status status;
+
+	step.ctx = ctx;
+	step.sys = sys;
+	step.meth = &sys->meth[ADDRXLAT_SYS_METH_PGT];
+
 	if (is_directmap(sys, ctx, LINUX_DIRECTMAP_START_2_6_0)) {
-		rgn->first = LINUX_DIRECTMAP_START_2_6_0;
-		rgn->last = LINUX_DIRECTMAP_END_2_6_0;
-		return ADDRXLAT_OK;
+		rgn->last = rgn->first = LINUX_DIRECTMAP_START_2_6_0;
+		return highest_linear(&step, &rgn->last,
+				      LINUX_DIRECTMAP_END_2_6_0, -rgn->first);
 	}
 
-	/* Only kernels between 2.6.11 and 2.6.27 had this direct mapping */
 	if (is_directmap(sys, ctx, LINUX_DIRECTMAP_START_2_6_11)) {
-		rgn->first = LINUX_DIRECTMAP_START_2_6_11;
-		rgn->last = LINUX_DIRECTMAP_END_2_6_11;
-		return ADDRXLAT_OK;
+		rgn->last = rgn->first = LINUX_DIRECTMAP_START_2_6_11;
+		return highest_linear(&step, &rgn->last,
+				      LINUX_DIRECTMAP_END_2_6_11, -rgn->first);
 	}
 
-	/* Only 2.6.31+ kernels map VMEMMAP at this address */
-	if (is_mapped(sys, ctx, 0xffffea0000000000)) {
-		rgn->first = LINUX_DIRECTMAP_START_2_6_31;
-		rgn->last = LINUX_DIRECTMAP_END_2_6_31;
-		return ADDRXLAT_OK;
-	}
-
-	/* Sanity check for 2.6.27+ direct mapping */
-	if (is_directmap(sys, ctx, LINUX_DIRECTMAP_START_2_6_27)) {
-		rgn->first = LINUX_DIRECTMAP_START_2_6_27;
-		rgn->last = LINUX_DIRECTMAP_END_2_6_27;
-		return ADDRXLAT_OK;
+	rgn->first = LINUX_DIRECTMAP_START_2_6_31;
+	status = lowest_mapped(&step, &rgn->first, LINUX_DIRECTMAP_END_2_6_31);
+	if (status == ADDRXLAT_OK) {
+		rgn->last = rgn->first;
+		return highest_linear(&step, &rgn->last,
+				      LINUX_DIRECTMAP_END_2_6_31, -rgn->first);
 	}
 
 	return ADDRXLAT_ERR_NOTIMPL;

@@ -36,12 +36,14 @@ KV -> PHYS:
 0-7fffffffffff: @rootpgt
 800000000000-ffff7fffffffffff: NONE
 ffff800000000000-ffff87ffffffffff: @rootpgt
-ffff880000000000-ffffc0ffffffffff: @direct
-ffffc10000000000-ffffffffffffffff: @rootpgt
+ffff880000000000-ffff88002fffffff: @direct
+ffff880030000000-ffffffff80ffffff: @rootpgt
+ffffffff81000000-ffffffff811fffff: @ktext
+ffffffff81200000-ffffffffffffffff: @rootpgt
 
 KPHYS -> DIRECT:
-0-38ffffffffff: @rdirect
-390000000000-ffffffffffffffff: NONE
+0-2fffffff: @rdirect
+30000000-ffffffffffffffff: NONE
 
 MACHPHYS -> KPHYS:
 0-fffffffffffff: @machphys_kphys
