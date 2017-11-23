@@ -204,6 +204,17 @@ vtop_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx, addrxlat_addr_t *addr)
 	return status;
 }
 
+/** Remove the method for the reverse direct mapping.
+ * @param sys  Translation system.
+ */
+static void
+remove_rdirect(addrxlat_sys_t *sys)
+{
+	sys->meth[ADDRXLAT_SYS_METH_RDIRECT].kind = ADDRXLAT_NOMETH;
+	internal_map_decref(sys->map[ADDRXLAT_SYS_MAP_KPHYS_DIRECT]);
+	sys->map[ADDRXLAT_SYS_MAP_KPHYS_DIRECT] = NULL;
+}
+
 /** Get Linux directmap layout by kernel version.
  * @param rgn  Directmap region; updated on success.
  * @param ver  Version code.
@@ -404,12 +415,7 @@ linux_rdirect_map(struct os_init_data *ctl)
 				 linux_directmap_ranges[i].first))
 			return ADDRXLAT_OK;
 
-		/* rollback */
-		ctl->sys->meth[ADDRXLAT_SYS_METH_RDIRECT].kind =
-			ADDRXLAT_NOMETH;
-		internal_map_decref(
-			ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_DIRECT]);
-		ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_DIRECT] = NULL;
+		remove_rdirect(ctl->sys);
 	}
 
 	return ADDRXLAT_NOMETH;
