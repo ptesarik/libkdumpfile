@@ -380,30 +380,50 @@ linux_rdirect_map(struct os_init_data *ctl)
 		LINUX_DIRECTMAP_START_2_6_31,
 	};
 
+	struct sys_region layout[2];
 	int i;
+	addrxlat_fulladdr_t page_offset;
+	addrxlat_status status;
 
 	if (!ctl->ctx->cb.read64 ||
 	    !(ctl->ctx->cb.read_caps & ADDRXLAT_CAPS(ADDRXLAT_KVADDR)))
 		return ADDRXLAT_ERR_NOMETH;
 
-	for (i = 0; i < ARRAY_SIZE(fixed_loc); ++i) {
-		struct sys_region layout[2];
-		addrxlat_status status;
+	layout[0].first = 0;
+	layout[0].last = PHYSADDR_MASK;
+	layout[0].meth = ADDRXLAT_SYS_METH_RDIRECT;
+	layout[0].act = SYS_ACT_RDIRECT;
+	layout[1].meth = ADDRXLAT_SYS_METH_NUM;
 
-		ctl->sys->meth[ADDRXLAT_SYS_METH_DIRECT].param.linear.off =
-			-fixed_loc[i];
+	status = get_symval(ctl->ctx, "page_offset_base",
+			    &page_offset.addr);
+	if (status == ADDRXLAT_OK) {
+		uint64_t val;
 
-		layout[0].first = 0;
-		layout[0].last = PHYSADDR_MASK;
-		layout[0].meth = ADDRXLAT_SYS_METH_RDIRECT;
-		layout[0].act = SYS_ACT_RDIRECT;
-		layout[1].meth = ADDRXLAT_SYS_METH_NUM;
-		status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KPHYS_DIRECT,
-					layout);
+		page_offset.as = ADDRXLAT_KVADDR;
+		status = ctl->ctx->cb.read64(ctl->ctx->cb.data,
+					     &page_offset, &val);
 		if (status != ADDRXLAT_OK)
-			return set_error(ctl->ctx, status,
-					 "Cannot set up %s",
-					 "Linux kernel direct mapping");
+			return status;
+
+		ctl->sys->meth[ADDRXLAT_SYS_METH_DIRECT]
+			.param.linear.off = -val;
+		status = sys_set_layout(
+			ctl, ADDRXLAT_SYS_MAP_KPHYS_DIRECT, layout);
+		if (status != ADDRXLAT_OK)
+			goto err_layout;
+
+		if (is_directmap(ctl->sys, ctl->ctx, val))
+			return ADDRXLAT_OK;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(fixed_loc); ++i) {
+		ctl->sys->meth[ADDRXLAT_SYS_METH_DIRECT]
+			.param.linear.off = -fixed_loc[i];
+		status = sys_set_layout(
+			ctl, ADDRXLAT_SYS_MAP_KPHYS_DIRECT, layout);
+		if (status != ADDRXLAT_OK)
+			goto err_layout;
 
 		if (is_directmap(ctl->sys, ctl->ctx, fixed_loc[i]))
 			return ADDRXLAT_OK;
@@ -412,6 +432,10 @@ linux_rdirect_map(struct os_init_data *ctl)
 	}
 
 	return ADDRXLAT_NOMETH;
+
+ err_layout:
+	return set_error(ctl->ctx, status, "Cannot set up %s",
+			 "Linux kernel direct mapping");
 }
 
 /** Set up Linux kernel text translation method.
