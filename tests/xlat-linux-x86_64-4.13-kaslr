@@ -1,0 +1,13 @@
+#! /bin/sh
+
+#
+# Check Linux 4.13 X86_64 translation with kASLR without explicit version,
+# using page table content alone
+#
+
+arch=x86_64
+ostype=1
+osver=0
+opts="physbase=0x13000000"
+
+. "$srcdir"/xlat-os-common
