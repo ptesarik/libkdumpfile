@@ -113,9 +113,6 @@ static const struct {
 #define LINUX_DIRECTMAP_2_6_11	1
 	{ LINUX_DIRECTMAP_START_2_6_11, LINUX_DIRECTMAP_END_2_6_11 },
 
-#define LINUX_DIRECTMAP_2_6_27	2
-	{ LINUX_DIRECTMAP_START_2_6_27, LINUX_DIRECTMAP_END_2_6_27 },
-
 #define LINUX_DIRECTMAP_2_6_31	3
 	{ LINUX_DIRECTMAP_START_2_6_31, LINUX_DIRECTMAP_END_2_6_31 },
 };
@@ -210,9 +207,14 @@ vtop_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx, addrxlat_addr_t *addr)
 static void
 remove_rdirect(addrxlat_sys_t *sys)
 {
+	addrxlat_map_t *map;
+
 	sys->meth[ADDRXLAT_SYS_METH_RDIRECT].kind = ADDRXLAT_NOMETH;
-	internal_map_decref(sys->map[ADDRXLAT_SYS_MAP_KPHYS_DIRECT]);
-	sys->map[ADDRXLAT_SYS_MAP_KPHYS_DIRECT] = NULL;
+	map = sys->map[ADDRXLAT_SYS_MAP_KPHYS_DIRECT];
+	if (map) {
+		internal_map_decref(map);
+		sys->map[ADDRXLAT_SYS_MAP_KPHYS_DIRECT] = NULL;
+	}
 }
 
 /** Get Linux directmap layout by kernel version.
@@ -317,6 +319,7 @@ linux_directmap(struct os_init_data *ctl)
 	status = linux_directmap_by_pgt(&layout[0], ctl->sys, ctl->ctx);
 	if (status != ADDRXLAT_OK && ctl->osdesc->ver)
 		status = linux_directmap_by_ver(&layout[0], ctl->osdesc->ver);
+	remove_rdirect(ctl->sys);
 	if (status == ADDRXLAT_OK) {
 		layout[0].meth = ADDRXLAT_SYS_METH_DIRECT;
 		layout[0].act = SYS_ACT_DIRECT;
