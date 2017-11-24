@@ -1004,6 +1004,14 @@ open_common(kdump_ctx_t *ctx)
 	if (ret != KDUMP_OK)
 		return ret;
 
+	/* Check that physical addresses are usable */
+	for (i = 0; i < edp->num_load_segments; ++i)
+		if (edp->load_segments[i].phys)
+			break;
+	if (i >= edp->num_load_segments && i > 1)
+		while (i--)
+			edp->load_segments[i].phys = ADDRXLAT_ADDR_MAX;
+
 	/* process LOAD segments */
 	for (i = 0; i < edp->num_load_segments; ++i) {
 		struct load_segment *seg = edp->load_segments + i;
