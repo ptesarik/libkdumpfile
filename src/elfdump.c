@@ -1040,6 +1040,7 @@ static kdump_status
 open_common(kdump_ctx_t *ctx)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
+	unsigned long as_caps;
 	kdump_status ret;
 	int i;
 
@@ -1065,6 +1066,8 @@ open_common(kdump_ctx_t *ctx)
 	if (ret != KDUMP_OK)
 		return ret;
 
+	as_caps = ADDRXLAT_CAPS(ADDRXLAT_KVADDR);
+
 	/* Check that physical addresses are usable */
 	for (i = 0; i < edp->num_load_segments; ++i)
 		if (edp->load_segments[i].phys)
@@ -1072,6 +1075,8 @@ open_common(kdump_ctx_t *ctx)
 	if (i >= edp->num_load_segments && i > 1)
 		while (i--)
 			edp->load_segments[i].phys = ADDRXLAT_ADDR_MAX;
+	else
+		as_caps |= ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR);
 
 	/* process LOAD segments */
 	for (i = 0; i < edp->num_load_segments; ++i) {
@@ -1134,10 +1139,11 @@ open_common(kdump_ctx_t *ctx)
 			return set_error(ctx, KDUMP_ERR_NOTIMPL,
 					 "Missing Xen P2M mapping");
 		ctx->shared->ops = &xc_core_elf_ops;
-		set_addrspace_caps(ctx->shared,
-				   ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR) |
-				   ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
+		as_caps = ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR) |
+			ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR);
 	}
+
+	set_addrspace_caps(ctx->shared, as_caps);
 
 	return KDUMP_OK;
 }
@@ -1159,10 +1165,6 @@ do_probe(kdump_ctx_t *ctx, void *hdr)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate ELF dump private data");
 	ctx->shared->fmtdata = edp;
-
-	set_addrspace_caps(ctx->shared,
-			   ADDRXLAT_CAPS(ADDRXLAT_KVADDR) |
-			   ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
 
 	switch (eheader[EI_DATA]) {
 	case ELFDATA2LSB:
