@@ -458,6 +458,7 @@ linux_ktext_meth(struct os_init_data *ctl)
 	if (status == ADDRXLAT_ERR_NODATA) {
 		addrxlat_step_t step;
 
+		clear_error(ctl->ctx);
 		step.ctx = ctl->ctx;
 		step.sys = ctl->sys;
 		step.meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
