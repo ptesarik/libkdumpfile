@@ -266,10 +266,10 @@ calc_linux_phys_base(kdump_ctx_t *ctx, kdump_paddr_t paddr)
 	kdump_status status;
 
 	rwlock_unlock(&ctx->shared->lock);
-	status = get_symbol_val(ctx, "_text", &stext);
+	status = get_symbol_val(ctx, "_stext", &stext);
 	if (status == KDUMP_ERR_NODATA) {
 		clear_error(ctx);
-		status = get_symbol_val(ctx, "_stext", &stext);
+		status = get_symbol_val(ctx, "_text", &stext);
 	}
 	rwlock_rdlock(&ctx->shared->lock);
 
