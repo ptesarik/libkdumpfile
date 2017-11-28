@@ -174,6 +174,8 @@ find_closest_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
 	bestload = NULL;
 	for (i = 0; i < edp->num_load_segments; i++) {
 		struct load_segment *pls = &edp->load_segments[i];
+		if (pls->phys == ADDRXLAT_ADDR_MAX)
+			continue;
 		if (paddr >= pls->phys + pls->memsz)
 			continue;
 		if (paddr >= pls->phys)
