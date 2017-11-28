@@ -40,22 +40,20 @@
  * @param ctx  Dump file object.
  * @param pio  Page I/O control.
  * @param fn   Read function.
- * @param idx  Page index passed to @p fn (usually PFN).
  * @returns    Error status.
  *
  * If the page is not currently found in the cache, read it using
  * the read function.
  */
 kdump_status
-cache_get_page(kdump_ctx_t *ctx, struct page_io *pio,
-	       read_page_fn *fn, cache_key_t idx)
+cache_get_page(kdump_ctx_t *ctx, struct page_io *pio, read_page_fn *fn)
 {
 	struct cache_entry *entry;
 	kdump_status ret;
 
 	pio->chunk.nent = 1;
 	pio->chunk.fce.cache = ctx->shared->cache;
-	entry = cache_get_entry(pio->chunk.fce.cache, idx);
+	entry = cache_get_entry(pio->chunk.fce.cache, pio->addr.addr);
 	if (!entry)
 		return set_error(ctx, KDUMP_ERR_BUSY,
 				 "Cache is fully utilized");
@@ -65,7 +63,7 @@ cache_get_page(kdump_ctx_t *ctx, struct page_io *pio,
 	if (cache_entry_valid(entry))
 		return KDUMP_OK;
 
-	ret = fn(ctx, pio, idx);
+	ret = fn(ctx, pio);
 	if (ret == KDUMP_OK) {
 		if (pio->precious)
 			cache_make_precious(pio->chunk.fce.cache, entry);

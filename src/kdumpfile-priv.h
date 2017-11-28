@@ -926,13 +926,11 @@ kphys_is_machphys(kdump_ctx_t *ctx)
 /** Type of a cache entry key.
  * This type must be big enough to hold anything that is used as
  * a key in the cache:
- *  - PFN (used by most file handlers)
+ *  - kdump_addr_t (used by most file handlers)
  *  - unsigned long (used by xc_core)
- *  - kdump_addr_t (used by devmem)
  *
- * An unsigned long cannot be bigger than a PFN (because then the PFN
- * would have to be bigger on such architecture).
- * A PFN cannot be bigger than an address.
+ * An unsigned long cannot be bigger than an address (because then the
+ * address would have to be bigger on such architecture).
  * So, it is safe to define this type as an alias for @ref kdump_addr_t.
  */
 typedef kdump_addr_t	cache_key_t;
@@ -1091,11 +1089,10 @@ struct page_io {
 };
 
 typedef kdump_status read_page_fn(
-	kdump_ctx_t *ctx, struct page_io *pio, cache_key_t idx);
+	kdump_ctx_t *ctx, struct page_io *pio);
 
 INTERNAL_DECL(kdump_status, cache_get_page,
-	      (kdump_ctx_t *ctx, struct page_io *pio,
-	       read_page_fn *fn, cache_key_t idx));
+	      (kdump_ctx_t *ctx, struct page_io *pio, read_page_fn *fn));
 INTERNAL_DECL(void, cache_put_page,
 	      (kdump_ctx_t *ctx, struct page_io *pio));
 

@@ -229,13 +229,18 @@ pfn_to_pdpos(struct disk_dump_priv *ddp, unsigned long pfn)
 }
 
 static kdump_status
-diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
+diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
+	kdump_pfn_t pfn;
 	struct page_desc pd;
 	off_t pd_pos;
 	void *buf;
 	kdump_status ret;
+
+	pfn = pio->addr.addr >> get_page_shift(ctx);
+	if (pfn >= get_max_pfn(ctx))
+		return set_error(ctx, KDUMP_ERR_NODATA, "Out-of-bounds PFN");
 
 	pd_pos = pfn_to_pdpos(ddp, pfn);
 	if (pd_pos == (off_t)-1) {
@@ -325,12 +330,7 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
 static kdump_status
 diskdump_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
-	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
-
-	if (pfn >= get_max_pfn(ctx))
-		return set_error(ctx, KDUMP_ERR_NODATA, "Out-of-bounds PFN");
-
-	return cache_get_page(ctx, pio, diskdump_read_page, pfn);
+	return cache_get_page(ctx, pio, diskdump_read_page);
 }
 
 /** Reallocate buffer for compressed data.

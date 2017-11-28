@@ -219,15 +219,17 @@ find_closest_vload(struct elfdump_priv *edp, kdump_vaddr_t vaddr,
 }
 
 static kdump_status
-elf_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t addr)
+elf_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
+	kdump_addr_t addr;
 	struct load_segment *pls;
 	kdump_addr_t loadaddr;
 	void *p, *endp;
 	off_t pos;
 	ssize_t size, rd;
 
+	addr = pio->addr.addr;
 	p = pio->chunk.data;
 	endp = p + get_page_size(ctx);
 	while (p < endp) {
@@ -316,7 +318,7 @@ elf_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 	return (loadaddr <= addr && pls->filesz >= addr - loadaddr + sz)
 		? fcache_get_chunk(ctx->shared->fcache, &pio->chunk, sz,
 				   pls->file_offset + addr - loadaddr)
-		: cache_get_page(ctx, pio, elf_read_page, addr);
+		: cache_get_page(ctx, pio, elf_read_page);
 }
 
 static void

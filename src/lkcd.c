@@ -734,9 +734,10 @@ lkcd_max_pfn_validate(kdump_ctx_t *ctx, struct attr_data *attr)
 }
 
 static kdump_status
-lkcd_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
+lkcd_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
+	kdump_pfn_t pfn;
 	struct dump_page dp;
 	unsigned type;
 	off_t off;
@@ -744,6 +745,7 @@ lkcd_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
 	kdump_status ret;
 
 	off = 0;
+	pfn = pio->addr.addr >> get_page_shift(ctx);
 	ret = get_page_desc(ctx, pfn, &dp, &off);
 	if (ret != KDUMP_OK)
 		return ret;
@@ -804,8 +806,7 @@ lkcd_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t pfn)
 static kdump_status
 lkcd_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
-	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
-	return cache_get_page(ctx, pio, lkcd_read_page, pfn);
+	return cache_get_page(ctx, pio, lkcd_read_page);
 }
 
 /** Reallocate buffer for compressed data.
