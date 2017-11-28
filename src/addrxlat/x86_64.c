@@ -456,6 +456,10 @@ linux_ktext_meth(struct os_init_data *ctl)
 
 	status = get_symval(ctl->ctx, "_stext", &stext);
 	if (status == ADDRXLAT_ERR_NODATA) {
+		clear_error(ctl->ctx);
+		status = get_symval(ctl->ctx, "_text", &stext);
+	}
+	if (status == ADDRXLAT_ERR_NODATA) {
 		addrxlat_step_t step;
 
 		clear_error(ctl->ctx);
