@@ -28,6 +28,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -58,7 +59,8 @@ dump_buffer(unsigned long long addr, unsigned char *buf, size_t len)
 }
 
 static int
-dump_data(kdump_ctx_t *ctx, unsigned long long addr, unsigned long long len)
+dump_data(kdump_ctx_t *ctx, kdump_addrspace_t as, unsigned long long addr,
+	  unsigned long long len)
 {
 	unsigned char buf[CHUNKSZ];
 	size_t sz, remain;
@@ -74,8 +76,7 @@ dump_data(kdump_ctx_t *ctx, unsigned long long addr, unsigned long long len)
 		remain = sz;
 		while (remain) {
 			sz = remain;
-			res = kdump_read(ctx, KDUMP_MACHPHYSADDR, addr,
-					 buf, &sz);
+			res = kdump_read(ctx, as, addr, buf, &sz);
 			dump_buffer(addr, buf, sz);
 			addr += sz;
 			remain -= sz;
@@ -103,8 +104,21 @@ dump_data(kdump_ctx_t *ctx, unsigned long long addr, unsigned long long len)
 	return rc;
 }
 
+static addrxlat_addrspace_t
+get_addrspace(const char *p, const char *endp)
+{
+	if (!strncasecmp(p, "KPHYSADDR:", endp - p))
+		return KDUMP_KPHYSADDR;
+	else if (!strncasecmp(p, "MACHPHYSADDR:", endp - p))
+		return KDUMP_MACHPHYSADDR;
+	else if (!strncasecmp(p, "KVADDR:", endp - p))
+		return KDUMP_KVADDR;
+	else
+		return (addrxlat_addrspace_t)-1;
+}
+
 static int
-dump_data_fd(int fd, unsigned long long addr, unsigned long long len)
+dump_data_fd(int fd, char **argv)
 {
 	kdump_ctx_t *ctx;
 	kdump_status res;
@@ -120,8 +134,46 @@ dump_data_fd(int fd, unsigned long long addr, unsigned long long len)
 	if (res != KDUMP_OK) {
 		fprintf(stderr, "Cannot open dump: %s\n", kdump_get_err(ctx));
 		rc = TEST_ERR;
-	} else
-		rc = dump_data(ctx, addr, len);
+	} else {
+		kdump_addrspace_t as;
+		unsigned long long addr, len;
+		char *endp;
+
+		while (*argv) {
+			endp = strchr(argv[0], ':');
+			if (endp) {
+				as = get_addrspace(argv[0], endp);
+				if (as == -1) {
+					fprintf(stderr, "Invalid address space spec: %s\n",
+						argv[0]);
+					return TEST_ERR;
+				}
+				++endp;
+			} else {
+				as = KDUMP_MACHPHYSADDR;
+				endp = argv[0];
+			}
+
+			addr = strtoull(endp, &endp, 0);
+			if (*endp) {
+				fprintf(stderr, "Invalid address: %s\n",
+					argv[0]);
+				return TEST_ERR;
+			}
+
+			len = strtoull(argv[1], &endp, 0);
+			if (*endp) {
+				fprintf(stderr, "Invalid length: %s\n",
+					argv[1]);
+				return TEST_ERR;
+			}
+
+			rc = dump_data(ctx, as, addr, len);
+			if (rc != KDUMP_OK)
+				break;
+			argv += 2;
+		}
+	}
 
 	kdump_free(ctx);
 	return rc;
@@ -130,25 +182,12 @@ dump_data_fd(int fd, unsigned long long addr, unsigned long long len)
 int
 main(int argc, char **argv)
 {
-	unsigned long long addr, len;
-	char *endp;
 	int fd;
 	int rc;
 
-	if (argc != 4 || !*argv[2] || !*argv[3]) {
-		fprintf(stderr, "Usage: %s <dump> <addr> <len>\n", argv[0]);
-		return TEST_ERR;
-	}
-
-	addr = strtoull(argv[2], &endp, 0);
-	if (*endp) {
-		fprintf(stderr, "Invalid address: %s", argv[2]);
-		return TEST_ERR;
-	}
-
-	len = strtoull(argv[3], &endp, 0);
-	if (*endp) {
-		fprintf(stderr, "Invalid length: %s", argv[3]);
+	if (argc < 4 || argc % 2 != 0) {
+		fprintf(stderr, "Usage: %s <dump> <addr> <len> [...]\n",
+			argv[0]);
 		return TEST_ERR;
 	}
 
@@ -158,7 +197,7 @@ main(int argc, char **argv)
 		return TEST_ERR;
 	}
 
-	rc = dump_data_fd(fd, addr, len);
+	rc = dump_data_fd(fd, argv + 2);
 
 	if (close(fd) < 0) {
 		perror("close dump");
