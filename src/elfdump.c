@@ -159,7 +159,7 @@ mach2arch(unsigned mach, int elfclass)
 /**  Find the LOAD segment that is closest to a physical address.
  * @param edp	 ELF dump private data.
  * @param paddr	 Requested physical address.
- * @param dist	 Maximum allowed distance from @ref paddr.
+ * @param dist	 Maximum allowed distance from @c paddr.
  * @returns	 Pointer to the closest LOAD segment, or @c NULL if none.
  */
 static struct load_segment *
@@ -188,11 +188,42 @@ find_closest_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
 	return bestload;
 }
 
+/**  Find the LOAD segment that is closest to a virtual address.
+ * @param edp	 ELF dump private data.
+ * @param vaddr	 Requested virtual address.
+ * @param dist	 Maximum allowed distance from @c vaddr.
+ * @returns	 Pointer to the closest LOAD segment, or @c NULL if none.
+ */
+static struct load_segment *
+find_closest_vload(struct elfdump_priv *edp, kdump_vaddr_t vaddr,
+		   unsigned long dist)
+{
+	unsigned long bestdist;
+	struct load_segment *bestload;
+	int i;
+
+	bestdist = dist;
+	bestload = NULL;
+	for (i = 0; i < edp->num_load_segments; i++) {
+		struct load_segment *pls = &edp->load_segments[i];
+		if (vaddr >= pls->virt + pls->memsz)
+			continue;
+		if (vaddr >= pls->virt)
+			return pls;	/* Exact match */
+		if (bestdist > pls->virt - vaddr) {
+			bestdist = pls->virt - vaddr;
+			bestload = pls;
+		}
+	}
+	return bestload;
+}
+
 static kdump_status
 elf_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t addr)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	struct load_segment *pls;
+	kdump_addr_t loadaddr;
 	void *p, *endp;
 	off_t pos;
 	ssize_t size, rd;
@@ -200,23 +231,28 @@ elf_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t addr)
 	p = pio->chunk.data;
 	endp = p + get_page_size(ctx);
 	while (p < endp) {
-		pls = find_closest_load(edp, addr, endp - p);
+		pls = (pio->addr.as == ADDRXLAT_KVADDR
+		       ? find_closest_vload(edp, addr, endp - p)
+		       : find_closest_load(edp, addr, endp - p));
 		if (!pls) {
 			memset(p, 0, endp - p);
 			break;
 		}
 
-		if (pls->phys > addr) {
-			memset(p, 0, pls->phys - addr);
-			p += pls->phys - addr;
-			addr = pls->phys;
+		loadaddr = (pio->addr.as == ADDRXLAT_KVADDR
+			    ? pls->virt
+			    : pls->phys);
+		if (loadaddr > addr) {
+			memset(p, 0, loadaddr - addr);
+			p += loadaddr - addr;
+			addr = loadaddr;
 		}
 
-		pos = pls->file_offset + addr - pls->phys;
-		if (pls->phys + pls->filesz > addr) {
+		pos = pls->file_offset + addr - loadaddr;
+		if (loadaddr + pls->filesz > addr) {
 			size = endp - p;
-			if (size > pls->phys + pls->filesz - addr)
-				size = pls->phys + pls->filesz - addr;
+			if (size > loadaddr + pls->filesz - addr)
+				size = loadaddr + pls->filesz - addr;
 
 			rd = pread(get_file_fd(ctx), p, size, pos);
 			if (rd != size)
@@ -229,8 +265,8 @@ elf_read_page(kdump_ctx_t *ctx, struct page_io *pio, cache_key_t addr)
 		}
 		if (p < endp) {
 			size = endp - p;
-			if (size > pls->phys + pls->memsz - addr)
-				size = pls->phys + pls->memsz - addr;
+			if (size > loadaddr + pls->memsz - addr)
+				size = loadaddr + pls->memsz - addr;
 			memset(p, 0, size);
 			p += size;
 			addr += size;
@@ -245,18 +281,23 @@ elf_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	struct load_segment *pls;
-	kdump_paddr_t addr;
+	kdump_paddr_t addr, loadaddr;
 	size_t sz;
 
-	pls = find_closest_load(edp, pio->addr.addr, get_page_size(ctx));
+	sz = get_page_size(ctx);
+	pls = (pio->addr.as == ADDRXLAT_KVADDR
+	       ? find_closest_vload(edp, pio->addr.addr, sz)
+	       : find_closest_load(edp, pio->addr.addr, sz));
 	if (!pls)
 		return set_error(ctx, KDUMP_ERR_NODATA, "Page not found");
 
 	addr = pio->addr.addr;
-	sz = get_page_size(ctx);
-	return (pls->phys <= addr && pls->filesz >= addr - pls->phys + sz)
+	loadaddr = (pio->addr.as == ADDRXLAT_KVADDR
+		    ? pls->virt
+		    : pls->phys);
+	return (loadaddr <= addr && pls->filesz >= addr - loadaddr + sz)
 		? fcache_get_chunk(ctx->shared->fcache, &pio->chunk, sz,
-				   pls->file_offset + addr - pls->phys)
+				   pls->file_offset + addr - loadaddr)
 		: cache_get_page(ctx, pio, elf_read_page, addr);
 }
 
@@ -1102,6 +1143,7 @@ do_probe(kdump_ctx_t *ctx, void *hdr)
 	ctx->shared->fmtdata = edp;
 
 	set_addrspace_caps(ctx->shared,
+			   ADDRXLAT_CAPS(ADDRXLAT_KVADDR) |
 			   ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
 
 	switch (eheader[EI_DATA]) {
