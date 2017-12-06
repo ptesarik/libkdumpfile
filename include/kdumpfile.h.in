@@ -247,15 +247,20 @@ addrxlat_sys_t *kdump_get_addrxlat_sys(const kdump_ctx_t *ctx);
  * When passing an address to kdump_read(), this type is used to
  * specify the kind of address.
  *
- * The difference between @c KDUMP_KPHYSADDR and @c KDUMP_MACHPHYSADDR
- * matters only in environments where the kernel has a different view
- * of physical address space than the CPU, e.g. paravirtualized kernels
- * under Xen.
+ * The numeric values shall match those of @ref addrxlat_addrspace_t.
  */
 typedef enum _kdump_addrspace {
-	KDUMP_KPHYSADDR,	/**< Kernel physical address. */
-	KDUMP_MACHPHYSADDR,	/**< Machine physical address. */
-	KDUMP_KVADDR,		/**< Kernel virtual address. */
+	/** Kernel physical address. */
+	KDUMP_KPHYSADDR = ADDRXLAT_KPHYSADDR,
+
+	/** Machine physical address. */
+	KDUMP_MACHPHYSADDR = ADDRXLAT_MACHPHYSADDR,
+
+	/** Kernel virtual address. */
+	KDUMP_KVADDR = ADDRXLAT_KVADDR,
+
+	/** Invalid address. */
+	KDUMP_NOADDR = ADDRXLAT_NOADDR,
 } kdump_addrspace_t;
 
 /**  Read data from the dump file.
