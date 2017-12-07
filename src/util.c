@@ -824,6 +824,51 @@ set_cpu_regs32(kdump_ctx_t *ctx, unsigned cpu,
 	return status;
 }
 
+/** Set CPU register attributes.
+ * @param ctx   Dump object.
+ * @param cpu   CPU number.
+ * @param tmpl  Register attribute templates.
+ * @param data  Data structure containing registers.
+ * @param def   Register definitions.
+ * @returns     Error status.
+ */
+kdump_status
+set_cpu_regs(kdump_ctx_t *ctx, unsigned cpu,
+	     const struct attr_template *tmpl,
+	     const void *data, const struct reg_def *def)
+{
+	kdump_status status = KDUMP_OK;
+
+	while(def->bits) {
+		const void *regptr = data + def->off;
+
+		switch (def->bits) {
+		case 16:
+			status = set_cpu_regs16(
+				ctx, cpu, &tmpl[def->regidx],
+				(uint16_t*) regptr, def->count);
+			break;
+
+		case 32:
+			status = set_cpu_regs32(
+				ctx, cpu, &tmpl[def->regidx],
+				(uint32_t*) regptr, def->count);
+			break;
+
+		case 64:
+			status = set_cpu_regs64(
+				ctx, cpu, &tmpl[def->regidx],
+				(uint64_t*) regptr, def->count);
+			break;
+		}
+		if (status != KDUMP_OK)
+			return status;
+		++def;
+	}
+
+	return KDUMP_OK;
+}
+
 kdump_status
 set_cpu_regs16(kdump_ctx_t *ctx, unsigned cpu,
 	       const struct attr_template *tmpl,
