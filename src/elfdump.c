@@ -1042,6 +1042,7 @@ static kdump_status
 open_common(kdump_ctx_t *ctx)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
+	kdump_pfn_t max_pfn;
 	unsigned long as_caps;
 	kdump_status ret;
 	int i;
@@ -1080,14 +1081,20 @@ open_common(kdump_ctx_t *ctx)
 	else
 		as_caps |= ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR);
 
-	/* process LOAD segments */
+	/* Find max PFN */
+	max_pfn = 0;
 	for (i = 0; i < edp->num_load_segments; ++i) {
 		struct load_segment *seg = edp->load_segments + i;
-		unsigned long pfn =
-			(seg->phys + seg->filesz) >> get_page_shift(ctx);
-		if (pfn > get_max_pfn(ctx))
-			set_max_pfn(ctx, pfn);
+		unsigned long pfn;
+
+		if (seg->phys == ADDRXLAT_ADDR_MAX)
+			continue;
+
+		pfn = (seg->phys + seg->memsz) >> get_page_shift(ctx);
+		if (pfn > max_pfn)
+			max_pfn = pfn;
 	}
+	set_max_pfn(ctx, max_pfn);
 
 	for (i = 0; i < edp->num_sections; ++i) {
 		struct section *sect = edp->sections + i;
