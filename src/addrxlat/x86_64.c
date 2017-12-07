@@ -370,7 +370,7 @@ set_pgt_fallback(addrxlat_sys_t *sys, addrxlat_sys_meth_t idx)
  * @param ctl  Initialization data.
  * @returns    Error status.
  */
-addrxlat_status
+static addrxlat_status
 linux_rdirect_map(struct os_init_data *ctl)
 {
 	/** Possible direct mapping locations (if not randomized). */
