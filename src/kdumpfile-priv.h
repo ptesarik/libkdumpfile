@@ -650,6 +650,10 @@ INTERNAL_DECL(kdump_status, set_cpu_regs32,
 	      (kdump_ctx_t *ctx, unsigned cpu,
 	       const struct attr_template *tmpl,
 	       const uint32_t *regs, unsigned num));
+INTERNAL_DECL(kdump_status, set_cpu_regs16,
+	      (kdump_ctx_t *ctx, unsigned cpu,
+	       const struct attr_template *tmpl,
+	       const uint16_t *regs, unsigned num));
 
 INTERNAL_DECL(kdump_status, set_file_description,
 	      (kdump_ctx_t *ctx, const char *name));

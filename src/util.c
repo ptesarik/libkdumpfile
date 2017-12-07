@@ -824,6 +824,21 @@ set_cpu_regs32(kdump_ctx_t *ctx, unsigned cpu,
 	return status;
 }
 
+kdump_status
+set_cpu_regs16(kdump_ctx_t *ctx, unsigned cpu,
+	       const struct attr_template *tmpl,
+	       const uint16_t *regs, unsigned num)
+{
+	struct attr_data *dir;
+	kdump_status status;
+
+	status = cpu_regs_dir(ctx, cpu, &dir);
+	while (status == KDUMP_OK && num--)
+		status = set_cpu_reg(ctx, dir, tmpl++,
+				     dump16toh(ctx, *regs++));
+	return status;
+}
+
 /**  Set file.description to a static string.
  * @param ctx   Dump file object.
  * @param name  Descriptive format name.
