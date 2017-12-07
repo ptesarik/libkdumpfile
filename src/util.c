@@ -745,72 +745,83 @@ get_symbol_val(kdump_ctx_t *ctx, const char *name, kdump_addr_t *val)
 	return KDUMP_OK;
 }
 
-kdump_status
-set_cpu_regs64(kdump_ctx_t *ctx, unsigned cpu,
-	       const struct attr_template *tmpl, uint64_t *regs, unsigned num)
+/** Get a CPU directory attribute by number.
+ * @param ctx   Dump object.
+ * @param cpu   CPU number.
+ * @param pdir  Directory attribute, set on success.
+ * @returns     Error status.
+ *
+ * If the directory attribute does not exist yet, it is created.
+ */
+static kdump_status
+cpu_regs_dir(kdump_ctx_t *ctx, unsigned cpu, struct attr_data **pdir)
 {
 	char cpukey[20 + sizeof(".reg")];
 	size_t keylen;
-	struct attr_data *dir, *attr;
-	unsigned i;
-	kdump_status res;
 
 	keylen = sprintf(cpukey, "%u.reg", cpu);
-	dir = create_attr_path(ctx->shared, gattr(ctx, GKI_dir_cpu),
-			       cpukey, keylen, &dir_template);
-	if (!dir)
+	*pdir = create_attr_path(ctx->shared, gattr(ctx, GKI_dir_cpu),
+				 cpukey, keylen, &dir_template);
+	return *pdir
+		? KDUMP_OK
+		: set_error(ctx, KDUMP_ERR_SYSTEM,
+			    "Cannot allocate CPU %u registers", cpu);
+}
+
+/** Set a single CPU register.
+ * @param ctx   Dump object.
+ * @param dir   CPU register directory.
+ * @param tmpl  Register attribute template.
+ * @param val   Register value (numeric).
+ * @returns     Error status.
+ */
+static kdump_status
+set_cpu_reg(kdump_ctx_t *ctx, struct attr_data *dir,
+	    const struct attr_template *tmpl, kdump_num_t val)
+{
+	struct attr_data *attr = new_attr(ctx->shared, dir, tmpl);
+	kdump_status status;
+
+	if (!attr)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot allocate CPU %u registers", cpu);
-
-	for (i = 0; i < num; ++i) {
-		attr = new_attr(ctx->shared, dir, tmpl + i);
-		if (!attr)
-			return set_error(ctx, KDUMP_ERR_SYSTEM,
-					 "Cannot %s CPU %u register %s",
-					 "allocate", cpu, tmpl[i].key);
-		res = set_attr_number(ctx, attr, ATTR_DEFAULT,
-				      dump64toh(ctx, regs[i]));
-		if (res != KDUMP_OK)
-			return set_error(ctx, res,
-					 "Cannot %s CPU %u register %s",
-					 "set", cpu, tmpl[i].key);
-	}
-
+				 "Cannot %s CPU %s register %s",
+				 "allocate", dir->template->key, tmpl->key);
+	status = set_attr_number(ctx, attr, ATTR_DEFAULT, val);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status,
+				 "Cannot %s CPU %s register %s",
+				 "set", dir->template->key, tmpl->key);
 	return KDUMP_OK;
 }
 
 kdump_status
-set_cpu_regs32(kdump_ctx_t *ctx, unsigned cpu,
-	       const struct attr_template *tmpl, uint32_t *regs, unsigned num)
+set_cpu_regs64(kdump_ctx_t *ctx, unsigned cpu,
+	       const struct attr_template *tmpl,
+	       uint64_t *regs, unsigned num)
 {
-	char cpukey[20 + sizeof(".reg")];
-	size_t keylen;
-	struct attr_data *dir, *attr;
-	unsigned i;
-	kdump_status res;
+	struct attr_data *dir;
+	kdump_status status;
 
-	keylen = sprintf(cpukey, "%u.reg", cpu);
-	dir = create_attr_path(ctx->shared, gattr(ctx, GKI_dir_cpu),
-			       cpukey, keylen, &dir_template);
-	if (!dir)
-		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot allocate CPU %u registers", cpu);
+	status = cpu_regs_dir(ctx, cpu, &dir);
+	while (status == KDUMP_OK && num--)
+		status = set_cpu_reg(ctx, dir, tmpl++,
+				     dump64toh(ctx, *regs++));
+	return status;
+}
 
-	for (i = 0; i < num; ++i) {
-		attr = new_attr(ctx->shared, dir, tmpl + i);
-		if (!attr)
-			return set_error(ctx, KDUMP_ERR_SYSTEM,
-					 "Cannot %s CPU %u register %s",
-					 "allocate", cpu, tmpl[i].key);
-		res = set_attr_number(ctx, attr, ATTR_DEFAULT,
-				      dump32toh(ctx, regs[i]));
-		if (res != KDUMP_OK)
-			return set_error(ctx, res,
-					 "Cannot %s CPU %u register %s",
-					 "set", cpu, tmpl[i].key);
-	}
+kdump_status
+set_cpu_regs32(kdump_ctx_t *ctx, unsigned cpu,
+	       const struct attr_template *tmpl,
+	       uint32_t *regs, unsigned num)
+{
+	struct attr_data *dir;
+	kdump_status status;
 
-	return KDUMP_OK;
+	status = cpu_regs_dir(ctx, cpu, &dir);
+	while (status == KDUMP_OK && num--)
+		status = set_cpu_reg(ctx, dir, tmpl++,
+				     dump32toh(ctx, *regs++));
+	return status;
 }
 
 /**  Set file.description to a static string.
