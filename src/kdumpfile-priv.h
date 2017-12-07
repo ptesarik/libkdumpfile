@@ -645,11 +645,11 @@ INTERNAL_DECL(kdump_status, get_symbol_val,
 INTERNAL_DECL(kdump_status, set_cpu_regs64,
 	      (kdump_ctx_t *ctx, unsigned cpu,
 	       const struct attr_template *tmpl,
-	       uint64_t *regs, unsigned num));
+	       const uint64_t *regs, unsigned num));
 INTERNAL_DECL(kdump_status, set_cpu_regs32,
 	      (kdump_ctx_t *ctx, unsigned cpu,
 	       const struct attr_template *tmpl,
-	       uint32_t *regs, unsigned num));
+	       const uint32_t *regs, unsigned num));
 
 INTERNAL_DECL(kdump_status, set_file_description,
 	      (kdump_ctx_t *ctx, const char *name));
