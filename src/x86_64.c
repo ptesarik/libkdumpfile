@@ -296,15 +296,45 @@ set_linux_phys_base(kdump_ctx_t *ctx)
 }
 
 static kdump_status
+init_linux_phys_base(kdump_ctx_t *ctx)
+{
+	const addrxlat_meth_t *meth;
+	kdump_status status;
+
+
+	meth = addrxlat_sys_get_meth(
+		ctx->shared->xlatsys, ADDRXLAT_SYS_METH_KTEXT);
+	if (meth->kind == ADDRXLAT_LINEAR) {
+		set_phys_base(ctx, meth->param.linear.off + __START_KERNEL_map);
+		return KDUMP_OK;
+	}
+
+	status = set_linux_phys_base(ctx);
+	if (status == KDUMP_OK) {
+		status = vtop_init(ctx);
+	} else if (status == KDUMP_ERR_NODATA) {
+		/* ignore missing data */
+		clear_error(ctx);
+		return KDUMP_OK;
+	}
+
+	if (status != KDUMP_OK)
+		return set_error(ctx, status,
+				 "Cannot initialize address translation");
+
+	return KDUMP_OK;
+}
+
+static kdump_status
 x86_64_late_init(kdump_ctx_t *ctx)
 {
+	kdump_status status;
+
 	if (ctx->shared->ostype == ADDRXLAT_OS_LINUX &&
-	    !isset_phys_base(ctx) &&
-	    set_linux_phys_base(ctx) == KDUMP_OK) {
-		kdump_status status = vtop_init(ctx);
+	    !isset_phys_base(ctx)) {
+		status = init_linux_phys_base(ctx);
 		if (status != KDUMP_OK)
-			return set_error(ctx, status,
-					 "Cannot initialize address translation");
+			return status;
 	}
 
 	return KDUMP_OK;
