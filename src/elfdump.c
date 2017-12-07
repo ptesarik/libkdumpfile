@@ -984,7 +984,7 @@ init_elf64(kdump_ctx_t *ctx, Elf64_Ehdr *ehdr)
 		}
 	}
 
-	offset = dump32toh(ctx, ehdr->e_shoff);
+	offset = dump64toh(ctx, ehdr->e_shoff);
 	if (lseek(get_file_fd(ctx), offset, SEEK_SET) < 0)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot seek to section headers at %llu",
