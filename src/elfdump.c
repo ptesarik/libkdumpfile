@@ -823,39 +823,31 @@ store_sect(struct elfdump_priv *edp, off_t offset,
 	++edp->num_sections;
 }
 
-static void *
-read_elf_sect(kdump_ctx_t *ctx, struct section *sect)
-{
-	void *buf;
-
-	buf = ctx_malloc(sect->size, ctx, "ELF section buffer");
-	if (!buf)
-		return NULL;
-
-	if (pread(get_file_fd(ctx), buf, sect->size,
-		  sect->file_offset) == sect->size)
-		return buf;
-
-	free(buf);
-	return NULL;
-}
-
 static kdump_status
 init_strtab(kdump_ctx_t *ctx, unsigned strtabidx)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	struct section *ps;
+	kdump_status status;
 
 	if (!strtabidx || strtabidx >= edp->num_sections)
 		return KDUMP_OK;	/* no string table */
 
 	ps = edp->sections + strtabidx;
 	edp->strtab_size = ps->size;
-	edp->strtab = read_elf_sect(ctx, ps);
+	edp->strtab = ctx_malloc(ps->size, ctx, "ELF string table");
 	if (!edp->strtab)
-		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot allocate string table (%zu bytes)",
-				 edp->strtab_size);
+		return KDUMP_ERR_SYSTEM;
+
+	status = fcache_pread(ctx->shared->fcache, edp->strtab,
+			      ps->size, ps->file_offset);
+	if (status != KDUMP_OK) {
+		free(edp->strtab);
+		edp->strtab = NULL;
+		return set_error(ctx, status,
+				 "Cannot read %s at %llu", "ELF string table",
+				 (unsigned long long) ps->file_offset);
+	}
 
 	return KDUMP_OK;
 }
