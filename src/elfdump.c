@@ -870,11 +870,11 @@ static kdump_status
 init_elf32(kdump_ctx_t *ctx, Elf32_Ehdr *ehdr)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
-	Elf32_Phdr prog;
-	Elf32_Shdr sect;
 	off_t offset;
+	size_t entsz;
+	struct fcache_chunk fch;
 	kdump_status ret;
-	int i;
+	int i, num;
 
 	set_arch_machine(ctx, dump16toh(ctx, ehdr->e_machine));
 
@@ -887,47 +887,56 @@ init_elf32(kdump_ctx_t *ctx, Elf32_Ehdr *ehdr)
 		return ret;
 
 	offset = dump32toh(ctx, ehdr->e_phoff);
-	if (lseek(get_file_fd(ctx), offset, SEEK_SET) < 0)
-		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot seek to program headers at %llu",
-				 (unsigned long long) offset);
-	for (i = 0; i < dump16toh(ctx, ehdr->e_phnum); ++i) {
+	entsz = dump16toh(ctx, ehdr->e_phentsize);
+	num = dump16toh(ctx, ehdr->e_phnum);
+	for (i = 0; i < num; ++i) {
+		Elf32_Phdr *prog;
 		struct load_segment *pls;
-		ssize_t rd;
 
-		rd = read(get_file_fd(ctx), &prog, sizeof prog);
-		if (rd != sizeof prog)
-			return set_error(ctx, read_error(rd),
-					 "Cannot read program header #%d", i);
+		ret = fcache_get_chunk(ctx->shared->fcache, &fch,
+				       entsz, offset);
+		if (ret != KDUMP_OK)
+			return set_error(ctx, ret,
+					 "Cannot read ELF %s #%d at %llu",
+					 "program header", i,
+					 (unsigned long long) offset);
+		offset += entsz;
+		prog = (Elf32_Phdr*) fch.data;
 
-		pls = next_phdr(edp, dump32toh(ctx, prog.p_type));
+		pls = next_phdr(edp, dump32toh(ctx, prog->p_type));
 		if (pls) {
-			pls->file_offset = dump32toh(ctx, prog.p_offset);
-			pls->filesz = dump32toh(ctx, prog.p_filesz);
-			pls->phys = dump32toh(ctx, prog.p_paddr);
+			pls->file_offset = dump32toh(ctx, prog->p_offset);
+			pls->filesz = dump32toh(ctx, prog->p_filesz);
+			pls->phys = dump32toh(ctx, prog->p_paddr);
 			if (pls->phys == UINT32_MAX)
 				pls->phys = ADDRXLAT_ADDR_MAX;
-			pls->memsz = dump32toh(ctx, prog.p_memsz);
-			pls->virt = dump32toh(ctx, prog.p_vaddr);
+			pls->memsz = dump32toh(ctx, prog->p_memsz);
+			pls->virt = dump32toh(ctx, prog->p_vaddr);
 		}
+		fcache_put_chunk(&fch);
 	}
 
 	offset = dump32toh(ctx, ehdr->e_shoff);
-	if (lseek(get_file_fd(ctx), offset, SEEK_SET) < 0)
-		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot seek to section headers at %llu",
-				 (unsigned long long) offset);
-	for (i = 0; i < dump16toh(ctx, ehdr->e_shnum); ++i) {
-		ssize_t rd;
+	entsz = dump16toh(ctx, ehdr->e_shentsize);
+	num = dump16toh(ctx, ehdr->e_shnum);
+	for (i = 0; i < num; ++i) {
+		Elf32_Shdr *sect;
 
-		rd = read(get_file_fd(ctx), &sect, sizeof sect);
-		if (rd != sizeof sect)
-			return set_error(ctx, read_error(rd),
-					 "Cannot read section header #%d", i);
+		ret = fcache_get_chunk(ctx->shared->fcache, &fch,
+				       entsz, offset);
+		if (ret != KDUMP_OK)
+			return set_error(ctx, ret,
+					 "Cannot read ELF %s #%d at %llu",
+					 "section header", i,
+					 (unsigned long long) offset);
+		offset += entsz;
+		sect = (Elf32_Shdr*) fch.data;
+
 		store_sect(edp,
-			   dump32toh(ctx, sect.sh_offset),
-			   dump32toh(ctx, sect.sh_size),
-			   dump32toh(ctx, sect.sh_name));
+			   dump32toh(ctx, sect->sh_offset),
+			   dump32toh(ctx, sect->sh_size),
+			   dump32toh(ctx, sect->sh_name));
+		fcache_put_chunk(&fch);
 	}
 
 	ret = init_strtab(ctx, dump16toh(ctx, ehdr->e_shstrndx));
@@ -941,11 +950,11 @@ static kdump_status
 init_elf64(kdump_ctx_t *ctx, Elf64_Ehdr *ehdr)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
-	Elf64_Phdr prog;
-	Elf64_Shdr sect;
 	off_t offset;
+	size_t entsz;
+	struct fcache_chunk fch;
 	kdump_status ret;
-	int i;
+	int i, num;
 
 	set_arch_machine(ctx, dump16toh(ctx, ehdr->e_machine));
 
@@ -959,47 +968,56 @@ init_elf64(kdump_ctx_t *ctx, Elf64_Ehdr *ehdr)
 
 
 	offset = dump64toh(ctx, ehdr->e_phoff);
-	if (lseek(get_file_fd(ctx), offset, SEEK_SET) < 0)
-		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot seek to program headers at %llu",
-				 (unsigned long long) offset);
-	for (i = 0; i < dump16toh(ctx, ehdr->e_phnum); ++i) {
+	entsz = dump16toh(ctx, ehdr->e_phentsize);
+	num = dump16toh(ctx, ehdr->e_phnum);
+	for (i = 0; i < num; ++i) {
+		Elf64_Phdr *prog;
 		struct load_segment *pls;
-		ssize_t rd;
 
-		rd = read(get_file_fd(ctx), &prog, sizeof prog);
-		if (rd != sizeof prog)
-			return set_error(ctx, read_error(rd),
-					 "Cannot read program header #%d", i);
+		ret = fcache_get_chunk(ctx->shared->fcache, &fch,
+				       entsz, offset);
+		if (ret != KDUMP_OK)
+			return set_error(ctx, ret,
+					 "Cannot read ELF %s #%d at %llu",
+					 "program header", i,
+					 (unsigned long long) offset);
+		offset += entsz;
+		prog = (Elf64_Phdr*) fch.data;
 
-		pls = next_phdr(edp, dump32toh(ctx, prog.p_type));
+		pls = next_phdr(edp, dump32toh(ctx, prog->p_type));
 		if (pls) {
-			pls->file_offset = dump64toh(ctx, prog.p_offset);
-			pls->filesz = dump64toh(ctx, prog.p_filesz);
-			pls->phys = dump64toh(ctx, prog.p_paddr);
+			pls->file_offset = dump64toh(ctx, prog->p_offset);
+			pls->filesz = dump64toh(ctx, prog->p_filesz);
+			pls->phys = dump64toh(ctx, prog->p_paddr);
 			if (pls->phys == UINT64_MAX)
 				pls->phys = ADDRXLAT_ADDR_MAX;
-			pls->memsz = dump64toh(ctx, prog.p_memsz);
-			pls->virt = dump64toh(ctx, prog.p_vaddr);
+			pls->memsz = dump64toh(ctx, prog->p_memsz);
+			pls->virt = dump64toh(ctx, prog->p_vaddr);
 		}
+		fcache_put_chunk(&fch);
 	}
 
 	offset = dump64toh(ctx, ehdr->e_shoff);
-	if (lseek(get_file_fd(ctx), offset, SEEK_SET) < 0)
-		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot seek to section headers at %llu",
-				 (unsigned long long) offset);
-	for (i = 0; i < dump16toh(ctx, ehdr->e_shnum); ++i) {
-		ssize_t rd;
+	entsz = dump16toh(ctx, ehdr->e_shentsize);
+	num = dump16toh(ctx, ehdr->e_shnum);
+	for (i = 0; i < num; ++i) {
+		Elf64_Shdr *sect;
 
-		rd = read(get_file_fd(ctx), &sect, sizeof sect);
-		if (rd != sizeof sect)
-			return set_error(ctx, read_error(rd),
-					 "Cannot read section header #%d", i);
+		ret = fcache_get_chunk(ctx->shared->fcache, &fch,
+				       entsz, offset);
+		if (ret != KDUMP_OK)
+			return set_error(ctx, ret,
+					 "Cannot read ELF %s #%d at %llu",
+					 "section header", i,
+					 (unsigned long long) offset);
+		offset += entsz;
+		sect = (Elf64_Shdr*) fch.data;
+
 		store_sect(edp,
-			   dump64toh(ctx, sect.sh_offset),
-			   dump64toh(ctx, sect.sh_size),
-			   dump32toh(ctx, sect.sh_name));
+			   dump64toh(ctx, sect->sh_offset),
+			   dump64toh(ctx, sect->sh_size),
+			   dump32toh(ctx, sect->sh_name));
+		fcache_put_chunk(&fch);
 	}
 
 	ret = init_strtab(ctx, dump16toh(ctx, ehdr->e_shstrndx));
