@@ -1062,6 +1062,7 @@ static kdump_status
 open_common(kdump_ctx_t *ctx)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
+	struct fcache_chunk fch;
 	kdump_pfn_t max_pfn;
 	unsigned long as_caps;
 	kdump_status ret;
@@ -1134,21 +1135,26 @@ open_common(kdump_ctx_t *ctx)
 				return set_error(ctx, ret,
 						 "Cannot create Xen PFN map");
 		} else if (!strcmp(name, ".note.Xen")) {
-			void *notes = read_elf_sect(ctx, sect);
-			if (!notes)
-				return KDUMP_ERR_SYSTEM;
-			ret = process_notes(ctx, notes, sect->size);
-			free(notes);
+			ret = fcache_get_chunk(ctx->shared->fcache, &fch,
+					       sect->size, sect->file_offset);
+			if (ret != KDUMP_OK)
+				return set_error(ctx, ret,
+						 "Cannot read '%s'", name);
+			ret = process_notes(ctx, fch.data, sect->size);
+			fcache_put_chunk(&fch);
 			if (ret != KDUMP_OK)
 				return set_error(ctx, ret,
 						 "Cannot process Xen notes");
 		} else if (!strcmp(name, ".xen_prstatus")) {
-			void *data = read_elf_sect(ctx, sect);
-			if (!data)
-				return KDUMP_ERR_SYSTEM;
+			ret = fcache_get_chunk(ctx->shared->fcache, &fch,
+					       sect->size, sect->file_offset);
+			if (ret != KDUMP_OK)
+				return set_error(ctx, ret,
+						 "Cannot read '%s'", name);
+
 			ret = ctx->shared->arch_ops->process_xen_prstatus(
-				ctx, data, sect->size);
-			free(data);
+				ctx, fch.data, sect->size);
+			fcache_put_chunk(&fch);
 			if (ret != KDUMP_OK)
 				return set_error(ctx, ret,
 						 "Cannot process Xen prstatus");
