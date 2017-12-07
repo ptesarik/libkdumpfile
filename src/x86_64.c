@@ -349,7 +349,7 @@ x86_64_late_init(kdump_ctx_t *ctx)
 	  (regnum), REG_CNT(firstreg, lastreg), (bits) }
 
 static kdump_status
-process_x86_64_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
+process_x86_64_prstatus(kdump_ctx_t *ctx, const void *data, size_t size)
 {
 	static const struct reg_def def[] = {
 		REG_DEF(64, pr_reg[0], pr_reg[ELF_NGREG - 1], 0),
@@ -392,7 +392,7 @@ process_x86_64_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
 	  (regnum), XEN_UREG_CNT(firstreg, lastreg), (bits) }
 
 static kdump_status
-process_x86_64_xen_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
+process_x86_64_xen_prstatus(kdump_ctx_t *ctx, const void *data, size_t size)
 {
 	static const struct reg_def def[] = {
 		XEN_UREG_DEF(64, r15, rdi, 0),

@@ -245,10 +245,10 @@ struct arch_ops {
 	kdump_status (*late_init)(kdump_ctx_t *);
 
 	/** Process an NT_PRSTATUS note. */
-	kdump_status (*process_prstatus)(kdump_ctx_t *, void *, size_t);
+	kdump_status (*process_prstatus)(kdump_ctx_t *, const void *, size_t);
 
 	/** Process a Xen .xen_prstatus section. */
-	kdump_status (*process_xen_prstatus)(kdump_ctx_t *, void *, size_t);
+	kdump_status (*process_xen_prstatus)(kdump_ctx_t *, const void *, size_t);
 
 	/** Clean up any arch-specific data. */
 	void (*cleanup)(struct kdump_shared *);
