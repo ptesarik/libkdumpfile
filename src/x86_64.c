@@ -52,12 +52,6 @@
 struct x86_64_data {
 	/** Overridden methods for linux.phys_base attribute. */
 	struct attr_override phys_base_override;
-
-	/** Kernel text load virtual start. */
-	addrxlat_addr_t ktext_vaddr;
-
-	/** Kernel text load virtual start. */
-	addrxlat_addr_t ktext_paddr;
 };
 
 /** @cond TARGET_ABI */
@@ -246,7 +240,6 @@ x86_64_init(kdump_ctx_t *ctx)
 	if (!archdata)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate x86_64 private data");
-	archdata->ktext_vaddr = ADDRXLAT_ADDR_MAX;
 	ctx->shared->archdata = archdata;
 
 	if (isset_phys_base(ctx))
@@ -284,14 +277,7 @@ calc_linux_phys_base(kdump_ctx_t *ctx, kdump_paddr_t paddr)
 static kdump_status
 set_linux_phys_base(kdump_ctx_t *ctx)
 {
-	struct x86_64_data *archdata = ctx->shared->archdata;
 	kdump_paddr_t paddr;
-
-	if (archdata->ktext_vaddr < ADDRXLAT_ADDR_MAX) {
-		set_phys_base(ctx, archdata->ktext_paddr -
-			      (archdata->ktext_vaddr - __START_KERNEL_map));
-		return KDUMP_OK;
-	}
 
 	if (ctx->shared->ops == &devmem_ops) {
 		kdump_status status = linux_iomem_kcode(ctx, &paddr);
@@ -406,21 +392,6 @@ process_x86_64_xen_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
 	return KDUMP_OK;
 }
 
-static kdump_status
-x86_64_process_load(kdump_ctx_t *ctx, kdump_vaddr_t vaddr, kdump_paddr_t paddr)
-{
-	struct x86_64_data *archdata = ctx->shared->archdata;
-
-	if (paddr != ADDRXLAT_ADDR_MAX &&
-	    vaddr >= __START_KERNEL_map &&
-	    vaddr < archdata->ktext_vaddr) {
-		archdata->ktext_vaddr = vaddr;
-		archdata->ktext_paddr = paddr;
-	}
-
-	return KDUMP_OK;
-}
-
 static void
 x86_64_cleanup(struct kdump_shared *shared)
 {
@@ -439,7 +410,6 @@ const struct arch_ops x86_64_ops = {
 	.init = x86_64_init,
 	.late_init = x86_64_late_init,
 	.process_prstatus = process_x86_64_prstatus,
-	.process_load = x86_64_process_load,
 	.process_xen_prstatus = process_x86_64_xen_prstatus,
 	.cleanup = x86_64_cleanup,
 };
