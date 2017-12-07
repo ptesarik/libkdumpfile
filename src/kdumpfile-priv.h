@@ -247,10 +247,6 @@ struct arch_ops {
 	/** Process an NT_PRSTATUS note. */
 	kdump_status (*process_prstatus)(kdump_ctx_t *, void *, size_t);
 
-	/** Process a LOAD segment. */
-	kdump_status (*process_load)(kdump_ctx_t *ctx, kdump_vaddr_t vaddr,
-				     kdump_paddr_t paddr);
-
 	/** Process a Xen .xen_prstatus section. */
 	kdump_status (*process_xen_prstatus)(kdump_ctx_t *, void *, size_t);
 

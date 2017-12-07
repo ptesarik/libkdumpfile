@@ -1087,13 +1087,6 @@ open_common(kdump_ctx_t *ctx)
 			(seg->phys + seg->filesz) >> get_page_shift(ctx);
 		if (pfn > get_max_pfn(ctx))
 			set_max_pfn(ctx, pfn);
-
-		if (ctx->shared->arch_ops && ctx->shared->arch_ops->process_load) {
-			ret = ctx->shared->arch_ops->process_load(
-				ctx, seg->virt, seg->phys);
-			if (ret != KDUMP_OK)
-				return ret;
-		}
 	}
 
 	for (i = 0; i < edp->num_sections; ++i) {
