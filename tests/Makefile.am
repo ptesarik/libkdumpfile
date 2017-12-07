@@ -254,7 +254,8 @@ test_scripts = \
 	xlat-xen-x86_64-4.3-nover \
 	xlat-xen-x86_64-4.4 \
 	xlat-xen-x86_64-4.4-nover \
-	xlat-xen-x86_64-4.6-bigmem
+	xlat-xen-x86_64-4.6-bigmem \
+	zero-size
 
 dist_check_DATA = \
 	addrmap-single-begin.expect \

@@ -35,6 +35,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/mman.h>
 
 /** Destructor for mmapped cache entries.
@@ -58,6 +60,7 @@ struct fcache *
 fcache_new(int fd, unsigned n, unsigned order)
 {
 	struct fcache *fc;
+	struct stat st;
 
 	fc = malloc(sizeof *fc);
 	if (!fc)
@@ -75,6 +78,11 @@ fcache_new(int fd, unsigned n, unsigned order)
 	fc->fbcache = cache_alloc(1 << order, fc->pgsz);
 	if (!fc->fbcache)
 		goto err_cache;
+
+	fc->filesz = (fstat(fd, &st) == 0 && S_ISREG(st.st_mode)
+		      ? st.st_size
+		      : ((unsigned long long) ~(off_t)0) >> 1);
+
 	return fc;
 
  err_cache:
@@ -108,24 +116,27 @@ fcache_get(struct fcache *fc, struct fcache_entry *fce, off_t pos)
 	size_t off;
 	struct cache_entry *ce;
 
-	blkpos = pos & ~(fc->mmapsz - 1);
-	ce = cache_get_entry(fc->cache, blkpos);
-	if (!ce)
-		return KDUMP_ERR_BUSY;
+	blkpos = pos & ~(fc->pgsz - 1);
+	if (blkpos < fc->filesz) {
+		blkpos = pos & ~(fc->mmapsz - 1);
+		ce = cache_get_entry(fc->cache, blkpos);
+		if (!ce)
+			return KDUMP_ERR_BUSY;
 
-	if (!cache_entry_valid(ce)) {
-		ce->data = mmap(NULL, fc->mmapsz, PROT_READ, MAP_SHARED,
-				fc->fd, blkpos);
-		cache_insert(fc->cache, ce);
-	}
+		if (!cache_entry_valid(ce)) {
+			ce->data = mmap(NULL, fc->mmapsz, PROT_READ,
+					MAP_SHARED, fc->fd, blkpos);
+			cache_insert(fc->cache, ce);
+		}
 
-	if (ce->data != MAP_FAILED) {
-		fce->ce = ce;
-		off = pos & (fc->mmapsz - 1);
-		fce->len = fc->mmapsz - off;
-		fce->data = ce->data + off;
-		fce->cache = fc->cache;
-		return KDUMP_OK;
+		if (ce->data != MAP_FAILED) {
+			fce->ce = ce;
+			off = pos & (fc->mmapsz - 1);
+			fce->len = fc->mmapsz - off;
+			fce->data = ce->data + off;
+			fce->cache = fc->cache;
+			return KDUMP_OK;
+		}
 	}
 
 	blkpos = pos & ~(fc->pgsz - 1);

@@ -1,0 +1,21 @@
+#! /bin/sh
+
+#
+# Check that opening a zero-sized file fails gracefully
+#
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+dumpfile="out/${name}.dump"
+resultfile="out/${name}.result"
+
+> "$dumpfile"
+./dumpdata "$dumpfile" 0 1 > "$resultfile"
+rc=$?
+if [ $rc -ne 99 ]; then
+   echo "Unexpected exit status: $rc" >&2
+   exit 1
+fi
+
+exit 0

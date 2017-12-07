@@ -1050,6 +1050,9 @@ struct fcache {
 	/** Size of mmap'ed regions. */
 	size_t mmapsz;
 
+	/** File size (if known) or maximum off_t. */
+	off_t filesz;
+
 	/** Main cache (for mmap'ed regions). */
 	struct cache *cache;
 
