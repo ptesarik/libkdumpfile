@@ -227,7 +227,8 @@ elf_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 	kdump_addr_t loadaddr;
 	void *p, *endp;
 	off_t pos;
-	ssize_t size, rd;
+	size_t size;
+	kdump_status status;
 
 	addr = pio->addr.addr;
 	p = pio->chunk.data;
@@ -256,10 +257,11 @@ elf_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 			if (size > loadaddr + pls->filesz - addr)
 				size = loadaddr + pls->filesz - addr;
 
-			rd = pread(get_file_fd(ctx), p, size, pos);
-			if (rd != size)
+			status = fcache_pread(ctx->shared->fcache,
+					      p, size, pos);
+			if (status != KDUMP_OK)
 				return set_error(
-					ctx, read_error(rd),
+					ctx, status,
 					"Cannot read page data at %llu",
 					(unsigned long long) pos);
 			p += size;
