@@ -40,8 +40,6 @@
 
 #define ELF_NGREG 27
 
-#define VIRTADDR_MAX		UINT64_MAX
-
 #define __START_KERNEL_map	0xffffffff80000000ULL
 
 /** Minimum Linux kernel text alignment. */
