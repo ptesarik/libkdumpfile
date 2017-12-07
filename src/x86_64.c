@@ -170,6 +170,7 @@ static const struct attr_template reg_names[] = {
 	REG(es),		/* 24 */
 	REG(fs),		/* 25 */
 	REG(gs),		/* 26 */
+
 	REG(cr0),		/* 27 */
 	REG(cr1),		/* 28 */
 	REG(cr2),		/* 29 */
@@ -186,10 +187,9 @@ static const struct attr_template reg_names[] = {
 	REG(dr5),		/* 40 */
 	REG(dr6),		/* 41 */
 	REG(dr7),		/* 42 */
-};
 
-static const struct attr_template tmpl_pid =
-	{ "pid", NULL, KDUMP_NUMBER };
+	REG(pid),		/* 43 */
+};
 
 /** Set the kernel text virtual to physical offset.
  * @param archdata   x86-64 arch-specific data.
@@ -338,74 +338,81 @@ x86_64_late_init(kdump_ctx_t *ctx)
 	return KDUMP_OK;
 }
 
+#define REG_CNT(start, end)				\
+	((offsetof(struct elf_prstatus, end)		\
+	  - offsetof(struct elf_prstatus, start))	\
+	 / sizeof(((struct elf_prstatus*)0)->start)	\
+	 + 1)
+
+#define REG_DEF(bits, firstreg, lastreg, regnum)			\
+	{ offsetof(struct elf_prstatus, firstreg),		\
+	  (regnum), REG_CNT(firstreg, lastreg), (bits) }
+
 static kdump_status
 process_x86_64_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
 {
-	struct elf_prstatus *status = data;
-	char cpukey[sizeof("cpu.") + 20];
-	struct attr_data *dir, *attr;
+	static const struct reg_def def[] = {
+		REG_DEF(64, pr_reg[0], pr_reg[ELF_NGREG - 1], 0),
+		REG_DEF(32, pr_pid, pr_pid, 43),
+		REG_DEF_END
+	};
+
 	kdump_status res;
 
 	if (size < sizeof(struct elf_prstatus))
 		return set_error(ctx, KDUMP_ERR_CORRUPT,
 				 "Wrong PRSTATUS size: %zu", size);
 
-	res = set_cpu_regs64(ctx, get_num_cpus(ctx), reg_names,
-			     status->pr_reg, ELF_NGREG);
+	res = set_cpu_regs(ctx, get_num_cpus(ctx), reg_names, data, def);
 	if (res != KDUMP_OK)
 		return res;
-
-	sprintf(cpukey, "cpu.%u", get_num_cpus(ctx));
-	dir = lookup_attr(ctx->shared, cpukey);
-	if (!dir)
-		return set_error(ctx, KDUMP_ERR_NOKEY,
-				 "'%s': %s", cpukey, "No such key");
-	attr = new_attr(ctx->shared, dir, &tmpl_pid);
-	if (!attr)
-		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot allocate '%s'", cpukey);
-	res = set_attr_number(ctx, attr, ATTR_DEFAULT,
-			      dump32toh(ctx, status->pr_pid));
-	if (res != KDUMP_OK)
-		return set_error(ctx, res,
-				 "Cannot set '%s'", cpukey);
 
 	set_num_cpus(ctx, get_num_cpus(ctx) + 1);
 	return KDUMP_OK;
 }
 
-#define xen_reg_idx(field) \
-	(offsetof(struct xen_cpu_user_regs, field) / sizeof(uint64_t))
-#define xen_reg_cnt(start, end) \
-	(xen_reg_idx(end) - xen_reg_idx(start) + 1)
+#define XEN_REG_CNT(start, end)					\
+	  ((offsetof(struct xen_vcpu_guest_context, end)	\
+	    - offsetof(struct xen_vcpu_guest_context, start))	\
+	   / sizeof(((struct xen_vcpu_guest_context*)0)->start)	\
+	   + 1)
+
+#define XEN_REG_DEF(bits, firstreg, lastreg, regnum)		\
+	   { offsetof(struct xen_vcpu_guest_context, firstreg),	\
+	     (regnum), XEN_REG_CNT(firstreg, lastreg), (bits) }
+
+#define XEN_UREG_CNT(start, end)				\
+	   ((offsetof(struct xen_cpu_user_regs, end)		\
+	     - offsetof(struct xen_cpu_user_regs, start))	\
+	    / sizeof(((struct xen_cpu_user_regs*)0)->start)	\
+	    + 1)
+
+#define XEN_UREG_DEF(bits, firstreg, lastreg, regnum)			\
+	{ offsetof(struct xen_vcpu_guest_context, user_regs.firstreg),	\
+	  (regnum), XEN_UREG_CNT(firstreg, lastreg), (bits) }
 
 static kdump_status
 process_x86_64_xen_prstatus(kdump_ctx_t *ctx, void *data, size_t size)
 {
+	static const struct reg_def def[] = {
+		XEN_UREG_DEF(64, r15, rdi, 0),
+		XEN_UREG_DEF(64, rip, rip, 16),
+		XEN_UREG_DEF(16, cs, cs, 17),
+		XEN_UREG_DEF(64, rflags, rsp, 18),
+		XEN_UREG_DEF(16, ss, ss, 20),
+		XEN_UREG_DEF(16, es, es, 24),
+		XEN_UREG_DEF(16, ds, ds, 23),
+		XEN_UREG_DEF(16, fs, fs, 25),
+		XEN_UREG_DEF(16, gs, gs, 26),
+		XEN_REG_DEF(64, ctrlreg[0], debugreg[7], 27),
+		REG_DEF_END
+	};
+
 	unsigned cpu = 0;
 	kdump_status res;
 
 	while (size >= sizeof(struct xen_vcpu_guest_context)) {
-		struct xen_vcpu_guest_context *vgc = data;
-		struct xen_cpu_user_regs *regs = &vgc->user_regs;
-		uint16_t *p;
-
-		/* zero out padding */
-		for (p = &regs->cs; p <= &regs->gs; p += 4)
-			p[1] = p[2] = p[3] = 0;
-
-		res = set_cpu_regs64(ctx, cpu, &reg_names[0], &regs->r15,
-				     xen_reg_cnt(r15, rdi));
-		if (res != KDUMP_OK)
-			return res;
-
-		res = set_cpu_regs64(ctx, cpu, &reg_names[16], &regs->rip,
-				     xen_reg_cnt(cs, gs));
-		if (res != KDUMP_OK)
-			return res;
-
-		res = set_cpu_regs64(ctx, cpu, &reg_names[27],
-				     vgc->ctrlreg, 16);
+		res = set_cpu_regs(ctx, cpu, reg_names, data, def);
 		if (res != KDUMP_OK)
 			return res;
 
