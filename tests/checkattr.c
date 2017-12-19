@@ -135,7 +135,7 @@ check_attr(kdump_ctx_t *ctx, char *key, const kdump_attr_t *expect, int chkval)
 static int
 check_attr_val(kdump_ctx_t *ctx, char *key, char *val)
 {
-	char *sep, *p;
+	char *sep, *p, savedsep;
 	unsigned long long number;
 	char *string;
 	struct param param;
@@ -143,6 +143,7 @@ check_attr_val(kdump_ctx_t *ctx, char *key, char *val)
 	int rc;
 
 	sep = strchrnul(val, ':');
+	savedsep = *sep;
 
 	p = sep;
 	do {
@@ -172,7 +173,7 @@ check_attr_val(kdump_ctx_t *ctx, char *key, char *val)
 		return TEST_FAIL;
 	}
 
-	if (!*sep)
+	if (!savedsep)
 		return check_attr(ctx, key, &attr, 0);
 
 	param.key = key;
