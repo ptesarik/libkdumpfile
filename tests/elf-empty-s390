@@ -11,7 +11,7 @@ byte_order=0
 ptr_size=4
 page_shift=12
 page_size=4096
-pteval_spec="number: 8"
+pteval_spec="number: 4"
 
 ei_class=1
 ei_data=2
