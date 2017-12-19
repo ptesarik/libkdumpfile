@@ -194,7 +194,7 @@ set_param_number_array(const struct param *param, const char *val)
 	valp = arr;
 	for (i = 0; i < n; ++i) {
 		*valp++ = strtoull(p, &endp, 0);
-		p = strpbrk(p, ARRAY_SEPARATORS);
+		p = strpbrk(p, ARRAY_SEPARATORS) ?: p + strlen(p);
 		if (endp != p) {
 			fprintf(stderr, "Invalid number array: %s\n", val);
 			free(arr);
