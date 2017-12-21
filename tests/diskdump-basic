@@ -39,6 +39,15 @@ if [ $rc -ne 0 ]; then
 fi
 echo "Created DISKDUMP dump: $dumpfile"
 
+./checkattr "$dumpfile" <<EOF
+file.pagemap = bitmap: 1
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Attribute check failed" >&2
+    exit $rc
+fi
+
 ./dumpdata "$dumpfile" 0 4096 >"$resultfile"
 rc=$?
 if [ $rc -ne 0 ]; then

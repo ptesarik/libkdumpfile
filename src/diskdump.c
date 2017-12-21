@@ -218,7 +218,8 @@ add_pfn_rgn(kdump_ctx_t *ctx, const struct pfn_rgn *rgn)
 /** Find a PFN region by PFN.
  * @param ddp  Diskdump private data.
  * @param pfn  Page frame number.
- * @returns    Pointer to the PFN region which contains @c pfn, or @c NULL.
+ * @returns    Pointer to a PFN region which contains @c pfn or a closest
+ *             higher PFN, or @c NULL if there is no such region.
  */
 static const struct pfn_rgn *
 find_pfn_rgn(struct disk_dump_priv *ddp, kdump_pfn_t pfn)
@@ -234,19 +235,72 @@ find_pfn_rgn(struct disk_dump_priv *ddp, kdump_pfn_t pfn)
 		else
 			return rgn;
 	}
-	return NULL;
+	return right < ddp->pfn_rgn_num
+		? ddp->pfn_rgn + right
+		: NULL;
 }
 
 static off_t
 pfn_to_pdpos(struct disk_dump_priv *ddp, unsigned long pfn)
 {
 	const struct pfn_rgn *rgn = find_pfn_rgn(ddp, pfn);
-	return rgn
+	return rgn && pfn >= rgn->pfn
 		? rgn->pos + (pfn - rgn->pfn) * sizeof(struct page_desc)
 		: (off_t) -1;
 }
 
+static kdump_status
+diskdump_get_bits(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
+		  kdump_addr_t first, kdump_addr_t last, unsigned char *bits)
+{
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
+	const struct pfn_rgn *rgn, *end;
+	kdump_addr_t cur, next;
+
+	rgn = find_pfn_rgn(ddp, first);
+	if (!rgn) {
+		memset(bits, 0, ((last - first) >> 3) + 1);
+		return KDUMP_OK;
+	}
+
+	/* Clear extra bits in the last byte of the raw bitmap. */
+	bits[(last - first) >> 3] = 0;
+
+	/* Clear bits beyond last PFN region. */
+	end = ddp->pfn_rgn + ddp->pfn_rgn_num - 1;
+	next = end->pfn + end->cnt;
+	if (next <= last) {
+		clear_bits(bits, next - first, last - first);
+		last = next - 1;
+	}
+
+	cur = first;
+	for ( ;; ) {
+		next = rgn->pfn;
+		if (cur < next) {
+			if (next > last) {
+				clear_bits(bits, cur - first, last - first);
+				break;
+			}
+			clear_bits(bits, cur - first, next - 1 - first);
+			cur = next;
+		}
+
+		next += rgn->cnt - 1;
+		if (next >= last) {
+			set_bits(bits, cur - first, last - first);
+			break;
+		}
+		set_bits(bits, cur - first, next - first);
+		cur = next + 1;
+		++rgn;
+	}
+
+	return KDUMP_OK;
+}
+
 static const struct kdump_bmp_ops diskdump_bmp_ops = {
+	.get_bits = diskdump_get_bits,
 };
 
 static kdump_status
