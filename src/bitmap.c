@@ -32,7 +32,56 @@
 
 #include "kdumpfile-priv.h"
 
+#include <string.h>
 #include <stdlib.h>
+
+/** Set a range of bits in a raw bitmap.
+ * @param buf    Pointer to raw bitmap.
+ * @param start  First bit to set.
+ * @param end    Last bit to set.
+ */
+void
+set_bits(unsigned char *buf, size_t start, size_t end)
+{
+	size_t startbyte, endbyte;
+	char startmask, endmask;
+
+	startbyte = start >> 3;
+	startmask = (1 << (start & 7)) - 1;
+	endbyte = end >> 3;
+	endmask = (1 << ((end & 7) + 1)) - 1;
+
+	if (startbyte < endbyte) {
+		buf[startbyte++] |= ~startmask;
+		memset(buf + startbyte, 0xff, endbyte - startbyte);
+		buf[endbyte] |= endmask;
+	} else
+		buf[startbyte] |= ~startmask & endmask;
+}
+
+/** Clear a range of bits in a raw bitmap.
+ * @param buf    Pointer to raw bitmap.
+ * @param start  First bit to clear.
+ * @param end    Last bit to clear.
+ */
+void
+clear_bits(unsigned char *buf, size_t start, size_t end)
+{
+	size_t startbyte, endbyte;
+	char startmask, endmask;
+
+	startbyte = start >> 3;
+	startmask = (1 << (start & 7)) - 1;
+	endbyte = end >> 3;
+	endmask = (1 << ((end & 7) + 1)) - 1;
+
+	if (startbyte < endbyte) {
+		buf[startbyte++] &= startmask;
+		memset(buf + startbyte, 0x00, endbyte - startbyte);
+		buf[endbyte] &= ~endmask;
+	} else
+		buf[startbyte] &= startmask | ~endmask;
+}
 
 /** Allocate a new bitmap object.
  * @param ops  Bitmap operations.

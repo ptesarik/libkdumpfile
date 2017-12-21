@@ -273,6 +273,11 @@ struct _kdump_bmp {
 INTERNAL_DECL(kdump_bmp_t *, kdump_bmp_new,
 	      (const struct kdump_bmp_ops *ops));
 
+INTERNAL_DECL(void, set_bits,
+	      (unsigned char *buf, size_t start, size_t end));
+INTERNAL_DECL(void, clear_bits,
+	      (unsigned char *buf, size_t start, size_t end));
+
 /* provide our own definition of new_utsname */
 #define NEW_UTS_LEN 64
 #define UTS_SYSNAME "Linux"
