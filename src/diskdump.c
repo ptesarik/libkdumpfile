@@ -558,7 +558,7 @@ skip_set(unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
 	if (bp >= bitmap + size)
 		return pfn;
 
-	lead = ffs(~(*bp >> (pfn & 7)));
+	lead = ffs(~((signed char)*bp >> (pfn & 7)));
 	if (lead)
 		return pfn + lead - 1;
 
@@ -567,7 +567,7 @@ skip_set(unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
 	while (bp < bitmap + size && *bp == 0xff)
 		pfn += 8, ++bp;
 	if (bp < bitmap + size)
-		pfn += ffs(~(*bp)) - 1;
+		pfn += ffs(~(signed char)*bp) - 1;
 
 	return pfn;
 }
