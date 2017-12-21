@@ -190,6 +190,11 @@ struct setup_data {
 
 static void diskdump_cleanup(struct kdump_shared *shared);
 
+/** Add a new PFN region.
+ * @param ctx  Dump file context.
+ * @param rgn  PFN region.
+ * @returns    Error status.
+ */
 static kdump_status
 add_pfn_rgn(kdump_ctx_t *ctx, const struct pfn_rgn *rgn)
 {
@@ -210,8 +215,13 @@ add_pfn_rgn(kdump_ctx_t *ctx, const struct pfn_rgn *rgn)
 	return KDUMP_OK;
 }
 
-static off_t
-pfn_to_pdpos(struct disk_dump_priv *ddp, unsigned long pfn)
+/** Find a PFN region by PFN.
+ * @param ddp  Diskdump private data.
+ * @param pfn  Page frame number.
+ * @returns    Pointer to the PFN region which contains @c pfn, or @c NULL.
+ */
+static const struct pfn_rgn *
+find_pfn_rgn(struct disk_dump_priv *ddp, kdump_pfn_t pfn)
 {
 	size_t left = 0, right = ddp->pfn_rgn_num;
 	while (left != right) {
@@ -222,10 +232,18 @@ pfn_to_pdpos(struct disk_dump_priv *ddp, unsigned long pfn)
 		else if (pfn >= rgn->pfn + rgn->cnt)
 			left = mid + 1;
 		else
-			return rgn->pos +
-				(pfn - rgn->pfn) * sizeof(struct page_desc);
+			return rgn;
 	}
-	return (off_t)-1;
+	return NULL;
+}
+
+static off_t
+pfn_to_pdpos(struct disk_dump_priv *ddp, unsigned long pfn)
+{
+	const struct pfn_rgn *rgn = find_pfn_rgn(ddp, pfn);
+	return rgn
+		? rgn->pos + (pfn - rgn->pfn) * sizeof(struct page_desc)
+		: (off_t) -1;
 }
 
 static kdump_status
