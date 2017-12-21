@@ -259,6 +259,14 @@ struct kdump_bmp_ops {
 	kdump_status (*get_bits)(
 		kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
 		kdump_addr_t first, kdump_addr_t last, unsigned char *bits);
+
+	/** Find a set bit. */
+	kdump_status (*find_set)(
+		kdump_ctx_t *ctx, const kdump_bmp_t *bmp, kdump_addr_t *idx);
+
+	/** Find a zero bit. */
+	kdump_status (*find_clear)(
+		kdump_ctx_t *ctx, const kdump_bmp_t *bmp, kdump_addr_t *idx);
 };
 
 /* kdump bitmaps */

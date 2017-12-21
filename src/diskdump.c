@@ -299,8 +299,42 @@ diskdump_get_bits(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
 	return KDUMP_OK;
 }
 
+static kdump_status
+diskdump_find_set(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
+		  kdump_addr_t *idx)
+{
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
+	const struct pfn_rgn *rgn;
+
+	rgn = find_pfn_rgn(ddp, *idx);
+	if (!rgn)
+		return set_error(ctx, KDUMP_ERR_NODATA,
+				 "No such bit not found");
+
+	if (rgn->pfn > *idx)
+		*idx = rgn->pfn;
+	return KDUMP_OK;
+}
+
+static kdump_status
+diskdump_find_clear(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
+		    kdump_addr_t *idx)
+{
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
+	const struct pfn_rgn *rgn;
+
+	rgn = find_pfn_rgn(ddp, *idx);
+	if (!rgn || rgn->pfn > *idx)
+		return KDUMP_OK;
+
+	*idx = rgn->pfn + rgn->cnt;
+	return KDUMP_OK;
+}
+
 static const struct kdump_bmp_ops diskdump_bmp_ops = {
 	.get_bits = diskdump_get_bits,
+	.find_set = diskdump_find_set,
+	.find_clear = diskdump_find_clear,
 };
 
 static kdump_status

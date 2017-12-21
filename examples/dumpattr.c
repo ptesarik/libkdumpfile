@@ -46,6 +46,34 @@ list_attr_recursive(kdump_ctx_t *ctx, kdump_attr_ref_t *dir, int indent)
 }
 
 static int
+print_bitmap(kdump_ctx_t *ctx, kdump_bmp_t *bmp)
+{
+	kdump_addr_t idx;
+	const char *delim = "";
+	kdump_status status;
+
+	idx = 0;
+	fputs("[ ", stdout);
+	while ( (status = kdump_bmp_find_set(ctx, bmp, &idx)) == KDUMP_OK) {
+		kdump_addr_t start = idx;
+		status = kdump_bmp_find_clear(ctx, bmp, &idx);
+		if (status != KDUMP_OK) {
+			fprintf(stderr, "kdump_bmp_find_clear faild: %s\n",
+				kdump_get_err(ctx));
+			return -1;
+		}
+		printf("%s%llx-%llx",
+		       delim,
+		       (unsigned long long) start,
+		       (unsigned long long) idx - 1);
+		delim = ", ";
+	}
+	fputs("]\n", stdout);
+
+	return 0;
+}
+
+static int
 show_attr(kdump_ctx_t *ctx, kdump_attr_ref_t *ref, int indent, const char *key)
 {
 	kdump_attr_t attr;
@@ -72,6 +100,9 @@ show_attr(kdump_ctx_t *ctx, kdump_attr_ref_t *ref, int indent, const char *key)
 		break;
 	case KDUMP_ADDRESS:
 		printf("%llx\n", (unsigned long long) attr.val.address);
+		break;
+	case KDUMP_BITMAP:
+		print_bitmap(ctx, attr.val.bitmap);
 		break;
 	case KDUMP_DIRECTORY:
 		if (key && *key)
