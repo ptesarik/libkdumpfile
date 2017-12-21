@@ -48,6 +48,9 @@ ATTR(cpu, "number", num_cpus, number, unsigned)
 /* dump file descriptor */
 ATTR(file, "fd", file_fd, number, int, .ops = &file_fd_ops)
 
+/* file page map */
+ATTR(file, "pagemap", file_pagemap, bitmap, kdump_bmp_t *)
+
 /* physical base */
 ATTR(linux, "phys_base", phys_base, address, kdump_addr_t)
 

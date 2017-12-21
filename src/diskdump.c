@@ -246,6 +246,9 @@ pfn_to_pdpos(struct disk_dump_priv *ddp, unsigned long pfn)
 		: (off_t) -1;
 }
 
+static const struct kdump_bmp_ops diskdump_bmp_ops = {
+};
+
 static kdump_status
 diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
@@ -742,6 +745,7 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 	struct disk_dump_header_64 *dh64 = hdr;
 	struct disk_dump_priv *ddp;
 	struct setup_data sd;
+	kdump_bmp_t *bmp;
 	kdump_status ret;
 
 	memset(&sd, 0, sizeof sd);
@@ -778,6 +782,14 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 	}
 	if (ret != KDUMP_OK)
 		goto err_cleanup;
+
+	bmp = kdump_bmp_new(&diskdump_bmp_ops);
+	if (!bmp) {
+		ret = set_error(ctx, KDUMP_ERR_SYSTEM,
+				"Cannot allocate file pagemap");
+		goto err_cleanup;
+	}
+	set_file_pagemap(ctx, bmp);
 
 	if (sd.note_sz) {
 		ret = read_notes(ctx, sd.note_off, sd.note_sz);

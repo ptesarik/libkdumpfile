@@ -305,6 +305,41 @@ kdump_status kdump_read_string(kdump_ctx_t *ctx,
 			       kdump_addrspace_t as, kdump_addr_t addr,
 			       char **pstr);
 
+/**  Dump bitmap.
+ *
+ * A bitmap contains the validity of indexed objects, e.g. pages
+ * in a dump file (indexed by their page frame numbers).
+ * It may not be implemented internally as an actual bitmap.
+ */
+typedef struct _kdump_bmp kdump_bmp_t;
+
+/** Increment kdump bitmap reference counter.
+ * @param map    Translation map.
+ * @returns      New reference count.
+ */
+unsigned long kdump_bmp_incref(kdump_bmp_t *bmp);
+
+/** Decrement kdump bitmap reference counter.
+ * @param map    Translation map.
+ * @returns      New reference count.
+ *
+ * If the new reference count is zero, the underlying object is freed
+ * and its address must not be used afterwards.
+ */
+unsigned long kdump_bmp_decref(kdump_bmp_t *bmp);
+
+/**  Get bitmap bits as a raw bitmap.
+ * @param ctx    Dump file object.
+ * @param bmp    Bitmap object.
+ * @param first  First index in the bitmap.
+ * @param last   Last index in the bitmap.
+ * @param raw    Raw bitmap (updated on success).
+ * @returns      Error status.
+ */
+kdump_status kdump_bmp_get_bits(
+	kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
+	kdump_addr_t first, kdump_addr_t last, unsigned char *raw);
+
 /**  Dump file attribute value type.
  */
 typedef enum _kdump_attr_type {
@@ -313,6 +348,7 @@ typedef enum _kdump_attr_type {
 	KDUMP_NUMBER,		/**< General number. */
 	KDUMP_ADDRESS,		/**< Address or symbol value. */
 	KDUMP_STRING,		/**< String attribute. */
+	KDUMP_BITMAP,		/**< Bitmap. */
 } kdump_attr_type_t;
 
 /**  Dump file attribute value.
@@ -321,6 +357,7 @@ typedef union _kdump_attr_value {
 	kdump_num_t number;	/**< Valid if type is @ref KDUMP_NUMBER. */
 	kdump_addr_t address;	/**< Valid if type is @ref KDUMP_ADDRESS.  */
 	const char *string;	/**< Valid if type is @ref KDUMP_STRING. */
+	kdump_bmp_t *bitmap;	/**< Valid if type is @ref KDUMP_BITMAP. */
 } kdump_attr_value_t;
 
 /**  Dump file attribute: type + value.

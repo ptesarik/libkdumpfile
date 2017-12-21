@@ -12,6 +12,10 @@ LIBKDUMPFILE_0 {
     kdump_read;
     kdump_read_string;
 
+    kdump_bmp_incref;
+    kdump_bmp_decref;
+    kdump_bmp_get_bits;
+
     kdump_set_attr;
     kdump_get_attr;
     kdump_attr_ref;

@@ -30,6 +30,7 @@ AM_CFLAGS = -fvisibility=hidden \
 lib_LTLIBRARIES = libkdumpfile.la
 libkdumpfile_la_SOURCES = \
 	attr.c \
+	bitmap.c \
 	cache.c \
 	context.c \
 	devmem.c \

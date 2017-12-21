@@ -254,6 +254,25 @@ struct arch_ops {
 	void (*cleanup)(struct kdump_shared *);
 };
 
+struct kdump_bmp_ops {
+	/** Get raw bits. */
+	kdump_status (*get_bits)(
+		kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
+		kdump_addr_t first, kdump_addr_t last, unsigned char *bits);
+};
+
+/* kdump bitmaps */
+struct _kdump_bmp {
+	/** Reference counter. */
+	unsigned long refcnt;
+
+	/** Operations. */
+	const struct kdump_bmp_ops *ops;
+};
+
+INTERNAL_DECL(kdump_bmp_t *, kdump_bmp_new,
+	      (const struct kdump_bmp_ops *ops));
+
 /* provide our own definition of new_utsname */
 #define NEW_UTS_LEN 64
 #define UTS_SYSNAME "Linux"

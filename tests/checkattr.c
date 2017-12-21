@@ -166,6 +166,9 @@ check_attr_val(kdump_ctx_t *ctx, char *key, char *val)
 		param.type = param_string;
 		param.string = &string;
 		string = NULL;
+	} else if (!strcmp(val, "bitmap")) {
+		attr.type = KDUMP_BITMAP;
+		return check_attr(ctx, key, &attr, 0);
 	} else if (!strcmp(val, "nil")) {
 		return check_noattr(ctx, key);
 	} else {

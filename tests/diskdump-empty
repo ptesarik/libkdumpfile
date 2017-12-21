@@ -33,6 +33,7 @@ echo "Created empty diskdump dump: $dumpfile"
 file = directory:
 file.fd = number
 file.format = string: diskdump
+file.pagemap = bitmap
 
 cache = directory:
 cache.size = number
