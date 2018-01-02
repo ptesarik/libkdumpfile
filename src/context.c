@@ -75,6 +75,7 @@ alloc_shared(void)
 	if (!init_attrs(shared))
 		goto err3;
 
+	shared->refcnt = 1;
 	return shared;
 
  err3:	addrxlat_sys_decref(shared->xlatsys);
@@ -86,11 +87,13 @@ alloc_shared(void)
 /** Clean up and free shared info.
  * @param shared  Shared info.
  *
- * The shared info must be unlocked prior to calling this function.
+ * The shared info must be locked by the caller.
  */
 void
 shared_free(struct kdump_shared *shared)
 {
+	rwlock_unlock(&shared->lock);
+
 	if (shared->ops && shared->ops->cleanup)
 		shared->ops->cleanup(shared);
 	if (shared->arch_ops && shared->arch_ops->cleanup)
@@ -157,6 +160,7 @@ kdump_clone(const kdump_ctx_t *orig)
 
 	rwlock_wrlock(&orig->shared->lock);
 	ctx->shared = orig->shared;
+	shared_incref_locked(ctx->shared);
 	list_add(&ctx->list, &orig->shared->ctx);
 	rwlock_unlock(&orig->shared->lock);
 

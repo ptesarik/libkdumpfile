@@ -420,7 +420,6 @@ kdump_free(kdump_ctx_t *ctx)
 {
 	struct kdump_shared *shared = ctx->shared;
 	int slot;
-	int isempty;
 
 	rwlock_wrlock(&shared->lock);
 
@@ -431,12 +430,8 @@ kdump_free(kdump_ctx_t *ctx)
 	addrxlat_ctx_decref(ctx->xlatctx);
 
 	list_del(&ctx->list);
-	isempty = list_empty(&shared->ctx);
-
-	rwlock_unlock(&shared->lock);
-
-	if (isempty)
-		shared_free(shared);
+	if (shared_decref_locked(shared))
+		rwlock_unlock(&shared->lock);
 
 	if (ctx->err_dyn)
 		free(ctx->err_dyn);

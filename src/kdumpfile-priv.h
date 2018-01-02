@@ -528,6 +528,8 @@ struct cache;
 struct kdump_shared {
 	rwlock_t lock;		/**< Guard accesses to shared data. */
 
+	unsigned long refcnt;	/**< Reference counter. */
+
 	/** List of all refererring @c kdump_ctx_t structures.
 	 * Each @c kdump_ctx_t that holds a reference to this shared data
 	 * must be added to this list.
@@ -568,6 +570,38 @@ struct kdump_shared {
 
 INTERNAL_DECL(void, shared_free,
 	      (struct kdump_shared *shared));
+
+/** Increment shared info reference counter.
+ * @param shared  Shared info.
+ * @returns       New reference count.
+ *
+ * The shared info must be locked by the caller.
+ */
+static inline unsigned long
+shared_incref_locked(struct kdump_shared *shared)
+{
+	return ++shared->refcnt;
+}
+
+/** Decrement shared info reference counter.
+ * @param shared  Shared info.
+ * @returns       New reference count.
+ *
+ * The shared info must be locked by the caller.
+ *
+ * If the new reference count is zero, the underlying object is freed
+ * and its address must not be used afterwards. Note that the caller
+ * must not even try to unlock the object in that case.
+ */
+static inline unsigned long
+shared_decref_locked(struct kdump_shared *shared)
+{
+	unsigned long refcnt = --shared->refcnt;
+	if (refcnt)
+		return refcnt;
+	shared_free(shared);
+	return 0;
+}
 
 /* Maximum length of the error message */
 #define ERRBUF	160
