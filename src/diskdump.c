@@ -253,7 +253,8 @@ static kdump_status
 diskdump_get_bits(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
 		  kdump_addr_t first, kdump_addr_t last, unsigned char *bits)
 {
-	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
+	struct kdump_shared *shared = bmp->priv;
+	struct disk_dump_priv *ddp = shared->fmtdata;
 	const struct pfn_rgn *rgn, *end;
 	kdump_addr_t cur, next;
 
@@ -303,7 +304,8 @@ static kdump_status
 diskdump_find_set(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
 		  kdump_addr_t *idx)
 {
-	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
+	struct kdump_shared *shared = bmp->priv;
+	struct disk_dump_priv *ddp = shared->fmtdata;
 	const struct pfn_rgn *rgn;
 
 	rgn = find_pfn_rgn(ddp, *idx);
@@ -320,7 +322,8 @@ static kdump_status
 diskdump_find_clear(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
 		    kdump_addr_t *idx)
 {
-	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
+	struct kdump_shared *shared = bmp->priv;
+	struct disk_dump_priv *ddp = shared->fmtdata;
 	const struct pfn_rgn *rgn;
 
 	rgn = find_pfn_rgn(ddp, *idx);
@@ -877,6 +880,7 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 				"Cannot allocate file pagemap");
 		goto err_cleanup;
 	}
+	bmp->priv = ctx->shared;
 	set_file_pagemap(ctx, bmp);
 
 	if (sd.note_sz) {

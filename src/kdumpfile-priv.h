@@ -276,6 +276,9 @@ struct _kdump_bmp {
 
 	/** Operations. */
 	const struct kdump_bmp_ops *ops;
+
+	/** Any private data (owned by the respective ops). */
+	void *priv;
 };
 
 INTERNAL_DECL(kdump_bmp_t *, kdump_bmp_new,
