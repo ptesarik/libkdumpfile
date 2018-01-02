@@ -566,6 +566,9 @@ struct kdump_shared {
 	size_t per_ctx_size[PER_CTX_SLOTS];
 };
 
+INTERNAL_DECL(void, shared_free,
+	      (struct kdump_shared *shared));
+
 /* Maximum length of the error message */
 #define ERRBUF	160
 

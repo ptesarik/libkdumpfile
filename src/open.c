@@ -435,21 +435,8 @@ kdump_free(kdump_ctx_t *ctx)
 
 	rwlock_unlock(&shared->lock);
 
-	if (isempty) {
-		if (shared->ops && shared->ops->cleanup)
-			shared->ops->cleanup(shared);
-		if (shared->arch_ops && shared->arch_ops->cleanup)
-			shared->arch_ops->cleanup(shared);
-		if (shared->cache)
-			cache_free(shared->cache);
-		if (shared->xlatsys)
-			addrxlat_sys_decref(shared->xlatsys);
-		if (shared->fcache)
-			fcache_free(shared->fcache);
-		cleanup_attr(shared);
-		rwlock_destroy(&shared->lock);
-		free(shared);
-	}
+	if (isempty)
+		shared_free(shared);
 
 	if (ctx->err_dyn)
 		free(ctx->err_dyn);

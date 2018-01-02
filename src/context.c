@@ -83,6 +83,29 @@ alloc_shared(void)
 	return NULL;
 }
 
+/** Clean up and free shared info.
+ * @param shared  Shared info.
+ *
+ * The shared info must be unlocked prior to calling this function.
+ */
+void
+shared_free(struct kdump_shared *shared)
+{
+	if (shared->ops && shared->ops->cleanup)
+		shared->ops->cleanup(shared);
+	if (shared->arch_ops && shared->arch_ops->cleanup)
+		shared->arch_ops->cleanup(shared);
+	if (shared->cache)
+		cache_free(shared->cache);
+	if (shared->xlatsys)
+		addrxlat_sys_decref(shared->xlatsys);
+	if (shared->fcache)
+		fcache_free(shared->fcache);
+	cleanup_attr(shared);
+	rwlock_destroy(&shared->lock);
+	free(shared);
+}
+
 kdump_ctx_t *
 kdump_new(void)
 {
