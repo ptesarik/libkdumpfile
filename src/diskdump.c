@@ -254,12 +254,15 @@ diskdump_get_bits(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
 		  kdump_addr_t first, kdump_addr_t last, unsigned char *bits)
 {
 	struct kdump_shared *shared = bmp->priv;
-	struct disk_dump_priv *ddp = shared->fmtdata;
+	struct disk_dump_priv *ddp;
 	const struct pfn_rgn *rgn, *end;
 	kdump_addr_t cur, next;
 
+	rwlock_rdlock(&shared->lock);
+	ddp = shared->fmtdata;
 	rgn = find_pfn_rgn(ddp, first);
 	if (!rgn) {
+		rwlock_unlock(&shared->lock);
 		memset(bits, 0, ((last - first) >> 3) + 1);
 		return KDUMP_OK;
 	}
@@ -297,6 +300,7 @@ diskdump_get_bits(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
 		++rgn;
 	}
 
+	rwlock_unlock(&shared->lock);
 	return KDUMP_OK;
 }
 
@@ -305,16 +309,21 @@ diskdump_find_set(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
 		  kdump_addr_t *idx)
 {
 	struct kdump_shared *shared = bmp->priv;
-	struct disk_dump_priv *ddp = shared->fmtdata;
+	struct disk_dump_priv *ddp;
 	const struct pfn_rgn *rgn;
 
+	rwlock_rdlock(&shared->lock);
+	ddp = shared->fmtdata;
 	rgn = find_pfn_rgn(ddp, *idx);
-	if (!rgn)
+	if (!rgn) {
+		rwlock_unlock(&shared->lock);
 		return set_error(ctx, KDUMP_ERR_NODATA,
 				 "No such bit not found");
+	}
 
 	if (rgn->pfn > *idx)
 		*idx = rgn->pfn;
+	rwlock_unlock(&shared->lock);
 	return KDUMP_OK;
 }
 
@@ -323,14 +332,15 @@ diskdump_find_clear(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
 		    kdump_addr_t *idx)
 {
 	struct kdump_shared *shared = bmp->priv;
-	struct disk_dump_priv *ddp = shared->fmtdata;
+	struct disk_dump_priv *ddp;
 	const struct pfn_rgn *rgn;
 
+	rwlock_rdlock(&shared->lock);
+	ddp = shared->fmtdata;
 	rgn = find_pfn_rgn(ddp, *idx);
-	if (!rgn || rgn->pfn > *idx)
-		return KDUMP_OK;
-
-	*idx = rgn->pfn + rgn->cnt;
+	if (rgn && rgn->pfn <= *idx)
+		*idx = rgn->pfn + rgn->cnt;
+	rwlock_unlock(&shared->lock);
 	return KDUMP_OK;
 }
 
