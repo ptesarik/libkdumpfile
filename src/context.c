@@ -109,6 +109,40 @@ shared_free(struct kdump_shared *shared)
 	free(shared);
 }
 
+/** Increment shared info reference counter.
+ * @param shared  Shared info.
+ * @returns       New reference count.
+ */
+unsigned long
+shared_incref(struct kdump_shared *shared)
+{
+	unsigned long refcnt;
+
+	rwlock_wrlock(&shared->lock);
+	refcnt = shared_incref_locked(shared);
+	rwlock_unlock(&shared->lock);
+	return refcnt;
+}
+
+/** Decrement shared info reference counter.
+ * @param shared  Shared info.
+ * @returns       New reference count.
+ *
+ * If the new reference count is zero, the underlying object is freed
+ * and its address must not be used afterwards.
+ */
+unsigned long
+shared_decref(struct kdump_shared *shared)
+{
+	unsigned long refcnt;
+
+	rwlock_wrlock(&shared->lock);
+	refcnt = shared_decref_locked(shared);
+	if (refcnt)
+		rwlock_unlock(&shared->lock);
+	return refcnt;
+}
+
 kdump_ctx_t *
 kdump_new(void)
 {

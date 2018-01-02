@@ -586,6 +586,8 @@ shared_incref_locked(struct kdump_shared *shared)
 	return ++shared->refcnt;
 }
 
+INTERNAL_DECL(unsigned long, shared_incref, (struct kdump_shared *shared));
+
 /** Decrement shared info reference counter.
  * @param shared  Shared info.
  * @returns       New reference count.
@@ -605,6 +607,8 @@ shared_decref_locked(struct kdump_shared *shared)
 	shared_free(shared);
 	return 0;
 }
+
+INTERNAL_DECL(unsigned long, shared_decref, (struct kdump_shared *shared));
 
 /* Maximum length of the error message */
 #define ERRBUF	160
