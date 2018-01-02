@@ -267,6 +267,9 @@ struct kdump_bmp_ops {
 	/** Find a zero bit. */
 	kdump_status (*find_clear)(
 		kdump_ctx_t *ctx, const kdump_bmp_t *bmp, kdump_addr_t *idx);
+
+	/** Clean up any private data. */
+	void (*cleanup)(const kdump_bmp_t *bmp);
 };
 
 /* kdump bitmaps */

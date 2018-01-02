@@ -112,6 +112,8 @@ kdump_bmp_decref(kdump_bmp_t *bmp)
 {
 	unsigned long refcnt = --bmp->refcnt;
 	if (!refcnt) {
+		if (bmp->ops->cleanup)
+			bmp->ops->cleanup(bmp);
 		free(bmp);
 	}
 	return refcnt;
