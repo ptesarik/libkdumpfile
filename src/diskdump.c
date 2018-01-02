@@ -334,10 +334,18 @@ diskdump_find_clear(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
 	return KDUMP_OK;
 }
 
+static void
+diskdump_bmp_cleanup(const kdump_bmp_t *bmp)
+{
+	struct kdump_shared *shared = bmp->priv;
+	shared_decref(shared);
+}
+
 static const struct kdump_bmp_ops diskdump_bmp_ops = {
 	.get_bits = diskdump_get_bits,
 	.find_set = diskdump_find_set,
 	.find_clear = diskdump_find_clear,
+	.cleanup = diskdump_bmp_cleanup,
 };
 
 static kdump_status
@@ -881,6 +889,7 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 		goto err_cleanup;
 	}
 	bmp->priv = ctx->shared;
+	shared_incref_locked(ctx->shared);
 	set_file_pagemap(ctx, bmp);
 
 	if (sd.note_sz) {
