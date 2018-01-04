@@ -829,6 +829,8 @@ attr_remove_override(struct attr_data *attr, struct attr_override *override)
 	} while (tmpl->parent != tmpl);
 }
 
+DEFINE_ALIAS(get_attr);
+
 kdump_status
 kdump_get_attr(kdump_ctx_t *ctx, const char *key, kdump_attr_t *valp)
 {
@@ -855,6 +857,23 @@ kdump_get_attr(kdump_ctx_t *ctx, const char *key, kdump_attr_t *valp)
  out:
 	rwlock_unlock(&ctx->shared->lock);
 	return ret;
+}
+
+kdump_status
+kdump_get_typed_attr(kdump_ctx_t *ctx, const char *key, kdump_attr_t *valp)
+{
+	kdump_attr_type_t type = valp->type;
+	kdump_status ret;
+
+	ret = internal_get_attr(ctx, key, valp);
+	if (ret != KDUMP_OK)
+		return ret;
+
+	if (valp->type != type)
+		return set_error(ctx, KDUMP_ERR_INVALID,
+				 "Attribute type mismatch");
+
+	return KDUMP_OK;
 }
 
 /**  Set an attribute value with type check.

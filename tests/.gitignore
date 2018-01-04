@@ -16,6 +16,7 @@ privptr
 subattr
 sys-xlat
 thread-errstr
+typed-attr
 vmci-cleanup
 vmci-lines-post
 vmci-post

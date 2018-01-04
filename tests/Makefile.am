@@ -93,6 +93,7 @@ sys_xlat_LDADD = \
 	$(top_builddir)/src/libkdumpfile.la
 
 thread_errstr_LDADD = $(top_builddir)/src/libkdumpfile.la
+typed_attr_LDADD = $(top_builddir)/src/libkdumpfile.la
 vmci_cleanup_LDADD = $(top_builddir)/src/libkdumpfile.la
 vmci_lines_post_LDADD = $(top_builddir)/src/libkdumpfile.la
 vmci_post_LDADD = $(top_builddir)/src/libkdumpfile.la
@@ -121,6 +122,7 @@ check_PROGRAMS = \
 	nometh \
 	subattr \
 	sys-xlat \
+	typed-attr \
 	thread-errstr \
 	vmci-cleanup \
 	vmci-lines-post \
@@ -419,6 +421,7 @@ TESTS = $(test_scripts) \
 	nometh \
 	subattr \
 	thread-errstr \
+	typed-attr \
 	vmci-cleanup \
 	vmci-lines-post \
 	vmci-post \

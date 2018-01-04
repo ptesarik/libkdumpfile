@@ -885,6 +885,8 @@ INTERNAL_DECL(struct attr_data *, lookup_dir_attr,
 	      (const struct kdump_shared *shared, const struct attr_data *dir,
 	       const char *key, size_t keylen));
 
+DECLARE_ALIAS(get_attr);
+
 /**  Attribute data by shared data and global key index.
  * @param shared  Shared data of a dump file object.
  * @param idx     Global key index.

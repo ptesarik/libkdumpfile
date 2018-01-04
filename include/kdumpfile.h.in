@@ -491,6 +491,22 @@ kdump_set_string_attr(kdump_ctx_t *ctx, const char *key, const char *str)
 kdump_status kdump_get_attr(kdump_ctx_t *ctx, const char *key,
 			    kdump_attr_t *valp);
 
+/**  Get a dump file attribute, checking its type.
+ * @param ctx  Dump file object.
+ * @param key  Attribute key.
+ * @param valp Value (updated on return).
+ * @returns    Error status.
+ *
+ * The @c type field in @c valp must be set to the expected attribute
+ * type by the caller. It is an error if the attribute is of a different
+ * type, but @c valp is updated to its value anyway.
+ *
+ * Note that the caller does not hold a reference to the attribute. See
+ * the description of @ref kdump_get_attr for limitations.
+ */
+kdump_status kdump_get_typed_attr(kdump_ctx_t *ctx, const char *key,
+				  kdump_attr_t *valp);
+
 /** Get a numeric attribute.
  *
  * @param ctx       Dump file object.
