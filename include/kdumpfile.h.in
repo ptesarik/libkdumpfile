@@ -518,9 +518,6 @@ kdump_get_number_attr(kdump_ctx_t *ctx, const char *key, kdump_num_t *num)
  * @param key        Attribute key.
  * @param addr[out]  Filled with the attribute value on successful return.
  * @returns          Error status.
- *
- * Note that the caller does not hold a reference to the string. See
- * the description of @ref kdump_get_attr for limitations.
  */
 static inline kdump_status
 kdump_get_address_attr(kdump_ctx_t *ctx, const char *key, kdump_addr_t *addr)
