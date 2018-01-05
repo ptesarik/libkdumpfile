@@ -518,13 +518,12 @@ static inline kdump_status
 kdump_get_number_attr(kdump_ctx_t *ctx, const char *key, kdump_num_t *num)
 {
 	kdump_attr_t attr;
-	kdump_status ret = kdump_get_attr(ctx, key, &attr);
-	if (ret == KDUMP_OK) {
-		if (attr.type == KDUMP_NUMBER)
-			*num = attr.val.number;
-		else
-			ret = KDUMP_ERR_INVALID;
-	}
+	kdump_status ret;
+
+	attr.type = KDUMP_NUMBER;
+	ret = kdump_get_typed_attr(ctx, key, &attr);
+	if (ret == KDUMP_OK)
+		*num = attr.val.number;
 	return ret;
 }
 
@@ -539,13 +538,12 @@ static inline kdump_status
 kdump_get_address_attr(kdump_ctx_t *ctx, const char *key, kdump_addr_t *addr)
 {
 	kdump_attr_t attr;
-	kdump_status ret = kdump_get_attr(ctx, key, &attr);
-	if (ret == KDUMP_OK) {
-		if (attr.type == KDUMP_ADDRESS)
-			*addr = attr.val.address;
-		else
-			ret = KDUMP_ERR_INVALID;
-	}
+	kdump_status ret;
+
+	attr.type = KDUMP_ADDRESS;
+	ret = kdump_get_typed_attr(ctx, key, &attr);
+	if (ret == KDUMP_OK)
+		*addr = attr.val.address;
 	return ret;
 }
 
@@ -563,13 +561,12 @@ static inline kdump_status
 kdump_get_string_attr(kdump_ctx_t *ctx, const char *key, const char **str)
 {
 	kdump_attr_t attr;
-	kdump_status ret = kdump_get_attr(ctx, key, &attr);
-	if (ret == KDUMP_OK) {
-		if (attr.type == KDUMP_STRING)
-			*str = attr.val.string;
-		else
-			ret = KDUMP_ERR_INVALID;
-	}
+	kdump_status ret;
+
+	attr.type = KDUMP_STRING;
+	ret = kdump_get_typed_attr(ctx, key, &attr);
+	if (ret == KDUMP_OK)
+		*str = attr.val.string;
 	return ret;
 }
 
