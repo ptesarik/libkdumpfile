@@ -381,11 +381,6 @@ DECLARE_ALIAS(walk);
 DECLARE_ALIAS(op);
 DECLARE_ALIAS(fulladdr_conv);
 
-/* near alias */
-INTERNAL_DECL(addrxlat_status, xlat_op,
-	      (const addrxlat_op_ctl_t *ctl,
-	       const addrxlat_fulladdr_t *paddr));
-
 /** Clear the error message.
  * @param ctx     Address translation context.
  */

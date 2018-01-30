@@ -159,7 +159,7 @@ read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
 	ctl.op = read32_op;
 	ctl.data = &param;
 	ctl.caps = step->ctx->cb.read_caps;
-	status = xlat_op(&ctl, addr);
+	status = internal_op(&ctl, addr);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status, read_err_fmt, 32, what,
 				 addrspace_name(addr->as), addr->addr);
@@ -201,7 +201,7 @@ read64(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint64_t *val,
 	ctl.op = read64_op;
 	ctl.data = &param;
 	ctl.caps = step->ctx->cb.read_caps;
-	status = xlat_op(&ctl, addr);
+	status = internal_op(&ctl, addr);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status, read_err_fmt, 64, what,
 				 addrspace_name(addr->as), addr->addr);

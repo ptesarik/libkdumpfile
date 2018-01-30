@@ -452,20 +452,16 @@ do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
 	return set_error(ctl->ctx, ADDRXLAT_ERR_NOMETH, "No way to translate");
 }
 
-/** A version of @ref addrxlat_op for internal use.
- * @param ctl   Control structure.
- * @param addr  Address (in any address space).
- * @returns     Error status.
- *
- * This version does not clear errors and, more importantly, does not
- * reset recursion detection.
- */
+DEFINE_ALIAS(op);
+
 addrxlat_status
-xlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
+addrxlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
 {
 	struct inflight inflight, *pif;
 	const struct xlat_chain *chain;
 	addrxlat_status status;
+
+	clear_error(ctl->ctx);
 
 	if (ctl->caps & ADDRXLAT_CAPS(paddr->as))
 		return ctl->op(ctl->data, paddr);
@@ -517,23 +513,6 @@ xlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
 	status = do_op(ctl, paddr, chain);
 
 	ctl->ctx->inflight = inflight.next;
-	return status;
-}
-
-DEFINE_ALIAS(op);
-
-addrxlat_status
-addrxlat_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr)
-{
-	struct inflight *inflight;
-	addrxlat_status status;
-
-	clear_error(ctl->ctx);
-
-	inflight = ctl->ctx->inflight;
-	ctl->ctx->inflight = NULL;
-	status = xlat_op(ctl, paddr);
-	ctl->ctx->inflight = inflight;
 	return status;
 }
 
