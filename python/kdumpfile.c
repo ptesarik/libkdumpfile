@@ -44,6 +44,8 @@ static PyTypeObject attr_iterkey_object_type;
 static PyTypeObject attr_itervalue_object_type;
 static PyTypeObject attr_iteritem_object_type;
 
+static PyTypeObject bmp_object_type;
+
 static PyObject *attr_viewkeys_type;
 static PyObject *attr_viewvalues_type;
 static PyObject *attr_viewitems_type;
@@ -51,6 +53,8 @@ static PyObject *attr_viewdict_type;
 
 static PyObject *attr_dir_new(kdumpfile_object *kdumpfile,
 			      const kdump_attr_ref_t *baseref);
+
+static PyObject *bmp_new(kdump_bmp_t *bitmap);
 
 static PyObject *
 exception_map(kdump_status status)
@@ -205,6 +209,8 @@ attr_new(kdumpfile_object *kdumpfile, kdump_attr_ref_t *ref, kdump_attr_t *attr)
 			return PyString_FromString(attr->val.string);
 		case KDUMP_DIRECTORY:
 			return attr_dir_new(kdumpfile, ref);
+		case KDUMP_BITMAP:
+			return bmp_new(attr->val.bitmap);
 		default:
 			PyErr_SetString(PyExc_RuntimeError, "Unhandled attr type");
 			return NULL;
@@ -1686,6 +1692,74 @@ static PyTypeObject attr_iteritem_object_type = {
 	attr_iteritem_next,		/* tp_iternext */
 };
 
+typedef struct {
+	PyObject_HEAD
+	kdump_bmp_t *bmp;
+} bmp_object;
+
+PyDoc_STRVAR(bmp__doc__,
+"bmp() -> dump bitmap");
+
+static PyObject *
+bmp_new(kdump_bmp_t *bmp)
+{
+	PyTypeObject *type = &bmp_object_type;
+	bmp_object *self;
+
+	self = (bmp_object*) type->tp_alloc(type, 0);
+	if (!self)
+		return NULL;
+
+	kdump_bmp_incref(bmp);
+	self->bmp = bmp;
+
+	return (PyObject*)self;
+}
+
+static void
+bmp_dealloc(PyObject *_self)
+{
+	bmp_object *self = (bmp_object*)_self;
+
+	if (self->bmp)
+		kdump_bmp_decref(self->bmp);
+
+	Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+static PyTypeObject bmp_object_type =
+{
+	PyVarObject_HEAD_INIT(NULL, 0)
+	MOD_NAME ".bmp",		/* tp_name */
+	sizeof (bmp_object),		/* tp_basicsize */
+	0,				/* tp_itemsize */
+	bmp_dealloc,			/* tp_dealloc */
+	0,				/* tp_print */
+	0,				/* tp_getattr */
+	0,				/* tp_setattr */
+	0,				/* tp_compare */
+	0,				/* tp_repr */
+	0,				/* tp_as_number */
+	0,				/* tp_as_sequence */
+	0,				/* tp_as_mapping */
+	0,				/* tp_hash */
+	0,				/* tp_call */
+	0,				/* tp_str */
+	0,				/* tp_getattro */
+	0,				/* tp_setattro */
+	0,				/* tp_as_buffer */
+	Py_TPFLAGS_DEFAULT
+	    | Py_TPFLAGS_BASETYPE,	/* tp_flags */
+	bmp__doc__,			/* tp_doc */
+	0,				/* tp_traverse */
+	0,				/* tp_clear */
+	0,				/* tp_richcompare */
+	0,				/* tp_weaklistoffset */
+	0,				/* tp_iter */
+	0,				/* tp_iternext */
+	0,				/* tp_methods */
+};
+
 struct constdef {
 	const char *name;
 	int value;
@@ -1740,6 +1814,8 @@ init_kdumpfile (void)
 	if (PyType_Ready(&attr_itervalue_object_type) < 0)
 		return MOD_ERROR_VAL;
 	if (PyType_Ready(&attr_iteritem_object_type) < 0)
+		return MOD_ERROR_VAL;
+	if (PyType_Ready(&bmp_object_type) < 0)
 		return MOD_ERROR_VAL;
 
 #if PY_MAJOR_VERSION >= 3
