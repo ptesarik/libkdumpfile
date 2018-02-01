@@ -54,7 +54,8 @@ static PyObject *attr_viewdict_type;
 static PyObject *attr_dir_new(kdumpfile_object *kdumpfile,
 			      const kdump_attr_ref_t *baseref);
 
-static PyObject *bmp_new(kdump_bmp_t *bitmap);
+static PyObject *bmp_new(kdumpfile_object *kdumpfile,
+			 kdump_bmp_t *bitmap);
 
 static PyObject *
 exception_map(kdump_status status)
@@ -210,7 +211,7 @@ attr_new(kdumpfile_object *kdumpfile, kdump_attr_ref_t *ref, kdump_attr_t *attr)
 		case KDUMP_DIRECTORY:
 			return attr_dir_new(kdumpfile, ref);
 		case KDUMP_BITMAP:
-			return bmp_new(attr->val.bitmap);
+			return bmp_new(kdumpfile, attr->val.bitmap);
 		default:
 			PyErr_SetString(PyExc_RuntimeError, "Unhandled attr type");
 			return NULL;
@@ -1694,6 +1695,7 @@ static PyTypeObject attr_iteritem_object_type = {
 
 typedef struct {
 	PyObject_HEAD
+	kdumpfile_object *kdumpfile;
 	kdump_bmp_t *bmp;
 } bmp_object;
 
@@ -1701,18 +1703,20 @@ PyDoc_STRVAR(bmp__doc__,
 "bmp() -> dump bitmap");
 
 static PyObject *
-bmp_new(kdump_bmp_t *bmp)
+bmp_new(kdumpfile_object *kdumpfile, kdump_bmp_t *bmp)
 {
-	PyTypeObject *type = &bmp_object_type;
 	bmp_object *self;
 
-	self = (bmp_object*) type->tp_alloc(type, 0);
+	self = PyObject_GC_New(bmp_object, &bmp_object_type);
 	if (!self)
 		return NULL;
 
+	Py_INCREF((PyObject*)kdumpfile);
+	self->kdumpfile = kdumpfile;
 	kdump_bmp_incref(bmp);
 	self->bmp = bmp;
 
+	PyObject_GC_Track(self);
 	return (PyObject*)self;
 }
 
@@ -1721,11 +1725,139 @@ bmp_dealloc(PyObject *_self)
 {
 	bmp_object *self = (bmp_object*)_self;
 
+	PyObject_GC_UnTrack(self);
 	if (self->bmp)
 		kdump_bmp_decref(self->bmp);
+	Py_XDECREF((PyObject*)self->kdumpfile);
 
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
+
+static int
+bmp_traverse(PyObject *_self, visitproc visit, void *arg)
+{
+	bmp_object *self = (bmp_object*)_self;
+
+	Py_VISIT((PyObject*)self->kdumpfile);
+	return 0;
+}
+
+PyDoc_STRVAR(bmp_get_bits__doc__,
+"BMP.get_bits(first, last) -> byte array\n\
+\n\
+Get bitmap bits as a raw bitmap.");
+
+static PyObject *
+bmp_get_bits(PyObject *_self, PyObject *args, PyObject *kwargs)
+{
+	static char *keywords[] = {"first", "last", NULL};
+	bmp_object *self = (bmp_object*)_self;
+	kdump_ctx_t *ctx;
+	unsigned long long first, last;
+	PyObject *buffer;
+	Py_ssize_t sz;
+	kdump_status status;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "KK:get_bits",
+					 keywords, &first, &last))
+		return NULL;
+
+	buffer = PyByteArray_FromStringAndSize(NULL, 0);
+	if (!buffer)
+		return NULL;
+
+	sz = ((last | 7) + 1 - first) / 8;
+	if (PyByteArray_Resize(buffer, sz) < 0) {
+		Py_DECREF(buffer);
+		return NULL;
+	}
+
+
+	ctx = self->kdumpfile->ctx;
+	status = kdump_bmp_get_bits(
+		ctx, self->bmp, first, last,
+		(unsigned char*)PyByteArray_AS_STRING(buffer));
+	if (status != KDUMP_OK) {
+		Py_DECREF(buffer);
+		PyErr_SetString(exception_map(status), kdump_get_err(ctx));
+		return NULL;
+	}
+
+	return buffer;
+}
+
+PyDoc_STRVAR(bmp_find_set__doc__,
+"BMP.find_set(idx) -> index\n\
+\n\
+Find the closest set bit in a bitmapm, starting at idx.");
+
+static PyObject *
+bmp_find_set(PyObject *_self, PyObject *args, PyObject *kwargs)
+{
+	static char *keywords[] = {"idx", NULL};
+	bmp_object *self = (bmp_object*)_self;
+	kdump_ctx_t *ctx;
+	unsigned long long argidx;
+	kdump_addr_t idx;
+	kdump_status status;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "K:find_set",
+					 keywords, &argidx))
+		return NULL;
+
+	ctx = self->kdumpfile->ctx;
+	idx = argidx;
+	status = kdump_bmp_find_set(ctx, self->bmp, &idx);
+	if (status != KDUMP_OK) {
+		PyErr_SetString(exception_map(status), kdump_get_err(ctx));
+		return NULL;
+	}
+
+	return PyLong_FromUnsignedLong(idx);
+}
+
+PyDoc_STRVAR(bmp_find_clear__doc__,
+"BMP.find_clear(idx) -> index\n\
+\n\
+Find the closest zero bit in a bitmapm, starting at idx.");
+
+static PyObject *
+bmp_find_clear(PyObject *_self, PyObject *args, PyObject *kwargs)
+{
+	static char *keywords[] = {"idx", NULL};
+	bmp_object *self = (bmp_object*)_self;
+	kdump_ctx_t *ctx;
+	unsigned long long argidx;
+	kdump_addr_t idx;
+	kdump_status status;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "K:find_clear",
+					 keywords, &argidx))
+		return NULL;
+
+	ctx = self->kdumpfile->ctx;
+	idx = argidx;
+	status = kdump_bmp_find_clear(ctx, self->bmp, &idx);
+	if (status != KDUMP_OK) {
+		PyErr_SetString(exception_map(status), kdump_get_err(ctx));
+		return NULL;
+	}
+
+	return PyLong_FromUnsignedLong(idx);
+}
+
+static PyMethodDef bmp_methods[] = {
+	{ "get_bits", (PyCFunction)bmp_get_bits,
+	  METH_VARARGS | METH_KEYWORDS,
+	  bmp_get_bits__doc__ },
+	{ "find_set", (PyCFunction)bmp_find_set,
+	  METH_VARARGS | METH_KEYWORDS,
+	  bmp_find_set__doc__ },
+	{ "find_clear", (PyCFunction)bmp_find_clear,
+	  METH_VARARGS | METH_KEYWORDS,
+	  bmp_find_clear__doc__ },
+	{NULL,		NULL}	/* sentinel */
+};
 
 static PyTypeObject bmp_object_type =
 {
@@ -1749,15 +1881,16 @@ static PyTypeObject bmp_object_type =
 	0,				/* tp_setattro */
 	0,				/* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT
+	    | Py_TPFLAGS_HAVE_GC
 	    | Py_TPFLAGS_BASETYPE,	/* tp_flags */
 	bmp__doc__,			/* tp_doc */
-	0,				/* tp_traverse */
+	bmp_traverse,			/* tp_traverse */
 	0,				/* tp_clear */
 	0,				/* tp_richcompare */
 	0,				/* tp_weaklistoffset */
 	0,				/* tp_iter */
 	0,				/* tp_iternext */
-	0,				/* tp_methods */
+	bmp_methods,			/* tp_methods */
 };
 
 struct constdef {
