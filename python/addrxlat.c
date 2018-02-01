@@ -2547,6 +2547,9 @@ make_meth_param(PyObject *meth)
 	PyObject *result;
 
 	result = type->tp_alloc(type, 0);
+	if (!result)
+		return NULL;
+
 	Py_INCREF(meth);
 	((meth_param_object*)result)->meth = meth;
 	return result;
