@@ -41,17 +41,17 @@ addrxlat_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
 attriter_SOURCES = attriter.c
 attriter_LDADD = \
 	$(LDADD) \
-	$(top_builddir)/src/libkdumpfile.la
+	$(top_builddir)/src/kdumpfile/libkdumpfile.la
 
 checkattr_SOURCES = checkattr.c
 checkattr_LDADD = \
 	$(LDADD) \
-	$(top_builddir)/src/libkdumpfile.la
+	$(top_builddir)/src/kdumpfile/libkdumpfile.la
 
 clearattr_SOURCES = clearattr.c
 clearattr_LDADD = \
 	$(LDADD) \
-	$(top_builddir)/src/libkdumpfile.la
+	$(top_builddir)/src/kdumpfile/libkdumpfile.la
 
 custom_meth_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
 
@@ -78,33 +78,33 @@ mklkcd_LDADD = \
 	$(ZLIB_LIBS)
 
 dumpdata_SOURCES = dumpdata.c
-dumpdata_LDADD = $(top_builddir)/src/libkdumpfile.la
+dumpdata_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
 
 multiread_SOURCES = multiread.c
-multiread_LDADD = $(top_builddir)/src/libkdumpfile.la
+multiread_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
 
 nometh_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
 
 subattr_SOURCES = subattr.c
-subattr_LDADD = $(top_builddir)/src/libkdumpfile.la
+subattr_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
 
 sys_xlat_LDADD = \
 	$(LDADD) \
-	$(top_builddir)/src/libkdumpfile.la
+	$(top_builddir)/src/kdumpfile/libkdumpfile.la
 
-thread_errstr_LDADD = $(top_builddir)/src/libkdumpfile.la
-typed_attr_LDADD = $(top_builddir)/src/libkdumpfile.la
-vmci_cleanup_LDADD = $(top_builddir)/src/libkdumpfile.la
-vmci_lines_post_LDADD = $(top_builddir)/src/libkdumpfile.la
-vmci_post_LDADD = $(top_builddir)/src/libkdumpfile.la
-vtop_LDADD = $(top_builddir)/src/libkdumpfile.la
-xlatmap_LDADD = $(top_builddir)/src/libkdumpfile.la -ldl
-xlatop_LDADD = $(top_builddir)/src/libkdumpfile.la
+thread_errstr_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
+typed_attr_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
+vmci_cleanup_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
+vmci_lines_post_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
+vmci_post_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
+vtop_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
+xlatmap_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la -ldl
+xlatop_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
 
 xlat_os_SOURCES = xlat-os.c
 xlat_os_LDADD = \
 	$(LDADD) \
-	$(top_builddir)/src/libkdumpfile.la
+	$(top_builddir)/src/kdumpfile/libkdumpfile.la
 
 check_PROGRAMS = \
 	addrxlat \

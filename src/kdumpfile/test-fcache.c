@@ -1,4 +1,4 @@
-/** @internal @file src/test-fcache.c
+/** @internal @file src/kdumpfile/test-fcache.c
  * @brief Test file cache.
  */
 /* Copyright (C) 2017 Petr Tesarik <ptesarik@suse.com>

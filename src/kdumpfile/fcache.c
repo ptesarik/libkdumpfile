@@ -1,4 +1,4 @@
-/** @internal @file src/fcache.c
+/** @internal @file src/kdumpfile/fcache.c
  * @brief File caching.
  */
 /* Copyright (C) 2017 Petr Tesarik <ptesarik@suse.com>

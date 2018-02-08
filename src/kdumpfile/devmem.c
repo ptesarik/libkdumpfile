@@ -1,4 +1,4 @@
-/** @internal @file src/devmem.c
+/** @internal @file src/kdumpfile/devmem.c
  * @brief Routines to read from /dev/mem.
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>

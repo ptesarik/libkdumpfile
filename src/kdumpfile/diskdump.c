@@ -1,4 +1,4 @@
-/** @internal @file src/diskdump.c
+/** @internal @file src/kdumpfile/diskdump.c
  * @brief Routines to read diskdump/compressed kdump files.
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>

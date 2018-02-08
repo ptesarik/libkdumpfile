@@ -1,4 +1,4 @@
-/** @internal @file src/todo.c
+/** @internal @file src/kdumpfile/todo.c
  * @brief TODO items - formats which are not yet supported.
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>

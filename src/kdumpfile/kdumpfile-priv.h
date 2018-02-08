@@ -1,4 +1,4 @@
-/** @internal @file src/kdumpfile-priv.h
+/** @internal @file src/kdumpfile/kdumpfile-priv.h
  * @brief Private interfaces for libkdumpfile (kernel coredump file access).
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>
@@ -37,8 +37,8 @@
 #include <kdumpfile.h>
 #pragma GCC visibility pop
 
-#include "list.h"
-#include "threads.h"
+#include "../list.h"
+#include "../threads.h"
 
 #include <endian.h>
 

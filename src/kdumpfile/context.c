@@ -1,4 +1,4 @@
-/** @internal @file src/context.c
+/** @internal @file src/kdumpfile/context.c
  * @brief Functions that provide access to kdump_ctx_t contents.
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>

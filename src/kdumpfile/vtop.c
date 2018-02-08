@@ -1,4 +1,4 @@
-/** @internal @file src/vtop.c
+/** @internal @file src/kdumpfile/vtop.c
  * @brief Virtual-to-physical address translation.
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>

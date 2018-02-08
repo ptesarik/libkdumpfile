@@ -1,4 +1,4 @@
-/** @internal @file src/open.c
+/** @internal @file src/kdumpfile/open.c
  * @brief Routines for opening dumps.
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>

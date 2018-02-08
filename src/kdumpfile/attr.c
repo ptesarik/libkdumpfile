@@ -1,4 +1,4 @@
-/** @internal @file src/attr.c
+/** @internal @file src/kdumpfile/attr.c
  * @brief Attribute handling.
  */
 /* Copyright (C) 2015 Petr Tesarik <ptesarik@suse.cz>

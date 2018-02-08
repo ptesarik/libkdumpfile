@@ -32,7 +32,7 @@ EXTRA__addrxlat_la_DEPENDENCIES = addrxlat.sym
 
 _kdumpfile_la_SOURCES = kdumpfile.c
 _kdumpfile_la_LDFLAGS = $(AM_LDFLAGS) -export-symbols $(srcdir)/kdumpfile.sym
-_kdumpfile_la_LIBADD = $(PYTHON_LIBS) $(top_builddir)/src/libkdumpfile.la
+_kdumpfile_la_LIBADD = $(PYTHON_LIBS) $(top_builddir)/src/kdumpfile/libkdumpfile.la
 EXTRA__kdumpfile_la_DEPENDENCIES = kdumpfile.sym
 
 check_LTLIBRARIES = _test_addrxlat.la

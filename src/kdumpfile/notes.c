@@ -1,4 +1,4 @@
-/** @internal @file src/notes.c
+/** @internal @file src/kdumpfile/notes.c
  * @brief Routines for parsing ELF notes.
  */
 /* Copyright (C) 2014 Petr Tesarik <ptesarik@suse.cz>

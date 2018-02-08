@@ -26,7 +26,7 @@ m4_define([pkg_version],
 
 AC_INIT([libkdumpfile],[pkg_version],[ptesarik@suse.com])
 
-AC_CONFIG_SRCDIR([src/diskdump.c])
+AC_CONFIG_SRCDIR([src/kdumpfile/diskdump.c])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADER([config.h])
 
@@ -97,6 +97,7 @@ AC_CONFIG_FILES([
 	include/Makefile
 	src/Makefile
 	src/addrxlat/Makefile
+	src/kdumpfile/Makefile
 	python/Makefile
 	python/addrxlat/Makefile
 	python/kdumpfile/Makefile

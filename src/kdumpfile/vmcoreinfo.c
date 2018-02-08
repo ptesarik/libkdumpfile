@@ -1,4 +1,4 @@
-/** @internal @file src/vmcoreinfo.c
+/** @internal @file src/kdumpfile/vmcoreinfo.c
  * @brief Handling of VMCOREINFO.
  */
 /* Copyright (C) 2016 Petr Tesarik <ptesarik@suse.com>
