@@ -23,5 +23,6 @@ SUBDIRS = addrxlat kdumpfile
 
 noinst_HEADERS = \
 	errstr.h \
+	internal.h \
 	list.h \
 	threads.h

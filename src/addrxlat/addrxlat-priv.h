@@ -35,46 +35,9 @@
 #include <addrxlat.h>
 #pragma GCC visibility pop
 
+#define LIBNAME	addrxlat
+#include "../internal.h"
 #include "../errstr.h"
-
-#define STRINGIFY(x)	#x
-#define XSTRINGIFY(x)	STRINGIFY(x)
-#define CONCATENATE(a, b)	a ## b
-#define XCONCATENATE(a, b)	CONCATENATE(a, b)
-
-/** Assembler name corresponding to a C identifier. */
-#define ASM_NAME(sym) \
-	XCONCATENATE(__USER_LABEL_PREFIX__, sym)
-
-/* Minimize chance of name clashes (in a static link) */
-#ifndef PIC
-#define INTERNAL_DECL(type, sym, param)	\
-	type sym param			\
-	__asm__(XSTRINGIFY(ASM_NAME(_addrxlat_priv_ ## sym)))
-#else
-#define INTERNAL_DECL(type, sym, param)	\
-	type sym param
-#endif
-
-#ifndef PIC
-#define INTERNAL_ALIAS(x)		addrxlat_ ## x
-#define _DECLARE_ALIAS(s, a)		\
-	extern typeof(s) (a) __asm__(XSTRINGIFY(ASM_NAME(s)))
-#define _DEFINE_ALIAS(s, a)		_DECLARE_ALIAS(s, a)
-#else
-#define INTERNAL_ALIAS(x)		internal_ ## x
-#define _DECLARE_ALIAS(s, a)		\
-	extern typeof(s) (a)
-#define _DEFINE_ALIAS(s, a)		\
-	extern typeof(s) (a)		\
-	__attribute__((alias(#s)))
-#endif
-
-/** Internal alias declaration. */
-#define DECLARE_ALIAS(x) _DECLARE_ALIAS(addrxlat_ ## x, internal_ ## x)
-
-/** Define an internal alias for a symbol. */
-#define DEFINE_ALIAS(x) _DEFINE_ALIAS(addrxlat_ ## x, internal_ ## x)
 
 /* General macros */
 
