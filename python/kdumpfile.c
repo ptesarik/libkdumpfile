@@ -1748,7 +1748,7 @@ bmp_get_bits(PyObject *_self, PyObject *args, PyObject *kwargs)
 	if (!buffer)
 		return NULL;
 
-	sz = ((last | 7) + 1 - first) / 8;
+	sz = (((last - first) | 7) + 1) / 8;
 	if (PyByteArray_Resize(buffer, sz) < 0) {
 		Py_DECREF(buffer);
 		return NULL;
