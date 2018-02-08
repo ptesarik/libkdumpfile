@@ -1950,6 +1950,12 @@ init_kdumpfile (void)
 	if (ret)
 		goto fail;
 
+	Py_INCREF((PyObject *)&bmp_object_type);
+	ret = PyModule_AddObject(mod, "bmp",
+				 (PyObject*)&bmp_object_type);
+	if (ret)
+		goto fail;
+
 	for (cdef = kdumpfile_constants; cdef->name; ++cdef)
 		if (PyModule_AddIntConstant(mod, cdef->name, cdef->value))
 			goto fail;
