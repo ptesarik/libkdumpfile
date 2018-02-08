@@ -35,6 +35,8 @@
 #include <addrxlat.h>
 #pragma GCC visibility pop
 
+#include "../errstr.h"
+
 #define STRINGIFY(x)	#x
 #define XSTRINGIFY(x)	STRINGIFY(x)
 #define CONCATENATE(a, b)	a ## b
@@ -82,9 +84,6 @@
 /** Use this to mask off address bits above @c bits. */
 #define ADDR_MASK(bits)		(((addrxlat_addr_t)1 << (bits)) - 1)
 
-/** Size of the fallback error buffer. */
-#define ERRBUF	64
-
 /**  In-flight translation. */
 struct inflight;
 
@@ -109,9 +108,7 @@ struct _addrxlat_ctx {
 	/** In-flight translations. */
 	struct inflight *inflight;
 
-	char *err_str;		/**< Error string. */
-	char *err_dyn;		/**< Dynamically allocated error string. */
-	char err_buf[ERRBUF];	/**< Fallback buffer for the error string. */
+	struct errstr err;
 };
 
 /* utils */
@@ -387,7 +384,7 @@ DECLARE_ALIAS(fulladdr_conv);
 static inline void
 clear_error(addrxlat_ctx_t *ctx)
 {
-	ctx->err_str = NULL;
+	err_clear(&ctx->err);
 }
 
 #endif	/* addrxlat-priv.h */

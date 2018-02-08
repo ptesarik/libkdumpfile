@@ -28,7 +28,6 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
@@ -56,8 +55,7 @@ addrxlat_ctx_decref(addrxlat_ctx_t *ctx)
 {
 	unsigned long refcnt = --ctx->refcnt;
 	if (!refcnt) {
-		if (ctx->err_dyn)
-			free(ctx->err_dyn);
+		err_free(&ctx->err);
 		free(ctx);
 	}
 	return refcnt;
@@ -71,7 +69,7 @@ void addrxlat_ctx_clear_err(addrxlat_ctx_t *ctx)
 const char *
 addrxlat_ctx_get_err(const addrxlat_ctx_t *ctx)
 {
-	return ctx->err_str;
+	return err_str(&ctx->err);
 }
 
 void
@@ -388,82 +386,14 @@ addrxlat_status
 addrxlat_ctx_err(addrxlat_ctx_t *ctx, addrxlat_status status,
 		 const char *msgfmt, ...)
 {
-	static const char failure[] = "(bad format string)";
-	static const char delim[] = { ':', ' ' };
+	if (status != ADDRXLAT_OK) {
+		va_list ap;
 
-	va_list ap;
-	char *msg, *newbuf;
-	int msglen, dlen;
-	size_t remain;
-
-	if (status == ADDRXLAT_OK)
-		return status;
-
-	/* Get length of formatted message. */
-	va_start(ap, msgfmt);
-	msglen = vsnprintf(NULL, 0, msgfmt, ap);
-	va_end(ap);
-
-	/* Cope with invalid format string.  */
-	if (msglen < 0) {
-		msgfmt = failure;
-		msglen = sizeof(failure) - 1;
+		va_start(ap, msgfmt);
+		err_vadd(&ctx->err, msgfmt, ap);
+		va_end(ap);
 	}
 
-	/* Calculate required and already allocated space. */
-	msg = ctx->err_str;
-	if (!msg || !*msg) {
-		msg = ctx->err_buf + sizeof(ctx->err_buf) - 1;
-		*msg = '\0';
-		remain = sizeof(ctx->err_buf) - 1;
-		dlen = 0;
-	} else {
-		remain = msg - ctx->err_buf;
-		if (remain >= sizeof(ctx->err_buf))
-			remain = msg - ctx->err_dyn;
-		dlen = sizeof(delim);
-	}
-
-	va_start(ap, msgfmt);
-	msglen += dlen;
-	if (remain < msglen) {
-		size_t curlen = strlen(msg);
-		newbuf = realloc(ctx->err_dyn, 1 + curlen + msglen + 1);
-		if (newbuf) {
-			if (ctx->err_dyn <= msg && msg <= ctx->err_dyn + 1)
-				msg += newbuf - ctx->err_dyn;
-			ctx->err_dyn = newbuf;
-			memmove(newbuf + msglen + 1, msg, curlen + 1);
-			vsnprintf(newbuf + 1, msglen + 1, msgfmt, ap);
-			msg = newbuf + msglen + 1;
-			remain = msglen;
-		} else if (remain) {
-			char lbuf[ERRBUF];
-			vsnprintf(lbuf, sizeof lbuf, msgfmt, ap);
-			if (msglen - dlen >= sizeof(lbuf)) {
-				lbuf[sizeof(lbuf) - 2] = '>';
-				msglen = sizeof(lbuf) - 1 + dlen;
-			}
-			memcpy(msg - remain, lbuf + msglen - remain, remain);
-			msglen = remain;
-			*(msg - remain) = '<';
-			--remain;
-		} else {
-			msglen = 0;
-			*msg = '<';
-		}
-	} else
-		vsnprintf(msg - msglen, msglen + 1, msgfmt, ap);
-	va_end(ap);
-
-	/* Add delimiter (or its part) if needed. */
-	if (dlen) {
-		if (remain > dlen)
-			remain = dlen;
-		memcpy(msg - remain, delim + sizeof(delim) - remain, remain);
-	}
-
-	ctx->err_str = msg - msglen;
 	return status;
 }
 

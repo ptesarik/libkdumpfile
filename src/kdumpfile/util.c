@@ -53,82 +53,14 @@ DEFINE_ALIAS(err);
 kdump_status
 kdump_err(kdump_ctx_t *ctx, kdump_status status, const char *msgfmt, ...)
 {
-	static const char failure[] = "(bad format string)";
-	static const char delim[] = { ':', ' ' };
+	if (status != KDUMP_OK) {
+		va_list ap;
 
-	va_list ap;
-	char *msg, *newbuf;
-	int msglen, dlen;
-	size_t remain;
-
-	if (status == KDUMP_OK)
-		return status;
-
-	/* Get length of formatted message. */
-	va_start(ap, msgfmt);
-	msglen = vsnprintf(NULL, 0, msgfmt, ap);
-	va_end(ap);
-
-	/* Cope with invalid format string.  */
-	if (msglen < 0) {
-		msgfmt = failure;
-		msglen = sizeof(failure) - 1;
+		va_start(ap, msgfmt);
+		err_vadd(&ctx->err, msgfmt, ap);
+		va_end(ap);
 	}
 
-	/* Calculate required and already allocated space. */
-	msg = ctx->err_str;
-	if (!msg || !*msg) {
-		msg = ctx->err_buf + sizeof(ctx->err_buf) - 1;
-		*msg = '\0';
-		remain = sizeof(ctx->err_buf) - 1;
-		dlen = 0;
-	} else {
-		remain = msg - ctx->err_buf;
-		if (remain >= sizeof(ctx->err_buf))
-			remain = msg - ctx->err_dyn;
-		dlen = sizeof(delim);
-	}
-
-	va_start(ap, msgfmt);
-	msglen += dlen;
-	if (remain < msglen) {
-		size_t curlen = strlen(msg);
-		newbuf = realloc(ctx->err_dyn, 1 + curlen + msglen + 1);
-		if (newbuf) {
-			if (ctx->err_dyn <= msg && msg <= ctx->err_dyn + 1)
-				msg += newbuf - ctx->err_dyn;
-			ctx->err_dyn = newbuf;
-			memmove(newbuf + msglen + 1, msg, curlen + 1);
-			vsnprintf(newbuf + 1, msglen + 1, msgfmt, ap);
-			msg = newbuf + msglen + 1;
-			remain = msglen;
-		} else if (remain) {
-			char lbuf[ERRBUF];
-			vsnprintf(lbuf, sizeof lbuf, msgfmt, ap);
-			if (msglen - dlen >= sizeof(lbuf)) {
-				lbuf[sizeof(lbuf) - 2] = '>';
-				msglen = sizeof(lbuf) - 1 + dlen;
-			}
-			memcpy(msg - remain, lbuf + msglen - remain, remain);
-			msglen = remain;
-			*(msg - remain) = '<';
-			--remain;
-		} else {
-			msglen = 0;
-			*msg = '<';
-		}
-	} else
-		vsnprintf(msg - msglen, msglen + 1, msgfmt, ap);
-	va_end(ap);
-
-	/* Add delimiter (or its part) if needed. */
-	if (dlen) {
-		if (remain > dlen)
-			remain = dlen;
-		memcpy(msg - remain, delim + sizeof(delim) - remain, remain);
-	}
-
-	ctx->err_str = msg - msglen;
 	return status;
 }
 
@@ -175,7 +107,7 @@ kdump2addrxlat(kdump_ctx_t *ctx, kdump_status status)
 	else
 		ret = -status;
 
-	addrxlat_ctx_err(ctx->xlatctx, ret, "%s", ctx->err_str);
+	addrxlat_ctx_err(ctx->xlatctx, ret, "%s", err_str(&ctx->err));
 	clear_error(ctx);
 	return ret;
 }

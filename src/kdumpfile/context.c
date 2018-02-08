@@ -204,7 +204,7 @@ kdump_clone(const kdump_ctx_t *orig)
 const char *
 kdump_get_err(kdump_ctx_t *ctx)
 {
-	return ctx->err_str;
+	return err_str(&ctx->err);
 }
 
 addrxlat_ctx_t *

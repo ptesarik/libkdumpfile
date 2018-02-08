@@ -433,7 +433,6 @@ kdump_free(kdump_ctx_t *ctx)
 	if (shared_decref_locked(shared))
 		rwlock_unlock(&shared->lock);
 
-	if (ctx->err_dyn)
-		free(ctx->err_dyn);
+	err_free(&ctx->err);
 	free(ctx);
 }

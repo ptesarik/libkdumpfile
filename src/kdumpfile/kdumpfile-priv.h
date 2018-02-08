@@ -37,6 +37,7 @@
 #include <kdumpfile.h>
 #pragma GCC visibility pop
 
+#include "../errstr.h"
 #include "../list.h"
 #include "../threads.h"
 
@@ -610,9 +611,6 @@ shared_decref_locked(struct kdump_shared *shared)
 
 INTERNAL_DECL(unsigned long, shared_decref, (struct kdump_shared *shared));
 
-/* Maximum length of the error message */
-#define ERRBUF	160
-
 /**  Representation of a dump file.
  *
  * This structure contains state information and a pointer to @c struct
@@ -630,9 +628,7 @@ struct _kdump_ctx {
 	/** Per-context data. */
 	void *data[PER_CTX_SLOTS];
 
-	char *err_str;		/**< Error string. */
-	char *err_dyn;		/**< Dynamically allocated error string. */
-	char err_buf[ERRBUF];	/**< Fallback buffer for the error string. */
+	struct errstr err;	/**< Error string. */
 };
 
 /* Per-context data */
@@ -1274,7 +1270,7 @@ DECLARE_ALIAS(err);
 static inline void
 clear_error(kdump_ctx_t *ctx)
 {
-	ctx->err_str = NULL;
+	err_clear(&ctx->err);
 }
 
 /* These are macros to avoid possible conversions of the "rd" parameter */
