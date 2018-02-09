@@ -492,7 +492,7 @@ linux_ktext_meth(struct os_init_data *ctl)
  * @param high  Highest ktext address (set on successful return).
  * @returns     Error status.
  */
-addrxlat_status
+static addrxlat_status
 linux_ktext_extents(struct os_init_data *ctl,
 		    addrxlat_addr_t *low, addrxlat_addr_t *high)
 {
