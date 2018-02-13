@@ -28,7 +28,7 @@
 
 #include <string.h>
 #include <stdio.h>
-#include <kdumpfile.h>
+#include <libkdumpfile/kdumpfile.h>
 
 #include "testutil.h"
 

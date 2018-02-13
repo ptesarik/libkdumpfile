@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
-#include <kdumpfile.h>
-#include <addrxlat.h>
+#include <libkdumpfile/kdumpfile.h>
+#include <libkdumpfile/addrxlat.h>
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 

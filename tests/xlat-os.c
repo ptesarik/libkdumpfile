@@ -31,7 +31,7 @@
 #include <string.h>
 #include <endian.h>
 #include <ctype.h>
-#include <addrxlat.h>
+#include <libkdumpfile/addrxlat.h>
 
 #include "testutil.h"
 

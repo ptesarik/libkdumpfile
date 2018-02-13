@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
-#include <kdumpfile.h>
+#include <libkdumpfile/kdumpfile.h>
 
 static kdump_vaddr_t
 read_ptr(kdump_ctx_t *ctx, kdump_vaddr_t addr)

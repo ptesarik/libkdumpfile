@@ -28,7 +28,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <addrxlat.h>
+#include <libkdumpfile/addrxlat.h>
 
 #include "testutil.h"
 

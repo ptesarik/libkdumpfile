@@ -7,7 +7,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#include <kdumpfile.h>
+#include <libkdumpfile/kdumpfile.h>
 
 static int list_attr_recursive(kdump_ctx_t *, kdump_attr_ref_t *, int);
 static int show_attr(kdump_ctx_t *, kdump_attr_ref_t *, int, const char *);

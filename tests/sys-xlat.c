@@ -34,7 +34,7 @@
 #include <limits.h>
 #include <ctype.h>
 #include <unistd.h>
-#include <addrxlat.h>
+#include <libkdumpfile/addrxlat.h>
 
 #include "testutil.h"
 

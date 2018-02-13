@@ -36,7 +36,7 @@ extern "C" {
 #endif
 
 #include <Python.h>
-#include <addrxlat.h>
+#include <libkdumpfile/addrxlat.h>
 
 #define addrxlat_CAPSULE_NAME	"_addrxlat._C_API"
 #define addrxlat_CAPI_VER	1UL

@@ -95,6 +95,7 @@ AC_CONFIG_FILES([
 	Makefile
 	examples/Makefile
 	include/Makefile
+	include/libkdumpfile/Makefile
 	src/Makefile
 	src/addrxlat/Makefile
 	src/kdumpfile/Makefile
@@ -104,8 +105,8 @@ AC_CONFIG_FILES([
 	tests/Makefile
 	libaddrxlat.pc
 	libkdumpfile.pc
-	include/kdumpfile.h
-	include/addrxlat.h
+	include/libkdumpfile/kdumpfile.h
+	include/libkdumpfile/addrxlat.h
 ])
 
 AC_OUTPUT

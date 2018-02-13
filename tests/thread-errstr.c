@@ -33,7 +33,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <kdumpfile.h>
+#include <libkdumpfile/kdumpfile.h>
 
 #include "testutil.h"
 

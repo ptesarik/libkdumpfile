@@ -34,7 +34,7 @@
 #include "config.h"
 
 #pragma GCC visibility push(default)
-#include <kdumpfile.h>
+#include <libkdumpfile/kdumpfile.h>
 #pragma GCC visibility pop
 
 #define LIBNAME	kdump
@@ -46,7 +46,7 @@
 
 #include <endian.h>
 
-#include <addrxlat.h>
+#include <libkdumpfile/addrxlat.h>
 
 /* Older glibc didn't have the byteorder macros */
 #ifndef be16toh

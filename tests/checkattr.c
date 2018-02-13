@@ -35,7 +35,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <kdumpfile.h>
+#include <libkdumpfile/kdumpfile.h>
 
 #include "testutil.h"
 

@@ -33,7 +33,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-#include <addrxlat.h>
+#include <libkdumpfile/addrxlat.h>
 
 #include "testutil.h"
 

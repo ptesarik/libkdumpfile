@@ -30,7 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
-#include <addrxlat.h>
+#include <libkdumpfile/addrxlat.h>
 
 #include "testutil.h"
 

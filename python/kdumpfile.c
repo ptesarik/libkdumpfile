@@ -1,7 +1,6 @@
 #include <Python.h>
 #include <structmember.h>
-#include <kdumpfile.h>
-#include <addrxlat.h>
+#include <libkdumpfile/kdumpfile.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>

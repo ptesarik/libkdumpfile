@@ -32,8 +32,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <getopt.h>
-#include <kdumpfile.h>
-#include <addrxlat.h>
+#include <libkdumpfile/kdumpfile.h>
+#include <libkdumpfile/addrxlat.h>
 
 #include "testutil.h"
 

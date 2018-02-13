@@ -26,7 +26,7 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <kdumpfile.h>
+#include <libkdumpfile/kdumpfile.h>
 
 #include "testutil.h"
 

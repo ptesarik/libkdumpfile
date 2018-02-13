@@ -32,7 +32,7 @@
 #define _ADDRXLAT_PRIV_H 1
 
 #pragma GCC visibility push(default)
-#include <addrxlat.h>
+#include <libkdumpfile/addrxlat.h>
 #pragma GCC visibility pop
 
 #define LIBNAME	addrxlat

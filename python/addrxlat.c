@@ -30,7 +30,6 @@
 
 #include <Python.h>
 #include <structmember.h>
-#include <addrxlat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>

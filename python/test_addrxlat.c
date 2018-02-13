@@ -31,8 +31,6 @@
 #include <Python.h>
 #include "addrxlatmod.h"
 
-#include <addrxlat.h>
-
 #define MOD_NAME	"_test_addrxlat"
 #define MOD_DOC		"helper for unit testing"
 
