@@ -36,6 +36,7 @@
 #include <unistd.h>
 
 #include "addrxlat.h"
+#include "errmsg.h"
 
 /** Major version (1st number in the release tag). */
 #define KDUMPFILE_VER_MAJOR	@PACKAGE_VER_MAJOR@
@@ -221,6 +222,12 @@ void kdump_clear_err(kdump_ctx_t *ctx);
  * library function that returns @ref kdump_status.
  */
 const char *kdump_get_err(kdump_ctx_t *ctx);
+
+/** Get error message object.
+ * @param ctx  Dump file object.
+ * @returns    Error message object.
+ */
+kdump_errmsg_t *kdump_get_errmsg(kdump_ctx_t *ctx);
 
 /**  Get the associated address translation context.
  * @param ctx  Dump file object.

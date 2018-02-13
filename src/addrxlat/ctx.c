@@ -76,6 +76,12 @@ addrxlat_ctx_get_err(const addrxlat_ctx_t *ctx)
 	return err_str(&ctx->err);
 }
 
+kdump_errmsg_t *
+addrxlat_ctx_get_errmsg(addrxlat_ctx_t *ctx)
+{
+	return &ctx->err;
+}
+
 void
 addrxlat_ctx_set_cb(addrxlat_ctx_t *ctx, const addrxlat_cb_t *cb)
 {

@@ -6,6 +6,7 @@ LIBADDRXLAT_0 {
     addrxlat_ctx_err;
     addrxlat_ctx_clear_err;
     addrxlat_ctx_get_err;
+    addrxlat_ctx_get_errmsg;
     addrxlat_ctx_set_cb;
     addrxlat_ctx_get_cb;
     addrxlat_ctx_get_ecb;

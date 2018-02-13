@@ -215,6 +215,12 @@ kdump_get_err(kdump_ctx_t *ctx)
 	return err_str(&ctx->err);
 }
 
+kdump_errmsg_t *
+kdump_get_errmsg(kdump_ctx_t *ctx)
+{
+	return &ctx->err;
+}
+
 addrxlat_ctx_t *
 kdump_get_addrxlat_ctx(const kdump_ctx_t *ctx)
 {
