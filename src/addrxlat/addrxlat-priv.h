@@ -37,7 +37,7 @@
 
 #define LIBNAME	addrxlat
 #include "../internal.h"
-#include "../errstr.h"
+#include "../errmsg.h"
 
 /* General macros */
 
@@ -73,7 +73,7 @@ struct _addrxlat_ctx {
 
 	/** Error message buffer.
 	 * This must be the last member. */
-	struct errstr err;
+	kdump_errmsg_t err;
 };
 
 /* utils */

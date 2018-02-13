@@ -1,5 +1,5 @@
-/** @internal @file src/errstr.h
- * @brief Error string object.
+/** @internal @file src/errmsg.h
+ * @brief Error message object private definitions.
  */
 /* Copyright (C) 2018 Petr Tesarik <ptesarik@suse.cz>
 
@@ -28,12 +28,22 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef _ERRMSG_H
+#define _ERRMSG_H 1
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <libkdumpfile/errmsg.h>
 
-struct errstr {
-	char *str;		/**< Error string. */
+struct _kdump_errmsg {
+	/** Error string.
+	 * This must be the first field in the structure to allow
+	 * typecasting without the private definition in the public
+	 * header.
+	 * @sa kdump_errmsg_str.
+	 */
+	char *str;
 	char *dyn;		/**< Dynamically allocated error string. */
 	size_t bufsz;		/**< Size of the fallback buffer. */
 	char buf[];		/**< Fallback buffer for the error string. */
@@ -43,7 +53,7 @@ struct errstr {
  * @param bufsz  Size of the fallback buffer.
  */
 static inline void
-err_init(struct errstr *err, size_t bufsz)
+err_init(kdump_errmsg_t *err, size_t bufsz)
 {
 	err->str = NULL;
 	err->dyn = NULL;
@@ -54,7 +64,7 @@ err_init(struct errstr *err, size_t bufsz)
  * @param err  Error string object.
  */
 static inline void
-err_cleanup(struct errstr *err)
+err_cleanup(kdump_errmsg_t *err)
 {
 	if (err->dyn)
 		free(err->dyn);
@@ -64,7 +74,7 @@ err_cleanup(struct errstr *err)
  * @param err  Error string object.
  */
 static inline void
-err_clear(struct errstr *err)
+err_clear(kdump_errmsg_t *err)
 {
 	err->str = NULL;
 }
@@ -74,9 +84,9 @@ err_clear(struct errstr *err)
  * @returns    NUL-terminated error string.
  */
 static inline const char *
-err_str(const struct errstr *err)
+err_str(const kdump_errmsg_t *err)
 {
-	return err->str;
+	return *(char* const*)err;
 }
 
 /* This declaration may not be available by default. */
@@ -91,7 +101,7 @@ extern int vsnprintf(char *, size_t, const char *, va_list);
  * argument is used instead of a variable number of arguments.
  */
 static inline void
-err_vadd(struct errstr *err, const char *msgfmt, va_list ap)
+err_vadd(kdump_errmsg_t *err, const char *msgfmt, va_list ap)
 {
 	static const char failure[] = "(bad format string)";
 	static const char delim[] = { ':', ' ' };
@@ -172,7 +182,7 @@ err_vadd(struct errstr *err, const char *msgfmt, va_list ap)
  */
 static inline void
 __attribute__ ((format (printf, 2, 3)))
-err_add(struct errstr *err, const char *msgfmt, ...)
+err_add(kdump_errmsg_t *err, const char *msgfmt, ...)
 {
 	va_list ap;
 
@@ -180,3 +190,5 @@ err_add(struct errstr *err, const char *msgfmt, ...)
 	err_vadd(err, msgfmt, ap);
 	va_end(ap);
 }
+
+#endif	/* errmsg.h */

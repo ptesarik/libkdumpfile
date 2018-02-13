@@ -107,6 +107,7 @@ AC_CONFIG_FILES([
 	libkdumpfile.pc
 	include/libkdumpfile/kdumpfile.h
 	include/libkdumpfile/addrxlat.h
+	include/libkdumpfile/errmsg.h
 ])
 
 AC_OUTPUT

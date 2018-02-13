@@ -21,4 +21,5 @@
 
 nodist_pkginclude_HEADERS = \
 	addrxlat.h	\
+	errmsg.h	\
 	kdumpfile.h

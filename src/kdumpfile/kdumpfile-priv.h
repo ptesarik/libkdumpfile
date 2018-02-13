@@ -40,7 +40,7 @@
 #define LIBNAME	kdump
 #include "../internal.h"
 
-#include "../errstr.h"
+#include "../errmsg.h"
 #include "../list.h"
 #include "../threads.h"
 
@@ -594,7 +594,7 @@ struct _kdump_ctx {
 
 	/** Error message buffer.
 	 * This must be the last member. */
-	struct errstr err;
+	kdump_errmsg_t err;
 };
 
 /* Per-context data */
