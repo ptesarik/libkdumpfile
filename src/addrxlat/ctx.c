@@ -34,12 +34,16 @@
 
 #include "addrxlat-priv.h"
 
+/** Maximum length of the static error message. */
+#define ERRBUF	64
+
 addrxlat_ctx_t *
 addrxlat_ctx_new(void)
 {
-	addrxlat_ctx_t *ctx = calloc(1, sizeof(addrxlat_ctx_t));
+	addrxlat_ctx_t *ctx = calloc(1, sizeof(addrxlat_ctx_t) + ERRBUF);
 	if (ctx) {
 		ctx->refcnt = 1;
+		err_init(&ctx->err, ERRBUF);
 	}
 	return ctx;
 }

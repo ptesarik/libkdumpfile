@@ -592,7 +592,9 @@ struct _kdump_ctx {
 	/** Per-context data. */
 	void *data[PER_CTX_SLOTS];
 
-	struct errstr err;	/**< Error string. */
+	/** Error message buffer.
+	 * This must be the last member. */
+	struct errstr err;
 };
 
 /* Per-context data */

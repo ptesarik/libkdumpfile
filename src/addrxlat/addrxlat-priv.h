@@ -71,6 +71,8 @@ struct _addrxlat_ctx {
 	/** In-flight translations. */
 	struct inflight *inflight;
 
+	/** Error message buffer.
+	 * This must be the last member. */
 	struct errstr err;
 };
 

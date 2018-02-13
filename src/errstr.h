@@ -32,14 +32,23 @@
 #include <string.h>
 #include <stdarg.h>
 
-/** Maximum length of the static error message. */
-#define ERRBUF	160
-
 struct errstr {
 	char *str;		/**< Error string. */
 	char *dyn;		/**< Dynamically allocated error string. */
-	char buf[ERRBUF];	/**< Fallback buffer for the error string. */
+	size_t bufsz;		/**< Size of the fallback buffer. */
+	char buf[];		/**< Fallback buffer for the error string. */
 };
+
+/** Initialize a new error message buffer.
+ * @param bufsz  Size of the fallback buffer.
+ */
+static inline void
+err_init(struct errstr *err, size_t bufsz)
+{
+	err->str = NULL;
+	err->dyn = NULL;
+	err->bufsz = bufsz;
+}
 
 /** Free up all resources associated with the error string.
  * @param err  Error string object.
@@ -106,13 +115,13 @@ err_vadd(struct errstr *err, const char *msgfmt, va_list ap)
 	/* Calculate required and already allocated space. */
 	msg = err->str;
 	if (!msg || !*msg) {
-		msg = err->buf + sizeof(err->buf) - 1;
+		msg = err->buf + err->bufsz - 1;
 		*msg = '\0';
-		remain = sizeof(err->buf) - 1;
+		remain = err->bufsz - 1;
 		dlen = 0;
 	} else {
 		remain = msg - err->buf;
-		if (remain >= sizeof(err->buf))
+		if (remain >= err->bufsz)
 			remain = msg - err->dyn;
 		dlen = sizeof(delim);
 	}
@@ -130,11 +139,11 @@ err_vadd(struct errstr *err, const char *msgfmt, va_list ap)
 			msg = newbuf + msglen + 1;
 			remain = msglen;
 		} else if (remain) {
-			char lbuf[ERRBUF];
+			char lbuf[err->bufsz];
 			vsnprintf(lbuf, sizeof lbuf, msgfmt, ap);
-			if (msglen - dlen >= sizeof(lbuf)) {
-				lbuf[sizeof(lbuf) - 2] = '>';
-				msglen = sizeof(lbuf) - 1 + dlen;
+			if (msglen - dlen >= err->bufsz) {
+				lbuf[err->bufsz - 2] = '>';
+				msglen = err->bufsz - 1 + dlen;
 			}
 			memcpy(msg - remain, lbuf + msglen - remain, remain);
 			msglen = remain;

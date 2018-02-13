@@ -37,22 +37,30 @@
 #include <stdio.h>
 #include <errno.h>
 
+/** Maximum length of the static error message. */
+#define ERRBUF	160
+
 static kdump_ctx_t *
 alloc_ctx(void)
 {
 	kdump_ctx_t *ctx;
 
-	ctx = calloc(1, sizeof (kdump_ctx_t));
+	ctx = calloc(1, sizeof (kdump_ctx_t) + ERRBUF);
 	if (!ctx)
 		return ctx;
 
+	err_init(&ctx->err, ERRBUF);
+
 	ctx->xlatctx = init_addrxlat(ctx);
-	if (!ctx->xlatctx) {
-		free(ctx);
-		return NULL;
-	}
+	if (!ctx->xlatctx)
+		goto err;
 
 	return ctx;
+
+ err:
+	err_cleanup(&ctx->err);
+	free(ctx);
+	return NULL;
 }
 
 static struct kdump_shared *
