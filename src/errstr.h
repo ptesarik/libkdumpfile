@@ -45,7 +45,7 @@ struct errstr {
  * @param err  Error string object.
  */
 static inline void
-err_free(struct errstr *err)
+err_cleanup(struct errstr *err)
 {
 	if (err->dyn)
 		free(err->dyn);

@@ -55,7 +55,7 @@ addrxlat_ctx_decref(addrxlat_ctx_t *ctx)
 {
 	unsigned long refcnt = --ctx->refcnt;
 	if (!refcnt) {
-		err_free(&ctx->err);
+		err_cleanup(&ctx->err);
 		free(ctx);
 	}
 	return refcnt;
