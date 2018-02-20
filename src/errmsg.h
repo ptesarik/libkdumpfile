@@ -34,20 +34,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#include <libkdumpfile/errmsg.h>
 
-struct _kdump_errmsg {
-	/** Error string.
-	 * This must be the first field in the structure to allow
-	 * typecasting without the private definition in the public
-	 * header.
-	 * @sa kdump_errmsg_str.
-	 */
-	char *str;
+typedef struct _kdump_errmsg {
+	char *str;		/**< Error string. */
 	char *dyn;		/**< Dynamically allocated error string. */
 	size_t bufsz;		/**< Size of the fallback buffer. */
 	char buf[];		/**< Fallback buffer for the error string. */
-};
+} kdump_errmsg_t;
 
 /** Initialize a new error message buffer.
  * @param bufsz  Size of the fallback buffer.

@@ -35,8 +35,6 @@
 #include <stdint.h>
 #include <inttypes.h>
 
-#include "errmsg.h"
-
 /** Major version (1st number in the release tag). */
 #define ADDRXLAT_VER_MAJOR	@PACKAGE_VER_MAJOR@
 /** Minor version (2nd number in the release tag). */
@@ -217,12 +215,6 @@ void addrxlat_ctx_clear_err(addrxlat_ctx_t *ctx);
  * library function that returns @ref addrxlat_status.
  */
 const char *addrxlat_ctx_get_err(const addrxlat_ctx_t *ctx);
-
-/** Get error message object.
- * @param ctx  Address translation context.
- * @returns    Error message object.
- */
-kdump_errmsg_t *addrxlat_ctx_get_errmsg(addrxlat_ctx_t *ctx);
 
 /* Forward declaration to solve circular reference. */
 typedef struct _addrxlat_cb addrxlat_cb_t;
