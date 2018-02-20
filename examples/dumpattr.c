@@ -54,12 +54,12 @@ print_bitmap(kdump_ctx_t *ctx, kdump_bmp_t *bmp)
 
 	idx = 0;
 	fputs("[ ", stdout);
-	while ( (status = kdump_bmp_find_set(ctx, bmp, &idx)) == KDUMP_OK) {
+	while ( (status = kdump_bmp_find_set(bmp, &idx)) == KDUMP_OK) {
 		kdump_addr_t start = idx;
-		status = kdump_bmp_find_clear(ctx, bmp, &idx);
+		status = kdump_bmp_find_clear(bmp, &idx);
 		if (status != KDUMP_OK) {
 			fprintf(stderr, "kdump_bmp_find_clear faild: %s\n",
-				kdump_get_err(ctx));
+				kdump_bmp_get_err(bmp));
 			return -1;
 		}
 		printf("%s%llx-%llx",

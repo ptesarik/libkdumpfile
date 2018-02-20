@@ -1751,7 +1751,6 @@ bmp_get_bits(PyObject *_self, PyObject *args, PyObject *kwargs)
 {
 	static char *keywords[] = {"first", "last", NULL};
 	bmp_object *self = (bmp_object*)_self;
-	kdump_ctx_t *ctx;
 	unsigned long long first, last;
 	PyObject *buffer;
 	Py_ssize_t sz;
@@ -1772,13 +1771,13 @@ bmp_get_bits(PyObject *_self, PyObject *args, PyObject *kwargs)
 	}
 
 
-	ctx = self->kdumpfile->ctx;
 	status = kdump_bmp_get_bits(
-		ctx, self->bmp, first, last,
+		self->bmp, first, last,
 		(unsigned char*)PyByteArray_AS_STRING(buffer));
 	if (status != KDUMP_OK) {
 		Py_DECREF(buffer);
-		PyErr_SetString(exception_map(status), kdump_get_err(ctx));
+		PyErr_SetString(exception_map(status),
+				kdump_bmp_get_err(self->bmp));
 		return NULL;
 	}
 
@@ -1795,7 +1794,6 @@ bmp_find_set(PyObject *_self, PyObject *args, PyObject *kwargs)
 {
 	static char *keywords[] = {"idx", NULL};
 	bmp_object *self = (bmp_object*)_self;
-	kdump_ctx_t *ctx;
 	unsigned long long argidx;
 	kdump_addr_t idx;
 	kdump_status status;
@@ -1804,11 +1802,11 @@ bmp_find_set(PyObject *_self, PyObject *args, PyObject *kwargs)
 					 keywords, &argidx))
 		return NULL;
 
-	ctx = self->kdumpfile->ctx;
 	idx = argidx;
-	status = kdump_bmp_find_set(ctx, self->bmp, &idx);
+	status = kdump_bmp_find_set(self->bmp, &idx);
 	if (status != KDUMP_OK) {
-		PyErr_SetString(exception_map(status), kdump_get_err(ctx));
+		PyErr_SetString(exception_map(status),
+				kdump_bmp_get_err(self->bmp));
 		return NULL;
 	}
 
@@ -1825,7 +1823,6 @@ bmp_find_clear(PyObject *_self, PyObject *args, PyObject *kwargs)
 {
 	static char *keywords[] = {"idx", NULL};
 	bmp_object *self = (bmp_object*)_self;
-	kdump_ctx_t *ctx;
 	unsigned long long argidx;
 	kdump_addr_t idx;
 	kdump_status status;
@@ -1834,11 +1831,11 @@ bmp_find_clear(PyObject *_self, PyObject *args, PyObject *kwargs)
 					 keywords, &argidx))
 		return NULL;
 
-	ctx = self->kdumpfile->ctx;
 	idx = argidx;
-	status = kdump_bmp_find_clear(ctx, self->bmp, &idx);
+	status = kdump_bmp_find_clear(self->bmp, &idx);
 	if (status != KDUMP_OK) {
-		PyErr_SetString(exception_map(status), kdump_get_err(ctx));
+		PyErr_SetString(exception_map(status),
+				kdump_bmp_get_err(self->bmp));
 		return NULL;
 	}
 

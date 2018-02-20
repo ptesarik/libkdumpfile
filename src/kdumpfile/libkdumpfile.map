@@ -15,6 +15,7 @@ LIBKDUMPFILE_0 {
 
     kdump_bmp_incref;
     kdump_bmp_decref;
+    kdump_bmp_get_err;
     kdump_bmp_get_bits;
     kdump_bmp_find_set;
     kdump_bmp_find_clear;

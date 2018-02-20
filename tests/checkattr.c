@@ -155,12 +155,12 @@ check_attr_bmp(kdump_ctx_t *ctx, char *key, const struct number_array *expect)
 		return TEST_FAIL;
 	}
 
-	status = kdump_bmp_get_bits(ctx, attr.val.bitmap,
+	status = kdump_bmp_get_bits(attr.val.bitmap,
 				    0, (expect->n << 3) - 1, bits);
 	if (status != KDUMP_OK) {
 		puts("FAILED");
 		fprintf(stderr, "Cannot get bitmap bits: %s\n",
-			kdump_get_err(ctx));
+			kdump_bmp_get_err(attr.val.bitmap));
 		return TEST_FAIL;
 	}
 

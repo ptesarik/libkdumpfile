@@ -222,16 +222,16 @@ struct arch_ops {
 struct kdump_bmp_ops {
 	/** Get raw bits. */
 	kdump_status (*get_bits)(
-		kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
+		kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 		kdump_addr_t first, kdump_addr_t last, unsigned char *bits);
 
 	/** Find a set bit. */
 	kdump_status (*find_set)(
-		kdump_ctx_t *ctx, const kdump_bmp_t *bmp, kdump_addr_t *idx);
+		kdump_errmsg_t *err, const kdump_bmp_t *bmp, kdump_addr_t *idx);
 
 	/** Find a zero bit. */
 	kdump_status (*find_clear)(
-		kdump_ctx_t *ctx, const kdump_bmp_t *bmp, kdump_addr_t *idx);
+		kdump_errmsg_t *err, const kdump_bmp_t *bmp, kdump_addr_t *idx);
 
 	/** Clean up any private data. */
 	void (*cleanup)(const kdump_bmp_t *bmp);
@@ -247,6 +247,10 @@ struct _kdump_bmp {
 
 	/** Any private data (owned by the respective ops). */
 	void *priv;
+
+	/** Error message.
+	 * This must be the last member. */
+	kdump_errmsg_t err;
 };
 
 INTERNAL_DECL(kdump_bmp_t *, kdump_bmp_new,

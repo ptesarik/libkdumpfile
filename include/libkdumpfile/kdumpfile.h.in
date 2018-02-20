@@ -335,8 +335,18 @@ unsigned long kdump_bmp_incref(kdump_bmp_t *bmp);
  */
 unsigned long kdump_bmp_decref(kdump_bmp_t *bmp);
 
+/**  Get a detailed error string.
+ * @param bmp  Bitmap object.
+ * @returns    Last error string.
+ *
+ * If an error status is returned, this function can be used to get
+ * a human-readable description of the error. The error string is not
+ * reset by calling this function, but it is reset by calling any
+ * other function that returns @ref kdump_status.
+ */
+const char *kdump_bmp_get_err(const kdump_bmp_t *bmp);
+
 /**  Get bitmap bits as a raw bitmap.
- * @param ctx    Dump file object.
  * @param bmp    Bitmap object.
  * @param first  First index in the bitmap.
  * @param last   Last index in the bitmap.
@@ -344,28 +354,24 @@ unsigned long kdump_bmp_decref(kdump_bmp_t *bmp);
  * @returns      Error status.
  */
 kdump_status kdump_bmp_get_bits(
-	kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
+	kdump_bmp_t *bmp,
 	kdump_addr_t first, kdump_addr_t last, unsigned char *raw);
 
 /** Find the closest set bit in a bitmap.
- * @param ctx  Dump file object.
  * @param bmp  Bitmap object.
  * @param idx  Starting index in the bitmap, updated on success.
  * @returns    Error status.
  */
 kdump_status kdump_bmp_find_set(
-	kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
-	kdump_addr_t *idx);
+	kdump_bmp_t *bmp, kdump_addr_t *idx);
 
 /** Find the closest zero bit in a bitmap.
- * @param ctx  Dump file object.
  * @param bmp  Bitmap object.
  * @param idx  Starting index in the bitmap, updated on success.
  * @returns    Error status.
  */
 kdump_status kdump_bmp_find_clear(
-	kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
-	kdump_addr_t *idx);
+	kdump_bmp_t *bmp, kdump_addr_t *idx);
 
 /**  Dump file attribute value type.
  */

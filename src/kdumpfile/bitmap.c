@@ -35,6 +35,9 @@
 #include <string.h>
 #include <stdlib.h>
 
+/** Maximum length of the static error message. */
+#define ERRBUF	80
+
 /** Set a range of bits in a raw bitmap.
  * @param buf    Pointer to raw bitmap.
  * @param start  First bit to set.
@@ -93,10 +96,11 @@ kdump_bmp_t *
 kdump_bmp_new(const struct kdump_bmp_ops *ops)
 {
 	kdump_bmp_t *bmp;
-	bmp = malloc(sizeof(kdump_bmp_t));
+	bmp = malloc(sizeof(kdump_bmp_t) + ERRBUF);
 	if (bmp) {
 		bmp->refcnt = 1;
 		bmp->ops = ops;
+		err_init(&bmp->err, ERRBUF);
 	}
 	return bmp;
 }
@@ -114,40 +118,45 @@ kdump_bmp_decref(kdump_bmp_t *bmp)
 	if (!refcnt) {
 		if (bmp->ops->cleanup)
 			bmp->ops->cleanup(bmp);
+		err_cleanup(&bmp->err);
 		free(bmp);
 	}
 	return refcnt;
 }
 
+const char *
+kdump_bmp_get_err(const kdump_bmp_t *bmp)
+{
+	return err_str(&bmp->err);
+}
+
 kdump_status
-kdump_bmp_get_bits(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
+kdump_bmp_get_bits(kdump_bmp_t *bmp,
 		   kdump_addr_t first, kdump_addr_t last, unsigned char *raw)
 {
-	clear_error(ctx);
+	err_clear(&bmp->err);
 	if (!bmp->ops->get_bits)
-		return set_error(ctx, KDUMP_ERR_NOTIMPL,
-				 "Function not implemented");
-	return bmp->ops->get_bits(ctx, bmp, first, last, raw);
+		return status_err(&bmp->err, KDUMP_ERR_NOTIMPL,
+				  "Function not implemented");
+	return bmp->ops->get_bits(&bmp->err, bmp, first, last, raw);
 }
 
 kdump_status
-kdump_bmp_find_set(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
-		   kdump_addr_t *idx)
+kdump_bmp_find_set(kdump_bmp_t *bmp, kdump_addr_t *idx)
 {
-	clear_error(ctx);
+	err_clear(&bmp->err);
 	if (!bmp->ops->find_set)
-		return set_error(ctx, KDUMP_ERR_NOTIMPL,
-				 "Function not implemented");
-	return bmp->ops->find_set(ctx, bmp, idx);
+		return status_err(&bmp->err, KDUMP_ERR_NOTIMPL,
+				  "Function not implemented");
+	return bmp->ops->find_set(&bmp->err, bmp, idx);
 }
 
 kdump_status
-kdump_bmp_find_clear(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
-		     kdump_addr_t *idx)
+kdump_bmp_find_clear(kdump_bmp_t *bmp, kdump_addr_t *idx)
 {
-	clear_error(ctx);
+	err_clear(&bmp->err);
 	if (!bmp->ops->find_clear)
-		return set_error(ctx, KDUMP_ERR_NOTIMPL,
-				 "Function not implemented");
-	return bmp->ops->find_clear(ctx, bmp, idx);
+		return status_err(&bmp->err, KDUMP_ERR_NOTIMPL,
+				  "Function not implemented");
+	return bmp->ops->find_clear(&bmp->err, bmp, idx);
 }

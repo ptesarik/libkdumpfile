@@ -250,7 +250,7 @@ pfn_to_pdpos(struct disk_dump_priv *ddp, unsigned long pfn)
 }
 
 static kdump_status
-diskdump_get_bits(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
+diskdump_get_bits(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 		  kdump_addr_t first, kdump_addr_t last, unsigned char *bits)
 {
 	struct kdump_shared *shared = bmp->priv;
@@ -305,7 +305,7 @@ diskdump_get_bits(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
 }
 
 static kdump_status
-diskdump_find_set(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
+diskdump_find_set(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 		  kdump_addr_t *idx)
 {
 	struct kdump_shared *shared = bmp->priv;
@@ -317,8 +317,8 @@ diskdump_find_set(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
 	rgn = find_pfn_rgn(ddp, *idx);
 	if (!rgn) {
 		rwlock_unlock(&shared->lock);
-		return set_error(ctx, KDUMP_ERR_NODATA,
-				 "No such bit not found");
+		return status_err(err, KDUMP_ERR_NODATA,
+				  "No such bit not found");
 	}
 
 	if (rgn->pfn > *idx)
@@ -328,7 +328,7 @@ diskdump_find_set(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
 }
 
 static kdump_status
-diskdump_find_clear(kdump_ctx_t *ctx, const kdump_bmp_t *bmp,
+diskdump_find_clear(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 		    kdump_addr_t *idx)
 {
 	struct kdump_shared *shared = bmp->priv;
