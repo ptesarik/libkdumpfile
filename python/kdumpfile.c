@@ -53,8 +53,7 @@ static PyObject *attr_viewdict_type;
 static PyObject *attr_dir_new(kdumpfile_object *kdumpfile,
 			      const kdump_attr_ref_t *baseref);
 
-static PyObject *bmp_new(kdumpfile_object *kdumpfile,
-			 kdump_bmp_t *bitmap);
+static PyObject *bmp_new(kdump_bmp_t *bitmap);
 
 static PyObject *
 exception_map(kdump_status status)
@@ -210,7 +209,7 @@ attr_new(kdumpfile_object *kdumpfile, kdump_attr_ref_t *ref, kdump_attr_t *attr)
 		case KDUMP_DIRECTORY:
 			return attr_dir_new(kdumpfile, ref);
 		case KDUMP_BITMAP:
-			return bmp_new(kdumpfile, attr->val.bitmap);
+			return bmp_new(attr->val.bitmap);
 		default:
 			PyErr_SetString(PyExc_RuntimeError, "Unhandled attr type");
 			return NULL;
@@ -1694,7 +1693,6 @@ static PyTypeObject attr_iteritem_object_type = {
 
 typedef struct {
 	PyObject_HEAD
-	kdumpfile_object *kdumpfile;
 	kdump_bmp_t *bmp;
 } bmp_object;
 
@@ -1702,7 +1700,7 @@ PyDoc_STRVAR(bmp__doc__,
 "bmp() -> dump bitmap");
 
 static PyObject *
-bmp_new(kdumpfile_object *kdumpfile, kdump_bmp_t *bmp)
+bmp_new(kdump_bmp_t *bmp)
 {
 	bmp_object *self;
 
@@ -1710,12 +1708,9 @@ bmp_new(kdumpfile_object *kdumpfile, kdump_bmp_t *bmp)
 	if (!self)
 		return NULL;
 
-	Py_INCREF((PyObject*)kdumpfile);
-	self->kdumpfile = kdumpfile;
 	kdump_bmp_incref(bmp);
 	self->bmp = bmp;
 
-	PyObject_GC_Track(self);
 	return (PyObject*)self;
 }
 
@@ -1724,21 +1719,10 @@ bmp_dealloc(PyObject *_self)
 {
 	bmp_object *self = (bmp_object*)_self;
 
-	PyObject_GC_UnTrack(self);
 	if (self->bmp)
 		kdump_bmp_decref(self->bmp);
-	Py_XDECREF((PyObject*)self->kdumpfile);
 
 	Py_TYPE(self)->tp_free((PyObject*)self);
-}
-
-static int
-bmp_traverse(PyObject *_self, visitproc visit, void *arg)
-{
-	bmp_object *self = (bmp_object*)_self;
-
-	Py_VISIT((PyObject*)self->kdumpfile);
-	return 0;
 }
 
 PyDoc_STRVAR(bmp_get_bits__doc__,
@@ -1877,10 +1861,9 @@ static PyTypeObject bmp_object_type =
 	0,				/* tp_setattro */
 	0,				/* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT
-	    | Py_TPFLAGS_HAVE_GC
 	    | Py_TPFLAGS_BASETYPE,	/* tp_flags */
 	bmp__doc__,			/* tp_doc */
-	bmp_traverse,			/* tp_traverse */
+	0,				/* tp_traverse */
 	0,				/* tp_clear */
 	0,				/* tp_richcompare */
 	0,				/* tp_weaklistoffset */
