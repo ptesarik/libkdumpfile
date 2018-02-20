@@ -1230,6 +1230,10 @@ page_align(kdump_ctx_t *ctx, kdump_addr_t addr)
 	return addr & (-get_page_size(ctx));
 }
 
+INTERNAL_DECL(kdump_status, status_err,
+	      (kdump_errmsg_t *err, kdump_status status,
+	       const char *msgfmt, ...));
+
 #define set_error internal_err
 DECLARE_ALIAS(err);
 

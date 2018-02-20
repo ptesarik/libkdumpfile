@@ -42,6 +42,23 @@
 # include <zlib.h>
 #endif
 
+/** Set an error message, returning @c kdump_status.
+ * @arg err     Error message object.
+ * @arg status  Status code.
+ * @arg msgfmt  Format string.
+ * @returns     Status code (equal to @c status).
+ */
+kdump_status
+status_err(kdump_errmsg_t *err, kdump_status status, const char *msgfmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, msgfmt);
+	err_vadd(err, msgfmt, ap);
+	va_end(ap);
+	return status;
+}
+
 void
 kdump_clear_err(kdump_ctx_t *ctx)
 {
