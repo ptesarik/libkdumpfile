@@ -745,9 +745,10 @@ xc_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 	uint_fast64_t idx;
 	off_t offset;
 
-	idx = (pio->addr.as == ADDRXLAT_KPHYSADDR
-	       ? pfn2idx_map_search(&edp->xen_pfnmap, pfn)
-	       : pfn2idx_map_search(&edp->xen_mfnmap, pfn));
+	idx = ( (get_xen_xlat(ctx) == KDUMP_XEN_NONAUTO &&
+		 pio->addr.as == ADDRXLAT_MACHPHYSADDR)
+		? pfn2idx_map_search(&edp->xen_mfnmap, pfn)
+		: pfn2idx_map_search(&edp->xen_pfnmap, pfn));
 	if (idx == IDX_NONE)
 		return set_error(ctx, KDUMP_ERR_NODATA, "Page not found");
 
