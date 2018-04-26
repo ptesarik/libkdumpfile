@@ -655,10 +655,13 @@ map_linux_x86_64(struct os_init_data *ctl)
 		{ ADDRXLAT_SYM_NONE }
 	};
 
+	addrxlat_meth_t *meth;
 	addrxlat_status status;
 
 	/* Set up page table translation. */
 	sys_sym_pgtroot(ctl, pgtspec);
+	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	meth->param.pgt.root.addr &= ~PAGE_MASK;
 
 	/* Take care of machine physical <-> kernel physical mapping. */
 	if (ctl->popt.val[OPT_xen_xlat].set &&
@@ -779,6 +782,7 @@ setup_xen_pgt(struct os_init_data *ctl)
 
 	status = sys_sym_pgtroot(ctl, pgtspec);
 	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	meth->param.pgt.root.addr &= ~PAGE_MASK;
 	if (meth->param.pgt.root.as != ADDRXLAT_KVADDR)
 		return status;	/* either unset or physical */
 
