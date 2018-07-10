@@ -1148,17 +1148,17 @@ kdump_attr_iter_end(kdump_ctx_t *ctx, kdump_attr_iter_t *iter)
 }
 
 /**  Use a map to choose an attribute by current OS type.
- * @param dict    Attribute dictionary.
+ * @param ctx     Dump file object.
  * @param map     OS type -> global attribute index.
  * @returns       Attribute, or @c NULL if OS type not found.
  */
 struct attr_data *
-ostype_attr(const struct attr_dict *dict,
+ostype_attr(const kdump_ctx_t *ctx,
 	    const struct ostype_attr_map *map)
 {
 	while (map->ostype != ADDRXLAT_OS_UNKNOWN) {
-		if (map->ostype == dict->shared->ostype)
-			return dgattr(dict, map->attrkey);
+		if (map->ostype == ctx->xlat->ostype)
+			return dgattr(ctx->dict, map->attrkey);
 		++map;
 	}
 

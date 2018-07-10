@@ -304,7 +304,7 @@ elf_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 		physpio = *pio;
 		status = addrxlat_fulladdr_conv(
 			&physpio.addr, ADDRXLAT_MACHPHYSADDR,
-			ctx->xlatctx, ctx->shared->xlatsys);
+			ctx->xlatctx, ctx->xlat->xlatsys);
 		if (status != ADDRXLAT_OK)
 			return addrxlat2kdump(ctx, status);
 
@@ -698,8 +698,8 @@ setup_custom_method(kdump_ctx_t *ctx, addrxlat_sys_meth_t methidx,
 		addrxlat_map_decref(map);
 		return addrxlat2kdump(ctx, axstatus);
 	}
-	addrxlat_sys_set_map(ctx->shared->xlatsys, mapidx, map);
-	addrxlat_sys_set_meth(ctx->shared->xlatsys, methidx, meth);
+	addrxlat_sys_set_map(ctx->xlat->xlatsys, mapidx, map);
+	addrxlat_sys_set_meth(ctx->xlat->xlatsys, methidx, meth);
 
 	return KDUMP_OK;
 }
@@ -1164,7 +1164,7 @@ open_common(kdump_ctx_t *ctx)
 			ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR);
 	}
 
-	set_addrspace_caps(ctx->shared, as_caps);
+	set_addrspace_caps(ctx->xlat, as_caps);
 
 	return KDUMP_OK;
 }

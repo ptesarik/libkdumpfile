@@ -263,7 +263,7 @@ kdump_vmcoreinfo(kdump_ctx_t *ctx)
 	clear_error(ctx);
 	rwlock_rdlock(&ctx->shared->lock);
 
-	attr = ostype_attr(ctx->dict, raw_map);
+	attr = ostype_attr(ctx, raw_map);
 	ret = (attr && validate_attr(ctx, attr) == KDUMP_OK &&
 	       attr->template->type == KDUMP_STRING)
 		? attr_value(attr)->string
@@ -289,7 +289,7 @@ kdump_vmcoreinfo_row(kdump_ctx_t *ctx, const char *key)
 	clear_error(ctx);
 	rwlock_rdlock(&ctx->shared->lock);
 
-	base = ostype_attr(ctx->dict, lines_map);
+	base = ostype_attr(ctx, lines_map);
 	if (base) {
 		attr = lookup_dir_attr(ctx->dict, base, key, strlen(key));
 		if (attr && validate_attr(ctx, attr) == KDUMP_OK)
@@ -317,7 +317,7 @@ kdump_vmcoreinfo_symbol(kdump_ctx_t *ctx, const char *symname,
 	clear_error(ctx);
 	rwlock_rdlock(&ctx->shared->lock);
 
-	base = ostype_attr(ctx->dict, symbol_map);
+	base = ostype_attr(ctx, symbol_map);
 	if (!base) {
 		ret = set_error(ctx, KDUMP_ERR_NOTIMPL, "Unsupported OS");
 		goto out;

@@ -204,7 +204,7 @@ set_ktext_off(kdump_ctx_t *ctx, kdump_addr_t phys_base)
 	meth.target_as = ADDRXLAT_KPHYSADDR;
 	meth.param.linear.off = phys_base - __START_KERNEL_map;
 	addrxlat_sys_set_meth(
-		ctx->shared->xlatsys, ADDRXLAT_SYS_METH_KTEXT, &meth);
+		ctx->xlat->xlatsys, ADDRXLAT_SYS_METH_KTEXT, &meth);
 }
 
 /** Update the physical base offfset.
@@ -301,7 +301,7 @@ init_linux_phys_base(kdump_ctx_t *ctx)
 
 
 	meth = addrxlat_sys_get_meth(
-		ctx->shared->xlatsys, ADDRXLAT_SYS_METH_KTEXT);
+		ctx->xlat->xlatsys, ADDRXLAT_SYS_METH_KTEXT);
 	if (meth->kind == ADDRXLAT_LINEAR) {
 		set_phys_base(ctx, meth->param.linear.off + __START_KERNEL_map);
 		return KDUMP_OK;
@@ -328,7 +328,7 @@ x86_64_late_init(kdump_ctx_t *ctx)
 {
 	kdump_status status;
 
-	if (ctx->shared->ostype == ADDRXLAT_OS_LINUX &&
+	if (ctx->xlat->ostype == ADDRXLAT_OS_LINUX &&
 	    !isset_phys_base(ctx)) {
 		status = init_linux_phys_base(ctx);
 		if (status != KDUMP_OK)

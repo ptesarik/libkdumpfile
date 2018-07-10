@@ -106,10 +106,10 @@ xlat_pio(kdump_ctx_t *ctx, struct page_io *pio)
 	addrxlat_op_ctl_t ctl;
 
 	ctl.ctx = ctx->xlatctx;
-	ctl.sys = ctx->shared->xlatsys;
+	ctl.sys = ctx->xlat->xlatsys;
 	ctl.op = xlat_pio_op;
 	ctl.data = pio;
-	ctl.caps = ctx->shared->xlat_caps;
+	ctl.caps = ctx->xlat->xlat_caps;
 	return addrxlat2kdump(ctx, addrxlat_op(&ctl, &pio->addr));
 }
 
@@ -337,16 +337,16 @@ read_u64(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 }
 
 /**  Set read address spaces.
- * @param shared  Dump file shared data.
+ * @param xlat    Address translation.
  * @param caps    Addrxlat capabilities.
  */
 void
-set_addrspace_caps(struct kdump_shared *shared, unsigned long caps)
+set_addrspace_caps(struct kdump_xlat *xlat, unsigned long caps)
 {
 	kdump_ctx_t *ctx;
 
-	shared->xlat_caps = caps;
-	list_for_each_entry(ctx, &shared->ctx, list) {
+	xlat->xlat_caps = caps;
+	list_for_each_entry(ctx, &xlat->ctx, xlat_list) {
 		addrxlat_ctx_t *xlatctx = ctx->xlatctx;
 		addrxlat_cb_t cb = *addrxlat_ctx_get_cb(xlatctx);
 		cb.read_caps = caps;

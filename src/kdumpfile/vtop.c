@@ -43,7 +43,7 @@ set_pteval_size(kdump_ctx_t *ctx)
 {
 	const addrxlat_meth_t *meth;
 
-	meth = addrxlat_sys_get_meth(ctx->shared->xlatsys,
+	meth = addrxlat_sys_get_meth(ctx->xlat->xlatsys,
 				     ADDRXLAT_SYS_METH_PGT);
 	if (meth->kind == ADDRXLAT_PGT) {
 		int shift = addrxlat_pteval_shift(
@@ -242,7 +242,7 @@ vtop_init(kdump_ctx_t *ctx)
 	addrxlat_status axres;
 	struct opts opts;
 
-	osdesc.type = ctx->shared->ostype;
+	osdesc.type = ctx->xlat->ostype;
 	osdesc.arch = get_arch_name(ctx);
 
 	status = get_version_code(ctx, &osdesc.ver);
@@ -251,9 +251,9 @@ vtop_init(kdump_ctx_t *ctx)
 	clear_error(ctx);
 
 	opts.n = 0;
-	if (ctx->shared->ostype == ADDRXLAT_OS_LINUX)
+	if (ctx->xlat->ostype == ADDRXLAT_OS_LINUX)
 		status = set_linux_opts(ctx, &opts);
-	else if (ctx->shared->ostype == ADDRXLAT_OS_XEN)
+	else if (ctx->xlat->ostype == ADDRXLAT_OS_XEN)
 		status = set_xen_opts(ctx, &opts);
 	if (status != KDUMP_OK) {
 		free_opts(&opts);
@@ -270,7 +270,7 @@ vtop_init(kdump_ctx_t *ctx)
 
 	rwlock_unlock(&ctx->shared->lock);
 
-	axres = addrxlat_sys_os_init(ctx->shared->xlatsys,
+	axres = addrxlat_sys_os_init(ctx->xlat->xlatsys,
 				     ctx->xlatctx, &osdesc);
 	if (osdesc.opts)
 		free((void*)osdesc.opts);
@@ -336,7 +336,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 
 	switch (sym->type) {
 	case ADDRXLAT_SYM_VALUE:
-		base = ostype_attr(ctx->dict, value_map);
+		base = ostype_attr(ctx, value_map);
 		if (!base)
 			return addrxlat_ctx_err(
 				ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
@@ -344,7 +344,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 		break;
 
 	case ADDRXLAT_SYM_SIZEOF:
-		base = ostype_attr(ctx->dict, sizeof_map);
+		base = ostype_attr(ctx, sizeof_map);
 		if (!base)
 			return addrxlat_ctx_err(
 				ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
@@ -352,7 +352,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 		break;
 
 	case ADDRXLAT_SYM_OFFSETOF:
-		base = ostype_attr(ctx->dict, offsetof_map);
+		base = ostype_attr(ctx, offsetof_map);
 		if (!base)
 			return addrxlat_ctx_err(
 				ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
@@ -444,4 +444,39 @@ init_addrxlat(kdump_ctx_t *ctx)
 	addrxlat_ctx_set_cb(addrxlat, &cb);
 
 	return addrxlat;
+}
+
+/**  Allocate a new translation definition.
+ * @returns       Address translation, or @c NULL on allocation failure.
+ */
+struct kdump_xlat *
+xlat_new(void)
+{
+	struct kdump_xlat *xlat;
+
+	xlat = calloc(1, sizeof(struct kdump_xlat));
+	if (!xlat)
+		return NULL;
+	xlat->refcnt = 1;
+	list_init(&xlat->ctx);
+
+	xlat->xlatsys = addrxlat_sys_new();
+	if (!xlat->xlatsys)
+		goto err;
+
+	return xlat;
+
+err:
+	free(xlat);
+	return NULL;
+}
+
+/**  Free a translation definition.
+ * @param xlat  Address translation.
+ */
+void
+xlat_free(struct kdump_xlat *xlat)
+{
+	addrxlat_sys_decref(xlat->xlatsys);
+	free(xlat);
 }

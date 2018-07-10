@@ -334,9 +334,9 @@ ostype_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
 		kdump_attr_value_t *val)
 {
 	if (!(strcmp(val->string, "linux")))
-		ctx->shared->ostype = ADDRXLAT_OS_LINUX;
+		ctx->xlat->ostype = ADDRXLAT_OS_LINUX;
 	else if (!strcmp(val->string, "xen"))
-		ctx->shared->ostype = ADDRXLAT_OS_XEN;
+		ctx->xlat->ostype = ADDRXLAT_OS_XEN;
 	else
 		return set_error(ctx, KDUMP_ERR_NOTIMPL,
 				 "Unsupported OS type");
@@ -350,7 +350,7 @@ ostype_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 	kdump_status status;
 
 	if (isset_arch_name(ctx)) {
-		switch (ctx->shared->ostype) {
+		switch (ctx->xlat->ostype) {
 		case ADDRXLAT_OS_LINUX:
 			linux_version_code(ctx);
 			break;
@@ -374,7 +374,7 @@ ostype_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 		return set_error(ctx, status,
 				 "Architecture late init failed");
 
-	switch (ctx->shared->ostype) {
+	switch (ctx->xlat->ostype) {
 	case ADDRXLAT_OS_LINUX:
 		status = update_linux_utsname(ctx);
 		if (status != KDUMP_OK)
@@ -402,7 +402,7 @@ ostype_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 static void
 ostype_clear_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
-	ctx->shared->ostype = ADDRXLAT_OS_UNKNOWN;
+	ctx->xlat->ostype = ADDRXLAT_OS_UNKNOWN;
 	if (isset_arch_name(ctx)) {
 		vtop_init(ctx);
 		clear_error(ctx);
@@ -428,6 +428,9 @@ kdump_free(kdump_ctx_t *ctx)
 			free(ctx->data[slot]);
 
 	addrxlat_ctx_decref(ctx->xlatctx);
+
+	list_del(&ctx->xlat_list);
+	xlat_decref(ctx->xlat);
 
 	attr_dict_decref(ctx->dict);
 

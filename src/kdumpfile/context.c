@@ -76,14 +76,9 @@ alloc_shared(void)
 	if (rwlock_init(&shared->lock, NULL))
 		goto err1;
 
-	shared->xlatsys = addrxlat_sys_new();
-	if (!shared->xlatsys)
-		goto err2;
-
 	shared->refcnt = 1;
 	return shared;
 
- err2:	rwlock_destroy(&shared->lock);
  err1:	free(shared);
 	return NULL;
 }
@@ -104,8 +99,6 @@ shared_free(struct kdump_shared *shared)
 		shared->arch_ops->cleanup(shared);
 	if (shared->cache)
 		cache_free(shared->cache);
-	if (shared->xlatsys)
-		addrxlat_sys_decref(shared->xlatsys);
 	if (shared->fcache)
 		fcache_decref(shared->fcache);
 	rwlock_destroy(&shared->lock);
@@ -164,11 +157,18 @@ kdump_new(void)
 	if (!ctx->dict)
 		goto err_dict;
 
+	ctx->xlat = xlat_new();
+	if (!ctx->xlat)
+		goto err_xlat;
+	list_add(&ctx->xlat_list, &ctx->xlat->ctx);
+
 	set_attr_number(ctx, gattr(ctx, GKI_cache_size),
 			ATTR_PERSIST, DEFAULT_CACHE_SIZE);
 
 	return ctx;
 
+ err_xlat:
+	attr_dict_decref(ctx->dict);
  err_dict:
 	shared_decref(ctx->shared);
  err:
@@ -206,9 +206,15 @@ kdump_clone(const kdump_ctx_t *orig)
 	rwlock_wrlock(&orig->shared->lock);
 	ctx->shared = orig->shared;
 	shared_incref_locked(ctx->shared);
+	list_add(&ctx->list, &orig->shared->ctx);
+
 	ctx->dict = orig->dict;
 	attr_dict_incref(ctx->dict);
-	list_add(&ctx->list, &orig->shared->ctx);
+
+	ctx->xlat = orig->xlat;
+	xlat_incref(ctx->xlat);
+	list_add(&ctx->xlat_list, &orig->xlat->ctx);
+
 	rwlock_unlock(&orig->shared->lock);
 
 	return ctx;
@@ -245,7 +251,7 @@ kdump_get_addrxlat_sys(const kdump_ctx_t *ctx)
 	addrxlat_sys_t *ret;
 
 	rwlock_rdlock(&ctx->shared->lock);
-	ret = ctx->shared->xlatsys;
+	ret = ctx->xlat->xlatsys;
 	addrxlat_sys_incref(ret);
 	rwlock_unlock(&ctx->shared->lock);
 

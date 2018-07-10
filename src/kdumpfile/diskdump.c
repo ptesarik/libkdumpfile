@@ -872,7 +872,7 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 
 	ctx->shared->fmtdata = ddp;
 
-	set_addrspace_caps(ctx->shared, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
+	set_addrspace_caps(ctx->xlat, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
 
 	if (uts_looks_sane(&dh32->utsname))
 		set_uts(ctx, &dh32->utsname);

@@ -154,7 +154,7 @@ do_probe(kdump_ctx_t *ctx, struct dump_header *dh)
 	if (ret != KDUMP_OK)
 		goto err;
 
-	set_addrspace_caps(ctx->shared, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
+	set_addrspace_caps(ctx->xlat, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
 
 	switch (dump32toh(ctx, dh->h1.arch)) {
 	case S390_ARCH_32BIT:

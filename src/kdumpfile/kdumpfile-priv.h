@@ -508,7 +508,7 @@ struct ostype_attr_map {
 };
 
 INTERNAL_DECL(struct attr_data *, ostype_attr,
-	      (const struct attr_dict *dict,
+	      (const kdump_ctx_t *ctx,
 	       const struct ostype_attr_map *map));
 
 struct cache;
@@ -546,10 +546,6 @@ struct kdump_shared {
 
 	struct cache *cache;	/**< Page cache. */
 	struct fcache *fcache;	/**< File cache. */
-
-	addrxlat_ostype_t ostype; /**< OS for address translation. */
-	addrxlat_sys_t *xlatsys;  /**< Address translation system. */
-	unsigned long xlat_caps;  /**< Address space capabilities. */
 
 	/** Static attributes. */
 #define ATTR(dir, key, field, type, ctype, ...)	\
@@ -600,6 +596,52 @@ shared_decref_locked(struct kdump_shared *shared)
 
 INTERNAL_DECL(unsigned long, shared_decref, (struct kdump_shared *shared));
 
+/**  Shareable address translation.
+ */
+struct kdump_xlat {
+	unsigned long refcnt;	/**< Reference counter. */
+
+	/** List of all refererring @c kdump_ctx_t structures.
+	 * Each @c kdump_ctx_t that holds a reference to this shared data
+	 * must be added to this list.
+	 */
+	struct list_head ctx;
+
+	addrxlat_ostype_t ostype; /**< OS for address translation. */
+	addrxlat_sys_t *xlatsys;  /**< Address translation system. */
+	unsigned long xlat_caps;  /**< Address space capabilities. */
+};
+
+INTERNAL_DECL(struct kdump_xlat *, xlat_new, (void));
+INTERNAL_DECL(void, xlat_free, (struct kdump_xlat *xlat));
+
+/** Increment address translation reference counter.
+ * @param xlat  Address translation.
+ * @returns     New reference count.
+ */
+static inline unsigned long
+xlat_incref(struct kdump_xlat *xlat)
+{
+	return ++xlat->refcnt;
+}
+
+/** Decrement address translation reference counter.
+ * @param dict  Address translation.
+ * @returns     New reference count.
+ *
+ * If the new reference count is zero, the underlying object is freed
+ * and its address must not be used afterwards.
+ */
+static inline unsigned long
+xlat_decref(struct kdump_xlat *xlat)
+{
+	unsigned long refcnt = --xlat->refcnt;
+	if (refcnt)
+		return refcnt;
+	xlat_free(xlat);
+	return 0;
+}
+
 /**  Representation of a dump file.
  *
  * This structure contains state information and a pointer to @c struct
@@ -612,6 +654,12 @@ struct _kdump_ctx {
 
 	/** Node of the @c ctx list in @c struct @ref kdump_shared. */
 	struct list_head list;
+
+	/** Node of the @c ctx list in @c struct @ref kdump_xlat. */
+	struct list_head xlat_list;
+
+	/** Shared address translation data. */
+	struct kdump_xlat *xlat;
 
 	/** Address translation context. */
 	addrxlat_ctx_t *xlatctx;
@@ -677,7 +725,7 @@ INTERNAL_DECL(kdump_status, read_u64,
 	      (kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	       int precious, char *what, uint64_t *result));
 INTERNAL_DECL(void, set_addrspace_caps,
-	      (struct kdump_shared *shared, unsigned long caps));
+	      (struct kdump_xlat *xlat, unsigned long caps));
 
 
 /* utils */
