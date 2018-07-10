@@ -85,7 +85,7 @@ file_fd_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 	int i;
 
 	if (ctx->shared->fcache)
-		fcache_free(ctx->shared->fcache);
+		fcache_decref(ctx->shared->fcache);
 	ctx->shared->fcache = fcache_new(get_file_fd(ctx),
 					 FCACHE_SIZE, FCACHE_ORDER);
 	if (!ctx->shared->fcache)

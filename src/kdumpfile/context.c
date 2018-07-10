@@ -111,7 +111,7 @@ shared_free(struct kdump_shared *shared)
 	if (shared->xlatsys)
 		addrxlat_sys_decref(shared->xlatsys);
 	if (shared->fcache)
-		fcache_free(shared->fcache);
+		fcache_decref(shared->fcache);
 	cleanup_attr(shared);
 	rwlock_destroy(&shared->lock);
 	free(shared);

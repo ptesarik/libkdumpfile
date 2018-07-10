@@ -66,6 +66,7 @@ fcache_new(int fd, unsigned n, unsigned order)
 	if (!fc)
 		return fc;
 
+	fc->refcnt = 1;
 	fc->fd = fd;
 	fc->pgsz = sysconf(_SC_PAGESIZE);
 	fc->mmapsz = fc->pgsz << order;

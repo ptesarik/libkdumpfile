@@ -1088,6 +1088,9 @@ struct fcache_entry {
 /** File cache.
  */
 struct fcache {
+	/** Reference counter. */
+	unsigned long refcnt;
+
 	/** Open file descriptor. */
 	int fd;
 
@@ -1111,6 +1114,33 @@ INTERNAL_DECL(struct fcache *, fcache_new,
 	      (int fd, unsigned n, unsigned order));
 INTERNAL_DECL(void, fcache_free,
 	      (struct fcache *fc));
+
+/** Increment file cache reference counter.
+ * @param fc  File cache.
+ * @returns   New reference count.
+ */
+static inline unsigned long
+fcache_incref(struct fcache *fc)
+{
+	return ++fc->refcnt;
+}
+
+/** Decrement file cache reference counter.
+ * @param fc  File cache.
+ * @returns   New reference count.
+ *
+ * If the new reference count is zero, the underlying object is freed
+ * and its address must not be used afterwards.
+ */
+static inline unsigned long
+fcache_decref(struct fcache *fc)
+{
+	unsigned long refcnt = --fc->refcnt;
+	if (refcnt)
+		return refcnt;
+	fcache_free(fc);
+	return 0;
+}
 
 INTERNAL_DECL(kdump_status, fcache_get,
 	      (struct fcache *fc, struct fcache_entry *fce, off_t pos));
