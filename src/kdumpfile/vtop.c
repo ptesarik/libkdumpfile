@@ -240,6 +240,7 @@ vtop_init(kdump_ctx_t *ctx)
 	kdump_status status;
 	addrxlat_osdesc_t osdesc;
 	addrxlat_status axres;
+	struct attr_data *attr;
 	struct opts opts;
 
 	osdesc.type = ctx->xlat->ostype;
@@ -258,6 +259,16 @@ vtop_init(kdump_ctx_t *ctx)
 	if (status != KDUMP_OK) {
 		free_opts(&opts);
 		return status;
+	}
+	attr = gattr(ctx, GKI_addrxlat_opts);
+	if (attr_isset(attr)) {
+		char *opt = strdup(attr_value(attr)->string);
+		if (!opt) {
+			free_opts(&opts);
+			return set_error(ctx, KDUMP_ERR_SYSTEM,
+					 "Cannot allocate addrxlat options");
+		}
+		opts.str[opts.n++] = opt;
 	}
 	if (opts.n) {
 		osdesc.opts = join_opts(&opts);
