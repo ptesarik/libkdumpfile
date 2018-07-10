@@ -182,6 +182,7 @@ test_scripts = \
 	elf-fractional \
 	elf-multiread \
 	elf-virt-phys-clash \
+	elf-vmcoreinfo \
 	lkcd-empty-i386 \
 	lkcd-empty-ppc64 \
 	lkcd-empty-x86_64 \
@@ -271,6 +272,8 @@ dist_check_DATA = \
 	early-version-code.expect \
 	elf-empty.data \
 	elf-virt-phys-clash.expect \
+	elf-vmcoreinfo.data \
+	elf-vmcoreinfo.expect \
 	basic.expect \
 	partial.expect \
 	sys-xlat-x86_64-linux.expect \

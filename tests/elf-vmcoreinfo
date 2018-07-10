@@ -1,0 +1,36 @@
+#! /bin/sh
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+datafile="$srcdir/${name}.data"
+dumpfile="out/${name}.dump"
+resultfile="out/${name}.result"
+expectfile="$srcdir/${name}.expect"
+
+./mkelf "$dumpfile" <<EOF
+ei_class = 2
+ei_data = 1
+e_machine = 62
+e_phoff = 0x1000
+
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create ELF file" >&2
+    exit $rc
+fi
+echo "Created ELF dump: $dumpfile"
+
+./dumpdata "$dumpfile" -o linux KVADDR:0 8 >"$resultfile"
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot dump ELF data" >&2
+    exit $rc
+fi
+
+if ! diff "$expectfile" "$resultfile"; then
+    echo "Results do not match" >&2
+    exit 1
+fi
