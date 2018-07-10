@@ -535,7 +535,7 @@ finphdr64(struct page_data *pg)
 	phdr.p_type = htodump32(be, pgelf->phdr.p_type);
 	phdr.p_flags = htodump64(be, pgelf->phdr.p_flags);
 	phdr.p_offset = htodump64(be, pgelf->filepos);
-	phdr.p_vaddr = htodump32(be, pgelf->phdr.p_vaddr);
+	phdr.p_vaddr = htodump64(be, pgelf->phdr.p_vaddr);
 	phdr.p_paddr = htodump64(be, pgelf->phdr.p_paddr);
 	phdr.p_filesz = htodump64(be, pgelf->filesz);
 	phdr.p_memsz = htodump64(be, pgelf->phdr.p_memsz);
