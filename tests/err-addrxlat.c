@@ -71,10 +71,18 @@ force_nomem(void)
 		perror("Cannot set current AS limit");
 		return -1;
 	}
-	for (sz = 1024; sz; sz >>= 1)
-		while ( (hog = malloc(sz)) )
-			if (nhogs < MAXHOGS)
+	for (sz = 1024; sz; sz -= sizeof(long)) {
+		do {
+			void *newhog;
+			size_t mysz = 0;
+			hog = NULL;
+			while ( (newhog = realloc(hog, mysz += sz)) )
+				hog = newhog;
+			if (hog && nhogs < MAXHOGS)
 				hogs[nhogs++] = hog;
+		} while (hog);
+	}
+
 	return 0;
 }
 
