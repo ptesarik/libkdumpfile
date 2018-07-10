@@ -76,7 +76,7 @@ get_version_code(kdump_ctx_t *ctx, unsigned long *pver)
 	ostype = attr_value(attr)->string;
 
 	/* Get OS directory attribute */
-	attr = lookup_attr(ctx->shared, ostype);
+	attr = lookup_attr(ctx->dict, ostype);
 	if (!attr || attr->template->type != KDUMP_DIRECTORY)
 		return set_error(ctx, KDUMP_ERR_NOTIMPL,
 				 "Unknown operating system type: %s", ostype);
@@ -89,7 +89,7 @@ get_version_code(kdump_ctx_t *ctx, unsigned long *pver)
 
 	/* Get version_code in the OS directory. */
 	attr = lookup_dir_attr(
-		ctx->shared, attr, attrname, sizeof(attrname) - 1);
+		ctx->dict, attr, attrname, sizeof(attrname) - 1);
 	if (!attr)
 		return KDUMP_OK;
 	status = validate_attr(ctx, attr);
@@ -153,7 +153,7 @@ set_x86_pae_opt(kdump_ctx_t *ctx, struct opts *opts)
 	attr = gattr(ctx, GKI_linux_vmcoreinfo_lines);
 	if (attr_isset(attr))
 		pae_state = "no";
-	attr = lookup_dir_attr(ctx->shared, attr,
+	attr = lookup_dir_attr(ctx->dict, attr,
 			       config_pae, sizeof(config_pae) - 1);
 	if (attr && validate_attr(ctx, attr) == KDUMP_OK &&
 	    !strcmp(attr_value(attr)->string, "y"))
@@ -336,7 +336,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 
 	switch (sym->type) {
 	case ADDRXLAT_SYM_VALUE:
-		base = ostype_attr(ctx->shared, value_map);
+		base = ostype_attr(ctx->dict, value_map);
 		if (!base)
 			return addrxlat_ctx_err(
 				ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
@@ -344,7 +344,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 		break;
 
 	case ADDRXLAT_SYM_SIZEOF:
-		base = ostype_attr(ctx->shared, sizeof_map);
+		base = ostype_attr(ctx->dict, sizeof_map);
 		if (!base)
 			return addrxlat_ctx_err(
 				ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
@@ -352,7 +352,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 		break;
 
 	case ADDRXLAT_SYM_OFFSETOF:
-		base = ostype_attr(ctx->shared, offsetof_map);
+		base = ostype_attr(ctx->dict, offsetof_map);
 		if (!base)
 			return addrxlat_ctx_err(
 				ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
@@ -361,7 +361,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 
 	case ADDRXLAT_SYM_REG:
 		rwlock_rdlock(&ctx->shared->lock);
-		base = lookup_attr(ctx->shared, "cpu.0.reg");
+		base = lookup_attr(ctx->dict, "cpu.0.reg");
 		rwlock_unlock(&ctx->shared->lock);
 		if (!base)
 			return addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
@@ -375,7 +375,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 
 	rwlock_rdlock(&ctx->shared->lock);
 
-	attr = lookup_dir_attr(ctx->shared, base,
+	attr = lookup_dir_attr(ctx->dict, base,
 			       sym->args[0], strlen(sym->args[0]));
 	if (!attr) {
 		ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
@@ -389,7 +389,7 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 	}
 
 	if (sym->type == ADDRXLAT_SYM_OFFSETOF) {
-		attr = lookup_dir_attr(ctx->shared, attr,
+		attr = lookup_dir_attr(ctx->dict, attr,
 				       sym->args[1], strlen(sym->args[1]));
 		if (!attr) {
 			ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,

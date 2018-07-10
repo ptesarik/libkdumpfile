@@ -428,11 +428,11 @@ process_x86_64_xen_prstatus(kdump_ctx_t *ctx, const void *data, size_t size)
 }
 
 static void
-x86_64_attr_cleanup(struct kdump_shared *shared)
+x86_64_attr_cleanup(struct attr_dict *dict)
 {
-	struct x86_64_data *archdata = shared->archdata;
+	struct x86_64_data *archdata = dict->shared->archdata;
 
-	attr_remove_override(sgattr(shared, GKI_phys_base),
+	attr_remove_override(dgattr(dict, GKI_phys_base),
 			     &archdata->phys_base_override);
 }
 

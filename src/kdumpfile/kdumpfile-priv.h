@@ -136,6 +136,7 @@ enum kdump_arch {
 
 struct page_io;
 struct kdump_shared;
+struct attr_dict;
 
 struct format_ops {
 	/**  Format name (identifier).
@@ -198,9 +199,9 @@ struct format_ops {
 	kdump_status (*realloc_caches)(kdump_ctx_t *ctx);
 
 	/** Clean up attribute hooks.
-	 * @param shared  Shared info.
+	 * @param dict    Attribute dictionary.
 	 */
-	void (*attr_cleanup)(struct kdump_shared *shared);
+	void (*attr_cleanup)(struct attr_dict *dict);
 
 	/* Clean up all private data.
 	 */
@@ -221,9 +222,9 @@ struct arch_ops {
 	kdump_status (*process_xen_prstatus)(kdump_ctx_t *, const void *, size_t);
 
 	/** Clean up attribute hooks.
-	 * @param shared  Shared info.
+	 * @param dict    Attribute dictionary.
 	 */
-	void (*attr_cleanup)(struct kdump_shared *shared);
+	void (*attr_cleanup)(struct attr_dict *dict);
 
 	/** Clean up any arch-specific data. */
 	void (*cleanup)(struct kdump_shared *);
@@ -484,6 +485,21 @@ struct attr_hash {
 	struct attr_data table[ATTR_HASH_SIZE];
 };
 
+/** Shareable attribute dictionary. */
+struct attr_dict {
+	/** Reference counter. */
+	unsigned long refcnt;
+
+	/** Attribute hash table. */
+	struct attr_hash *attr;
+
+	/** Global attributes. */
+	struct attr_data *global_attrs[NR_GLOBAL_ATTRS];
+
+	/** Dump file shared data. */
+	struct kdump_shared *shared;
+};
+
 /** OS type to attribute key mapping.
  */
 struct ostype_attr_map {
@@ -492,7 +508,7 @@ struct ostype_attr_map {
 };
 
 INTERNAL_DECL(struct attr_data *, ostype_attr,
-	      (const struct kdump_shared *shared,
+	      (const struct attr_dict *dict,
 	       const struct ostype_attr_map *map));
 
 struct cache;
@@ -534,11 +550,6 @@ struct kdump_shared {
 	addrxlat_ostype_t ostype; /**< OS for address translation. */
 	addrxlat_sys_t *xlatsys;  /**< Address translation system. */
 	unsigned long xlat_caps;  /**< Address space capabilities. */
-
-	struct attr_hash *attr;	/**< Attribute hash table. */
-
-	/** Global attributes. */
-	struct attr_data *global_attrs[NR_GLOBAL_ATTRS];
 
 	/** Static attributes. */
 #define ATTR(dir, key, field, type, ctype, ...)	\
@@ -596,6 +607,8 @@ INTERNAL_DECL(unsigned long, shared_decref, (struct kdump_shared *shared));
  */
 struct _kdump_ctx {
 	struct kdump_shared *shared; /**< Dump file shared data. */
+
+	struct attr_dict *dict;	/**< Attribute dictionary. */
 
 	/** Node of the @c ctx list in @c struct @ref kdump_shared. */
 	struct list_head list;
@@ -851,27 +864,57 @@ INTERNAL_DECL(struct attr_template *, alloc_attr_template,
 	      (const struct attr_template *tmpl,
 	       const char *key, size_t keylen));
 INTERNAL_DECL(struct attr_data *, new_attr,
-	      (struct kdump_shared *shared, struct attr_data *parent,
+	      (struct attr_dict *dict, struct attr_data *parent,
 	       const struct attr_template *tmpl));
 INTERNAL_DECL(void, dealloc_attr, (struct attr_data *attr));
-INTERNAL_DECL(struct attr_data **, init_attrs, (struct kdump_shared *shared));
 INTERNAL_DECL(struct attr_data *, lookup_attr,
-	      (const struct kdump_shared *shared, const char *key));
+	      (const struct attr_dict *dict, const char *key));
 INTERNAL_DECL(struct attr_data *, lookup_dir_attr,
-	      (const struct kdump_shared *shared, const struct attr_data *dir,
+	      (const struct attr_dict *dict, const struct attr_data *dir,
 	       const char *key, size_t keylen));
+
+INTERNAL_DECL(struct attr_dict *, attr_dict_new, (struct kdump_shared *shared));
+INTERNAL_DECL(void, attr_dict_free, (struct attr_dict *dict));
+
+/** Increment attribute dictionary reference counter.
+ * @param dict  Attribute dictionary.
+ * @returns     New reference count.
+ */
+static inline unsigned long
+attr_dict_incref(struct attr_dict *dict)
+{
+	return ++dict->refcnt;
+}
+
+/** Decrement attribute dictionary reference counter.
+ * @param dict  Attribute dictionary.
+ * @returns     New reference count.
+ *
+ * If the new reference count is zero, the underlying object is freed
+ * and its address must not be used afterwards. Note that the caller
+ * must not even try to unlock the object in that case.
+ */
+static inline unsigned long
+attr_dict_decref(struct attr_dict *dict)
+{
+	unsigned long refcnt = --dict->refcnt;
+	if (refcnt)
+		return refcnt;
+	attr_dict_free(dict);
+	return 0;
+}
 
 DECLARE_ALIAS(get_attr);
 
-/**  Attribute data by shared data and global key index.
- * @param shared  Shared data of a dump file object.
- * @param idx     Global key index.
- * @returns       Attribute data.
+/**  Attribute data by dict and global key index.
+ * @param dict  Attribute dictionary.
+ * @param idx   Global key index.
+ * @returns     Attribute data.
  */
 static inline struct attr_data *
-sgattr(const struct kdump_shared *shared, enum global_keyidx idx)
+dgattr(const struct attr_dict *dict, enum global_keyidx idx)
 {
-	return shared->global_attrs[idx];
+	return dict->global_attrs[idx];
 }
 
 /**  Attribute data by context and global key index.
@@ -882,7 +925,7 @@ sgattr(const struct kdump_shared *shared, enum global_keyidx idx)
 static inline struct attr_data *
 gattr(const kdump_ctx_t *ctx, enum global_keyidx idx)
 {
-	return sgattr(ctx->shared, idx);
+	return dgattr(ctx->dict, idx);
 }
 
 /**  Check if an attribute is set.
@@ -924,9 +967,8 @@ INTERNAL_DECL(kdump_status, set_attr_static_string,
 	       struct attr_flags flags, const char *str));
 INTERNAL_DECL(void, clear_attr, (kdump_ctx_t *ctx, struct attr_data *attr));
 INTERNAL_DECL(void, clear_volatile_attrs, (kdump_ctx_t *ctx));
-INTERNAL_DECL(void, cleanup_attr, (struct kdump_shared *shared));
 INTERNAL_DECL(struct attr_data *, create_attr_path,
-	      (struct kdump_shared *shared,
+	      (struct attr_dict *dict,
 	       struct attr_data *dir, const char *path, size_t pathlen,
 	       const struct attr_template *atmpl));
 

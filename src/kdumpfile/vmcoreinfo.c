@@ -81,12 +81,12 @@ add_parsed_row(kdump_ctx_t *ctx, struct attr_data *dir,
 	struct attr_data *attr;
 	kdump_status res;
 
-	attr = lookup_dir_attr(ctx->shared, dir, "lines", 5);
+	attr = lookup_dir_attr(ctx->dict, dir, "lines", 5);
 	if (!attr)
 		return set_error(ctx, KDUMP_ERR_NOKEY,
 				 "Cannot set VMCOREINFO '%.*s'",
 				 (int) keylen, key);
-	attr = create_attr_path(ctx->shared, attr, key, keylen, &lines_tmpl);
+	attr = create_attr_path(ctx->dict, attr, key, keylen, &lines_tmpl);
 	if (!attr)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot set VMCOREINFO '%.*s'",
@@ -189,7 +189,7 @@ lines_post_hook(kdump_ctx_t *ctx, struct attr_data *lineattr)
 		return KDUMP_OK;
 
 	sym[-1] = '.';
-	attr = create_attr_path(ctx->shared, dir, key, strlen(key), &tmpl);
+	attr = create_attr_path(ctx->dict, dir, key, strlen(key), &tmpl);
 	if (!attr)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot set VMCOREINFO '%s'", key);
@@ -263,7 +263,7 @@ kdump_vmcoreinfo(kdump_ctx_t *ctx)
 	clear_error(ctx);
 	rwlock_rdlock(&ctx->shared->lock);
 
-	attr = ostype_attr(ctx->shared, raw_map);
+	attr = ostype_attr(ctx->dict, raw_map);
 	ret = (attr && validate_attr(ctx, attr) == KDUMP_OK &&
 	       attr->template->type == KDUMP_STRING)
 		? attr_value(attr)->string
@@ -289,9 +289,9 @@ kdump_vmcoreinfo_row(kdump_ctx_t *ctx, const char *key)
 	clear_error(ctx);
 	rwlock_rdlock(&ctx->shared->lock);
 
-	base = ostype_attr(ctx->shared, lines_map);
+	base = ostype_attr(ctx->dict, lines_map);
 	if (base) {
-		attr = lookup_dir_attr(ctx->shared, base, key, strlen(key));
+		attr = lookup_dir_attr(ctx->dict, base, key, strlen(key));
 		if (attr && validate_attr(ctx, attr) == KDUMP_OK)
 			ret = attr_value(attr)->string;
 	}
@@ -317,13 +317,13 @@ kdump_vmcoreinfo_symbol(kdump_ctx_t *ctx, const char *symname,
 	clear_error(ctx);
 	rwlock_rdlock(&ctx->shared->lock);
 
-	base = ostype_attr(ctx->shared, symbol_map);
+	base = ostype_attr(ctx->dict, symbol_map);
 	if (!base) {
 		ret = set_error(ctx, KDUMP_ERR_NOTIMPL, "Unsupported OS");
 		goto out;
 	}
 
-	attr = lookup_dir_attr(ctx->shared, base, symname, strlen(symname));
+	attr = lookup_dir_attr(ctx->dict, base, symname, strlen(symname));
 	if (!attr) {
 		ret = set_error(ctx, KDUMP_ERR_NODATA, "Symbol not found");
 		goto out;

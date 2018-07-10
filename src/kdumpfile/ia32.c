@@ -112,11 +112,11 @@ process_ia32_prstatus(kdump_ctx_t *ctx, const void *data, size_t size)
 		return res;
 
 	sprintf(cpukey, "cpu.%u", get_num_cpus(ctx));
-	dir = lookup_attr(ctx->shared, cpukey);
+	dir = lookup_attr(ctx->dict, cpukey);
 	if (!dir)
 		return set_error(ctx, KDUMP_ERR_NOKEY,
 				 "'%s': %s", cpukey, "No such key");
-	attr = new_attr(ctx->shared, dir, &tmpl_pid);
+	attr = new_attr(ctx->dict, dir, &tmpl_pid);
 	if (!attr)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate '%s'", cpukey);

@@ -1044,13 +1044,13 @@ free_level1(struct pfn_block ***level1, unsigned long n)
 }
 
 static void
-lkcd_attr_cleanup(struct kdump_shared *shared)
+lkcd_attr_cleanup(struct attr_dict *dict)
 {
-	struct lkcd_priv *lkcdp = shared->fmtdata;
+	struct lkcd_priv *lkcdp = dict->shared->fmtdata;
 
-	attr_remove_override(sgattr(shared, GKI_page_size),
+	attr_remove_override(dgattr(dict, GKI_page_size),
 			     &lkcdp->page_size_override);
-	attr_remove_override(sgattr(shared, GKI_max_pfn),
+	attr_remove_override(dgattr(dict, GKI_max_pfn),
 			     &lkcdp->max_pfn_override);
 }
 

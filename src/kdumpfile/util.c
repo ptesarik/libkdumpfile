@@ -368,7 +368,7 @@ arch_name_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 
 	if (ctx->shared->arch_ops) {
 		if (ctx->shared->arch_ops->attr_cleanup)
-			ctx->shared->arch_ops->attr_cleanup(ctx->shared);
+			ctx->shared->arch_ops->attr_cleanup(ctx->dict);
 		if (ctx->shared->arch_ops->cleanup)
 			ctx->shared->arch_ops->cleanup(ctx->shared);
 	}
@@ -713,7 +713,7 @@ cpu_regs_dir(kdump_ctx_t *ctx, unsigned cpu, struct attr_data **pdir)
 	size_t keylen;
 
 	keylen = sprintf(cpukey, "%u.reg", cpu);
-	*pdir = create_attr_path(ctx->shared, gattr(ctx, GKI_dir_cpu),
+	*pdir = create_attr_path(ctx->dict, gattr(ctx, GKI_dir_cpu),
 				 cpukey, keylen, &dir_template);
 	return *pdir
 		? KDUMP_OK
@@ -732,7 +732,7 @@ static kdump_status
 set_cpu_reg(kdump_ctx_t *ctx, struct attr_data *dir,
 	    const struct attr_template *tmpl, kdump_num_t val)
 {
-	struct attr_data *attr = new_attr(ctx->shared, dir, tmpl);
+	struct attr_data *attr = new_attr(ctx->dict, dir, tmpl);
 	kdump_status status;
 
 	if (!attr)

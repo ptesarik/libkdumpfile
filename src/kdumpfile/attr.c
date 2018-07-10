@@ -189,14 +189,14 @@ path_hash(struct phash *ph, const struct attr_data *dir)
 }
 
 /**  Look up a child attribute of a given directory.
- * @param shared  Dump file shared data.
+ * @param dict    Attribute dictionary.
  * @param dir     Directory attribute.
  * @param key     Key name relative to @p dir.
  * @param keylen  Initial portion of @c key to be considered.
  * @returns       Stored attribute or @c NULL if not found.
  */
 struct attr_data *
-lookup_dir_attr(const struct kdump_shared *shared,
+lookup_dir_attr(const struct attr_dict *dict,
 		const struct attr_data *dir,
 		const char *key, size_t keylen)
 {
@@ -210,7 +210,7 @@ lookup_dir_attr(const struct kdump_shared *shared,
 	i = fold_hash(phash_value(&ph), ATTR_HASH_BITS);
 	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
 	do {
-		tbl = shared->attr;
+		tbl = dict->attr;
 		do {
 			struct attr_data *d = &tbl->table[i];
 			if (!d->parent)
@@ -226,32 +226,32 @@ lookup_dir_attr(const struct kdump_shared *shared,
 }
 
 /**  Look up attribute value by name.
- * @param shared  Dump file shared data.
+ * @param dict    Attribute dictionary.
  * @param key     Key name.
  * @param keylen  Initial portion of @c key to be considered.
  * @returns       Stored attribute or @c NULL if not found.
  */
 static struct attr_data*
-lookup_attr_part(const struct kdump_shared *shared,
+lookup_attr_part(const struct attr_dict *dict,
 		 const char *key, size_t keylen)
 {
-	return lookup_dir_attr(shared, sgattr(shared, GKI_dir_root),
+	return lookup_dir_attr(dict, dgattr(dict, GKI_dir_root),
 			       key, keylen);
 }
 
 /**  Look up attribute data by name.
- * @param shared  Dump file shared data.
+ * @param dict    Attribute dictionary.
  * @param key     Key name, or @c NULL for the root attribute.
  * @returns       Stored attribute or @c NULL if not found.
  *
  * This function does not check whether an attribute is set, or not.
  */
 struct attr_data *
-lookup_attr(const struct kdump_shared *shared, const char *key)
+lookup_attr(const struct attr_dict *dict, const char *key)
 {
 	return key
-		? lookup_attr_part(shared, key, strlen(key))
-		: sgattr(shared, GKI_dir_root);
+		? lookup_attr_part(dict, key, strlen(key))
+		: dgattr(dict, GKI_dir_root);
 }
 
 /**  Link a new attribute to its parent.
@@ -272,13 +272,13 @@ link_attr(struct attr_data *dir, struct attr_data *attr)
 }
 
 /**  Allocate an attribute from the hash table.
- * @param shared  Dump file shared data.
+ * @param dict    Attribute dictionary.
  * @param parent  Parent directory, or @c NULL.
  * @param tmpl    Attribute template.
  * @returns       Attribute data, or @c NULL on allocation failure.
  */
 static struct attr_data *
-alloc_attr(struct kdump_shared *shared, struct attr_data *parent,
+alloc_attr(struct attr_dict *dict, struct attr_data *parent,
 	   const struct attr_template *tmpl)
 {
 	struct attr_data tmp;
@@ -296,7 +296,7 @@ alloc_attr(struct kdump_shared *shared, struct attr_data *parent,
 	i = hash = key_hash_index(path);
 	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
 	do {
-		pnext = &shared->attr;
+		pnext = &dict->attr;
 		while (*pnext) {
 			tbl = *pnext;
 			if (!tbl->table[i].parent)
@@ -404,19 +404,19 @@ dealloc_attr(struct attr_data *attr)
 }
 
 /**  Allocate a new attribute in any directory.
- * @param shared  Dump file shared data.
+ * @param dict    Attribute dictionary.
  * @param parent  Parent directory. If @c NULL, create a self-owned
  *                attribute (root directory).
  * @param tmpl    Attribute template.
  * @returns       Attribute data, or @c NULL on allocation failure.
  */
 struct attr_data *
-new_attr(struct kdump_shared *shared, struct attr_data *parent,
+new_attr(struct attr_dict *dict, struct attr_data *parent,
 	 const struct attr_template *tmpl)
 {
 	struct attr_data *attr;
 
-	attr = alloc_attr(shared, parent, tmpl);
+	attr = alloc_attr(dict, parent, tmpl);
 	if (!attr)
 		return attr;
 
@@ -456,7 +456,7 @@ alloc_attr_template(const struct attr_template *tmpl,
 }
 
 /** Create an attribute including full path.
- * @param shared  Dump file shared data.
+ * @param dict    Attribute dictionary.
  * @param dir     Base directory.
  * @param path    Path under @p dir.
  * @param pathlen Length of @p path (maybe partial).
@@ -468,7 +468,7 @@ alloc_attr_template(const struct attr_template *tmpl,
  * all path elements are also created as necessary.
  */
 struct attr_data *
-create_attr_path(struct kdump_shared *shared, struct attr_data *dir,
+create_attr_path(struct attr_dict *dict, struct attr_data *dir,
 		 const char *path, size_t pathlen,
 		 const struct attr_template *atmpl)
 {
@@ -477,7 +477,7 @@ create_attr_path(struct kdump_shared *shared, struct attr_data *dir,
 	struct attr_template *tmpl;
 
 	p = endp = endpath = path + pathlen;
-	while (! (attr = lookup_dir_attr(shared, dir, path, endp - path)) )
+	while (! (attr = lookup_dir_attr(dict, dir, path, endp - path)) )
 		if (! (endp = memrchr(path, '.', endp - path)) ) {
 			endp = path - 1;
 			attr = dir;
@@ -493,7 +493,7 @@ create_attr_path(struct kdump_shared *shared, struct attr_data *dir,
 			: alloc_attr_template(atmpl, p, endpath - p);
 		if (!tmpl)
 			return NULL;
-		attr = new_attr(shared, attr, tmpl);
+		attr = new_attr(dict, attr, tmpl);
 		if (!attr) {
 			free(tmpl);
 			return NULL;
@@ -523,43 +523,57 @@ instantiate_path(struct attr_data *attr)
 	}
 }
 
-/**  Free all memory used by attributes.
- * @param shared  Shared data of a dump file object.
+/**  Free an attribute dictionary.
+ * @param dict  Attribute dictionary.
  */
 void
-cleanup_attr(struct kdump_shared *shared)
+attr_dict_free(struct attr_dict *dict)
 {
 	struct attr_hash *tbl, *tblnext;
 
-	dealloc_attr(sgattr(shared, GKI_dir_root));
+	dealloc_attr(dgattr(dict, GKI_dir_root));
 
-	tblnext = shared->attr;
+	tblnext = dict->attr->next;
 	while(tblnext) {
 		tbl = tblnext;
 		tblnext = tbl->next;
 		free(tbl);
 	}
-	shared->attr = NULL;
+
+	if (dict->shared->arch_ops && dict->shared->arch_ops->attr_cleanup)
+		dict->shared->arch_ops->attr_cleanup(dict);
+	if (dict->shared->ops && dict->shared->ops->attr_cleanup)
+		dict->shared->ops->attr_cleanup(dict);
+
+	shared_decref_locked(dict->shared);
+	free(dict);
 }
 
 /**  Initialize global attributes
  * @param shared  Shared data of a dump file object.
- * @returns       Global attribute array, or @c NULL on allocation failure.
+ * @returns       Attribute directory, or @c NULL on allocation failure.
  */
-struct attr_data **
-init_attrs(struct kdump_shared *shared)
+struct attr_dict *
+attr_dict_new(struct kdump_shared *shared)
 {
+	struct attr_dict *dict;
 	enum global_keyidx i;
+
+	dict = calloc(1, sizeof(struct attr_dict));
+	if (!dict)
+		return NULL;
+
+	dict->refcnt = 1;
 
 	for (i = 0; i < NR_GLOBAL_ATTRS; ++i) {
 		const struct attr_template *tmpl = &global_keys[i];
 		struct attr_data *attr, *parent;
 
-		parent = shared->global_attrs[tmpl->parent - global_keys];
-		attr = new_attr(shared, parent, tmpl);
+		parent = dict->global_attrs[tmpl->parent - global_keys];
+		attr = new_attr(dict, parent, tmpl);
 		if (!attr)
 			return NULL;
-		shared->global_attrs[i] = attr;
+		dict->global_attrs[i] = attr;
 
 		if (i >= GKI_static_first && i <= GKI_static_last) {
 			attr->flags.indirect = 1;
@@ -567,7 +581,10 @@ init_attrs(struct kdump_shared *shared)
 		}
 	}
 
-	return shared->global_attrs;
+	dict->shared = shared;
+	shared_incref_locked(dict->shared);
+
+	return dict;
 }
 
 /**  Check whether an attribute has a given value.
@@ -840,7 +857,7 @@ kdump_get_attr(kdump_ctx_t *ctx, const char *key, kdump_attr_t *valp)
 	clear_error(ctx);
 	rwlock_rdlock(&ctx->shared->lock);
 
-	d = lookup_attr(ctx->shared, key);
+	d = lookup_attr(ctx->dict, key);
 	if (!d) {
 		ret = set_error(ctx, KDUMP_ERR_NOKEY, "No such key");
 		goto out;
@@ -913,7 +930,7 @@ kdump_set_attr(kdump_ctx_t *ctx, const char *key,
 	clear_error(ctx);
 	rwlock_wrlock(&ctx->shared->lock);
 
-	d = lookup_attr(ctx->shared, key);
+	d = lookup_attr(ctx->dict, key);
 	if (!d) {
 		ret = set_error(ctx, KDUMP_ERR_NODATA, "No such key");
 		goto out;
@@ -954,7 +971,7 @@ kdump_attr_ref(kdump_ctx_t *ctx, const char *key, kdump_attr_ref_t *ref)
 	clear_error(ctx);
 
 	rwlock_rdlock(&ctx->shared->lock);
-	d = lookup_attr(ctx->shared, key);
+	d = lookup_attr(ctx->dict, key);
 	rwlock_unlock(&ctx->shared->lock);
 	if (!d)
 		return set_error(ctx, KDUMP_ERR_NOKEY, "No such key");
@@ -973,7 +990,7 @@ kdump_sub_attr_ref(kdump_ctx_t *ctx, const kdump_attr_ref_t *base,
 
 	dir = ref_attr(base);
 	rwlock_rdlock(&ctx->shared->lock);
-	attr = lookup_dir_attr(ctx->shared, dir, subkey, strlen(subkey));
+	attr = lookup_dir_attr(ctx->dict, dir, subkey, strlen(subkey));
 	rwlock_unlock(&ctx->shared->lock);
 	if (!attr)
 		return set_error(ctx, KDUMP_ERR_NOKEY, "No such key");
@@ -1083,7 +1100,7 @@ kdump_attr_iter_start(kdump_ctx_t *ctx, const char *path,
 	clear_error(ctx);
 	rwlock_rdlock(&ctx->shared->lock);
 
-	d = lookup_attr(ctx->shared, path);
+	d = lookup_attr(ctx->dict, path);
 	if (d)
 		ret = attr_iter_start(ctx, d, iter);
 	else
@@ -1131,17 +1148,17 @@ kdump_attr_iter_end(kdump_ctx_t *ctx, kdump_attr_iter_t *iter)
 }
 
 /**  Use a map to choose an attribute by current OS type.
- * @param shared  Shared data of a dump file object.
+ * @param dict    Attribute dictionary.
  * @param map     OS type -> global attribute index.
  * @returns       Attribute, or @c NULL if OS type not found.
  */
 struct attr_data *
-ostype_attr(const struct kdump_shared *shared,
+ostype_attr(const struct attr_dict *dict,
 	    const struct ostype_attr_map *map)
 {
 	while (map->ostype != ADDRXLAT_OS_UNKNOWN) {
-		if (map->ostype == shared->ostype)
-			return sgattr(shared, map->attrkey);
+		if (map->ostype == dict->shared->ostype)
+			return dgattr(dict, map->attrkey);
 		++map;
 	}
 

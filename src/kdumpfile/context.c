@@ -80,13 +80,9 @@ alloc_shared(void)
 	if (!shared->xlatsys)
 		goto err2;
 
-	if (!init_attrs(shared))
-		goto err3;
-
 	shared->refcnt = 1;
 	return shared;
 
- err3:	addrxlat_sys_decref(shared->xlatsys);
  err2:	rwlock_destroy(&shared->lock);
  err1:	free(shared);
 	return NULL;
@@ -102,10 +98,6 @@ shared_free(struct kdump_shared *shared)
 {
 	rwlock_unlock(&shared->lock);
 
-	if (shared->ops && shared->ops->attr_cleanup)
-		shared->ops->attr_cleanup(shared);
-	if (shared->arch_ops && shared->arch_ops->attr_cleanup)
-		shared->arch_ops->attr_cleanup(shared);
 	if (shared->ops && shared->ops->cleanup)
 		shared->ops->cleanup(shared);
 	if (shared->arch_ops && shared->arch_ops->cleanup)
@@ -116,7 +108,6 @@ shared_free(struct kdump_shared *shared)
 		addrxlat_sys_decref(shared->xlatsys);
 	if (shared->fcache)
 		fcache_decref(shared->fcache);
-	cleanup_attr(shared);
 	rwlock_destroy(&shared->lock);
 	free(shared);
 }
@@ -165,17 +156,25 @@ kdump_new(void)
 		return NULL;
 
 	ctx->shared = alloc_shared();
-	if (!ctx->shared) {
-		addrxlat_ctx_decref(ctx->xlatctx);
-		free(ctx);
-		return NULL;
-	}
+	if (!ctx->shared)
+		goto err;
 	list_add(&ctx->list, &ctx->shared->ctx);
+
+	ctx->dict = attr_dict_new(ctx->shared);
+	if (!ctx->dict)
+		goto err_dict;
 
 	set_attr_number(ctx, gattr(ctx, GKI_cache_size),
 			ATTR_PERSIST, DEFAULT_CACHE_SIZE);
 
 	return ctx;
+
+ err_dict:
+	shared_decref(ctx->shared);
+ err:
+	addrxlat_ctx_decref(ctx->xlatctx);
+	free(ctx);
+	return NULL;
 }
 
 kdump_ctx_t *
@@ -207,6 +206,8 @@ kdump_clone(const kdump_ctx_t *orig)
 	rwlock_wrlock(&orig->shared->lock);
 	ctx->shared = orig->shared;
 	shared_incref_locked(ctx->shared);
+	ctx->dict = orig->dict;
+	attr_dict_incref(ctx->dict);
 	list_add(&ctx->list, &orig->shared->ctx);
 	rwlock_unlock(&orig->shared->lock);
 

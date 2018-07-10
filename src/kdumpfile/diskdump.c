@@ -942,11 +942,11 @@ diskdump_probe(kdump_ctx_t *ctx)
 }
 
 static void
-diskdump_attr_cleanup(struct kdump_shared *shared)
+diskdump_attr_cleanup(struct attr_dict *dict)
 {
-	struct disk_dump_priv *ddp = shared->fmtdata;
+	struct disk_dump_priv *ddp = dict->shared->fmtdata;
 
-	attr_remove_override(sgattr(shared, GKI_page_size),
+	attr_remove_override(dgattr(dict, GKI_page_size),
 			     &ddp->page_size_override);
 }
 

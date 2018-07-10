@@ -429,6 +429,8 @@ kdump_free(kdump_ctx_t *ctx)
 
 	addrxlat_ctx_decref(ctx->xlatctx);
 
+	attr_dict_decref(ctx->dict);
+
 	list_del(&ctx->list);
 	if (shared_decref_locked(shared))
 		rwlock_unlock(&shared->lock);
