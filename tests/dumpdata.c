@@ -39,6 +39,8 @@
 #define CHUNKSZ 256
 #define BYTES_PER_LINE 16
 
+static const char *ostype = NULL;
+
 static inline int
 endofline(unsigned long long addr)
 {
@@ -130,10 +132,19 @@ dump_data_fd(int fd, char **argv)
 		return TEST_ERR;
 	}
 
+	if (ostype) {
+		res = kdump_set_string_attr(ctx, KDUMP_ATTR_OSTYPE, ostype);
+		if (res != KDUMP_OK) {
+			fprintf(stderr, "Cannot set OS type: %s\n",
+				kdump_get_err(ctx));
+			goto err;
+		}
+	}
+
 	res = kdump_set_number_attr(ctx, KDUMP_ATTR_FILE_FD, fd);
 	if (res != KDUMP_OK) {
 		fprintf(stderr, "Cannot open dump: %s\n", kdump_get_err(ctx));
-		rc = TEST_ERR;
+		goto err;
 	} else {
 		kdump_addrspace_t as;
 		unsigned long long addr, len;
@@ -177,27 +188,55 @@ dump_data_fd(int fd, char **argv)
 
 	kdump_free(ctx);
 	return rc;
+
+ err:
+	kdump_free(ctx);
+	return TEST_ERR;
+}
+
+static void
+usage(const char *name)
+{
+	fprintf(stderr,
+		"Usage: %s [<options>] <dump> <addr> <len> [...]\n"
+		"\n"
+		"Options:\n"
+		"  -o ostype  Set OS type\n",
+		name);
 }
 
 int
 main(int argc, char **argv)
 {
+	int opt;
 	int fd;
 	int rc;
 
-	if (argc < 4 || argc % 2 != 0) {
-		fprintf(stderr, "Usage: %s <dump> <addr> <len> [...]\n",
-			argv[0]);
+	while ((opt = getopt(argc, argv, "ho:")) != -1) {
+		switch (opt) {
+		case 'o':
+			ostype = optarg;
+			break;
+
+		case 'h':
+		default:
+			usage(argv[0]);
+			return (opt == 'h') ? TEST_OK : TEST_ERR;
+		}
+	}
+
+	if ((argc - optind) < 3 || (argc - optind) % 2 != 1) {
+		usage(argv[0]);
 		return TEST_ERR;
 	}
 
-	fd = open(argv[1], O_RDONLY);
+	fd = open(argv[optind], O_RDONLY);
 	if (fd < 0) {
 		perror("open dump");
 		return TEST_ERR;
 	}
 
-	rc = dump_data_fd(fd, argv + 2);
+	rc = dump_data_fd(fd, argv + optind + 1);
 
 	if (close(fd) < 0) {
 		perror("close dump");
