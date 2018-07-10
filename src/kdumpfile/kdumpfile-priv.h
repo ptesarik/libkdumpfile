@@ -197,6 +197,11 @@ struct format_ops {
 	 */
 	kdump_status (*realloc_caches)(kdump_ctx_t *ctx);
 
+	/** Clean up attribute hooks.
+	 * @param shared  Shared info.
+	 */
+	void (*attr_cleanup)(struct kdump_shared *shared);
+
 	/* Clean up all private data.
 	 */
 	void (*cleanup)(struct kdump_shared *);
@@ -214,6 +219,11 @@ struct arch_ops {
 
 	/** Process a Xen .xen_prstatus section. */
 	kdump_status (*process_xen_prstatus)(kdump_ctx_t *, const void *, size_t);
+
+	/** Clean up attribute hooks.
+	 * @param shared  Shared info.
+	 */
+	void (*attr_cleanup)(struct kdump_shared *shared);
 
 	/** Clean up any arch-specific data. */
 	void (*cleanup)(struct kdump_shared *);

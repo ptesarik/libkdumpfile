@@ -1044,7 +1044,7 @@ free_level1(struct pfn_block ***level1, unsigned long n)
 }
 
 static void
-lkcd_cleanup(struct kdump_shared *shared)
+lkcd_attr_cleanup(struct kdump_shared *shared)
 {
 	struct lkcd_priv *lkcdp = shared->fmtdata;
 
@@ -1052,6 +1052,13 @@ lkcd_cleanup(struct kdump_shared *shared)
 			     &lkcdp->page_size_override);
 	attr_remove_override(sgattr(shared, GKI_max_pfn),
 			     &lkcdp->max_pfn_override);
+}
+
+static void
+lkcd_cleanup(struct kdump_shared *shared)
+{
+	struct lkcd_priv *lkcdp = shared->fmtdata;
+
 	free_level1(lkcdp->pfn_level1, lkcdp->l1_size);
 	mutex_destroy(&lkcdp->pfn_block_mutex);
 	if (lkcdp->cbuf_slot >= 0)
@@ -1066,5 +1073,6 @@ const struct format_ops lkcd_ops = {
 	.get_page = lkcd_get_page,
 	.put_page = cache_put_page,
 	.realloc_caches = def_realloc_caches,
+	.attr_cleanup = lkcd_attr_cleanup,
 	.cleanup = lkcd_cleanup,
 };

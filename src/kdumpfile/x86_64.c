@@ -428,6 +428,15 @@ process_x86_64_xen_prstatus(kdump_ctx_t *ctx, const void *data, size_t size)
 }
 
 static void
+x86_64_attr_cleanup(struct kdump_shared *shared)
+{
+	struct x86_64_data *archdata = shared->archdata;
+
+	attr_remove_override(sgattr(shared, GKI_phys_base),
+			     &archdata->phys_base_override);
+}
+
+static void
 x86_64_cleanup(struct kdump_shared *shared)
 {
 	struct x86_64_data *archdata = shared->archdata;
@@ -435,8 +444,6 @@ x86_64_cleanup(struct kdump_shared *shared)
 	if (!archdata)
 		return;
 
-	attr_remove_override(sgattr(shared, GKI_phys_base),
-			     &archdata->phys_base_override);
 	free(archdata);
 	shared->archdata = NULL;
 }
@@ -446,5 +453,6 @@ const struct arch_ops x86_64_ops = {
 	.late_init = x86_64_late_init,
 	.process_prstatus = process_x86_64_prstatus,
 	.process_xen_prstatus = process_x86_64_xen_prstatus,
+	.attr_cleanup = x86_64_attr_cleanup,
 	.cleanup = x86_64_cleanup,
 };

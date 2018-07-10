@@ -942,13 +942,20 @@ diskdump_probe(kdump_ctx_t *ctx)
 }
 
 static void
+diskdump_attr_cleanup(struct kdump_shared *shared)
+{
+	struct disk_dump_priv *ddp = shared->fmtdata;
+
+	attr_remove_override(sgattr(shared, GKI_page_size),
+			     &ddp->page_size_override);
+}
+
+static void
 diskdump_cleanup(struct kdump_shared *shared)
 {
 	struct disk_dump_priv *ddp = shared->fmtdata;
 
 	if (ddp) {
-		attr_remove_override(sgattr(shared, GKI_page_size),
-				     &ddp->page_size_override);
 		if (ddp->pfn_rgn)
 			free(ddp->pfn_rgn);
 		if (ddp->cbuf_slot >= 0)
@@ -964,5 +971,6 @@ const struct format_ops diskdump_ops = {
 	.get_page = diskdump_get_page,
 	.put_page = cache_put_page,
 	.realloc_caches = def_realloc_caches,
+	.attr_cleanup = diskdump_attr_cleanup,
 	.cleanup = diskdump_cleanup,
 };

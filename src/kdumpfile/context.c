@@ -102,6 +102,10 @@ shared_free(struct kdump_shared *shared)
 {
 	rwlock_unlock(&shared->lock);
 
+	if (shared->ops && shared->ops->attr_cleanup)
+		shared->ops->attr_cleanup(shared);
+	if (shared->arch_ops && shared->arch_ops->attr_cleanup)
+		shared->arch_ops->attr_cleanup(shared);
 	if (shared->ops && shared->ops->cleanup)
 		shared->ops->cleanup(shared);
 	if (shared->arch_ops && shared->arch_ops->cleanup)
