@@ -57,6 +57,89 @@ make_room(struct page_data *pg, size_t sz)
 }
 
 static int
+add_string(struct page_data *pg, char **pp)
+{
+	char tmp1, tmp2, tmp3;
+	char *endp;
+
+	for (endp = *pp; *endp && *endp != '\"'; ++endp) {
+		int rc = make_room(pg, 1);
+		if (rc != TEST_OK)
+			return rc;
+
+		if (*endp == '\\') {
+			tmp1 = unoct(*++endp);
+			if (tmp1 != -1) {
+				tmp2 = unoct(*++endp);
+				if (tmp2 != -1) {
+					tmp3 = unoct(*++endp);
+					if (tmp3 != -1)
+						pg->buf[pg->len] = (tmp1 << 6) | (tmp2 << 3) | tmp3;
+					else {
+						pg->buf[pg->len] = (tmp1 << 3) | tmp2;
+						--endp;
+					}
+				} else {
+					pg->buf[pg->len] = tmp1;
+					--endp;
+				}
+			} else switch (*endp) {
+			case 'a':
+				pg->buf[pg->len] = '\a';
+				break;
+			case 'b':
+				pg->buf[pg->len] = '\b';
+				break;
+			case 'e':
+				pg->buf[pg->len] = '\033';
+				break;
+			case 'f':
+				pg->buf[pg->len] = '\f';
+				break;
+			case 'n':
+				pg->buf[pg->len] = '\n';
+				break;
+			case 'r':
+				pg->buf[pg->len] = '\r';
+				break;
+			case 't':
+				pg->buf[pg->len] = '\t';
+				break;
+			case 'v':
+				pg->buf[pg->len] = '\v';
+				break;
+			case 'x':
+				tmp1 = unhex(endp[1]);
+				tmp2 = (tmp1 == -1 ? tmp1 : unhex(endp[2]));
+				if (tmp2 == -1) {
+					fputs("Invalid hex escape\n", stderr);
+					return TEST_FAIL;
+				}
+				pg->buf[pg->len] = (tmp1 << 4) | tmp2;
+				endp += 2;
+				break;
+			case '\\':
+			case '\'':
+			case '\"':
+			case '?':
+			default:
+				pg->buf[pg->len] = *endp;
+			}
+		} else
+			pg->buf[pg->len] = *endp;
+		++pg->len;
+	}
+
+	if (!*endp) {
+		fprintf(stderr, "Unterminated string: %s\n", *pp);
+		return TEST_FAIL;
+	}
+
+	*pp = endp + 1;
+	return TEST_OK;
+}
+
+static int
 add_page_data(struct page_data *pg, char *p)
 {
 	char *endp;
@@ -70,6 +153,14 @@ add_page_data(struct page_data *pg, char *p)
 
 		if (*p == '#')
 			return TEST_OK;
+
+		if (*p == '"') {
+			++p;
+			rc = add_string(pg, &p);
+			if (rc != TEST_OK)
+				return rc;
+			continue;
+		}
 
 		endp = p;
 		while (*endp && isxdigit(*endp))
