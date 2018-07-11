@@ -223,7 +223,15 @@ static PyObject *
 get_addrxlat_ctx(PyObject *_self, PyObject *args)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
-	addrxlat_ctx_t *ctx = kdump_get_addrxlat_ctx(self->ctx);
+	addrxlat_ctx_t *ctx;
+	kdump_status status;
+
+	status = kdump_get_addrxlat(self->ctx, &ctx, NULL);
+	if (status != KDUMP_OK) {
+		PyErr_SetString(exception_map(status),
+				kdump_get_err(self->ctx));
+		return NULL;
+	}
 	return addrxlat_API->Context_FromPointer(self->addrxlat_convert, ctx);
 }
 
@@ -234,7 +242,15 @@ static PyObject *
 get_addrxlat_sys(PyObject *_self, PyObject *args)
 {
 	kdumpfile_object *self = (kdumpfile_object*)_self;
-	addrxlat_sys_t *sys = kdump_get_addrxlat_sys(self->ctx);
+	addrxlat_sys_t *sys;
+	kdump_status status;
+
+	status = kdump_get_addrxlat(self->ctx, NULL, &sys);
+	if (status != KDUMP_OK) {
+		PyErr_SetString(exception_map(status),
+				kdump_get_err(self->ctx));
+		return NULL;
+	}
 	return addrxlat_API->System_FromPointer(self->addrxlat_convert, sys);
 }
 

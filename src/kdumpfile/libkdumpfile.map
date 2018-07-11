@@ -6,8 +6,7 @@ LIBKDUMPFILE_0 {
     kdump_err;
     kdump_clear_err;
     kdump_get_err;
-    kdump_get_addrxlat_ctx;
-    kdump_get_addrxlat_sys;
+    kdump_get_addrxlat;
 
     kdump_read;
     kdump_read_string;

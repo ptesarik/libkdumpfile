@@ -226,10 +226,12 @@ static int
 dump_addrxlat(kdump_ctx_t *ctx)
 {
 	addrxlat_sys_t *sys;
+	kdump_status status;
 
-	sys = kdump_get_addrxlat_sys(ctx);
-	if (!sys) {
-		fputs("No translation system!\n", stderr);
+	status = kdump_get_addrxlat(ctx, NULL, &sys);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot get translation system: %s\n",
+			kdump_get_err(ctx));
 		return 1;
 	}
 

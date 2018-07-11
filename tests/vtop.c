@@ -44,9 +44,15 @@ vtop(kdump_ctx_t *ctx, unsigned long long vaddr)
 	addrxlat_ctx_t *axctx;
 	addrxlat_sys_t *axsys;
 	addrxlat_status axstatus;
+	kdump_status status;
 
-	axctx = kdump_get_addrxlat_ctx(ctx);
-	axsys = kdump_get_addrxlat_sys(ctx);
+	status = kdump_get_addrxlat(ctx, &axctx, &axsys);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot get address translation: %s\n",
+			kdump_get_err(ctx));
+		return TEST_FAIL;
+	}
+
 	faddr.addr = vaddr;
 	faddr.as = ADDRXLAT_KVADDR;
 	axstatus = addrxlat_fulladdr_conv(&faddr, ADDRXLAT_KPHYSADDR,

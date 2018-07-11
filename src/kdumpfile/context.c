@@ -232,30 +232,25 @@ kdump_get_errmsg(kdump_ctx_t *ctx)
 	return &ctx->err;
 }
 
-addrxlat_ctx_t *
-kdump_get_addrxlat_ctx(const kdump_ctx_t *ctx)
+kdump_status
+kdump_get_addrxlat(kdump_ctx_t *ctx,
+		   addrxlat_ctx_t **axctx, addrxlat_sys_t **axsys)
 {
-	addrxlat_ctx_t *ret;
-
+	clear_error(ctx);
 	rwlock_rdlock(&ctx->shared->lock);
-	ret = ctx->xlatctx;
-	addrxlat_ctx_incref(ret);
+
+	if (axctx) {
+		*axctx = ctx->xlatctx;
+		addrxlat_ctx_incref(*axctx);
+	}
+
+	if (axsys) {
+		*axsys = ctx->xlat->xlatsys;
+		addrxlat_sys_incref(*axsys);
+	}
+
 	rwlock_unlock(&ctx->shared->lock);
-
-	return ret;
-}
-
-addrxlat_sys_t *
-kdump_get_addrxlat_sys(const kdump_ctx_t *ctx)
-{
-	addrxlat_sys_t *ret;
-
-	rwlock_rdlock(&ctx->shared->lock);
-	ret = ctx->xlat->xlatsys;
-	addrxlat_sys_incref(ret);
-	rwlock_unlock(&ctx->shared->lock);
-
-	return ret;
+	return KDUMP_OK;
 }
 
 /**  Allocate per-context data.

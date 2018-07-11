@@ -222,25 +222,22 @@ void kdump_clear_err(kdump_ctx_t *ctx);
  */
 const char *kdump_get_err(kdump_ctx_t *ctx);
 
-/**  Get the associated address translation context.
- * @param ctx  Dump file object.
- * @returns    Associated address translation context.
+/**  Get the associated address translation data structures.
+ * @param ctx    Dump file object.
+ * @param axctx  Address translation context (filled on return).
+ * @param axsys  Address translation system (filled on return).
+ * @returns      Error status.
  *
- * This function grabs a new reference to the address translation context.
- * You should call addrxlat_ctx_decref on the returned object when you
- * no longer need it.
- */
-addrxlat_ctx_t *kdump_get_addrxlat_ctx(const kdump_ctx_t *ctx);
-
-/**  Get the associated address translation system.
- * @param ctx  Dump file object.
- * @returns    Associated address translation system.
+ * You may pass @c NULL as a target parameter if you don't need that
+ * specific object.
  *
- * This function grabs a new reference to the address translation system.
- * You should call addrxlat_sys_decref on the returned object when you
- * no longer need it.
+ * This function grabs a new reference.  You should call addrxlat_ctx_decref
+ * and/or addrxlat_sys_decref on the returned object(s) when you no longer
+ * need them.
  */
-addrxlat_sys_t *kdump_get_addrxlat_sys(const kdump_ctx_t *ctx);
+kdump_status kdump_get_addrxlat(kdump_ctx_t *ctx,
+				addrxlat_ctx_t **axctx,
+				addrxlat_sys_t **axsys);
 
 /**  Address spaces used by kdump_read()
  *
