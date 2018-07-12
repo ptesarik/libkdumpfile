@@ -92,6 +92,8 @@ file_fd_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate file cache");
 
+	ctx->xlat->dirty = true;
+
 	for (i = 0; i < ARRAY_SIZE(formats); ++i) {
 		ctx->shared->ops = formats[i];
 		ret = ctx->shared->ops->probe(ctx);
@@ -117,11 +119,6 @@ kdump_open_known(kdump_ctx_t *ctx)
 {
 	set_attr_static_string(ctx, gattr(ctx, GKI_file_format),
 			       ATTR_DEFAULT, ctx->shared->ops->name);
-
-	if (isset_arch_name(ctx)) {
-		vtop_init(ctx);
-		clear_error(ctx);
-	}
 
 	return KDUMP_OK;
 }
@@ -349,6 +346,8 @@ ostype_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	kdump_status status;
 
+	ctx->xlat->dirty = true;
+
 	if (isset_arch_name(ctx)) {
 		switch (ctx->xlat->ostype) {
 		case ADDRXLAT_OS_LINUX:
@@ -363,10 +362,6 @@ ostype_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 			break;
 		}
 		clear_error(ctx); /* version_code errors are not fatal */
-		status = vtop_init(ctx);
-		if (status != KDUMP_OK)
-			return set_error(ctx, status,
-					 "Cannot initialize address translation");
 	}
 
 	if (ctx->shared->arch_ops && ctx->shared->arch_ops->late_init &&
@@ -403,10 +398,7 @@ static void
 ostype_clear_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	ctx->xlat->ostype = ADDRXLAT_OS_UNKNOWN;
-	if (isset_arch_name(ctx)) {
-		vtop_init(ctx);
-		clear_error(ctx);
-	}
+	ctx->xlat->dirty = true;
 }
 
 const struct attr_ops ostype_ops = {

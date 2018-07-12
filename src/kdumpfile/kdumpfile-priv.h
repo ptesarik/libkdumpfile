@@ -44,6 +44,7 @@
 #include "../list.h"
 #include "../threads.h"
 
+#include <stdbool.h>
 #include <endian.h>
 
 #include <libkdumpfile/addrxlat.h>
@@ -601,6 +602,9 @@ INTERNAL_DECL(unsigned long, shared_decref, (struct kdump_shared *shared));
 struct kdump_xlat {
 	unsigned long refcnt;	/**< Reference counter. */
 
+	/** Is libaddrxlat (re-)initialization needed? */
+	bool dirty;
+
 	/** List of all refererring @c kdump_ctx_t structures.
 	 * Each @c kdump_ctx_t that holds a reference to this shared data
 	 * must be added to this list.
@@ -905,6 +909,18 @@ INTERNAL_DECL(kdump_status, process_arch_notes,
 INTERNAL_DECL(addrxlat_ctx_t *, init_addrxlat, (kdump_ctx_t *ctx));
 
 INTERNAL_DECL(kdump_status, vtop_init, (kdump_ctx_t *ctx));
+
+/** Revalidate address translation.
+ * @param ctx  Dump file object.
+ * @returns    Error status.
+ */
+static inline kdump_status
+revalidate_xlat(kdump_ctx_t *ctx)
+{
+	return ctx->xlat->dirty
+		? vtop_init(ctx)
+		: KDUMP_OK;
+}
 
 /* Attribute handling */
 INTERNAL_DECL(extern const struct attr_template, dir_template, );

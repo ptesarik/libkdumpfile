@@ -301,6 +301,10 @@ elf_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 			return set_error(ctx, KDUMP_ERR_NODATA,
 					 "Page not found");
 
+		ret = revalidate_xlat(ctx);
+		if (ret != KDUMP_OK)
+			return ret;
+
 		physpio = *pio;
 		status = addrxlat_fulladdr_conv(
 			&physpio.addr, ADDRXLAT_MACHPHYSADDR,

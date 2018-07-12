@@ -104,6 +104,11 @@ static kdump_status
 xlat_pio(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	addrxlat_op_ctl_t ctl;
+	kdump_status status;
+
+	status = revalidate_xlat(ctx);
+	if (status != KDUMP_OK)
+		return status;
 
 	ctl.ctx = ctx->xlatctx;
 	ctl.sys = ctx->xlat->xlatsys;

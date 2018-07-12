@@ -299,6 +299,9 @@ init_linux_phys_base(kdump_ctx_t *ctx)
 	const addrxlat_meth_t *meth;
 	kdump_status status;
 
+	status = revalidate_xlat(ctx);
+	if (status != KDUMP_OK)
+		return status;
 
 	meth = addrxlat_sys_get_meth(
 		ctx->xlat->xlatsys, ADDRXLAT_SYS_METH_KTEXT);
@@ -308,9 +311,7 @@ init_linux_phys_base(kdump_ctx_t *ctx)
 	}
 
 	status = set_linux_phys_base(ctx);
-	if (status == KDUMP_OK) {
-		status = vtop_init(ctx);
-	} else if (status == KDUMP_ERR_NODATA) {
+	if (status == KDUMP_ERR_NODATA) {
 		/* ignore missing data */
 		clear_error(ctx);
 		return KDUMP_OK;

@@ -236,21 +236,26 @@ kdump_status
 kdump_get_addrxlat(kdump_ctx_t *ctx,
 		   addrxlat_ctx_t **axctx, addrxlat_sys_t **axsys)
 {
+	kdump_status status;
+
 	clear_error(ctx);
 	rwlock_rdlock(&ctx->shared->lock);
 
-	if (axctx) {
-		*axctx = ctx->xlatctx;
-		addrxlat_ctx_incref(*axctx);
-	}
+	status = revalidate_xlat(ctx);
+	if (status == KDUMP_OK) {
+		if (axctx) {
+			*axctx = ctx->xlatctx;
+			addrxlat_ctx_incref(*axctx);
+		}
 
-	if (axsys) {
-		*axsys = ctx->xlat->xlatsys;
-		addrxlat_sys_incref(*axsys);
+		if (axsys) {
+			*axsys = ctx->xlat->xlatsys;
+			addrxlat_sys_incref(*axsys);
+		}
 	}
 
 	rwlock_unlock(&ctx->shared->lock);
-	return KDUMP_OK;
+	return status;
 }
 
 /**  Allocate per-context data.

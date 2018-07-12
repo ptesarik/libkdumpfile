@@ -279,6 +279,8 @@ vtop_init(kdump_ctx_t *ctx)
 	} else
 		osdesc.opts = NULL;
 
+	ctx->xlat->dirty = false;
+
 	rwlock_unlock(&ctx->shared->lock);
 
 	axres = addrxlat_sys_os_init(ctx->xlat->xlatsys,
