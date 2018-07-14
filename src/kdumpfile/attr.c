@@ -196,7 +196,7 @@ path_hash(struct phash *ph, const struct attr_data *dir)
  * @returns       Stored attribute or @c NULL if not found.
  */
 struct attr_data *
-lookup_dir_attr(const struct attr_dict *dict,
+lookup_dir_attr(struct attr_dict *dict,
 		const struct attr_data *dir,
 		const char *key, size_t keylen)
 {
@@ -210,7 +210,7 @@ lookup_dir_attr(const struct attr_dict *dict,
 	i = fold_hash(phash_value(&ph), ATTR_HASH_BITS);
 	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
 	do {
-		tbl = dict->attr;
+		tbl = &dict->attr;
 		do {
 			struct attr_data *d = &tbl->table[i];
 			if (!d->parent)
@@ -232,7 +232,7 @@ lookup_dir_attr(const struct attr_dict *dict,
  * @returns       Stored attribute or @c NULL if not found.
  */
 static struct attr_data*
-lookup_attr_part(const struct attr_dict *dict,
+lookup_attr_part(struct attr_dict *dict,
 		 const char *key, size_t keylen)
 {
 	return lookup_dir_attr(dict, dgattr(dict, GKI_dir_root),
@@ -247,7 +247,7 @@ lookup_attr_part(const struct attr_dict *dict,
  * This function does not check whether an attribute is set, or not.
  */
 struct attr_data *
-lookup_attr(const struct attr_dict *dict, const char *key)
+lookup_attr(struct attr_dict *dict, const char *key)
 {
 	return key
 		? lookup_attr_part(dict, key, strlen(key))
@@ -296,13 +296,13 @@ alloc_attr(struct attr_dict *dict, struct attr_data *parent,
 	i = hash = key_hash_index(path);
 	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
 	do {
-		pnext = &dict->attr;
-		while (*pnext) {
-			tbl = *pnext;
+		tbl = &dict->attr;
+		do {
 			if (!tbl->table[i].parent)
 				return &tbl->table[i];
 			pnext = &tbl->next;
-		}
+			tbl = *pnext;
+		} while (tbl);
 		i = (i + 1) % ATTR_HASH_SIZE;
 	} while (i != ehash);
 
@@ -533,7 +533,7 @@ attr_dict_free(struct attr_dict *dict)
 
 	dealloc_attr(dgattr(dict, GKI_dir_root));
 
-	tblnext = dict->attr->next;
+	tblnext = dict->attr.next;
 	while(tblnext) {
 		tbl = tblnext;
 		tblnext = tbl->next;

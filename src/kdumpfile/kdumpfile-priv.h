@@ -492,7 +492,7 @@ struct attr_dict {
 	unsigned long refcnt;
 
 	/** Attribute hash table. */
-	struct attr_hash *attr;
+	struct attr_hash attr;
 
 	/** Global attributes. */
 	struct attr_data *global_attrs[NR_GLOBAL_ATTRS];
@@ -932,9 +932,9 @@ INTERNAL_DECL(struct attr_data *, new_attr,
 	       const struct attr_template *tmpl));
 INTERNAL_DECL(void, dealloc_attr, (struct attr_data *attr));
 INTERNAL_DECL(struct attr_data *, lookup_attr,
-	      (const struct attr_dict *dict, const char *key));
+	      (struct attr_dict *dict, const char *key));
 INTERNAL_DECL(struct attr_data *, lookup_dir_attr,
-	      (const struct attr_dict *dict, const struct attr_data *dir,
+	      (struct attr_dict *dict, const struct attr_data *dir,
 	       const char *key, size_t keylen));
 
 INTERNAL_DECL(struct attr_dict *, attr_dict_new, (struct kdump_shared *shared));
