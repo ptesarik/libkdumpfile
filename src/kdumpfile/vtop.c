@@ -303,6 +303,18 @@ vtop_init(kdump_ctx_t *ctx)
 	return KDUMP_OK;
 }
 
+static kdump_status
+dirty_xlat_hook(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	ctx->xlat->dirty = true;
+	return KDUMP_OK;
+}
+
+const struct attr_ops addrxlat_opts_ops = {
+	.post_set = dirty_xlat_hook,
+	.pre_clear = (attr_pre_clear_fn*)dirty_xlat_hook,
+};
+
 static addrxlat_status
 addrxlat_read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 {
