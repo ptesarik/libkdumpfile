@@ -83,6 +83,7 @@ dumpdata_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
 multiread_SOURCES = multiread.c
 multiread_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
 
+multixlat_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
 nometh_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
 
 subattr_SOURCES = subattr.c
@@ -119,6 +120,7 @@ check_PROGRAMS = \
 	mkelf \
 	mklkcd \
 	multiread \
+	multixlat \
 	nometh \
 	subattr \
 	sys-xlat \
@@ -201,6 +203,7 @@ test_scripts = \
 	lkcd-unordered-faroff \
 	lkcd-duplicate \
 	lkcd-duplicate-middle \
+	multixlat-elf \
 	sys-xlat-x86_64-linux \
 	sys-xlat-x86_64-linux-xen \
 	xlatmap-check \
@@ -276,6 +279,8 @@ dist_check_DATA = \
 	elf-vmcoreinfo.expect \
 	basic.expect \
 	partial.expect \
+	multixlat.expect \
+	multixlat-elf.data \
 	sys-xlat-x86_64-linux.expect \
 	sys-xlat-x86_64-linux-xen.expect \
 	xlatmap.expect \

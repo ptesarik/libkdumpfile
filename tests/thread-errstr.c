@@ -147,7 +147,7 @@ run_threads(kdump_ctx_t *ctx)
 		return TEST_ERR;
 	}
 
-	if (! (tinfo[0].ctx = kdump_clone(ctx)) ) {
+	if (! (tinfo[0].ctx = kdump_clone(ctx, KDUMP_CLONE_ALL)) ) {
 		fprintf(stderr, "Cannot allocate clone: %s\n", strerror(res));
 		return TEST_ERR;
 	}
@@ -157,7 +157,7 @@ run_threads(kdump_ctx_t *ctx)
 		return TEST_ERR;
 	}
 
-	if (! (tinfo[1].ctx = kdump_clone(ctx)) ) {
+	if (! (tinfo[1].ctx = kdump_clone(ctx, KDUMP_CLONE_ALL)) ) {
 		fprintf(stderr, "Cannot allocate clone: %s\n", strerror(res));
 		return TEST_ERR;
 	}

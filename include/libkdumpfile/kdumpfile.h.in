@@ -163,13 +163,32 @@ typedef enum _kdump_xen_xlat {
  */
 kdump_ctx_t *kdump_new(void);
 
+/**  Clone flag bits.
+ * Bit positions for individual clone flags.
+ */
+enum kdump_clone_bits {
+	KDUMP_CLONE_BIT_XLAT,	/*< Share address translation. */
+};
+
+/** @name Clone Flags
+ * @{
+ */
+/** Share address translation. */
+#define KDUMP_CLONE_XLAT	(1UL << KDUMP_CLONE_BIT_XLAT)
+/* @} */
+
+/** Share all data. */
+#define KDUMP_CLONE_ALL							\
+	(KDUMP_CLONE_XLAT)
+
 /**  Clone a dump file object.
  * @param orig  Original dump file object.
+ * @param flags Specify which data should be shared with the original.
  * @returns     Cloned dump file object, or @c NULL on allocation error.
  *
  * A cloned dump file object shares file descriptor, cache, attributes and
- * other data with the original. This data remains shared, i.e. changes
- * in one of the objects are also seen by the other object.
+ * other data with the original, according to @c flags.  Changes of shared
+ * data in one of the objects are also seen by the other object.
  *
  * The following fields are *not* shared:
  * - address translation context (see @ref kdump_get_addrxlat_ctx),
@@ -180,7 +199,7 @@ kdump_ctx_t *kdump_new(void);
  *
  * @sa @ref threads
  */
-kdump_ctx_t *kdump_clone(const kdump_ctx_t *orig);
+kdump_ctx_t *kdump_clone(const kdump_ctx_t *orig, unsigned long flags);
 
 /**  Free a dump file object.
  * @param ctx  Object to be freed.

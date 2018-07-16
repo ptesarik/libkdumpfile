@@ -177,8 +177,25 @@ kdump_new(void)
 	return NULL;
 }
 
+static bool
+clone_xlat_attrs(kdump_ctx_t *dest, const kdump_ctx_t *orig)
+{
+	static const enum global_keyidx globals[] = {
+		GKI_addrxlat_opts,
+		GKI_ostype,
+	};
+
+	int i;
+	for (i = 0; i < ARRAY_SIZE(globals); ++i) {
+		struct attr_data *attr = dgattr(orig->dict, globals[i]);
+		if (! clone_attr_path(dest->dict, attr))
+			return false;
+	}
+	return true;
+}
+
 kdump_ctx_t *
-kdump_clone(const kdump_ctx_t *orig)
+kdump_clone(const kdump_ctx_t *orig, unsigned long flags)
 {
 	kdump_ctx_t *ctx;
 	int slot;
@@ -208,16 +225,41 @@ kdump_clone(const kdump_ctx_t *orig)
 	shared_incref_locked(ctx->shared);
 	list_add(&ctx->list, &orig->shared->ctx);
 
-	ctx->dict = orig->dict;
-	attr_dict_incref(ctx->dict);
+	if (flags == KDUMP_CLONE_ALL) {
+		ctx->dict = orig->dict;
+		attr_dict_incref(ctx->dict);
+	} else {
+		ctx->dict = attr_dict_clone(orig->dict);
+		if (!ctx->dict)
+			goto err_shared;
+	}
 
-	ctx->xlat = orig->xlat;
-	xlat_incref(ctx->xlat);
-	list_add(&ctx->xlat_list, &orig->xlat->ctx);
+	if (flags & KDUMP_CLONE_XLAT) {
+		ctx->xlat = orig->xlat;
+		xlat_incref(ctx->xlat);
+	} else {
+		ctx->xlat = xlat_clone(orig->xlat);
+		if (!ctx->xlat)
+			goto err_dict;
+		if (!clone_xlat_attrs(ctx, orig))
+			goto err_xlat;
+	}
+	list_add(&ctx->xlat_list, &ctx->xlat->ctx);
 
 	rwlock_unlock(&orig->shared->lock);
 
 	return ctx;
+
+ err_xlat:
+	xlat_decref(ctx->xlat);
+ err_dict:
+	attr_dict_decref(ctx->dict);
+ err_shared:
+	list_del(&ctx->list);
+	shared_decref_locked(ctx->shared);
+	rwlock_unlock(&orig->shared->lock);
+	free(ctx);
+	return NULL;
 }
 
 const char *

@@ -11,6 +11,7 @@ mkdiskdump
 mkelf
 mklkcd
 multiread
+multixlat
 nometh
 privptr
 subattr
