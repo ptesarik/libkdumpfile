@@ -164,7 +164,7 @@ keycmp(const struct attr_data *attr, const struct attr_data *dir,
 		len = p - key;
 	} while (p > key);
 
-	return attr == dir ? 0 : 1;
+	return attr->template == dir->template ? 0 : 1;
 }
 
 /**  Update a partial hash with an attribute directory path.
