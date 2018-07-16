@@ -496,6 +496,21 @@ err:
 	return NULL;
 }
 
+/**  Clone a translation definition.
+ * @param xlat  Original address translation.
+ * @returns     Cloned address translation, or @c NULL on allocation failure.
+ */
+struct kdump_xlat *
+xlat_clone(const struct kdump_xlat *orig)
+{
+	struct kdump_xlat *xlat;
+
+	xlat = xlat_new();
+	if (xlat)
+		set_addrspace_caps(xlat, orig->xlat_caps);
+	return xlat;
+}
+
 /**  Free a translation definition.
  * @param xlat  Address translation.
  */

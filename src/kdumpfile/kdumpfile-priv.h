@@ -620,6 +620,8 @@ struct kdump_xlat {
 };
 
 INTERNAL_DECL(struct kdump_xlat *, xlat_new, (void));
+INTERNAL_DECL(struct kdump_xlat *, xlat_clone,
+	      (const struct kdump_xlat *orig));
 INTERNAL_DECL(void, xlat_free, (struct kdump_xlat *xlat));
 
 /** Increment address translation reference counter.
