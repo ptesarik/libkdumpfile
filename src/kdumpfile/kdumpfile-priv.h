@@ -494,6 +494,9 @@ struct attr_dict {
 	/** Attribute hash table. */
 	struct attr_hash attr;
 
+	/** Fallback dictionary if an attribute is not found. */
+	struct attr_dict *fallback;
+
 	/** Global attributes. */
 	struct attr_data *global_attrs[NR_GLOBAL_ATTRS];
 
@@ -938,6 +941,7 @@ INTERNAL_DECL(struct attr_data *, lookup_dir_attr,
 	       const char *key, size_t keylen));
 
 INTERNAL_DECL(struct attr_dict *, attr_dict_new, (struct kdump_shared *shared));
+INTERNAL_DECL(struct attr_dict *, attr_dict_clone, (struct attr_dict *orig));
 INTERNAL_DECL(void, attr_dict_free, (struct attr_dict *dict));
 
 /** Increment attribute dictionary reference counter.
@@ -1035,6 +1039,8 @@ INTERNAL_DECL(struct attr_data *, create_attr_path,
 	      (struct attr_dict *dict,
 	       struct attr_data *dir, const char *path, size_t pathlen,
 	       const struct attr_template *atmpl));
+INTERNAL_DECL(struct attr_data *, clone_attr_path,
+	      (struct attr_dict *dict, struct attr_data *orig));
 
 /* Accessor functions for static attributes */
 

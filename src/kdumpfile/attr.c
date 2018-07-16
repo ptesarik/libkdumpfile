@@ -194,33 +194,47 @@ path_hash(struct phash *ph, const struct attr_data *dir)
  * @param key     Key name relative to @p dir.
  * @param keylen  Initial portion of @c key to be considered.
  * @returns       Stored attribute or @c NULL if not found.
+ *
+ * If @p key starts with a dot ('.'), the search uses only the specified
+ * dictionary, ie. if the search fails, fallback dictionary is not used.
  */
 struct attr_data *
 lookup_dir_attr(struct attr_dict *dict,
 		const struct attr_data *dir,
 		const char *key, size_t keylen)
 {
+	bool fallback;
 	struct phash ph;
-	unsigned ehash, i;
-	struct attr_hash *tbl;
+	unsigned hash, ehash;
+
+	if (*key == '.') {
+		++key;
+		--keylen;
+		fallback = false;
+	} else
+		fallback = true;
 
 	phash_init(&ph);
 	path_hash(&ph, dir);
 	phash_update(&ph, key, keylen);
-	i = fold_hash(phash_value(&ph), ATTR_HASH_BITS);
-	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
+	hash = fold_hash(phash_value(&ph), ATTR_HASH_BITS);
+	ehash = (hash + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
 	do {
-		tbl = &dict->attr;
+		unsigned i = hash;
 		do {
-			struct attr_data *d = &tbl->table[i];
-			if (!d->parent)
-				break;
-			if (!keycmp(d, dir, key, keylen))
-				return d;
-			tbl = tbl->next;
-		} while (tbl);
-		i = (i + 1) % ATTR_HASH_SIZE;
-	} while (i != ehash);
+			struct attr_hash *tbl = &dict->attr;
+			do {
+				struct attr_data *d = &tbl->table[i];
+				if (!d->parent)
+					break;
+				if (!keycmp(d, dir, key, keylen))
+					return d;
+				tbl = tbl->next;
+			} while (tbl);
+			i = (i + 1) % ATTR_HASH_SIZE;
+		} while (i != ehash);
+		dict = fallback ? dict->fallback : NULL;
+	} while (dict);
 
 	return NULL;
 }
@@ -476,7 +490,7 @@ create_attr_path(struct attr_dict *dict, struct attr_data *dir,
 	struct attr_data *attr;
 	struct attr_template *tmpl;
 
-	p = endp = endpath = path + pathlen;
+	endp = endpath = path + pathlen;
 	while (! (attr = lookup_dir_attr(dict, dir, path, endp - path)) )
 		if (! (endp = memrchr(path, '.', endp - path)) ) {
 			endp = path - 1;
@@ -499,6 +513,90 @@ create_attr_path(struct attr_dict *dict, struct attr_data *dir,
 			return NULL;
 		}
 		attr->tflags.dyntmpl = 1;
+	}
+
+	return attr;
+}
+
+static bool
+copy_data(struct attr_data *dest, const struct attr_data *src)
+{
+	dest->flags.isset = 1;
+	dest->flags.persist = src->flags.persist;
+
+	switch (src->template->type) {
+	case KDUMP_DIRECTORY:
+		return true;
+
+	case KDUMP_NUMBER:
+	case KDUMP_ADDRESS:
+		dest->val = *attr_value(src);
+		return true;
+
+	case KDUMP_STRING:
+		dest->val.string = strdup(attr_value(src)->string);
+		if (!dest->val.string)
+			return false;
+		dest->flags.dynstr = true;
+		return true;
+
+	case KDUMP_BITMAP:
+		/* Not yet implemented */
+
+	case KDUMP_NIL:		/* should not happen */
+	default:
+		return false;
+	}
+}
+
+/** Clone an attribute including full path.
+ * @param dict    Destination attribute dictionary.
+ * @param attr    Attribute to be cloned.
+ * @returns       Attribute data, or @c NULL on allocation failure.
+ *
+ * Look up the attribute @p path under @p dir. If the attribute does not
+ * exist yet, create it with type @p type. If @p path contains dots, then
+ * all path elements are also created as necessary.
+ */
+struct attr_data *
+clone_attr_path(struct attr_dict *dict, struct attr_data *orig)
+{
+	char *path;
+	const char *p, *endp, *endpath;
+	size_t pathlen;
+	struct attr_data *attr;
+
+	pathlen = attr_pathlen(orig) + 1;
+	path = alloca(pathlen + 1);
+	*path = '.';
+	make_attr_path(orig, path + pathlen);
+
+	endp = endpath = path + pathlen;
+	while (! (attr = lookup_attr_part(dict, path, endp - path)) )
+		if (! (endp = memrchr(path + 1, '.', endp - path - 1)) ) {
+			endp = path;
+			attr = dgattr(dict, GKI_dir_root);
+			break;
+		}
+
+	while (endp && endp != endpath) {
+		p = endp + 1;
+		endp = memchr(p, '.', endpath - p);
+		orig = endp
+			? lookup_attr_part(dict, path + 1, endp - path - 1)
+			: lookup_attr(dict, path + 1);
+		attr = new_attr(dict, attr, orig->template);
+		if (!attr)
+			return NULL;
+		if (attr_isset(orig) && !copy_data(attr, orig))
+			return NULL;
+
+		/* If this is a global attribute, update global_attrs[] */
+		if (attr->template >= global_keys &&
+		    attr->template < &global_keys[NR_GLOBAL_ATTRS]) {
+			enum global_keyidx idx = attr->template - global_keys;
+			dict->global_attrs[idx] = attr;
+		}
 	}
 
 	return attr;
@@ -545,6 +643,8 @@ attr_dict_free(struct attr_dict *dict)
 	if (dict->shared->ops && dict->shared->ops->attr_cleanup)
 		dict->shared->ops->attr_cleanup(dict);
 
+	if (dict->fallback)
+		attr_dict_decref(dict->fallback);
 	shared_decref_locked(dict->shared);
 	free(dict);
 }
@@ -582,6 +682,42 @@ attr_dict_new(struct kdump_shared *shared)
 	}
 
 	dict->shared = shared;
+	shared_incref_locked(dict->shared);
+
+	return dict;
+}
+
+/**  Clone an attribute dictionary.
+ * @param orig  Dictionary to be cloned.
+ * @returns     Attribute directory, or @c NULL on allocation failure.
+ *
+ * The new dictionary's root directory is initiailized as an indirect
+ * attribute pointing to the original dictionary.
+ */
+struct attr_dict *
+attr_dict_clone(struct attr_dict *orig)
+{
+	struct attr_dict *dict;
+	struct attr_data *rootdir;
+
+	dict = calloc(1, sizeof(struct attr_dict));
+	if (!dict)
+		return NULL;
+	dict->refcnt = 1;
+
+	memcpy(dict->global_attrs, orig->global_attrs,
+	       sizeof(orig->global_attrs));
+
+	rootdir = new_attr(dict, NULL, &global_keys[GKI_dir_root]);
+	if (!rootdir) {
+		free(dict);
+		return NULL;
+	}
+	dict->global_attrs[GKI_dir_root] = rootdir;
+
+	dict->fallback = orig;
+	attr_dict_incref(dict->fallback);
+	dict->shared = orig->shared;
 	shared_incref_locked(dict->shared);
 
 	return dict;
