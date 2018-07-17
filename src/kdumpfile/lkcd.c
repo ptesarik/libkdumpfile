@@ -692,10 +692,10 @@ get_page_desc(kdump_ctx_t *ctx, kdump_pfn_t pfn,
 }
 
 static kdump_status
-lkcd_max_pfn_validate(kdump_ctx_t *ctx, struct attr_data *attr)
+lkcd_max_pfn_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	struct lkcd_priv *lkcdp = ctx->shared->fmtdata;
-	attr_validate_fn *parent_validate;
+	attr_revalidate_fn *parent_revalidate;
 	const struct attr_ops *parent_ops;
 	kdump_status res;
 
@@ -717,8 +717,8 @@ lkcd_max_pfn_validate(kdump_ctx_t *ctx, struct attr_data *attr)
 		res = KDUMP_OK;
 
 	parent_ops = lkcdp->max_pfn_override.template.parent->ops;
-	parent_validate = parent_ops ? parent_ops->validate : NULL;
-	lkcdp->max_pfn_override.ops.validate = parent_validate;
+	parent_revalidate = parent_ops ? parent_ops->revalidate : NULL;
+	lkcdp->max_pfn_override.ops.revalidate = parent_revalidate;
 
 	if (res == KDUMP_OK) {
 		kdump_attr_value_t val;
@@ -728,8 +728,8 @@ lkcd_max_pfn_validate(kdump_ctx_t *ctx, struct attr_data *attr)
 
 	mutex_unlock(&lkcdp->pfn_block_mutex);
 
-	if (res == KDUMP_OK && parent_validate)
-		res = parent_validate(ctx, attr);
+	if (res == KDUMP_OK && parent_revalidate)
+		res = parent_revalidate(ctx, attr);
 	return res;
 }
 
@@ -945,7 +945,7 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 
 	attr_add_override(gattr(ctx, GKI_max_pfn),
 			  &lkcdp->max_pfn_override);
-	lkcdp->max_pfn_override.ops.validate = lkcd_max_pfn_validate;
+	lkcdp->max_pfn_override.ops.revalidate = lkcd_max_pfn_revalidate;
 	set_max_pfn(ctx, 0);
 
 	set_addrspace_caps(ctx->xlat, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));

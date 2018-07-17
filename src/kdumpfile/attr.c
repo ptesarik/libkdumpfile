@@ -929,9 +929,9 @@ set_attr_static_string(kdump_ctx_t *ctx, struct attr_data *attr,
 kdump_status
 attr_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
 {
-	if (!attr->template->ops || !attr->template->ops->validate)
+	if (!attr->template->ops || !attr->template->ops->revalidate)
 		return KDUMP_OK;
-	return attr->template->ops->validate(ctx, attr);
+	return attr->template->ops->revalidate(ctx, attr);
 }
 
 /**  Add a template override to an attribute.

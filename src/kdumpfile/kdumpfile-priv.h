@@ -357,7 +357,7 @@ typedef void attr_pre_clear_fn(
  * even before the value is known (presumably because getting its value
  * needs considerable resources).
  */
-typedef kdump_status attr_validate_fn(
+typedef kdump_status attr_revalidate_fn(
 	kdump_ctx_t *ctx, struct attr_data *attr);
 
 /**  Attribute ops
@@ -373,7 +373,7 @@ struct attr_ops {
 	attr_pre_clear_fn *pre_clear;
 
 	/** Called before validating value. */
-	attr_validate_fn *validate;
+	attr_revalidate_fn *revalidate;
 };
 
 /**  Attribute template.
