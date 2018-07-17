@@ -73,12 +73,12 @@ dump_data(kdump_ctx_t *ctx, unsigned long long addr, unsigned long long len)
 	int iserr;
 	int rc = TEST_OK;
 
-	res = kdump_get_string_attr(ctx, "addrxlat.opts", &opts);
+	res = kdump_get_string_attr(ctx, "addrxlat.opts.post", &opts);
 	if (res == KDUMP_OK)
 		printf("%s\n", opts);
 	else
-		fprintf(stderr, "WARNING: Cannot get addrxlat.opts: %s\n",
-			kdump_get_err(ctx));
+		fprintf(stderr, "WARNING: Cannot get %s: %s\n",
+			"addrxlat.opts.post", kdump_get_err(ctx));
 
 	iserr = 0;
 	while (len > 0) {
@@ -123,7 +123,7 @@ dump_ctx(kdump_ctx_t *ctx, unsigned long long rootpgt)
 	kdump_status res;
 
 	sprintf(opts, "rootpgt=MACHPHYSADDR:0x%llx", rootpgt);
-	res = kdump_set_string_attr(ctx, "addrxlat.opts", opts);
+	res = kdump_set_string_attr(ctx, "addrxlat.opts.post", opts);
 	if (res != KDUMP_OK) {
 		fprintf(stderr, "Cannot set option: %s\n", kdump_get_err(ctx));
 		return TEST_ERR;

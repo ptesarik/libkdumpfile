@@ -181,7 +181,8 @@ static bool
 clone_xlat_attrs(kdump_ctx_t *dest, const kdump_ctx_t *orig)
 {
 	static const enum global_keyidx globals[] = {
-		GKI_addrxlat_opts,
+		GKI_xlat_opts_pre,
+		GKI_xlat_opts_post,
 		GKI_ostype,
 	};
 

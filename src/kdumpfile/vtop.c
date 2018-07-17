@@ -142,6 +142,32 @@ free_opts(struct opts *opts)
 }
 
 static kdump_status
+add_attr_opt(kdump_ctx_t *ctx, struct opts *opts, enum global_keyidx key)
+{
+	struct attr_data *attr;
+	char *opt;
+	kdump_status status;
+
+	attr = gattr(ctx, key);
+	if (!attr_isset(attr))
+		return KDUMP_OK;
+
+	status = validate_attr(ctx, attr);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status,
+				 "Cannot get the value of addrxlat %s option",
+				 attr->template->key);
+
+	opt = strdup(attr_value(attr)->string);
+	if (!opt)
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot allocate addrxlat %s option",
+				 attr->template->key);
+
+	opts->str[opts->n++] = opt;
+	return KDUMP_OK;
+}
+static kdump_status
 set_x86_pae_opt(kdump_ctx_t *ctx, struct opts *opts)
 {
 	static const char config_pae[] = "CONFIG_X86_PAE";
@@ -240,7 +266,6 @@ vtop_init(kdump_ctx_t *ctx)
 	kdump_status status;
 	addrxlat_osdesc_t osdesc;
 	addrxlat_status axres;
-	struct attr_data *attr;
 	struct opts opts;
 
 	osdesc.type = ctx->xlat->ostype;
@@ -252,23 +277,18 @@ vtop_init(kdump_ctx_t *ctx)
 	clear_error(ctx);
 
 	opts.n = 0;
-	if (ctx->xlat->ostype == ADDRXLAT_OS_LINUX)
-		status = set_linux_opts(ctx, &opts);
-	else if (ctx->xlat->ostype == ADDRXLAT_OS_XEN)
-		status = set_xen_opts(ctx, &opts);
+	status = add_attr_opt(ctx, &opts, GKI_xlat_opts_pre);
+	if (status == KDUMP_OK) {
+		if (ctx->xlat->ostype == ADDRXLAT_OS_LINUX)
+			status = set_linux_opts(ctx, &opts);
+		else if (ctx->xlat->ostype == ADDRXLAT_OS_XEN)
+			status = set_xen_opts(ctx, &opts);
+	}
+	if (status == KDUMP_OK)
+		status = add_attr_opt(ctx, &opts, GKI_xlat_opts_post);
 	if (status != KDUMP_OK) {
 		free_opts(&opts);
 		return status;
-	}
-	attr = gattr(ctx, GKI_addrxlat_opts);
-	if (attr_isset(attr)) {
-		char *opt = strdup(attr_value(attr)->string);
-		if (!opt) {
-			free_opts(&opts);
-			return set_error(ctx, KDUMP_ERR_SYSTEM,
-					 "Cannot allocate addrxlat options");
-		}
-		opts.str[opts.n++] = opt;
 	}
 	if (opts.n) {
 		osdesc.opts = join_opts(&opts);
