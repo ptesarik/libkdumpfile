@@ -221,9 +221,9 @@ linux_version_code(kdump_ctx_t *ctx)
 	kdump_status status;
 
 	rel = gattr(ctx, GKI_linux_uts_release);
-	status = validate_attr(ctx, rel);
-	if (status == KDUMP_ERR_NODATA)
-		return KDUMP_OK; /* Missing data => ignore */
+	if (!attr_isset(rel))
+		return KDUMP_OK;
+	status = attr_revalidate(ctx, rel);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot get Linux release");
 
@@ -269,9 +269,9 @@ update_xen_extra_ver(kdump_ctx_t *ctx)
 	kdump_status status;
 
 	attr = gattr(ctx, GKI_xen_ver_extra_addr);
-	status = validate_attr(ctx, attr);
-	if (status == KDUMP_ERR_NODATA)
+	if (!attr_isset(attr))
 		return KDUMP_OK;
+	status = attr_revalidate(ctx, attr);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot locate %s", desc);
 
@@ -306,17 +306,17 @@ xen_version_code(kdump_ctx_t *ctx)
 	kdump_status status;
 
 	ver = gattr(ctx, GKI_xen_ver_major);
-	status = validate_attr(ctx, ver);
-	if (status == KDUMP_ERR_NODATA)
-		return KDUMP_OK; /* Missing data => ignore */
+	if (!attr_isset(ver))
+		return KDUMP_OK;
+	status = attr_revalidate(ctx, ver);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot get Xen major");
 	major = attr_value(ver)->number;
 
 	ver = gattr(ctx, GKI_xen_ver_minor);
-	status = validate_attr(ctx, ver);
-	if (status == KDUMP_ERR_NODATA)
-		return KDUMP_OK; /* Missing data => ignore */
+	if (!attr_isset(ver))
+		return KDUMP_OK;
+	status = attr_revalidate(ctx, ver);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot get Xen minor");
 	minor = attr_value(ver)->number;

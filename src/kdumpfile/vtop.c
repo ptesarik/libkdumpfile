@@ -68,9 +68,9 @@ get_version_code(kdump_ctx_t *ctx, unsigned long *pver)
 
 	/* Get OS type name */
 	attr = gattr(ctx, GKI_ostype);
-	status = validate_attr(ctx, attr);
-	if (status == KDUMP_ERR_NODATA)
+	if (!attr_isset(attr))
 		return KDUMP_OK;
+	status = attr_revalidate(ctx, attr);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot get OS type");
 	ostype = attr_value(attr)->string;
@@ -80,9 +80,9 @@ get_version_code(kdump_ctx_t *ctx, unsigned long *pver)
 	if (!attr || attr->template->type != KDUMP_DIRECTORY)
 		return set_error(ctx, KDUMP_ERR_NOTIMPL,
 				 "Unknown operating system type: %s", ostype);
-	status = validate_attr(ctx, attr);
-	if (status == KDUMP_ERR_NODATA)
+	if (!attr_isset(attr))
 		return KDUMP_OK;
+	status = attr_revalidate(ctx, attr);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot get %s.%s",
 				 ostype, attrname);
@@ -90,11 +90,9 @@ get_version_code(kdump_ctx_t *ctx, unsigned long *pver)
 	/* Get version_code in the OS directory. */
 	attr = lookup_dir_attr(
 		ctx->dict, attr, attrname, sizeof(attrname) - 1);
-	if (!attr)
+	if (!attr || !attr_isset(attr))
 		return KDUMP_OK;
-	status = validate_attr(ctx, attr);
-	if (status == KDUMP_ERR_NODATA)
-		return KDUMP_OK;
+	status = attr_revalidate(ctx, attr);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot get %s.%s",
 				 ostype, attrname);
@@ -151,8 +149,7 @@ add_attr_opt(kdump_ctx_t *ctx, struct opts *opts, enum global_keyidx key)
 	attr = gattr(ctx, key);
 	if (!attr_isset(attr))
 		return KDUMP_OK;
-
-	status = validate_attr(ctx, attr);
+	status = attr_revalidate(ctx, attr);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status,
 				 "Cannot get the value of addrxlat %s option",
@@ -181,9 +178,15 @@ set_x86_pae_opt(kdump_ctx_t *ctx, struct opts *opts)
 		pae_state = "no";
 	attr = lookup_dir_attr(ctx->dict, attr,
 			       config_pae, sizeof(config_pae) - 1);
-	if (attr && validate_attr(ctx, attr) == KDUMP_OK &&
-	    !strcmp(attr_value(attr)->string, "y"))
-		pae_state = "yes";
+	if (attr && attr_isset(attr)) {
+		kdump_status status = attr_revalidate(ctx, attr);
+		if (status != KDUMP_OK)
+			return set_error(ctx, status,
+					 "Cannot get %s from vmcoreinfo",
+					 config_pae);
+		if (!strcmp(attr_value(attr)->string, "y"))
+			pae_state = "yes";
+	}
 	if (pae_state) {
 		len = asprintf(&opts->str[opts->n], "pae=%s", pae_state);
 		if (len < 0)
@@ -226,7 +229,12 @@ set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 	}
 
 	attr = gattr(ctx, GKI_xen_p2m_mfn);
-	if (validate_attr(ctx, attr) == KDUMP_OK) {
+	if (attr_isset(attr)) {
+		kdump_status status = attr_revalidate(ctx, attr);
+		if (status != KDUMP_OK)
+			return set_error(ctx, status,
+					 "Cannot get %s from vmcoreinfo",
+					 "p2m_mfn");
 		len = asprintf(&opts->str[opts->n],
 			"xen_p2m_mfn=0x%"ADDRXLAT_PRIxADDR,
 			attr_value(attr)->number);
@@ -247,7 +255,11 @@ set_xen_opts(kdump_ctx_t *ctx, struct opts *opts)
 	int len;
 
 	attr = gattr(ctx, GKI_xen_phys_start);
-	if (validate_attr(ctx, attr) == KDUMP_OK) {
+	if (attr_isset(attr)) {
+		kdump_status status = attr_revalidate(ctx, attr);
+		if (status != KDUMP_OK)
+			return set_error(ctx, status, "Cannot get %s.%s",
+					 "xen", "phys_start");
 		len = asprintf(&opts->str[opts->n],
 			       "phys_base=0x%"ADDRXLAT_PRIxADDR,
 			       attr_value(attr)->address);
@@ -427,9 +439,14 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 				       "Symbol not found");
 		goto out;
 	}
-	if (validate_attr(ctx, attr) != KDUMP_OK) {
+	if (!attr_isset(attr)) {
 		ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
 				       "Symbol has no value");
+		goto out;
+	}
+	if (attr_revalidate(ctx, attr) != KDUMP_OK) {
+		ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
+				       "Symbol value cannot be revalidated");
 		goto out;
 	}
 
@@ -441,9 +458,14 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 					       "Field not found");
 			goto out;
 		}
-		if (validate_attr(ctx, attr) != KDUMP_OK) {
+		if (!attr_isset(attr)) {
 			ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
 					       "Field has no value");
+			goto out;
+		}
+		if (attr_revalidate(ctx, attr) != KDUMP_OK) {
+			ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
+					       "Field cannot be revalidated");
 			goto out;
 		}
 	}

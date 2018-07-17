@@ -264,7 +264,8 @@ kdump_vmcoreinfo(kdump_ctx_t *ctx)
 	rwlock_rdlock(&ctx->shared->lock);
 
 	attr = ostype_attr(ctx, raw_map);
-	ret = (attr && validate_attr(ctx, attr) == KDUMP_OK &&
+	ret = (attr && attr_isset(attr) &&
+	       attr_revalidate(ctx, attr) == KDUMP_OK &&
 	       attr->template->type == KDUMP_STRING)
 		? attr_value(attr)->string
 		: NULL;
@@ -292,7 +293,8 @@ kdump_vmcoreinfo_row(kdump_ctx_t *ctx, const char *key)
 	base = ostype_attr(ctx, lines_map);
 	if (base) {
 		attr = lookup_dir_attr(ctx->dict, base, key, strlen(key));
-		if (attr && validate_attr(ctx, attr) == KDUMP_OK)
+		if (attr && attr_isset(attr) &&
+		    attr_revalidate(ctx, attr) == KDUMP_OK)
 			ret = attr_value(attr)->string;
 	}
 
@@ -328,8 +330,13 @@ kdump_vmcoreinfo_symbol(kdump_ctx_t *ctx, const char *symname,
 		ret = set_error(ctx, KDUMP_ERR_NODATA, "Symbol not found");
 		goto out;
 	}
-	if (validate_attr(ctx, attr) != KDUMP_OK) {
+	if (!attr_isset(attr)) {
 		ret = set_error(ctx, KDUMP_ERR_NODATA, "Symbol has no value");
+		goto out;
+	}
+	ret = attr_revalidate(ctx, attr);
+	if (ret != KDUMP_OK) {
+		ret = set_error(ctx, ret, "Value cannot be revalidated");
 		goto out;
 	}
 

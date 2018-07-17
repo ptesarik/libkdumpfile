@@ -351,7 +351,7 @@ typedef void attr_pre_clear_fn(
  * @param attr     Attribute.
  * @returns        Error status.
  *
- * This function is called by @ref validate_attr before checking
+ * This function is called by @ref attr_revalidate before checking
  * that the attribute has a value. The hook is intended for lazy
  * initialization of attributes which should be listed in the hierarchy
  * even before the value is known (presumably because getting its value
@@ -1014,7 +1014,7 @@ attr_value(const struct attr_data *attr)
 	return attr->flags.indirect ? attr->pval : &attr->val;
 }
 
-INTERNAL_DECL(kdump_status, validate_attr,
+INTERNAL_DECL(kdump_status, attr_revalidate,
 	      (kdump_ctx_t *ctx, struct attr_data *attr));
 INTERNAL_DECL(kdump_status, set_attr,
 	      (kdump_ctx_t *ctx, struct attr_data *attr,

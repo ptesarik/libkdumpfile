@@ -859,7 +859,7 @@ unsigned
 get_cache_size(kdump_ctx_t *ctx)
 {
 	struct attr_data *attr = gattr(ctx, GKI_cache_size);
-	return validate_attr(ctx, attr) == KDUMP_OK
+	return attr_isset(attr) && attr_revalidate(ctx, attr) == KDUMP_OK
 		? attr_value(attr)->number
 		: DEFAULT_CACHE_SIZE;
 }

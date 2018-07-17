@@ -921,21 +921,14 @@ set_attr_static_string(kdump_ctx_t *ctx, struct attr_data *attr,
 	return set_attr(ctx, attr, flags, &val);
 }
 
-/**  Validate attribute data.
+/**  Revalidate attribute data.
  * @param ctx   Dump file object.
  * @param attr  Attribute data.
  * @returns     Error status.
- *
- * This can be safely used with unset attributes. If an attribute
- * has no value, then this function returns @ref KDUMP_ERR_NODATA but
- * does not set any error message, so callers can clear the error
- * simply by ignoring the return value.
  */
 kdump_status
-validate_attr(kdump_ctx_t *ctx, struct attr_data *attr)
+attr_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
 {
-	if (!attr_isset(attr))
-		return KDUMP_ERR_NODATA;
 	if (!attr->template->ops || !attr->template->ops->validate)
 		return KDUMP_OK;
 	return attr->template->ops->validate(ctx, attr);
@@ -998,8 +991,13 @@ kdump_get_attr(kdump_ctx_t *ctx, const char *key, kdump_attr_t *valp)
 		ret = set_error(ctx, KDUMP_ERR_NOKEY, "No such key");
 		goto out;
 	}
-	if (validate_attr(ctx, d) != KDUMP_OK) {
+	if (!attr_isset(d)) {
 		ret = set_error(ctx, KDUMP_ERR_NODATA, "Key has no value");
+		goto out;
+	}
+	ret = attr_revalidate(ctx, d);
+	if (ret != KDUMP_OK) {
+		ret = set_error(ctx, ret, "Value cannot be revalidated");
 		goto out;
 	}
 
@@ -1163,8 +1161,13 @@ kdump_attr_ref_get(kdump_ctx_t *ctx, const kdump_attr_ref_t *ref,
 	clear_error(ctx);
 	rwlock_rdlock(&ctx->shared->lock);
 
-	if (validate_attr(ctx, d) != KDUMP_OK) {
+	if (!attr_isset(d)) {
 		ret = set_error(ctx, KDUMP_ERR_NODATA, "Key has no value");
+		goto out;
+	}
+	ret = attr_revalidate(ctx, d);
+	if (ret != KDUMP_OK) {
+		ret = set_error(ctx, ret, "Value cannot be revalidated");
 		goto out;
 	}
 
