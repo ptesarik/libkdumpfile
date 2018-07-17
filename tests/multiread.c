@@ -105,7 +105,7 @@ run_threads(kdump_ctx_t *ctx, unsigned long nthreads, unsigned long cache_size)
 	}
 
 	for (i = 0; i < nthreads; ++i) {
-		tinfo[i].ctx = kdump_clone(ctx, KDUMP_CLONE_ALL);
+		tinfo[i].ctx = kdump_clone(ctx, 0);
 		if (!tinfo[i].ctx) {
 			fprintf(stderr, "Cannot allocate clone: %s\n",
 				strerror(res));

@@ -167,19 +167,15 @@ kdump_ctx_t *kdump_new(void);
  * Bit positions for individual clone flags.
  */
 enum kdump_clone_bits {
-	KDUMP_CLONE_BIT_XLAT,	/*< Share address translation. */
+	KDUMP_CLONE_BIT_XLAT,	/*< Do not share address translation. */
 };
 
 /** @name Clone Flags
  * @{
  */
-/** Share address translation. */
+/** Do not share address translation. */
 #define KDUMP_CLONE_XLAT	(1UL << KDUMP_CLONE_BIT_XLAT)
 /* @} */
-
-/** Share all data. */
-#define KDUMP_CLONE_ALL							\
-	(KDUMP_CLONE_XLAT)
 
 /**  Clone a dump file object.
  * @param orig  Original dump file object.

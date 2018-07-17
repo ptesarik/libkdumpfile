@@ -226,24 +226,24 @@ kdump_clone(const kdump_ctx_t *orig, unsigned long flags)
 	shared_incref_locked(ctx->shared);
 	list_add(&ctx->list, &orig->shared->ctx);
 
-	if (flags == KDUMP_CLONE_ALL) {
-		ctx->dict = orig->dict;
-		attr_dict_incref(ctx->dict);
-	} else {
+	if (flags) {
 		ctx->dict = attr_dict_clone(orig->dict);
 		if (!ctx->dict)
 			goto err_shared;
+	} else {
+		ctx->dict = orig->dict;
+		attr_dict_incref(ctx->dict);
 	}
 
 	if (flags & KDUMP_CLONE_XLAT) {
-		ctx->xlat = orig->xlat;
-		xlat_incref(ctx->xlat);
-	} else {
 		ctx->xlat = xlat_clone(orig->xlat);
 		if (!ctx->xlat)
 			goto err_dict;
 		if (!clone_xlat_attrs(ctx, orig))
 			goto err_xlat;
+	} else {
+		ctx->xlat = orig->xlat;
+		xlat_incref(ctx->xlat);
 	}
 	list_add(&ctx->xlat_list, &ctx->xlat->ctx);
 

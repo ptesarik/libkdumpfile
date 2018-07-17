@@ -143,7 +143,7 @@ read_ctx(kdump_ctx_t *ctx)
 	if (res != TEST_OK)
 		return res;
 
-	clonectx = kdump_clone(ctx, KDUMP_CLONE_ALL & ~KDUMP_CLONE_XLAT);
+	clonectx = kdump_clone(ctx, KDUMP_CLONE_XLAT);
 	if (!clonectx) {
 		fputs("Cannot clone context\n", stderr);
 		return TEST_OK;
