@@ -106,6 +106,9 @@ xlat_pio(kdump_ctx_t *ctx, struct page_io *pio)
 	addrxlat_op_ctl_t ctl;
 	kdump_status status;
 
+	if (ctx->xlat->xlat_caps & ADDRXLAT_CAPS(pio->addr.as))
+		return KDUMP_OK;
+
 	status = revalidate_xlat(ctx);
 	if (status != KDUMP_OK)
 		return status;
