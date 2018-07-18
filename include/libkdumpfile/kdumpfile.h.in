@@ -495,6 +495,20 @@ kdump_set_string_attr(kdump_ctx_t *ctx, const char *key, const char *str)
 	return kdump_set_attr(ctx, key, &attr);
 }
 
+/**  Clear an attribute.
+ * @param ctx  Dump file object.
+ * @param key  Attribute key.
+ * @param str  New attribute value.
+ * @returns    Error status.
+ */
+static inline kdump_status
+kdump_clear_attr(kdump_ctx_t *ctx, const char *key)
+{
+	kdump_attr_t attr;
+	attr.type = KDUMP_NIL;
+	return kdump_set_attr(ctx, key, &attr);
+}
+
 /**  Get a dump file attribute.
  * @param ctx  Dump file object.
  * @param key  Attribute key.
