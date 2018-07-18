@@ -52,10 +52,10 @@ ATTR(file, "fd", file_fd, number, int, .ops = &file_fd_ops)
 ATTR(file, "pagemap", file_pagemap, bitmap, kdump_bmp_t *)
 
 /* physical base */
-ATTR(linux, "phys_base", phys_base, address, kdump_addr_t)
+ATTR(linux, "phys_base", phys_base, address, kdump_addr_t, .ops = &linux_dirty_xlat_ops)
 
 /* Xen dump type */
-ATTR(xen, "type", xen_type, number, kdump_xen_type_t)
+ATTR(xen, "type", xen_type, number, kdump_xen_type_t, .ops = &dirty_xlat_ops)
 
 /* Xen physmap translation */
-ATTR(xen, "xlat", xen_xlat, number, kdump_xen_xlat_t)
+ATTR(xen, "xlat", xen_xlat, number, kdump_xen_xlat_t, .ops = &dirty_xlat_ops)

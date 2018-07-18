@@ -33,8 +33,8 @@ ATTR(arch, "pteval_size", pteval_size, number, size_t)
 /* address translation */
 ATTR(root, "addrxlat", dir_addrxlat, directory, struct attr_data *)
 ATTR(addrxlat, "opts", dir_xlat_opts, directory, struct attr_data *)
-ATTR(xlat_opts, "pre", xlat_opts_pre, string, const char *, .ops = &addrxlat_opts_ops)
-ATTR(xlat_opts, "post", xlat_opts_post, string, const char *, .ops = &addrxlat_opts_ops)
+ATTR(xlat_opts, "pre", xlat_opts_pre, string, const char *, .ops = &dirty_xlat_ops)
+ATTR(xlat_opts, "post", xlat_opts_post, string, const char *, .ops = &dirty_xlat_ops)
 ATTR(addrxlat, "ostype", ostype, string, const char *, .ops = &ostype_ops)
 
 /* cache */
@@ -74,8 +74,8 @@ ATTR(linux_vmcoreinfo, "SYMBOL", linux_symbol, directory, struct attr_data *)
 
 /* Xen */
 ATTR(root, "xen", dir_xen, directory, struct attr_data *)
-ATTR(xen, "p2m_mfn", xen_p2m_mfn, address, kdump_pfn_t)
-ATTR(xen, "phys_start", xen_phys_start, address, kdump_paddr)
+ATTR(xen, "p2m_mfn", xen_p2m_mfn, address, kdump_pfn_t, .ops = &dirty_xlat_ops)
+ATTR(xen, "phys_start", xen_phys_start, address, kdump_paddr, .ops = &xen_dirty_xlat_ops)
 ATTR(xen, "version", dir_xen_version, directory, struct attr_data *)
 ATTR(xen_version, "major", xen_ver_major, number, unsigned long)
 ATTR(xen_version, "minor", xen_ver_minor, number, unsigned long)

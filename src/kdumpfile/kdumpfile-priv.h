@@ -1085,10 +1085,12 @@ INTERNAL_DECL(extern const struct attr_ops, page_size_ops, );
 INTERNAL_DECL(extern const struct attr_ops, page_shift_ops, );
 INTERNAL_DECL(extern const struct attr_ops, cache_size_ops, );
 INTERNAL_DECL(extern const struct attr_ops, arch_name_ops, );
-INTERNAL_DECL(extern const struct attr_ops, addrxlat_opts_ops, );
 INTERNAL_DECL(extern const struct attr_ops, ostype_ops, );
 INTERNAL_DECL(extern const struct attr_ops, uts_machine_ops, );
 INTERNAL_DECL(extern const struct attr_ops, vmcoreinfo_raw_ops, );
+INTERNAL_DECL(extern const struct attr_ops, dirty_xlat_ops, );
+INTERNAL_DECL(extern const struct attr_ops, linux_dirty_xlat_ops, );
+INTERNAL_DECL(extern const struct attr_ops, xen_dirty_xlat_ops, );
 
 /**  Attribute template override.
  *

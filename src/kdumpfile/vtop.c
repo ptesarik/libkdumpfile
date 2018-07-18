@@ -342,9 +342,35 @@ dirty_xlat_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 	return KDUMP_OK;
 }
 
-const struct attr_ops addrxlat_opts_ops = {
+const struct attr_ops dirty_xlat_ops = {
 	.post_set = dirty_xlat_hook,
 	.pre_clear = (attr_pre_clear_fn*)dirty_xlat_hook,
+};
+
+static kdump_status
+linux_dirty_xlat_hook(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	if (ctx->xlat->ostype == ADDRXLAT_OS_LINUX)
+		ctx->xlat->dirty = true;
+	return KDUMP_OK;
+}
+
+const struct attr_ops linux_dirty_xlat_ops = {
+	.post_set = linux_dirty_xlat_hook,
+	.pre_clear = (attr_pre_clear_fn*)linux_dirty_xlat_hook,
+};
+
+static kdump_status
+xen_dirty_xlat_hook(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	if (ctx->xlat->ostype == ADDRXLAT_OS_XEN)
+		ctx->xlat->dirty = true;
+	return KDUMP_OK;
+}
+
+const struct attr_ops xen_dirty_xlat_ops = {
+	.post_set = xen_dirty_xlat_hook,
+	.pre_clear = (attr_pre_clear_fn*)xen_dirty_xlat_hook,
 };
 
 static addrxlat_status
