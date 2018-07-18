@@ -45,13 +45,6 @@
 /** Minimum Linux kernel text alignment. */
 #define LINUX_TEXT_ALIGN	0x200000ULL
 
-/**  Private data for the x86_64 arch-specific methods.
- */
-struct x86_64_data {
-	/** Overridden methods for linux.phys_base attribute. */
-	struct attr_override phys_base_override;
-};
-
 /** @cond TARGET_ABI */
 
 struct elf_siginfo
@@ -190,65 +183,6 @@ static const struct attr_template reg_names[] = {
 
 	REG(pid),		/* 43 */
 };
-
-/** Set the kernel text virtual to physical offset.
- * @param archdata   x86-64 arch-specific data.
- * @param phys_base  Kernel physical base address.
- */
-static void
-set_ktext_off(kdump_ctx_t *ctx, kdump_addr_t phys_base)
-{
-	addrxlat_meth_t meth;
-
-	meth.kind = ADDRXLAT_LINEAR;
-	meth.target_as = ADDRXLAT_KPHYSADDR;
-	meth.param.linear.off = phys_base - __START_KERNEL_map;
-	addrxlat_sys_set_meth(
-		ctx->xlat->xlatsys, ADDRXLAT_SYS_METH_KTEXT, &meth);
-}
-
-/** Update the physical base offfset.
- * @param ctx   Dump file object.
- * @param attr  "linux.phys_base" attribute.
- * @returns     Error status.
- *
- * This function is used as a post-set handler for @c linux.phys_base
- * to update the total kernel text offset.
- */
-static kdump_status
-update_phys_base(kdump_ctx_t *ctx, struct attr_data *attr)
-{
-	struct x86_64_data *archdata = ctx->shared->archdata;
-	const struct attr_ops *parent_ops;
-
-	set_ktext_off(ctx, attr_value(attr)->address);
-
-	parent_ops = archdata->phys_base_override.template.parent->ops;
-	return (parent_ops && parent_ops->post_set)
-		? parent_ops->post_set(ctx, attr)
-		: KDUMP_OK;
-}
-
-static kdump_status
-x86_64_init(kdump_ctx_t *ctx)
-{
-	struct x86_64_data *archdata;
-
-	archdata = calloc(1, sizeof(struct x86_64_data));
-	if (!archdata)
-		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot allocate x86_64 private data");
-	ctx->shared->archdata = archdata;
-
-	if (isset_phys_base(ctx))
-		set_ktext_off(ctx, get_phys_base(ctx));
-
-	attr_add_override(gattr(ctx, GKI_phys_base),
-			  &archdata->phys_base_override);
-	archdata->phys_base_override.ops.post_set = update_phys_base;
-
-	return KDUMP_OK;
-}
 
 static kdump_status
 calc_linux_phys_base(kdump_ctx_t *ctx, kdump_paddr_t paddr)
@@ -428,32 +362,8 @@ process_x86_64_xen_prstatus(kdump_ctx_t *ctx, const void *data, size_t size)
 	return KDUMP_OK;
 }
 
-static void
-x86_64_attr_cleanup(struct attr_dict *dict)
-{
-	struct x86_64_data *archdata = dict->shared->archdata;
-
-	attr_remove_override(dgattr(dict, GKI_phys_base),
-			     &archdata->phys_base_override);
-}
-
-static void
-x86_64_cleanup(struct kdump_shared *shared)
-{
-	struct x86_64_data *archdata = shared->archdata;
-
-	if (!archdata)
-		return;
-
-	free(archdata);
-	shared->archdata = NULL;
-}
-
 const struct arch_ops x86_64_ops = {
-	.init = x86_64_init,
 	.late_init = x86_64_late_init,
 	.process_prstatus = process_x86_64_prstatus,
 	.process_xen_prstatus = process_x86_64_xen_prstatus,
-	.attr_cleanup = x86_64_attr_cleanup,
-	.cleanup = x86_64_cleanup,
 };
