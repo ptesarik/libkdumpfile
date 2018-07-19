@@ -234,15 +234,17 @@ init_linux_phys_base(kdump_ctx_t *ctx)
 	kdump_status status;
 
 	status = revalidate_xlat(ctx);
-	if (status != KDUMP_OK)
-		return status;
-
-	meth = addrxlat_sys_get_meth(
-		ctx->xlat->xlatsys, ADDRXLAT_SYS_METH_KTEXT);
-	if (meth->kind == ADDRXLAT_LINEAR) {
-		set_phys_base(ctx, meth->param.linear.off + __START_KERNEL_map);
-		return KDUMP_OK;
-	}
+	if (status == KDUMP_OK) {
+		meth = addrxlat_sys_get_meth(
+			ctx->xlat->xlatsys, ADDRXLAT_SYS_METH_KTEXT);
+		if (meth->kind == ADDRXLAT_LINEAR) {
+			set_phys_base(ctx, (meth->param.linear.off +
+					    __START_KERNEL_map));
+			return KDUMP_OK;
+		}
+	} else
+		/* Ignore addrxlat initialization failures */
+		clear_error(ctx);
 
 	status = set_linux_phys_base(ctx);
 	if (status == KDUMP_ERR_NODATA) {
