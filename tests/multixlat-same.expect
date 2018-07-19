@@ -1,0 +1,15 @@
+Using first root page table:
+rootpgt=MACHPHYSADDR:0x2e10000
+01 23 45 67 89 AB CD EF 
+Using second root page table on a cloned context:
+rootpgt=MACHPHYSADDR:0x2e10000
+01 23 45 67 89 AB CD EF 
+Using original context again:
+rootpgt=MACHPHYSADDR:0x2e10000
+01 23 45 67 89 AB CD EF 
+Reinitialized original context:
+rootpgt=MACHPHYSADDR:0x2e10000
+01 23 45 67 89 AB CD EF 
+Using cloned context again:
+rootpgt=MACHPHYSADDR:0x2e10000
+01 23 45 67 89 AB CD EF 

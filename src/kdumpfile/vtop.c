@@ -576,6 +576,7 @@ xlat_clone(const struct kdump_xlat *orig)
 	xlat = xlat_new();
 	if (xlat)
 		set_addrspace_caps(xlat, orig->xlat_caps);
+	xlat->dirty = true;
 	return xlat;
 }
 

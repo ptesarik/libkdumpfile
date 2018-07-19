@@ -1,0 +1,39 @@
+#! /bin/sh
+#
+# Test that cloned contexts can use the same translation as the original
+#
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+datafile="$srcdir/multixlat-elf.data"
+dumpfile="out/${name}.dump"
+resultfile="out/${name}.result"
+expectfile="$srcdir/multixlat-same.expect"
+
+./mkelf "$dumpfile" <<EOF
+ei_class = 2
+ei_data = 1
+e_machine = 62
+e_phoff = 0x1000
+
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create ELF file" >&2
+    exit $rc
+fi
+echo "Created ELF dump: $dumpfile"
+
+./multixlat -1 0x2e10000 -2 0x2e10000 -a 0 -l 8 "$dumpfile" >"$resultfile"
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot dump ELF data" >&2
+    exit $rc
+fi
+
+if ! diff "$expectfile" "$resultfile"; then
+    echo "Results do not match" >&2
+    exit 1
+fi

@@ -204,6 +204,7 @@ test_scripts = \
 	lkcd-duplicate \
 	lkcd-duplicate-middle \
 	multixlat-elf \
+	multixlat-same \
 	sys-xlat-x86_64-linux \
 	sys-xlat-x86_64-linux-xen \
 	xlatmap-check \
@@ -281,6 +282,7 @@ dist_check_DATA = \
 	partial.expect \
 	multixlat.expect \
 	multixlat-elf.data \
+	multixlat-same.expect \
 	sys-xlat-x86_64-linux.expect \
 	sys-xlat-x86_64-linux-xen.expect \
 	xlatmap.expect \
