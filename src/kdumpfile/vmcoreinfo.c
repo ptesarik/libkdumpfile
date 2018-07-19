@@ -181,7 +181,7 @@ lines_post_hook(kdump_ctx_t *ctx, struct attr_data *lineattr)
 		   !strcmp(type, "NUMBER") ||
 		   !strcmp(type, "OFFSET") ||
 		   !strcmp(type, "SIZE")) {
-		num = strtoull(attr_value(lineattr)->string, &p, 10);
+		num = strtoull(attr_value(lineattr)->string, &p, 0);
 		if (*p)
 			/* invalid format -> ignore */
 			return KDUMP_OK;
