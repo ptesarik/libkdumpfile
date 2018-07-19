@@ -110,6 +110,8 @@ lines_post_hook(kdump_ctx_t *ctx, struct attr_data *lineattr)
 	struct attr_data *dir, *attr;
 	kdump_status res;
 
+	ctx->xlat->dirty = true;
+
 	keylen = 0;
 	attr = lineattr;
 	while (attr != gattr(ctx, GKI_linux_vmcoreinfo_lines) &&
@@ -167,6 +169,7 @@ lines_post_hook(kdump_ctx_t *ctx, struct attr_data *lineattr)
 	*p = '\0';
 
 	memset(&tmpl, 0, sizeof tmpl);
+	tmpl.ops = &dirty_xlat_ops;
 
 	if (!strcmp(type, "SYMBOL")) {
 		num = strtoull(attr_value(lineattr)->string, &p, 16);
