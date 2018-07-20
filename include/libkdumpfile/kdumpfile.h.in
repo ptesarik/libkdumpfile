@@ -818,19 +818,22 @@ void kdump_attr_iter_end(kdump_ctx_t *ctx, kdump_attr_iter_t *iter);
 
 /**  Get VMCOREINFO raw data.
  * @param ctx  Dump file object.
- * @returns    VMCOREINFO data, or @c NULL.
+ * @param raw  Filled with raw VMCOREINFO string on success.
+ * @returns    Error status.
  *
  * The output string is always NUL-terminated, but if there was a NUL
  * byte inside VMCOREINFO, there is no way to know the full length.
  */
-const char *kdump_vmcoreinfo(kdump_ctx_t *ctx);
+kdump_status kdump_vmcoreinfo_raw(kdump_ctx_t *ctx, const char **raw);
 
-/**  Get a VMCOREINFO row.
- * @param ctx      Dump file object.
- * @param[in] key  Name of the VMCOREINFO variable.
- * @returns        Value of the key, or @c NULL if not found.
+/**  Get a VMCOREINFO line.
+ * @param ctx       Dump file object.
+ * @param[in] key   Name of the VMCOREINFO variable (part before '=').
+ * @param[out] val  Filled with the part after (first) '='.
+ * @returns         Error status.
  */
-const char *kdump_vmcoreinfo_row(kdump_ctx_t *ctx, const char *key);
+kdump_status kdump_vmcoreinfo_line(kdump_ctx_t *ctx, const char *key,
+				   const char **val);
 
 /**  Get VMCOREINFO symbol value.
  * @param ctx            Dump file object.

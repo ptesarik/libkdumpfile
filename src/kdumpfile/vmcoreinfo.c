@@ -251,55 +251,92 @@ const struct attr_ops vmcoreinfo_raw_ops = {
 	.pre_clear = vmcoreinfo_raw_clear_hook,
 };
 
-const char *
-kdump_vmcoreinfo(kdump_ctx_t *ctx)
+static kdump_status
+get_raw_locked(kdump_ctx_t *ctx, const char **raw)
 {
 	static const struct ostype_attr_map raw_map[] = {
 		{ ADDRXLAT_OS_LINUX, GKI_linux_vmcoreinfo_raw },
 		{ ADDRXLAT_OS_XEN, GKI_xen_vmcoreinfo_raw },
 		{ ADDRXLAT_OS_UNKNOWN }
 	};
+	struct attr_data *attr = ostype_attr(ctx, raw_map);
+	kdump_status status;
 
-	struct attr_data *attr;
-	const char *ret;
+	if (!attr)
+		return set_error(ctx, KDUMP_ERR_NOTIMPL,
+				 "No VMCOREINFO for this OS");
+	if (!attr_isset(attr))
+		return set_error(ctx, KDUMP_ERR_NODATA,
+				 "No VMCOREINFO data");
+
+	status = attr_revalidate(ctx, attr);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status,
+				 "Value cannot be revalidated");
+
+	*raw = attr_value(attr)->string;
+	return KDUMP_OK;
+}
+
+kdump_status
+kdump_vmcoreinfo_raw(kdump_ctx_t *ctx, const char **raw)
+{
+	kdump_status ret;
 
 	clear_error(ctx);
 	rwlock_rdlock(&ctx->shared->lock);
 
-	attr = ostype_attr(ctx, raw_map);
-	ret = (attr && attr_isset(attr) &&
-	       attr_revalidate(ctx, attr) == KDUMP_OK &&
-	       attr->template->type == KDUMP_STRING)
-		? attr_value(attr)->string
-		: NULL;
+	ret = get_raw_locked(ctx, raw);
 
 	rwlock_rdlock(&ctx->shared->lock);
 	return ret;
 }
 
-const char *
-kdump_vmcoreinfo_row(kdump_ctx_t *ctx, const char *key)
+static kdump_status
+get_line_locked(kdump_ctx_t *ctx, const char *key,
+		const char **val)
 {
 	static const struct ostype_attr_map lines_map[] = {
 		{ ADDRXLAT_OS_LINUX, GKI_linux_vmcoreinfo_lines },
 		{ ADDRXLAT_OS_XEN, GKI_xen_vmcoreinfo_lines },
 		{ ADDRXLAT_OS_UNKNOWN }
 	};
-
-	const struct attr_data *base;
+	const struct attr_data *base = ostype_attr(ctx, lines_map);
 	struct attr_data *attr;
-	const char *ret = NULL;
+	kdump_status status;
+
+	if (!base)
+		return set_error(ctx, KDUMP_ERR_NOTIMPL,
+				 "No VMCOREINFO for this OS");
+
+	attr = lookup_dir_attr(ctx->dict, base, key, strlen(key));
+	if (!attr)
+		return set_error(ctx, KDUMP_ERR_NODATA,
+				 "No such VMCOREINFO line");
+
+	if (!attr_isset(attr))
+		return set_error(ctx, KDUMP_ERR_NODATA,
+				 "Data has been cleared");
+
+	status = attr_revalidate(ctx, attr);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status,
+				 "Value cannot be revalidated");
+
+	*val = attr_value(attr)->string;
+	return KDUMP_OK;
+}
+
+kdump_status
+kdump_vmcoreinfo_line(kdump_ctx_t *ctx, const char *key,
+		      const char **val)
+{
+	kdump_status ret;
 
 	clear_error(ctx);
 	rwlock_rdlock(&ctx->shared->lock);
 
-	base = ostype_attr(ctx, lines_map);
-	if (base) {
-		attr = lookup_dir_attr(ctx->dict, base, key, strlen(key));
-		if (attr && attr_isset(attr) &&
-		    attr_revalidate(ctx, attr) == KDUMP_OK)
-			ret = attr_value(attr)->string;
-	}
+	ret = get_line_locked(ctx, key, val);
 
 	rwlock_unlock(&ctx->shared->lock);
 	return ret;
