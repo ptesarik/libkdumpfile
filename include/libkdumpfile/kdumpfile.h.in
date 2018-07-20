@@ -816,6 +816,10 @@ void kdump_attr_iter_end(kdump_ctx_t *ctx, kdump_attr_iter_t *iter);
  */
 #define KDUMP_ATTR_XEN_VERSION_CODE	"xen.version_code"
 
+/** Xen physical start address attribute.
+ */
+#define KDUMP_ATTR_XEN_PHYS_START	"xen.phys_start"
+
 /**  Get VMCOREINFO raw data.
  * @param ctx  Dump file object.
  * @param raw  Filled with raw VMCOREINFO string on success.
