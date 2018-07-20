@@ -1087,7 +1087,9 @@ open_common(kdump_ctx_t *ctx)
 	if (ret != KDUMP_OK)
 		return ret;
 
-	as_caps = ADDRXLAT_CAPS(ADDRXLAT_KVADDR);
+	as_caps = get_xen_type(ctx) == KDUMP_XEN_NONE
+		? ADDRXLAT_CAPS(ADDRXLAT_KVADDR)
+		: 0;
 
 	/* Check that physical addresses are usable */
 	for (i = 0; i < edp->num_load_segments; ++i)
