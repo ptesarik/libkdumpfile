@@ -188,7 +188,12 @@ next_step_pfn(addrxlat_step_t *step)
 
 	status = read_pte(step);
 	if (status == ADDRXLAT_OK) {
-		const addrxlat_meth_t *meth = step->meth;
+		const addrxlat_meth_t *meth;
+		if (!step->raw.pte)
+			return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
+					 "Level-%u PFN not present",
+					 step->remain);
+		meth = step->meth;
 		step->base.addr =
 			step->raw.pte << meth->param.pgt.pf.fieldsz[0];
 		step->base.as = meth->target_as;
