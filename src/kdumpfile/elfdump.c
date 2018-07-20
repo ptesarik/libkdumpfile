@@ -293,7 +293,6 @@ elf_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 	       ? find_closest_vload(edp, pio->addr.addr, sz)
 	       : find_closest_load(edp, pio->addr.addr, sz));
 	if (!pls) {
-		struct page_io physpio;
 		addrxlat_status status;
 		kdump_status ret;
 
@@ -305,16 +304,16 @@ elf_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 		if (ret != KDUMP_OK)
 			return ret;
 
-		physpio = *pio;
 		status = addrxlat_fulladdr_conv(
-			&physpio.addr, ADDRXLAT_MACHPHYSADDR,
+			&pio->addr, ADDRXLAT_MACHPHYSADDR,
 			ctx->xlatctx, ctx->xlat->xlatsys);
 		if (status != ADDRXLAT_OK)
 			return addrxlat2kdump(ctx, status);
 
-		ret = elf_get_page(ctx, &physpio);
-		pio->chunk = physpio.chunk;
-		return ret;
+		pls = find_closest_load(edp, pio->addr.addr, sz);
+		if (!pls)
+			return set_error(ctx, KDUMP_ERR_NODATA,
+					 "Page not found");
 	}
 
 	addr = pio->addr.addr;
