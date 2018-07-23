@@ -648,7 +648,6 @@ lowest_mapped(addrxlat_step_t *step,
 
 	page_mask = pf_page_mask(&step->meth->param.pgt.pf);
 	*addr &= ~page_mask;
-	limit |= page_mask;
 
 	status = internal_launch(step, *addr);
 	if (status != ADDRXLAT_OK)
@@ -718,7 +717,6 @@ highest_mapped(addrxlat_step_t *step,
 
 	page_mask = pf_page_mask(&step->meth->param.pgt.pf);
 	*addr |= page_mask;
-	limit &= ~page_mask;
 
 	status = internal_launch(step, *addr);
 	if (status != ADDRXLAT_OK)
