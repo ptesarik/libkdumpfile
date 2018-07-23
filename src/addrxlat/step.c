@@ -824,3 +824,30 @@ lowest_nonlinear(addrxlat_step_t *step,
 
 	return lowest_nonlinear_tbl(step, addr, limit, off);
 }
+
+/** Find the highest linear mapping in a given range.
+ * @param step   Initial step state.
+ * @param addr   First address to try; updated on return.
+ * @param limit  Last address to try.
+ * @param off    Required virtual-to-kernel-physical offset.
+ * @returns      Error status.
+ *
+ * The initial step state must be initialized same way as for a call
+ * to @ref addrxlat_launch.
+ */
+addrxlat_status
+highest_linear(addrxlat_step_t *step,
+	       addrxlat_addr_t *addr, addrxlat_addr_t limit,
+	       addrxlat_addr_t off)
+{
+	addrxlat_addr_t low = *addr;
+	addrxlat_status status;
+
+	status = lowest_nonlinear(step, addr, limit, off);
+	--*addr;
+	if (status == ADDRXLAT_OK ||
+	    status == ADDRXLAT_ERR_NOTPRESENT)
+		return highest_mapped(step, addr, low);
+	else
+		return status;
+}
