@@ -562,10 +562,23 @@ pf_page_mask(const addrxlat_paging_form_t *pf)
 	return pf_page_size(pf) - 1;
 }
 
+/** Get the number of elements in a page table at a given level.
+ * @param pf     Paging form.
+ * @param level  Page table level.
+ * @returns      Number of elements in this page.
+ *
+ * NB if @c level is zero, page size is returned.
+ */
+static inline addrxlat_addr_t
+pf_table_size(const addrxlat_paging_form_t *pf, unsigned short level)
+{
+	return (addrxlat_addr_t)1 << pf->fieldsz[level];
+}
+
 /** Get the number of addresses covered by a page table at a given level.
  * @param pf     Paging form.
  * @param level  Page table level.
- * @returns      Page mask.
+ * @returns      Number of addresses spanned by the page table entry.
  */
 static inline addrxlat_addr_t
 pf_table_span(const addrxlat_paging_form_t *pf, unsigned short level)
@@ -622,7 +635,7 @@ lowest_mapped_tbl(addrxlat_step_t *step,
 		for (i = 0; i < mystep.remain - 1; ++i)
 			mystep.idx[i] = 0;
 		if (++mystep.idx[i] >=
-		    1U << mystep.meth->param.pgt.pf.fieldsz[i])
+		    pf_table_size(&mystep.meth->param.pgt.pf, i))
 			return ADDRXLAT_ERR_NOTPRESENT;
 		memcpy(step, &mystep, sizeof *step);
 	}
@@ -690,7 +703,7 @@ highest_mapped_tbl(addrxlat_step_t *step,
 
 		for (i = 0; i < mystep.remain - 1; ++i)
 			mystep.idx[i] =
-				(1U << mystep.meth->param.pgt.pf.fieldsz[i]) - 1;
+				pf_table_size(&mystep.meth->param.pgt.pf, i) - 1;
 		if (!mystep.idx[i]--)
 			return ADDRXLAT_ERR_NOTPRESENT;
 		memcpy(step, &mystep, sizeof *step);
@@ -775,7 +788,7 @@ lowest_nonlinear_tbl(addrxlat_step_t *step,
 		for (i = 0; i < mystep.remain - 1; ++i)
 			mystep.idx[i] = 0;
 		if (++mystep.idx[i] >=
-		    1U << mystep.meth->param.pgt.pf.fieldsz[i])
+		    pf_table_size(&mystep.meth->param.pgt.pf, i))
 			return ADDRXLAT_ERR_NOTPRESENT;
 		memcpy(step, &mystep, sizeof *step);
 	}
