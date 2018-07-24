@@ -373,24 +373,64 @@ const struct attr_ops xen_dirty_xlat_ops = {
 	.pre_clear = (attr_pre_clear_fn*)xen_dirty_xlat_hook,
 };
 
+/**  Addrxlat read32 callback.
+ * @param data  Dump file object.
+ * @param addr  Value address.
+ * @param val   Pointer to resulting variable.
+ * @returns     Error status.
+ *
+ * This function fails if data crosses a page boundary.
+ */
 static addrxlat_status
 addrxlat_read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 {
 	kdump_ctx_t *ctx = (kdump_ctx_t*) data;
+	struct page_io pio;
+	uint32_t *p;
 	kdump_status status;
 
-	status = read_u32(ctx, addr->as, addr->addr, 0, NULL, val);
-	return kdump2addrxlat(ctx, status);
+	pio.addr.addr = page_align(ctx, addr->addr);
+	pio.addr.as = addr->as;
+	pio.precious = 0;
+
+	status = ctx->shared->ops->get_page(ctx, &pio);
+	if (status != KDUMP_OK)
+		return kdump2addrxlat(ctx, status);
+
+	p = pio.chunk.data + (addr->addr & (get_page_size(ctx) - 1));
+	*val = dump32toh(ctx, *p);
+	put_page(ctx, &pio);
+	return ADDRXLAT_OK;
 }
 
+/**  Addrxlat read64 callback.
+ * @param data  Dump file object.
+ * @param addr  Value address.
+ * @param val   Pointer to resulting variable.
+ * @returns     Error status.
+ *
+ * This function fails if data crosses a page boundary.
+ */
 static addrxlat_status
 addrxlat_read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 {
 	kdump_ctx_t *ctx = (kdump_ctx_t*) data;
+	struct page_io pio;
+	uint64_t *p;
 	kdump_status status;
 
-	status = read_u64(ctx, addr->as, addr->addr, 0, NULL, val);
-	return kdump2addrxlat(ctx, status);
+	pio.addr.addr = page_align(ctx, addr->addr);
+	pio.addr.as = addr->as;
+	pio.precious = 0;
+
+	status = ctx->shared->ops->get_page(ctx, &pio);
+	if (status != KDUMP_OK)
+		return kdump2addrxlat(ctx, status);
+
+	p = pio.chunk.data + (addr->addr & (get_page_size(ctx) - 1));
+	*val = dump64toh(ctx, *p);
+	put_page(ctx, &pio);
+	return ADDRXLAT_OK;
 }
 
 static addrxlat_status
