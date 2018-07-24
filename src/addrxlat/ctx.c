@@ -152,22 +152,26 @@ read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
        const char *what)
 {
 	addrxlat_ctx_t *ctx = step->ctx;
-	addrxlat_op_ctl_t ctl;
-	struct read_param param;
 	addrxlat_status status;
 
 	if (!ctx->cb.read32)
 		return set_error(ctx, ADDRXLAT_ERR_NODATA, read_nocb_fmt, 32,
 				 addrspace_name(addr->as));
 
-	param.ctx = ctx;
-	param.val = val;
-	ctl.ctx = ctx;
-	ctl.sys = step->sys;
-	ctl.op = read32_op;
-	ctl.data = &param;
-	ctl.caps = step->ctx->cb.read_caps;
-	status = internal_op(&ctl, addr);
+	if (ctx->cb.read_caps & ADDRXLAT_CAPS(addr->as)) {
+		status = ctx->cb.read32(ctx->cb.data, addr, val);
+	} else {
+		addrxlat_op_ctl_t ctl;
+		struct read_param param = { ctx, val };
+
+		ctl.ctx = ctx;
+		ctl.sys = step->sys;
+		ctl.op = read32_op;
+		ctl.data = &param;
+		ctl.caps = ctx->cb.read_caps;
+		status = internal_op(&ctl, addr);
+	}
+
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status, read_err_fmt, 32, what,
 				 addrspace_name(addr->as), addr->addr);
@@ -194,22 +198,26 @@ read64(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint64_t *val,
        const char *what)
 {
 	addrxlat_ctx_t *ctx = step->ctx;
-	addrxlat_op_ctl_t ctl;
-	struct read_param param;
 	addrxlat_status status;
 
 	if (!ctx->cb.read64)
 		return set_error(ctx, ADDRXLAT_ERR_NODATA, read_nocb_fmt, 64,
 				 addrspace_name(addr->as));
 
-	param.ctx = ctx;
-	param.val = val;
-	ctl.ctx = ctx;
-	ctl.sys = step->sys;
-	ctl.op = read64_op;
-	ctl.data = &param;
-	ctl.caps = step->ctx->cb.read_caps;
-	status = internal_op(&ctl, addr);
+	if (ctx->cb.read_caps & ADDRXLAT_CAPS(addr->as)) {
+		status = ctx->cb.read64(ctx->cb.data, addr, val);
+	} else {
+		addrxlat_op_ctl_t ctl;
+		struct read_param param = { ctx, val };
+
+		ctl.ctx = ctx;
+		ctl.sys = step->sys;
+		ctl.op = read64_op;
+		ctl.data = &param;
+		ctl.caps = ctx->cb.read_caps;
+		status = internal_op(&ctl, addr);
+	}
+
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status, read_err_fmt, 64, what,
 				 addrspace_name(addr->as), addr->addr);
