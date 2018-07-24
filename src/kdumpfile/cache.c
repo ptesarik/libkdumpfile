@@ -204,25 +204,12 @@ add_inflight(struct cache *cache, struct cache_entry *entry, unsigned idx)
  * This function must be called with the cache mutex held.
  */
 static void
-locked_cache_make_precious(struct cache *cache, struct cache_entry *entry)
+make_precious(struct cache *cache, struct cache_entry *entry)
 {
 	if (entry->state == cs_probe) {
 		--cache->nprobetotal;
 		entry->state = cs_precious;
 	}
-}
-
-/**  Ensure that an in-flight entry goes to the precious list, eventually.
- *
- * @param cache  Cache object.
- * @param entry  Cache entry.
- */
-void
-cache_make_precious(struct cache *cache, struct cache_entry *entry)
-{
-	mutex_lock(&cache->mutex);
-	locked_cache_make_precious(cache, entry);
-	mutex_unlock(&cache->mutex);
 }
 
 /**  Reuse a cached entry.
@@ -545,7 +532,7 @@ get_inflight_entry(struct cache *cache, cache_key_t key)
 	for (n = cache->ninflight; n; --n) {
 		entry = &cache->ce[idx];
 		if (entry->key == key) {
-			locked_cache_make_precious(cache, entry);
+			make_precious(cache, entry);
 			return entry;
 		}
 		idx = entry->next;

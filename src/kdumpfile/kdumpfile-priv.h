@@ -1172,8 +1172,6 @@ INTERNAL_DECL(void, cache_put_entry,
 	      (struct cache *cache, struct cache_entry *entry));
 INTERNAL_DECL(void, cache_insert, (struct cache *, struct cache_entry *));
 INTERNAL_DECL(void, cache_discard, (struct cache *, struct cache_entry *));
-INTERNAL_DECL(void, cache_make_precious,
-	      (struct cache *cache, struct cache_entry *entry));
 
 INTERNAL_DECL(kdump_status, def_realloc_caches, (kdump_ctx_t *ctx));
 
@@ -1311,7 +1309,6 @@ INTERNAL_DECL(void, fcache_put_chunk, (struct fcache_chunk *fch));
 struct page_io {
 	addrxlat_fulladdr_t addr;  /**< Address of page under I/O. */
 	struct fcache_chunk chunk; /**< File cache chunk. */
-	int precious;		   /**< Is this page precious? */
 };
 
 typedef kdump_status read_page_fn(

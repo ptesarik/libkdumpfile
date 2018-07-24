@@ -391,7 +391,6 @@ addrxlat_read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 
 	pio.addr.addr = page_align(ctx, addr->addr);
 	pio.addr.as = addr->as;
-	pio.precious = 0;
 
 	status = ctx->shared->ops->get_page(ctx, &pio);
 	if (status != KDUMP_OK)
@@ -421,7 +420,6 @@ addrxlat_read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 
 	pio.addr.addr = page_align(ctx, addr->addr);
 	pio.addr.as = addr->as;
-	pio.precious = 0;
 
 	status = ctx->shared->ops->get_page(ctx, &pio);
 	if (status != KDUMP_OK)

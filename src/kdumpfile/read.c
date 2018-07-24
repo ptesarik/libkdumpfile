@@ -65,11 +65,9 @@ cache_get_page(kdump_ctx_t *ctx, struct page_io *pio, read_page_fn *fn)
 		return KDUMP_OK;
 
 	ret = fn(ctx, pio);
-	if (ret == KDUMP_OK) {
-		if (pio->precious)
-			cache_make_precious(pio->chunk.fce.cache, entry);
+	if (ret == KDUMP_OK)
 		cache_insert(pio->chunk.fce.cache, entry);
-	} else
+	else
 		cache_discard(pio->chunk.fce.cache, entry);
 	return ret;
 }
@@ -160,7 +158,6 @@ read_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	kdump_status ret;
 
 	ret = KDUMP_OK;
-	pio.precious = 0;
 	remain = *plength;
 	while (remain) {
 		size_t off, partlen;
@@ -220,7 +217,6 @@ read_string_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	size_t length = 0, newlength;
 	kdump_status ret;
 
-	pio.precious = 0;
 	do {
 		size_t off, partlen;
 
