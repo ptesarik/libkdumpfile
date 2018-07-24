@@ -727,12 +727,6 @@ INTERNAL_DECL(kdump_status, read_string_locked,
 INTERNAL_DECL(kdump_status, read_locked,
 	      (kdump_ctx_t *ctx, kdump_addrspace_t as,
 	       kdump_addr_t addr, void *buffer, size_t *plength));
-INTERNAL_DECL(kdump_status, read_u32,
-	      (kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
-	       int precious, char *what, uint32_t *result));
-INTERNAL_DECL(kdump_status, read_u64,
-	      (kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
-	       int precious, char *what, uint64_t *result));
 INTERNAL_DECL(void, set_addrspace_caps,
 	      (struct kdump_xlat *xlat, unsigned long caps));
 
