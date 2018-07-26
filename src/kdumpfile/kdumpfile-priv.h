@@ -651,6 +651,23 @@ xlat_decref(struct kdump_xlat *xlat)
 	return 0;
 }
 
+/** Number of read cache slots. */
+#define READ_CACHE_SLOTS	4
+
+/** Size of each read cache slot. */
+#define READ_CACHE_SIZE		128
+
+/** Read cache storage and metadata. */
+struct cached_reads {
+	unsigned slot;		/**< Slot of the last cached read. */
+
+	/** Cache keys (combined address and address space). */
+	addrxlat_addr_t key[READ_CACHE_SLOTS];
+
+	/** Cached values. */
+	unsigned char val[READ_CACHE_SLOTS][READ_CACHE_SIZE];
+};
+
 /**  Representation of a dump file.
  *
  * This structure contains state information and a pointer to @c struct
@@ -672,6 +689,9 @@ struct _kdump_ctx {
 
 	/** Address translation context. */
 	addrxlat_ctx_t *xlatctx;
+
+	/** Cached reads. */
+	struct cached_reads cached;
 
 	/** Per-context data. */
 	void *data[PER_CTX_SLOTS];

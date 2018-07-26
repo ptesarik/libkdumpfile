@@ -373,6 +373,24 @@ const struct attr_ops xen_dirty_xlat_ops = {
 	.pre_clear = (attr_pre_clear_fn*)xen_dirty_xlat_hook,
 };
 
+/**  Add a cached read chunk.
+ * @param cache  Read cache.
+ * @param key    New entry key.
+ * @param p      Buffer address.
+ * @returns      New cache entry slot.
+ */
+static unsigned
+cached_read_insert(struct cached_reads *cache, addrxlat_addr_t key, void *p)
+{
+	unsigned slot;
+
+	slot = (cache->slot + READ_CACHE_SLOTS - 1) % READ_CACHE_SLOTS;
+	cache->slot = slot;
+	cache->key[slot] = key;
+	memcpy(cache->val[slot], p, sizeof(cache->val[slot]));
+	return slot;
+}
+
 /**  Addrxlat read32 callback.
  * @param data  Dump file object.
  * @param addr  Value address.
@@ -387,7 +405,18 @@ addrxlat_read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 	kdump_ctx_t *ctx = (kdump_ctx_t*) data;
 	struct page_io pio;
 	uint32_t *p;
+	addrxlat_addr_t aligned;
+	unsigned slot, off;
 	kdump_status status;
+
+	off = addr->addr & (READ_CACHE_SIZE - 1);
+	aligned = addr->addr - off;
+	slot = ctx->cached.slot;
+	do {
+		if (ctx->cached.key[slot] == (aligned | addr->as))
+			goto out;
+		slot = (slot + 1) % READ_CACHE_SLOTS;
+	} while (slot != ctx->cached.slot);
 
 	pio.addr.addr = page_align(ctx, addr->addr);
 	pio.addr.as = addr->as;
@@ -396,9 +425,13 @@ addrxlat_read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
 	if (status != KDUMP_OK)
 		return kdump2addrxlat(ctx, status);
 
-	p = pio.chunk.data + (addr->addr & (get_page_size(ctx) - 1));
-	*val = dump32toh(ctx, *p);
+	p = pio.chunk.data + (aligned & (get_page_size(ctx) - 1));
+	slot = cached_read_insert(&ctx->cached, aligned | addr->as, p);
 	put_page(ctx, &pio);
+
+ out:
+	p = (uint32_t*)(ctx->cached.val[slot] + off);
+	*val = dump32toh(ctx, *p);
 	return ADDRXLAT_OK;
 }
 
@@ -416,7 +449,18 @@ addrxlat_read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 	kdump_ctx_t *ctx = (kdump_ctx_t*) data;
 	struct page_io pio;
 	uint64_t *p;
+	addrxlat_addr_t aligned;
+	unsigned slot, off;
 	kdump_status status;
+
+	off = addr->addr & (READ_CACHE_SIZE - 1);
+	aligned = addr->addr - off;
+	slot = ctx->cached.slot;
+	do {
+		if (ctx->cached.key[slot] == (aligned | addr->as))
+			goto out;
+		slot = (slot + 1) % READ_CACHE_SLOTS;
+	} while (slot != ctx->cached.slot);
 
 	pio.addr.addr = page_align(ctx, addr->addr);
 	pio.addr.as = addr->as;
@@ -425,9 +469,13 @@ addrxlat_read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
 	if (status != KDUMP_OK)
 		return kdump2addrxlat(ctx, status);
 
-	p = pio.chunk.data + (addr->addr & (get_page_size(ctx) - 1));
-	*val = dump64toh(ctx, *p);
+	p = pio.chunk.data + (aligned & (get_page_size(ctx) - 1));
+	slot = cached_read_insert(&ctx->cached, aligned | addr->as, p);
 	put_page(ctx, &pio);
+
+ out:
+	p = (uint64_t*)(ctx->cached.val[slot] + off);
+	*val = dump64toh(ctx, *p);
 	return ADDRXLAT_OK;
 }
 

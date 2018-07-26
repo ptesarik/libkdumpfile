@@ -44,6 +44,7 @@ static kdump_ctx_t *
 alloc_ctx(void)
 {
 	kdump_ctx_t *ctx;
+	unsigned i;
 
 	ctx = calloc(1, sizeof (kdump_ctx_t) + ERRBUF);
 	if (!ctx)
@@ -54,6 +55,9 @@ alloc_ctx(void)
 	ctx->xlatctx = init_addrxlat(ctx);
 	if (!ctx->xlatctx)
 		goto err;
+
+	for (i = 0; i < READ_CACHE_SLOTS; ++i)
+		ctx->cached.key[i] = ADDRXLAT_NOADDR;
 
 	return ctx;
 
