@@ -531,13 +531,21 @@ addrxlat_walk(addrxlat_step_t *step)
 
 	clear_error(step->ctx);
 
-	while (step->remain) {
-		status = internal_step(step);
+	status = first_step(step, step->base.addr);
+	if (status != ADDRXLAT_OK)
+		return status;
+
+	while (--step->remain) {
+		step->base.addr += step->idx[step->remain] * step->elemsz;
+		status = next_step(step);
 		if (status != ADDRXLAT_OK)
-			break;
+			return status;
 	}
 
-	return status;
+	step->base.as = step->meth->target_as;
+	step->base.addr += step->idx[0] * step->elemsz;
+	step->elemsz = 0;
+	return ADDRXLAT_OK;
 }
 
 /** Get the page size for a given paging form.

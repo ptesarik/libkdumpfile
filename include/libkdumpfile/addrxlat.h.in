@@ -986,10 +986,12 @@ addrxlat_status addrxlat_launch(addrxlat_step_t *step, addrxlat_addr_t addr);
  */
 addrxlat_status addrxlat_step(addrxlat_step_t *step);
 
-/** Perform all remaining translation steps.
- * @param step   Current step state.
- * @returns      Error status.
+/** Perform one complete address translation.
+ * @param step  Initialized translation step state.
+ * @returns     Error status.
  *
+ * The source address to be translated is in @c step->base. All other
+ * fields must be initialized as for a call to @ref addrxlat_launch.
  * On successful return, the resulting address is found in @c step->base.
  */
 addrxlat_status addrxlat_walk(addrxlat_step_t *step);

@@ -170,10 +170,7 @@ vtop_pgt(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx, addrxlat_addr_t *addr)
 	step.ctx = ctx;
 	step.sys = sys;
 	step.meth = &sys->meth[ADDRXLAT_SYS_METH_PGT];
-	status = internal_launch(&step, *addr);
-	if (status != ADDRXLAT_OK)
-		return status;
-
+	step.base.addr = *addr;
 	status = internal_walk(&step);
 	if (status != ADDRXLAT_OK)
 		return status;

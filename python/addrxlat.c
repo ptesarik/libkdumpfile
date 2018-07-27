@@ -4927,7 +4927,7 @@ step_step(PyObject *_self, PyObject *args)
 PyDoc_STRVAR(step_walk__doc__,
 "STEP.walk() -> status\n\
 \n\
-Perform all remaining translation steps.");
+Perform one complete address translation.");
 
 /** Wrapper for @ref addrxlat_walk
  * @param _self   step object

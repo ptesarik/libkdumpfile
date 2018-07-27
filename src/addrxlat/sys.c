@@ -407,6 +407,7 @@ do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
       const struct xlat_chain *chain)
 {
 	unsigned i, j;
+	addrxlat_fulladdr_t lastbase;
 	addrxlat_step_t step;
 	addrxlat_status status;
 
@@ -432,16 +433,15 @@ do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
 			meth = internal_map_search(map, paddr->addr);
 			if (meth == ADDRXLAT_SYS_METH_NONE)
 				continue;
-
 			step.meth = &ctl->sys->meth[meth];
-			status = internal_launch(&step, paddr->addr);
-			if (status == ADDRXLAT_OK)
-				status = internal_walk(&step);
 
+			step.base.addr = paddr->addr;
+			status = internal_walk(&step);
 			if (status == ADDRXLAT_OK) {
-				paddr = &step.base;
-				if (ctl->caps & ADDRXLAT_CAPS(paddr->as))
-					return ctl->op(ctl->data, paddr);
+				if (ctl->caps & ADDRXLAT_CAPS(step.base.as))
+					return ctl->op(ctl->data, &step.base);
+				lastbase = step.base;
+				paddr = &lastbase;
 				break;
 			} else if (status != ADDRXLAT_ERR_NOMETH &&
 				   status != ADDRXLAT_ERR_NODATA)

@@ -204,18 +204,15 @@ check_pae(struct os_init_data *ctl, const addrxlat_fulladdr_t *root,
 	meth.target_as = ADDRXLAT_MACHPHYSADDR;
 	meth.param.pgt.root = *root;
 
-	meth.param.pgt.pf = ia32_pf_pae;
-	step.ctx = ctl->ctx;
-	step.sys = ctl->sys;
-	step.meth = &meth;
-	status = internal_launch(&step, direct);
-	if (status != ADDRXLAT_OK)
-		return set_error(ctl->ctx, status,
-				 "Cannot launch %s translation", "PAE");
 	status = sys_set_physmaps(ctl, PHYSADDR_MASK_PAE);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot set up physical mappings");
+	meth.param.pgt.pf = ia32_pf_pae;
+	step.ctx = ctl->ctx;
+	step.sys = ctl->sys;
+	step.meth = &meth;
+	step.base.addr = direct;
 	status = internal_walk(&step);
 	if (status == ADDRXLAT_OK && step.base.addr == 0) {
 		ctl->popt.val[OPT_pae].num = 1;
@@ -226,18 +223,15 @@ check_pae(struct os_init_data *ctl, const addrxlat_fulladdr_t *root,
 	map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_MACHPHYS_KPHYS]);
 	map_clear(ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS]);
 
-	meth.param.pgt.pf = ia32_pf;
-	step.ctx = ctl->ctx;
-	step.sys = ctl->sys;
-	step.meth = &meth;
-	status = internal_launch(&step, direct);
-	if (status != ADDRXLAT_OK)
-		return set_error(ctl->ctx, status,
-				 "Cannot launch %s translation", "non-PAE");
 	status = sys_set_physmaps(ctl, PHYSADDR_MASK_NONPAE);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot set up physical mappings");
+	meth.param.pgt.pf = ia32_pf;
+	step.ctx = ctl->ctx;
+	step.sys = ctl->sys;
+	step.meth = &meth;
+	step.base.addr = direct;
 	status = internal_walk(&step);
 	if (status == ADDRXLAT_OK && step.base.addr == 0) {
 		ctl->popt.val[OPT_pae].num = 0;

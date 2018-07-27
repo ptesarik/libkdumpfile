@@ -278,13 +278,7 @@ do_xlat(addrxlat_ctx_t *ctx, addrxlat_meth_t *meth, addrxlat_addr_t addr)
 	step.ctx = ctx;
 	step.sys = NULL;
 	step.meth = meth;
-	status = addrxlat_launch(&step, addr);
-	if (status != ADDRXLAT_OK) {
-		fprintf(stderr, "Cannot launch address translation: %s\n",
-			addrxlat_ctx_get_err(ctx));
-		return TEST_FAIL;
-	}
-
+	step.base.addr = addr;
 	status = addrxlat_walk(&step);
 	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "Address translation failed: %s\n",
