@@ -1299,6 +1299,9 @@ fcache_put(struct fcache_entry *fce)
 INTERNAL_DECL(kdump_status, fcache_pread,
 	      (struct fcache *fc, void *buf, size_t len, off_t pos));
 
+/** Number of file cache entries embedded in a chunk descriptor. */
+#define MAX_EMBED_FCES	2
+
 /** A contiguous cached data chunk.
  */
 struct fcache_chunk {
@@ -1309,10 +1312,10 @@ struct fcache_chunk {
 	size_t nent;
 
 	union {
-		/** File cache entry (if @c nent is one). */
-		struct fcache_entry fce;
+		/** File cache entries if @c nent <= @ref MAX_EMBED_FCES. */
+		struct fcache_entry embed_fces[MAX_EMBED_FCES];
 
-		/** File cache entries (if @c nent >= 1). */
+		/** File cache entries if @c nent > @ref MAX_EMBED_FCES. */
 		struct fcache_entry *fces;
 	};
 };

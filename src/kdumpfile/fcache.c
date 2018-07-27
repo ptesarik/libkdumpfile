@@ -229,6 +229,17 @@ fcache_pread(struct fcache *fc, void *buf, size_t len, off_t pos)
 	return KDUMP_OK;
 }
 
+/** Put an array of file cache entries.
+ * @param fces  Array of file cache entries.
+ * @param n     Number of entries in the array.
+ */
+static void
+put_fces(struct fcache_entry *fces, size_t n)
+{
+	while (n--)
+		fcache_put(&fces[n]);
+}
+
 /** Free an array of file cache entries.
  * @param fces  Array of file cache entries.
  * @param n     Number of entries in the array.
@@ -237,8 +248,7 @@ static void
 free_fces(struct fcache_entry *fces, size_t n)
 {
 	if (fces) {
-		while (n--)
-			fcache_put(&fces[n]);
+		put_fces(fces, n);
 		free(fces);
 	}
 }
@@ -287,14 +297,15 @@ fcache_get_chunk(struct fcache *fc, struct fcache_chunk *fch,
 
 	first = pos & ~(fc->pgsz - 1);
 	last = (pos + len - 1) & ~(fc->pgsz - 1);
-	if (last != first) {
-		fces = malloc(((last - first) / fc->pgsz + 1) * sizeof(*fces));
+	nent = (last - first) / fc->pgsz + 1;
+	if (nent > MAX_EMBED_FCES) {
+		fces = malloc(nent * sizeof(*fces));
 		if (!fces)
 			return KDUMP_ERR_SYSTEM;
 		curfce = fces;
 	} else {
 		fces = NULL;
-		curfce = &fce;
+		curfce = fch->embed_fces;
 	}
 
 	nent = 0;
@@ -303,7 +314,9 @@ fcache_get_chunk(struct fcache *fc, struct fcache_chunk *fch,
 	while (remain) {
 		status = fcache_get(fc, curfce, pos);
 		if (status != KDUMP_OK) {
-			free_fces(fces, nent);
+			put_fces(curfce - nent, nent);
+			if (fces)
+				free(fces);
 			return status;
 		}
 
@@ -316,14 +329,17 @@ fcache_get_chunk(struct fcache *fc, struct fcache_chunk *fch,
 			if (!data) {
 				data = malloc(len);
 				if (!data) {
-					free_fces(fces, nent + 1);
+					put_fces(curfce - nent, nent + 1);
+					if (fces)
+						free(fces);
 					return KDUMP_ERR_SYSTEM;
 				}
-				curdata = copy_data(data, fces, nent);
-
+				curdata = copy_data(data, curfce - nent, nent);
+				put_fces(curfce - nent, nent);
 				fce = *curfce;
 				curfce = &fce;
-				free_fces(fces, nent);
+				if (fces)
+					free(fces);
 			}
 			memcpy(curdata, curfce->data, curfce->len);
 		}
@@ -340,20 +356,18 @@ fcache_get_chunk(struct fcache *fc, struct fcache_chunk *fch,
 	}
 
 	fch->nent = nent;
-	if (nent > 1) {
-		if (data) {
-			fch->data = data;
-			fch->nent = 0;
-		} else {
-			fch->data = fces->data;
-			fch->fces = fces;
-		}
-	} else if (nent) {
-		--curfce;
-		fch->data = curfce->data;
-		fch->fce = *curfce;
-		if (fces)
+	if (data) {
+		fch->data = data;
+		fch->nent = 0;
+	} else if (nent > MAX_EMBED_FCES) {
+		fch->data = fces->data;
+		fch->fces = fces;
+	} else {
+		if (fces) {
+			memcpy(fch->embed_fces, fces, nent * sizeof(*fces));
 			free(fces);
+		}
+		fch->data = fch->embed_fces->data;
 	}
 
 	return KDUMP_OK;
@@ -365,10 +379,10 @@ fcache_get_chunk(struct fcache *fc, struct fcache_chunk *fch,
 void
 fcache_put_chunk(struct fcache_chunk *fch)
 {
-	if (fch->nent > 1)
+	if (fch->nent > MAX_EMBED_FCES)
 		free_fces(fch->fces, fch->nent);
 	else if (fch->nent)
-		fcache_put(&fch->fce);
+		put_fces(fch->embed_fces, fch->nent);
 	else
 		free(fch->data);
 }

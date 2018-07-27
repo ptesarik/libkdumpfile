@@ -193,7 +193,7 @@ devmem_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 static void
 devmem_put_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
-	--pio->chunk.fce.ce->refcnt;
+	--pio->chunk.embed_fces->ce->refcnt;
 }
 
 static kdump_status
