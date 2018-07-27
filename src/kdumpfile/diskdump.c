@@ -378,7 +378,9 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 		return KDUMP_OK;
 	}
 
+	mutex_lock(&ctx->shared->cache_lock);
 	ret = fcache_pread(ctx->shared->fcache, &pd, sizeof pd, pd_pos);
+	mutex_unlock(&ctx->shared->cache_lock);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read page descriptor at %llu",
@@ -404,7 +406,9 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 	}
 
 	/* read page data */
+	mutex_lock(&ctx->shared->cache_lock);
 	ret = fcache_pread(ctx->shared->fcache, buf, pd.size, pd.offset);
+	mutex_unlock(&ctx->shared->cache_lock);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read page data at %llu",

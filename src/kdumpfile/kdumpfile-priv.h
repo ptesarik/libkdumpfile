@@ -550,6 +550,7 @@ struct kdump_shared {
 
 	struct cache *cache;	/**< Page cache. */
 	struct fcache *fcache;	/**< File cache. */
+	mutex_t cache_lock;	/**< Cache access lock. */
 
 	/** Static attributes. */
 #define ATTR(dir, key, field, type, ctype, ...)	\

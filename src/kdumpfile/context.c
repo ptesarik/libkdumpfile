@@ -80,9 +80,13 @@ alloc_shared(void)
 	if (rwlock_init(&shared->lock, NULL))
 		goto err1;
 
+	if (mutex_init(&shared->cache_lock, NULL))
+		goto err2;
+
 	shared->refcnt = 1;
 	return shared;
 
+ err2:	rwlock_destroy(&shared->lock);
  err1:	free(shared);
 	return NULL;
 }
@@ -105,6 +109,7 @@ shared_free(struct kdump_shared *shared)
 		cache_free(shared->cache);
 	if (shared->fcache)
 		fcache_decref(shared->fcache);
+	mutex_destroy(&shared->cache_lock);
 	rwlock_destroy(&shared->lock);
 	free(shared);
 }

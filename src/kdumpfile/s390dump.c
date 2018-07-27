@@ -100,13 +100,17 @@ s390_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	struct s390dump_priv *sdp = ctx->shared->fmtdata;
 	off_t pos;
+	kdump_status status;
 
 	if ((pio->addr.addr >> get_page_shift(ctx)) >= get_max_pfn(ctx))
 		return set_error(ctx, KDUMP_ERR_NODATA, "Out-of-bounds PFN");
 
 	pos = (off_t)pio->addr.addr + (off_t)sdp->dataoff;
-	return fcache_get_chunk(ctx->shared->fcache, &pio->chunk,
-				get_page_size(ctx), pos);
+	mutex_lock(&ctx->shared->cache_lock);
+	status = fcache_get_chunk(ctx->shared->fcache, &pio->chunk,
+				  get_page_size(ctx), pos);
+	mutex_unlock(&ctx->shared->cache_lock);
+	return status;
 }
 
 static kdump_status

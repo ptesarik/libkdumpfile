@@ -230,6 +230,8 @@ elf_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 	size_t size;
 	kdump_status status;
 
+	mutex_lock(&ctx->shared->cache_lock);
+
 	addr = pio->addr.addr;
 	p = pio->chunk.data;
 	endp = p + get_page_size(ctx);
@@ -260,10 +262,7 @@ elf_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 			status = fcache_pread(ctx->shared->fcache,
 					      p, size, pos);
 			if (status != KDUMP_OK)
-				return set_error(
-					ctx, status,
-					"Cannot read page data at %llu",
-					(unsigned long long) pos);
+				goto err_read;
 			p += size;
 			addr += size;
 		}
@@ -277,7 +276,14 @@ elf_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 		}
 	}
 
+	mutex_unlock(&ctx->shared->cache_lock);
 	return KDUMP_OK;
+
+ err_read:
+	mutex_unlock(&ctx->shared->cache_lock);
+	return set_error(ctx, status,
+			 "Cannot read page data at %llu",
+			 (unsigned long long) pos);
 }
 
 static kdump_status
@@ -287,6 +293,7 @@ elf_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 	struct load_segment *pls;
 	kdump_paddr_t addr, loadaddr;
 	size_t sz;
+	kdump_status status;
 
 	sz = get_page_size(ctx);
 	pls = (pio->addr.as == ADDRXLAT_KVADDR
@@ -320,10 +327,16 @@ elf_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 	loadaddr = (pio->addr.as == ADDRXLAT_KVADDR
 		    ? pls->virt
 		    : pls->phys);
-	return (loadaddr <= addr && pls->filesz >= addr - loadaddr + sz)
-		? fcache_get_chunk(ctx->shared->fcache, &pio->chunk, sz,
-				   pls->file_offset + addr - loadaddr)
-		: cache_get_page(ctx, pio, elf_read_page);
+
+	/* Handle reads crossing a LOAD boundary. */
+	if (! (loadaddr <= addr && pls->filesz >= addr - loadaddr + sz))
+		return cache_get_page(ctx, pio, elf_read_page);
+
+	mutex_lock(&ctx->shared->cache_lock);
+	status = fcache_get_chunk(ctx->shared->fcache, &pio->chunk, sz,
+				  pls->file_offset + addr - loadaddr);
+	mutex_unlock(&ctx->shared->cache_lock);
+	return status;
 }
 
 static void
@@ -620,7 +633,9 @@ xc_p2m_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 					"PFN not found");
 
 	pos = edp->xen_map_offset + idx * sizeof(struct xen_p2m);
+	mutex_lock(&shared->cache_lock);
 	status = fcache_pread(shared->fcache, &p2m, sizeof p2m, pos);
+	mutex_unlock(&shared->cache_lock);
 	if (status != KDUMP_OK)
 		return addrxlat_ctx_err(step->ctx, ADDRXLAT_ERR_NODATA,
 					"Cannot read p2m entry at %llu",
@@ -656,7 +671,9 @@ xc_m2p_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 					"MFN not found");
 
 	pos = edp->xen_map_offset + idx * sizeof(struct xen_p2m);
+	mutex_lock(&shared->cache_lock);
 	status = fcache_pread(shared->fcache, &p2m, sizeof p2m, pos);
+	mutex_unlock(&shared->cache_lock);
 	if (status != KDUMP_OK)
 		return addrxlat_ctx_err(step->ctx, ADDRXLAT_ERR_NODATA,
 					"Cannot read p2m entry at %llu",
@@ -747,6 +764,7 @@ xc_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
 	uint_fast64_t idx;
 	off_t offset;
+	kdump_status status;
 
 	idx = ( (get_xen_xlat(ctx) == KDUMP_XEN_NONAUTO &&
 		 pio->addr.as == ADDRXLAT_MACHPHYSADDR)
@@ -756,8 +774,12 @@ xc_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 		return set_error(ctx, KDUMP_ERR_NODATA, "Page not found");
 
 	offset = edp->xen_pages_offset + ((off_t)idx << get_page_shift(ctx));
-	return fcache_get_chunk(ctx->shared->fcache, &pio->chunk,
-				get_page_size(ctx), offset);
+
+	mutex_lock(&ctx->shared->cache_lock);
+	status = fcache_get_chunk(ctx->shared->fcache, &pio->chunk,
+				  get_page_size(ctx), offset);
+	mutex_unlock(&ctx->shared->cache_lock);
+	return status;
 }
 
 static kdump_status

@@ -72,8 +72,6 @@
  * discarded.
  */
 struct cache {
-	mutex_t mutex;		 /**< Lock for changes to struct cache. */
-
 	unsigned split;		 /**< Split point between probed and precious
 				  *   entries (index of MRU probed entry) */
 	unsigned nprec;		 /**< Number of cached precious entries */
@@ -200,8 +198,6 @@ add_inflight(struct cache *cache, struct cache_entry *entry, unsigned idx)
  *
  * @param cache  Cache object (locked).
  * @param entry  Cache entry.
- *
- * This function must be called with the cache mutex held.
  */
 static void
 make_precious(struct cache *cache, struct cache_entry *entry)
@@ -443,11 +439,9 @@ cache_get_entry(struct cache *cache, cache_key_t key)
 {
 	struct cache_entry *entry;
 
-	mutex_lock(&cache->mutex);
 	entry = cache_get_entry_noref(cache, key);
 	if (entry)
 		++entry->refcnt;
-	mutex_unlock(&cache->mutex);
 
 	return entry;
 }
@@ -599,9 +593,8 @@ cache_insert(struct cache *cache, struct cache_entry *entry)
 {
 	unsigned idx;
 
-	mutex_lock(&cache->mutex);
 	if (cache_entry_valid(entry))
-		goto unlock;
+		return;
 
 	idx = entry - cache->ce;
 	if (cache->ninflight--) {
@@ -625,9 +618,6 @@ cache_insert(struct cache *cache, struct cache_entry *entry)
 		break;
 	}
 	entry->state = cs_valid;
-
- unlock:
-	mutex_unlock(&cache->mutex);
 }
 
 /**  Drop a reference to a cache entry.
@@ -638,9 +628,7 @@ cache_insert(struct cache *cache, struct cache_entry *entry)
 void
 cache_put_entry(struct cache *cache, struct cache_entry *entry)
 {
-	mutex_lock(&cache->mutex);
 	--entry->refcnt;
-	mutex_unlock(&cache->mutex);
 }
 
 /**  Discard an entry.
@@ -661,11 +649,10 @@ cache_discard(struct cache *cache, struct cache_entry *entry)
 {
 	unsigned n, idx, eprobe;
 
-	mutex_lock(&cache->mutex);
 	if (--entry->refcnt)
-		goto unlock;
+		return;
 	if (cache_entry_valid(entry))
-		goto unlock;
+		return;
 	if (entry->state == cs_probe)
 		--cache->nprobetotal;
 
@@ -685,9 +672,6 @@ cache_discard(struct cache *cache, struct cache_entry *entry)
 		cache->split = idx;
 
 	add_entry_after(cache, entry, idx, eprobe);
-
- unlock:
-	mutex_unlock(&cache->mutex);
 }
 
 /**  Clean up all cache entries.
@@ -774,11 +758,6 @@ cache_alloc(unsigned n, size_t size)
 	if (!cache)
 		return cache;
 
-	if (mutex_init(&cache->mutex, NULL)) {
-		free(cache);
-		return NULL;
-	}
-
 	cache->elemsize = size;
 	cache->cap = n;
 	cache->hits.number = 0;
@@ -812,10 +791,8 @@ void
 set_cache_entry_cleanup(struct cache *cache, cache_entry_cleanup_fn *fn,
 			void *data)
 {
-	mutex_lock(&cache->mutex);
 	cache->entry_cleanup = fn;
 	cache->cleanup_data = data;
-	mutex_unlock(&cache->mutex);
 }
 
 /**  Free a cache object.
@@ -828,7 +805,6 @@ set_cache_entry_cleanup(struct cache *cache, cache_entry_cleanup_fn *fn,
 void
 cache_free(struct cache *cache)
 {
-	mutex_destroy(&cache->mutex);
 	cleanup_entries(cache);
 	if (cache->data != cache)
 		free(cache->data);

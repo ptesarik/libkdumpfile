@@ -51,10 +51,12 @@ cache_get_page(kdump_ctx_t *ctx, struct page_io *pio, read_page_fn *fn)
 	struct cache_entry *entry;
 	kdump_status ret;
 
+	mutex_lock(&ctx->shared->cache_lock);
 	pio->chunk.nent = 1;
 	pio->chunk.embed_fces->cache = ctx->shared->cache;
 	entry = cache_get_entry(pio->chunk.embed_fces->cache,
 				pio->addr.addr | pio->addr.as);
+	mutex_unlock(&ctx->shared->cache_lock);
 	if (!entry)
 		return set_error(ctx, KDUMP_ERR_BUSY,
 				 "Cache is fully utilized");
@@ -65,10 +67,12 @@ cache_get_page(kdump_ctx_t *ctx, struct page_io *pio, read_page_fn *fn)
 		return KDUMP_OK;
 
 	ret = fn(ctx, pio);
+	mutex_lock(&ctx->shared->cache_lock);
 	if (ret == KDUMP_OK)
 		cache_insert(pio->chunk.embed_fces->cache, entry);
 	else
 		cache_discard(pio->chunk.embed_fces->cache, entry);
+	mutex_unlock(&ctx->shared->cache_lock);
 	return ret;
 }
 

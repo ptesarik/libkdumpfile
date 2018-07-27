@@ -705,8 +705,10 @@ lkcd_max_pfn_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
 		struct dump_page dummy_dp;
 		off_t dummy_off;
 
+		mutex_lock(&ctx->shared->cache_lock);
 		res = search_page_desc(ctx, ~(kdump_pfn_t)0,
 				       &dummy_dp, &dummy_off);
+		mutex_unlock(&ctx->shared->cache_lock);
 		if (res == KDUMP_ERR_NODATA) {
 			clear_error(ctx);
 			res = KDUMP_OK;
@@ -744,9 +746,11 @@ lkcd_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 	void *buf;
 	kdump_status ret;
 
+	mutex_lock(&ctx->shared->cache_lock);
 	off = 0;
 	pfn = pio->addr.addr >> get_page_shift(ctx);
 	ret = get_page_desc(ctx, pfn, &dp, &off);
+	mutex_unlock(&ctx->shared->cache_lock);
 	if (ret != KDUMP_OK)
 		return ret;
 
@@ -772,7 +776,9 @@ lkcd_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 	}
 
 	/* read page data */
+	mutex_lock(&ctx->shared->cache_lock);
 	ret = fcache_pread(ctx->shared->fcache, buf, dp.dp_size, off);
+	mutex_unlock(&ctx->shared->cache_lock);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read page data at %llu",
