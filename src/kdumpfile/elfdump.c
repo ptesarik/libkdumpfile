@@ -108,6 +108,8 @@ struct pfn2idx_map {
 struct elfdump_priv {
 	int num_load_segments;
 	struct load_segment *load_segments;
+	struct load_segment *last_load, *last_vload;
+
 	int num_note_segments;
 	struct load_segment *note_segments;
 
@@ -170,6 +172,11 @@ find_closest_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
 	struct load_segment *bestload;
 	int i;
 
+	if (edp->last_load &&
+	    paddr >= edp->last_load->phys &&
+	    paddr < edp->last_load->phys + edp->last_load->memsz)
+		return edp->last_load;
+
 	bestdist = dist;
 	bestload = NULL;
 	for (i = 0; i < edp->num_load_segments; i++) {
@@ -179,7 +186,7 @@ find_closest_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
 		if (paddr >= pls->phys + pls->memsz)
 			continue;
 		if (paddr >= pls->phys)
-			return pls;	/* Exact match */
+			return edp->last_load = pls; /* Exact match */
 		if (bestdist > pls->phys - paddr) {
 			bestdist = pls->phys - paddr;
 			bestload = pls;
@@ -202,6 +209,11 @@ find_closest_vload(struct elfdump_priv *edp, kdump_vaddr_t vaddr,
 	struct load_segment *bestload;
 	int i;
 
+	if (edp->last_vload &&
+	    vaddr >= edp->last_vload->virt &&
+	    vaddr < edp->last_vload->virt + edp->last_vload->memsz)
+		return edp->last_vload;
+
 	bestdist = dist;
 	bestload = NULL;
 	for (i = 0; i < edp->num_load_segments; i++) {
@@ -209,7 +221,7 @@ find_closest_vload(struct elfdump_priv *edp, kdump_vaddr_t vaddr,
 		if (vaddr >= pls->virt + pls->memsz)
 			continue;
 		if (vaddr >= pls->virt)
-			return pls;	/* Exact match */
+			return edp->last_vload = pls; /* Exact match */
 		if (bestdist > pls->virt - vaddr) {
 			bestdist = pls->virt - vaddr;
 			bestload = pls;
