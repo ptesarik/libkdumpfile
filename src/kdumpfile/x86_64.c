@@ -240,6 +240,7 @@ init_linux_phys_base(kdump_ctx_t *ctx)
 		if (meth->kind == ADDRXLAT_LINEAR) {
 			set_phys_base(ctx, (meth->param.linear.off +
 					    __START_KERNEL_map));
+			ctx->xlat->dirty = false;
 			return KDUMP_OK;
 		}
 	} else
