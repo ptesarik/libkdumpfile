@@ -94,22 +94,20 @@ xlat_pio_op(void *data, const addrxlat_fulladdr_t *addr)
 	return ADDRXLAT_OK;
 }
 
-/**  Tranlate the address for page I/O.
+/**  Get page with address tranlation.
  * @param ctx  Dump file object.
  * @param pio  Page I/O control.
  *
  * This function translates the page I/O address to an address space that
- * is included in @c xlat_caps. The resulting page I/O object can be
- * directly passed to a @c get_page method.
+ * is included in @c xlat_caps. The resulting page I/O is then passed to
+ * a @c get_page method.
  */
-static kdump_status
-xlat_pio(kdump_ctx_t *ctx, struct page_io *pio)
+kdump_status
+get_page_xlat(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	addrxlat_op_ctl_t ctl;
 	kdump_status status;
-
-	if (ctx->xlat->xlat_caps & ADDRXLAT_CAPS(pio->addr.as))
-		return KDUMP_OK;
+	addrxlat_status xlaterr;
 
 	status = revalidate_xlat(ctx);
 	if (status != KDUMP_OK)
@@ -120,24 +118,25 @@ xlat_pio(kdump_ctx_t *ctx, struct page_io *pio)
 	ctl.op = xlat_pio_op;
 	ctl.data = pio;
 	ctl.caps = ctx->xlat->xlat_caps;
-	return addrxlat2kdump(ctx, addrxlat_op(&ctl, &pio->addr));
+
+	xlaterr = addrxlat_op(&ctl, &pio->addr);
+	if (xlaterr != ADDRXLAT_OK)
+		return set_error(ctx, addrxlat2kdump(ctx, xlaterr),
+				 "Cannot get page I/O address");
+
+	return ctx->shared->ops->get_page(ctx, pio);
 }
 
 /**  Raw interface to get_page().
  * @param ctx  Dump file object.
  * @param pio  Page I/O control.
  */
-static kdump_status
+static inline kdump_status
 get_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
-	kdump_status status;
-
-	status = xlat_pio(ctx, pio);
-	if (status != KDUMP_OK)
-		return set_error(ctx, status,
-				 "Cannot get page I/O address");
-
-	return ctx->shared->ops->get_page(ctx, pio);
+	return ctx->xlat->xlat_caps & ADDRXLAT_CAPS(pio->addr.as)
+		? ctx->shared->ops->get_page(ctx, pio)
+		: get_page_xlat(ctx, pio);
 }
 
 /**  Internal version of @ref kdump_read
