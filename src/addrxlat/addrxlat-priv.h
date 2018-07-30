@@ -197,10 +197,6 @@ INTERNAL_DECL(addrxlat_status, lowest_unmapped,
 	      (addrxlat_step_t *step, addrxlat_addr_t *addr,
 	       addrxlat_addr_t limit));
 
-INTERNAL_DECL(addrxlat_status, lowest_nonlinear,
-	      (addrxlat_step_t *step, addrxlat_addr_t *addr,
-	       addrxlat_addr_t limit, addrxlat_addr_t off));
-
 INTERNAL_DECL(addrxlat_status, highest_linear,
 	      (addrxlat_step_t *step, addrxlat_addr_t *addr,
 	       addrxlat_addr_t limit, addrxlat_addr_t off));
