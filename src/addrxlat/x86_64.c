@@ -76,6 +76,9 @@
  */
 #define LINUX_KTEXT_START	0xffffffff80000000
 
+/** Maximum kernel text mapping if kASLR is not active. */
+#define LINUX_KTEXT_END_NOKASLR	0xffffffff9fffffff
+
 /** Maximum end of kernel text mapping (virtual address).
  * The kernel text may be smaller, but it must never span beyond this
  * address.
@@ -520,7 +523,19 @@ linux_ktext_extents(struct os_init_data *ctl,
 					 linearoff + LINUX_KTEXT_START);
 
 	*high = *low;
-	return highest_linear(&step, high, LINUX_KTEXT_END, linearoff);
+	status = highest_linear(&step, high, LINUX_KTEXT_END_NOKASLR,
+				linearoff);
+	if (status == ADDRXLAT_OK && *high == LINUX_KTEXT_END_NOKASLR) {
+		++*high;
+		status = highest_linear(&step, high, LINUX_KTEXT_END,
+					linearoff);
+		if (status == ADDRXLAT_ERR_NOTPRESENT) {
+			clear_error(step.ctx);
+			--*high;
+			status = ADDRXLAT_OK;
+		}
+	}
+	return status;
 }
 
 /** Set up Linux kernel text mapping on x86_64.

@@ -917,14 +917,34 @@ highest_linear(addrxlat_step_t *step,
 	       addrxlat_addr_t *addr, addrxlat_addr_t limit,
 	       addrxlat_addr_t off)
 {
-	addrxlat_addr_t low = *addr;
+	addrxlat_addr_t nextaddr = *addr;
 	addrxlat_status status;
+	addrxlat_status ret = ADDRXLAT_ERR_NOTPRESENT;
 
-	status = lowest_nonlinear(step, addr, limit, off);
-	--*addr;
-	if (status == ADDRXLAT_OK ||
-	    status == ADDRXLAT_ERR_NOTPRESENT)
-		return highest_mapped(step, addr, low);
-	else
-		return status;
+	while ( (status = lowest_mapped(step, &nextaddr,
+					limit)) == ADDRXLAT_OK) {
+		addrxlat_fulladdr_t faddr;
+
+		faddr.as = ADDRXLAT_KVADDR;
+		faddr.addr = nextaddr;
+		status = internal_fulladdr_conv(&faddr, ADDRXLAT_KPHYSADDR,
+						step->ctx, step->sys);
+		if (status != ADDRXLAT_OK)
+			return status;
+
+		if (faddr.addr - nextaddr != off)
+			break;
+
+		/* Assume that the whole range is linear. */
+		status = lowest_unmapped(step, &nextaddr, limit);
+		if (status != ADDRXLAT_OK &&
+		    status != ADDRXLAT_ERR_NOTPRESENT)
+			return status;
+		*addr = nextaddr - 1;
+		ret = ADDRXLAT_OK;
+	}
+
+	return (status == ADDRXLAT_OK || status == ADDRXLAT_ERR_NOTPRESENT)
+		? ret
+		: status;
 }
