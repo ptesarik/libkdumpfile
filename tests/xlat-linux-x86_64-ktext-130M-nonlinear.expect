@@ -1,6 +1,6 @@
 @rootpgt: PGT
   target_as=MACHPHYSADDR
-  root=KVADDR:0xffffffff81e10000
+  root=KVADDR:0xffffffff99e10000
   pte_format=x86_64
   fields=12,9,9,9,9
 
@@ -24,9 +24,9 @@ ffff800000000000-ffffffffffffffff: @rootpgt
 KV -> PHYS:
 0-7fffffffffff: @rootpgt
 800000000000-ffff7fffffffffff: NONE
-ffff800000000000-ffffffff80ffffff: @rootpgt
-ffffffff81000000-ffffffff87ffffff: @ktext
-ffffffff88000000-ffffffffffffffff: @rootpgt
+ffff800000000000-ffffffff97ffffff: @rootpgt
+ffffffff98000000-ffffffff9fffffff: @ktext
+ffffffffa0000000-ffffffffffffffff: @rootpgt
 
 KPHYS -> DIRECT:
 
