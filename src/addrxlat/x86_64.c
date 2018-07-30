@@ -551,12 +551,13 @@ linux_ktext_map(struct os_init_data *ctl)
 	addrxlat_status status;
 
 	status = linux_ktext_meth(ctl);
-	if (status != ADDRXLAT_OK &&
-	    status != ADDRXLAT_ERR_NOMETH &&
-	    status != ADDRXLAT_ERR_NODATA &&
-	    status != ADDRXLAT_ERR_NOTPRESENT)
-		return status;
-	clear_error(ctl->ctx);
+	if (status == ADDRXLAT_ERR_NOMETH ||
+	    status == ADDRXLAT_ERR_NODATA ||
+	    status == ADDRXLAT_ERR_NOTPRESENT)
+		goto err_nonfatal;
+	else if (status != ADDRXLAT_OK)
+		return set_error(ctl->ctx, status, "Cannot set up %s",
+				 "Linux kernel text mapping");
 
 	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	if (meth->kind == ADDRXLAT_PGT &&
@@ -576,7 +577,7 @@ linux_ktext_map(struct os_init_data *ctl)
 	if (status == ADDRXLAT_ERR_NOMETH ||
 	    status == ADDRXLAT_ERR_NODATA ||
 	    status == ADDRXLAT_ERR_NOTPRESENT)
-		return ADDRXLAT_OK; /* Non-fatal here. */
+		goto err_nonfatal;
 	else if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Linux kernel text search failed");
@@ -589,6 +590,10 @@ linux_ktext_map(struct os_init_data *ctl)
 		return set_error(ctl->ctx, status, "Cannot set up %s",
 				 "Linux kernel text mapping");
 
+	return ADDRXLAT_OK;
+
+ err_nonfatal:
+	clear_error(ctl->ctx);
 	return ADDRXLAT_OK;
 }
 
