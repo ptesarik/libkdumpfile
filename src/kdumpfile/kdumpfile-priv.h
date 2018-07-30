@@ -1389,6 +1389,28 @@ dump64toh(kdump_ctx_t *ctx, uint64_t x)
 		: le64toh(x);
 }
 
+/** Convert an address to a PFN.
+ * @param shared  Shared variables.
+ * @param addr    Address to be converted.
+ * @returns       Page frame number.
+ */
+static inline kdump_addr_t
+addr_to_pfn(struct kdump_shared *shared, kdump_addr_t addr)
+{
+	return addr >> sget_page_shift(shared);
+}
+
+/** Convert a PFN to an address.
+ * @param shared  Shared variables.
+ * @param pfn     Page frame number to be converted.
+ * @returns       First address in the page.
+ */
+static inline kdump_addr_t
+pfn_to_addr(struct kdump_shared *shared, kdump_addr_t pfn)
+{
+	return pfn << sget_page_shift(shared);
+}
+
 /** Check if a character is a POSIX white space.
  * @param c  Character to check.
  *
