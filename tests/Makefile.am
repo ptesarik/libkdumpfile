@@ -228,8 +228,6 @@ test_scripts = \
 	xlat-linux-x86_64-ktext-130M \
 	xlat-linux-x86_64-ktext-130M-nonlinear \
 	xlat-linux-x86_64-ktext-40M \
-	xlat-linux-x86_64-ktext-42M \
-	xlat-linux-x86_64-ktext-42M-nonlinear \
 	xlat-linux-x86_64-ktext-512M \
 	xlat-linux-x86_64-ktext-520M \
 	xlat-linux-x86_64-old \
@@ -333,12 +331,6 @@ dist_check_DATA = \
 	xlat-linux-x86_64-ktext-40M.data \
 	xlat-linux-x86_64-ktext-40M.expect \
 	xlat-linux-x86_64-ktext-40M.sym \
-	xlat-linux-x86_64-ktext-42M.data \
-	xlat-linux-x86_64-ktext-42M.expect \
-	xlat-linux-x86_64-ktext-42M.sym \
-	xlat-linux-x86_64-ktext-42M-nonlinear.data \
-	xlat-linux-x86_64-ktext-42M-nonlinear.expect \
-	xlat-linux-x86_64-ktext-42M-nonlinear.sym \
 	xlat-linux-x86_64-ktext-512M.data \
 	xlat-linux-x86_64-ktext-512M.expect \
 	xlat-linux-x86_64-ktext-512M.sym \
