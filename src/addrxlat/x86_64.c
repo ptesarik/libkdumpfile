@@ -507,21 +507,8 @@ linux_ktext_extents(struct os_init_data *ctl,
 	status = lowest_mapped(&step, low, LINUX_KTEXT_END);
 	if (status != ADDRXLAT_OK)
 		return status;
-	status = internal_fulladdr_conv(&step.base, ADDRXLAT_KPHYSADDR,
-					step.ctx, step.sys);
-	if (status != ADDRXLAT_OK)
-		return status;
 
-	linearoff = step.base.addr - *low;
-	if (ctl->popt.val[OPT_phys_base].set &&
-	    ctl->popt.val[OPT_phys_base].addr !=
-	    linearoff + LINUX_KTEXT_START)
-			return set_error(ctl->ctx, ADDRXLAT_ERR_INVALID,
-					 "phys_base=0x%"ADDRXLAT_PRIxADDR
-					 " actual=0x%"ADDRXLAT_PRIxADDR,
-					 ctl->popt.val[OPT_phys_base].addr,
-					 linearoff + LINUX_KTEXT_START);
-
+	linearoff = ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT].param.linear.off;
 	*high = *low;
 	status = highest_linear(&step, high, LINUX_KTEXT_END_NOKASLR,
 				linearoff);
