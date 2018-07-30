@@ -746,6 +746,75 @@ highest_mapped(addrxlat_step_t *step,
 	return highest_mapped_tbl(step, addr, limit);
 }
 
+/** Find the lowest unmapped virtual address in a given page table.
+ * @param step   Current step state.
+ * @param addr   First address to try; updated on return.
+ * @param limit  Last address to try.
+ * @returns      Error status.
+ */
+static addrxlat_status
+lowest_unmapped_tbl(addrxlat_step_t *step,
+		    addrxlat_addr_t *addr, addrxlat_addr_t limit)
+{
+	int i;
+	addrxlat_addr_t tblmask;
+	addrxlat_step_t mystep;
+	addrxlat_status status;
+
+	tblmask = pf_table_mask(&step->meth->param.pgt.pf, step->remain - 1);
+	memcpy(&mystep, step, sizeof *step);
+	while (*addr <= limit) {
+		status = internal_step(step);
+		if (status == ADDRXLAT_ERR_NOTPRESENT) {
+			clear_error(step->ctx);
+			return ADDRXLAT_OK;
+		} else if (status != ADDRXLAT_OK)
+			return status;
+
+		if (step->remain > 1) {
+			status = lowest_unmapped_tbl(step, addr, limit);
+			if (status != ADDRXLAT_ERR_NOTPRESENT)
+				return status;
+		} else
+			*addr = (*addr | tblmask) + 1;
+
+		for (i = 0; i < mystep.remain - 1; ++i)
+			mystep.idx[i] = 0;
+		if (++mystep.idx[i] >=
+		    pf_table_size(&mystep.meth->param.pgt.pf, i))
+			break;
+		memcpy(step, &mystep, sizeof *step);
+	}
+
+	return ADDRXLAT_ERR_NOTPRESENT;
+}
+
+/** Find the lowest unmapped virtual address in a given range.
+ * @param step   Initial step state.
+ * @param addr   First address to try; updated on return.
+ * @param limit  Last address to try.
+ * @returns      Error status.
+ *
+ * The initial step state must be initialized same way as for a call
+ * to @ref addrxlat_launch.
+ */
+addrxlat_status
+lowest_unmapped(addrxlat_step_t *step,
+		addrxlat_addr_t *addr, addrxlat_addr_t limit)
+{
+	addrxlat_addr_t page_mask;
+	addrxlat_status status;
+
+	page_mask = pf_page_mask(&step->meth->param.pgt.pf);
+	*addr &= ~page_mask;
+
+	status = internal_launch(step, *addr);
+	if (status != ADDRXLAT_OK)
+		return status;
+
+	return lowest_unmapped_tbl(step, addr, limit);
+}
+
 /** Find the lowest non-linear mapping in a given page table.
  * @param step   Current step state.
  * @param addr   First address to try; updated on return.

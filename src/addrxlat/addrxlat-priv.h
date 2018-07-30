@@ -190,8 +190,10 @@ INTERNAL_DECL(addrxlat_addr_t, paging_max_index,
 INTERNAL_DECL(addrxlat_status, lowest_mapped,
 	      (addrxlat_step_t *step, addrxlat_addr_t *addr,
 	       addrxlat_addr_t limit));
-
 INTERNAL_DECL(addrxlat_status, highest_mapped,
+	      (addrxlat_step_t *step, addrxlat_addr_t *addr,
+	       addrxlat_addr_t limit));
+INTERNAL_DECL(addrxlat_status, lowest_unmapped,
 	      (addrxlat_step_t *step, addrxlat_addr_t *addr,
 	       addrxlat_addr_t limit));
 
