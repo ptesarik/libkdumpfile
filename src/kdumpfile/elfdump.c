@@ -108,7 +108,14 @@ struct pfn2idx_map {
 struct elfdump_priv {
 	int num_load_segments;
 	struct load_segment *load_segments;
-	struct load_segment *last_load, *last_vload;
+
+	int num_load_sorted;
+	struct load_segment *load_sorted;
+	struct load_segment *last_load;
+
+	int num_load_vsorted;
+	struct load_segment *load_vsorted;
+	struct load_segment  *last_vload;
 
 	int num_note_segments;
 	struct load_segment *note_segments;
@@ -168,8 +175,6 @@ static struct load_segment *
 find_closest_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
 		  unsigned long dist)
 {
-	unsigned long bestdist;
-	struct load_segment *bestload;
 	int i;
 
 	if (edp->last_load &&
@@ -177,22 +182,14 @@ find_closest_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
 	    paddr < edp->last_load->phys + edp->last_load->memsz)
 		return edp->last_load;
 
-	bestdist = dist;
-	bestload = NULL;
-	for (i = 0; i < edp->num_load_segments; i++) {
-		struct load_segment *pls = &edp->load_segments[i];
-		if (pls->phys == ADDRXLAT_ADDR_MAX)
-			continue;
+	for (i = 0; i < edp->num_load_sorted; i++) {
+		struct load_segment *pls = &edp->load_sorted[i];
 		if (paddr >= pls->phys + pls->memsz)
 			continue;
-		if (paddr >= pls->phys)
-			return edp->last_load = pls; /* Exact match */
-		if (bestdist > pls->phys - paddr) {
-			bestdist = pls->phys - paddr;
-			bestload = pls;
-		}
+		if (paddr >= pls->phys || pls->phys - paddr < dist)
+			return edp->last_load = pls;
 	}
-	return bestload;
+	return NULL;
 }
 
 /**  Find the LOAD segment that is closest to a virtual address.
@@ -205,8 +202,6 @@ static struct load_segment *
 find_closest_vload(struct elfdump_priv *edp, kdump_vaddr_t vaddr,
 		   unsigned long dist)
 {
-	unsigned long bestdist;
-	struct load_segment *bestload;
 	int i;
 
 	if (edp->last_vload &&
@@ -214,20 +209,14 @@ find_closest_vload(struct elfdump_priv *edp, kdump_vaddr_t vaddr,
 	    vaddr < edp->last_vload->virt + edp->last_vload->memsz)
 		return edp->last_vload;
 
-	bestdist = dist;
-	bestload = NULL;
-	for (i = 0; i < edp->num_load_segments; i++) {
-		struct load_segment *pls = &edp->load_segments[i];
+	for (i = 0; i < edp->num_load_vsorted; i++) {
+		struct load_segment *pls = &edp->load_vsorted[i];
 		if (vaddr >= pls->virt + pls->memsz)
 			continue;
-		if (vaddr >= pls->virt)
-			return edp->last_vload = pls; /* Exact match */
-		if (bestdist > pls->virt - vaddr) {
-			bestdist = pls->virt - vaddr;
-			bestload = pls;
-		}
+		if (vaddr >= pls->virt || pls->virt - vaddr < dist)
+			return edp->last_load = pls;
 	}
-	return bestload;
+	return NULL;
 }
 
 static kdump_status
@@ -1088,6 +1077,20 @@ walk_elf_notes(kdump_ctx_t *ctx, walk_notes_fn *fn)
 	return KDUMP_OK;
 }
 
+static int
+seg_phys_cmp(const void *a, const void *b)
+{
+	const struct load_segment *la = a, *lb = b;
+	return la->phys != lb->phys ? (la->phys < lb->phys ? -1 : 1) : 0;
+}
+
+static int
+seg_virt_cmp(const void *a, const void *b)
+{
+	const struct load_segment *la = a, *lb = b;
+	return la->phys != lb->phys ? (la->phys < lb->phys ? -1 : 1) : 0;
+}
+
 static kdump_status
 open_common(kdump_ctx_t *ctx)
 {
@@ -1100,6 +1103,13 @@ open_common(kdump_ctx_t *ctx)
 
 	if (!edp->num_load_segments && !edp->num_sections)
 		return set_error(ctx, KDUMP_ERR_NOTIMPL, "No content found");
+
+	edp->load_sorted = ctx_malloc(2 * edp->num_load_segments *
+				      sizeof(*edp->load_sorted),
+				      ctx, "Sorted LOAD segments");
+	if (!edp->load_sorted)
+		return KDUMP_ERR_SYSTEM;
+	edp->load_vsorted = edp->load_sorted + edp->num_load_segments;
 
 	/* process NOTE segments */
 	ret = walk_elf_notes(ctx, process_noarch_notes);
@@ -1146,9 +1156,25 @@ open_common(kdump_ctx_t *ctx)
 		pfn = (seg->phys + seg->memsz) >> get_page_shift(ctx);
 		if (pfn > max_pfn)
 			max_pfn = pfn;
+
+		edp->load_sorted[edp->num_load_sorted++] = *seg;
 	}
 	set_max_pfn(ctx, max_pfn);
 
+	/* Make sorted lists. */
+	qsort(edp->load_sorted, edp->num_load_sorted,
+	      sizeof(struct load_segment), seg_phys_cmp);
+
+	edp->num_load_vsorted = edp->num_load_segments;
+	memcpy(edp->load_vsorted, edp->load_segments,
+	       edp->num_load_vsorted * sizeof(struct load_segment));
+	qsort(edp->load_vsorted, edp->num_load_segments,
+	      sizeof(struct load_segment), seg_virt_cmp);
+
+	free(edp->load_segments);
+	edp->load_segments = edp->note_segments = NULL;
+
+	/* Process sections. */
 	for (i = 0; i < edp->num_sections; ++i) {
 		struct section *sect = edp->sections + i;
 		const char *name = strtab_entry(edp, sect->name_index);
@@ -1286,6 +1312,8 @@ elf_cleanup(struct kdump_shared *shared)
 	struct elfdump_priv *edp = shared->fmtdata;
 
 	if (edp) {
+		if (edp->load_sorted)
+			free(edp->load_sorted);
 		if (edp->load_segments)
 			free(edp->load_segments);
 		if (edp->sections)
