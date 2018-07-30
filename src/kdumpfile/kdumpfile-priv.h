@@ -1061,6 +1061,12 @@ INTERNAL_DECL(struct attr_data *, clone_attr_path,
 
 /* Accessor functions for static attributes */
 
+#define DEFINE_SGET_ACCESSOR(name, type, ctype)			\
+	static inline ctype					\
+	sget_ ## name(struct kdump_shared *shared)		\
+	{							\
+		return shared->name.type;			\
+	}
 #define DEFINE_GET_ACCESSOR(name, type, ctype)			\
 	static inline ctype					\
 	get_ ## name(kdump_ctx_t *ctx)				\
@@ -1078,13 +1084,14 @@ INTERNAL_DECL(struct attr_data *, clone_attr_path,
 	}
 #define DEFINE_ISSET_ACCESSOR(name)				\
 	static inline int					\
-	isset_ ## name(kdump_ctx_t *ctx)				\
+	isset_ ## name(kdump_ctx_t *ctx)			\
 	{							\
 		struct attr_data *d = gattr(ctx, GKI_ ## name);	\
 		return attr_isset(d);				\
 	}
 
 #define DEFINE_ACCESSORS(name, type, ctype)	\
+	DEFINE_SGET_ACCESSOR(name, type, ctype)	\
 	DEFINE_GET_ACCESSOR(name, type, ctype)	\
 	DEFINE_SET_ACCESSOR(name, type, ctype)	\
 	DEFINE_ISSET_ACCESSOR(name)
