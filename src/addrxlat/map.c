@@ -208,17 +208,15 @@ DEFINE_ALIAS(map_search);
 addrxlat_sys_meth_t
 addrxlat_map_search(const addrxlat_map_t *map, addrxlat_addr_t addr)
 {
-	if (map) {
-		const addrxlat_range_t *r = map->ranges;
-		addrxlat_addr_t raddr = 0;
-		size_t left = map->n;
+	const addrxlat_range_t *r = map->ranges;
+	addrxlat_addr_t raddr = 0;
+	size_t left = map->n;
 
-		while (left-- > 0) {
-			if (addr <= raddr + r->endoff)
-				return r->meth;
-			raddr += r->endoff + 1;
-			++r;
-		}
+	while (left-- > 0) {
+		if (addr <= raddr + r->endoff)
+			return r->meth;
+		raddr += r->endoff + 1;
+		++r;
 	}
 	return ADDRXLAT_SYS_METH_NONE;
 }
@@ -234,7 +232,7 @@ addrxlat_map_copy(const addrxlat_map_t *map)
 	size_t todo;
 
 	ret = internal_map_new();
-	if (!ret || !map)
+	if (!ret)
 		return ret;
 
 	ret->ranges = malloc(map->n * sizeof(ret->ranges[0]));

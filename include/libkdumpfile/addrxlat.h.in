@@ -709,10 +709,6 @@ addrxlat_map_set(addrxlat_map_t *map, addrxlat_addr_t addr,
  *
  * If no entry is found in the translation map, this function returns
  * @c ADDRXLAT_SYS_METH_NONE.
- *
- * It is allowed to pass @c NULL as the translation map; the result
- * is the same as if an empty map was given, i.e. the function always
- * returns @c ADDRXLAT_SYS_METH_NONE.
  */
 addrxlat_sys_meth_t addrxlat_map_search(
 	const addrxlat_map_t *map, addrxlat_addr_t addr);
