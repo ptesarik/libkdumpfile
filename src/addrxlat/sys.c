@@ -420,7 +420,8 @@ do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
 		for (j = 0; j < alt->num; ++j) {
 			addrxlat_sys_map_t mapidx = alt->map[j];
 			addrxlat_map_t *map;
-			addrxlat_sys_meth_t meth;
+			addrxlat_sys_meth_t methidx;
+			addrxlat_meth_t *meth;
 
 			if (paddr->as != map_expect_as[mapidx])
 				continue;
@@ -430,11 +431,22 @@ do_op(const addrxlat_op_ctl_t *ctl, const addrxlat_fulladdr_t *paddr,
 				continue;
 
 			clear_error(ctl->ctx);
-			meth = internal_map_search(map, paddr->addr);
-			if (meth == ADDRXLAT_SYS_METH_NONE)
+			methidx = internal_map_search(map, paddr->addr);
+			if (methidx == ADDRXLAT_SYS_METH_NONE)
 				continue;
-			step.meth = &ctl->sys->meth[meth];
 
+			meth = &ctl->sys->meth[methidx];
+			if (meth->kind == ADDRXLAT_LINEAR) {
+				lastbase.as = meth->target_as;
+				lastbase.addr =
+					paddr->addr + meth->param.linear.off;
+				if (ctl->caps & ADDRXLAT_CAPS(lastbase.as))
+					return ctl->op(ctl->data, &lastbase);
+				paddr = &lastbase;
+				break;
+			}
+
+			step.meth = meth;
 			step.base.addr = paddr->addr;
 			status = internal_walk(&step);
 			if (status == ADDRXLAT_OK) {
