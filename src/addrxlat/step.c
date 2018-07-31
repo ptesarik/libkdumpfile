@@ -608,10 +608,12 @@ lowest_mapped_tbl(addrxlat_step_t *step,
 		  addrxlat_addr_t *addr, addrxlat_addr_t limit)
 {
 	int i;
+	addrxlat_addr_t nelem;
 	addrxlat_addr_t tblmask;
 	addrxlat_step_t mystep;
 	addrxlat_status status;
 
+	nelem = pf_table_size(&step->meth->param.pgt.pf, step->remain - 1);
 	tblmask = pf_table_mask(&step->meth->param.pgt.pf, step->remain - 1);
 	memcpy(&mystep, step, sizeof *step);
 	while (*addr <= limit) {
@@ -631,8 +633,7 @@ lowest_mapped_tbl(addrxlat_step_t *step,
 
 		for (i = 0; i < mystep.remain - 1; ++i)
 			mystep.idx[i] = 0;
-		if (++mystep.idx[i] >=
-		    pf_table_size(&mystep.meth->param.pgt.pf, i))
+		if (++mystep.idx[i] >= nelem)
 			return ADDRXLAT_ERR_NOTPRESENT;
 		memcpy(step, &mystep, sizeof *step);
 	}
@@ -682,10 +683,12 @@ highest_mapped_tbl(addrxlat_step_t *step,
 		   addrxlat_addr_t *addr, addrxlat_addr_t limit)
 {
 	int i;
+	addrxlat_addr_t nelem;
 	addrxlat_addr_t tblmask;
 	addrxlat_step_t mystep;
 	addrxlat_status status;
 
+	nelem = pf_table_size(&step->meth->param.pgt.pf, step->remain - 1);
 	tblmask = pf_table_mask(&step->meth->param.pgt.pf, step->remain - 1);
 	memcpy(&mystep, step, sizeof *step);
 	while (*addr >= limit) {
@@ -704,8 +707,7 @@ highest_mapped_tbl(addrxlat_step_t *step,
 			return status;
 
 		for (i = 0; i < mystep.remain - 1; ++i)
-			mystep.idx[i] =
-				pf_table_size(&mystep.meth->param.pgt.pf, i) - 1;
+			mystep.idx[i] = nelem - 1;
 		if (!mystep.idx[i]--)
 			return ADDRXLAT_ERR_NOTPRESENT;
 		memcpy(step, &mystep, sizeof *step);
@@ -756,10 +758,12 @@ lowest_unmapped_tbl(addrxlat_step_t *step,
 		    addrxlat_addr_t *addr, addrxlat_addr_t limit)
 {
 	int i;
+	addrxlat_addr_t nelem;
 	addrxlat_addr_t tblmask;
 	addrxlat_step_t mystep;
 	addrxlat_status status;
 
+	nelem = pf_table_size(&step->meth->param.pgt.pf, step->remain - 1);
 	tblmask = pf_table_mask(&step->meth->param.pgt.pf, step->remain - 1);
 	memcpy(&mystep, step, sizeof *step);
 	while (*addr <= limit) {
@@ -779,8 +783,7 @@ lowest_unmapped_tbl(addrxlat_step_t *step,
 
 		for (i = 0; i < mystep.remain - 1; ++i)
 			mystep.idx[i] = 0;
-		if (++mystep.idx[i] >=
-		    pf_table_size(&mystep.meth->param.pgt.pf, i))
+		if (++mystep.idx[i] >= nelem)
 			break;
 		memcpy(step, &mystep, sizeof *step);
 	}
