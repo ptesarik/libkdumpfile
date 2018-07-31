@@ -170,7 +170,41 @@ struct _addrxlat_sys {
 
 /* vtop */
 
-INTERNAL_DECL(addrxlat_status, read_pte, (addrxlat_step_t *step));
+/** Read raw 32-bit PTE value.
+ * @param step  Current step state.
+ * @returns     Error status.
+ *
+ * On successful return, @c step->raw.pte contains the raw
+ * PTE value for the current translation step.
+ */
+static inline addrxlat_status
+read_pte32(addrxlat_step_t *step)
+{
+	uint32_t pte32;
+	addrxlat_status status;
+	status = read32(step, &step->base, &pte32, "PTE");
+	if (status == ADDRXLAT_OK)
+		step->raw.pte = pte32;
+	return status;
+}
+
+/** Read raw 64-bit PTE value.
+ * @param step  Current step state.
+ * @returns     Error status.
+ *
+ * On successful return, @c step->raw.pte contains the raw
+ * PTE value for the current translation step.
+ */
+static inline addrxlat_status
+read_pte64(addrxlat_step_t *step)
+{
+	uint64_t pte64;
+	addrxlat_status status;
+	status = read64(step, &step->base, &pte64, "PTE");
+	if (status == ADDRXLAT_OK)
+		step->raw.pte = pte64;
+	return status;
+}
 
 INTERNAL_DECL(addrxlat_status, pgt_huge_page, (addrxlat_step_t *state));
 

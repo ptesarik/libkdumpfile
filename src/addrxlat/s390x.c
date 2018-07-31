@@ -83,7 +83,7 @@ pgt_s390x(addrxlat_step_t *step)
 	const addrxlat_paging_form_t *pf = &step->meth->param.pgt.pf;
 	addrxlat_status status;
 
-	status = read_pte(step);
+	status = read_pte64(step);
 	if (status != ADDRXLAT_OK)
 		return status;
 

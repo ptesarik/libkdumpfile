@@ -62,44 +62,6 @@ paging_max_index(const addrxlat_paging_form_t *pf)
 		: ADDRXLAT_ADDR_MAX);
 }
 
-/** Read the raw PTE value.
- * @param step  Current step state.
- * @returns     Error status.
- *
- * On successful return, @c step->raw.pte contains the raw
- * PTE value for the current translation step.
- */
-addrxlat_status
-read_pte(addrxlat_step_t *step)
-{
-	uint64_t pte64;
-	uint32_t pte32;
-	addrxlat_pte_t pte;
-	addrxlat_status status;
-
-	switch(step->elemsz) {
-	case 4:
-		status = read32(step, &step->base, &pte32, "PTE");
-		pte = pte32;
-		break;
-
-	case 8:
-		status = read64(step, &step->base, &pte64, "PTE");
-		pte = pte64;
-		break;
-
-	default:
-		return set_error(step->ctx, ADDRXLAT_ERR_NOTIMPL,
-				 "Unsupported PTE size: %u",
-				 step->elemsz);
-	}
-
-	if (status == ADDRXLAT_OK)
-		step->raw.pte = pte;
-
-	return status;
-}
-
 /** Update current step state for huge page.
  * @param step  Current step state.
  * @returns     Always @c ADDRXLAT_OK.
@@ -175,33 +137,58 @@ first_step_pgt_generic(addrxlat_step_t *step, addrxlat_addr_t addr)
 	return ADDRXLAT_OK;
 }
 
-/** Page frame number next step function.
+/** Common next step helper for page frame number.
  * @param step  Current step state.
  * @returns     Error status.
  *
- * This function handles page frame numbers in a table.
+ * This function contains the common processing for 32-bit and
+ * 64-bit PFNs after the PTE was read into @c step->raw.pte.
  */
 static addrxlat_status
-next_step_pfn(addrxlat_step_t *step)
+next_step_pfn_common(addrxlat_step_t *step)
 {
-	addrxlat_status status;
+	const addrxlat_meth_t *meth;
+	if (!step->raw.pte)
+		return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
+				 "Level-%u PFN not present",
+				 step->remain);
+	meth = step->meth;
+	step->base.addr =
+		step->raw.pte << meth->param.pgt.pf.fieldsz[0];
+	step->base.as = meth->target_as;
+	if (step->remain == 1)
+		step->elemsz = 1;
+	return ADDRXLAT_OK;
+}
 
-	status = read_pte(step);
-	if (status == ADDRXLAT_OK) {
-		const addrxlat_meth_t *meth;
-		if (!step->raw.pte)
-			return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
-					 "Level-%u PFN not present",
-					 step->remain);
-		meth = step->meth;
-		step->base.addr =
-			step->raw.pte << meth->param.pgt.pf.fieldsz[0];
-		step->base.as = meth->target_as;
-		if (step->remain == 1)
-			step->elemsz = 1;
-	}
+/** Next step function for a 32-bit page frame number.
+ * @param step  Current step state.
+ * @returns     Error status.
+ *
+ * This function handles 32-bit page frame numbers in a table.
+ */
+static addrxlat_status
+next_step_pfn32(addrxlat_step_t *step)
+{
+	addrxlat_status status = read_pte32(step);
+	if (status != ADDRXLAT_OK)
+		return status;
+	return next_step_pfn_common(step);
+}
 
-	return status;
+/** Next step function for a 64-bit page frame number.
+ * @param step  Current step state.
+ * @returns     Error status.
+ *
+ * This function handles 64-bit page frame numbers in a table.
+ */
+static addrxlat_status
+next_step_pfn64(addrxlat_step_t *step)
+{
+	addrxlat_status status = read_pte64(step);
+	if (status != ADDRXLAT_OK)
+		return status;
+	return next_step_pfn_common(step);
 }
 
 /** Check unsigned address overflow.
@@ -319,8 +306,10 @@ next_step_pgt(addrxlat_step_t *step)
 		return ADDRXLAT_OK;
 
 	case ADDRXLAT_PTE_PFN32:
+		return next_step_pfn32(step);
+
 	case ADDRXLAT_PTE_PFN64:
-		return next_step_pfn(step);
+		return next_step_pfn64(step);
 
 	case ADDRXLAT_PTE_IA32:
 		return pgt_ia32(step);

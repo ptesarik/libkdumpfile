@@ -92,7 +92,7 @@ pgt_ia32(addrxlat_step_t *step)
 	};
 	addrxlat_status status;
 
-	status = read_pte(step);
+	status = read_pte32(step);
 	if (status != ADDRXLAT_OK)
 		return status;
 
@@ -139,7 +139,7 @@ pgt_ia32_pae(addrxlat_step_t *step)
 	};
 	addrxlat_status status;
 
-	status = read_pte(step);
+	status = read_pte64(step);
 	if (status != ADDRXLAT_OK)
 		return status;
 

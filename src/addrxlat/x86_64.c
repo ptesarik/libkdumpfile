@@ -126,7 +126,7 @@ pgt_x86_64(addrxlat_step_t *step)
 	};
 	addrxlat_status status;
 
-	status = read_pte(step);
+	status = read_pte64(step);
 	if (status != ADDRXLAT_OK)
 		return status;
 

@@ -196,7 +196,7 @@ pgt_ppc64_linux(addrxlat_step_t *step, unsigned rpn_shift)
 	const addrxlat_paging_form_t *pf = &step->meth->param.pgt.pf;
 	addrxlat_status status;
 
-	status = read_pte(step);
+	status = read_pte64(step);
 	if (status != ADDRXLAT_OK)
 		return status;
 
