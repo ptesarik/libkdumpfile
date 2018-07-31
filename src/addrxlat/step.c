@@ -654,6 +654,7 @@ lowest_mapped(addrxlat_step_t *step,
 	      addrxlat_addr_t *addr, addrxlat_addr_t limit)
 {
 	addrxlat_addr_t page_mask;
+	int savednoerr;
 	addrxlat_status status;
 
 	page_mask = pf_page_mask(&step->meth->param.pgt.pf);
@@ -663,7 +664,11 @@ lowest_mapped(addrxlat_step_t *step,
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	return lowest_mapped_tbl(step, addr, limit);
+	savednoerr = step->ctx->noerr.notpresent;
+	step->ctx->noerr.notpresent = 1;
+	status = lowest_mapped_tbl(step, addr, limit);
+	step->ctx->noerr.notpresent = savednoerr;
+	return status;
 }
 
 /** Find the highest mapped virtual address in a given page table.
@@ -723,6 +728,7 @@ highest_mapped(addrxlat_step_t *step,
 	       addrxlat_addr_t *addr, addrxlat_addr_t limit)
 {
 	addrxlat_addr_t page_mask;
+	int savednoerr;
 	addrxlat_status status;
 
 	page_mask = pf_page_mask(&step->meth->param.pgt.pf);
@@ -732,7 +738,11 @@ highest_mapped(addrxlat_step_t *step,
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	return highest_mapped_tbl(step, addr, limit);
+	savednoerr = step->ctx->noerr.notpresent;
+	step->ctx->noerr.notpresent = 1;
+	status = highest_mapped_tbl(step, addr, limit);
+	step->ctx->noerr.notpresent = savednoerr;
+	return status;
 }
 
 /** Find the lowest unmapped virtual address in a given page table.

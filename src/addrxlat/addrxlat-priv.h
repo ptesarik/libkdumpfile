@@ -59,6 +59,12 @@ struct _addrxlat_ctx {
 	/** Reference counter. */
 	unsigned long refcnt;
 
+	/** Events with no eror reporting. */
+	struct {
+		/** Skip error reporting of non-present pages. */
+		int notpresent : 1;
+	} noerr;
+
 	/** Callback definitions. */
 	addrxlat_cb_t cb;
 

@@ -201,10 +201,12 @@ pgt_ppc64_linux(addrxlat_step_t *step, unsigned rpn_shift)
 		return status;
 
 	if (!step->raw.pte)
-		return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
-				 "%s[%u] is none",
-				 pte_name[step->remain - 1],
-				 (unsigned) step->idx[step->remain]);
+		return !step->ctx->noerr.notpresent
+			? set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
+				    "%s[%u] is none",
+				    pte_name[step->remain - 1],
+				    (unsigned) step->idx[step->remain])
+			: ADDRXLAT_ERR_NOTPRESENT;
 
 	if (step->remain > 1) {
 		addrxlat_addr_t table_size;

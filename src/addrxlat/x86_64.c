@@ -131,12 +131,14 @@ pgt_x86_64(addrxlat_step_t *step)
 		return status;
 
 	if (!(step->raw.pte & _PAGE_PRESENT))
-		return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
-				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
-				 pgt_full_name[step->remain - 1],
-				 pte_name[step->remain - 1],
-				 (unsigned) step->idx[step->remain],
-				 step->raw.pte);
+		return !step->ctx->noerr.notpresent
+			? set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
+				    "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
+				    pgt_full_name[step->remain - 1],
+				    pte_name[step->remain - 1],
+				    (unsigned) step->idx[step->remain],
+				    step->raw.pte)
+			: ADDRXLAT_ERR_NOTPRESENT;
 
 	step->base.addr = step->raw.pte & PHYSADDR_MASK;
 	step->base.as = step->meth->target_as;

@@ -88,12 +88,14 @@ pgt_s390x(addrxlat_step_t *step)
 		return status;
 
 	if (PTE_I(step->raw.pte))
-		return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
-				 "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
-				 pgt_full_name[step->remain - 1],
-				 pte_name[step->remain - 1],
-				 (unsigned) step->idx[step->remain],
-				 step->raw.pte);
+		return !step->ctx->noerr.notpresent
+			? set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
+				    "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
+				    pgt_full_name[step->remain - 1],
+				    pte_name[step->remain - 1],
+				    (unsigned) step->idx[step->remain],
+				    step->raw.pte)
+			: ADDRXLAT_ERR_NOTPRESENT;
 
 	if (step->remain >= 2 && PTE_TT(step->raw.pte) != step->remain - 2)
 		return set_error(step->ctx, ADDRXLAT_ERR_INVALID,
@@ -119,12 +121,14 @@ pgt_s390x(addrxlat_step_t *step)
 			(pf->fieldsz[step->remain - 1] - pf->fieldsz[0]);
 		if (pgidx < PTE_TF(step->raw.pte) ||
 		    pgidx > PTE_TL(step->raw.pte))
-			return set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
-					 "%s index %u not within %u and %u",
-					 pgt_full_name[step->remain-1],
-					 (unsigned) step->idx[step->remain-1],
-					 (unsigned) PTE_TF(step->raw.pte),
-					 (unsigned) PTE_TL(step->raw.pte));
+			return !step->ctx->noerr.notpresent
+				? set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
+					    "%s index %u not within %u and %u",
+					    pgt_full_name[step->remain-1],
+					    (unsigned) step->idx[step->remain-1],
+					    (unsigned) PTE_TF(step->raw.pte),
+					    (unsigned) PTE_TL(step->raw.pte))
+				: ADDRXLAT_ERR_NOTPRESENT;
 	}
 
 	step->base.addr &= (step->remain == 2 ? ~PTO_MASK : ~PAGE_MASK);
