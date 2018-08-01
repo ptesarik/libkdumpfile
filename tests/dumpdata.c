@@ -44,7 +44,7 @@ static const char *ostype = NULL;
 static inline int
 endofline(unsigned long long addr)
 {
-	return (addr % BYTES_PER_LINE == BYTES_PER_LINE - 1);
+	return (addr % BYTES_PER_LINE == 0);
 }
 
 static inline char
@@ -57,7 +57,7 @@ static void
 dump_buffer(unsigned long long addr, unsigned char *buf, size_t len)
 {
 	while (len--)
-		printf("%02X%c", *buf++, separator(addr++));
+		printf("%02X%c", *buf++, separator(++addr));
 }
 
 static int
@@ -91,16 +91,15 @@ dump_data(kdump_ctx_t *ctx, kdump_addrspace_t as, unsigned long long addr,
 					rc = TEST_FAIL;
 				}
 				if (remain) {
-					printf("??%c", separator(addr));
-					++addr;
 					--remain;
+					printf("??%c", separator(++addr));
 				}
 			} else
 				iserr = 0;
 		}
 	}
 
-	if (!endofline(addr - 1))
+	if (!endofline(addr))
 		putchar('\n');
 
 	return rc;
