@@ -1,0 +1,65 @@
+#! /bin/sh
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+datafile="elf-endian.data"
+dumpfile="out/${name}.dump"
+
+./mkelf "$dumpfile" <<EOF
+ei_class = 2
+ei_data = 1
+e_machine = 62
+e_phoff = 64
+
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create ELF file" >&2
+    exit $rc
+fi
+echo "Created ELF dump: $dumpfile"
+
+totalrc=0
+
+resultfile="out/${name}16.result"
+expectfile="${name}16.expect"
+./dumpdata -s 2 "$dumpfile" 0 8 >"$resultfile"
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot dump ELF data" >&2
+    exit $rc
+fi
+if ! diff "$expectfile" "$resultfile"; then
+    echo "Results do not match" >&2
+    totalrc=1
+fi
+
+resultfile="out/${name}32.result"
+expectfile="${name}32.expect"
+./dumpdata -s 4 "$dumpfile" 0 4 >"$resultfile"
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot dump ELF data" >&2
+    exit $rc
+fi
+if ! diff "$expectfile" "$resultfile"; then
+    echo "Results do not match" >&2
+    totalrc=1
+fi
+
+resultfile="out/${name}64.result"
+expectfile="${name}64.expect"
+./dumpdata -s 8 "$dumpfile" 0 2 >"$resultfile"
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot dump ELF data" >&2
+    exit $rc
+fi
+if ! diff "$expectfile" "$resultfile"; then
+    echo "Results do not match" >&2
+    totalrc=1
+fi
+
+exit $totalrc

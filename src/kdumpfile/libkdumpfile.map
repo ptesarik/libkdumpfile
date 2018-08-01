@@ -8,6 +8,10 @@ LIBKDUMPFILE_0 {
     kdump_get_err;
     kdump_get_addrxlat;
 
+    kdump_d16toh;
+    kdump_d32toh;
+    kdump_d64toh;
+
     kdump_read;
     kdump_read_string;
 

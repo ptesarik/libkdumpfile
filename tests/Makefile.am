@@ -179,6 +179,8 @@ test_scripts = \
 	elf-empty-s390x \
 	elf-empty-x86_64 \
 	elf-basic \
+        elf-be \
+        elf-le \
 	elf-nonexistent \
 	elf-partial \
 	elf-fractional \
@@ -273,6 +275,13 @@ dist_check_DATA = \
 	early-version-code.data \
 	early-version-code.expect \
 	elf-empty.data \
+        elf-endian.data \
+        elf-be16.expect \
+        elf-be32.expect \
+        elf-be64.expect \
+        elf-le16.expect \
+        elf-le32.expect \
+        elf-le64.expect \
 	elf-virt-phys-clash.expect \
 	elf-vmcoreinfo.data \
 	elf-vmcoreinfo.expect \

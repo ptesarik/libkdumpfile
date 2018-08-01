@@ -254,6 +254,27 @@ kdump_status kdump_get_addrxlat(kdump_ctx_t *ctx,
 				addrxlat_ctx_t **axctx,
 				addrxlat_sys_t **axsys);
 
+/** Convert a 16-bit value from dump to host byte order.
+ * @param ctx  Dump file object.
+ * @param val  Value in dump file byte order.
+ * @returns    Value in host byte order.
+ */
+uint_fast16_t kdump_d16toh(kdump_ctx_t *ctx, uint_fast16_t val);
+
+/** Convert a 32-bit value from dump to host byte order.
+ * @param ctx  Dump file object.
+ * @param val  Value in dump file byte order.
+ * @returns    Value in host byte order.
+ */
+uint_fast32_t kdump_d32toh(kdump_ctx_t *ctx, uint_fast32_t val);
+
+/** Convert a 64-bit value from dump to host byte order.
+ * @param ctx  Dump file object.
+ * @param val  Value in dump file byte order.
+ * @returns    Value in host byte order.
+ */
+uint_fast64_t kdump_d64toh(kdump_ctx_t *ctx, uint_fast64_t val);
+
 /**  Address spaces used by kdump_read()
  *
  * When passing an address to kdump_read(), this type is used to

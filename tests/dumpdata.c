@@ -40,6 +40,7 @@
 #define BYTES_PER_LINE 16
 
 static const char *ostype = NULL;
+static unsigned long valsz = 1;
 
 static inline int
 endofline(unsigned long long addr)
@@ -54,8 +55,41 @@ separator(unsigned long long addr)
 }
 
 static void
-dump_buffer(unsigned long long addr, unsigned char *buf, size_t len)
+dump_buffer(kdump_ctx_t *ctx, unsigned long long addr,
+	    unsigned char *buf, size_t len)
 {
+	switch (valsz) {
+	case 8:
+		while (len >= 8) {
+			printf("%016"PRIXFAST64"%c",
+			       kdump_d64toh(ctx, *(uint64_t*)buf),
+			       separator((addr += 8) & -8ULL));
+			buf += 8;
+			len -= 8;
+		}
+		break;
+
+	case 4:
+		while (len >= 4) {
+			printf("%08"PRIXFAST32"%c",
+			       kdump_d32toh(ctx, *(uint32_t*)buf),
+			       separator((addr += 4) & -4ULL));
+			buf += 4;
+			len -= 4;
+		}
+		break;
+
+	case 2:
+		while (len >= 2) {
+			printf("%04"PRIXFAST16"%c",
+			       kdump_d16toh(ctx, *(uint16_t*)buf),
+			       separator((addr += 2) & -2ULL));
+			buf += 2;
+			len -= 2;
+		}
+		break;
+	}
+
 	while (len--)
 		printf("%02X%c", *buf++, separator(++addr));
 }
@@ -79,7 +113,7 @@ dump_data(kdump_ctx_t *ctx, kdump_addrspace_t as, unsigned long long addr,
 		while (remain) {
 			sz = remain;
 			res = kdump_read(ctx, as, addr, buf, &sz);
-			dump_buffer(addr, buf, sz);
+			dump_buffer(ctx, addr, buf, sz);
 			addr += sz;
 			remain -= sz;
 			if (res != KDUMP_OK) {
@@ -178,7 +212,7 @@ dump_data_fd(int fd, char **argv)
 				return TEST_ERR;
 			}
 
-			rc = dump_data(ctx, as, addr, len);
+			rc = dump_data(ctx, as, addr, len * valsz);
 			if (rc != KDUMP_OK)
 				break;
 			argv += 2;
@@ -200,21 +234,33 @@ usage(const char *name)
 		"Usage: %s [<options>] <dump> <addr> <len> [...]\n"
 		"\n"
 		"Options:\n"
-		"  -o ostype  Set OS type\n",
+		"  -o ostype  Set OS type\n"
+		"  -s size    Set value size in bytes\n",
 		name);
 }
 
 int
 main(int argc, char **argv)
 {
+	char *endp;
 	int opt;
 	int fd;
 	int rc;
 
-	while ((opt = getopt(argc, argv, "ho:")) != -1) {
+	while ((opt = getopt(argc, argv, "ho:s:")) != -1) {
 		switch (opt) {
 		case 'o':
 			ostype = optarg;
+			break;
+
+		case 's':
+			valsz = strtoul(optarg, &endp, 0);
+			if (endp == optarg || *endp ||
+			    (valsz != 1 && valsz != 2 &&
+			     valsz != 4 && valsz != 8)) {
+				fprintf(stderr, "Invalid size: %s\n", optarg);
+				return TEST_ERR;
+			}
 			break;
 
 		case 'h':

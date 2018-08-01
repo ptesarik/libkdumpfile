@@ -392,3 +392,21 @@ kdump_strerror(kdump_status status)
 		return "Unknown error";
 	}
 }
+
+uint_fast16_t
+kdump_d16toh(kdump_ctx_t *ctx, uint_fast16_t val)
+{
+	return dump16toh(ctx, val);
+}
+
+uint_fast32_t
+kdump_d32toh(kdump_ctx_t *ctx, uint_fast32_t val)
+{
+	return dump32toh(ctx, val);
+}
+
+uint_fast64_t
+kdump_d64toh(kdump_ctx_t *ctx, uint_fast64_t val)
+{
+	return dump64toh(ctx, val);
+}
