@@ -731,6 +731,13 @@ void kdump_attr_iter_end(kdump_ctx_t *ctx, kdump_attr_iter_t *iter);
  */
 #define KDUMP_ATTR_FILE_FORMAT	"file.format"
 
+/** File page map attribute.
+ * This attribute contains a bitmap of pages that are contained in
+ * the file. If only part of a page is present, the corresponding
+ * bit is set to 1.
+ */
+#define KDUMP_ATTR_FILE_PAGEMAP	"file.pagemap"
+
 /** Canonical architecture name attribute.
  * Unlike @ref KDUMP_ATTR_MACHINE, which may contain the name of a
  * particular platform (e.g. "i586" v. "i686") or may not even be
