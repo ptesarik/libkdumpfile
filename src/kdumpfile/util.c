@@ -676,10 +676,7 @@ cksum32(void *buffer, size_t size, uint32_t csum)
 kdump_status
 get_symbol_val(kdump_ctx_t *ctx, const char *name, kdump_addr_t *val)
 {
-	struct {
-		addrxlat_sym_t sym;
-		const char *name;
-	} info;
+	addrxlat_sym_t sym;
 	addrxlat_cb_t *cb;
 	addrxlat_status status;
 
@@ -687,14 +684,14 @@ get_symbol_val(kdump_ctx_t *ctx, const char *name, kdump_addr_t *val)
 	if (!cb->sym)
 		return set_error(ctx, KDUMP_ERR_NODATA, "NULL callback");
 
-	info.sym.type = ADDRXLAT_SYM_VALUE;
-	info.name = name;
-	status = cb->sym(cb->data, &info.sym);
+	sym.type = ADDRXLAT_SYM_VALUE;
+	sym.args[0] = name;
+	status = cb->sym(cb->data, &sym);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, addrxlat2kdump(ctx, status),
-				 "Cannot resolve \"%s\"", info.name);
+				 "Cannot resolve \"%s\"", sym.args[0]);
 
-	*val = info.sym.val;
+	*val = sym.val;
 	return KDUMP_OK;
 }
 

@@ -298,7 +298,7 @@ typedef struct _addrxlat_sym {
 	addrxlat_sym_type_t type;
 
 	/** [in] Symbolic arguments. */
-	const char *args[];
+	const char *args[ADDRXLAT_SYM_ARGC_MAX];
 } addrxlat_sym_t;
 
 /** Type of the symbolic information callback.

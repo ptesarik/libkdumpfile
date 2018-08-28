@@ -236,24 +236,21 @@ read64(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint64_t *val,
 addrxlat_status
 get_reg(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 {
-	struct {
-		addrxlat_sym_t sym;
-		const char *name;
-	} info;
+	addrxlat_sym_t sym;
 	addrxlat_status status;
 
 	if (!ctx->cb.sym)
 		return set_error(ctx, ADDRXLAT_ERR_NODATA,
 				 "No symbolic information callback");
 
-	info.sym.type = ADDRXLAT_SYM_REG;
-	info.name = name;
-	status = ctx->cb.sym(ctx->cb.data, (addrxlat_sym_t*)&info);
+	sym.type = ADDRXLAT_SYM_REG;
+	sym.args[0] = name;
+	status = ctx->cb.sym(ctx->cb.data, &sym);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status,
-				 "Cannot read register \"%s\"", info.name);
+				 "Cannot read register \"%s\"", sym.args[0]);
 
-	*val = info.sym.val;
+	*val = sym.val;
 	return status;
 }
 
@@ -268,24 +265,21 @@ get_reg(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 addrxlat_status
 get_symval(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 {
-	struct {
-		addrxlat_sym_t sym;
-		const char *name;
-	} info;
+	addrxlat_sym_t sym;
 	addrxlat_status status;
 
 	if (!ctx->cb.sym)
 		return set_error(ctx, ADDRXLAT_ERR_NODATA,
 				 "No symbolic information callback");
 
-	info.sym.type = ADDRXLAT_SYM_VALUE;
-	info.name = name;
-	status = ctx->cb.sym(ctx->cb.data, (addrxlat_sym_t*)&info);
+	sym.type = ADDRXLAT_SYM_VALUE;
+	sym.args[0] = name;
+	status = ctx->cb.sym(ctx->cb.data, &sym);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status,
-				 "Cannot resolve \"%s\"", info.name);
+				 "Cannot resolve \"%s\"", sym.args[0]);
 
-	*val = info.sym.val;
+	*val = sym.val;
 	return status;
 }
 
@@ -300,24 +294,21 @@ get_symval(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 addrxlat_status
 get_sizeof(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *sz)
 {
-	struct {
-		addrxlat_sym_t sym;
-		const char *name;
-	} info;
+	addrxlat_sym_t sym;
 	addrxlat_status status;
 
 	if (!ctx->cb.sym)
 		return set_error(ctx, ADDRXLAT_ERR_NODATA,
 				 "No symbolic information callback");
 
-	info.sym.type = ADDRXLAT_SYM_SIZEOF;
-	info.name = name;
-	status = ctx->cb.sym(ctx->cb.data, (addrxlat_sym_t*)&info);
+	sym.type = ADDRXLAT_SYM_SIZEOF;
+	sym.args[0] = name;
+	status = ctx->cb.sym(ctx->cb.data, &sym);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status, "Cannot get sizeof(%s)",
-				 info.name);
+				 sym.args[0]);
 
-	*sz = info.sym.val;
+	*sz = sym.val;
 	return status;
 }
 
@@ -334,26 +325,22 @@ addrxlat_status
 get_offsetof(addrxlat_ctx_t *ctx, const char *type, const char *memb,
 	     addrxlat_addr_t *off)
 {
-	struct {
-		addrxlat_sym_t sym;
-		const char *type;
-		const char *memb;
-	} info;
+	addrxlat_sym_t sym;
 	addrxlat_status status;
 
 	if (!ctx->cb.sym)
 		return set_error(ctx, ADDRXLAT_ERR_NODATA,
 				 "No symbolic information callback");
 
-	info.sym.type = ADDRXLAT_SYM_OFFSETOF;
-	info.type = type;
-	info.memb = memb;
-	status = ctx->cb.sym(ctx->cb.data, (addrxlat_sym_t*)&info);
+	sym.type = ADDRXLAT_SYM_OFFSETOF;
+	sym.args[0] = type;
+	sym.args[1] = memb;
+	status = ctx->cb.sym(ctx->cb.data, &sym);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status, "Cannot get offsetof(%s, %s)",
-				 info.type, info.memb);
+				 sym.args[0], sym.args[1]);
 
-	*off = info.sym.val;
+	*off = sym.val;
 	return status;
 }
 
@@ -369,10 +356,6 @@ addrxlat_status
 get_first_sym(addrxlat_ctx_t *ctx, const struct sym_spec *spec,
 	      addrxlat_fulladdr_t *addr)
 {
-	struct {
-		addrxlat_sym_t sym;
-		const char *name;
-	} info;
 	addrxlat_status status = ADDRXLAT_ERR_NODATA;
 
 	if (!ctx->cb.sym)
@@ -380,11 +363,12 @@ get_first_sym(addrxlat_ctx_t *ctx, const struct sym_spec *spec,
 				 "No symbolic information callback");
 
 	while (spec->type != ADDRXLAT_SYM_NONE) {
-		info.sym.type = spec->type;
-		info.name = spec->name;
-		status = ctx->cb.sym(ctx->cb.data, (addrxlat_sym_t*)&info);
+		addrxlat_sym_t sym;
+		sym.type = spec->type;
+		sym.args[0] = spec->name;
+		status = ctx->cb.sym(ctx->cb.data, &sym);
 		if (status == ADDRXLAT_OK) {
-			addr->addr = info.sym.val;
+			addr->addr = sym.val;
 			addr->as = spec->as;
 			return status;
 		} else if (status != ADDRXLAT_ERR_NODATA)
@@ -395,7 +379,7 @@ get_first_sym(addrxlat_ctx_t *ctx, const struct sym_spec *spec,
 	}
 
 	return set_error(ctx, status,
-			 "Cannot resolve \"%s\"", info.name);
+			 "Cannot resolve \"%s\"", spec->name);
 }
 
 DEFINE_ALIAS(ctx_err);

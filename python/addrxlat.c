@@ -1789,7 +1789,7 @@ ctx_next_cb_sym(PyObject *_self, PyObject *args)
 	addrxlat_sym_type_t type;
 	Py_ssize_t argc, i;
 	int symargc;
-	addrxlat_sym_t *sym;
+	addrxlat_sym_t sym;
 	addrxlat_status status;
 
 	addrxlat_ctx_clear_err(self->ctx);
@@ -1823,26 +1823,16 @@ ctx_next_cb_sym(PyObject *_self, PyObject *args)
 		return NULL;
 	}
 
-	sym = malloc(offsetof(addrxlat_sym_t, args) +
-		     symargc * sizeof(const char*));
-	if (!sym)
-		return PyErr_NoMemory();
-
-	sym->type = type;
+	sym.type = type;
 	for (i = 1; i < argc; ++i) {
 		char *arg = Text_AsUTF8(PyTuple_GET_ITEM(args, i));
-		if (!arg) {
-			free(sym);
+		if (!arg)
 			return NULL;
-		}
-		sym->args[i - 1] = arg;
+		sym.args[i - 1] = arg;
 	}
 
-	status = self->next_cb.sym(self->next_cb.data, sym);
-	obj = cb_status_result(self, status, sym->val);
-	free(sym);
-
-	return obj;
+	status = self->next_cb.sym(self->next_cb.data, &sym);
+	return cb_status_result(self, status, sym.val);
 }
 
 PyDoc_STRVAR(ctx_cb_read32__doc__,

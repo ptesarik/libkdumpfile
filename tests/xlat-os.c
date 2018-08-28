@@ -126,21 +126,16 @@ add_entry(addrxlat_addr_t addr, void *buf, size_t sz)
 	return TEST_OK;
 }
 
-struct store_symdata {
-	addrxlat_sym_type_t type;
-	const char *args[ADDRXLAT_SYM_ARGC_MAX];
-};
-
 struct symdata {
 	struct symdata *next;
-	struct store_symdata ss;
+	addrxlat_sym_t ss;
 	addrxlat_addr_t val;
 };
 
 static struct symdata *symdata;
 
 static int
-add_symdata(const struct store_symdata *ss, addrxlat_addr_t val)
+add_symdata(const addrxlat_sym_t *ss, addrxlat_addr_t val)
 {
 	struct symdata *sd = malloc(sizeof(*sd));
 	if (!sd) {
@@ -492,7 +487,7 @@ os_map(void)
 static int
 symheader(struct page_data *pg, char *p)
 {
-	struct store_symdata *ss = pg->priv;
+	addrxlat_sym_t *ss = pg->priv;
 	char *delim;
 	int argc;
 
@@ -567,7 +562,7 @@ symheader(struct page_data *pg, char *p)
 static int
 storesym(struct page_data *pg)
 {
-	struct store_symdata *ss = pg->priv;
+	addrxlat_sym_t *ss = pg->priv;
 	addrxlat_addr_t val;
 	size_t sz = pg->len;
 
@@ -587,7 +582,7 @@ storesym(struct page_data *pg)
 static int
 read_sym(void)
 {
-	struct store_symdata ss;
+	addrxlat_sym_t ss;
 	struct page_data pg;
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
