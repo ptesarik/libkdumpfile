@@ -265,10 +265,15 @@ typedef enum _addrxlat_sym_type {
 	ADDRXLAT_SYM_OFFSETOF,
 } addrxlat_sym_type_t;
 
+/** Maximum argument count for @ref addrxlat_sym_t. */
+#define ADDRXLAT_SYM_ARGC_MAX	2
+
 /** Get the number of arguments for a given type.
  * @param type  Type of symbolic information.
  * @returns     Number of arguments, or -1 if unknown.
-*/
+ *
+ * The return value must not be greater than @ref ADDRXLAT_SYM_ARGC_MAX.
+ */
 static inline int
 addrxlat_sym_argc(addrxlat_sym_type_t type)
 {

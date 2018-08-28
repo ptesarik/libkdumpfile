@@ -40,11 +40,6 @@ struct cbdata {
 	addrxlat_sys_t *sys;
 };
 
-struct sym {
-	struct sym *next;
-	addrxlat_sym_t sym;
-};
-
 struct store_page_data {
 	addrxlat_addr_t addr;
 };
@@ -131,10 +126,9 @@ add_entry(addrxlat_addr_t addr, void *buf, size_t sz)
 	return TEST_OK;
 }
 
-#define MAX_SYMDATA_ARGS	2
 struct store_symdata {
 	addrxlat_sym_type_t type;
-	const char *args[MAX_SYMDATA_ARGS];
+	const char *args[ADDRXLAT_SYM_ARGC_MAX];
 };
 
 struct symdata {
@@ -533,7 +527,7 @@ symheader(struct page_data *pg, char *p)
 	}
 	++p;
 
-	for (argc = 0; argc < MAX_SYMDATA_ARGS; ++argc) {
+	for (argc = 0; argc < ADDRXLAT_SYM_ARGC_MAX; ++argc) {
 		char *endp, *arg;
 
 		while (isspace(*p))
@@ -558,7 +552,7 @@ symheader(struct page_data *pg, char *p)
 		ss->args[argc] = arg;
 
 		if (*delim == ')') {
-			while (++argc < MAX_SYMDATA_ARGS)
+			while (++argc < ADDRXLAT_SYM_ARGC_MAX)
 				ss->args[argc] = NULL;
 			return TEST_OK;
 		}
