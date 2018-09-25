@@ -3,7 +3,7 @@
 mkdir -p out || exit 99
 
 name=$( basename "$0" )
-datafile="elf-endian.data"
+datafile="$srcdir/elf-endian.data"
 dumpfile="out/${name}.dump"
 
 ./mkelf "$dumpfile" <<EOF
@@ -24,7 +24,7 @@ echo "Created ELF dump: $dumpfile"
 totalrc=0
 
 resultfile="out/${name}16.result"
-expectfile="${name}16.expect"
+expectfile="$srcdir/${name}16.expect"
 ./dumpdata -s 2 "$dumpfile" 0 8 >"$resultfile"
 rc=$?
 if [ $rc -ne 0 ]; then
@@ -37,7 +37,7 @@ if ! diff "$expectfile" "$resultfile"; then
 fi
 
 resultfile="out/${name}32.result"
-expectfile="${name}32.expect"
+expectfile="$srcdir/${name}32.expect"
 ./dumpdata -s 4 "$dumpfile" 0 4 >"$resultfile"
 rc=$?
 if [ $rc -ne 0 ]; then
@@ -50,7 +50,7 @@ if ! diff "$expectfile" "$resultfile"; then
 fi
 
 resultfile="out/${name}64.result"
-expectfile="${name}64.expect"
+expectfile="$srcdir/${name}64.expect"
 ./dumpdata -s 8 "$dumpfile" 0 2 >"$resultfile"
 rc=$?
 if [ $rc -ne 0 ]; then
