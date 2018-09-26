@@ -6,7 +6,6 @@ import sys
 
 class kdumpfile(kdumpfile):
     def __init__(self, *args, **kwargs):
-        super(kdumpfile, self).__init__(*args, **kwargs)
         self.addrxlat_convert = _convert
 
 import inspect as _inspect
