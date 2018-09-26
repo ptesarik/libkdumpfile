@@ -225,7 +225,10 @@ convert.Step = Step
 convert.Operator = Operator
 
 import inspect as _inspect
-for _cls in globals().values():
+_values = globals().values()
+if sys.version_info.major >= 3:
+    _values = list(_values)
+for _cls in _values:
     if not _inspect.isclass(_cls):
         continue
     for _name, _method in _inspect.getmembers(_cls, _inspect.ismethod):
@@ -237,4 +240,4 @@ for _cls in globals().values():
                 break
 
 # Free up temporary variables
-del _cls, _name, _method, _parent, _inspect
+del _values, _cls, _name, _method, _parent, _inspect
