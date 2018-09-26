@@ -3,6 +3,10 @@
 
 import unittest
 import addrxlat
+import sys
+
+if (sys.version_info.major >= 3):
+    xrange = range
 
 class TestFullAddress(unittest.TestCase):
     def test_fulladdr_defaults(self):
