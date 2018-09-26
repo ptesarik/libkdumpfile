@@ -3,6 +3,7 @@
 
 from _addrxlat import *
 from addrxlat.exceptions import *
+import sys
 
 class FullAddress(FullAddress):
     def __init__(self, addrspace=NOADDR, addr=0, *args, **kwargs):
@@ -231,12 +232,19 @@ if sys.version_info.major >= 3:
 for _cls in _values:
     if not _inspect.isclass(_cls):
         continue
-    for _name, _method in _inspect.getmembers(_cls, _inspect.ismethod):
+    for _name, _method in _inspect.getmembers(_cls,
+                                              lambda x:
+                                              (_inspect.ismethod(x),
+                                               _inspect.isfunction(x))
+                                              [sys.version_info.major >= 3]):
         if _method.__doc__:
             continue
         for _parent in _inspect.getmro(_cls)[1:]:
             if hasattr(_parent, _name):
-                _method.__func__.__doc__ = getattr(_parent, _name).__doc__
+                if _inspect.ismethod(_method):
+                    _method.__func__.__doc__ = getattr(_parent, _name).__doc__
+                else:
+                    _method.__doc__ = getattr(_parent, _name).__doc__
                 break
 
 # Free up temporary variables
