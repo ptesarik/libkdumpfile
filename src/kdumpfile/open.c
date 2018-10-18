@@ -35,7 +35,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <linux/version.h>
 
 /** File cache size.
  * This number should be big enough to cover page table lookups with a
@@ -202,60 +201,6 @@ update_linux_utsname(kdump_ctx_t *ctx)
 	return KDUMP_OK;
 }
 
-/** Initialize Linux version code from kernel release string.
- * @param ctx      Dump file object.
- * @returns        Error status.
- *
- * If the release string is not set, version code is left unchanged,
- * and this function succeeds. This behaviour may have to change if
- * the function is used from other contexts than the ostype post hook.
- */
-static kdump_status
-linux_version_code(kdump_ctx_t *ctx)
-{
-	struct attr_data *rel;
-	const char *p;
-	char *endp;
-	long a, b, c;
-	kdump_attr_value_t val;
-	kdump_status status;
-
-	rel = gattr(ctx, GKI_linux_uts_release);
-	if (!attr_isset(rel))
-		return KDUMP_OK;
-	status = attr_revalidate(ctx, rel);
-	if (status != KDUMP_OK)
-		return set_error(ctx, status, "Cannot get Linux release");
-
-	p = attr_value(rel)->string;
-	a = strtoul(p, &endp, 10);
-	if (endp == p || *endp != '.')
-		goto err;
-
-	b = c = 0L;
-	if (*endp) {
-		p = endp + 1;
-		b = strtoul(p, &endp, 10);
-		if (endp == p || *endp != '.')
-			goto err;
-
-		if (*endp) {
-			p = endp + 1;
-			c = strtoul(p, &endp, 10);
-			if (endp == p)
-				goto err;
-		}
-	}
-
-	val.number = KERNEL_VERSION(a, b, c);
-	return set_attr(ctx, gattr(ctx, GKI_linux_version_code),
-			ATTR_DEFAULT, &val);
-
- err:
-	return set_error(ctx, KDUMP_ERR_CORRUPT, "Invalid kernel version: %s",
-			 attr_value(rel)->string);
-}
-
 /** Read the Xen extra version string.
  * @param ctx      Dump file object.
  * @returns        Error status.
@@ -289,43 +234,6 @@ update_xen_extra_ver(kdump_ctx_t *ctx)
 	return KDUMP_OK;
 }
 
-/** Initialize Xen version code from Xen major/minor strings.
- * @param ctx      Dump file object.
- * @returns        Error status.
- *
- * If the version strings are not set, version code is left unchanged,
- * and this function succeeds. This behaviour may have to change if
- * the function is used from other contexts than the ostype post hook.
- */
-static kdump_status
-xen_version_code(kdump_ctx_t *ctx)
-{
-	struct attr_data *ver;
-	unsigned long major, minor;
-	kdump_attr_value_t val;
-	kdump_status status;
-
-	ver = gattr(ctx, GKI_xen_ver_major);
-	if (!attr_isset(ver))
-		return KDUMP_OK;
-	status = attr_revalidate(ctx, ver);
-	if (status != KDUMP_OK)
-		return set_error(ctx, status, "Cannot get Xen major");
-	major = attr_value(ver)->number;
-
-	ver = gattr(ctx, GKI_xen_ver_minor);
-	if (!attr_isset(ver))
-		return KDUMP_OK;
-	status = attr_revalidate(ctx, ver);
-	if (status != KDUMP_OK)
-		return set_error(ctx, status, "Cannot get Xen minor");
-	minor = attr_value(ver)->number;
-
-	val.number = ADDRXLAT_VER_XEN(major, minor);
-	return set_attr(ctx, gattr(ctx, GKI_xen_version_code),
-			ATTR_DEFAULT, &val);
-}
-
 static kdump_status
 ostype_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
 		kdump_attr_value_t *val)
@@ -348,22 +256,6 @@ ostype_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 
 	ctx->xlat->dirty = true;
 
-	if (isset_arch_name(ctx)) {
-		switch (ctx->xlat->ostype) {
-		case ADDRXLAT_OS_LINUX:
-			linux_version_code(ctx);
-			break;
-
-		case ADDRXLAT_OS_XEN:
-			xen_version_code(ctx);
-			break;
-
-		default:
-			break;
-		}
-		clear_error(ctx); /* version_code errors are not fatal */
-	}
-
 	if (ctx->shared->arch_ops && ctx->shared->arch_ops->late_init &&
 	    (status = ctx->shared->arch_ops->late_init(ctx)) != KDUMP_OK)
 		return set_error(ctx, status,
@@ -374,15 +266,9 @@ ostype_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 		status = update_linux_utsname(ctx);
 		if (status != KDUMP_OK)
 			return status;
-		status = linux_version_code(ctx);
-		if (status != KDUMP_OK)
-			return status;
 		/* fall through */
 	case ADDRXLAT_OS_XEN:
 		status = update_xen_extra_ver(ctx);
-		if (status != KDUMP_OK)
-			return status;
-		status = xen_version_code(ctx);
 		if (status != KDUMP_OK)
 			return status;
 		break;

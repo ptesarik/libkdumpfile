@@ -1113,6 +1113,10 @@ INTERNAL_DECL(extern const struct attr_ops, vmcoreinfo_raw_ops, );
 INTERNAL_DECL(extern const struct attr_ops, dirty_xlat_ops, );
 INTERNAL_DECL(extern const struct attr_ops, linux_dirty_xlat_ops, );
 INTERNAL_DECL(extern const struct attr_ops, xen_dirty_xlat_ops, );
+INTERNAL_DECL(extern const struct attr_ops, linux_version_code_ops, );
+INTERNAL_DECL(extern const struct attr_ops, linux_ver_ops, );
+INTERNAL_DECL(extern const struct attr_ops, xen_version_code_ops, );
+INTERNAL_DECL(extern const struct attr_ops, xen_ver_ops, );
 
 /**  Attribute template override.
  *

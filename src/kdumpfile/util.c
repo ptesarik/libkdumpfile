@@ -32,6 +32,7 @@
 
 #include "kdumpfile-priv.h"
 
+#include <linux/version.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -415,6 +416,125 @@ uts_machine_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 
 const struct attr_ops uts_machine_ops = {
 	.post_set = uts_machine_post_hook,
+};
+
+/** Revalidate linux.version_code.
+ * @param ctx      Dump file object.
+ * @param attr     "linux.version_code" attribute.
+ * @returns        Error status.
+ *
+ * Re-initialize Linux version code from kernel release string to make
+ * sure that it is up to date.
+ */
+static kdump_status
+linux_ver_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	struct attr_data *rel;
+	const char *p;
+	char *endp;
+	long a, b, c;
+	kdump_attr_value_t val;
+	kdump_status status;
+
+	rel = gattr(ctx, GKI_linux_uts_release);
+	if (!attr_isset(rel))
+		return KDUMP_OK;
+	status = attr_revalidate(ctx, rel);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Cannot get Linux release");
+
+	p = attr_value(rel)->string;
+	a = strtoul(p, &endp, 10);
+	if (endp == p || *endp != '.')
+		goto err;
+
+	b = c = 0L;
+	if (*endp) {
+		p = endp + 1;
+		b = strtoul(p, &endp, 10);
+		if (endp == p || *endp != '.')
+			goto err;
+
+		if (*endp) {
+			p = endp + 1;
+			c = strtoul(p, &endp, 10);
+			if (endp == p)
+				goto err;
+		}
+	}
+
+	val.number = KERNEL_VERSION(a, b, c);
+	return set_attr(ctx, attr, ATTR_DEFAULT, &val);
+ err:
+	return set_error(ctx, KDUMP_ERR_CORRUPT, "Invalid kernel version: %s",
+			 attr_value(rel)->string);
+}
+
+const struct attr_ops linux_version_code_ops = {
+	.revalidate = linux_ver_revalidate,
+};
+
+static kdump_status
+linux_ver_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	return set_attr_number(ctx, gattr(ctx, GKI_linux_version_code),
+			       ATTR_DEFAULT, 0);
+}
+
+const struct attr_ops linux_ver_ops = {
+	.post_set = linux_ver_post_hook,
+};
+
+/** Revalidate xen.version_code.
+ * @param ctx      Dump file object.
+ * @param attr     "xen.version_code" attribute.
+ * @returns        Error status.
+ *
+ * Re-initialize Xen version code from Xen major/minor version to make
+ * sure that it is up to date.
+ */
+static kdump_status
+xen_ver_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	struct attr_data *attr_major, *attr_minor;
+	unsigned long major, minor;
+	kdump_attr_value_t val;
+	kdump_status status;
+
+	attr_major = gattr(ctx, GKI_xen_ver_major);
+	if (!attr_isset(attr_major))
+		return KDUMP_OK;
+	attr_minor = gattr(ctx, GKI_xen_ver_minor);
+	if (!attr_isset(attr_minor))
+		return KDUMP_OK;
+
+	status = attr_revalidate(ctx, attr_major);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Cannot get Xen major");
+	major = attr_value(attr_major)->number;
+
+	status = attr_revalidate(ctx, attr_minor);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Cannot get Xen minor");
+	minor = attr_value(attr_minor)->number;
+
+	val.number = ADDRXLAT_VER_XEN(major, minor);
+	return set_attr(ctx, attr, ATTR_DEFAULT, &val);
+}
+
+const struct attr_ops xen_version_code_ops = {
+	.revalidate = xen_ver_revalidate,
+};
+
+static kdump_status
+xen_ver_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	return set_attr_number(ctx, gattr(ctx, GKI_xen_version_code),
+			       ATTR_DEFAULT, 0);
+}
+
+const struct attr_ops xen_ver_ops = {
+	.post_set = xen_ver_post_hook,
 };
 
 static kdump_status

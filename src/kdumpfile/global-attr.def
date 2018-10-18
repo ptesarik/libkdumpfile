@@ -48,13 +48,15 @@ ATTR(file, "description", file_description, string, const char *)
 
 /* Linux */
 ATTR(root, "linux", dir_linux, directory, struct attr_data *)
-ATTR(linux, "version_code", linux_version_code, number, unsigned)
+ATTR(linux, "version_code", linux_version_code, number, unsigned,
+	.ops = &linux_version_code_ops)
 
 /* utsname */
 ATTR(linux, "uts", dir_linux_uts, directory, struct attr_data *)
 ATTR(linux_uts, "sysname", linux_uts_sysname, string, const char *)
 ATTR(linux_uts, "nodename", linux_uts_nodename, string, const char *)
-ATTR(linux_uts, "release", linux_uts_release, string, const char *)
+ATTR(linux_uts, "release", linux_uts_release, string, const char *,
+	.ops = &linux_ver_ops)
 ATTR(linux_uts, "version", linux_uts_version, string, const char *)
 ATTR(linux_uts, "machine", linux_uts_machine, string, const char *,
      .ops = &uts_machine_ops)
@@ -77,11 +79,14 @@ ATTR(root, "xen", dir_xen, directory, struct attr_data *)
 ATTR(xen, "p2m_mfn", xen_p2m_mfn, address, kdump_pfn_t, .ops = &dirty_xlat_ops)
 ATTR(xen, "phys_start", xen_phys_start, address, kdump_paddr, .ops = &xen_dirty_xlat_ops)
 ATTR(xen, "version", dir_xen_version, directory, struct attr_data *)
-ATTR(xen_version, "major", xen_ver_major, number, unsigned long)
-ATTR(xen_version, "minor", xen_ver_minor, number, unsigned long)
+ATTR(xen_version, "major", xen_ver_major, number, unsigned long,
+	.ops = &xen_ver_ops)
+ATTR(xen_version, "minor", xen_ver_minor, number, unsigned long,
+	.ops = &xen_ver_ops)
 ATTR(xen_version, "extra", xen_ver_extra, string, const char *)
 ATTR(xen_version, "extra_addr", xen_ver_extra_addr, address, kdump_vaddr_t)
-ATTR(xen, "version_code", xen_version_code, number, unsigned)
+ATTR(xen, "version_code", xen_version_code, number, unsigned,
+	.ops = &xen_version_code_ops)
 
 /* Xen vmcoreinfo */
 ATTR(xen, "vmcoreinfo", dir_xen_vmcoreinfo, directory, struct attr_data *)
