@@ -1045,6 +1045,19 @@ attr_value(const struct attr_data *attr)
 	return attr->flags.indirect ? attr->pval : &attr->val;
 }
 
+/**  Revalidate attribute data.
+ * @param ctx   Dump file object.
+ * @param attr  Attribute data.
+ * @returns     Error status.
+ */
+static inline kdump_status
+attr_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	return attr->flags.invalid
+		? attr->template->ops->revalidate(ctx, attr)
+		: KDUMP_OK;
+}
+
 INTERNAL_DECL(kdump_status, attr_revalidate,
 	      (kdump_ctx_t *ctx, struct attr_data *attr));
 INTERNAL_DECL(kdump_status, set_attr,

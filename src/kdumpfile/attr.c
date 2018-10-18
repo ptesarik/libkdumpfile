@@ -921,19 +921,6 @@ set_attr_static_string(kdump_ctx_t *ctx, struct attr_data *attr,
 	return set_attr(ctx, attr, flags, &val);
 }
 
-/**  Revalidate attribute data.
- * @param ctx   Dump file object.
- * @param attr  Attribute data.
- * @returns     Error status.
- */
-kdump_status
-attr_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
-{
-	return attr->flags.invalid
-		? attr->template->ops->revalidate(ctx, attr)
-		: KDUMP_OK;
-}
-
 /**  Add a template override to an attribute.
  * @param attr      Attribute data.
  * @param override  Override definition.
