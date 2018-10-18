@@ -478,7 +478,7 @@ static kdump_status
 linux_ver_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	return set_attr_number(ctx, gattr(ctx, GKI_linux_version_code),
-			       ATTR_DEFAULT, 0);
+			       ATTR_INVALID, 0);
 }
 
 const struct attr_ops linux_ver_ops = {
@@ -530,7 +530,7 @@ static kdump_status
 xen_ver_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	return set_attr_number(ctx, gattr(ctx, GKI_xen_version_code),
-			       ATTR_DEFAULT, 0);
+			       ATTR_INVALID, 0);
 }
 
 const struct attr_ops xen_ver_ops = {

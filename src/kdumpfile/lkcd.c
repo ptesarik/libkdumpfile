@@ -952,7 +952,7 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 	attr_add_override(gattr(ctx, GKI_max_pfn),
 			  &lkcdp->max_pfn_override);
 	lkcdp->max_pfn_override.ops.revalidate = lkcd_max_pfn_revalidate;
-	set_max_pfn(ctx, 0);
+	set_attr_number(ctx, gattr(ctx, GKI_max_pfn), ATTR_INVALID, 0);
 
 	set_addrspace_caps(ctx->xlat, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
 

@@ -395,6 +395,7 @@ struct attr_flags {
 	uint8_t persist : 1;	/**< Persistent (never cleared) */
 	uint8_t dynstr : 1;	/**< Dynamically allocated string */
 	uint8_t indirect : 1;	/**< Actual value is at @c *pval */
+	uint8_t invalid : 1;	/**< Value needs revalidation */
 };
 
 /**  Get the default attribute flags.
@@ -439,6 +440,21 @@ attr_flags_indirect(void)
 
 /**  Indirect attribute flags. */
 #define ATTR_INDIRECT	(attr_flags_indirect())
+
+/**  Get the default invalid flags.
+ * @returns Invalid attribute flags.
+ */
+static inline struct attr_flags
+attr_flags_invalid(void)
+{
+	const struct attr_flags flags = {
+		.invalid = 1,
+	};
+	return flags;
+}
+
+/**  Invalid attribute flags. */
+#define ATTR_INVALID	(attr_flags_invalid())
 
 /**  Attribute template flags.
  */
