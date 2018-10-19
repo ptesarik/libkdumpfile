@@ -222,6 +222,16 @@ struct arch_ops {
 	/** Process a Xen .xen_prstatus section. */
 	kdump_status (*process_xen_prstatus)(kdump_ctx_t *, const void *, size_t);
 
+	/** Address translation post-hook.
+	 * @param ctx  Dump file object.
+	 * @returns    Status code.
+	 *
+	 * This routine is called whenever address translation is
+	 * (re-)initialized to allow arch-specific adjustments to the
+	 * translation system (e.g. phys_base recalculation).
+	 */
+	kdump_status (*post_addrxlat)(kdump_ctx_t *ctx);
+
 	/** Clean up attribute hooks.
 	 * @param dict    Attribute dictionary.
 	 */
