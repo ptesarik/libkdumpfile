@@ -222,6 +222,11 @@ update_xen_extra_ver(kdump_ctx_t *ctx)
 
 	status = read_string_locked(ctx, KDUMP_MACHPHYSADDR,
 				    attr_value(attr)->address, &extra);
+	if (status == KDUMP_ERR_NODATA) {
+		/* Missing data is not fatal here. */
+		clear_error(ctx);
+		return KDUMP_OK;
+	}
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot read %s", desc);
 
