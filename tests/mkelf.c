@@ -459,7 +459,7 @@ static int
 finshdr64(struct page_data *pg)
 {
 	struct page_data_elf *pgelf = pg->priv;
-	Elf32_Shdr shdr;
+	Elf64_Shdr shdr;
 	off_t off;
 
 	shdr.sh_name = htodump32(be, pgelf->shdr.sh_name);
