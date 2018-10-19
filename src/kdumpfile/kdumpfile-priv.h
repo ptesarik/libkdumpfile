@@ -213,9 +213,6 @@ struct arch_ops {
 	/** Initialize any arch-specific data. */
 	kdump_status (*init)(kdump_ctx_t *);
 
-	/** Late initialization (after everything else is done). */
-	kdump_status (*late_init)(kdump_ctx_t *);
-
 	/** Process an NT_PRSTATUS note. */
 	kdump_status (*process_prstatus)(kdump_ctx_t *, const void *, size_t);
 

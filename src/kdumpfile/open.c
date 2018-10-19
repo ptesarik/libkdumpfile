@@ -261,11 +261,6 @@ ostype_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 
 	ctx->xlat->dirty = true;
 
-	if (ctx->shared->arch_ops && ctx->shared->arch_ops->late_init &&
-	    (status = ctx->shared->arch_ops->late_init(ctx)) != KDUMP_OK)
-		return set_error(ctx, status,
-				 "Architecture late init failed");
-
 	switch (ctx->xlat->ostype) {
 	case ADDRXLAT_OS_LINUX:
 		status = update_linux_utsname(ctx);
