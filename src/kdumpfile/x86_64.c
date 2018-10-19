@@ -228,24 +228,23 @@ set_linux_phys_base(kdump_ctx_t *ctx)
 }
 
 static kdump_status
-init_linux_phys_base(kdump_ctx_t *ctx)
+x86_64_post_addrxlat(kdump_ctx_t *ctx)
 {
 	const addrxlat_meth_t *meth;
 	kdump_status status;
 
-	status = revalidate_xlat(ctx);
-	if (status == KDUMP_OK) {
-		meth = addrxlat_sys_get_meth(
-			ctx->xlat->xlatsys, ADDRXLAT_SYS_METH_KTEXT);
-		if (meth->kind == ADDRXLAT_LINEAR) {
-			set_phys_base(ctx, (meth->param.linear.off +
-					    __START_KERNEL_map));
-			ctx->xlat->dirty = false;
-			return KDUMP_OK;
-		}
-	} else
-		/* Ignore addrxlat initialization failures */
-		clear_error(ctx);
+	if (isset_phys_base(ctx) ||
+	    ctx->xlat->ostype != ADDRXLAT_OS_LINUX)
+		return KDUMP_OK;
+
+	meth = addrxlat_sys_get_meth(ctx->xlat->xlatsys,
+				     ADDRXLAT_SYS_METH_KTEXT);
+	if (meth->kind == ADDRXLAT_LINEAR) {
+		set_phys_base(ctx, (meth->param.linear.off +
+				    __START_KERNEL_map));
+		ctx->xlat->dirty = false;
+		return KDUMP_OK;
+	}
 
 	status = set_linux_phys_base(ctx);
 	if (status == KDUMP_ERR_NODATA) {
@@ -258,22 +257,7 @@ init_linux_phys_base(kdump_ctx_t *ctx)
 		return set_error(ctx, status,
 				 "Cannot initialize address translation");
 
-	return KDUMP_OK;
-}
-
-static kdump_status
-x86_64_late_init(kdump_ctx_t *ctx)
-{
-	kdump_status status;
-
-	if (ctx->xlat->ostype == ADDRXLAT_OS_LINUX &&
-	    !isset_phys_base(ctx)) {
-		status = init_linux_phys_base(ctx);
-		if (status != KDUMP_OK)
-			return status;
-	}
-
-	return KDUMP_OK;
+	return revalidate_xlat(ctx);
 }
 
 #define REG_CNT(start, end)				\
@@ -366,7 +350,7 @@ process_x86_64_xen_prstatus(kdump_ctx_t *ctx, const void *data, size_t size)
 }
 
 const struct arch_ops x86_64_ops = {
-	.late_init = x86_64_late_init,
+	.post_addrxlat = x86_64_post_addrxlat,
 	.process_prstatus = process_x86_64_prstatus,
 	.process_xen_prstatus = process_x86_64_xen_prstatus,
 };
