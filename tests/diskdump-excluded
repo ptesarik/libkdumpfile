@@ -1,0 +1,75 @@
+#! /bin/sh
+
+#
+# The actual call to mkdiskdump and dumpdata
+#
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+datafile="$srcdir/${name}.data"
+dumpfile="out/${name}.dump"
+resultfile="out/${name}.result"
+errfile="out/${name}.err"
+expectfile="$srcdir/${name}.expect"
+
+./mkdiskdump "$dumpfile" <<EOF
+version = 6
+arch_name = x86_64
+block_size = 4096
+phys_base = 0
+max_mapnr = 0x100
+sub_hdr_size = 1
+
+uts.sysname = Linux
+uts.nodename = test-node
+uts.release = 3.4.5-test
+uts.version = #1 SMP Fri Jan 22 14:02:42 UTC 2016 (1234567)
+uts.machine = x86_64
+uts.domainname = (none)
+
+nr_cpus = 1
+
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create DISKDUMP file" >&2
+    exit $rc
+fi
+echo "Created DISKDUMP dump: $dumpfile"
+
+./checkattr "$dumpfile" <<EOF
+file.pagemap = bitmap: 5
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Attribute check failed" >&2
+    totalrc=1
+fi
+
+./dumpdata "$dumpfile" 0 0x3000 >"$resultfile" 2>"$errfile"
+rc=$?
+if [ $rc -eq 0 ]; then
+    echo "Unexpected dump success" >&2
+    totalrc=1
+fi
+
+if ! grep "Excluded page" "$errfile" ; then
+    echo "\"Excluded page\" error not found" >&2
+    totalrc=1
+fi
+
+./dumpdata -z "$dumpfile" 0x1000 16 >>"$resultfile"
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot dump excluded region" >&2
+    totalrc=1
+fi
+
+if ! diff "$expectfile" "$resultfile"; then
+    echo "Results do not match" >&2
+    exit 1
+fi
+
+exit $totalrc

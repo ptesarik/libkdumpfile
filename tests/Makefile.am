@@ -172,6 +172,7 @@ test_scripts = \
 	diskdump-basic-lzo \
 	diskdump-basic-snappy \
 	diskdump-multiread \
+	diskdump-excluded \
 	early-version-code \
 	elf-empty-i386 \
 	elf-empty-i386-elf64 \
@@ -293,6 +294,8 @@ dist_check_DATA = \
 	multixlat.expect \
 	multixlat-elf.data \
 	multixlat-same.expect \
+	diskdump-excluded.data \
+	diskdump-excluded.expect \
 	sys-xlat-x86_64-linux.expect \
 	sys-xlat-x86_64-linux-xen.expect \
 	xlatmap.expect \

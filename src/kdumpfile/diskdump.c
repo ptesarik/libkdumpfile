@@ -374,8 +374,11 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 
 	pd_pos = pfn_to_pdpos(ddp, pfn);
 	if (pd_pos == (off_t)-1) {
-		memset(pio->chunk.data, 0, get_page_size(ctx));
-		return KDUMP_OK;
+		if (get_zero_excluded(ctx)) {
+			memset(pio->chunk.data, 0, get_page_size(ctx));
+			return KDUMP_OK;
+		}
+		return set_error(ctx, KDUMP_ERR_NODATA, "Excluded page");
 	}
 
 	mutex_lock(&ctx->shared->cache_lock);

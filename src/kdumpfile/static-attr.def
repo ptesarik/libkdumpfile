@@ -51,6 +51,9 @@ ATTR(file, "fd", file_fd, number, int, .ops = &file_fd_ops)
 /* file page map */
 ATTR(file, "pagemap", file_pagemap, bitmap, kdump_bmp_t *)
 
+/* replace excluded pages with zeroes? */
+ATTR(file, "zero_excluded", zero_excluded, number, bool)
+
 /* physical base */
 ATTR(linux, "phys_base", phys_base, address, kdump_addr_t, .ops = &linux_dirty_xlat_ops)
 

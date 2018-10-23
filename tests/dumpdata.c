@@ -41,6 +41,7 @@
 
 static const char *ostype = NULL;
 static unsigned long valsz = 1;
+static int zero_excluded;
 
 static inline int
 endofline(unsigned long long addr)
@@ -174,6 +175,15 @@ dump_data_fd(int fd, char **argv)
 		}
 	}
 
+	if (zero_excluded) {
+		res = kdump_set_number_attr(ctx, KDUMP_ATTR_ZERO_EXCLUDED, 1);
+		if (res != KDUMP_OK) {
+			fprintf(stderr, "Cannot set zero_excluded: %s\n",
+				kdump_get_err(ctx));
+			goto err;
+		}
+	}
+
 	res = kdump_set_number_attr(ctx, KDUMP_ATTR_FILE_FD, fd);
 	if (res != KDUMP_OK) {
 		fprintf(stderr, "Cannot open dump: %s\n", kdump_get_err(ctx));
@@ -235,7 +245,8 @@ usage(const char *name)
 		"\n"
 		"Options:\n"
 		"  -o ostype  Set OS type\n"
-		"  -s size    Set value size in bytes\n",
+		"  -s size    Set value size in bytes\n"
+		"  -z         Fill excluded pages with zeroes\n",
 		name);
 }
 
@@ -247,7 +258,7 @@ main(int argc, char **argv)
 	int fd;
 	int rc;
 
-	while ((opt = getopt(argc, argv, "ho:s:")) != -1) {
+	while ((opt = getopt(argc, argv, "ho:s:z")) != -1) {
 		switch (opt) {
 		case 'o':
 			ostype = optarg;
@@ -261,6 +272,10 @@ main(int argc, char **argv)
 				fprintf(stderr, "Invalid size: %s\n", optarg);
 				return TEST_ERR;
 			}
+			break;
+
+		case 'z':
+			zero_excluded = 1;
 			break;
 
 		case 'h':

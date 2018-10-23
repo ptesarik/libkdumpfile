@@ -57,6 +57,7 @@ struct page_data_kdump {
 		compress_auto = -1,
 		compress_no,
 		compress_yes,
+		compress_exclude,
 	} compress;
 
 	void *cbuf;
@@ -434,6 +435,8 @@ parseheader(struct page_data *pg, char *p)
 	} else if (!strcmp(p, "snappy")) {
 		pgkdump->flags |= DUMP_DH_COMPRESSED_SNAPPY;
 		pgkdump->compress = compress_yes;
+	} else if (!strcmp(p, "exclude")) {
+		pgkdump->compress = compress_exclude;
 	} else {
 		pgkdump->flags = strtoul(p, &endp, 0);
 		if (*endp) {
@@ -572,7 +575,8 @@ markpage(struct page_data *pg)
 
 	idx = pfn >> 3;
 	bitmap1[idx] |= 1U << (pfn & 7);
-	bitmap2[idx] |= 1U << (pfn & 7);
+	if (pgkdump->compress != compress_exclude)
+		bitmap2[idx] |= 1U << (pfn & 7);
 
 	dataoff += sizeof(struct page_desc);
 	return TEST_OK;
@@ -609,6 +613,9 @@ writepage(struct page_data *pg)
 	unsigned char *buf;
 	size_t buflen;
 	uint32_t flags;
+
+	if (pgkdump->compress == compress_exclude)
+		return TEST_OK;
 
 	flags = pgkdump->flags;
 
