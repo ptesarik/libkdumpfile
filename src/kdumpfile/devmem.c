@@ -265,7 +265,7 @@ devmem_probe(kdump_ctx_t *ctx)
 	if (ret != KDUMP_OK)
 		return ret;
 
-	set_addrspace_caps(ctx->xlat, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
+	set_addrspace_caps(ctx->xlat, ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR));
 
 #if defined(__x86_64__)
 	ret = set_arch_name(ctx, KDUMP_ARCH_X86_64);
