@@ -42,6 +42,7 @@
 #include <endian.h>
 #include <signal.h>
 #include <ucontext.h>
+#include <sys/sysmacros.h>
 
 #define FN_VMCOREINFO	"/sys/kernel/vmcoreinfo"
 #define FN_IOMEM	"/proc/iomem"
