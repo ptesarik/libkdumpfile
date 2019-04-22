@@ -39,6 +39,7 @@ project from scratch, you will need:
 * [autoconf](https://www.gnu.org/software/autoconf/)
 * [automake](https://www.gnu.org/software/automake/)
 * [libtool](https://www.gnu.org/software/libtool/)
+* [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
 
 To generate the `configure` script, run
 
