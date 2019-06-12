@@ -1561,6 +1561,8 @@ install_cb_hook(ctx_object *self, addrxlat_cb_t *cb)
 	cb->sym = cb_sym;
 	cb->read32 = cb_read32;
 	cb->read64 = cb_read64;
+
+	Py_INCREF((PyObject *)self);
 }
 
 static void
@@ -1573,6 +1575,8 @@ cb_hook(void *_self, addrxlat_cb_t *cb)
 
 	if (self->ctx)
 		install_cb_hook(self, cb);
+
+	Py_DECREF((PyObject *)self);
 }
 
 PyDoc_STRVAR(ctx__doc__,
