@@ -46,29 +46,15 @@
 #define XTAG_PUB_NAME(tag, sym)	TAG_PUB_NAME(tag, sym)
 #define PUB_NAME(sym)		XTAG_PUB_NAME(LIBNAME, sym)
 
-/* Minimize chance of name clashes (in a static link) */
-#ifndef PIC
+/* Minimize chance of name clashes */
 #define INTERNAL_DECL(type, sym, param)	\
 	type sym param			\
 	__asm__(XSTRINGIFY(ASM_NAME(PRIV_NAME(sym))))
-#else
-#define INTERNAL_DECL(type, sym, param)	\
-	type sym param
-#endif
 
-#ifndef PIC
 #define INTERNAL_ALIAS(x)		PUB_NAME(x)
 #define _DECLARE_ALIAS(s, a)		\
 	extern typeof(s) (a) __asm__(XSTRINGIFY(ASM_NAME(s)))
 #define _DEFINE_ALIAS(s, a)		_DECLARE_ALIAS(s, a)
-#else
-#define INTERNAL_ALIAS(x)		internal_ ## x
-#define _DECLARE_ALIAS(s, a)		\
-	extern typeof(s) (a)
-#define _DEFINE_ALIAS(s, a)		\
-	extern typeof(s) (a)		\
-	__attribute__((alias(STRINGIFY(s))))
-#endif
 
 /** Internal alias declaration. */
 #define DECLARE_ALIAS(x) _DECLARE_ALIAS(PUB_NAME(x), internal_ ## x)
