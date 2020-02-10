@@ -33,6 +33,14 @@
 
 #include <stddef.h>
 
+/**  Cast a structure field out to the containing structure.
+ * @param ptr    Pointer to the field.
+ * @param type   Type of the container struct the field is part of.
+ * @param field  Name of the field within the containing struct.
+ */
+#define container_of(ptr, type, field) \
+	(type *)((char*)(ptr) - offsetof(type, field))
+
 /**  Get a pointer to the structure which contains the list.
  * @param node   Pointer to a @c struct @ref list_head.
  * @param type   Type of the containing structure.
@@ -40,7 +48,7 @@
  * @returns      Pointer to the containing structure.
  */
 #define list_entry(node, type, field) \
-	(type*)((char*)(node) - offsetof(type, field))
+	container_of(node, type, field)
 
 /**  A generic list head or node.
  * This structure is modelled after the Linux kernel list API.
@@ -142,7 +150,7 @@ struct hlist_node {
  */
 #define hlist_entry(node, type, field)				\
 	({ typeof(node) ____ptr = (node);			\
-	   ____ptr ? list_entry(____ptr, type, field) : NULL;	\
+	   ____ptr ? container_of(____ptr, type, field) : NULL;	\
 	})
 
 /**  Remove an element from a hlist.
