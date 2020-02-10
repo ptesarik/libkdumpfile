@@ -205,7 +205,7 @@ lookup_dir_attr(struct attr_dict *dict,
 {
 	bool fallback;
 	struct phash ph;
-	unsigned hash, ehash;
+	unsigned hash;
 
 	if (*key == '.') {
 		++key;
@@ -218,21 +218,14 @@ lookup_dir_attr(struct attr_dict *dict,
 	path_hash(&ph, dir);
 	phash_update(&ph, key, keylen);
 	hash = fold_hash(phash_value(&ph), ATTR_HASH_BITS);
-	ehash = (hash + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
 	do {
-		unsigned i = hash;
-		do {
-			struct attr_hash *tbl = &dict->attr;
-			do {
-				struct attr_data *d = &tbl->table[i];
-				if (!d->parent)
-					break;
-				if (!keycmp(d, dir, key, keylen))
-					return d;
-				tbl = tbl->next;
-			} while (tbl);
-			i = (i + 1) % ATTR_HASH_SIZE;
-		} while (i != ehash);
+		struct attr_data *d;
+		hlist_for_each_entry(d, &dict->attr.table[hash], list) {
+			if (!d->parent)
+				break;
+			if (!keycmp(d, dir, key, keylen))
+				return d;
+		}
 		dict = fallback ? dict->fallback : NULL;
 	} while (dict);
 
@@ -295,38 +288,24 @@ static struct attr_data *
 alloc_attr(struct attr_dict *dict, struct attr_data *parent,
 	   const struct attr_template *tmpl)
 {
-	struct attr_data tmp;
+	struct attr_data *d;
 	size_t pathlen;
 	char *path;
-	unsigned hash, ehash, i;
-	struct attr_hash *tbl, **pnext;
+	unsigned hash;
 
-	tmp.parent = parent ?: &tmp;
-	tmp.template = tmpl;
-	pathlen = attr_pathlen(&tmp);
+	d = calloc(1, sizeof *d);
+	if (!d)
+		return d;
+
+	d->parent = parent ?: d;
+	d->template = tmpl;
+	pathlen = attr_pathlen(d);
 	path = alloca(pathlen + 1);
-	make_attr_path(&tmp, path + pathlen);
+	make_attr_path(d, path + pathlen);
+	hash = key_hash_index(path);
+	hlist_add_head(&d->list, &dict->attr.table[hash]);
 
-	i = hash = key_hash_index(path);
-	ehash = (i + ATTR_HASH_FUZZ) % ATTR_HASH_SIZE;
-	do {
-		tbl = &dict->attr;
-		do {
-			if (!tbl->table[i].parent)
-				return &tbl->table[i];
-			pnext = &tbl->next;
-			tbl = *pnext;
-		} while (tbl);
-		i = (i + 1) % ATTR_HASH_SIZE;
-	} while (i != ehash);
-
-	tbl = calloc(1, sizeof(struct attr_hash));
-	if (!tbl)
-		return NULL;
-	tbl->next = *pnext;
-	*pnext = tbl;
-
-	return &tbl->table[hash];
+	return d;
 }
 
 /**  Clear (unset) a single attribute.
@@ -405,16 +384,23 @@ clear_volatile_attrs(kdump_ctx_t *ctx)
 void
 dealloc_attr(struct attr_data *attr)
 {
-	struct attr_data *child;
-	if (attr->template->type == KDUMP_DIRECTORY)
-		for (child = attr->dir; child; child = child->next)
+	if (attr->template->type == KDUMP_DIRECTORY) {
+		struct attr_data *next = attr->dir;
+		while (next) {
+			struct attr_data *child = next;
+			next = child->next;
 			dealloc_attr(child);
+		}
+	}
 
 	if (attr->flags.dynstr)
 		free((void*) attr_value(attr)->string);
 	if (attr->tflags.dyntmpl)
 		free((void*) attr->template);
 	attr->parent = NULL;
+
+	hlist_del(&attr->list);
+	free(attr);
 }
 
 /**  Allocate a new attribute in any directory.
@@ -434,7 +420,6 @@ new_attr(struct attr_dict *dict, struct attr_data *parent,
 	if (!attr)
 		return attr;
 
-	memset(attr, 0, sizeof *attr);
 	attr->template = tmpl;
 	if (!parent)
 		parent = attr;
@@ -627,16 +612,7 @@ instantiate_path(struct attr_data *attr)
 void
 attr_dict_free(struct attr_dict *dict)
 {
-	struct attr_hash *tbl, *tblnext;
-
 	dealloc_attr(dgattr(dict, GKI_dir_root));
-
-	tblnext = dict->attr.next;
-	while(tblnext) {
-		tbl = tblnext;
-		tblnext = tbl->next;
-		free(tbl);
-	}
 
 	if (dict->shared->arch_ops && dict->shared->arch_ops->attr_cleanup)
 		dict->shared->arch_ops->attr_cleanup(dict);

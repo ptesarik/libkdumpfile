@@ -62,8 +62,12 @@ dealloc_vmcoreinfo(struct attr_data *dir)
 		if (child->template->type != KDUMP_DIRECTORY)
 			continue;
 
-		for (child2 = child->dir; child2; child2 = child2->next)
+		struct attr_data *next = child->dir;
+		while (next) {
+			struct attr_data *child2 = next;
+			next = child2->next;
 			dealloc_attr(child2);
+		}
 		child->dir = NULL;
 	}
 }

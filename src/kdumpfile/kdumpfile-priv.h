@@ -489,6 +489,8 @@ struct attr_data {
 		struct attr_data *dir;	  /**< For @c KDUMP_DIRECTORY */
 		kdump_attr_value_t *pval; /**< Pointer to indirect value */
 	};
+
+	struct hlist_node list;		/**< Hash table element node */
 };
 
 /**  Size of the attribute hash table.
@@ -498,15 +500,9 @@ struct attr_data {
 #define ATTR_HASH_FUZZ	8
 
 /**  Attribute hash table.
- *
- * Attributes are in fact stored in a linked list of hash tables.
- * Allocation is first attempted from a given slot, walking through
- * all linked hash tables. If this fails, allocation is retried from
- * the following slot(s) in the table.
  */
 struct attr_hash {
-	struct attr_hash *next;
-	struct attr_data table[ATTR_HASH_SIZE];
+	struct hlist_head table[ATTR_HASH_SIZE];
 };
 
 /** Shareable attribute dictionary. */
