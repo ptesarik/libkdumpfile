@@ -22,6 +22,13 @@ LIBKDUMPFILE_0 {
     kdump_bmp_find_set;
     kdump_bmp_find_clear;
 
+    kdump_blob_incref;
+    kdump_blob_decref;
+    kdump_blob_pin;
+    kdump_blob_unpin;
+    kdump_blob_size;
+    kdump_blob_set;
+
     kdump_set_attr;
     kdump_get_attr;
     kdump_get_typed_attr;

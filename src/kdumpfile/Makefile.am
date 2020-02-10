@@ -29,6 +29,7 @@ lib_LTLIBRARIES = libkdumpfile.la
 libkdumpfile_la_SOURCES = \
 	attr.c \
 	bitmap.c \
+	blob.c \
 	cache.c \
 	context.c \
 	devmem.c \
@@ -70,11 +71,16 @@ noinst_HEADERS = \
 dist_noinst_DATA = \
 	libkdumpfile.map
 
-check_PROGRAMS = test-fcache
+check_PROGRAMS = test-fcache test-blob
+
 test_fcache_LDFLAGS = -static
 test_fcache_LDADD = libkdumpfile.la -ldl
 
+test_blob_LDFLAGS = -static
+test_blob_LDADD = libkdumpfile.la -ldl
+
 TESTS = \
+	test-blob \
 	test-fcache
 
 clean-local:

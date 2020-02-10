@@ -46,6 +46,7 @@ const struct attr_template dir_template = {
 #define KDUMP_address	KDUMP_ADDRESS
 #define KDUMP_string	KDUMP_STRING
 #define KDUMP_bitmap	KDUMP_BITMAP
+#define KDUMP_blob	KDUMP_BLOB
 
 static const struct attr_template global_keys[] = {
 #define ATTR(dir, key, field, type, ctype, ...)				\

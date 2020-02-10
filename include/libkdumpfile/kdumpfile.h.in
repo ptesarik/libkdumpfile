@@ -399,6 +399,75 @@ kdump_status kdump_bmp_find_set(
 kdump_status kdump_bmp_find_clear(
 	kdump_bmp_t *bmp, kdump_addr_t *idx);
 
+/**  Dump binary large object (BLOB).
+ *
+ * A blob contains arbitrary binary data.
+ */
+typedef struct _kdump_blob kdump_blob_t;
+
+/** Increment kdump blob reference counter.
+ * @param blob   Binary object.
+ * @returns      New reference count.
+ */
+unsigned long kdump_blob_incref(kdump_blob_t *blob);
+
+/** Decrement kdump blob reference counter.
+ * @param blob   Binary object.
+ * @returns      New reference count.
+ *
+ * If the new reference count is zero, the underlying object is freed
+ * and its address must not be used afterwards.
+ */
+unsigned long kdump_blob_decref(kdump_blob_t *blob);
+
+/**  Pin the internal data buffer.
+ * @param blob  Binary object.
+ * @returns     Pointer to binary data.
+ *
+ * Returns pointer to the internal data buffer. The pointer is valid
+ * until a matching call to @ref kdump_blob_unpin. While a blob is pinned,
+ * it cannot be modified by a call to @ref kdump_blob_set or by any other
+ * internal library operation. The blob is pinned if there is at least one
+ * user of the data.
+ */
+void *kdump_blob_pin(kdump_blob_t *blob);
+
+/**  Unpin the internal data buffer.
+ * @param blob  Binary object.
+ * @returns     Number of remaining pinned users.
+ *
+ * This function releases the data pointer, decreasing an internal pin
+ * counter. When the counter reaches zero, any pointers to internal data
+ * are no longer valid (but the blob object itself remains valid).
+ */
+unsigned long kdump_blob_unpin(kdump_blob_t *blob);
+
+/**  Get a blob size in bytes.
+ * @param blob  Binary object.
+ * @returns     Size of the binary object in bytes.
+ *
+ * Note that an unpinned blob may be changed at any time, so you probably
+ * want to call @ref kdump_blob_pin first.
+ */
+size_t kdump_blob_size(const kdump_blob_t *blob);
+
+/**  Set kdump blob data.
+ * @param blob  Binary object.
+ * @param data  Pointer to new binary data.
+ * @param size  Size of the new data in bytes.
+ * @returns     Error status.
+ *
+ * Set the internal buffer to @c data. The buffer must be allocated from
+ * the heap (i.e. using @c malloc and friends), because the library will
+ * eventually call @c free on it!
+ *
+ * Attempts to set data of a pinned blob return @ref KDUMP_ERR_BUSY,
+ * all other calls return @ref KDUMP_OK.
+ *
+ * It is OK to set the data to @c NULL.
+ */
+kdump_status kdump_blob_set(kdump_blob_t *blob, void *data, size_t size);
+
 /**  Dump file attribute value type.
  */
 typedef enum _kdump_attr_type {
@@ -408,6 +477,7 @@ typedef enum _kdump_attr_type {
 	KDUMP_ADDRESS,		/**< Address or symbol value. */
 	KDUMP_STRING,		/**< String attribute. */
 	KDUMP_BITMAP,		/**< Bitmap. */
+	KDUMP_BLOB,		/**< Binary large object. */
 } kdump_attr_type_t;
 
 /**  Dump file attribute value.
@@ -417,6 +487,7 @@ typedef union _kdump_attr_value {
 	kdump_addr_t address;	/**< Valid if type is @ref KDUMP_ADDRESS.  */
 	const char *string;	/**< Valid if type is @ref KDUMP_STRING. */
 	kdump_bmp_t *bitmap;	/**< Valid if type is @ref KDUMP_BITMAP. */
+	kdump_blob_t *blob;	/**< Valid if type is @ref KDUMP_BLOB. */
 } kdump_attr_value_t;
 
 /**  Dump file attribute: type + value.

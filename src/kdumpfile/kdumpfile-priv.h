@@ -280,6 +280,21 @@ INTERNAL_DECL(void, set_bits,
 INTERNAL_DECL(void, clear_bits,
 	      (unsigned char *buf, size_t start, size_t end));
 
+/* kdump blobs */
+struct _kdump_blob {
+	/** Reference counter. */
+	unsigned long refcnt;
+
+	/** Pin counter. */
+	unsigned long pincnt;
+
+	void *data;		/**< Binary data. */
+	size_t size;		/**< Size of binary data. */
+};
+
+INTERNAL_DECL(kdump_blob_t *, kdump_blob_new,
+	      (void *data, size_t size));
+
 /* provide our own definition of new_utsname */
 #define NEW_UTS_LEN 64
 #define UTS_SYSNAME "Linux"
