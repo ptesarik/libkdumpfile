@@ -47,7 +47,7 @@
 #define PUB_NAME(sym)		XTAG_PUB_NAME(LIBNAME, sym)
 
 /* Minimize chance of name clashes (in a static link) */
-#ifndef PIC
+#ifndef ENABLE_DEBUG
 #define INTERNAL_DECL(type, sym, param)	\
 	type sym param			\
 	__asm__(XSTRINGIFY(ASM_NAME(PRIV_NAME(sym))))
@@ -56,7 +56,7 @@
 	type sym param
 #endif
 
-#ifndef PIC
+#ifndef ENABLE_DEBUG
 #define INTERNAL_ALIAS(x)		PUB_NAME(x)
 #define _DECLARE_ALIAS(s, a)		\
 	extern typeof(s) (a) __asm__(XSTRINGIFY(ASM_NAME(s)))

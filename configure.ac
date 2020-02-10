@@ -88,6 +88,14 @@ AS_IF([test "x$have_pthread" = xyes],
   ])
 AC_SUBST(PTHREAD_LIBS)
 
+dnl check for useful debugging options
+AC_ARG_ENABLE(debug,
+  [AS_HELP_STRING([--enable-debug],
+    [Make a build suitable for debugging @<:@default=no@:>@])],
+  [], [enable_debug=no])
+AS_IF([test "x$enable_debug" = xyes],
+    [AC_DEFINE(ENABLE_DEBUG, 1, Define to enable extra debugging features)])
+
 dnl check for Python
 kdump_PYTHON([2.7.0])
 
