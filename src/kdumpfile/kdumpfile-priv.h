@@ -495,9 +495,8 @@ struct attr_data {
 
 /**  Size of the attribute hash table.
  */
-#define ATTR_HASH_BITS	8
+#define ATTR_HASH_BITS	10
 #define ATTR_HASH_SIZE	(1U<<ATTR_HASH_BITS)
-#define ATTR_HASH_FUZZ	8
 
 /**  Attribute hash table.
  */
