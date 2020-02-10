@@ -102,7 +102,7 @@ attr_pathlen(const struct attr_data *attr)
 	const struct attr_data *d;
 	size_t len = 0;
 
-	for (d = attr; d->parent != d; d = d->parent) {
+	for (d = attr; d->parent; d = d->parent) {
 		len += strlen(d->template->key);
 		if (d != attr)
 			++len;	/* for the separating dot ('.') */
@@ -126,7 +126,7 @@ make_attr_path(const struct attr_data *attr, char *endp)
 	const struct attr_data *d;
 
 	*endp = '\0';
-	for (d = attr; d->parent != d; d = d->parent) {
+	for (d = attr; d->parent; d = d->parent) {
 		size_t len = strlen(d->template->key);
 		if (d != attr)
 			*(--endp) = '.';
@@ -161,6 +161,8 @@ keycmp(const struct attr_data *attr, const struct attr_data *dir,
 		if (attr->template->key[partlen] != '\0')
 			return 1;
 		attr = attr->parent;
+		if (!attr)
+			return 1;
 		len = p - key;
 	} while (p > key);
 
@@ -180,7 +182,7 @@ static void
 path_hash(struct phash *ph, const struct attr_data *dir)
 {
 	const struct attr_template *tmpl;
-	if (dir->parent != dir) {
+	if (dir->parent) {
 		path_hash(ph, dir->parent);
 		tmpl = dir->template;
 		phash_update(ph, tmpl->key, strlen(tmpl->key));
@@ -220,12 +222,9 @@ lookup_dir_attr(struct attr_dict *dict,
 	hash = fold_hash(phash_value(&ph), ATTR_HASH_BITS);
 	do {
 		struct attr_data *d;
-		hlist_for_each_entry(d, &dict->attr.table[hash], list) {
-			if (!d->parent)
-				break;
+		hlist_for_each_entry(d, &dict->attr.table[hash], list)
 			if (!keycmp(d, dir, key, keylen))
 				return d;
-		}
 		dict = fallback ? dict->fallback : NULL;
 	} while (dict);
 
@@ -261,23 +260,6 @@ lookup_attr(struct attr_dict *dict, const char *key)
 		: dgattr(dict, GKI_dir_root);
 }
 
-/**  Link a new attribute to its parent.
- * @param dir   Parent attribute.
- * @param attr  Complete initialized attribute.
- *
- * This function merely adds the attribute to the dump file object.
- * It does not check for duplicates.
- */
-static void
-link_attr(struct attr_data *dir, struct attr_data *attr)
-{
-	/* Link the new node */
-	attr->next = dir->dir;
-	if (attr != dir)
-		dir->dir = attr;
-	attr->parent = dir;
-}
-
 /**  Allocate an attribute from the hash table.
  * @param dict    Attribute dictionary.
  * @param parent  Parent directory, or @c NULL.
@@ -297,7 +279,7 @@ alloc_attr(struct attr_dict *dict, struct attr_data *parent,
 	if (!d)
 		return d;
 
-	d->parent = parent ?: d;
+	d->parent = parent;
 	d->template = tmpl;
 	pathlen = attr_pathlen(d);
 	path = alloca(pathlen + 1);
@@ -397,7 +379,6 @@ dealloc_attr(struct attr_data *attr)
 		free((void*) attr_value(attr)->string);
 	if (attr->tflags.dyntmpl)
 		free((void*) attr->template);
-	attr->parent = NULL;
 
 	hlist_del(&attr->list);
 	free(attr);
@@ -421,9 +402,13 @@ new_attr(struct attr_dict *dict, struct attr_data *parent,
 		return attr;
 
 	attr->template = tmpl;
-	if (!parent)
-		parent = attr;
-	link_attr(parent, attr);
+
+	attr->parent = parent;
+	if (parent) {
+		attr->next = parent->dir;
+		parent->dir = attr;
+	}
+
 	return attr;
 }
 
@@ -600,7 +585,7 @@ instantiate_path(struct attr_data *attr)
 {
 	while (!attr_isset(attr)) {
 		attr->flags.isset = 1;
-		if (attr == attr->parent)
+		if (!attr->parent)
 			break;
 		attr = attr->parent;
 	}
