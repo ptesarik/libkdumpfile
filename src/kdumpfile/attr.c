@@ -52,7 +52,7 @@ static const struct attr_template global_keys[] = {
 #define ATTR(dir, key, field, type, ctype, ...)				\
 	[GKI_ ## field] = {						\
 		key,							\
-		&global_keys[GKI_dir_ ## dir],				\
+		{ .parent_key = GKI_dir_ ## dir },			\
 		KDUMP_ ## type,						\
 		##__VA_ARGS__						\
 	},
@@ -631,7 +631,7 @@ attr_dict_new(struct kdump_shared *shared)
 		const struct attr_template *tmpl = &global_keys[i];
 		struct attr_data *attr, *parent;
 
-		parent = dict->global_attrs[tmpl->parent - global_keys];
+		parent = dict->global_attrs[tmpl->parent_key];
 		attr = new_attr(dict, parent, tmpl);
 		if (!attr)
 			return NULL;

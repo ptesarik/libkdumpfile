@@ -408,7 +408,12 @@ struct attr_ops {
  */
 struct attr_template {
 	const char *key;
-	const struct attr_template *parent;
+	union {
+		/** Overrides: pointer to original template. */
+		const struct attr_template *parent;
+		/** Global keys: attribute index in the global array. */
+		enum global_keyidx parent_key;
+	};
 	kdump_attr_type_t type;
 	const struct attr_ops *ops;
 };
