@@ -1,0 +1,70 @@
+#! /bin/sh
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+datafile="$srcdir/${name}.data"
+dumpfile="out/${name}.dump"
+resultfile="out/${name}.result"
+expectfile="$srcdir/${name}.expect"
+
+./mkelf "$dumpfile" <<EOF
+ei_class = 2
+ei_data = 1
+e_machine = 62
+e_phoff = 0x1000
+
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create ELF file" >&2
+    exit $rc
+fi
+echo "Created ELF dump: $dumpfile"
+
+./checkattr "$dumpfile" <<EOF
+file = directory:
+file.fd = number
+file.format = string: elf
+
+cpu = directory:
+cpu.number = number:1
+cpu.0 = directory:
+cpu.0.reg = directory:
+cpu.0.reg.r15 = number:0x3531722020202020
+cpu.0.reg.r14 = number:0x3431722020202020
+cpu.0.reg.r13 = number:0x3331722020202020
+cpu.0.reg.r12 = number:0x3231722020202020
+cpu.0.reg.rbp = number:0x7062722020202020
+cpu.0.reg.rbx = number:0x7862722020202020
+cpu.0.reg.r11 = number:0x3131722020202020
+cpu.0.reg.r10 = number:0x3031722020202020
+cpu.0.reg.r9 = number:0x3972202020202020
+cpu.0.reg.r8 = number:0x3872202020202020
+cpu.0.reg.rax = number:0x7861722020202020
+cpu.0.reg.rcx = number:0x7863722020202020
+cpu.0.reg.rdx = number:0x7864722020202020
+cpu.0.reg.rsi = number:0x6973722020202020
+cpu.0.reg.rdi = number:0x6964722020202020
+cpu.0.reg.orig_rax = number:0x7861725f6769726f
+cpu.0.reg.rip = number:0x7069722020202020
+cpu.0.reg.cs = number:0x7363202020202020
+cpu.0.reg.rflags = number:0x7367616c66722020
+cpu.0.reg.rsp = number:0x7073722020202020
+cpu.0.reg.ss = number:0x7373202020202020
+cpu.0.reg.fs_base = number:0x657361625f736620
+cpu.0.reg.gs_base = number:0x657361625f736720
+cpu.0.reg.ds = number:0x7364202020202020
+cpu.0.reg.es = number:0x7365202020202020
+cpu.0.reg.fs = number:0x7366202020202020
+cpu.0.reg.gs = number:0x7367202020202020
+cpu.0.reg.pid = number:0x6469705f
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Attribute check failed" >&2
+    exit $rc
+fi
+
+exit 0

@@ -179,6 +179,7 @@ test_scripts = \
 	elf-empty-s390 \
 	elf-empty-s390x \
 	elf-empty-x86_64 \
+	elf-prstatus-x86_64 \
 	elf-basic \
         elf-be \
         elf-le \
@@ -277,6 +278,7 @@ dist_check_DATA = \
 	early-version-code.data \
 	early-version-code.expect \
 	elf-empty.data \
+	elf-prstatus-x86_64.data \
         elf-endian.data \
         elf-be16.expect \
         elf-be32.expect \
