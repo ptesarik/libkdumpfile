@@ -1461,6 +1461,30 @@ dump64toh(kdump_ctx_t *ctx, uint64_t x)
 		: le64toh(x);
 }
 
+static inline uint16_t
+htodump16(kdump_ctx_t *ctx, uint16_t x)
+{
+	return get_byte_order(ctx) == KDUMP_BIG_ENDIAN
+		? htobe16(x)
+		: htole16(x);
+}
+
+static inline uint32_t
+htodump32(kdump_ctx_t *ctx, uint32_t x)
+{
+	return get_byte_order(ctx) == KDUMP_BIG_ENDIAN
+		? htobe32(x)
+		: htole32(x);
+}
+
+static inline uint64_t
+htodump64(kdump_ctx_t *ctx, uint64_t x)
+{
+	return get_byte_order(ctx) == KDUMP_BIG_ENDIAN
+		? htobe64(x)
+		: htole64(x);
+}
+
 /** Convert an address to a PFN.
  * @param shared  Shared variables.
  * @param addr    Address to be converted.
