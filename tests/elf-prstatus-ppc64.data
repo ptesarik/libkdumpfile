@@ -1,0 +1,74 @@
+@phdr type=NOTE offset=0x1800
+# PRSTATUS
+00000005 000001f8 00000001 "CORE" 00 00 00 00
+00000003 00000004 00000005
+000b 0000
+"pr_sigpe"
+"pr_sigho"
+"_pid"
+"ppid"
+"pgrp"
+"_sid"
+0000000000000000 "pr_utime"
+0000000000000000 "pr_stime"
+0000000000000000 "pr_cutim"
+0000000000000000 "pr_cstim"
+"      r0"
+"      r1"
+"      r2"
+"      r3"
+"      r4"
+"      r5"
+"      r6"
+"      r7"
+"      r8"
+"      r9"
+"     r10"
+"     r11"
+"     r12"
+"     r13"
+"     r14"
+"     r15"
+"     r16"
+"     r17"
+"     r18"
+"     r19"
+"     r20"
+"     r21"
+"     r22"
+"     r23"
+"     r24"
+"     r25"
+"     r26"
+"     r27"
+"     r28"
+"     r29"
+"     r30"
+"     r31"
+"      pc"
+"     msr"
+" orig_r3"
+"     ctr"
+"      lr"
+"     xer"
+"     ccr"
+"   softe"
+"    trap"
+"     dar"
+"   dsisr"
+"  result"
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+00000000 00000000
+
+# ppc64 requires minimum VMCOREINFO with PAGESIZE= to perform arch init,
+# because there is no default page size
+0000000b 00000049 00000000 "VMCOREINFO" 00 00
+"OSRELEASE=3.12.28\n"
+"PAGESIZE=65536\n"
+"SYMBOL(swapper_pg_dir)=c000000001070000\n"
+
+@phdr type=LOAD offset=0x2000 paddr=0x2000000 vaddr=0xffff880002000000 memsz=0x1000
+41 42 43 44 45 46 47 48

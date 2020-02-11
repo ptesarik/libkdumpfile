@@ -1,0 +1,85 @@
+#! /bin/sh
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+datafile="$srcdir/${name}.data"
+dumpfile="out/${name}.dump"
+resultfile="out/${name}.result"
+expectfile="$srcdir/${name}.expect"
+
+./mkelf "$dumpfile" <<EOF
+ei_class = 2
+ei_data = 2
+e_machine = 21
+e_phoff = 0x1000
+
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create ELF file" >&2
+    exit $rc
+fi
+echo "Created ELF dump: $dumpfile"
+
+./checkattr "$dumpfile" <<EOF
+file = directory:
+file.fd = number
+file.format = string: elf
+
+cpu = directory:
+cpu.number = number:1
+cpu.0 = directory:
+cpu.0.reg.r0 = number:0x2020202020207230
+cpu.0.reg.r1 = number:0x2020202020207231
+cpu.0.reg.r2 = number:0x2020202020207232
+cpu.0.reg.r3 = number:0x2020202020207233
+cpu.0.reg.r4 = number:0x2020202020207234
+cpu.0.reg.r5 = number:0x2020202020207235
+cpu.0.reg.r6 = number:0x2020202020207236
+cpu.0.reg.r7 = number:0x2020202020207237
+cpu.0.reg.r8 = number:0x2020202020207238
+cpu.0.reg.r9 = number:0x2020202020207239
+cpu.0.reg.r10 = number:0x2020202020723130
+cpu.0.reg.r11 = number:0x2020202020723131
+cpu.0.reg.r12 = number:0x2020202020723132
+cpu.0.reg.r13 = number:0x2020202020723133
+cpu.0.reg.r14 = number:0x2020202020723134
+cpu.0.reg.r15 = number:0x2020202020723135
+cpu.0.reg.r16 = number:0x2020202020723136
+cpu.0.reg.r17 = number:0x2020202020723137
+cpu.0.reg.r18 = number:0x2020202020723138
+cpu.0.reg.r19 = number:0x2020202020723139
+cpu.0.reg.r20 = number:0x2020202020723230
+cpu.0.reg.r21 = number:0x2020202020723231
+cpu.0.reg.r22 = number:0x2020202020723232
+cpu.0.reg.r23 = number:0x2020202020723233
+cpu.0.reg.r24 = number:0x2020202020723234
+cpu.0.reg.r25 = number:0x2020202020723235
+cpu.0.reg.r26 = number:0x2020202020723236
+cpu.0.reg.r27 = number:0x2020202020723237
+cpu.0.reg.r28 = number:0x2020202020723238
+cpu.0.reg.r29 = number:0x2020202020723239
+cpu.0.reg.r30 = number:0x2020202020723330
+cpu.0.reg.r31 = number:0x2020202020723331
+cpu.0.reg.pc = number:0x2020202020207063
+cpu.0.reg.msr = number:0x20202020206d7372
+cpu.0.reg.or3 = number:0x206f7269675f7233
+cpu.0.reg.ctr = number:0x2020202020637472
+cpu.0.reg.lr = number:0x2020202020206c72
+cpu.0.reg.xer = number:0x2020202020786572
+cpu.0.reg.ccr = number:0x2020202020636372
+cpu.0.reg.softe = number:0x202020736f667465
+cpu.0.reg.trap = number:0x2020202074726170
+cpu.0.reg.dar = number:0x2020202020646172
+cpu.0.reg.dsisr = number:0x2020206473697372
+cpu.0.reg.res = number:0x2020726573756c74
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Attribute check failed" >&2
+    exit $rc
+fi
+
+exit 0
