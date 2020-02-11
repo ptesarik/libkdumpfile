@@ -70,64 +70,59 @@ struct elf_prstatus
 
 /** @endcond */
 
-static const struct attr_template reg_names[] = {
-#define REG(name)	{ #name, NULL, KDUMP_NUMBER }
-	REG(ebx),
-	REG(ecx),
-	REG(edx),
-	REG(esi),
-	REG(edi),
-	REG(ebp),
-	REG(eax),
-	REG(ds),
-	REG(es),
-	REG(fs),
-	REG(gs),
-	REG(orig_eax),
-	REG(eip),
-	REG(cs),
-	REG(eflags),
-	REG(esp),
-	REG(ss),
-};
+#define PRINFO(name, field, bits) \
+	{ { #name, { .depth = 0 }, KDUMP_NUMBER },	\
+	  offsetof(struct elf_prstatus, field), \
+	  (bits) / BITS_PER_BYTE }
 
-static const struct attr_template tmpl_pid =
-	{ "pid", NULL, KDUMP_NUMBER };
+#define REG(name, field, bits) \
+	{ { #name, { .depth = 1 }, KDUMP_NUMBER },	\
+	  offsetof(struct elf_prstatus, field), \
+	  (bits) / BITS_PER_BYTE }
+
+static struct blob_attr_def ia32_reg_attrs[] = {
+	REG(ebx, pr_reg[0], 32),
+	REG(ecx, pr_reg[1], 32),
+	REG(edx, pr_reg[2], 32),
+	REG(esi, pr_reg[3], 32),
+	REG(edi, pr_reg[4], 32),
+	REG(ebp, pr_reg[5], 32),
+	REG(eax, pr_reg[6], 32),
+	REG(ds,  pr_reg[7], 32),
+	REG(es,  pr_reg[8], 32),
+	REG(fs,  pr_reg[9], 32),
+	REG(gs,  pr_reg[10], 32),
+	REG(orig_eax, pr_reg[11], 32),
+	REG(eip, pr_reg[12], 32),
+	REG(cs,  pr_reg[13], 32),
+	REG(eflags, pr_reg[14], 32),
+	REG(esp, pr_reg[15], 32),
+	REG(ss,  pr_reg[16], 32),
+	PRINFO(pid, pr_pid, 32),
+};
 
 static kdump_status
 process_ia32_prstatus(kdump_ctx_t *ctx, const void *data, size_t size)
 {
-	const struct elf_prstatus *status = data;
-	char cpukey[sizeof("cpu.") + 20];
-	struct attr_data *dir, *attr;
-	kdump_status res;
+	unsigned cpu;
+	kdump_status status;
+
+	cpu = get_num_cpus(ctx);
+	set_num_cpus(ctx, get_num_cpus(ctx) + 1);
+
+	status = set_cpu_prstatus(ctx, cpu, data, size);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status,
+				 "Cannot set CPU %u PRSTATUS", cpu);
 
 	if (size < sizeof(struct elf_prstatus))
 		return set_error(ctx, KDUMP_ERR_CORRUPT,
 				 "Wrong PRSTATUS size: %zu", size);
 
-	res = set_cpu_regs32(ctx, get_num_cpus(ctx),
-			     reg_names, status->pr_reg, ELF_NGREG);
-	if (res != KDUMP_OK)
-		return res;
+	status = create_cpu_regs(
+		ctx, cpu, ia32_reg_attrs, ARRAY_SIZE(ia32_reg_attrs));
 
-	sprintf(cpukey, "cpu.%u", get_num_cpus(ctx));
-	dir = lookup_attr(ctx->dict, cpukey);
-	if (!dir)
-		return set_error(ctx, KDUMP_ERR_NOKEY,
-				 "'%s': %s", cpukey, "No such key");
-	attr = new_attr(ctx->dict, dir, &tmpl_pid);
-	if (!attr)
-		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot allocate '%s'", cpukey);
-	res = set_attr_number(ctx, attr, ATTR_DEFAULT,
-			      dump32toh(ctx, status->pr_pid));
-	if (res != KDUMP_OK)
-		return set_error(ctx, res,
-				 "Cannot set '%s'", cpukey);
-
-	set_num_cpus(ctx, get_num_cpus(ctx) + 1);
-	return KDUMP_OK;
+	return status;
 }
 
 static kdump_status
