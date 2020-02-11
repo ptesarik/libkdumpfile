@@ -1098,6 +1098,58 @@ prstatus_reg_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
 	return status;
 }
 
+/**  Update the PRSTATUS register after setting the register value.
+ * @param ctx   Dump object.
+ * @param attr  Register value attribute.
+ * @returns     Error status.
+ *
+ * Make sure that PRSTATUS and register attributes are always in
+ * a consistent state, even after setting the register attribute
+ * to a new value.
+ *
+ * This function should be used as a post-set hook.
+ */
+static kdump_status
+prstatus_reg_update(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	const struct blob_attr_def *def =
+		container_of(attr->template, struct blob_attr_def, tmpl);
+	kdump_blob_t *blob;
+	kdump_status status;
+	void *ptr;
+
+	if (attr->flags.invalid)
+		return KDUMP_OK;
+
+	status = get_prstatus_attr(ctx, attr, &blob);
+	if (status != KDUMP_OK)
+		return status;
+
+	ptr = internal_blob_pin(blob) + def->offset;
+	switch(def->length) {
+	case 1:
+		*(uint8_t*)ptr = attr->val.number;
+		break;
+	case 2:
+		*(uint16_t*)ptr = htodump16(ctx, attr->val.number);
+		break;
+	case 4:
+		*(uint32_t*)ptr = htodump32(ctx, attr->val.number);
+		break;
+	case 8:
+		*(uint64_t*)ptr = htodump64(ctx, attr->val.number);
+		break;
+	default:
+		status = set_error(ctx, KDUMP_ERR_NOTIMPL,
+				   "Writing %hu-byte values not implemented",
+				   def->length);
+	}
+	attr->flags.invalid = 1;
+	internal_blob_unpin(blob);
+
+	return status;
+}
+
 /**  Create a single CPU register attribute.
  * @param ctx  Dump object.
  * @param dir  Attribute directory (cpu.<num>.reg).
@@ -1148,6 +1200,7 @@ create_cpu_regs(kdump_ctx_t *ctx, unsigned cpu,
 {
 	static const struct attr_ops prstatus_reg_ops = {
 		.revalidate = prstatus_reg_revalidate,
+		.post_set = prstatus_reg_update,
 	};
 
 	struct attr_data *dir;

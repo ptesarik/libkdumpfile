@@ -68,4 +68,11 @@ if [ $rc -ne 0 ]; then
     exit $rc
 fi
 
+./elf-prstatus-mod-x86_64 "$dumpfile"
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Attribute modification check failed" >&2
+    exit $rc
+fi
+
 exit 0

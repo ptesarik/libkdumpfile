@@ -54,7 +54,7 @@ clearattr_LDADD = \
 	$(top_builddir)/src/kdumpfile/libkdumpfile.la
 
 custom_meth_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
-
+elf_prstatus_mod_x86_64_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
 err_addrxlat_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
 
 mkdiskdump_SOURCES = mkdiskdump.c
@@ -115,6 +115,7 @@ check_PROGRAMS = \
 	clearattr \
 	custom-meth \
 	dumpdata \
+	elf-prstatus-mod-x86_64 \
 	err-addrxlat \
 	mkdiskdump \
 	mkelf \
