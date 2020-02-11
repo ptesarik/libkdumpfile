@@ -74,6 +74,26 @@ print_bitmap(kdump_ctx_t *ctx, kdump_bmp_t *bmp)
 }
 
 static int
+print_blob(kdump_ctx_t *ctx, kdump_blob_t *blob)
+{
+	kdump_addr_t idx;
+	unsigned char *data;
+	size_t size;
+	kdump_status status;
+
+	data = kdump_blob_pin(blob);
+	size = kdump_blob_size(blob);
+
+	fputs("[ ", stdout);
+	while (size--)
+		printf("%02X", *data++);
+	fputs(" ]\n", stdout);
+
+	kdump_blob_unpin(blob);
+	return 0;
+}
+
+static int
 show_attr(kdump_ctx_t *ctx, kdump_attr_ref_t *ref, int indent, const char *key)
 {
 	kdump_attr_t attr;
@@ -103,6 +123,9 @@ show_attr(kdump_ctx_t *ctx, kdump_attr_ref_t *ref, int indent, const char *key)
 		break;
 	case KDUMP_BITMAP:
 		print_bitmap(ctx, attr.val.bitmap);
+		break;
+	case KDUMP_BLOB:
+		print_blob(ctx, attr.val.blob);
 		break;
 	case KDUMP_DIRECTORY:
 		if (key && *key)
