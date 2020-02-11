@@ -859,6 +859,25 @@ INTERNAL_DECL(kdump_status, set_cpu_regs,
 INTERNAL_DECL(kdump_status, set_file_description,
 	      (kdump_ctx_t *ctx, const char *name));
 
+/**  Translation of raw binary data to an attribute value.
+ */
+struct blob_attr_def {
+	/** Attribute template. */
+	struct attr_template tmpl;
+
+	/** Byte offset inside the blob. */
+	unsigned short offset;
+
+	/** Length in bytes. */
+	unsigned short length;
+};
+
+INTERNAL_DECL(kdump_status, create_cpu_regs,
+	      (kdump_ctx_t *ctx, unsigned cpu,
+	       struct blob_attr_def *def, unsigned ndef));
+INTERNAL_DECL(kdump_status, set_cpu_prstatus,
+	      (kdump_ctx_t *ctx, unsigned cpu, const void *data, size_t size));
+
 /* hashing */
 INTERNAL_DECL(unsigned long, string_hash, (const char *s));
 INTERNAL_DECL(unsigned long, mem_hash, (const char *s, size_t len));

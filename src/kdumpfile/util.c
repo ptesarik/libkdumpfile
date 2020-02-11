@@ -815,7 +815,30 @@ get_symbol_val(kdump_ctx_t *ctx, const char *name, kdump_addr_t *val)
 	return KDUMP_OK;
 }
 
-/** Get a CPU directory attribute by number.
+/**  Get the CPU directory attribute.
+ * @param ctx   Dump object.
+ * @param cpu   CPU number.
+ * @param pdir  Directory attribute, set on success.
+ * @returns     Error status.
+ *
+ * If the directory attribute does not exist yet, it is created.
+ */
+static kdump_status
+cpu_dir(kdump_ctx_t *ctx, unsigned cpu, struct attr_data **pdir)
+{
+	char cpukey[21];
+	size_t keylen;
+
+	keylen = sprintf(cpukey, "%u", cpu);
+	*pdir = create_attr_path(ctx->dict, gattr(ctx, GKI_dir_cpu),
+				 cpukey, keylen, &dir_template);
+	return *pdir
+		? KDUMP_OK
+		: set_error(ctx, KDUMP_ERR_SYSTEM,
+			    "Cannot allocate CPU %u attributes", cpu);
+}
+
+/**  Get the CPU register directory attribute.
  * @param ctx   Dump object.
  * @param cpu   CPU number.
  * @param pdir  Directory attribute, set on success.
@@ -836,6 +859,60 @@ cpu_regs_dir(kdump_ctx_t *ctx, unsigned cpu, struct attr_data **pdir)
 		? KDUMP_OK
 		: set_error(ctx, KDUMP_ERR_SYSTEM,
 			    "Cannot allocate CPU %u registers", cpu);
+}
+
+/**  Set the PRSTATUS attribute for a CPU
+ * @param ctx   Dump object.
+ * @param cpu   CPU number.
+ * @param data  PRSTATUS raw binary data.
+ * @param size  Size of the PRSTATUS data in bytes.
+ * @returns     Error status.
+ */
+kdump_status
+set_cpu_prstatus(kdump_ctx_t *ctx, unsigned cpu, const void *data, size_t size)
+{
+        static const struct attr_template prstatus_tmpl = {
+		.key = "PRSTATUS",
+                .type = KDUMP_BLOB,
+        };
+
+	void *buffer;
+	struct attr_data *dir, *attr;
+	kdump_attr_value_t val;
+	kdump_status status;
+
+	status = cpu_dir(ctx, cpu, &dir);
+	if (status != KDUMP_OK)
+		return status;
+
+	buffer = malloc(size);
+	if (!buffer)
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Buffer allocation failed");
+	memcpy(buffer, data, size);
+
+	val.blob = kdump_blob_new(buffer, size);
+	if (!val.blob) {
+		free(buffer);
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Blob allocation failed");
+	}
+
+	attr = new_attr(ctx->dict, dir, &prstatus_tmpl);
+	if (!attr) {
+		kdump_blob_decref(val.blob);
+		return set_error(ctx, status,
+				 "Attribute allocation failed");
+	}
+
+	status = set_attr(ctx, attr, ATTR_DEFAULT, &val);
+	if (status != KDUMP_OK) {
+		kdump_blob_decref(val.blob);
+		return set_error(ctx, status,
+				 "Cannot set attribute");
+	}
+
+	return status;
 }
 
 /** Set a single CPU register.
@@ -951,6 +1028,117 @@ set_cpu_regs16(kdump_ctx_t *ctx, unsigned cpu,
 	while (status == KDUMP_OK && num--)
 		status = set_cpu_reg(ctx, dir, tmpl++,
 				     dump16toh(ctx, *regs++));
+	return status;
+}
+
+/**  Get register value from the corresponding PRSTATUS attribute.
+ * @param ctx   Dump object.
+ * @param attr  Register value attribute.
+ * @returns     Error status.
+ *
+ * This is implemented as a revalidation hook, but the attribute's
+ * invalid flag is not removed, so the hook is called for every
+ * attribute read.
+ */
+static kdump_status
+prstatus_reg_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	const struct blob_attr_def *def =
+		container_of(attr->template, struct blob_attr_def, tmpl);
+	struct attr_data *raw;
+	kdump_status status;
+	void *ptr;
+
+	raw = lookup_dir_attr(ctx->dict, attr->parent->parent, "PRSTATUS", 8);
+	if (!raw)
+		return set_error(ctx, KDUMP_ERR_NODATA, "PRSTATUS not found");
+
+	status = KDUMP_OK;
+	ptr = internal_blob_pin(raw->val.blob) + def->offset;
+	switch(def->length) {
+	case 1:
+		attr->val.number = *(uint8_t*)ptr;
+		break;
+	case 2:
+		attr->val.number = dump16toh(ctx, *(uint16_t*)ptr);
+		break;
+	case 4:
+		attr->val.number = dump32toh(ctx, *(uint32_t*)ptr);
+		break;
+	case 8:
+		attr->val.number = dump64toh(ctx, *(uint64_t*)ptr);
+		break;
+	default:
+		status = set_error(ctx, KDUMP_ERR_NOTIMPL,
+				   "Reading %hu-byte values not implemented",
+				   def->length);
+	}
+	internal_blob_unpin(raw->val.blob);
+
+	return status;
+}
+
+/**  Create a single CPU register attribute.
+ * @param ctx  Dump object.
+ * @param dir  Attribute directory (cpu.<num>.reg).
+ * @param def  Register definition.
+ * @returns    Error status.
+ */
+static kdump_status
+create_cpu_reg(kdump_ctx_t *ctx, struct attr_data *dir,
+	       struct blob_attr_def *def)
+{
+	struct attr_data *attr;
+	const char *action;
+	kdump_status status;
+
+	action = "allocate";
+	attr = new_attr(ctx->dict, dir, &def->tmpl);
+	if (!attr)
+		goto err;
+
+	action = "set";
+	status = set_attr_number(ctx, attr, ATTR_INVALID, 0);
+	if (status != KDUMP_OK)
+		goto err;
+
+	return KDUMP_OK;
+
+err:
+	return set_error(ctx, status,
+			 "Cannot %s CPU %s register %s",
+			 action, dir->template->key, def->tmpl.key);
+}
+
+/**  Create a set of CPU register attributes.
+ * @param ctx   Dump object.
+ * @param cpu   CPU number.
+ * @param def   Register definitions (array).
+ * @param ndef  Number of entries in the @c def array.
+ * @returns     Error status.
+ *
+ * Use this function to create register attributes under
+ * cpu.<num>.reg.  The values are taken from the corresponding
+ * cpu.<num>.PRSTATUS blob attribute, using offsets and sizes
+ * from the definition array.
+ */
+kdump_status
+create_cpu_regs(kdump_ctx_t *ctx, unsigned cpu,
+		struct blob_attr_def *def, unsigned ndef)
+{
+	static const struct attr_ops prstatus_reg_ops = {
+		.revalidate = prstatus_reg_revalidate,
+	};
+
+	struct attr_data *dir;
+	kdump_status status;
+
+	status = cpu_regs_dir(ctx, cpu, &dir);
+	while (status == KDUMP_OK && ndef--) {
+		def->tmpl.ops = &prstatus_reg_ops;
+		status = create_cpu_reg(ctx, dir, def++);
+	}
+
 	return status;
 }
 
