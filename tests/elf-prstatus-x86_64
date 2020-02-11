@@ -60,7 +60,7 @@ cpu.0.reg.ds = number:0x7364202020202020
 cpu.0.reg.es = number:0x7365202020202020
 cpu.0.reg.fs = number:0x7366202020202020
 cpu.0.reg.gs = number:0x7367202020202020
-cpu.0.reg.pid = number:0x6469705f
+cpu.0.pid = number:0x6469705f
 EOF
 rc=$?
 if [ $rc -ne 0 ]; then

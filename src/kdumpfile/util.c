@@ -1042,8 +1042,12 @@ get_prstatus_attr(kdump_ctx_t *ctx, struct attr_data *attr,
 		  kdump_blob_t **blob)
 {
 	struct attr_data *raw;
+	unsigned i;
 
-	raw = lookup_dir_attr(ctx->dict, attr->parent->parent,
+	for (i = attr->template->depth; i; --i)
+		attr = attr->parent;
+
+	raw = lookup_dir_attr(ctx->dict, attr->parent,
 			      "PRSTATUS", sizeof("PRSTATUS")-1);
 	if (!raw)
 		return set_error(ctx, KDUMP_ERR_NODATA, "PRSTATUS not found");
@@ -1163,6 +1167,10 @@ create_cpu_reg(kdump_ctx_t *ctx, struct attr_data *dir,
 	struct attr_data *attr;
 	const char *action;
 	kdump_status status;
+	unsigned i;
+
+	for (i = 1 - def->tmpl.depth; i; --i)
+		dir = dir->parent;
 
 	action = "allocate";
 	attr = new_attr(ctx->dict, dir, &def->tmpl);

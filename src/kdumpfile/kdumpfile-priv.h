@@ -413,6 +413,8 @@ struct attr_template {
 		const struct attr_template *parent;
 		/** Global keys: attribute index in the global array. */
 		enum global_keyidx parent_key;
+		/** CPU registers: number of levels below cpu.<num>. */
+		unsigned depth;
 	};
 	kdump_attr_type_t type;
 	const struct attr_ops *ops;
