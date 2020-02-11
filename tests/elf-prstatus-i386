@@ -1,0 +1,61 @@
+#! /bin/sh
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+datafile="$srcdir/${name}.data"
+dumpfile="out/${name}.dump"
+resultfile="out/${name}.result"
+expectfile="$srcdir/${name}.expect"
+
+./mkelf "$dumpfile" <<EOF
+ei_class = 1
+ei_data = 1
+e_machine = 3
+e_phoff = 0x1000
+e_phentsize = 32
+
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create ELF file" >&2
+    exit $rc
+fi
+echo "Created ELF dump: $dumpfile"
+
+./checkattr "$dumpfile" <<EOF
+file = directory:
+file.fd = number
+file.format = string: elf
+
+cpu = directory:
+cpu.number = number:1
+cpu.0 = directory:
+cpu.0.reg = directory:
+cpu.0.reg.ebx = number:0x78626520
+cpu.0.reg.ecx = number:0x78636520
+cpu.0.reg.edx = number:0x78646520
+cpu.0.reg.esi = number:0x69736520
+cpu.0.reg.edi = number:0x69646520
+cpu.0.reg.ebp = number:0x70626520
+cpu.0.reg.eax = number:0x78616520
+cpu.0.reg.ds = number:0x73642020
+cpu.0.reg.es = number:0x73652020
+cpu.0.reg.fs = number:0x73662020
+cpu.0.reg.gs = number:0x73672020
+cpu.0.reg.orig_eax = number:0x6769726f
+cpu.0.reg.eip = number:0x70696520
+cpu.0.reg.cs = number:0x73632020
+cpu.0.reg.eflags = number:0x616c6665
+cpu.0.reg.esp = number:0x70736520
+cpu.0.reg.ss = number:0x73732020
+cpu.0.pid = number:0x6469705f
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Attribute check failed" >&2
+    exit $rc
+fi
+
+exit 0
