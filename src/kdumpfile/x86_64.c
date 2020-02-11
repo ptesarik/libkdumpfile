@@ -182,6 +182,7 @@ static const struct attr_template reg_names[] = {
 	REG(dr7),		/* 42 */
 
 	REG(pid),		/* 43 */
+#undef REG
 };
 
 static kdump_status
@@ -260,37 +261,64 @@ x86_64_post_addrxlat(kdump_ctx_t *ctx)
 	return revalidate_xlat(ctx);
 }
 
-#define REG_CNT(start, end)				\
-	((offsetof(struct elf_prstatus, end)		\
-	  - offsetof(struct elf_prstatus, start))	\
-	 / sizeof(((struct elf_prstatus*)0)->start)	\
-	 + 1)
+#define REG(name, field, bits) \
+	{ { #name, NULL, KDUMP_NUMBER }, \
+	  offsetof(struct elf_prstatus, field), \
+	  (bits) / BITS_PER_BYTE }
 
-#define REG_DEF(bits, firstreg, lastreg, regnum)			\
-	{ offsetof(struct elf_prstatus, firstreg),		\
-	  (regnum), REG_CNT(firstreg, lastreg), (bits) }
+static struct blob_attr_def x86_64_reg_attrs[] = {
+	REG(r15, pr_reg[0], 64),
+	REG(r14, pr_reg[1], 64),
+	REG(r13, pr_reg[2], 64),
+	REG(r12, pr_reg[3], 64),
+	REG(rbp, pr_reg[4], 64),
+	REG(rbx, pr_reg[5], 64),
+	REG(r11, pr_reg[6], 64),
+	REG(r10, pr_reg[7], 64),
+	REG(r9,  pr_reg[8], 64),
+	REG(r8,  pr_reg[9], 64),
+	REG(rax, pr_reg[10], 64),
+	REG(rcx, pr_reg[11], 64),
+	REG(rdx, pr_reg[12], 64),
+	REG(rsi, pr_reg[13], 64),
+	REG(rdi, pr_reg[14], 64),
+	REG(orig_rax, pr_reg[15], 64),
+	REG(rip, pr_reg[16], 64),
+	REG(cs,  pr_reg[17], 64),
+	REG(rflags, pr_reg[18], 64),
+	REG(rsp, pr_reg[19], 64),
+	REG(ss,  pr_reg[20], 64),
+	REG(fs_base, pr_reg[21], 64),
+	REG(gs_base, pr_reg[22], 64),
+	REG(ds, pr_reg[23], 64),
+	REG(es, pr_reg[24], 64),
+	REG(fs, pr_reg[25], 64),
+	REG(gs, pr_reg[26], 64),
+	REG(pid, pr_pid, 32),
+};
 
 static kdump_status
 process_x86_64_prstatus(kdump_ctx_t *ctx, const void *data, size_t size)
 {
-	static const struct reg_def def[] = {
-		REG_DEF(64, pr_reg[0], pr_reg[ELF_NGREG - 1], 0),
-		REG_DEF(32, pr_pid, pr_pid, 43),
-		REG_DEF_END
-	};
+	unsigned cpu;
+	kdump_status status;
 
-	kdump_status res;
+	cpu = get_num_cpus(ctx);
+	set_num_cpus(ctx, get_num_cpus(ctx) + 1);
+
+	status = set_cpu_prstatus(ctx, cpu, data, size);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status,
+				 "Cannot set CPU %u PRSTATUS", cpu);
 
 	if (size < sizeof(struct elf_prstatus))
 		return set_error(ctx, KDUMP_ERR_CORRUPT,
 				 "Wrong PRSTATUS size: %zu", size);
 
-	res = set_cpu_regs(ctx, get_num_cpus(ctx), reg_names, data, def);
-	if (res != KDUMP_OK)
-		return res;
+	status = create_cpu_regs(
+		ctx, cpu, x86_64_reg_attrs, ARRAY_SIZE(x86_64_reg_attrs));
 
-	set_num_cpus(ctx, get_num_cpus(ctx) + 1);
-	return KDUMP_OK;
+	return status;
 }
 
 #define XEN_REG_CNT(start, end)					\
