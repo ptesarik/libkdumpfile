@@ -180,12 +180,64 @@ check_attr_bmp(kdump_ctx_t *ctx, char *key, const struct number_array *expect)
 }
 
 static int
+check_attr_blob(kdump_ctx_t *ctx, char *key, const struct blob *expect)
+{
+	kdump_attr_t attr;
+	unsigned char *data;
+	size_t size;
+	kdump_status status;
+	size_t i;
+
+	printf("Checking %s... ", key);
+	if (kdump_get_attr(ctx, key, &attr) != KDUMP_OK) {
+		puts("FAILED");
+		fprintf(stderr, "Cannot get attribute %s: %s\n",
+			key, kdump_get_err(ctx));
+		return TEST_FAIL;
+	}
+
+	if (attr.type != KDUMP_BLOB) {
+		puts("FAILED");
+		fprintf(stderr, "Type mismatch for %s: expect %u, got %u\n",
+			key, (unsigned) KDUMP_BLOB, (unsigned) attr.type);
+		return TEST_FAIL;
+	}
+
+	data = kdump_blob_pin(attr.val.blob);
+	size = kdump_blob_size(attr.val.blob);
+	if (size != expect->length) {
+		kdump_blob_unpin(attr.val.blob);
+		puts("FAILED");
+		fprintf(stderr, "Size mismatch for %s: expect %zd, got %zd\n",
+			key, expect->length, size);
+		return TEST_FAIL;
+	}
+
+	for (i = 0; i < size; ++i) {
+		if (data[i] != expect->data[i]) {
+			kdump_blob_unpin(attr.val.blob);
+			puts("FAILED");
+			fprintf(stderr, "%s value mismatch at index %u: ",
+				key, i);
+			fprintf(stderr, "expect 0x%02x, got 0x%02x\n",
+				expect->data[i], data[i]);
+			return TEST_FAIL;
+		}
+	}
+	kdump_blob_unpin(attr.val.blob);
+
+	puts("OK");
+	return TEST_OK;
+}
+
+static int
 check_attr_val(kdump_ctx_t *ctx, char *key, char *val)
 {
 	char *sep, *p, savedsep;
 	unsigned long long number;
 	char *string;
 	struct number_array number_array;
+	struct blob *blob;
 	struct param param;
 	kdump_attr_t attr;
 	int rc;
@@ -219,6 +271,11 @@ check_attr_val(kdump_ctx_t *ctx, char *key, char *val)
 		param.type = param_number_array;
 		param.number_array = &number_array;
 		number_array.val = NULL;
+	} else if (!strcmp(val, "blob")) {
+		attr.type = KDUMP_BLOB;
+		param.type = param_blob;
+		param.blob = &blob;
+		blob = NULL;
 	} else if (!strcmp(val, "nil")) {
 		return check_noattr(ctx, key);
 	} else {
@@ -245,6 +302,8 @@ check_attr_val(kdump_ctx_t *ctx, char *key, char *val)
 	case KDUMP_STRING:  attr.val.string = string;  break;
 	case KDUMP_BITMAP:
 		return check_attr_bmp(ctx, key, &number_array);
+	case KDUMP_BLOB:
+		return check_attr_blob(ctx, key, blob);
 	default:
 		fprintf(stderr, "INTERNAL ERROR: Invalid attr type: %u\n",
 			(unsigned) attr.type);

@@ -96,6 +96,13 @@ unoct(char digit)
 	return -1;
 }
 
+/* Generic types */
+
+struct blob {
+	size_t length;
+	unsigned char data[];
+};
+
 /* Parameter files */
 
 struct number_array {
@@ -109,11 +116,13 @@ struct param {
 		param_string,
 		param_number,
 		param_number_array,
+		param_blob,
 	} type;
 	union {
 		char **string;
 		unsigned long long *number;
 		struct number_array *number_array;
+		struct blob **blob;
 	};
 };
 
@@ -163,10 +172,6 @@ int compress_rle(unsigned char *dst, size_t *pdstlen,
 		 const unsigned char *src, size_t srclen);
 
 /* File content slurping */
-struct blob {
-	size_t length;
-	unsigned char data[];
-};
 
 struct blob *slurp(const char *fname);
 struct blob *slurp_file(FILE *f);

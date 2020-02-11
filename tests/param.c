@@ -212,6 +212,57 @@ set_param_number_array(const struct param *param, const char *val)
 	return TEST_OK;
 }
 
+static int
+set_param_blob(const struct param *param, const char *val)
+{
+	struct blob *blob;
+	unsigned i, n;
+	const char *p;
+	unsigned char *valp;
+	char *endp;
+
+	p = strpbrk(val, ARRAY_SEPARATORS);
+	n = p ? p - val : strlen(val);
+	if (n % 2 != 0) {
+		fputs("Blob hex string has odd length!\n", stderr);
+		return TEST_FAIL;
+	}
+	n /= 2;
+
+	blob = malloc(sizeof(struct blob) + n);
+	if (!blob) {
+		perror("Blob allocation failed");
+		return TEST_ERR;
+	}
+	blob->length = n;
+
+	p = val;
+	valp = blob->data;
+	for (i = 0; i < n; ++i) {
+		int isok = 0;
+
+		if (isxdigit(*p)) {
+			*valp = unhex(*p++) << 4;
+			if (isxdigit(*p)) {
+				*valp |= unhex(*p++);
+				isok = 1;
+			}
+		}
+		if (!isok) {
+			fprintf(stderr, "Invalid hex digit at %d: '%c'\n",
+				p - val, *p);
+			free(blob);
+			return TEST_FAIL;
+		}
+		++valp;
+	}
+
+	if (*param->blob)
+		free(*param->blob);
+	*param->blob = blob;
+	return TEST_OK;
+}
+
 int
 set_param(const struct param *p, const char *val)
 {
@@ -224,6 +275,9 @@ set_param(const struct param *p, const char *val)
 
 	case param_number_array:
 		return set_param_number_array(p, val);
+
+	case param_blob:
+		return set_param_blob(p, val);
 	}
 
 	fprintf(stderr, "INTERNAL ERROR: Invalid param type: %d\n",
