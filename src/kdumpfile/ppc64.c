@@ -39,62 +39,55 @@
 
 static const struct attr_template reg_names[] = {
 #define REG(name)	{ #name, NULL, KDUMP_NUMBER }
-	REG(gpr00),
-	REG(gpr01),
-	REG(gpr02),
-	REG(gpr03),
-	REG(gpr04),
-	REG(gpr05),
-	REG(gpr06),
-	REG(gpr07),
-	REG(gpr08),
-	REG(gpr09),
-	REG(gpr10),
-	REG(gpr11),
-	REG(gpr12),
-	REG(gpr13),
-	REG(gpr14),
-	REG(gpr15),
-	REG(gpr16),
-	REG(gpr17),
-	REG(gpr18),
-	REG(gpr19),
-	REG(gpr20),
-	REG(gpr21),
-	REG(gpr22),
-	REG(gpr23),
-	REG(gpr24),
-	REG(gpr25),
-	REG(gpr26),
-	REG(gpr27),
-	REG(gpr28),
-	REG(gpr29),
-	REG(gpr30),
-	REG(gpr31),
-	REG(nip),
+	REG(r0),
+	REG(r1),
+	REG(r2),
+	REG(r3),
+	REG(r4),
+	REG(r5),
+	REG(r6),
+	REG(r7),
+	REG(r8),
+	REG(r9),
+	REG(r10),
+	REG(r11),
+	REG(r12),
+	REG(r13),
+	REG(r14),
+	REG(r15),
+	REG(r16),
+	REG(r17),
+	REG(r18),
+	REG(r19),
+	REG(r20),
+	REG(r21),
+	REG(r22),
+	REG(r23),
+	REG(r24),
+	REG(r25),
+	REG(r26),
+	REG(r27),
+	REG(r28),
+	REG(r29),
+	REG(r30),
+	REG(r31),
+	REG(pc),
 	REG(msr),
 	REG(or3),
 	REG(ctr),
 	REG(lr),
 	REG(xer),
 	REG(ccr),
-	REG(mq),
+	REG(softe),
+	REG(trap),
 	REG(dar),
 	REG(dsisr),
-	REG(rx1),
-	REG(rx2),
-	REG(rx3),
-	REG(rx4),
-	REG(rx5),
-	REG(rx6),
-	REG(rx7),
-	REG(rx8),
-	REG(rx9),
+	REG(res),
 };
 
 /** @cond TARGET_ABI */
 
-#define ELF_NGREG 49
+#define ELF_NGREG 48
 
 struct elf_siginfo
 {
@@ -120,10 +113,18 @@ struct elf_prstatus
 	struct timeval_64 pr_cutime;	/* UNUSED in kernel cores */
 	struct timeval_64 pr_cstime;	/* UNUSED in kernel cores */
 	uint64_t pr_reg[ELF_NGREG];	/* GP registers */
+	int32_t pr_fpvalid;		/* UNUSED in kernel cores */
 	/* optional UNUSED fields may follow */
 } __attribute__((packed));
 
 /** @endcond */
+
+/**  Number of registers in struct pt_regs.
+ *
+ * This is the number of registers that are actually saved in a kernel crash
+ * dump. Rest of the structure is always filled with zeroes.
+ */
+#define ELF_NGREG_PTREGS	44
 
 static kdump_status
 process_ppc64_prstatus(kdump_ctx_t *ctx, const void *data, size_t size)
@@ -136,7 +137,7 @@ process_ppc64_prstatus(kdump_ctx_t *ctx, const void *data, size_t size)
 				 "Wrong PRSTATUS size: %zu", size);
 
 	res = set_cpu_regs64(ctx, get_num_cpus(ctx), reg_names,
-			     status->pr_reg, ELF_NGREG);
+			     status->pr_reg, ELF_NGREG_PTREGS);
 
 	if (res != KDUMP_OK)
 		return res;
