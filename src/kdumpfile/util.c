@@ -1031,6 +1031,27 @@ set_cpu_regs16(kdump_ctx_t *ctx, unsigned cpu,
 	return status;
 }
 
+/**  Get the PRSTATUS blob corresponding to a register attribute.
+ * @param ctx   Dump object.
+ * @param attr  Register value attribute.
+ * @param blob  Pointer to the blob variable.
+ * @returns     Error status.
+ */
+static kdump_status
+get_prstatus_attr(kdump_ctx_t *ctx, struct attr_data *attr,
+		  kdump_blob_t **blob)
+{
+	struct attr_data *raw;
+
+	raw = lookup_dir_attr(ctx->dict, attr->parent->parent,
+			      "PRSTATUS", sizeof("PRSTATUS")-1);
+	if (!raw)
+		return set_error(ctx, KDUMP_ERR_NODATA, "PRSTATUS not found");
+
+	*blob = raw->val.blob;
+	return KDUMP_OK;
+}
+
 /**  Get register value from the corresponding PRSTATUS attribute.
  * @param ctx   Dump object.
  * @param attr  Register value attribute.
@@ -1045,16 +1066,15 @@ prstatus_reg_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	const struct blob_attr_def *def =
 		container_of(attr->template, struct blob_attr_def, tmpl);
-	struct attr_data *raw;
+	kdump_blob_t *blob;
 	kdump_status status;
 	void *ptr;
 
-	raw = lookup_dir_attr(ctx->dict, attr->parent->parent, "PRSTATUS", 8);
-	if (!raw)
-		return set_error(ctx, KDUMP_ERR_NODATA, "PRSTATUS not found");
+	status = get_prstatus_attr(ctx, attr, &blob);
+	if (status != KDUMP_OK)
+		return status;
 
-	status = KDUMP_OK;
-	ptr = internal_blob_pin(raw->val.blob) + def->offset;
+	ptr = internal_blob_pin(blob) + def->offset;
 	switch(def->length) {
 	case 1:
 		attr->val.number = *(uint8_t*)ptr;
@@ -1073,7 +1093,7 @@ prstatus_reg_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
 				   "Reading %hu-byte values not implemented",
 				   def->length);
 	}
-	internal_blob_unpin(raw->val.blob);
+	internal_blob_unpin(blob);
 
 	return status;
 }
