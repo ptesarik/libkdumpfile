@@ -295,6 +295,9 @@ struct _kdump_blob {
 INTERNAL_DECL(kdump_blob_t *, kdump_blob_new,
 	      (void *data, size_t size));
 
+DECLARE_ALIAS(blob_pin);
+DECLARE_ALIAS(blob_unpin);
+
 /* provide our own definition of new_utsname */
 #define NEW_UTS_LEN 64
 #define UTS_SYSNAME "Linux"

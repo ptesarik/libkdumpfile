@@ -73,12 +73,16 @@ kdump_blob_decref(kdump_blob_t *blob)
 	return refcnt;
 }
 
+DEFINE_ALIAS(blob_pin);
+
 void *
 kdump_blob_pin(kdump_blob_t *blob)
 {
 	++blob->pincnt;
 	return blob->data;
 }
+
+DEFINE_ALIAS(blob_unpin);
 
 unsigned long
 kdump_blob_unpin(kdump_blob_t *blob)
