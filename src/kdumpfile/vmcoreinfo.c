@@ -292,7 +292,7 @@ kdump_vmcoreinfo_raw(kdump_ctx_t *ctx, const char **raw)
 
 	ret = get_raw_locked(ctx, raw);
 
-	rwlock_rdlock(&ctx->shared->lock);
+	rwlock_unlock(&ctx->shared->lock);
 	return ret;
 }
 
