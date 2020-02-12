@@ -861,21 +861,19 @@ cpu_regs_dir(kdump_ctx_t *ctx, unsigned cpu, struct attr_data **pdir)
 			    "Cannot allocate CPU %u registers", cpu);
 }
 
-/**  Set the PRSTATUS attribute for a CPU
+/**  Initialize a per-cpu blob attribute.
  * @param ctx   Dump object.
  * @param cpu   CPU number.
- * @param data  PRSTATUS raw binary data.
- * @param size  Size of the PRSTATUS data in bytes.
+ * @param data  Raw binary data.
+ * @param size  Size of the binary data in bytes.
+ * @param tmpl  Blob attribute template.
  * @returns     Error status.
  */
-kdump_status
-set_cpu_prstatus(kdump_ctx_t *ctx, unsigned cpu, const void *data, size_t size)
+static kdump_status
+init_cpu_blob_attr(kdump_ctx_t *ctx, unsigned cpu,
+		   const void *data, size_t size,
+		   const struct attr_template *tmpl)
 {
-        static const struct attr_template prstatus_tmpl = {
-		.key = "PRSTATUS",
-                .type = KDUMP_BLOB,
-        };
-
 	void *buffer;
 	struct attr_data *dir, *attr;
 	kdump_attr_value_t val;
@@ -898,7 +896,7 @@ set_cpu_prstatus(kdump_ctx_t *ctx, unsigned cpu, const void *data, size_t size)
 				 "Blob allocation failed");
 	}
 
-	attr = new_attr(ctx->dict, dir, &prstatus_tmpl);
+	attr = new_attr(ctx->dict, dir, tmpl);
 	if (!attr) {
 		kdump_blob_decref(val.blob);
 		return set_error(ctx, status,
@@ -913,6 +911,24 @@ set_cpu_prstatus(kdump_ctx_t *ctx, unsigned cpu, const void *data, size_t size)
 	}
 
 	return status;
+}
+
+/**  Initialize the PRSTATUS attribute for a CPU
+ * @param ctx   Dump object.
+ * @param cpu   CPU number.
+ * @param data  PRSTATUS raw binary data.
+ * @param size  Size of the PRSTATUS data in bytes.
+ * @returns     Error status.
+ */
+kdump_status
+init_cpu_prstatus(kdump_ctx_t *ctx, unsigned cpu,
+		  const void *data, size_t size)
+{
+        static const struct attr_template prstatus_tmpl = {
+		.key = "PRSTATUS",
+                .type = KDUMP_BLOB,
+        };
+	return init_cpu_blob_attr(ctx, cpu, data, size, &prstatus_tmpl);
 }
 
 /** Set a single CPU register.
@@ -1031,15 +1047,16 @@ set_cpu_regs16(kdump_ctx_t *ctx, unsigned cpu,
 	return status;
 }
 
-/**  Get the PRSTATUS blob corresponding to a register attribute.
+/**  Get the blob corresponding to a derived number attribute.
  * @param ctx   Dump object.
- * @param attr  Register value attribute.
+ * @param attr  Derived attribute.
+ * @param name  Name of the blob attribute.
  * @param blob  Pointer to the blob variable.
  * @returns     Error status.
  */
 static kdump_status
-get_prstatus_attr(kdump_ctx_t *ctx, struct attr_data *attr,
-		  kdump_blob_t **blob)
+get_attr_blob(kdump_ctx_t *ctx, struct attr_data *attr,
+	      const char *name, kdump_blob_t **blob)
 {
 	struct attr_data *raw;
 	unsigned i;
@@ -1047,8 +1064,7 @@ get_prstatus_attr(kdump_ctx_t *ctx, struct attr_data *attr,
 	for (i = attr->template->depth; i; --i)
 		attr = attr->parent;
 
-	raw = lookup_dir_attr(ctx->dict, attr->parent,
-			      "PRSTATUS", sizeof("PRSTATUS")-1);
+	raw = lookup_dir_attr(ctx->dict, attr->parent, name, strlen(name));
 	if (!raw)
 		return set_error(ctx, KDUMP_ERR_NODATA, "PRSTATUS not found");
 
@@ -1056,25 +1072,26 @@ get_prstatus_attr(kdump_ctx_t *ctx, struct attr_data *attr,
 	return KDUMP_OK;
 }
 
-/**  Get register value from the corresponding PRSTATUS attribute.
+/**  Get attribute value from the corresponding blob attribute.
  * @param ctx   Dump object.
- * @param attr  Register value attribute.
+ * @param attr  Derived attribute.
+ * @param name  Name of the corresponding blob attribute.
  * @returns     Error status.
  *
- * This is implemented as a revalidation hook, but the attribute's
- * invalid flag is not removed, so the hook is called for every
- * attribute read.
+ * Call this from a revalidation hook to update the current value.
+ * The attribute's invalid flag is not removed, so the hook will be
+ * called for every attribute read.
  */
 static kdump_status
-prstatus_reg_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
+derived_attr_revalidate(kdump_ctx_t *ctx, struct attr_data *attr,
+			const char *name)
 {
-	const struct blob_attr_def *def =
-		container_of(attr->template, struct blob_attr_def, tmpl);
+	const struct derived_attr_def *def = attr_to_derived_def(attr);
 	kdump_blob_t *blob;
 	kdump_status status;
 	void *ptr;
 
-	status = get_prstatus_attr(ctx, attr, &blob);
+	status = get_attr_blob(ctx, attr, name, &blob);
 	if (status != KDUMP_OK)
 		return status;
 
@@ -1102,22 +1119,21 @@ prstatus_reg_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
 	return status;
 }
 
-/**  Update the PRSTATUS register after setting the register value.
+/**  Update blob after setting a derived attribute's value.
  * @param ctx   Dump object.
- * @param attr  Register value attribute.
+ * @param attr  Derived attribute.
+ * @param name  Name of the corresponding blob attribute.
  * @returns     Error status.
  *
- * Make sure that PRSTATUS and register attributes are always in
- * a consistent state, even after setting the register attribute
- * to a new value.
- *
- * This function should be used as a post-set hook.
+ * Call this from a post-set hook to update the blob attribute.
+ * Since a derived attribute's value is always retrieved from the
+ * corresponding blob, the blob must be updated to assign a new value.
  */
 static kdump_status
-prstatus_reg_update(kdump_ctx_t *ctx, struct attr_data *attr)
+derived_attr_update(kdump_ctx_t *ctx, struct attr_data *attr,
+		    const char *name)
 {
-	const struct blob_attr_def *def =
-		container_of(attr->template, struct blob_attr_def, tmpl);
+	const struct derived_attr_def *def = attr_to_derived_def(attr);
 	kdump_blob_t *blob;
 	kdump_status status;
 	void *ptr;
@@ -1125,7 +1141,7 @@ prstatus_reg_update(kdump_ctx_t *ctx, struct attr_data *attr)
 	if (attr->flags.invalid)
 		return KDUMP_OK;
 
-	status = get_prstatus_attr(ctx, attr, &blob);
+	status = get_attr_blob(ctx, attr, name, &blob);
 	if (status != KDUMP_OK)
 		return status;
 
@@ -1154,15 +1170,15 @@ prstatus_reg_update(kdump_ctx_t *ctx, struct attr_data *attr)
 	return status;
 }
 
-/**  Create a single CPU register attribute.
+/**  Create a derived attribute.
  * @param ctx  Dump object.
- * @param dir  Attribute directory (cpu.<num>.reg).
- * @param def  Register definition.
+ * @param dir  Directory containing the blob attribute.
+ * @param def  Derived attribute definition.
  * @returns    Error status.
  */
 static kdump_status
-create_cpu_reg(kdump_ctx_t *ctx, struct attr_data *dir,
-	       struct blob_attr_def *def)
+create_derived_attr(kdump_ctx_t *ctx, struct attr_data *dir,
+		    struct derived_attr_def *def)
 {
 	struct attr_data *attr;
 	const char *action;
@@ -1190,6 +1206,28 @@ err:
 			 action, dir->template->key, def->tmpl.key);
 }
 
+/**  Get register value from the corresponding PRSTATUS attribute.
+ * @param ctx   Dump object.
+ * @param attr  Register value attribute.
+ * @returns     Error status.
+ */
+static kdump_status
+prstatus_reg_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	return derived_attr_revalidate(ctx, attr, "PRSTATUS");
+}
+
+/**  Update the PRSTATUS attribute after setting the register value.
+ * @param ctx   Dump object.
+ * @param attr  Register value attribute.
+ * @returns     Error status.
+ */
+static kdump_status
+prstatus_reg_update(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	return derived_attr_update(ctx, attr, "PRSTATUS");
+}
+
 /**  Create a set of CPU register attributes.
  * @param ctx   Dump object.
  * @param cpu   CPU number.
@@ -1204,7 +1242,7 @@ err:
  */
 kdump_status
 create_cpu_regs(kdump_ctx_t *ctx, unsigned cpu,
-		struct blob_attr_def *def, unsigned ndef)
+		struct derived_attr_def *def, unsigned ndef)
 {
 	static const struct attr_ops prstatus_reg_ops = {
 		.revalidate = prstatus_reg_revalidate,
@@ -1217,7 +1255,7 @@ create_cpu_regs(kdump_ctx_t *ctx, unsigned cpu,
 	status = cpu_regs_dir(ctx, cpu, &dir);
 	while (status == KDUMP_OK && ndef--) {
 		def->tmpl.ops = &prstatus_reg_ops;
-		status = create_cpu_reg(ctx, dir, def++);
+		status = create_derived_attr(ctx, dir, def++);
 	}
 
 	return status;

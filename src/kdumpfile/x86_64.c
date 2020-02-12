@@ -271,7 +271,7 @@ x86_64_post_addrxlat(kdump_ctx_t *ctx)
 	  offsetof(struct elf_prstatus, field), \
 	  (bits) / BITS_PER_BYTE }
 
-static struct blob_attr_def x86_64_reg_attrs[] = {
+static struct derived_attr_def x86_64_reg_attrs[] = {
 	REG(r15, pr_reg[0], 64),
 	REG(r14, pr_reg[1], 64),
 	REG(r13, pr_reg[2], 64),
@@ -311,7 +311,7 @@ process_x86_64_prstatus(kdump_ctx_t *ctx, const void *data, size_t size)
 	cpu = get_num_cpus(ctx);
 	set_num_cpus(ctx, get_num_cpus(ctx) + 1);
 
-	status = set_cpu_prstatus(ctx, cpu, data, size);
+	status = init_cpu_prstatus(ctx, cpu, data, size);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status,
 				 "Cannot set CPU %u PRSTATUS", cpu);

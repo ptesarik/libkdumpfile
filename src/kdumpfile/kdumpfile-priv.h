@@ -413,7 +413,8 @@ struct attr_template {
 		const struct attr_template *parent;
 		/** Global keys: attribute index in the global array. */
 		enum global_keyidx parent_key;
-		/** CPU registers: number of levels below cpu.<num>. */
+		/** Derived attributes: number of levels below the directory
+		 *  that contains the corresponding blob attribute. */
 		unsigned depth;
 	};
 	kdump_attr_type_t type;
@@ -866,9 +867,12 @@ INTERNAL_DECL(kdump_status, set_cpu_regs,
 INTERNAL_DECL(kdump_status, set_file_description,
 	      (kdump_ctx_t *ctx, const char *name));
 
-/**  Translation of raw binary data to an attribute value.
+/**  Definition of a derived attribute.
+ *
+ * This structure is used to translate raw binary data to an attribute
+ * value and vice versa.
  */
-struct blob_attr_def {
+struct derived_attr_def {
 	/** Attribute template. */
 	struct attr_template tmpl;
 
@@ -879,11 +883,21 @@ struct blob_attr_def {
 	unsigned short length;
 };
 
+/** Get pointer to the definition of a derived attribute.
+ *
+ * This macro only works for derived attributes which are embedded inside
+ * a struct @ref derived_attr_def, but no checking is done. If you use
+ * it on any other attribute, your code will cause memory corruption and/or
+ * program crash.
+ */
+#define attr_to_derived_def(attr) \
+	container_of((attr)->template, struct derived_attr_def, tmpl)
+
+INTERNAL_DECL(kdump_status, init_cpu_prstatus,
+	      (kdump_ctx_t *ctx, unsigned cpu, const void *data, size_t size));
 INTERNAL_DECL(kdump_status, create_cpu_regs,
 	      (kdump_ctx_t *ctx, unsigned cpu,
-	       struct blob_attr_def *def, unsigned ndef));
-INTERNAL_DECL(kdump_status, set_cpu_prstatus,
-	      (kdump_ctx_t *ctx, unsigned cpu, const void *data, size_t size));
+	       struct derived_attr_def *def, unsigned ndef));
 
 /* hashing */
 INTERNAL_DECL(unsigned long, string_hash, (const char *s));

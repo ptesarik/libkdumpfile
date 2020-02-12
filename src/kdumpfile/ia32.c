@@ -80,7 +80,7 @@ struct elf_prstatus
 	  offsetof(struct elf_prstatus, field), \
 	  (bits) / BITS_PER_BYTE }
 
-static struct blob_attr_def ia32_reg_attrs[] = {
+static struct derived_attr_def ia32_reg_attrs[] = {
 	REG(ebx, pr_reg[0], 32),
 	REG(ecx, pr_reg[1], 32),
 	REG(edx, pr_reg[2], 32),
@@ -110,7 +110,7 @@ process_ia32_prstatus(kdump_ctx_t *ctx, const void *data, size_t size)
 	cpu = get_num_cpus(ctx);
 	set_num_cpus(ctx, get_num_cpus(ctx) + 1);
 
-	status = set_cpu_prstatus(ctx, cpu, data, size);
+	status = init_cpu_prstatus(ctx, cpu, data, size);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status,
 				 "Cannot set CPU %u PRSTATUS", cpu);
