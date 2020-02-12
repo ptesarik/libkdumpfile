@@ -1297,6 +1297,8 @@ open_common(kdump_ctx_t *ctx)
 	for (i = 0; i < edp->num_sections; ++i) {
 		struct section *sect = edp->sections + i;
 		const char *name = strtab_entry(edp, sect->name_index);
+		if (!name)
+			continue;
 		if (!strcmp(name, ".xen_pages"))
 			edp->xen_pages_offset = sect->file_offset;
 		else if (!strcmp(name, ".xen_p2m")) {
