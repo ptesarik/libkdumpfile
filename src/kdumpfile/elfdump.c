@@ -578,7 +578,7 @@ pfn2idx_map_search(struct pfn2idx_map *map, kdump_pfn_t pfn)
 		}
 	}
 
-	for (i = 0; i < map->nsingles && pfn <= map->singles[i].pfn; ++i)
+	for (i = 0; i < map->nsingles && pfn >= map->singles[i].pfn; ++i)
 		if (map->singles[i].pfn == pfn)
 			return map->singles[i].idx;
 
