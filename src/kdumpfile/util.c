@@ -931,6 +931,24 @@ init_cpu_prstatus(kdump_ctx_t *ctx, unsigned cpu,
 	return init_cpu_blob_attr(ctx, cpu, data, size, &prstatus_tmpl);
 }
 
+/**  Initialize the XEN_PRSTATUS attribute for a CPU
+ * @param ctx   Dump object.
+ * @param cpu   CPU number.
+ * @param data  XEN_PRSTATUS raw binary data.
+ * @param size  Size of the XEN_PRSTATUS data in bytes.
+ * @returns     Error status.
+ */
+kdump_status
+init_xen_cpu_prstatus(kdump_ctx_t *ctx, unsigned cpu,
+		      const void *data, size_t size)
+{
+        static const struct attr_template prstatus_tmpl = {
+		.key = "XEN_PRSTATUS",
+                .type = KDUMP_BLOB,
+        };
+	return init_cpu_blob_attr(ctx, cpu, data, size, &prstatus_tmpl);
+}
+
 /** Set a single CPU register.
  * @param ctx   Dump object.
  * @param dir   CPU register directory.
@@ -1255,6 +1273,61 @@ create_cpu_regs(kdump_ctx_t *ctx, unsigned cpu,
 	status = cpu_regs_dir(ctx, cpu, &dir);
 	while (status == KDUMP_OK && ndef--) {
 		def->tmpl.ops = &prstatus_reg_ops;
+		status = create_derived_attr(ctx, dir, def++);
+	}
+
+	return status;
+}
+
+/**  Get register value from the corresponding XEN_PRSTATUS attribute.
+ * @param ctx   Dump object.
+ * @param attr  Register value attribute.
+ * @returns     Error status.
+ */
+static kdump_status
+xen_prstatus_reg_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	return derived_attr_revalidate(ctx, attr, "XEN_PRSTATUS");
+}
+
+/**  Update the XEN_PRSTATUS attribute after setting the register value.
+ * @param ctx   Dump object.
+ * @param attr  Register value attribute.
+ * @returns     Error status.
+ */
+static kdump_status
+xen_prstatus_reg_update(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	return derived_attr_update(ctx, attr, "XEN_PRSTATUS");
+}
+
+/**  Create a set of CPU register attributes.
+ * @param ctx   Dump object.
+ * @param cpu   CPU number.
+ * @param def   Register definitions (array).
+ * @param ndef  Number of entries in the @c def array.
+ * @returns     Error status.
+ *
+ * Use this function to create register attributes under
+ * cpu.<num>.reg.  The values are taken from the corresponding
+ * cpu.<num>.XEN_PRSTATUS blob attribute, using offsets and sizes
+ * from the definition array.
+ */
+kdump_status
+create_xen_cpu_regs(kdump_ctx_t *ctx, unsigned cpu,
+		    struct derived_attr_def *def, unsigned ndef)
+{
+	static const struct attr_ops xen_prstatus_reg_ops = {
+		.revalidate = xen_prstatus_reg_revalidate,
+		.post_set = xen_prstatus_reg_update,
+	};
+
+	struct attr_data *dir;
+	kdump_status status;
+
+	status = cpu_regs_dir(ctx, cpu, &dir);
+	while (status == KDUMP_OK && ndef--) {
+		def->tmpl.ops = &xen_prstatus_reg_ops;
 		status = create_derived_attr(ctx, dir, def++);
 	}
 

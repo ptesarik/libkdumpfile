@@ -134,57 +134,6 @@ struct xen_vcpu_guest_context {
 
 /** @endcond */
 
-static const struct attr_template reg_names[] = {
-#define REG(name)	{ #name, NULL, KDUMP_NUMBER }
-	REG(r15),		/*  0 */
-	REG(r14),		/*  1 */
-	REG(r13),		/*  2 */
-	REG(r12),		/*  3 */
-	REG(rbp),		/*  4 */
-	REG(rbx),		/*  5 */
-	REG(r11),		/*  6 */
-	REG(r10),		/*  7 */
-	REG(r9),		/*  8 */
-	REG(r8),		/*  9 */
-	REG(rax),		/* 10 */
-	REG(rcx),		/* 11 */
-	REG(rdx),		/* 12 */
-	REG(rsi),		/* 13 */
-	REG(rdi),		/* 14 */
-	REG(orig_rax),		/* 15 */
-	REG(rip),		/* 16 */
-	REG(cs),		/* 17 */
-	REG(rflags),		/* 18 */
-	REG(rsp),		/* 19 */
-	REG(ss),		/* 20 */
-	REG(fs_base),		/* 21 */
-	REG(gs_base),		/* 22 */
-	REG(ds),		/* 23 */
-	REG(es),		/* 24 */
-	REG(fs),		/* 25 */
-	REG(gs),		/* 26 */
-
-	REG(cr0),		/* 27 */
-	REG(cr1),		/* 28 */
-	REG(cr2),		/* 29 */
-	REG(cr3),		/* 30 */
-	REG(cr4),		/* 31 */
-	REG(cr5),		/* 32 */
-	REG(cr6),		/* 33 */
-	REG(cr7),		/* 34 */
-	REG(dr0),		/* 35 */
-	REG(dr1),		/* 36 */
-	REG(dr2),		/* 37 */
-	REG(dr3),		/* 38 */
-	REG(dr4),		/* 39 */
-	REG(dr5),		/* 40 */
-	REG(dr6),		/* 41 */
-	REG(dr7),		/* 42 */
-
-	REG(pid),		/* 43 */
-#undef REG
-};
-
 static kdump_status
 calc_linux_phys_base(kdump_ctx_t *ctx, kdump_paddr_t paddr)
 {
@@ -313,8 +262,8 @@ process_x86_64_prstatus(kdump_ctx_t *ctx, const void *data, size_t size)
 
 	status = init_cpu_prstatus(ctx, cpu, data, size);
 	if (status != KDUMP_OK)
-		return set_error(ctx, status,
-				 "Cannot set CPU %u PRSTATUS", cpu);
+		return set_error(ctx, status, "Cannot set CPU %u %s",
+				 cpu, "PRSTATUS");
 
 	if (size < sizeof(struct elf_prstatus))
 		return set_error(ctx, KDUMP_ERR_CORRUPT,
@@ -326,50 +275,76 @@ process_x86_64_prstatus(kdump_ctx_t *ctx, const void *data, size_t size)
 	return status;
 }
 
-#define XEN_REG_CNT(start, end)					\
-	  ((offsetof(struct xen_vcpu_guest_context, end)	\
-	    - offsetof(struct xen_vcpu_guest_context, start))	\
-	   / sizeof(((struct xen_vcpu_guest_context*)0)->start)	\
-	   + 1)
+#define XEN_REG(name, field, bits) \
+	{ { #name, { .depth = 1 }, KDUMP_NUMBER },	  \
+	  offsetof(struct xen_vcpu_guest_context, field), \
+	  (bits) / BITS_PER_BYTE }
 
-#define XEN_REG_DEF(bits, firstreg, lastreg, regnum)		\
-	   { offsetof(struct xen_vcpu_guest_context, firstreg),	\
-	     (regnum), XEN_REG_CNT(firstreg, lastreg), (bits) }
+#define XEN_UREG(name, bits)	 \
+	{ { #name, { .depth = 1 }, KDUMP_NUMBER },		   \
+	  offsetof(struct xen_vcpu_guest_context, user_regs.name), \
+	  (bits) / BITS_PER_BYTE }
 
-#define XEN_UREG_CNT(start, end)				\
-	   ((offsetof(struct xen_cpu_user_regs, end)		\
-	     - offsetof(struct xen_cpu_user_regs, start))	\
-	    / sizeof(((struct xen_cpu_user_regs*)0)->start)	\
-	    + 1)
-
-#define XEN_UREG_DEF(bits, firstreg, lastreg, regnum)			\
-	{ offsetof(struct xen_vcpu_guest_context, user_regs.firstreg),	\
-	  (regnum), XEN_UREG_CNT(firstreg, lastreg), (bits) }
+static struct derived_attr_def x86_64_xen_reg_attrs[] = {
+	XEN_UREG(r15, 64),
+	XEN_UREG(r14, 64),
+	XEN_UREG(r13, 64),
+	XEN_UREG(r12, 64),
+	XEN_UREG(rbp, 64),
+	XEN_UREG(rbx, 64),
+	XEN_UREG(r11, 64),
+	XEN_UREG(r10, 64),
+	XEN_UREG(r9, 64),
+	XEN_UREG(r8, 64),
+	XEN_UREG(rax, 64),
+	XEN_UREG(rcx, 64),
+	XEN_UREG(rdx, 64),
+	XEN_UREG(rsi, 64),
+	XEN_UREG(rdi, 64),
+	XEN_UREG(rip, 64),
+	XEN_UREG(cs, 16),
+	XEN_UREG(rflags, 64),
+	XEN_UREG(rsp, 64),
+	XEN_UREG(ss, 16),
+	XEN_UREG(es, 16),
+	XEN_UREG(ds, 16),
+	XEN_UREG(fs, 16),
+	XEN_UREG(gs, 16),
+	XEN_REG(cr0, ctrlreg[0], 64),
+	XEN_REG(cr1, ctrlreg[1], 64),
+	XEN_REG(cr2, ctrlreg[2], 64),
+	XEN_REG(cr3, ctrlreg[3], 64),
+	XEN_REG(cr4, ctrlreg[4], 64),
+	XEN_REG(cr5, ctrlreg[5], 64),
+	XEN_REG(cr6, ctrlreg[6], 64),
+	XEN_REG(cr7, ctrlreg[7], 64),
+	XEN_REG(dr0, debugreg[0], 64),
+	XEN_REG(dr1, debugreg[1], 64),
+	XEN_REG(dr2, debugreg[2], 64),
+	XEN_REG(dr3, debugreg[3], 64),
+	XEN_REG(dr4, debugreg[4], 64),
+	XEN_REG(dr5, debugreg[5], 64),
+	XEN_REG(dr6, debugreg[6], 64),
+	XEN_REG(dr7, debugreg[7], 64),
+};
 
 static kdump_status
 process_x86_64_xen_prstatus(kdump_ctx_t *ctx, const void *data, size_t size)
 {
-	static const struct reg_def def[] = {
-		XEN_UREG_DEF(64, r15, rdi, 0),
-		XEN_UREG_DEF(64, rip, rip, 16),
-		XEN_UREG_DEF(16, cs, cs, 17),
-		XEN_UREG_DEF(64, rflags, rsp, 18),
-		XEN_UREG_DEF(16, ss, ss, 20),
-		XEN_UREG_DEF(16, es, es, 24),
-		XEN_UREG_DEF(16, ds, ds, 23),
-		XEN_UREG_DEF(16, fs, fs, 25),
-		XEN_UREG_DEF(16, gs, gs, 26),
-		XEN_REG_DEF(64, ctrlreg[0], debugreg[7], 27),
-		REG_DEF_END
-	};
-
 	unsigned cpu = 0;
-	kdump_status res;
+	kdump_status status;
 
 	while (size >= sizeof(struct xen_vcpu_guest_context)) {
-		res = set_cpu_regs(ctx, cpu, reg_names, data, def);
-		if (res != KDUMP_OK)
-			return res;
+		status = init_xen_cpu_prstatus(
+			ctx, cpu, data, sizeof(struct xen_vcpu_guest_context));
+		if (status != KDUMP_OK)
+			return set_error(ctx, status, "Cannot set CPU %u %s",
+					 cpu, "XEN_PRSTATUS");
+
+		status = create_xen_cpu_regs(ctx, cpu, x86_64_xen_reg_attrs,
+					     ARRAY_SIZE(x86_64_xen_reg_attrs));
+		if (status != KDUMP_OK)
+			return status;
 
 		++cpu;
 		data += sizeof(struct xen_vcpu_guest_context);
