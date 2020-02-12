@@ -1,5 +1,5 @@
-/** @internal @file src/kdumpfile/fcache.c
- * @brief File caching.
+/** @internal @file src/kdumpfile/bitmap.c
+ * @brief Bitmap attribute values.
  */
 /* Copyright (C) 2017 Petr Tesarik <ptesarik@suse.com>
 
