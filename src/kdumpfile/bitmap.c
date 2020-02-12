@@ -135,9 +135,6 @@ kdump_bmp_get_bits(kdump_bmp_t *bmp,
 		   kdump_addr_t first, kdump_addr_t last, unsigned char *raw)
 {
 	err_clear(&bmp->err);
-	if (!bmp->ops->get_bits)
-		return status_err(&bmp->err, KDUMP_ERR_NOTIMPL,
-				  "Function not implemented");
 	return bmp->ops->get_bits(&bmp->err, bmp, first, last, raw);
 }
 
@@ -145,9 +142,6 @@ kdump_status
 kdump_bmp_find_set(kdump_bmp_t *bmp, kdump_addr_t *idx)
 {
 	err_clear(&bmp->err);
-	if (!bmp->ops->find_set)
-		return status_err(&bmp->err, KDUMP_ERR_NOTIMPL,
-				  "Function not implemented");
 	return bmp->ops->find_set(&bmp->err, bmp, idx);
 }
 
@@ -155,8 +149,5 @@ kdump_status
 kdump_bmp_find_clear(kdump_bmp_t *bmp, kdump_addr_t *idx)
 {
 	err_clear(&bmp->err);
-	if (!bmp->ops->find_clear)
-		return status_err(&bmp->err, KDUMP_ERR_NOTIMPL,
-				  "Function not implemented");
 	return bmp->ops->find_clear(&bmp->err, bmp, idx);
 }
