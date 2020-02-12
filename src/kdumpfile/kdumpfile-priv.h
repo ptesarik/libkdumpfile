@@ -826,44 +826,6 @@ INTERNAL_DECL(uint32_t, cksum32, (void *buffer, size_t size, uint32_t csum));
 INTERNAL_DECL(kdump_status, get_symbol_val,
 	      (kdump_ctx_t *ctx, const char *name, kdump_addr_t *val));
 
-INTERNAL_DECL(kdump_status, set_cpu_regs64,
-	      (kdump_ctx_t *ctx, unsigned cpu,
-	       const struct attr_template *tmpl,
-	       const uint64_t *regs, unsigned num));
-INTERNAL_DECL(kdump_status, set_cpu_regs32,
-	      (kdump_ctx_t *ctx, unsigned cpu,
-	       const struct attr_template *tmpl,
-	       const uint32_t *regs, unsigned num));
-INTERNAL_DECL(kdump_status, set_cpu_regs16,
-	      (kdump_ctx_t *ctx, unsigned cpu,
-	       const struct attr_template *tmpl,
-	       const uint16_t *regs, unsigned num));
-
-/** Register definition for @ref set_cpu_regs.
- */
-struct reg_def {
-	/** Offset to data.
-	 * This is the relative offset (in bytes) from the @c data pointer. */
-	size_t off;
-
-	/** Index into the @c tmpl array. */
-	unsigned regidx;
-
-	/** Number of registers in a row. */
-	unsigned short count;
-
-	/** Register bits (16, 32, or 64).
-	 * Use 0 to terminate the array. */
-	unsigned short bits;
-};
-
-#define REG_DEF_END	{ 0, 0, 0, 0 }
-
-INTERNAL_DECL(kdump_status, set_cpu_regs,
-	      (kdump_ctx_t *ctx, unsigned cpu,
-	       const struct attr_template *tmpl,
-	       const void *data, const struct reg_def *def));
-
 INTERNAL_DECL(kdump_status, set_file_description,
 	      (kdump_ctx_t *ctx, const char *name));
 
