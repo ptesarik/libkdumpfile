@@ -21,6 +21,9 @@ AS_IF([test "x$withval" != xno],[dnl
 ])
 AS_IF([test "$have_python" = yes],[dnl
   PYTHON_CONFIG="$PYTHON-config"
+  AS_IF([test -x "$PYTHON_CONFIG"],[],[dnl
+    AC_PATH_PROG(PYTHON_CONFIG,"$PYTHON-config")
+  ])
   AS_IF([test -x "$PYTHON_CONFIG"],[dnl
     PYTHON_CFLAGS=`$PYTHON_CONFIG --cflags`
     PYTHON_LIBS=`$PYTHON_CONFIG --libs`
