@@ -340,17 +340,40 @@ parse_key_val(char *line, char **key, char **val)
 int
 parse_params_file(const struct params *params, FILE *f)
 {
-	char *line, *key, *val;
-	size_t linesz;
+	char *line, *logline, *key, *val;
+	size_t linesz, loglinesz;
 	unsigned linenum;
 	int rc = TEST_OK;
 
-	line = NULL;
-	linesz = 0;
+	line = logline = NULL;
+	linesz = loglinesz = 0;
 	linenum = 0;
 
 	while (getline(&line, &linesz, f) > 0) {
 		++linenum;
+
+		/* Handle continuation lines */
+		if (logline) {
+			char *p;
+			size_t len = strlen(line);
+
+			logline = realloc(logline, loglinesz + len);
+			memcpy(logline + loglinesz, line, len);
+			loglinesz += len;
+			p = logline + loglinesz;
+			if (*p == '\n')
+				--p, --loglinesz;
+			if (*p == '\r')
+				--p, --loglinesz;
+			if (*p == '\\') {
+				--p, --loglinesz;
+				continue;
+			}
+			free(line);
+			line = logline;
+			linesz = loglinesz;
+			logline = NULL;
+		}
 
 		if (parse_key_val(line, &key, &val)) {
 			fprintf(stderr, "Malformed param: %s\n", line);
