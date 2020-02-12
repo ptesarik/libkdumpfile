@@ -1,0 +1,103 @@
+#! /bin/sh
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+datafile="$srcdir/${name}.data"
+dumpfile="out/${name}.dump"
+resultfile="out/${name}.result"
+expectfile="$srcdir/${name}.expect"
+
+./mkelf "$dumpfile" <<EOF
+ei_class = 2
+ei_data = 1
+ei_abiversion = 1
+e_machine = 62
+e_shoff = 0x40
+e_shstrndx = 1
+
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create ELF file" >&2
+    exit $rc
+fi
+echo "Created ELF dump: $dumpfile"
+
+totalrc=0
+
+./checkattr "$dumpfile" <<EOF
+file = directory:
+file.fd = number
+file.format = string: xc_core_elf
+
+cpu = directory:
+cpu.number = number:1
+cpu.0 = directory:
+cpu.0.reg.r15 = number:0x723135
+cpu.0.reg.r14 = number:0x723134
+cpu.0.reg.r13 = number:0x723133
+cpu.0.reg.r12 = number:0x723132
+cpu.0.reg.rbp = number:0x726270
+cpu.0.reg.rbx = number:0x726278
+cpu.0.reg.r11 = number:0x723131
+cpu.0.reg.r10 = number:0x723130
+cpu.0.reg.r9 = number:0x7239
+cpu.0.reg.r8 = number:0x7238
+cpu.0.reg.rax = number:0x726178
+cpu.0.reg.rcx = number:0x726378
+cpu.0.reg.rdx = number:0x726478
+cpu.0.reg.rsi = number:0x727369
+cpu.0.reg.rdi = number:0x726469
+cpu.0.reg.rip = number:0xffffffff936c6d52
+cpu.0.reg.cs = number:0x0010
+cpu.0.reg.rflags = number:0x246
+cpu.0.reg.rsp = number:0xffffffff94003e78
+cpu.0.reg.ss = number:0x18
+cpu.0.reg.es = number:0x6573
+cpu.0.reg.ds = number:0x6473
+cpu.0.reg.fs = number:0x6673
+cpu.0.reg.gs = number:0x6773
+cpu.0.reg.cr0 = number:0x80050033
+cpu.0.reg.cr1 = number:0x637231
+cpu.0.reg.cr2 = number:0x55a061fcc740
+cpu.0.reg.cr3 = number:0x700a006
+cpu.0.reg.cr4 = number:0x3606f0
+cpu.0.reg.cr5 = number:0x637235
+cpu.0.reg.cr6 = number:0x637236
+cpu.0.reg.cr7 = number:0x637237
+cpu.0.reg.dr0 = number:0x647230
+cpu.0.reg.dr1 = number:0x647231
+cpu.0.reg.dr2 = number:0x647232
+cpu.0.reg.dr3 = number:0x647233
+cpu.0.reg.dr4 = number:0x647234
+cpu.0.reg.dr5 = number:0x647235
+cpu.0.reg.dr6 = number:0x647236
+cpu.0.reg.dr7 = number:0x647237
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Attribute check failed" >&2
+    if [ $rc -ne 1 ]; then
+	exit $rc
+    fi
+    totalrc=1
+else
+    echo "Attribute check PASSED"
+fi
+
+./dumpdata "$dumpfile" -o linux KVADDR:0xffffffff93c00120 8 >"$resultfile"
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot dump ELF data" >&2
+    exit $rc
+fi
+
+if ! diff "$expectfile" "$resultfile"; then
+    echo "Content does not match" >&2
+    totalrc=1
+fi
+echo "Content check PASSED"
+
+exit $totalrc

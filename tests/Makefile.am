@@ -193,6 +193,7 @@ test_scripts = \
 	elf-virt-phys-clash \
 	elf-vmcoreinfo \
 	elf-dom0-no-phys_base \
+	elf-xen_prstatus \
 	lkcd-empty-i386 \
 	lkcd-empty-ppc64 \
 	lkcd-empty-x86_64 \
@@ -296,6 +297,8 @@ dist_check_DATA = \
 	elf-vmcoreinfo.expect \
 	elf-dom0-no-phys_base.data \
 	elf-dom0-no-phys_base.expect \
+	elf-xen_prstatus.data \
+	elf-xen_prstatus.expect \
 	basic.expect \
 	partial.expect \
 	multixlat.expect \
