@@ -913,6 +913,12 @@ init_cpu_blob_attr(kdump_ctx_t *ctx, unsigned cpu,
 	return status;
 }
 
+/**  PRSTATUS blob attribute template. */
+static const struct attr_template prstatus_tmpl = {
+	.key = "PRSTATUS",
+	.type = KDUMP_BLOB,
+};
+
 /**  Initialize the PRSTATUS attribute for a CPU
  * @param ctx   Dump object.
  * @param cpu   CPU number.
@@ -924,12 +930,14 @@ kdump_status
 init_cpu_prstatus(kdump_ctx_t *ctx, unsigned cpu,
 		  const void *data, size_t size)
 {
-        static const struct attr_template prstatus_tmpl = {
-		.key = "PRSTATUS",
-                .type = KDUMP_BLOB,
-        };
 	return init_cpu_blob_attr(ctx, cpu, data, size, &prstatus_tmpl);
 }
+
+/**  XEN_PRSTATUS blob attribute template. */
+static const struct attr_template xen_prstatus_tmpl = {
+	.key = "XEN_PRSTATUS",
+	.type = KDUMP_BLOB,
+};
 
 /**  Initialize the XEN_PRSTATUS attribute for a CPU
  * @param ctx   Dump object.
@@ -942,11 +950,7 @@ kdump_status
 init_xen_cpu_prstatus(kdump_ctx_t *ctx, unsigned cpu,
 		      const void *data, size_t size)
 {
-        static const struct attr_template prstatus_tmpl = {
-		.key = "XEN_PRSTATUS",
-                .type = KDUMP_BLOB,
-        };
-	return init_cpu_blob_attr(ctx, cpu, data, size, &prstatus_tmpl);
+	return init_cpu_blob_attr(ctx, cpu, data, size, &xen_prstatus_tmpl);
 }
 
 /**  Get the blob corresponding to a derived number attribute.
@@ -1116,7 +1120,7 @@ err:
 static kdump_status
 prstatus_reg_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
 {
-	return derived_attr_revalidate(ctx, attr, "PRSTATUS");
+	return derived_attr_revalidate(ctx, attr, prstatus_tmpl.key);
 }
 
 /**  Update the PRSTATUS attribute after setting the register value.
@@ -1127,7 +1131,7 @@ prstatus_reg_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
 static kdump_status
 prstatus_reg_update(kdump_ctx_t *ctx, struct attr_data *attr)
 {
-	return derived_attr_update(ctx, attr, "PRSTATUS");
+	return derived_attr_update(ctx, attr, prstatus_tmpl.key);
 }
 
 /**  Create a set of CPU register attributes.
@@ -1171,7 +1175,7 @@ create_cpu_regs(kdump_ctx_t *ctx, unsigned cpu,
 static kdump_status
 xen_prstatus_reg_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
 {
-	return derived_attr_revalidate(ctx, attr, "XEN_PRSTATUS");
+	return derived_attr_revalidate(ctx, attr, xen_prstatus_tmpl.key);
 }
 
 /**  Update the XEN_PRSTATUS attribute after setting the register value.
@@ -1182,7 +1186,7 @@ xen_prstatus_reg_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
 static kdump_status
 xen_prstatus_reg_update(kdump_ctx_t *ctx, struct attr_data *attr)
 {
-	return derived_attr_update(ctx, attr, "XEN_PRSTATUS");
+	return derived_attr_update(ctx, attr, xen_prstatus_tmpl.key);
 }
 
 /**  Create a set of CPU register attributes.
