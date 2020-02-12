@@ -1000,6 +1000,9 @@ INTERNAL_DECL(struct attr_data *, lookup_attr,
 INTERNAL_DECL(struct attr_data *, lookup_dir_attr,
 	      (struct attr_dict *dict, const struct attr_data *dir,
 	       const char *key, size_t keylen));
+INTERNAL_DECL(struct attr_data *, lookup_attr_child,
+	      (const struct attr_data *dir,
+	       const struct attr_template *tmpl));
 
 INTERNAL_DECL(struct attr_dict *, attr_dict_new, (struct kdump_shared *shared));
 INTERNAL_DECL(struct attr_dict *, attr_dict_clone, (struct attr_dict *orig));

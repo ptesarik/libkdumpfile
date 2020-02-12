@@ -232,6 +232,32 @@ lookup_dir_attr(struct attr_dict *dict,
 	return NULL;
 }
 
+/**  Look up a child attribute with a known template.
+ * @param dir   Directory attribute.
+ * @param tmpl  Template of the child.
+ * @returns     Child attribute, or @c NULL if not found.
+ *
+ * Perform a linear search over all children of @c dir, so use
+ * this function only if the expected number of children is small
+ * (or if you know the child is among the first few children).
+ *
+ * The result is not ambiguous, because the template specifies the
+ * name of the attribute, and duplicate names are not allowed.
+ *
+ * This function does not check whether @c dir is indeed a dictionary.
+ * Bad things will happen if you try to use on another type.
+ */
+struct attr_data *
+lookup_attr_child(const struct attr_data *dir,
+		  const struct attr_template *tmpl)
+{
+	struct attr_data *child;
+	for (child = dir->dir; child; child = child->next)
+		if (child->template == tmpl)
+			return child;
+	return NULL;
+}
+
 /**  Look up attribute value by name.
  * @param dict    Attribute dictionary.
  * @param key     Key name.

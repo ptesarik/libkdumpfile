@@ -956,13 +956,13 @@ init_xen_cpu_prstatus(kdump_ctx_t *ctx, unsigned cpu,
 /**  Get the blob corresponding to a derived number attribute.
  * @param ctx   Dump object.
  * @param attr  Derived attribute.
- * @param name  Name of the blob attribute.
+ * @param tmpl  Template of the blob attribute.
  * @param blob  Pointer to the blob variable.
  * @returns     Error status.
  */
 static kdump_status
 get_attr_blob(kdump_ctx_t *ctx, struct attr_data *attr,
-	      const char *name, kdump_blob_t **blob)
+	      const struct attr_template *tmpl, kdump_blob_t **blob)
 {
 	struct attr_data *raw;
 	unsigned i;
@@ -970,7 +970,7 @@ get_attr_blob(kdump_ctx_t *ctx, struct attr_data *attr,
 	for (i = attr->template->depth; i; --i)
 		attr = attr->parent;
 
-	raw = lookup_dir_attr(ctx->dict, attr->parent, name, strlen(name));
+	raw = lookup_attr_child(attr->parent, tmpl);
 	if (!raw)
 		return set_error(ctx, KDUMP_ERR_NODATA, "PRSTATUS not found");
 
@@ -981,7 +981,7 @@ get_attr_blob(kdump_ctx_t *ctx, struct attr_data *attr,
 /**  Get attribute value from the corresponding blob attribute.
  * @param ctx   Dump object.
  * @param attr  Derived attribute.
- * @param name  Name of the corresponding blob attribute.
+ * @param tmpl  Template of the blob attribute.
  * @returns     Error status.
  *
  * Call this from a revalidation hook to update the current value.
@@ -990,14 +990,14 @@ get_attr_blob(kdump_ctx_t *ctx, struct attr_data *attr,
  */
 static kdump_status
 derived_attr_revalidate(kdump_ctx_t *ctx, struct attr_data *attr,
-			const char *name)
+			const struct attr_template *tmpl)
 {
 	const struct derived_attr_def *def = attr_to_derived_def(attr);
 	kdump_blob_t *blob;
 	kdump_status status;
 	void *ptr;
 
-	status = get_attr_blob(ctx, attr, name, &blob);
+	status = get_attr_blob(ctx, attr, tmpl, &blob);
 	if (status != KDUMP_OK)
 		return status;
 
@@ -1028,7 +1028,7 @@ derived_attr_revalidate(kdump_ctx_t *ctx, struct attr_data *attr,
 /**  Update blob after setting a derived attribute's value.
  * @param ctx   Dump object.
  * @param attr  Derived attribute.
- * @param name  Name of the corresponding blob attribute.
+ * @param tmpl  Template of the blob attribute.
  * @returns     Error status.
  *
  * Call this from a post-set hook to update the blob attribute.
@@ -1037,7 +1037,7 @@ derived_attr_revalidate(kdump_ctx_t *ctx, struct attr_data *attr,
  */
 static kdump_status
 derived_attr_update(kdump_ctx_t *ctx, struct attr_data *attr,
-		    const char *name)
+		    const struct attr_template *tmpl)
 {
 	const struct derived_attr_def *def = attr_to_derived_def(attr);
 	kdump_blob_t *blob;
@@ -1047,7 +1047,7 @@ derived_attr_update(kdump_ctx_t *ctx, struct attr_data *attr,
 	if (attr->flags.invalid)
 		return KDUMP_OK;
 
-	status = get_attr_blob(ctx, attr, name, &blob);
+	status = get_attr_blob(ctx, attr, tmpl, &blob);
 	if (status != KDUMP_OK)
 		return status;
 
@@ -1120,7 +1120,7 @@ err:
 static kdump_status
 prstatus_reg_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
 {
-	return derived_attr_revalidate(ctx, attr, prstatus_tmpl.key);
+	return derived_attr_revalidate(ctx, attr, &prstatus_tmpl);
 }
 
 /**  Update the PRSTATUS attribute after setting the register value.
@@ -1131,7 +1131,7 @@ prstatus_reg_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
 static kdump_status
 prstatus_reg_update(kdump_ctx_t *ctx, struct attr_data *attr)
 {
-	return derived_attr_update(ctx, attr, prstatus_tmpl.key);
+	return derived_attr_update(ctx, attr, &prstatus_tmpl);
 }
 
 /**  Create a set of CPU register attributes.
@@ -1175,7 +1175,7 @@ create_cpu_regs(kdump_ctx_t *ctx, unsigned cpu,
 static kdump_status
 xen_prstatus_reg_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
 {
-	return derived_attr_revalidate(ctx, attr, xen_prstatus_tmpl.key);
+	return derived_attr_revalidate(ctx, attr, &xen_prstatus_tmpl);
 }
 
 /**  Update the XEN_PRSTATUS attribute after setting the register value.
@@ -1186,7 +1186,7 @@ xen_prstatus_reg_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
 static kdump_status
 xen_prstatus_reg_update(kdump_ctx_t *ctx, struct attr_data *attr)
 {
-	return derived_attr_update(ctx, attr, xen_prstatus_tmpl.key);
+	return derived_attr_update(ctx, attr, &xen_prstatus_tmpl);
 }
 
 /**  Create a set of CPU register attributes.
