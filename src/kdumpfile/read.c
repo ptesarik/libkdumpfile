@@ -102,7 +102,7 @@ xlat_pio_op(void *data, const addrxlat_fulladdr_t *addr)
  * is included in @c xlat_caps. The resulting page I/O is then passed to
  * a @c get_page method.
  */
-kdump_status
+static kdump_status
 get_page_xlat(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	addrxlat_op_ctl_t ctl;
@@ -124,18 +124,18 @@ get_page_xlat(kdump_ctx_t *ctx, struct page_io *pio)
 		return set_error(ctx, addrxlat2kdump(ctx, xlaterr),
 				 "Cannot get page I/O address");
 
-	return ctx->shared->ops->get_page(ctx, pio);
+	return get_page(ctx, pio);
 }
 
-/**  Raw interface to get_page().
+/**  Get a page, performing address translation if necessary.
  * @param ctx  Dump file object.
  * @param pio  Page I/O control.
  */
 static inline kdump_status
-get_page(kdump_ctx_t *ctx, struct page_io *pio)
+get_page_maybe_xlat(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	return ctx->xlat->xlat_caps & ADDRXLAT_CAPS(pio->addr.as)
-		? ctx->shared->ops->get_page(ctx, pio)
+		? get_page(ctx, pio)
 		: get_page_xlat(ctx, pio);
 }
 
@@ -167,7 +167,7 @@ read_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 
 		pio.addr.as = as;
 		pio.addr.addr = page_align(ctx, addr);
-		ret = get_page(ctx, &pio);
+		ret = get_page_maybe_xlat(ctx, &pio);
 		if (ret != KDUMP_OK)
 			break;
 
@@ -225,7 +225,7 @@ read_string_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 
 		pio.addr.as = as;
 		pio.addr.addr = page_align(ctx, addr);
-		ret = get_page(ctx, &pio);
+		ret = get_page_maybe_xlat(ctx, &pio);
 		if (ret != KDUMP_OK)
 			return ret;
 

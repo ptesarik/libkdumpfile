@@ -1414,8 +1414,32 @@ INTERNAL_DECL(kdump_status, cache_get_page,
 INTERNAL_DECL(void, cache_put_page,
 	      (kdump_ctx_t *ctx, struct page_io *pio));
 
-static inline
-void put_page(kdump_ctx_t *ctx, struct page_io *pio)
+/** Get page data.
+ * @param ctx  Dump file object.
+ * @param pio  Page I/O control.
+ * @returns    Error status.
+ *
+ * Intended use of this function:
+ * - Fill in @c pio.addr.
+ * - Call @c get_page.
+ * - Check return status. If successful, @c pio.chunk.data
+ *   contains a pointer to the cached page data.
+ */
+static inline kdump_status
+get_page(kdump_ctx_t *ctx, struct page_io *pio)
+{
+	return ctx->shared->ops->get_page(ctx, pio);
+}
+
+/** Release page data.
+ * @param ctx  Dump file object.
+ * @param pio  Page I/O control.
+ *
+ * Call this function to let the cache know that the data structures
+ * used to provide the buffer are no longer needed.
+ */
+static inline void
+put_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	ctx->shared->ops->put_page(ctx, pio);
 }
