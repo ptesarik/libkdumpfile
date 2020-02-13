@@ -1002,6 +1002,12 @@ derived_attr_revalidate(kdump_ctx_t *ctx, struct attr_data *attr,
 		return status;
 
 	ptr = internal_blob_pin(blob) + def->offset;
+	if (def->offset + def->length > blob->size) {
+		status = set_error(ctx, KDUMP_ERR_CORRUPT,
+				   "%s attribute too short", tmpl->key);
+		goto unpin;
+	}
+
 	switch(def->length) {
 	case 1:
 		attr->val.number = *(uint8_t*)ptr;
@@ -1020,8 +1026,9 @@ derived_attr_revalidate(kdump_ctx_t *ctx, struct attr_data *attr,
 				   "Reading %hu-byte values not implemented",
 				   def->length);
 	}
-	internal_blob_unpin(blob);
 
+ unpin:
+	internal_blob_unpin(blob);
 	return status;
 }
 
@@ -1052,6 +1059,12 @@ derived_attr_update(kdump_ctx_t *ctx, struct attr_data *attr,
 		return status;
 
 	ptr = internal_blob_pin(blob) + def->offset;
+	if (def->offset + def->length > blob->size) {
+		status = set_error(ctx, KDUMP_ERR_CORRUPT,
+				   "%s attribute too short", tmpl->key);
+		goto unpin;
+	}
+
 	switch(def->length) {
 	case 1:
 		*(uint8_t*)ptr = attr->val.number;
@@ -1071,8 +1084,9 @@ derived_attr_update(kdump_ctx_t *ctx, struct attr_data *attr,
 				   def->length);
 	}
 	attr->flags.invalid = 1;
-	internal_blob_unpin(blob);
 
+ unpin:
+	internal_blob_unpin(blob);
 	return status;
 }
 

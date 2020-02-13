@@ -157,6 +157,24 @@ check(kdump_ctx_t *ctx)
 	}
 	printf("RAX value #2: %016llX\n", (unsigned long long) rax);
 
+	/* Check that register cannot be accessed after resetting PRSTATUS. */
+	kdump_blob_unpin(blob);
+	status = kdump_blob_set(blob, NULL, 0);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot reset PRSTATUS: %s\n",
+			kdump_strerror(status));
+		return TEST_ERR;
+	}
+	status = kdump_get_number_attr(ctx, ATTR_KEY_RAX, &rax);
+	if (status == KDUMP_OK) {
+		fprintf(stderr, "Got RAX value with zero-sized PRSTATUS!\n");
+		return TEST_FAIL;
+	} else if (status != KDUMP_ERR_CORRUPT) {
+		fprintf(stderr, "Cannot re-get RAX value: %s\n",
+			kdump_get_err(ctx));
+		return TEST_FAIL;
+	}
+
 	return TEST_OK;
 }
 
