@@ -396,92 +396,51 @@ cached_read_insert(struct cached_reads *cache, addrxlat_addr_t key, void *p)
 	return slot;
 }
 
-/**  Addrxlat read32 callback.
+/**  Addrxlat get_page callback.
  * @param data  Dump file object.
- * @param addr  Value address.
- * @param val   Pointer to resulting variable.
+ * @param buf   Page buffer metadata.
  * @returns     Error status.
- *
- * This function fails if data crosses a page boundary.
  */
 static addrxlat_status
-addrxlat_read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
+addrxlat_get_page(void *data, addrxlat_buffer_t *buf)
 {
 	kdump_ctx_t *ctx = (kdump_ctx_t*) data;
-	struct page_io pio;
-	uint32_t *p;
-	addrxlat_addr_t aligned;
-	unsigned slot, off;
+	struct page_io *pio;
 	kdump_status status;
 
-	off = addr->addr & (READ_CACHE_SIZE - 1);
-	aligned = addr->addr - off;
-	slot = ctx->cached.slot;
-	do {
-		if (ctx->cached.key[slot] == (aligned | addr->as))
-			goto out;
-		slot = (slot + 1) % READ_CACHE_SLOTS;
-	} while (slot != ctx->cached.slot);
+	pio = malloc(sizeof *pio);
+	if (!pio)
+		return addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NOMEM,
+					"Cannot allocate pio structure");
 
-	pio.addr.addr = page_align(ctx, addr->addr);
-	pio.addr.as = addr->as;
+	/* init all fields here except ptr */
+	buf->addr.addr = page_align(ctx, buf->addr.addr);
+	buf->size = get_page_size(ctx);
+	buf->byte_order = get_byte_order(ctx);
+	buf->priv = pio;
 
-	status = get_page(ctx, &pio);
+	pio->addr.addr = buf->addr.addr;
+	pio->addr.as = buf->addr.as;
+	status = get_page(ctx, pio);
 	if (status != KDUMP_OK)
 		return kdump2addrxlat(ctx, status);
 
-	p = pio.chunk.data + (aligned & (get_page_size(ctx) - 1));
-	slot = cached_read_insert(&ctx->cached, aligned | addr->as, p);
-	put_page(ctx, &pio);
-
- out:
-	p = (uint32_t*)(ctx->cached.val[slot] + off);
-	*val = dump32toh(ctx, *p);
+	buf->ptr = pio->chunk.data;
 	return ADDRXLAT_OK;
 }
 
-/**  Addrxlat read64 callback.
+/**  Addrxlat put_page callback.
  * @param data  Dump file object.
- * @param addr  Value address.
- * @param val   Pointer to resulting variable.
+ * @param buf   Page buffer metadata.
  * @returns     Error status.
- *
- * This function fails if data crosses a page boundary.
  */
-static addrxlat_status
-addrxlat_read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
+static void
+addrxlat_put_page(void *data, const addrxlat_buffer_t *buf)
 {
 	kdump_ctx_t *ctx = (kdump_ctx_t*) data;
-	struct page_io pio;
-	uint64_t *p;
-	addrxlat_addr_t aligned;
-	unsigned slot, off;
-	kdump_status status;
-
-	off = addr->addr & (READ_CACHE_SIZE - 1);
-	aligned = addr->addr - off;
-	slot = ctx->cached.slot;
-	do {
-		if (ctx->cached.key[slot] == (aligned | addr->as))
-			goto out;
-		slot = (slot + 1) % READ_CACHE_SLOTS;
-	} while (slot != ctx->cached.slot);
-
-	pio.addr.addr = page_align(ctx, addr->addr);
-	pio.addr.as = addr->as;
-
-	status = get_page(ctx, &pio);
-	if (status != KDUMP_OK)
-		return kdump2addrxlat(ctx, status);
-
-	p = pio.chunk.data + (aligned & (get_page_size(ctx) - 1));
-	slot = cached_read_insert(&ctx->cached, aligned | addr->as, p);
-	put_page(ctx, &pio);
-
- out:
-	p = (uint64_t*)(ctx->cached.val[slot] + off);
-	*val = dump64toh(ctx, *p);
-	return ADDRXLAT_OK;
+	struct page_io *pio = buf->priv;
+	put_page(ctx, pio);
+	free(pio);
 }
 
 static addrxlat_status
@@ -613,8 +572,8 @@ init_addrxlat(kdump_ctx_t *ctx)
 	addrxlat_ctx_t *addrxlat;
 	addrxlat_cb_t cb = {
 		.data = ctx,
-		.read32 = addrxlat_read32,
-		.read64 = addrxlat_read64,
+		.get_page = addrxlat_get_page,
+		.put_page = addrxlat_put_page,
 		.read_caps = (ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR) |
 			      ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR) |
 			      ADDRXLAT_CAPS(ADDRXLAT_KVADDR)),
