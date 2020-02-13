@@ -538,6 +538,7 @@ copy_data(struct attr_data *dest, const struct attr_data *src)
 		return true;
 
 	case KDUMP_BITMAP:
+	case KDUMP_BLOB:
 		/* Not yet implemented */
 
 	case KDUMP_NIL:		/* should not happen */
@@ -737,6 +738,12 @@ attr_has_value(struct attr_data *attr, kdump_attr_value_t newval)
 
 	case KDUMP_STRING:
 		return !strcmp(oldval->string, newval.string);
+
+	case KDUMP_BITMAP:
+		return oldval->bitmap == newval.bitmap;
+
+	case KDUMP_BLOB:
+		return oldval->blob == newval.blob;
 
 	case KDUMP_NIL:
 	default:
