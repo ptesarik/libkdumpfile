@@ -122,7 +122,7 @@ addrspace_name(addrxlat_addrspace_t as)
 
 /** Common format string for missing read callback. */
 static const char read_nocb_fmt[] =
-	"No read callback for %d-bit %s";
+	"No read callback for %s";
 
 /** Common format string for read callback failures. */
 static const char read_err_fmt[] =
@@ -133,33 +133,30 @@ struct read_param {
 	void *val;
 };
 
-/** Wrapper around the read32 callback. */
+/** Read a 32-bit entity using the get-page callback. */
 addrxlat_status
 do_read32(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint32_t *val)
 {
-	if (ctx->cb.get_page) {
-		addrxlat_buffer_t buf = { *addr };
-		addrxlat_status status;
-		const uint32_t *ptr;
+	addrxlat_buffer_t buf = { *addr };
+	addrxlat_status status;
+	const uint32_t *ptr;
 
-		status = ctx->cb.get_page(ctx->cb.data, &buf);
-		if (status != ADDRXLAT_OK)
-			return status;
-		ptr = buf.ptr + (addr->addr - buf.addr.addr);
-		switch (buf.byte_order) {
-		case ADDRXLAT_BIG_ENDIAN:
-			*val = be32toh(*ptr);
-			break;
-		case ADDRXLAT_LITTLE_ENDIAN:
-			*val = le32toh(*ptr);
-			break;
-		case ADDRXLAT_HOST_ENDIAN:
-			*val = *ptr;
-		}
-		if (ctx->cb.put_page)
-			ctx->cb.put_page(ctx->cb.data, &buf);
-	} else
-		return ctx->cb.read32(ctx->cb.data, addr, val);
+	status = ctx->cb.get_page(ctx->cb.data, &buf);
+	if (status != ADDRXLAT_OK)
+		return status;
+	ptr = buf.ptr + (addr->addr - buf.addr.addr);
+	switch (buf.byte_order) {
+	case ADDRXLAT_BIG_ENDIAN:
+		*val = be32toh(*ptr);
+		break;
+	case ADDRXLAT_LITTLE_ENDIAN:
+		*val = le32toh(*ptr);
+		break;
+	case ADDRXLAT_HOST_ENDIAN:
+		*val = *ptr;
+	}
+	if (ctx->cb.put_page)
+		ctx->cb.put_page(ctx->cb.data, &buf);
 }
 
 static addrxlat_status
@@ -183,8 +180,8 @@ read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
 	addrxlat_ctx_t *ctx = step->ctx;
 	addrxlat_status status;
 
-	if (!ctx->cb.read32 && !ctx->cb.get_page)
-		return set_error(ctx, ADDRXLAT_ERR_NODATA, read_nocb_fmt, 32,
+	if (!ctx->cb.get_page)
+		return set_error(ctx, ADDRXLAT_ERR_NODATA, read_nocb_fmt,
 				 addrspace_name(addr->as));
 
 	if (ctx->cb.read_caps & ADDRXLAT_CAPS(addr->as)) {
@@ -208,33 +205,30 @@ read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
 	return ADDRXLAT_OK;
 }
 
-/** Wrapper around the read64 callback. */
+/** Read a 64-bit entity using the get-page callback. */
 addrxlat_status
 do_read64(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint64_t *val)
 {
-	if (ctx->cb.get_page) {
-		addrxlat_buffer_t buf = { *addr };
-		addrxlat_status status;
-		const uint64_t *ptr;
+	addrxlat_buffer_t buf = { *addr };
+	addrxlat_status status;
+	const uint64_t *ptr;
 
-		status = ctx->cb.get_page(ctx->cb.data, &buf);
-		if (status != ADDRXLAT_OK)
-			return status;
-		ptr = buf.ptr + (addr->addr - buf.addr.addr);
-		switch (buf.byte_order) {
-		case ADDRXLAT_BIG_ENDIAN:
-			*val = be64toh(*ptr);
-			break;
-		case ADDRXLAT_LITTLE_ENDIAN:
-			*val = le64toh(*ptr);
-			break;
-		case ADDRXLAT_HOST_ENDIAN:
-			*val = *ptr;
-		}
-		if (ctx->cb.put_page)
-			ctx->cb.put_page(ctx->cb.data, &buf);
-	} else
-		return ctx->cb.read64(ctx->cb.data, addr, val);
+	status = ctx->cb.get_page(ctx->cb.data, &buf);
+	if (status != ADDRXLAT_OK)
+		return status;
+	ptr = buf.ptr + (addr->addr - buf.addr.addr);
+	switch (buf.byte_order) {
+	case ADDRXLAT_BIG_ENDIAN:
+		*val = be64toh(*ptr);
+		break;
+	case ADDRXLAT_LITTLE_ENDIAN:
+		*val = le64toh(*ptr);
+		break;
+	case ADDRXLAT_HOST_ENDIAN:
+		*val = *ptr;
+	}
+	if (ctx->cb.put_page)
+		ctx->cb.put_page(ctx->cb.data, &buf);
 }
 
 static addrxlat_status
@@ -258,8 +252,8 @@ read64(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint64_t *val,
 	addrxlat_ctx_t *ctx = step->ctx;
 	addrxlat_status status;
 
-	if (!ctx->cb.read64 && !ctx->cb.get_page)
-		return set_error(ctx, ADDRXLAT_ERR_NODATA, read_nocb_fmt, 64,
+	if (!ctx->cb.get_page)
+		return set_error(ctx, ADDRXLAT_ERR_NODATA, read_nocb_fmt,
 				 addrspace_name(addr->as));
 
 	if (ctx->cb.read_caps & ADDRXLAT_CAPS(addr->as)) {

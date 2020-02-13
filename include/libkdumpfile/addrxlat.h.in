@@ -313,24 +313,6 @@ typedef struct _addrxlat_sym {
  */
 typedef addrxlat_status addrxlat_sym_fn(void *data, addrxlat_sym_t *sym);
 
-/** Type of the read callback for 32-bit integers.
- * @param data      Arbitrary user-supplied data.
- * @param[in] addr  Address of the 32-bit integer.
- * @param[out] val  Value in host byte order.
- * @returns         Error status.
- */
-typedef addrxlat_status addrxlat_read32_fn(
-	void *data, const addrxlat_fulladdr_t *addr, uint32_t *val);
-
-/** Type of the read callback for 64-bit integers.
- * @param data      Arbitrary user-supplied data.
- * @param[in] addr  Address of the 64-bit integer.
- * @param[out] val  Value in host byte order.
- * @returns         Error status.
- */
-typedef addrxlat_status addrxlat_read64_fn(
-	void *data, const addrxlat_fulladdr_t *addr, uint64_t *val);
-
 /**  Data byte order.
  *
  * Byte order of the raw data returned by callbacks.
@@ -414,12 +396,6 @@ struct _addrxlat_cb {
 
 	/** Symbolic information callback. */
 	addrxlat_sym_fn *sym;
-
-	/** Callback for 32-bit integers. */
-	addrxlat_read32_fn *read32;
-
-	/** Callback for 64-bit integers. */
-	addrxlat_read64_fn *read64;
 
 	/** Callback to get a page buffer. */
 	addrxlat_get_page_fn *get_page;

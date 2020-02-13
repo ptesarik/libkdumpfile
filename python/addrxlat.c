@@ -1541,23 +1541,21 @@ cb_get_page(void *_self, addrxlat_buffer_t *buf)
 		Py_DECREF(bufferobj);
 		return ctx_error_status(self);
 	}
+	Py_DECREF(bufferobj);
 	buf->priv = PyMem_Malloc(view.len);
 	if (buf->priv == NULL) {
 		PyBuffer_Release(&view);
-		Py_DECREF(bufferobj);
 		PyErr_NoMemory();
 		return ctx_error_status(self);
 	}
 	if (PyBuffer_ToContiguous(buf->priv, &view, view.len, 'C') < 0) {
 		PyBuffer_Release(&view);
-		Py_DECREF(bufferobj);
 		return ctx_error_status(self);
 	}
 	buf->ptr = buf->priv;
 	buf->size = view.len;
 	buf->byte_order = byte_order;
 	PyBuffer_Release(&view);
-	Py_DECREF(bufferobj);
 
 	return ADDRXLAT_OK;
 }
