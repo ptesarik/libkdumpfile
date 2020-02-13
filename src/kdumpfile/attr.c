@@ -737,7 +737,8 @@ attr_has_value(struct attr_data *attr, kdump_attr_value_t newval)
 		return oldval->address == newval.address;
 
 	case KDUMP_STRING:
-		return !strcmp(oldval->string, newval.string);
+		return oldval->string == newval.string ||
+			!strcmp(oldval->string, newval.string);
 
 	case KDUMP_BITMAP:
 		return oldval->bitmap == newval.bitmap;
