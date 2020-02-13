@@ -120,7 +120,7 @@ main(int argc, char **argv)
 	}
 
 	/* Check changes to a pinned blob */
-	status = kdump_blob_set(blob, buffer, sizeof buffer);
+	status = kdump_blob_set(blob, buffer, sizeof bufdata);
 	if (status != KDUMP_ERR_BUSY) {
 		fputs("Changes to a pinned blob not blocked!\n", stderr);
 		ret = TEST_ERR;
@@ -135,7 +135,7 @@ main(int argc, char **argv)
 	}
 
 	/* Set own data buffer */
-	status = kdump_blob_set(blob, buffer, sizeof buffer);
+	status = kdump_blob_set(blob, buffer, sizeof bufdata);
 	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot change internal buffer: %s\n",
 			kdump_strerror(status));
@@ -146,8 +146,8 @@ main(int argc, char **argv)
 	data = kdump_blob_pin(blob);
 	size = kdump_blob_size(blob);
 	printf("Blob internal buffer set to %p+%zd, found %p+%zd\n",
-	       buffer, sizeof buffer, data, size);
-	if (data != buffer || size != sizeof buffer) {
+	       buffer, sizeof bufdata, data, size);
+	if (data != buffer || size != sizeof bufdata) {
 		fputs("Internal buffer mismatch!\n", stderr);
 		ret = TEST_ERR;
 	}
