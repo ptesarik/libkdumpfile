@@ -403,8 +403,7 @@ linux_rdirect_map(struct os_init_data *ctl)
 		uint64_t val;
 
 		page_offset.as = ADDRXLAT_KVADDR;
-		status = ctl->ctx->cb.read64(ctl->ctx->cb.data,
-					     &page_offset, &val);
+		status = do_read64(ctl->ctx, &page_offset, &val);
 		if (status != ADDRXLAT_OK)
 			return status;
 

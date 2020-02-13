@@ -92,6 +92,14 @@ INTERNAL_DECL(addrxlat_status, read64,
 	      (addrxlat_step_t *step, const addrxlat_fulladdr_t *addr,
 	       uint64_t *val, const char *what));
 
+INTERNAL_DECL(addrxlat_status, do_read32,
+	      (addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr,
+	       uint32_t *val));
+
+INTERNAL_DECL(addrxlat_status, do_read64,
+	      (addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr,
+	       uint64_t *val));
+
 INTERNAL_DECL(addrxlat_status, get_reg,
 	      (addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val));
 

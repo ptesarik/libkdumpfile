@@ -133,11 +133,18 @@ struct read_param {
 	void *val;
 };
 
+/** Wrapper around the read32 callback. */
+addrxlat_status
+do_read32(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint32_t *val)
+{
+	return ctx->cb.read32(ctx->cb.data, addr, val);
+}
+
 static addrxlat_status
 read32_op(void *data, const addrxlat_fulladdr_t *addr)
 {
 	const struct read_param *param = data;
-	return param->ctx->cb.read32(param->ctx->cb.data, addr, param->val);
+	return do_read32(param->ctx, addr, param->val);
 }
 
 /** Read a 32-bit value, making an error message if needed.
@@ -159,7 +166,7 @@ read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
 				 addrspace_name(addr->as));
 
 	if (ctx->cb.read_caps & ADDRXLAT_CAPS(addr->as)) {
-		status = ctx->cb.read32(ctx->cb.data, addr, val);
+		status = do_read32(ctx, addr, val);
 	} else {
 		addrxlat_op_ctl_t ctl;
 		struct read_param param = { ctx, val };
@@ -179,11 +186,18 @@ read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
 	return ADDRXLAT_OK;
 }
 
+/** Wrapper around the read64 callback. */
+addrxlat_status
+do_read64(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint64_t *val)
+{
+	return ctx->cb.read64(ctx->cb.data, addr, val);
+}
+
 static addrxlat_status
 read64_op(void *data, const addrxlat_fulladdr_t *addr)
 {
 	const struct read_param *param = data;
-	return param->ctx->cb.read64(param->ctx->cb.data, addr, param->val);
+	return do_read64(param->ctx, addr, param->val);
 }
 
 /** Read a 64-bit value, making an error message if needed.
@@ -205,7 +219,7 @@ read64(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint64_t *val,
 				 addrspace_name(addr->as));
 
 	if (ctx->cb.read_caps & ADDRXLAT_CAPS(addr->as)) {
-		status = ctx->cb.read64(ctx->cb.data, addr, val);
+		status = do_read64(ctx, addr, val);
 	} else {
 		addrxlat_op_ctl_t ctl;
 		struct read_param param = { ctx, val };
