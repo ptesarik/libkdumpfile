@@ -1492,61 +1492,80 @@ cb_sym(void *_self, addrxlat_sym_t *sym)
 }
 
 static addrxlat_status
-cb_read32(void *_self, const addrxlat_fulladdr_t *addr, uint32_t *val)
+cb_get_page(void *_self, addrxlat_buffer_t *buf)
 {
 	ctx_object *self = (ctx_object*)_self;
-	PyObject *addrobj, *result;
-	unsigned long long tmpval;
+	PyObject *addrobj, *result, *bufferobj;
+	addrxlat_fulladdr_t *addr;
+	int byte_order;
+	Py_buffer view;
 
-	addrobj = fulladdr_FromPointer(self->convert, addr);
+	addrobj = fulladdr_FromPointer(self->convert, &buf->addr);
 	if (!addrobj)
 		return ctx_error_status(self);
 	result = PyObject_CallMethod(
-		(PyObject*)self, "cb_read32", "O", addrobj);
-	Py_DECREF(addrobj);
-	if (!result)
+		(PyObject*)self, "cb_get_page", "O", addrobj);
+	if (!result) {
+		Py_DECREF(addrobj);
 		return ctx_error_status(self);
+	}
 	if (result == Py_None) {
 		Py_DECREF(result);
+		Py_DECREF(addrobj);
 		return cb_none(self);
 	}
 
-	tmpval = Number_AsUnsignedLongLong(result);
-	Py_DECREF(result);
-	if (PyErr_Occurred())
-		return ctx_error_status(self);
+	byte_order = ADDRXLAT_HOST_ENDIAN;
+	if (PyTuple_Check(result)) {
+		if (!PyArg_ParseTuple(result, "O|i:cb_get_page",
+				      &bufferobj, &byte_order)) {
+			Py_DECREF(result);
+			Py_DECREF(addrobj);
+			return ctx_error_status(self);
+		}
+		Py_INCREF(bufferobj);
+		Py_DECREF(result);
+	} else
+		bufferobj = result;
 
-	*val = tmpval;
+	addr = fulladdr_AsPointer(addrobj);
+	if (!addr) {
+		Py_DECREF(addrobj);
+		Py_DECREF(bufferobj);
+		return ctx_error_status(self);
+	}
+	buf->addr = *addr;
+	Py_DECREF(addrobj);
+
+	if (PyObject_GetBuffer(bufferobj, &view, PyBUF_CONTIG_RO) < 0) {
+		Py_DECREF(bufferobj);
+		return ctx_error_status(self);
+	}
+	buf->priv = PyMem_Malloc(view.len);
+	if (buf->priv == NULL) {
+		PyBuffer_Release(&view);
+		Py_DECREF(bufferobj);
+		PyErr_NoMemory();
+		return ctx_error_status(self);
+	}
+	if (PyBuffer_ToContiguous(buf->priv, &view, view.len, 'C') < 0) {
+		PyBuffer_Release(&view);
+		Py_DECREF(bufferobj);
+		return ctx_error_status(self);
+	}
+	buf->ptr = buf->priv;
+	buf->size = view.len;
+	buf->byte_order = byte_order;
+	PyBuffer_Release(&view);
+	Py_DECREF(bufferobj);
+
 	return ADDRXLAT_OK;
 }
 
-static addrxlat_status
-cb_read64(void *_self, const addrxlat_fulladdr_t *addr, uint64_t *val)
+static void
+cb_put_page(void *_self, const addrxlat_buffer_t *buf)
 {
-	ctx_object *self = (ctx_object*)_self;
-	PyObject *addrobj, *result;
-	unsigned long long tmpval;
-
-	addrobj = fulladdr_FromPointer(self->convert, addr);
-	if (!addrobj)
-		return ctx_error_status(self);
-	result = PyObject_CallMethod(
-		(PyObject*)self, "cb_read64", "O", addrobj);
-	Py_DECREF(addrobj);
-	if (!result)
-		return ctx_error_status(self);
-	if (result == Py_None) {
-		Py_DECREF(result);
-		return cb_none(self);
-	}
-
-	tmpval = Number_AsUnsignedLongLong(result);
-	Py_DECREF(result);
-	if (PyErr_Occurred())
-		return ctx_error_status(self);
-
-	*val = tmpval;
-	return ADDRXLAT_OK;
+	PyMem_Free(buf->priv);
 }
 
 static void cb_hook(void *_self, addrxlat_cb_t *cb);
@@ -1559,8 +1578,8 @@ install_cb_hook(ctx_object *self, addrxlat_cb_t *cb)
 	cb->data = self;
 	cb->cb_hook = cb_hook;
 	cb->sym = cb_sym;
-	cb->read32 = cb_read32;
-	cb->read64 = cb_read64;
+	cb->get_page = cb_get_page;
+	cb->put_page = cb_put_page;
 
 	Py_INCREF((PyObject *)self);
 }
@@ -1606,9 +1625,7 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 
 		if (copy_attr((PyObject*)self, "next_cb_sym", "cb_sym"))
 			goto err;
-		if (copy_attr((PyObject*)self, "next_cb_read32", "cb_read32"))
-			goto err;
-		if (copy_attr((PyObject*)self, "next_cb_read64", "cb_read64"))
+		if (copy_attr((PyObject*)self, "next_cb_get_page", "cb_get_page"))
 			goto err;
 	}
 
@@ -1839,27 +1856,29 @@ ctx_next_cb_sym(PyObject *_self, PyObject *args)
 	return cb_status_result(self, status, sym.val);
 }
 
-PyDoc_STRVAR(ctx_cb_read32__doc__,
-"CTX.cb_read32(fulladdr) -> value\n\
+PyDoc_STRVAR(ctx_cb_get_page__doc__,
+"CTX.cb_get_page(fulladdr) -> (value, [byte_order])\n\
 \n\
-Callback function to read a 32-bit integer from a given address.");
+Callback function to read a page at a given address. The first element\n\
+of the return tuple must implement the buffer protocol. The second\n\
+element is optional and defaults to HOST_ENDIAN.");
 
-PyDoc_STRVAR(ctx_next_cb_read32__doc__,
-"CTX.next_cb_read32(type, *args) -> value\n\
+PyDoc_STRVAR(ctx_next_cb_get_page__doc__,
+"CTX.next_cb_get_page(type, *args) -> value\n\
 \n\
-Call the next callback to read 32-bit entities.");
+Call the next callback to read a page.");
 
 static PyObject *
-ctx_next_cb_read32(PyObject *_self, PyObject *args)
+ctx_next_cb_get_page(PyObject *_self, PyObject *args)
 {
 	ctx_object *self = (ctx_object*)_self;
-	PyObject *addrobj;
+	PyObject *addrobj, *bytearrayobj, *result;
 	addrxlat_fulladdr_t *addr;
-	uint32_t val;
+	addrxlat_buffer_t buffer;
 	addrxlat_status status;
 
 	addrxlat_ctx_clear_err(self->ctx);
-	if (!self->next_cb.read32)
+	if (!self->next_cb.get_page)
 		return raise_exception(self->ctx, cb_null(self));
 
 	if (!PyArg_ParseTuple(args, "O", &addrobj))
@@ -1868,41 +1887,29 @@ ctx_next_cb_read32(PyObject *_self, PyObject *args)
 	if (!addr)
 		return NULL;
 
-	status = self->next_cb.read32(self->next_cb.data, addr, &val);
-	return cb_status_result(self, status, val);
-}
+	buffer.addr = *addr;
+	status = self->next_cb.get_page(self->next_cb.data, &buffer);
+	*addr = buffer.addr;
 
-PyDoc_STRVAR(ctx_cb_read64__doc__,
-"CTX.cb_read64(fulladdr) -> value\n\
-\n\
-Callback function to read a 64-bit integer from a given address.");
-
-PyDoc_STRVAR(ctx_next_cb_read64__doc__,
-"CTX.next_cb_read64(type, *args) -> value\n\
-\n\
-Call the next callback to read 64-bit entities.");
-
-static PyObject *
-ctx_next_cb_read64(PyObject *_self, PyObject *args)
-{
-	ctx_object *self = (ctx_object*)_self;
-	PyObject *addrobj;
-	addrxlat_fulladdr_t *addr;
-	uint64_t val;
-	addrxlat_status status;
-
-	addrxlat_ctx_clear_err(self->ctx);
-	if (!self->next_cb.read64)
-		return raise_exception(self->ctx, cb_null(self));
-
-	if (!PyArg_ParseTuple(args, "O", &addrobj))
-		return NULL;
-	addr = fulladdr_AsPointer(addrobj);
-	if (!addr)
+	if (self->next_cb.cb_hook == cb_hook &&
+	    handle_cb_exception((ctx_object*)self->next_cb.data, status))
 		return NULL;
 
-	status = self->next_cb.read64(self->next_cb.data, addr, &val);
-	return cb_status_result(self, status, val);
+	if (status != ADDRXLAT_OK)
+		return raise_exception(self->ctx, status);
+
+	bytearrayobj = PyByteArray_FromStringAndSize(buffer.ptr, buffer.size);
+	if (!bytearrayobj)
+		goto err;
+	result = Py_BuildValue("(Oi)", bytearrayobj, buffer.byte_order);
+	if (!result)
+		goto err_bytearray;
+	return result;
+
+ err_bytearray:
+	Py_DECREF(bytearrayobj);
+ err:
+	return NULL;
 }
 
 static PyMethodDef ctx_methods[] = {
@@ -1916,17 +1923,13 @@ static PyMethodDef ctx_methods[] = {
 	/* Callbacks */
 	{ "cb_sym", ctx_next_cb_sym, METH_VARARGS,
 	  ctx_cb_sym__doc__ },
-	{ "cb_read32", ctx_next_cb_read32, METH_VARARGS,
-	  ctx_cb_read32__doc__ },
-	{ "cb_read64", ctx_next_cb_read64, METH_VARARGS,
-	  ctx_cb_read64__doc__ },
+	{ "cb_get_page", ctx_next_cb_get_page, METH_VARARGS,
+	  ctx_cb_get_page__doc__ },
 
 	{ "next_cb_sym", ctx_next_cb_sym, METH_VARARGS,
 	  ctx_next_cb_sym__doc__ },
-	{ "next_cb_read32", ctx_next_cb_read32, METH_VARARGS,
-	  ctx_next_cb_read32__doc__ },
-	{ "next_cb_read64", ctx_next_cb_read64, METH_VARARGS,
-	  ctx_next_cb_read64__doc__ },
+	{ "next_cb_get_page", ctx_next_cb_get_page, METH_VARARGS,
+	  ctx_next_cb_get_page__doc__ },
 
 	{ NULL }
 };
@@ -5719,6 +5722,11 @@ init_addrxlat (void)
 	CONSTDEF(MACHPHYSADDR);
 	CONSTDEF(KVADDR);
 	CONSTDEF(NOADDR);
+
+	/* endianity */
+	CONSTDEF(BIG_ENDIAN);
+	CONSTDEF(LITTLE_ENDIAN);
+	CONSTDEF(HOST_ENDIAN);
 
 	/* symbolic info types */
 	CONSTDEF(SYM_REG);

@@ -635,23 +635,27 @@ class TestOperator(unittest.TestCase):
 #
 class TestTranslation(unittest.TestCase):
     def setUp(self):
-        def read32(addr):
+        def get_page(addr):
             # Page table level 2 @ 0
             if addr.addr == 0x10000:
-                return 0x101
+                return (bytearray((0x00, 0x00, 0x01, 0x01)),
+                        addrxlat.BIG_ENDIAN)
             # Page table level 1 @ 0x65
             if addr.addr == 0x10100 + 0x65 * 4:
-                return 0x1c0
+                return (bytearray((0x00, 0x00, 0x01, 0xc0)),
+                        addrxlat.BIG_ENDIAN)
             # Page table level 1 @ 0x41
             if addr.addr == 0x10100 + 0x41 * 4:
-                return 0x1a9
+                return (bytearray((0x00, 0x00, 0x01, 0xa9)),
+                        addrxlat.BIG_ENDIAN)
             # Memory array at 0x40
             if addr.addr == 0x11000 + 0x40 * 4:
-                return 0xaa
+                return (bytearray((0x00, 0x00, 0x00, 0xaa)),
+                        addrxlat.BIG_ENDIAN)
 
         self.ctx = addrxlat.Context()
         self.ctx.read_caps = addrxlat.CAPS(addrxlat.MACHPHYSADDR)
-        self.ctx.cb_read32 = read32
+        self.ctx.cb_get_page = get_page
         self.sys = addrxlat.System()
 
         map = addrxlat.Map()
@@ -787,10 +791,11 @@ class TestTranslation(unittest.TestCase):
             def __init__(self, *args, **kwargs):
                 super(mycontext, self).__init__(*args, **kwargs)
                 self.read_caps = addrxlat.CAPS(addrxlat.MACHPHYSADDR)
-            def cb_read32(self, addr):
+            def cb_get_page(self, addr):
                 # Memory array at 0x40
                 if addr.addr == 0x11000 + 0x40 * 4:
-                    return 0x12
+                    return (bytearray((0x00, 0x00, 0x00, 0x12)),
+                            addrxlat.BIG_ENDIAN)
 
         ctx = mycontext()
         addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x4034)
