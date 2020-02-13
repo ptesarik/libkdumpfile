@@ -50,24 +50,15 @@ find_entry(addrxlat_addr_t addr)
 }
 
 static addrxlat_status
-read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
+get_page(void *data, addrxlat_buffer_t *buf)
 {
 	addrxlat_ctx_t *ctx = data;
-	addrxlat_lookup_elem_t *ent = find_entry(addr->addr);
+	addrxlat_lookup_elem_t *ent = find_entry(buf->addr.addr);
 	if (!ent)
 		return addrxlat_ctx_err(ctx, ADDRXLAT_ERR_NODATA, "No data");
-	*val = ent->dest;
-	return ADDRXLAT_OK;
-}
-
-static addrxlat_status
-read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
-{
-	addrxlat_ctx_t *ctx = data;
-	addrxlat_lookup_elem_t *ent = find_entry(addr->addr);
-	if (!ent)
-		return addrxlat_ctx_err(ctx, ADDRXLAT_ERR_NODATA, "No data");
-	*val = ent->dest;
+	buf->ptr = &ent->dest;
+	buf->size = sizeof ent->dest;
+	buf->byte_order = ADDRXLAT_LITTLE_ENDIAN;
 	return ADDRXLAT_OK;
 }
 
@@ -101,7 +92,7 @@ add_entry(const char *spec)
 	}
 
 	entries[nentries].orig = addr;
-	entries[nentries].dest = val;
+	entries[nentries].dest = htole64(val);
 	++nentries;
 
 	return TEST_OK;
@@ -327,8 +318,7 @@ main(int argc, char **argv)
 	char *endp;
 	addrxlat_ctx_t *ctx;
 	addrxlat_cb_t cb = {
-		.read32 = read32,
-		.read64 = read64,
+		.get_page = get_page,
 		.read_caps = (ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR) |
 			      ADDRXLAT_CAPS(ADDRXLAT_KVADDR))
 	};

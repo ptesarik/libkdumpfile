@@ -768,44 +768,25 @@ find_entry(addrxlat_addr_t addr, size_t sz)
 }
 
 static addrxlat_status
-read32(void *data, const addrxlat_fulladdr_t *addr, uint32_t *val)
-{
-	struct cbdata *cbd = data;
-	struct entry *ent;
-	uint32_t *p;
-
-	if (addr->as != ADDRXLAT_MACHPHYSADDR)
-		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_ERR_INVALID,
-					"Unexpected address space: %ld",
-					(long)addr->as);
-
-	ent = find_entry(addr->addr, sizeof(uint32_t));
-	if (!ent)
-		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_ERR_NODATA,
-					"No data");
-	p = (uint32_t*)(ent->buf + addr->addr - ent->addr);
-	*val = *p;
-	return ADDRXLAT_OK;
-}
-
-static addrxlat_status
-read64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
+get_page(void *data, addrxlat_buffer_t *buf)
 {
 	struct cbdata *cbd = data;
 	struct entry *ent;
 	uint64_t *p;
 
-	if (addr->as != ADDRXLAT_MACHPHYSADDR)
+	if (buf->addr.as != ADDRXLAT_MACHPHYSADDR)
 		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_ERR_INVALID,
 					"Unexpected address space: %ld",
-					(long)addr->as);
+					(long)buf->addr.as);
 
-	ent = find_entry(addr->addr, sizeof(uint64_t));
+	ent = find_entry(buf->addr.addr, sizeof(uint64_t));
 	if (!ent)
 		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_ERR_NODATA,
 					"No data");
-	p = (uint64_t*)(ent->buf + addr->addr - ent->addr);
-	*val = *p;
+	buf->addr.addr = ent->addr;
+	buf->ptr = ent->buf;
+	buf->size = ent->buflen;
+	buf->byte_order = ADDRXLAT_HOST_ENDIAN;
 	return ADDRXLAT_OK;
 }
 
@@ -915,8 +896,7 @@ int main(int argc, char *argv[])
 	struct cbdata data;
 	addrxlat_cb_t cb = {
 		.data = &data,
-		.read32 = read32,
-		.read64 = read64,
+		.get_page = get_page,
 		.read_caps = ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR)
 	};
 	int c;

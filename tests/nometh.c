@@ -71,7 +71,7 @@ setup_pgt(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 }
 
 static addrxlat_status
-myread64(void *data, const addrxlat_fulladdr_t *addr, uint64_t *val)
+mygetpage(void *data, addrxlat_buffer_t *buf)
 {
 	fputs("read callback called?!\n", stderr);
 	return ADDRXLAT_OK;
@@ -87,7 +87,7 @@ int
 main(int argc, char **argv)
 {
 	static addrxlat_cb_t cb = {
-		.read64 = myread64,
+		.get_page = mygetpage,
 		.read_caps = ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR)
 	};
 
@@ -156,7 +156,7 @@ main(int argc, char **argv)
 		printf("OK (%s)\n", addrxlat_ctx_get_err(ctx));
 
 	fputs("Missing callback: ", stdout);
-	cb.read64 = NULL;
+	cb.get_page = NULL;
 	addrxlat_ctx_set_cb(ctx, &cb);
 	status = addrxlat_op(&opctl, &faddr);
 	if (status == ADDRXLAT_OK) {
