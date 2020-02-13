@@ -33,6 +33,8 @@
 #include "kdumpfile-priv.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <malloc.h>
 
 #define TEST_OK     0
 #define TEST_FAIL   1
@@ -62,6 +64,9 @@ main(int argc, char **argv)
 
 	ret = TEST_OK;
 
+	/* Make sure freed regions are overwritten */
+	mallopt(M_PERTURB, 1);
+
 	ctx = kdump_new();
 	if (!ctx) {
 		perror("Cannot allocate kdump context");
@@ -80,7 +85,7 @@ main(int argc, char **argv)
 		return TEST_FAIL;
 	}
 
-	buffer = malloc(sizeof bufdata);
+	buffer = malloc(2 * sizeof bufdata);
 	if (!buffer) {
 		perror("Cannot allocate buffer data");
 		return TEST_FAIL;
@@ -153,6 +158,38 @@ main(int argc, char **argv)
 	}
 
 	/* Unpin own data buffer */
+	cnt = kdump_blob_unpin(blob);
+	printf("Expected pin count %lu, found %lu\n", 0, cnt);
+	if (cnt != 0) {
+		fputs("Pin count mismatch!\n", stderr);
+		ret = TEST_ERR;
+	}
+
+	/* Resize own buffer */
+	status = kdump_blob_set(blob, buffer, 2 * sizeof bufdata);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot resize internal buffer: %s\n",
+			kdump_strerror(status));
+		ret = TEST_ERR;
+	}
+
+	/* Check resized data buffer */
+	data = kdump_blob_pin(blob);
+	size = kdump_blob_size(blob);
+	printf("Blob internal buffer set to %p+%zd, found %p+%zd\n",
+	       buffer, 2 * sizeof bufdata, data, size);
+	if (data != buffer || size != 2 * sizeof bufdata) {
+		fputs("Internal buffer mismatch!\n", stderr);
+		ret = TEST_ERR;
+	}
+
+	/* Check that the data is still valid */
+	if (memcmp(buffer, bufdata, sizeof bufdata) != 0) {
+		fputs("Buffer corrupted after resize!\n", stderr);
+		ret = TEST_ERR;
+	}
+
+	/* Unpin own data buffer again */
 	cnt = kdump_blob_unpin(blob);
 	printf("Expected pin count %lu, found %lu\n", 0, cnt);
 	if (cnt != 0) {

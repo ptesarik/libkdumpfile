@@ -102,7 +102,7 @@ kdump_blob_set(kdump_blob_t *blob, void *data, size_t size)
 	if (blob->pincnt)
 		return KDUMP_ERR_BUSY;
 
-	if (blob->data)
+	if (blob->data && blob->data != data)
 		free(blob->data);
 
 	if (!data)
