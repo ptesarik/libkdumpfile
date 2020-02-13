@@ -137,7 +137,29 @@ struct read_param {
 addrxlat_status
 do_read32(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint32_t *val)
 {
-	return ctx->cb.read32(ctx->cb.data, addr, val);
+	if (ctx->cb.get_page) {
+		addrxlat_buffer_t buf = { *addr };
+		addrxlat_status status;
+		const uint32_t *ptr;
+
+		status = ctx->cb.get_page(ctx->cb.data, &buf);
+		if (status != ADDRXLAT_OK)
+			return status;
+		ptr = buf.ptr + (addr->addr - buf.addr.addr);
+		switch (buf.byte_order) {
+		case ADDRXLAT_BIG_ENDIAN:
+			*val = be32toh(*ptr);
+			break;
+		case ADDRXLAT_LITTLE_ENDIAN:
+			*val = le32toh(*ptr);
+			break;
+		case ADDRXLAT_HOST_ENDIAN:
+			*val = *ptr;
+		}
+		if (ctx->cb.put_page)
+			ctx->cb.put_page(ctx->cb.data, &buf);
+	} else
+		return ctx->cb.read32(ctx->cb.data, addr, val);
 }
 
 static addrxlat_status
@@ -161,7 +183,7 @@ read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
 	addrxlat_ctx_t *ctx = step->ctx;
 	addrxlat_status status;
 
-	if (!ctx->cb.read32)
+	if (!ctx->cb.read32 && !ctx->cb.get_page)
 		return set_error(ctx, ADDRXLAT_ERR_NODATA, read_nocb_fmt, 32,
 				 addrspace_name(addr->as));
 
@@ -190,7 +212,29 @@ read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
 addrxlat_status
 do_read64(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint64_t *val)
 {
-	return ctx->cb.read64(ctx->cb.data, addr, val);
+	if (ctx->cb.get_page) {
+		addrxlat_buffer_t buf = { *addr };
+		addrxlat_status status;
+		const uint64_t *ptr;
+
+		status = ctx->cb.get_page(ctx->cb.data, &buf);
+		if (status != ADDRXLAT_OK)
+			return status;
+		ptr = buf.ptr + (addr->addr - buf.addr.addr);
+		switch (buf.byte_order) {
+		case ADDRXLAT_BIG_ENDIAN:
+			*val = be64toh(*ptr);
+			break;
+		case ADDRXLAT_LITTLE_ENDIAN:
+			*val = le64toh(*ptr);
+			break;
+		case ADDRXLAT_HOST_ENDIAN:
+			*val = *ptr;
+		}
+		if (ctx->cb.put_page)
+			ctx->cb.put_page(ctx->cb.data, &buf);
+	} else
+		return ctx->cb.read64(ctx->cb.data, addr, val);
 }
 
 static addrxlat_status
@@ -214,7 +258,7 @@ read64(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint64_t *val,
 	addrxlat_ctx_t *ctx = step->ctx;
 	addrxlat_status status;
 
-	if (!ctx->cb.read64)
+	if (!ctx->cb.read64 && !ctx->cb.get_page)
 		return set_error(ctx, ADDRXLAT_ERR_NODATA, read_nocb_fmt, 64,
 				 addrspace_name(addr->as));
 
