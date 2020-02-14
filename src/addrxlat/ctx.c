@@ -113,7 +113,6 @@ get_cache_buf(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr,
 {
 	addrxlat_status status;
 	struct read_cache_slot *slot;
-	unsigned i;
 
 	/* Try to reuse a cache slot */
 	slot = &ctx->cache.slot[0];
