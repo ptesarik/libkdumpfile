@@ -839,9 +839,9 @@ def_realloc_caches(kdump_ctx_t *ctx)
 				 cache_size, get_page_size(ctx));
 
 	set_attr(ctx, gattr(ctx, GKI_cache_hits),
-		 ATTR_INDIRECT, &cache->hits);
+		 ATTR_PERSIST_INDIRECT, &cache->hits);
 	set_attr(ctx, gattr(ctx, GKI_cache_misses),
-		 ATTR_INDIRECT, &cache->misses);
+		 ATTR_PERSIST_INDIRECT, &cache->misses);
 
 	if (ctx->shared->cache)
 		cache_free(ctx->shared->cache);

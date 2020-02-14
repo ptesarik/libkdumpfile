@@ -447,6 +447,11 @@ struct attr_flags {
 #define ATTR_INVALID	\
 	((struct attr_flags){ .invalid = 1 })
 
+/**  Persistent indirect attribute flags. */
+#define ATTR_PERSIST_INDIRECT	\
+	((struct attr_flags){ .persist = 1, .indirect = 1 })
+
+
 /**  Attribute template flags.
  */
 struct attr_template_flags {

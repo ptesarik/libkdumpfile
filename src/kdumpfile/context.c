@@ -170,6 +170,10 @@ kdump_new(void)
 
 	set_attr_number(ctx, gattr(ctx, GKI_cache_size),
 			ATTR_PERSIST, DEFAULT_CACHE_SIZE);
+	set_attr_number(ctx, gattr(ctx, GKI_cache_hits),
+			ATTR_PERSIST, 0);
+	set_attr_number(ctx, gattr(ctx, GKI_cache_misses),
+			ATTR_PERSIST, 0);
 
 	return ctx;
 
