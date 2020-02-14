@@ -109,6 +109,9 @@ struct read_cache {
 	struct read_cache_slot slot[READ_CACHE_SLOTS];
 };
 
+INTERNAL_DECL(void, bury_cache_buffer,
+	      (struct read_cache *cache, const addrxlat_fulladdr_t *addr));
+
 /**  Representation of address translation.
  *
  * This structure contains all internal state needed to perform address

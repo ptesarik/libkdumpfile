@@ -633,8 +633,10 @@ lowest_mapped_tbl(addrxlat_step_t *step,
 
 		for (i = 0; i < mystep.remain - 1; ++i)
 			mystep.idx[i] = 0;
-		if (++mystep.idx[i] >= nelem)
+		if (++mystep.idx[i] >= nelem) {
+			bury_cache_buffer(&step->ctx->cache, &mystep.base);
 			return ADDRXLAT_ERR_NOTPRESENT;
+		}
 		memcpy(step, &mystep, sizeof *step);
 	}
 
@@ -708,8 +710,10 @@ highest_mapped_tbl(addrxlat_step_t *step,
 
 		for (i = 0; i < mystep.remain - 1; ++i)
 			mystep.idx[i] = nelem - 1;
-		if (!mystep.idx[i]--)
+		if (!mystep.idx[i]--) {
+			bury_cache_buffer(&step->ctx->cache, &mystep.base);
 			return ADDRXLAT_ERR_NOTPRESENT;
+		}
 		memcpy(step, &mystep, sizeof *step);
 	}
 
@@ -783,8 +787,10 @@ lowest_unmapped_tbl(addrxlat_step_t *step,
 
 		for (i = 0; i < mystep.remain - 1; ++i)
 			mystep.idx[i] = 0;
-		if (++mystep.idx[i] >= nelem)
+		if (++mystep.idx[i] >= nelem) {
+			bury_cache_buffer(&step->ctx->cache, &mystep.base);
 			break;
+		}
 		memcpy(step, &mystep, sizeof *step);
 	}
 

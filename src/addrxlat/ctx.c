@@ -144,6 +144,47 @@ get_cache_buf(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr,
 	return ADDRXLAT_OK;
 }
 
+/** Mark a buffer as no longer needed.
+ * @param cache  Read cache.
+ * @param addr   Address inside a buffer to be buried.
+ *
+ * This function moves the cache slot corresponding to the given address
+ * to the end of the MRU chain. It does not release the associated page,
+ * but the slot will be evicted first (unless it is meanwhile reused, of
+ * course).
+ */
+void
+bury_cache_buffer(struct read_cache *cache, const addrxlat_fulladdr_t *addr)
+{
+	struct read_cache_slot *slot;
+
+	/* Find the corresponding cache slot */
+	slot = &cache->slot[0];
+	do {
+		addrxlat_buffer_t *buf = &slot->buffer;
+		if (buf->size > addr->addr - buf->addr.addr &&
+		    buf->addr.as == addr->as) {
+			/* FOUND */
+
+			/* If already marked, do nothing. */
+			if (slot->next == cache->mru)
+				break;
+
+			/* Reorder the MRU chain if needed */
+			if (slot != cache->mru) {
+				slot->prev->next = slot->next;
+				slot->next->prev = slot->prev;
+				slot->next = cache->mru;
+				slot->prev = cache->mru->prev;
+				slot->prev->next = slot->next->prev = slot;
+			} else
+				/* Move the MRU pointer. */
+				cache->mru = slot->next;
+			break;
+		}
+	} while (++slot < &cache->slot[READ_CACHE_SLOTS]);
+}
+
 addrxlat_ctx_t *
 addrxlat_ctx_new(void)
 {
