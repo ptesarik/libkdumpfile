@@ -431,63 +431,21 @@ struct attr_flags {
 	uint8_t invalid : 1;	/**< Value needs revalidation */
 };
 
-/**  Get the default attribute flags.
- * @returns Default attribute flags.
- */
-static inline struct attr_flags
-attr_flags_default(void)
-{
-	const struct attr_flags flags = { };
-	return flags;
-}
-
 /**  Default attribute flags. */
-#define ATTR_DEFAULT	(attr_flags_default())
-
-/**  Get the persistent attribute flags.
- * @returns Persistent attribute flags.
- */
-static inline struct attr_flags
-attr_flags_persist(void)
-{
-	const struct attr_flags flags = {
-		.persist = 1,
-	};
-	return flags;
-}
+#define ATTR_DEFAULT	\
+	((struct attr_flags){ })
 
 /**  Persistent attribute flags. */
-#define ATTR_PERSIST	(attr_flags_persist())
-
-/**  Get the default indirect flags.
- * @returns Indirect attribute flags.
- */
-static inline struct attr_flags
-attr_flags_indirect(void)
-{
-	const struct attr_flags flags = {
-		.indirect = 1,
-	};
-	return flags;
-}
+#define ATTR_PERSIST	\
+	((struct attr_flags){ .persist = 1 })
 
 /**  Indirect attribute flags. */
-#define ATTR_INDIRECT	(attr_flags_indirect())
-
-/**  Get the default invalid flags.
- * @returns Invalid attribute flags.
- */
-static inline struct attr_flags
-attr_flags_invalid(void)
-{
-	const struct attr_flags flags = {
-		.invalid = 1,
-	};
-	return flags;
-}
+#define ATTR_INDIRECT	\
+	((struct attr_flags){ .indirect = 1 })
 
 /**  Invalid attribute flags. */
-#define ATTR_INVALID	(attr_flags_invalid())
+#define ATTR_INVALID	\
+	((struct attr_flags){ .invalid = 1 })
 
 /**  Attribute template flags.
  */
