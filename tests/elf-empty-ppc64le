@@ -1,0 +1,18 @@
+#! /bin/sh
+
+#
+# elf-empty-ppc64le
+#
+# Create an empty dump file and verify meta-attributes.
+#
+
+arch=ppc64
+byte_order=1
+ptr_size=8
+pteval_spec="number: 8"
+
+ei_class=2
+ei_data=1
+e_machine=21
+
+. "$srcdir"/elf-empty

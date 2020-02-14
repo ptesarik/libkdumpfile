@@ -177,6 +177,8 @@ test_scripts = \
 	early-version-code \
 	elf-empty-i386 \
 	elf-empty-i386-elf64 \
+	elf-empty-ppc64 \
+	elf-empty-ppc64le \
 	elf-empty-s390 \
 	elf-empty-s390x \
 	elf-empty-x86_64 \

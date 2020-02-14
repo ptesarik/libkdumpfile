@@ -11,7 +11,7 @@ dumpfile="out/${name}.dump"
 ei_class = $ei_class
 ei_data = $ei_data
 e_machine = $e_machine
-e_phoff = $page_size
+e_phoff = 0x1000
 
 DATA = $srcdir/elf-empty.data
 EOF
@@ -21,6 +21,15 @@ if [ $rc -ne 0 ]; then
     exit $rc
 fi
 echo "Created empty ELF dump: $dumpfile"
+
+page_shift_spec=
+if [ -n "$page_shift" ]; then
+    page_shift_spec="arch.page_shift = number: $page_shift"
+fi
+page_size_spec=
+if [ -n "$page_size" ]; then
+    page_size_spec="arch.page_size = number: $page_size"
+fi
 
 ./checkattr "$dumpfile" <<EOF
 file = directory:
@@ -36,8 +45,8 @@ arch = directory:
 arch.name = string: $arch
 arch.byte_order = number: $byte_order
 arch.ptr_size = number: $ptr_size
-arch.page_shift = number: $page_shift
-arch.page_size = number: $page_size
+$page_shift_spec
+$page_size_spec
 arch.pteval_size = $pteval_spec
 EOF
 rc=$?
