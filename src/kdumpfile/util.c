@@ -284,7 +284,6 @@ static const struct arch_ops*
 arch_ops(enum kdump_arch arch)
 {
 	switch (arch) {
-	case ARCH_AARCH64:
 	case ARCH_ALPHA:
 	case ARCH_ARM:
 	case ARCH_IA64:
@@ -294,6 +293,7 @@ arch_ops(enum kdump_arch arch)
 		/* TODO */
 		break;
 
+	case ARCH_AARCH64:	return &aarch64_ops;
 	case ARCH_IA32:		return &ia32_ops;
 	case ARCH_PPC64:	return &ppc64_ops;
 	case ARCH_S390X:	return &s390x_ops;

@@ -183,6 +183,7 @@ test_scripts = \
 	elf-empty-s390 \
 	elf-empty-s390x \
 	elf-empty-x86_64 \
+	elf-prstatus-aarch64 \
 	elf-prstatus-i386 \
 	elf-prstatus-ppc64 \
 	elf-prstatus-x86_64 \
@@ -285,6 +286,7 @@ dist_check_DATA = \
 	early-version-code.data \
 	early-version-code.expect \
 	elf-empty.data \
+	elf-prstatus-aarch64.data \
 	elf-prstatus-i386.data \
 	elf-prstatus-ppc64.data \
 	elf-prstatus-x86_64.data \
