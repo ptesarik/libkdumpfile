@@ -356,7 +356,6 @@ static kdump_status
 do_arch_init(kdump_ctx_t *ctx)
 {
 	ctx->shared->arch_init_done = 1;
-	ctx->shared->arch_ops = arch_ops(ctx->shared->arch);
 	if (ctx->shared->arch_ops && ctx->shared->arch_ops->init)
 		return ctx->shared->arch_ops->init(ctx);
 
@@ -374,7 +373,7 @@ arch_name_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 		if (ctx->shared->arch_ops->cleanup)
 			ctx->shared->arch_ops->cleanup(ctx->shared);
 	}
-	ctx->shared->arch_ops = NULL;
+	ctx->shared->arch_ops = arch_ops(ctx->shared->arch);
 	ctx->shared->arch_init_done = 0;
 
 	if (ctx->shared->arch == ARCH_UNKNOWN)
