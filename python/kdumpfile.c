@@ -2041,8 +2041,10 @@ static PyTypeObject blob_object_type =
 	0,				/* tp_setattro */
 	&blob_as_buffer,		/* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT
-	    | Py_TPFLAGS_BASETYPE
-	    | Py_TPFLAGS_HAVE_NEWBUFFER, /* tp_flags */
+#if PY_MAJOR_VERSION < 3
+	    | Py_TPFLAGS_HAVE_NEWBUFFER
+#endif
+	    | Py_TPFLAGS_BASETYPE,	/* tp_flags */
 	blob__doc__,			/* tp_doc */
 	0,				/* tp_traverse */
 	0,				/* tp_clear */
