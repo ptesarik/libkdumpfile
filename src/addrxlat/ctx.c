@@ -37,12 +37,121 @@
 /** Maximum length of the static error message. */
 #define ERRBUF	64
 
+/**  Initialize the read cache.
+ * @param cache  Read cache.
+ */
+static void
+init_cache(struct read_cache *cache)
+{
+	struct read_cache_slot *slot, *end;
+
+	slot = &cache->slot[0];
+	end  = &cache->slot[READ_CACHE_SLOTS];
+	cache->mru = slot;
+	do {
+		slot->next = slot + 1 < end ? slot + 1 : &cache->slot[0];
+		slot->next->prev = slot;
+	} while (++slot < end);
+}
+
+/**  Clean up the read cache.
+ * @param cache  Read cache.
+ * @param cb     Callback definitions.
+ *
+ * Release all cached pages using @c put_page function from the
+ * provided callback definition.
+ */
+static void
+cleanup_cache(struct read_cache *cache, const addrxlat_cb_t *cb)
+{
+	struct read_cache_slot *slot;
+
+	if (!cb->put_page)
+		return;
+
+	slot = &cache->slot[0];
+	do {
+		addrxlat_buffer_t *buf = &slot->buffer;
+		if (buf->size)
+			cb->put_page(cb->data, buf);
+	} while (++slot < &cache->slot[READ_CACHE_SLOTS]);
+}
+
+/** Mark a slot as most recently used.
+ * @param cache  Read cache.
+ * @param slot   Cache slot.
+ */
+static inline void
+touch_cache_slot(struct read_cache *cache, struct read_cache_slot *slot)
+{
+	/* If already marked, do nothing. */
+	if (slot == cache->mru)
+		return;
+
+	/* Reorder the MRU chain if needed */
+	if (slot->next != cache->mru) {
+		slot->prev->next = slot->next;
+		slot->next->prev = slot->prev;
+		slot->next = cache->mru;
+		slot->prev = cache->mru->prev;
+		slot->prev->next = slot->next->prev = slot;
+	}
+
+	/* Move the MRU pointer. */
+	cache->mru = slot;
+}
+
+/** Get a cache slot for a given address.
+ * @param      ctx   Address translation context.
+ * @param      addr  Desired address.
+ * @param[out] pbuf  Buffer (updated on success).
+ * @returns          Error status.
+ */
+static addrxlat_status
+get_cache_buf(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr,
+	      addrxlat_buffer_t **pbuf)
+{
+	addrxlat_status status;
+	struct read_cache_slot *slot;
+	unsigned i;
+
+	/* Try to reuse a cache slot */
+	slot = &ctx->cache.slot[0];
+	do {
+		addrxlat_buffer_t *buf = &slot->buffer;
+		if (buf->size > addr->addr - buf->addr.addr &&
+		    buf->addr.as == addr->as)
+			goto out;
+	} while (++slot < &ctx->cache.slot[READ_CACHE_SLOTS]);
+
+	/* Not found - use the LRU slot */
+	slot = ctx->cache.mru->prev;
+
+	/* Free up the slot if necessary */
+	if (slot->buffer.size && ctx->cb.put_page)
+		ctx->cb.put_page(ctx->cb.data, &slot->buffer);
+
+	/* Get the new page */
+	slot->buffer.addr = *addr;
+	status = ctx->cb.get_page(ctx->cb.data, &slot->buffer);
+	if (status != ADDRXLAT_OK) {
+		slot->buffer.size = 0;
+		return status;
+	}
+
+ out:
+	*pbuf = &slot->buffer;
+	touch_cache_slot(&ctx->cache, slot);
+	return ADDRXLAT_OK;
+}
+
 addrxlat_ctx_t *
 addrxlat_ctx_new(void)
 {
 	addrxlat_ctx_t *ctx = calloc(1, sizeof(addrxlat_ctx_t) + ERRBUF);
 	if (ctx) {
 		ctx->refcnt = 1;
+		init_cache(&ctx->cache);
 		err_init(&ctx->err, ERRBUF);
 	}
 	return ctx;
@@ -59,6 +168,7 @@ addrxlat_ctx_decref(addrxlat_ctx_t *ctx)
 {
 	unsigned long refcnt = --ctx->refcnt;
 	if (!refcnt) {
+		cleanup_cache(&ctx->cache, &ctx->cb);
 		err_cleanup(&ctx->err);
 		free(ctx);
 	}
@@ -137,15 +247,16 @@ struct read_param {
 addrxlat_status
 do_read32(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint32_t *val)
 {
-	addrxlat_buffer_t buf = { *addr };
 	addrxlat_status status;
+	addrxlat_buffer_t *buf;
 	const uint32_t *ptr;
 
-	status = ctx->cb.get_page(ctx->cb.data, &buf);
+	status = get_cache_buf(ctx, addr, &buf);
 	if (status != ADDRXLAT_OK)
 		return status;
-	ptr = buf.ptr + (addr->addr - buf.addr.addr);
-	switch (buf.byte_order) {
+
+	ptr = buf->ptr + (addr->addr - buf->addr.addr);
+	switch (buf->byte_order) {
 	case ADDRXLAT_BIG_ENDIAN:
 		*val = be32toh(*ptr);
 		break;
@@ -155,8 +266,7 @@ do_read32(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint32_t *val)
 	case ADDRXLAT_HOST_ENDIAN:
 		*val = *ptr;
 	}
-	if (ctx->cb.put_page)
-		ctx->cb.put_page(ctx->cb.data, &buf);
+	return ADDRXLAT_OK;
 }
 
 static addrxlat_status
@@ -209,15 +319,16 @@ read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
 addrxlat_status
 do_read64(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint64_t *val)
 {
-	addrxlat_buffer_t buf = { *addr };
 	addrxlat_status status;
+	addrxlat_buffer_t *buf;
 	const uint64_t *ptr;
 
-	status = ctx->cb.get_page(ctx->cb.data, &buf);
+	status = get_cache_buf(ctx, addr, &buf);
 	if (status != ADDRXLAT_OK)
 		return status;
-	ptr = buf.ptr + (addr->addr - buf.addr.addr);
-	switch (buf.byte_order) {
+
+	ptr = buf->ptr + (addr->addr - buf->addr.addr);
+	switch (buf->byte_order) {
 	case ADDRXLAT_BIG_ENDIAN:
 		*val = be64toh(*ptr);
 		break;
@@ -227,8 +338,7 @@ do_read64(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr, uint64_t *val)
 	case ADDRXLAT_HOST_ENDIAN:
 		*val = *ptr;
 	}
-	if (ctx->cb.put_page)
-		ctx->cb.put_page(ctx->cb.data, &buf);
+	return ADDRXLAT_OK;
 }
 
 static addrxlat_status

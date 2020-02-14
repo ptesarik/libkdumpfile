@@ -88,6 +88,27 @@
 /**  In-flight translation. */
 struct inflight;
 
+/** Number of read cache slots. */
+#define READ_CACHE_SLOTS	4
+
+/** Cache slot (buffer plus cache metadata). */
+struct read_cache_slot {
+	/** Buffer metadata */
+	addrxlat_buffer_t buffer;
+
+	/** MRU chain. */
+	struct read_cache_slot *prev, *next;
+};
+
+/** Read cache storage and metadata. */
+struct read_cache {
+	/** Most recently used cache slot. */
+	struct read_cache_slot *mru;
+
+	/** Cache slots. */
+	struct read_cache_slot slot[READ_CACHE_SLOTS];
+};
+
 /**  Representation of address translation.
  *
  * This structure contains all internal state needed to perform address
@@ -114,6 +135,9 @@ struct _addrxlat_ctx {
 
 	/** In-flight translations. */
 	struct inflight *inflight;
+
+	/** Read cache. */
+	struct read_cache cache;
 
 	/** Error message buffer.
 	 * This must be the last member. */
