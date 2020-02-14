@@ -280,6 +280,9 @@ vtop_init(kdump_ctx_t *ctx)
 	addrxlat_status axres;
 	struct opts opts;
 
+	if (!isset_arch_name(ctx))
+		return KDUMP_OK;
+
 	osdesc.type = ctx->xlat->ostype;
 	osdesc.arch = get_arch_name(ctx);
 
