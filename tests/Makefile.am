@@ -175,6 +175,7 @@ test_scripts = \
 	diskdump-multiread \
 	diskdump-excluded \
 	early-version-code \
+	elf-empty-aarch64 \
 	elf-empty-i386 \
 	elf-empty-i386-elf64 \
 	elf-empty-ppc64 \

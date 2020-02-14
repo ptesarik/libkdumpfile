@@ -202,6 +202,7 @@ static size_t
 arch_ptr_size(enum kdump_arch arch)
 {
 	switch (arch) {
+	case ARCH_AARCH64:
 	case ARCH_ALPHA:
 	case ARCH_IA64:
 	case ARCH_PPC64:
