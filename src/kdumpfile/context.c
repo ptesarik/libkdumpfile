@@ -56,9 +56,6 @@ alloc_ctx(void)
 	if (!ctx->xlatctx)
 		goto err;
 
-	for (i = 0; i < READ_CACHE_SLOTS; ++i)
-		ctx->cached.key[i] = ADDRXLAT_NOADDR;
-
 	return ctx;
 
  err:

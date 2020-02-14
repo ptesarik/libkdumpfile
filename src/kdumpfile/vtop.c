@@ -378,24 +378,6 @@ const struct attr_ops xen_dirty_xlat_ops = {
 	.pre_clear = (attr_pre_clear_fn*)xen_dirty_xlat_hook,
 };
 
-/**  Add a cached read chunk.
- * @param cache  Read cache.
- * @param key    New entry key.
- * @param p      Buffer address.
- * @returns      New cache entry slot.
- */
-static unsigned
-cached_read_insert(struct cached_reads *cache, addrxlat_addr_t key, void *p)
-{
-	unsigned slot;
-
-	slot = (cache->slot + READ_CACHE_SLOTS - 1) % READ_CACHE_SLOTS;
-	cache->slot = slot;
-	cache->key[slot] = key;
-	memcpy(cache->val[slot], p, sizeof(cache->val[slot]));
-	return slot;
-}
-
 /**  Addrxlat get_page callback.
  * @param data  Dump file object.
  * @param buf   Page buffer metadata.
