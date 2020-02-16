@@ -137,7 +137,7 @@ struct hlist_node {
 	/** Pointer to the next node. */
 	struct hlist_node *next;
 
-	/**< Pointer to the previous node's @c next pointer, or to
+	/** Pointer to the previous node's @c next pointer, or to
 	 * the list head's @c first pointer. */
 	struct hlist_node **pprev;
 };
