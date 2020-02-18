@@ -1,0 +1,31 @@
+#! /bin/sh
+
+#
+# Check VTOP translation for AArch64 with 16k pages.
+#
+
+pf="aarch64:14,11,11,11,1"
+
+ptes="-e 0x0000:0x4003"		# PGD[0] -> 4000
+ptes="$ptes -e 0x0008:0x14003"	# PGD[1] -> 14000
+ptes="$ptes -e 0x4000:0x8003"	# PGD[0] -> PUD[0] -> 8000
+ptes="$ptes -e 0x4918:0x3c003"	# PGD[0] -> PUD[291] -> 3c000
+ptes="$ptes -e 0x8000:0xc003"	# PGD[0] -> PUD[0] -> PMD[0] -> c000
+ptes="$ptes -e 0x8008:0x10003"	# PGD[0] -> PUD[0] -> PMD[1] -> 10000
+ptes="$ptes -e 0x8010:0xe000791" # PGD[0] -> PUD[0] -> PMD[2] -> e000000 (32M)
+ptes="$ptes -e 0xc000:0x28793"	# PGD[0] -> PUD[0] -> PMD[0] -> PTE[0] -> 28000
+ptes="$ptes -e 0xc008:0x2c793"	# PGD[0] -> PUD[0] -> PMD[0] -> PTE[1] -> 2c000
+ptes="$ptes -e 0x12000:0x30793"	# PGD[0] -> PUD[0] -> PMD[1] -> PTE[1024] -> 30000
+ptes="$ptes -e 0x14010:0x18003"	# PGD[1] -> PUD[2] -> 18000
+ptes="$ptes -e 0x18018:0x38003"	# PGD[1] -> PUD[2] -> PMD[3] -> 38000
+ptes="$ptes -e 0x38020:0x34793"	# PGD[1] -> PUD[2] -> PMD[3] -> PTE[4] -> 34000
+ptes="$ptes -e 0x3d158:0x123456000791" # PGD[0] -> PUD[291] -> PMD[555] -> directmap (32M)
+
+list="0x123:0x28123"		# PGD[0] -> PUD[0] -> PMD[0] -> PTE[0]
+list="$list 0x4234:0x2c234"	# PGD[0] -> PUD[0] -> PMD[0] -> PTE[1]
+list="$list 0x3000567:0x30567"	# PGD[0] -> PUD[0] -> PMD[1] -> PTE[1024]
+list="$list 0x80200601089a:0x3489a" # PGD[1] -> PUD[2] -> PMD[3] -> PTE[4]
+list="$list 0x4123456:0xe123456"    # PGD[0] -> PUD[0] -> PMD[1] (32M)
+list="$list 0xffff123456789abc:0x123456789abc" # PGD[0] -> PUD[291] -> PMD[555] (32M)
+
+. "$srcdir"/addrxlat-common

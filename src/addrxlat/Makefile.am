@@ -29,6 +29,7 @@ libaddrxlat_la_SOURCES = \
 	opt.c \
 	step.c \
 	sys.c \
+	aarch64.c \
 	ia32.c \
 	ppc64.c \
 	s390x.c \

@@ -274,6 +274,7 @@ first_step_pgt(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
 	switch (step->meth->param.pgt.pf.pte_format) {
 	case ADDRXLAT_PTE_NONE:
+	case ADDRXLAT_PTE_AARCH64:
 	case ADDRXLAT_PTE_PPC64_LINUX_RPN30:
 		return first_step_pgt_generic(step, addr);
 
@@ -310,6 +311,9 @@ next_step_pgt(addrxlat_step_t *step)
 
 	case ADDRXLAT_PTE_PFN64:
 		return next_step_pfn64(step);
+
+	case ADDRXLAT_PTE_AARCH64:
+		return pgt_aarch64(step);
 
 	case ADDRXLAT_PTE_IA32:
 		return pgt_ia32(step);

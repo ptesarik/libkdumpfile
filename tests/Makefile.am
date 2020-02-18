@@ -146,6 +146,9 @@ test_scripts = \
 	addrxlat-identity \
 	addrxlat-pfn32 \
 	addrxlat-pfn64 \
+	addrxlat-aarch64-4k \
+	addrxlat-aarch64-16k \
+	addrxlat-aarch64-64k \
 	addrxlat-ia32 \
 	addrxlat-ia32-pae \
 	addrxlat-ppc64-64k \

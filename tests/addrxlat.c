@@ -115,6 +115,8 @@ set_paging_form(addrxlat_paging_form_t *pf, const char *spec)
 		pf->pte_format = ADDRXLAT_PTE_PFN32;
 	else if (!strncasecmp(spec, "pfn64:", endp - spec + 1))
 		pf->pte_format = ADDRXLAT_PTE_PFN64;
+	else if (!strncasecmp(spec, "aarch64:", endp - spec + 1))
+		pf->pte_format = ADDRXLAT_PTE_AARCH64;
 	else if (!strncasecmp(spec, "ia32:", endp - spec + 1))
 		pf->pte_format = ADDRXLAT_PTE_IA32;
 	else if (!strncasecmp(spec, "ia32_pae:", endp - spec + 1))

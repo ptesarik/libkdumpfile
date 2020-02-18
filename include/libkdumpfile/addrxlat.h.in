@@ -522,6 +522,7 @@ typedef enum _addrxlat_pte_format {
 	ADDRXLAT_PTE_NONE,	/**< Undefined. */
 	ADDRXLAT_PTE_PFN32,	/**< 32-bit page frame number. */
 	ADDRXLAT_PTE_PFN64,	/**< 64-bit page frame number. */
+	ADDRXLAT_PTE_AARCH64,	/**< ARM AArch64. */
 	ADDRXLAT_PTE_IA32,	/**< Original 32-bit Intel. */
 	ADDRXLAT_PTE_IA32_PAE,	/**< Intel IA32 with PAE. */
 	ADDRXLAT_PTE_X86_64,	/**< AMD64 (Intel 64).  */
@@ -544,6 +545,7 @@ addrxlat_pteval_shift(addrxlat_pte_format_t fmt)
 		return 2;
 
 	case ADDRXLAT_PTE_PFN64:
+	case ADDRXLAT_PTE_AARCH64:
 	case ADDRXLAT_PTE_IA32_PAE:
 	case ADDRXLAT_PTE_X86_64:
 	case ADDRXLAT_PTE_S390X:
