@@ -297,6 +297,66 @@ INTERNAL_DECL(addrxlat_next_step_fn, pgt_s390x, );
 
 INTERNAL_DECL(addrxlat_next_step_fn, pgt_ppc64_linux_rpn30, );
 
+/** Get the page size for a given paging form.
+ * @param pf  Paging form.
+ * @returns   Page size.
+ */
+static inline addrxlat_addr_t
+pf_page_size(const addrxlat_paging_form_t *pf)
+{
+	return (addrxlat_addr_t)1 << pf->fieldsz[0];
+}
+
+/** Get the page mask for a given paging form.
+ * @param pf  Paging form.
+ * @returns   Page mask.
+ *
+ * When applied to an address, page mask gives the offset within a page.
+ */
+static inline addrxlat_addr_t
+pf_page_mask(const addrxlat_paging_form_t *pf)
+{
+	return pf_page_size(pf) - 1;
+}
+
+/** Get the number of elements in a page table at a given level.
+ * @param pf     Paging form.
+ * @param level  Page table level.
+ * @returns      Number of elements in this page.
+ *
+ * NB if @c level is zero, page size is returned.
+ */
+static inline addrxlat_addr_t
+pf_table_size(const addrxlat_paging_form_t *pf, unsigned short level)
+{
+	return (addrxlat_addr_t)1 << pf->fieldsz[level];
+}
+
+/** Get the number of addresses covered by a page table at a given level.
+ * @param pf     Paging form.
+ * @param level  Page table level.
+ * @returns      Number of addresses spanned by the page table entry.
+ */
+static inline addrxlat_addr_t
+pf_table_span(const addrxlat_paging_form_t *pf, unsigned short level)
+{
+	addrxlat_addr_t ret = 1;
+	while (level--)
+		ret <<= pf->fieldsz[level];
+	return ret;
+}
+
+/** Get the address mask for a page table at a given level.
+ * @param pf     Paging form.
+ * @param level  Page table level.
+ * @returns      Page mask.
+ */
+static inline addrxlat_addr_t
+pf_table_mask(const addrxlat_paging_form_t *pf, unsigned short level)
+{
+	return pf_table_span(pf, level) - 1;
+}
+
 INTERNAL_DECL(addrxlat_addr_t, paging_max_index,
 	      (const addrxlat_paging_form_t *pf));
 
