@@ -164,6 +164,29 @@ add_attr_opt(kdump_ctx_t *ctx, struct opts *opts, enum global_keyidx key)
 	opts->str[opts->n++] = opt;
 	return KDUMP_OK;
 }
+
+/**  Add "pagesize=" addrxlat option if page size is known.
+ * @param ctx   Dump file object.
+ * @param opts  Options.
+ * @returns     Error status.
+ *
+ * If page size is unknown, nothing is added and this function
+ * returns success.
+ */
+static kdump_status
+set_page_size_opt(kdump_ctx_t *ctx, struct opts *opts)
+{
+	if (isset_page_size(ctx)) {
+		int len = asprintf(&opts->str[opts->n], "pagesize=%zd",
+				   get_page_size(ctx));
+		if (len < 0)
+			return set_error(ctx, KDUMP_ERR_SYSTEM,
+					 "Cannot make %s option", "pagesize");
+		++opts->n;
+	}
+	return KDUMP_OK;
+}
+
 static kdump_status
 set_x86_pae_opt(kdump_ctx_t *ctx, struct opts *opts)
 {
@@ -293,6 +316,8 @@ vtop_init(kdump_ctx_t *ctx)
 
 	opts.n = 0;
 	status = add_attr_opt(ctx, &opts, GKI_xlat_opts_pre);
+	if (status == KDUMP_OK)
+		status = set_page_size_opt(ctx, &opts);
 	if (status == KDUMP_OK) {
 		if (ctx->xlat->ostype == ADDRXLAT_OS_LINUX)
 			status = set_linux_opts(ctx, &opts);
