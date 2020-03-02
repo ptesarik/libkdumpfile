@@ -1,0 +1,20 @@
+Source: libkdumpfile
+Section: misc
+Priority: optional
+Maintainer: Delphix Engineering <eng@delphix.com>
+Standards-Version: 4.1.2
+Build-Depends: autoconf,
+               automake,
+               git,
+               liblzo2-dev,
+               libsnappy1v5,
+               libtool,
+               pkg-config,
+               python3-distutils,
+               python3.6-dev,
+               zlib1g-dev
+
+Package: libkdumpfile
+Architecture: any
+Depends: ${shlibs:Depends}, ${python3:Depends}
+Description: Kernel coredump file access
