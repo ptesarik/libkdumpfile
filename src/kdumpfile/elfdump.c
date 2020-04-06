@@ -894,12 +894,18 @@ xc_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 }
 
 static kdump_status
-init_segments(kdump_ctx_t *ctx, unsigned phnum)
+init_segments(kdump_ctx_t *ctx, uint64_t phnum)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 
 	if (!phnum)
 		return KDUMP_OK;
+
+	if (phnum > SIZE_MAX / 2 / sizeof(struct load_segment)) {
+		set_error(ctx, KDUMP_ERR_SYSTEM,
+			  "Too many program headers (%" PRIu64 ")", phnum);
+		return KDUMP_ERR_SYSTEM;
+	}
 
 	edp->load_segments =
 		ctx_malloc(2 * phnum * sizeof(struct load_segment),
@@ -914,12 +920,18 @@ init_segments(kdump_ctx_t *ctx, unsigned phnum)
 }
 
 static kdump_status
-init_sections(kdump_ctx_t *ctx, unsigned snum)
+init_sections(kdump_ctx_t *ctx, uint64_t snum)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 
 	if (!snum)
 		return KDUMP_OK;
+
+	if (snum > SIZE_MAX / sizeof(struct section)) {
+		set_error(ctx, KDUMP_ERR_SYSTEM,
+			  "Too many section headers (%" PRIu64 ")", snum);
+		return KDUMP_ERR_SYSTEM;
+	}
 
 	edp->sections =
 		ctx_malloc(snum * sizeof(struct section),
@@ -1001,26 +1013,49 @@ static kdump_status
 init_elf32(kdump_ctx_t *ctx, Elf32_Ehdr *ehdr)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
+	uint32_t shnum, phnum, i;
 	off_t offset;
 	size_t entsz;
 	struct fcache_chunk fch;
 	kdump_status ret;
-	int i, num;
 
 	set_arch_machine(ctx, dump16toh(ctx, ehdr->e_machine));
 
-	ret = init_segments(ctx, dump16toh(ctx, ehdr->e_phnum));
+	shnum = dump16toh(ctx, ehdr->e_shnum);
+	phnum = dump16toh(ctx, ehdr->e_phnum);
+	offset = dump32toh(ctx, ehdr->e_shoff);
+	if (offset != 0 && (shnum == 0 || phnum == PN_XNUM)) {
+		Elf32_Shdr *sect;
+
+		ret = fcache_get_chunk(ctx->shared->fcache, &fch,
+				       dump16toh(ctx, ehdr->e_shentsize),
+				       offset);
+		if (ret != KDUMP_OK)
+			return set_error(ctx, ret,
+					 "Cannot read ELF %s #%d at %llu",
+					 "section header", 0,
+					 (unsigned long long) offset);
+		sect = (Elf32_Shdr*) fch.data;
+
+		if (shnum == 0)
+			shnum = dump32toh(ctx, sect->sh_size);
+		if (shnum > 0 && phnum == PN_XNUM)
+			phnum = dump32toh(ctx, sect->sh_info);
+
+		fcache_put_chunk(&fch);
+	}
+
+	ret = init_segments(ctx, phnum);
 	if (ret != KDUMP_OK)
 		return ret;
 
-	ret = init_sections(ctx, dump16toh(ctx, ehdr->e_shnum));
+	ret = init_sections(ctx, shnum);
 	if (ret != KDUMP_OK)
 		return ret;
 
 	offset = dump32toh(ctx, ehdr->e_phoff);
 	entsz = dump16toh(ctx, ehdr->e_phentsize);
-	num = dump16toh(ctx, ehdr->e_phnum);
-	for (i = 0; i < num; ++i) {
+	for (i = 0; i < phnum; ++i) {
 		Elf32_Phdr *prog;
 		struct load_segment *pls;
 
@@ -1028,7 +1063,7 @@ init_elf32(kdump_ctx_t *ctx, Elf32_Ehdr *ehdr)
 				       entsz, offset);
 		if (ret != KDUMP_OK)
 			return set_error(ctx, ret,
-					 "Cannot read ELF %s #%d at %llu",
+					 "Cannot read ELF %s #%" PRIu32 " at %llu",
 					 "program header", i,
 					 (unsigned long long) offset);
 		offset += entsz;
@@ -1049,15 +1084,14 @@ init_elf32(kdump_ctx_t *ctx, Elf32_Ehdr *ehdr)
 
 	offset = dump32toh(ctx, ehdr->e_shoff);
 	entsz = dump16toh(ctx, ehdr->e_shentsize);
-	num = dump16toh(ctx, ehdr->e_shnum);
-	for (i = 0; i < num; ++i) {
+	for (i = 0; i < shnum; ++i) {
 		Elf32_Shdr *sect;
 
 		ret = fcache_get_chunk(ctx->shared->fcache, &fch,
 				       entsz, offset);
 		if (ret != KDUMP_OK)
 			return set_error(ctx, ret,
-					 "Cannot read ELF %s #%d at %llu",
+					 "Cannot read ELF %s #%" PRIu32 " at %llu",
 					 "section header", i,
 					 (unsigned long long) offset);
 		offset += entsz;
@@ -1081,27 +1115,49 @@ static kdump_status
 init_elf64(kdump_ctx_t *ctx, Elf64_Ehdr *ehdr)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
+	uint64_t shnum, phnum, i;
 	off_t offset;
 	size_t entsz;
 	struct fcache_chunk fch;
 	kdump_status ret;
-	int i, num;
 
 	set_arch_machine(ctx, dump16toh(ctx, ehdr->e_machine));
 
-	ret = init_segments(ctx, dump16toh(ctx, ehdr->e_phnum));
+	shnum = dump16toh(ctx, ehdr->e_shnum);
+	phnum = dump16toh(ctx, ehdr->e_phnum);
+	offset = dump64toh(ctx, ehdr->e_shoff);
+	if (offset != 0 && (shnum == 0 || phnum == PN_XNUM)) {
+		Elf64_Shdr *sect;
+
+		ret = fcache_get_chunk(ctx->shared->fcache, &fch,
+				       dump16toh(ctx, ehdr->e_shentsize),
+				       offset);
+		if (ret != KDUMP_OK)
+			return set_error(ctx, ret,
+					 "Cannot read ELF %s #%d at %llu",
+					 "section header", 0,
+					 (unsigned long long) offset);
+		sect = (Elf64_Shdr*) fch.data;
+
+		if (shnum == 0)
+			shnum = dump64toh(ctx, sect->sh_size);
+		if (shnum > 0 && phnum == PN_XNUM)
+			phnum = dump32toh(ctx, sect->sh_info);
+
+		fcache_put_chunk(&fch);
+	}
+
+	ret = init_segments(ctx, phnum);
 	if (ret != KDUMP_OK)
 		return ret;
 
-	ret = init_sections(ctx, dump16toh(ctx, ehdr->e_shnum));
+	ret = init_sections(ctx, shnum);
 	if (ret != KDUMP_OK)
 		return ret;
-
 
 	offset = dump64toh(ctx, ehdr->e_phoff);
 	entsz = dump16toh(ctx, ehdr->e_phentsize);
-	num = dump16toh(ctx, ehdr->e_phnum);
-	for (i = 0; i < num; ++i) {
+	for (i = 0; i < phnum; ++i) {
 		Elf64_Phdr *prog;
 		struct load_segment *pls;
 
@@ -1109,7 +1165,7 @@ init_elf64(kdump_ctx_t *ctx, Elf64_Ehdr *ehdr)
 				       entsz, offset);
 		if (ret != KDUMP_OK)
 			return set_error(ctx, ret,
-					 "Cannot read ELF %s #%d at %llu",
+					 "Cannot read ELF %s #%" PRIu64 " at %llu",
 					 "program header", i,
 					 (unsigned long long) offset);
 		offset += entsz;
@@ -1130,15 +1186,14 @@ init_elf64(kdump_ctx_t *ctx, Elf64_Ehdr *ehdr)
 
 	offset = dump64toh(ctx, ehdr->e_shoff);
 	entsz = dump16toh(ctx, ehdr->e_shentsize);
-	num = dump16toh(ctx, ehdr->e_shnum);
-	for (i = 0; i < num; ++i) {
+	for (i = 0; i < shnum; ++i) {
 		Elf64_Shdr *sect;
 
 		ret = fcache_get_chunk(ctx->shared->fcache, &fch,
 				       entsz, offset);
 		if (ret != KDUMP_OK)
 			return set_error(ctx, ret,
-					 "Cannot read ELF %s #%d at %llu",
+					 "Cannot read ELF %s #%" PRIu64 " at %llu",
 					 "section header", i,
 					 (unsigned long long) offset);
 		offset += entsz;
