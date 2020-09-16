@@ -148,6 +148,14 @@ get_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 {
 	addrxlat_status status;
 
+	if (ctl->popt.val[OPT_rootpgt].set)
+		*root = ctl->popt.val[OPT_rootpgt].fulladdr;
+	else
+		root->as = ADDRXLAT_NOADDR;
+
+	if (root->as != ADDRXLAT_NOADDR)
+		return ADDRXLAT_OK;
+
 	switch (ctl->osdesc->type) {
 	case ADDRXLAT_OS_UNKNOWN:
 		status = ADDRXLAT_ERR_NODATA;
@@ -170,49 +178,27 @@ get_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 			 "Cannot determine page table root address");
 }
 
-/* Try to guess the page table type from its content.
+/* Use the content of the root page table to determine paging levels.
  * @param ctl  Initialization data.
  * @returns    Error status.
  */
 static addrxlat_status
-determine_pgttype(struct os_init_data *ctl)
+get_levels_from_pgt(struct os_init_data *ctl)
 {
 	addrxlat_step_t step =	/* step state surrogate */
 		{ .ctx = ctl->ctx, .sys = ctl->sys };
-	addrxlat_meth_t *meth;
 	addrxlat_fulladdr_t ptr;
 	uint64_t entry;
 	unsigned i;
 	addrxlat_status status;
 
-	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
-
-	if (ctl->popt.val[OPT_rootpgt].set)
-		meth->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
-	else
-		meth->param.pgt.root.as = ADDRXLAT_NOADDR;
-
-	if (meth->param.pgt.root.as == ADDRXLAT_NOADDR) {
-		status = get_pgtroot(ctl, &meth->param.pgt.root);
-		if (status != ADDRXLAT_OK)
-			return status;
-	}
-
-	ptr = meth->param.pgt.root;
+	ptr = ctl->sys->meth[ADDRXLAT_SYS_METH_PGT].param.pgt.root;
 	for (i = 0; i < ROOT_PGT_LEN; ++i) {
 		status = read64(&step, &ptr, &entry, "page table");
 		if (status != ADDRXLAT_OK)
 			return status;
 		if (!PTE_I(entry)) {
-			static const addrxlat_paging_form_t pf = {
-				.pte_format = ADDRXLAT_PTE_S390X,
-				.fieldsz = { 12, 8, 11, 11, 11, 11 }
-			};
-
-			meth->kind = ADDRXLAT_PGT;
-			meth->target_as = ADDRXLAT_MACHPHYSADDR;
-			meth->param.pgt.pf = pf;
-			meth->param.pgt.pf.nfields = PTE_TT(entry) + 3;
+			ctl->popt.val[OPT_levels].num = PTE_TT(entry) + 2;
 			return ADDRXLAT_OK;
 		}
 		ptr.addr += sizeof(uint64_t);
@@ -220,6 +206,42 @@ determine_pgttype(struct os_init_data *ctl)
 
 	return set_error(ctl->ctx, ADDRXLAT_ERR_NOTPRESENT,
 			 "Empty top-level page table");
+}
+
+/* Initialize paging form.
+ * @param ctl  Initialization data.
+ * @returns    Error status.
+ */
+static addrxlat_status
+init_paging_form(struct os_init_data *ctl)
+{
+	static const addrxlat_paging_form_t pf = {
+		.pte_format = ADDRXLAT_PTE_S390X,
+		.fieldsz = { 12, 8, 11, 11, 11, 11 }
+	};
+
+	addrxlat_meth_t *meth;
+	long levels;
+	addrxlat_status status;
+
+	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+
+	status = get_pgtroot(ctl, &meth->param.pgt.root);
+	if (status == ADDRXLAT_OK && !ctl->popt.val[OPT_levels].set)
+		status = get_levels_from_pgt(ctl);
+	if (status != ADDRXLAT_OK)
+		return status;
+
+	levels = ctl->popt.val[OPT_levels].num;
+	if (levels < 2 || levels > 5)
+		return set_error(ctl->ctx, ADDRXLAT_ERR_NOTIMPL,
+				 "%ld-level paging not implemented", levels);
+
+	meth->kind = ADDRXLAT_PGT;
+	meth->target_as = ADDRXLAT_MACHPHYSADDR;
+	meth->param.pgt.pf = pf;
+	meth->param.pgt.pf.nfields = levels + 1;
+	return ADDRXLAT_OK;
 }
 
 /** Initialize a translation map for a s390x OS.
@@ -237,7 +259,7 @@ sys_s390x(struct os_init_data *ctl)
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	status = determine_pgttype(ctl);
+	status = init_paging_form(ctl);
 	if (status == ADDRXLAT_ERR_NODATA) {
 		clear_error(ctl->ctx);
 		return ADDRXLAT_OK;
