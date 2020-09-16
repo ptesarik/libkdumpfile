@@ -5,7 +5,7 @@
 #
 
 arch=ia32
-opts="pae=no"
+opts="levels=2"
 ostype=0
 osver=0
 

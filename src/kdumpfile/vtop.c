@@ -192,13 +192,13 @@ set_x86_pae_opt(kdump_ctx_t *ctx, struct opts *opts)
 {
 	static const char config_pae[] = "CONFIG_X86_PAE";
 	struct attr_data *attr;
-	const char *pae_state;
+	int levels;
 	int len;
 
-	pae_state = NULL;
+	levels = 0;
 	attr = gattr(ctx, GKI_linux_vmcoreinfo_lines);
 	if (attr_isset(attr))
-		pae_state = "no";
+		levels = 2;
 	attr = lookup_dir_attr(ctx->dict, attr,
 			       config_pae, sizeof(config_pae) - 1);
 	if (attr && attr_isset(attr)) {
@@ -208,10 +208,10 @@ set_x86_pae_opt(kdump_ctx_t *ctx, struct opts *opts)
 					 "Cannot get %s from vmcoreinfo",
 					 config_pae);
 		if (!strcmp(attr_value(attr)->string, "y"))
-			pae_state = "yes";
+			levels = 3;
 	}
-	if (pae_state) {
-		len = asprintf(&opts->str[opts->n], "pae=%s", pae_state);
+	if (levels) {
+		len = asprintf(&opts->str[opts->n], "levels=%d", levels);
 		if (len < 0)
 			return set_error(ctx, KDUMP_ERR_SYSTEM,
 					 "Cannot make %s option", "pae");

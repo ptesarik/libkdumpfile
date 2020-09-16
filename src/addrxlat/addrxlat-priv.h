@@ -380,8 +380,7 @@ INTERNAL_DECL(addrxlat_status, highest_linear,
 
 /** All options recognized by @ref parse_opts. */
 enum optidx {
-	OPT_levels,		/**< [s390x] Number of page table levels. */
-	OPT_pae,		/**< [ia32] PAE state (boolean). */
+	OPT_levels,		/**< Number of page table levels. */
 	OPT_pagesize,		/**< Page size (number). */
 	OPT_phys_base,		/**< [x86-64] Linux physical base address. */
 	OPT_rootpgt,		/**< Root page table address. */
