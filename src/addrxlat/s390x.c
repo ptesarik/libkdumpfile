@@ -234,8 +234,7 @@ init_paging_form(struct os_init_data *ctl)
 
 	levels = ctl->popt.val[OPT_levels].num;
 	if (levels < 2 || levels > 5)
-		return set_error(ctl->ctx, ADDRXLAT_ERR_NOTIMPL,
-				 "%ld-level paging not implemented", levels);
+		return bad_paging_levels(ctl->ctx, levels);
 
 	meth->kind = ADDRXLAT_PGT;
 	meth->target_as = ADDRXLAT_MACHPHYSADDR;

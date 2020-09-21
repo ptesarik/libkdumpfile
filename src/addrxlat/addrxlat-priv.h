@@ -502,4 +502,11 @@ clear_error(addrxlat_ctx_t *ctx)
 	err_clear(&ctx->err);
 }
 
+static inline addrxlat_status
+bad_paging_levels(addrxlat_ctx_t *ctx, long levels)
+{
+	return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
+			 "%ld-level paging not implemented", levels);
+}
+
 #endif	/* addrxlat-priv.h */

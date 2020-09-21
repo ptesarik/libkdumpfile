@@ -531,9 +531,7 @@ sys_ia32(struct os_init_data *ctl)
 	else if (levels == 3)
 		status = sys_ia32_pae(ctl);
 	else
-		return set_error(ctl->ctx, ADDRXLAT_ERR_NOTIMPL,
-				 "%ld-level paging not implemented",
-				 levels);
+		return bad_paging_levels(ctl->ctx, levels);
 	if (status != ADDRXLAT_OK)
 		return status;
 
