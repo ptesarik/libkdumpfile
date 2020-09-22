@@ -35,29 +35,26 @@ check_HEADERS = \
 	lkcd.h \
 	testutil.h
 
-addrmap_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
-addrxlat_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
-
-attriter_SOURCES = attriter.c
+addrmap_LDADD = \
+	$(top_builddir)/src/addrxlat/libaddrxlat.la
+addrxlat_LDADD = \
+	$(top_builddir)/src/addrxlat/libaddrxlat.la
 attriter_LDADD = \
 	$(LDADD) \
 	$(top_builddir)/src/kdumpfile/libkdumpfile.la
-
-checkattr_SOURCES = checkattr.c
 checkattr_LDADD = \
 	$(LDADD) \
 	$(top_builddir)/src/kdumpfile/libkdumpfile.la
-
-clearattr_SOURCES = clearattr.c
 clearattr_LDADD = \
 	$(LDADD) \
 	$(top_builddir)/src/kdumpfile/libkdumpfile.la
+custom_meth_LDADD = \
+	$(top_builddir)/src/addrxlat/libaddrxlat.la
+elf_prstatus_mod_x86_64_LDADD = \
+	$(top_builddir)/src/kdumpfile/libkdumpfile.la
+err_addrxlat_LDADD = \
+	$(top_builddir)/src/addrxlat/libaddrxlat.la
 
-custom_meth_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
-elf_prstatus_mod_x86_64_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
-err_addrxlat_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
-
-mkdiskdump_SOURCES = mkdiskdump.c
 mkdiskdump_CFLAGS = \
 	$(ZLIB_CFLAGS) \
 	$(LZO_CFLAGS) \
@@ -68,45 +65,43 @@ mkdiskdump_LDADD = \
 	$(LZO_LIBS) \
 	$(SNAPPY_LIBS)
 
-mkelf_SOURCES = mkelf.c
-
-mklkcd_SOURCES = mklkcd.c
 mklkcd_CFLAGS = \
 	$(ZLIB_CFLAGS)
 mklkcd_LDADD = \
 	$(LDADD) \
 	$(ZLIB_LIBS)
 
-dumpdata_SOURCES = dumpdata.c
-dumpdata_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
-
-multiread_SOURCES = multiread.c
-multiread_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
-
-multixlat_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
-nometh_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
-
-subattr_SOURCES = subattr.c
-subattr_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
-
+dumpdata_LDADD = \
+	$(top_builddir)/src/kdumpfile/libkdumpfile.la
+multiread_LDADD = \
+	$(top_builddir)/src/kdumpfile/libkdumpfile.la
+multixlat_LDADD = \
+	$(top_builddir)/src/kdumpfile/libkdumpfile.la
+nometh_LDADD = \
+	$(top_builddir)/src/addrxlat/libaddrxlat.la
+subattr_LDADD = \
+	$(top_builddir)/src/kdumpfile/libkdumpfile.la
 sys_xlat_LDADD = \
 	$(LDADD) \
 	$(top_builddir)/src/addrxlat/libaddrxlat.la
-
-thread_errstr_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
-typed_attr_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
-vmci_cleanup_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
-vmci_lines_post_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
-vmci_post_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
+thread_errstr_LDADD = \
+	$(top_builddir)/src/kdumpfile/libkdumpfile.la
+typed_attr_LDADD = \
+	$(top_builddir)/src/kdumpfile/libkdumpfile.la
+vmci_cleanup_LDADD = \
+	$(top_builddir)/src/kdumpfile/libkdumpfile.la
+vmci_lines_post_LDADD = \
+	$(top_builddir)/src/kdumpfile/libkdumpfile.la
+vmci_post_LDADD = \
+	$(top_builddir)/src/kdumpfile/libkdumpfile.la
 vtop_LDADD = \
 	$(top_builddir)/src/kdumpfile/libkdumpfile.la \
 	$(top_builddir)/src/addrxlat/libaddrxlat.la
 xlatmap_LDADD = \
 	$(top_builddir)/src/addrxlat/libaddrxlat.la \
 	-ldl
-xlatop_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
-
-xlat_os_SOURCES = xlat-os.c
+xlatop_LDADD = \
+	$(top_builddir)/src/addrxlat/libaddrxlat.la
 xlat_os_LDADD = \
 	$(LDADD) \
 	$(top_builddir)/src/addrxlat/libaddrxlat.la
