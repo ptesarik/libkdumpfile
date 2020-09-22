@@ -42,8 +42,11 @@
 #define _PAGE_PRESENT	(1UL << _PAGE_BIT_PRESENT)
 #define _PAGE_PSE	(1UL << _PAGE_BIT_PSE)
 
-/* Maximum virtual address bits (architecture limit) */
+/** Maximum virtual address bits (architecture limit). */
 #define VIRTADDR_BITS_MAX	48
+
+/** Maximum virtual address bits for 5-level paging (architecture limit). */
+#define VIRTADDR_5L_BITS_MAX	57
 
 /** Page shift (log2 4K). */
 #define PAGE_SHIFT		12
@@ -66,6 +69,10 @@
 #define NONCANONICAL_START	((uint64_t)1<<(VIRTADDR_BITS_MAX-1))
 #define NONCANONICAL_END	(~NONCANONICAL_START)
 #define VIRTADDR_MAX		UINT64_MAX
+
+/* 5-level paging non-canonical extents. */
+#define NONCANONICAL_5L_START	((uint64_t)1<<(VIRTADDR_5L_BITS_MAX-1))
+#define NONCANONICAL_5L_END	(~NONCANONICAL_5L_START)
 
 /** Virtual address of the Xen machine-to-physical map. */
 #define XEN_MACH2PHYS_ADDR	0xffff800000000000
@@ -105,6 +112,12 @@
 /** End of direct physical mapping in Linux 2.6.31+ */
 #define LINUX_DIRECTMAP_END_2_6_31	0xffffc7ffffffffff
 
+/** Start of direct physical mapping with 5-level paging */
+#define LINUX_DIRECTMAP_START_5LEVEL	0xff11000000000000
+
+/** End of direct physical mapping with 5-level paging */
+#define LINUX_DIRECTMAP_END_5LEVEL	0xff90ffffffffffff
+
 /** AMD64 (Intel 64) page table step function.
  * @param step  Current step state.
  * @returns     Error status.
@@ -117,11 +130,13 @@ pgt_x86_64(addrxlat_step_t *step)
 		"Page table",
 		"Page directory",
 		"PDPT table",
+		"PML4 table",
 	};
 	static const char pte_name[][4] = {
 		"pte",
 		"pmd",
 		"pud",
+		"p4d",
 		"pgd",
 	};
 	addrxlat_status status;
@@ -264,6 +279,7 @@ linux_directmap_by_pgt(struct sys_region *rgn,
 		       addrxlat_sys_t *sys, addrxlat_ctx_t *ctx)
 {
 	addrxlat_step_t step;
+	addrxlat_addr_t end;
 	addrxlat_status status;
 
 	step.ctx = ctx;
@@ -282,12 +298,17 @@ linux_directmap_by_pgt(struct sys_region *rgn,
 				      LINUX_DIRECTMAP_END_2_6_11, -rgn->first);
 	}
 
-	rgn->first = LINUX_DIRECTMAP_START_2_6_31;
-	status = lowest_mapped(&step, &rgn->first, LINUX_DIRECTMAP_END_2_6_31);
+	if (step.meth->param.pgt.pf.nfields == 6) {
+		rgn->first = LINUX_DIRECTMAP_START_5LEVEL;
+		end = LINUX_DIRECTMAP_END_5LEVEL;
+	} else {
+		rgn->first = LINUX_DIRECTMAP_START_2_6_31;
+		end = LINUX_DIRECTMAP_END_2_6_31;
+	}
+	status = lowest_mapped(&step, &rgn->first, end);
 	if (status == ADDRXLAT_OK) {
 		rgn->last = rgn->first;
-		return highest_linear(&step, &rgn->last,
-				      LINUX_DIRECTMAP_END_2_6_31, -rgn->first);
+		return highest_linear(&step, &rgn->last, end, -rgn->first);
 	}
 
 	return ADDRXLAT_ERR_NOTIMPL;
@@ -907,6 +928,16 @@ static const struct sys_region layout_generic[] = {
 	SYS_REGION_END
 };
 
+/** Generic x86_64 5-level paging layout */
+static const struct sys_region layout_5level[] = {
+	{  0,  NONCANONICAL_5L_START - 1,		/* lower half       */
+	   ADDRXLAT_SYS_METH_PGT },
+	/* NONCANONICAL_5L_START - NONCANONICAL_5L_END   non-canonical    */
+	{  NONCANONICAL_5L_END + 1,  VIRTADDR_MAX,	/* higher half      */
+	   ADDRXLAT_SYS_METH_PGT },
+	SYS_REGION_END
+};
+
 /** Initialize a translation map for an x86_64 OS.
  * @param ctl  Initialization data.
  * @returns    Error status.
@@ -917,7 +948,7 @@ sys_x86_64(struct os_init_data *ctl)
 	static const addrxlat_paging_form_t x86_64_pf = {
 		.pte_format = ADDRXLAT_PTE_X86_64,
 		.nfields = 5,
-		.fieldsz = { 12, 9, 9, 9, 9 }
+		.fieldsz = { 12, 9, 9, 9, 9, 9 }
 	};
 	addrxlat_map_t *map;
 	addrxlat_meth_t *meth;
@@ -932,7 +963,17 @@ sys_x86_64(struct os_init_data *ctl)
 		meth->param.pgt.root.as = ADDRXLAT_NOADDR;
 	meth->param.pgt.pf = x86_64_pf;
 
-	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_HW, layout_generic);
+	if (ctl->popt.val[OPT_levels].set) {
+		long levels = ctl->popt.val[OPT_levels].num;
+		if (levels < 4 || levels > 5)
+			return bad_paging_levels(ctl->ctx, levels);
+		meth->param.pgt.pf.nfields = levels + 1;
+	}
+
+	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_HW,
+				(meth->param.pgt.pf.nfields == 6
+				 ? layout_5level
+				 : layout_generic));
 	if (status != ADDRXLAT_OK)
 		return status;
 

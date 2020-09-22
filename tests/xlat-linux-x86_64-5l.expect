@@ -1,0 +1,51 @@
+@rootpgt: PGT
+  target_as=MACHPHYSADDR
+  root=KVADDR:0xffffffff8b40a000
+  pte_format=x86_64
+  fields=12,9,9,9,9,9
+
+@direct: LINEAR
+  target_as=KPHYSADDR
+  off=0xcc55bfc0000000
+
+@ktext: LINEAR
+  target_as=KPHYSADDR
+  off=0x13d5600000
+
+@rdirect: LINEAR
+  target_as=KVADDR
+  off=0xff33aa4040000000
+
+@machphys_kphys: LINEAR
+  target_as=KPHYSADDR
+  off=0x0
+
+@kphys_machphys: LINEAR
+  target_as=MACHPHYSADDR
+  off=0x0
+
+KV -> HW:
+0-ffffffffffffff: @rootpgt
+100000000000000-feffffffffffffff: NONE
+ff00000000000000-ffffffffffffffff: @rootpgt
+
+KV -> PHYS:
+0-ffffffffffffff: @rootpgt
+100000000000000-feffffffffffffff: NONE
+ff00000000000000-ff33aa403fffffff: @rootpgt
+ff33aa4040000000-ff33aac0bfffffff: @direct
+ff33aac0c0000000-ffffffff89ffffff: @rootpgt
+ffffffff8a000000-ffffffff8cbfffff: @ktext
+ffffffff8cc00000-ffffffffffffffff: @rootpgt
+
+KPHYS -> DIRECT:
+0-807fffffff: @rdirect
+8080000000-ffffffffffffffff: NONE
+
+MACHPHYS -> KPHYS:
+0-fffffffffffff: @machphys_kphys
+10000000000000-ffffffffffffffff: NONE
+
+KPHYS -> MACHPHYS:
+0-fffffffffffff: @kphys_machphys
+10000000000000-ffffffffffffffff: NONE

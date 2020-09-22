@@ -263,6 +263,7 @@ test_scripts = \
 	xlat-linux-x86_64-2.6.31-nover-xen \
 	xlat-linux-x86_64-4.13-nover \
 	xlat-linux-x86_64-4.13-kaslr \
+	xlat-linux-x86_64-5l \
 	xlat-xen-ia32 \
 	xlat-xen-ia32-pae \
 	xlat-xen-x86_64-old \
@@ -411,6 +412,9 @@ dist_check_DATA = \
 	xlat-linux-x86_64-4.13-kaslr.data \
 	xlat-linux-x86_64-4.13-kaslr.expect \
 	xlat-linux-x86_64-4.13-kaslr.sym \
+	xlat-linux-x86_64-5l.data \
+	xlat-linux-x86_64-5l.expect \
+	xlat-linux-x86_64-5l.sym \
 	xlat-xen-ia32.data \
 	xlat-xen-ia32.expect \
 	xlat-xen-ia32-pae.data \

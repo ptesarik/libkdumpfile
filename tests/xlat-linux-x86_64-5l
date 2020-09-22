@@ -1,0 +1,13 @@
+#! /bin/sh
+
+#
+# Check Linux X86_64 5-level translation without explicit version,
+# using page table content alone
+#
+
+arch=x86_64
+ostype=1
+osver=0
+opts="phys_base=0x1355600000 levels=5"
+
+. "$srcdir"/xlat-os-common
