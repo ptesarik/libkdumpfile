@@ -187,18 +187,24 @@ set_page_size_opt(kdump_ctx_t *ctx, struct opts *opts)
 	return KDUMP_OK;
 }
 
+/**  Determine number of paging levels for x86 Linux OS.
+ * @param ctx     Dump file object.
+ * @param levels  Set to number of levels on success.
+ * @returns       Error status.
+ *
+ * If PAE status is unknown, @c levels is unchanged, and this function
+ * returns success.
+ */
 static kdump_status
-set_x86_pae_opt(kdump_ctx_t *ctx, struct opts *opts)
+get_linux_x86_levels(kdump_ctx_t *ctx, int *levels)
 {
 	static const char config_pae[] = "CONFIG_X86_PAE";
 	struct attr_data *attr;
-	int levels;
 	int len;
 
-	levels = 0;
 	attr = gattr(ctx, GKI_linux_vmcoreinfo_lines);
 	if (attr_isset(attr))
-		levels = 2;
+		*levels = 2;
 	attr = lookup_dir_attr(ctx->dict, attr,
 			       config_pae, sizeof(config_pae) - 1);
 	if (attr && attr_isset(attr)) {
@@ -208,36 +214,26 @@ set_x86_pae_opt(kdump_ctx_t *ctx, struct opts *opts)
 					 "Cannot get %s from vmcoreinfo",
 					 config_pae);
 		if (!strcmp(attr_value(attr)->string, "y"))
-			levels = 3;
+			*levels = 3;
 	}
-	if (levels) {
-		len = asprintf(&opts->str[opts->n], "levels=%d", levels);
-		if (len < 0)
-			return set_error(ctx, KDUMP_ERR_SYSTEM,
-					 "Cannot make %s option", "pae");
-		++opts->n;
-	}
-
 	return KDUMP_OK;
 }
 
-/**  Add "levels=" addrxlat option for x86-64 using 5-level paging.
- * @param ctx   Dump file object.
- * @param opts  Options.
- * @returns     Error status.
+/**  Determine number of paging levels for x86-64 Linux OS.
+ * @param ctx     Dump file object.
+ * @param levels  Set to number of levels on success.
+ * @returns       Error status.
  *
- * If 5-level paging status is unknown, nothing is added and this function
- * returns success.
+ * If 5-level paging status is unknown, @c levels is unchanged, and
+ * this function returns success.
  */
 static kdump_status
-set_x86_64_levels_opt(kdump_ctx_t *ctx, struct opts *opts)
+get_linux_x86_64_levels(kdump_ctx_t *ctx, int *levels)
 {
 	static const char l5_enabled[] = "pgtable_l5_enabled";
 	struct attr_data *attr;
-	int levels;
 	int len;
 
-	levels = 0;
 	attr = lookup_dir_attr(ctx->dict, gattr(ctx, GKI_linux_number),
 			       l5_enabled, sizeof(l5_enabled) - 1);
 	if (attr && attr_isset(attr)) {
@@ -247,11 +243,46 @@ set_x86_64_levels_opt(kdump_ctx_t *ctx, struct opts *opts)
 					 "Cannot get %s from vmcoreinfo",
 					 l5_enabled);
 		if (attr_value(attr)->number != 0)
-			levels = 5;
+			*levels = 5;
 		else
-			levels = 4;
+			*levels = 4;
 	}
-	if (levels) {
+	return KDUMP_OK;
+}
+
+/**  Add "levels=" addrxlat option if possible.
+ * @param ctx   Dump file object.
+ * @param opts  Options.
+ * @returns     Error status.
+ *
+ * If paging levels cannot be determined, nothing is added and this
+ * function returns success.
+ */
+static kdump_status
+set_linux_levels_opt(kdump_ctx_t *ctx, struct opts *opts)
+{
+	int levels;
+	int len;
+	kdump_status status;
+
+	levels = 0;
+	switch (ctx->shared->arch) {
+	case ARCH_IA32:
+		status = get_linux_x86_levels(ctx, &levels);
+		break;
+
+	case ARCH_X86_64:
+		status = get_linux_x86_64_levels(ctx, &levels);
+		break;
+
+	default:
+		status = KDUMP_OK;
+		break;
+	}
+	if (status != KDUMP_OK)
+		return status;
+
+	if (levels != 0) {
 		len = asprintf(&opts->str[opts->n], "levels=%d", levels);
 		if (len < 0)
 			return set_error(ctx, KDUMP_ERR_SYSTEM,
@@ -267,18 +298,11 @@ set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 {
 	struct attr_data *attr;
 	int len;
+	kdump_status status;
 
-	if (ctx->shared->arch == ARCH_IA32) {
-		kdump_status status = set_x86_pae_opt(ctx, opts);
-		if (status != KDUMP_OK)
-			return status;
-	}
-
-	if (ctx->shared->arch == ARCH_X86_64) {
-		kdump_status status = set_x86_64_levels_opt(ctx, opts);
-		if (status != KDUMP_OK)
-			return status;
-	}
+	status = set_linux_levels_opt(ctx, opts);
+	if (status != KDUMP_OK)
+		return status;
 
 	if (isset_phys_base(ctx)) {
 		len = asprintf(&opts->str[opts->n],
