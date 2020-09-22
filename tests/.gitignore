@@ -22,7 +22,6 @@ typed-attr
 vmci-cleanup
 vmci-lines-post
 vmci-post
-vtop
 xlatmap
 xlatop
 xlat-os

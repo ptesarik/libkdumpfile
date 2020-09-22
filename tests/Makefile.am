@@ -94,9 +94,6 @@ vmci_lines_post_LDADD = \
 	$(top_builddir)/src/kdumpfile/libkdumpfile.la
 vmci_post_LDADD = \
 	$(top_builddir)/src/kdumpfile/libkdumpfile.la
-vtop_LDADD = \
-	$(top_builddir)/src/kdumpfile/libkdumpfile.la \
-	$(top_builddir)/src/addrxlat/libaddrxlat.la
 xlatmap_LDADD = \
 	$(top_builddir)/src/addrxlat/libaddrxlat.la \
 	-ldl
@@ -129,7 +126,6 @@ check_PROGRAMS = \
 	vmci-cleanup \
 	vmci-lines-post \
 	vmci-post \
-	vtop \
 	xlatmap \
 	xlatop \
 	xlat-os
