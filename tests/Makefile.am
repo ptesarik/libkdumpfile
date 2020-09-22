@@ -91,21 +91,25 @@ subattr_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
 
 sys_xlat_LDADD = \
 	$(LDADD) \
-	$(top_builddir)/src/kdumpfile/libkdumpfile.la
+	$(top_builddir)/src/addrxlat/libaddrxlat.la
 
 thread_errstr_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
 typed_attr_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
 vmci_cleanup_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
 vmci_lines_post_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
 vmci_post_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
-vtop_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
-xlatmap_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la -ldl
-xlatop_LDADD = $(top_builddir)/src/kdumpfile/libkdumpfile.la
+vtop_LDADD = \
+	$(top_builddir)/src/kdumpfile/libkdumpfile.la \
+	$(top_builddir)/src/addrxlat/libaddrxlat.la
+xlatmap_LDADD = \
+	$(top_builddir)/src/addrxlat/libaddrxlat.la \
+	-ldl
+xlatop_LDADD = $(top_builddir)/src/addrxlat/libaddrxlat.la
 
 xlat_os_SOURCES = xlat-os.c
 xlat_os_LDADD = \
 	$(LDADD) \
-	$(top_builddir)/src/kdumpfile/libkdumpfile.la
+	$(top_builddir)/src/addrxlat/libaddrxlat.la
 
 check_PROGRAMS = \
 	addrxlat \
