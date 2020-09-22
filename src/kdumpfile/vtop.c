@@ -221,6 +221,47 @@ set_x86_pae_opt(kdump_ctx_t *ctx, struct opts *opts)
 	return KDUMP_OK;
 }
 
+/**  Add "levels=" addrxlat option for x86-64 using 5-level paging.
+ * @param ctx   Dump file object.
+ * @param opts  Options.
+ * @returns     Error status.
+ *
+ * If 5-level paging status is unknown, nothing is added and this function
+ * returns success.
+ */
+static kdump_status
+set_x86_64_levels_opt(kdump_ctx_t *ctx, struct opts *opts)
+{
+	static const char l5_enabled[] = "pgtable_l5_enabled";
+	struct attr_data *attr;
+	int levels;
+	int len;
+
+	levels = 0;
+	attr = lookup_dir_attr(ctx->dict, gattr(ctx, GKI_linux_number),
+			       l5_enabled, sizeof(l5_enabled) - 1);
+	if (attr && attr_isset(attr)) {
+		kdump_status status = attr_revalidate(ctx, attr);
+		if (status != KDUMP_OK)
+			return set_error(ctx, status,
+					 "Cannot get %s from vmcoreinfo",
+					 l5_enabled);
+		if (attr_value(attr)->number != 0)
+			levels = 5;
+		else
+			levels = 4;
+	}
+	if (levels) {
+		len = asprintf(&opts->str[opts->n], "levels=%d", levels);
+		if (len < 0)
+			return set_error(ctx, KDUMP_ERR_SYSTEM,
+					 "Cannot make %s option", "levels");
+		++opts->n;
+	}
+
+	return KDUMP_OK;
+}
+
 static kdump_status
 set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 {
@@ -229,6 +270,12 @@ set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 
 	if (ctx->shared->arch == ARCH_IA32) {
 		kdump_status status = set_x86_pae_opt(ctx, opts);
+		if (status != KDUMP_OK)
+			return status;
+	}
+
+	if (ctx->shared->arch == ARCH_X86_64) {
+		kdump_status status = set_x86_64_levels_opt(ctx, opts);
 		if (status != KDUMP_OK)
 			return status;
 	}
