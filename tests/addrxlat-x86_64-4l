@@ -1,7 +1,7 @@
 #! /bin/sh
 
 #
-# Check VTOP translation for IA32 with PAE.
+# Check VTOP translation for X86-64 using 4-level paging
 #
 
 pf="x86_64:12,9,9,9,9"

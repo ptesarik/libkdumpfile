@@ -1,0 +1,37 @@
+#! /bin/sh
+
+#
+# Check VTOP translation for X86-64 using 5-level paging
+#
+
+pf="x86_64:12,9,9,9,9,9"
+
+ptes="-e 0x0000:0x1067"		# PGD[0] -> 1000
+ptes="$ptes -e 0x0008:0x5067"	# PGD[1] -> 5000
+ptes="$ptes -e 0x0888:0x8067"	# PGD[273] -> 8000
+ptes="$ptes -e 0x1000:0x2067"	# PGD[0] -> P4D[0] -> 2000
+ptes="$ptes -e 0x2000:0x3067"	# PGD[0] -> P4D[0] -> PUD[0] -> 3000
+ptes="$ptes -e 0x2008:0x4067"	# PGD[0] -> P4D[0] -> PUD[1] -> 4000
+ptes="$ptes -e 0x2010:0x3c00000e7" # PGD[0] -> P4D[0] -> PUD[2] -> 0x3c0000000 (1G)
+ptes="$ptes -e 0x3000:0x9067"	# PGD[0] -> P4D[0] -> PUD[0] -> PMD[0] -> 9000
+ptes="$ptes -e 0x3008:0xa067"	# PGD[0] -> P4D[0] -> PUD[0] -> PMD[1] -> a000
+ptes="$ptes -e 0x3010:0xe000e7"	# PGD[0] -> P4D[0] -> PUD[2] -> e00000 (2M)
+ptes="$ptes -e 0x5010:0x6067"	# PGD[1] -> P4D[2] -> 6000
+ptes="$ptes -e 0x6018:0x7067"	# PGD[1] -> P4D[2] -> PUD[3] -> 7000
+ptes="$ptes -e 0x7020:0xb067"	# PGD[0] -> P4D[1] -> PUD[3] -> PMD[4] -> b000
+ptes="$ptes -e 0x8230:0xc0e7"	# PGD[273] -> P4D[70] -> c000
+ptes="$ptes -e 0x9000:0x1a067"	# PGD[0] -> P4D[0] -> PUD[0] -> PMD[0] -> PTE[0] -> 1a000
+ptes="$ptes -e 0x9008:0x1b067"	# PGD[0] -> P4D[0] -> PUD[0] -> PMD[0] -> PTE[1] -> 1b000
+ptes="$ptes -e 0xa800:0x1c067"	# PGD[0] -> P4D[0] -> PUD[1] -> PMD[1] -> PTE[256] -> 1c000
+ptes="$ptes -e 0xb028:0x1d067"	# PGD[0] -> P4D[1] -> PUD[3] -> PMD[4] -> PTE[5] -> 1d000
+ptes="$ptes -e 0xc8a8:0x12345400000e7 " # PGD[273] -> P4D[70] -> PUD[277] -> directmap (1G)
+
+list="0x123:0x1a123"		# PGD[0] -> P4D[0] -> PUD[0] -> PMD[0] -> PTE[0]
+list="$list 0x1234:0x1b234"	# PGD[0] -> P4D[0] -> PUD[0] -> PMD[0] -> PTE[1]
+list="$list 0x300567:0x1c567"	# PGD[0] -> P4D[0] -> PUD[0] -> PMD[1] -> PTE[256]
+list="$list 0x10100c080589a:0x1d89a" # PGD[1] -> P4D[2] -> PUD[3] -> PMD[4] -> PTE[5]
+list="$list 0x523456:0xf23456"	# PGD[0] -> P4D[0] -> PUD[0] -> PMD[1] (2M)
+list="$list 0xa1234567:0x3e1234567" # PGD[0] -> P4D[0] -> PUD[2] (1G)
+list="$list 0xff1123456789abcd:0x123456789abcd" # PGD[273] -> P4D[70] -> PUD[277] -> (1G)
+
+. "$srcdir"/addrxlat-common
