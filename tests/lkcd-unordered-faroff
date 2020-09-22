@@ -59,7 +59,7 @@ if [ $rc -ne 0 ]; then
     exit $rc
 fi
 echo "Data: $result"
-expect=$( echo -ne "00\n$magic" )
+expect=$( echo 00 ; echo -n "$magic" )
 if [ "${result% *}" != "$expect" ] ; then
     echo "Wrong data found" >&2
     exit 1
@@ -72,7 +72,7 @@ if [ $rc -ne 0 ]; then
     exit $rc
 fi
 echo "Data: $result"
-expect=$( echo -ne "00\n$magic2" )
+expect=$( echo 00 ; echo -n "$magic2" )
 if [ "${result% *}" != "$expect" ] ; then
     echo "Wrong data found" >&2
     exit 1
