@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
-dnl Copyright (C) 2014-2017 Petr Tesarik <ptesarik@suse.com>
+dnl Copyright (C) 2014-2020 Petr Tesarik <ptesarik@suse.com>
 dnl
 dnl This file is part of libkdumpfile.
 dnl
@@ -19,7 +19,7 @@ dnl  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 dnl Package release versioning
 m4_define([pkg_major_version], [0])
-m4_define([pkg_minor_version], [3])
+m4_define([pkg_minor_version], [4])
 m4_define([pkg_micro_version], [0])
 m4_define([pkg_version],
           [pkg_major_version.pkg_minor_version.pkg_micro_version])
