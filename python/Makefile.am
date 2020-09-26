@@ -40,13 +40,14 @@ all-local: setup.cfg
 
 install-exec-local: setup.cfg
 	$(PYTHON) $(srcdir)/setup.py install \
+		--root "$(DESTDIR)"/ \
 		--install-purelib $(pythondir) \
 		--install-platlib $(pyexecdir) \
 		--record $(installed_list)
 
 uninstall-local: $(installed_list)
 	while read f ; do \
-	    $(LIBTOOL) --mode=uninstall rm -f "$$f" ; \
+	    $(LIBTOOL) --mode=uninstall rm -f "$(DESTDIR)/$$f" ; \
 	done < $<
 
 mostlyclean-local: setup.cfg
