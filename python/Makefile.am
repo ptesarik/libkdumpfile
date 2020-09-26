@@ -23,6 +23,8 @@ AM_CPPFLAGS = -I$(top_builddir)/include
 AM_CFLAGS = $(PYTHON_CFLAGS)
 AM_LDFLAGS = -module -avoid-version
 
+installed_list = installed.list
+
 setup.cfg: Makefile
 	$(AM_V_GEN)
 	$(AM_V_at)echo "[kdumpfile]" > $@
@@ -39,11 +41,19 @@ all-local: setup.cfg
 install-exec-local: setup.cfg
 	$(PYTHON) $(srcdir)/setup.py install \
 		--install-purelib $(pythondir) \
-		--install-platlib $(pyexecdir)
+		--install-platlib $(pyexecdir) \
+		--record $(installed_list)
+
+uninstall-local: $(installed_list)
+	while read f ; do \
+	    $(LIBTOOL) --mode=uninstall rm -f "$$f" ; \
+	done < $<
 
 mostlyclean-local: setup.cfg
 	$(PYTHON) $(srcdir)/setup.py clean --all
 	rm $<
+
+CLEANFILES = $(installed_list)
 
 check_LTLIBRARIES = _test_addrxlat.la
 
