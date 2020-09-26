@@ -23,17 +23,27 @@ AM_CPPFLAGS = -I$(top_builddir)/include
 AM_CFLAGS = $(PYTHON_CFLAGS)
 AM_LDFLAGS = -module -avoid-version
 
-pyexec_LTLIBRARIES = _addrxlat.la _kdumpfile.la
+setup.cfg: Makefile
+	$(AM_V_GEN)
+	$(AM_V_at)echo "[kdumpfile]" > $@
+	$(AM_V_at)echo "version=$(VERSION)" >> $@
+	$(AM_V_at)echo "libtool=$(LIBTOOL)" >> $@
+	$(AM_V_at)echo "libtool_install=$(LIBTOOL) --mode=install $(INSTALL)" >> $@
+	$(AM_V_at)echo "pyexecdir=$(pyexecdir)" >> $@
+	$(AM_V_at)echo "srcdir=$(srcdir)" >> $@
+	$(AM_V_at)echo "top_builddir=$(top_builddir)" >> $@
 
-_addrxlat_la_SOURCES = addrxlat.c
-_addrxlat_la_LDFLAGS = $(AM_LDFLAGS) -export-symbols $(srcdir)/addrxlat.sym
-_addrxlat_la_LIBADD = $(PYTHON_LIBS) $(top_builddir)/src/addrxlat/libaddrxlat.la
-EXTRA__addrxlat_la_DEPENDENCIES = addrxlat.sym
+all-local: setup.cfg
+	$(PYTHON) $(srcdir)/setup.py build
 
-_kdumpfile_la_SOURCES = kdumpfile.c
-_kdumpfile_la_LDFLAGS = $(AM_LDFLAGS) -export-symbols $(srcdir)/kdumpfile.sym
-_kdumpfile_la_LIBADD = $(PYTHON_LIBS) $(top_builddir)/src/kdumpfile/libkdumpfile.la
-EXTRA__kdumpfile_la_DEPENDENCIES = kdumpfile.sym
+install-exec-local: setup.cfg
+	$(PYTHON) $(srcdir)/setup.py install \
+		--install-purelib $(pythondir) \
+		--install-platlib $(pyexecdir)
+
+mostlyclean-local: setup.cfg
+	$(PYTHON) $(srcdir)/setup.py clean --all
+	rm $<
 
 check_LTLIBRARIES = _test_addrxlat.la
 
@@ -45,12 +55,21 @@ _test_addrxlat_la_LDFLAGS = \
 _test_addrxlat_la_LIBADD = $(PYTHON_LIBS) $(top_builddir)/src/addrxlat/libaddrxlat.la
 EXTRA__test_addrxlat_la_DEPENDENCIES = test_addrxlat.sym
 
-dist_noinst_DATA = \
-	addrxlat.sym \
-	kdumpfile.sym \
-	test_addrxlat.sym \
+dist_noinst_SCRIPTS = \
+	setup.py \
+	libtoolize.py \
+	addrxlat/__init__.py \
+	addrxlat/exceptions.py \
+	kdumpfile/__init__.py \
+	kdumpfile/exceptions.py \
+	kdumpfile/views.py \
 	showxlat.py \
 	vtop.py
+
+dist_noinst_DATA = \
+	addrxlat.c \
+	kdumpfile.c \
+	test_addrxlat.sym
 
 noinst_HEADERS = \
 	addrxlatmod.h
@@ -68,5 +87,3 @@ LOG_COMPILER = $(PYTHON)
 AM_TESTS_ENVIRONMENT = \
 eval " $$($(LIBTOOL) --config)"; \
 PYTHONPATH="$$srcdir:$$objdir"
-
-SUBDIRS = addrxlat kdumpfile
