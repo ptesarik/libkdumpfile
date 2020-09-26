@@ -39,15 +39,6 @@ setup(name='libkdumpfile',
           Extension('_kdumpfile', [os.path.join(srcdir, 'kdumpfile.c')],
                     extra_objects=[kdumpfile_la]),
       ],
-      options={
-          'build_ext': {
-              'libtool': cfg.get('kdumpfile', 'libtool'),
-              'pyexecdir': cfg.get('kdumpfile', 'pyexecdir'),
-          },
-          'install_lib': {
-              'libtool_install': cfg.get('kdumpfile', 'libtool_install'),
-          },
-      },
       cmdclass={
           'build_ext': libtoolize.build_ext,
           'install_lib': libtoolize.install_lib,

@@ -29,11 +29,15 @@ setup.cfg: Makefile
 	$(AM_V_GEN)
 	$(AM_V_at)echo "[kdumpfile]" > $@
 	$(AM_V_at)echo "version=$(VERSION)" >> $@
-	$(AM_V_at)echo "libtool=$(LIBTOOL)" >> $@
-	$(AM_V_at)echo "libtool_install=$(LIBTOOL) --mode=install $(INSTALL)" >> $@
-	$(AM_V_at)echo "pyexecdir=$(pyexecdir)" >> $@
 	$(AM_V_at)echo "srcdir=$(srcdir)" >> $@
 	$(AM_V_at)echo "top_builddir=$(top_builddir)" >> $@
+	$(AM_V_at)echo >> $@
+	$(AM_V_at)echo "[build_ext]" >> $@
+	$(AM_V_at)echo "libtool=$(LIBTOOL)" >> $@
+	$(AM_V_at)echo "pyexecdir=$(pyexecdir)" >> $@
+	$(AM_V_at)echo >> $@
+	$(AM_V_at)echo "[install_lib]" >> $@
+	$(AM_V_at)echo "libtool_install=$(LIBTOOL) --mode=install $(INSTALL)" >> $@
 
 all-local: setup.cfg
 	$(PYTHON) $(srcdir)/setup.py build
