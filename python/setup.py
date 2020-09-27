@@ -11,6 +11,7 @@ cfg = ConfigParser()
 cfg.read('setup.cfg')
 srcdir = cfg.get('kdumpfile', 'srcdir')
 top_builddir = cfg.get('kdumpfile', 'top_builddir')
+include_dir=os.path.join(top_builddir, 'include'),
 addrxlat_la = os.path.join(
     top_builddir, 'src', 'addrxlat', 'libaddrxlat.la')
 kdumpfile_la = os.path.join(
@@ -35,8 +36,10 @@ setup(name='libkdumpfile',
       package_dir={'': srcdir},
       ext_modules=[
           Extension('_addrxlat', [os.path.join(srcdir, 'addrxlat.c')],
+                    include_dirs=[include_dir],
                     extra_objects=[addrxlat_la]),
           Extension('_kdumpfile', [os.path.join(srcdir, 'kdumpfile.c')],
+                    include_dirs=[include_dir],
                     extra_objects=[kdumpfile_la]),
       ],
       cmdclass={
