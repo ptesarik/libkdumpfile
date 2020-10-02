@@ -1,6 +1,7 @@
 @rootpgt: PGT
   target_as=MACHPHYSADDR
   root=NOADDR
+  pte_mask=0x0
   pte_format=ia32_pae
   fields=12,9,9,2
 

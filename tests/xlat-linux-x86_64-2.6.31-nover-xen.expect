@@ -1,6 +1,7 @@
 @rootpgt: PGT
   target_as=MACHPHYSADDR
   root=KVADDR:0xffffffff81e10000
+  pte_mask=0x0
   pte_format=x86_64
   fields=12,9,9,9,9
 
@@ -26,6 +27,7 @@
 @kphys_machphys: PGT
   target_as=MACHPHYSADDR
   root=MACHPHYSADDR:0x3abc000
+  pte_mask=0x0
   pte_format=pfn64
   fields=12,9,9,9
 

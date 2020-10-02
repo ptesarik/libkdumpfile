@@ -1,12 +1,14 @@
 @rootpgt: PGT
   target_as=MACHPHYSADDR
   root=NOADDR
+  pte_mask=0x0
   pte_format=ppc64_linux_rpn30
   fields=16,12,12,4
 
 @userpgt: PGT
   target_as=MACHPHYSADDR
   root=NOADDR
+  pte_mask=0x0
   pte_format=ppc64_linux_rpn30
   fields=16,12,12,4
 

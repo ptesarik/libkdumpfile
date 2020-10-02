@@ -142,6 +142,7 @@ enum param_index {
 
 	/* Page tables */
 	pgt_root,
+	pgt_pte_mask,
 	pgt_pte_format,
 	pgt_fields,
 
@@ -169,6 +170,7 @@ static const kw_pair_t linear_param[] = {
 
 static const kw_pair_t pgt_param[] = {
 	{"root", pgt_root },
+	{"pte_mask", pgt_pte_mask },
 	{"pte_format", pgt_pte_format },
 	{"fields", pgt_fields },
 	{NULL}
@@ -462,6 +464,14 @@ parse_meth_param(const char *spec, addrxlat_meth_t *meth)
 
 	case pgt_root:
 		res = parse_fulladdr(p, &meth->param.pgt.root);
+		break;
+
+	case pgt_pte_mask:
+		meth->param.pgt.pte_mask = strtoull(p, (char**)&endp, 0);
+		if (endp != p && !*endp)
+			res = TEST_OK;
+		else
+			fprintf(stderr, "Invalid number: %s", p);
 		break;
 
 	case pgt_pte_format:

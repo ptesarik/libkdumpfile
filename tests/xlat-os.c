@@ -259,6 +259,8 @@ print_pgt(const addrxlat_meth_t *meth)
 	fputs("  root=", stdout);
 	print_fulladdr(&meth->param.pgt.root);
 	putchar('\n');
+	printf("  pte_mask=0x%"ADDRXLAT_PRIxPTE"\n",
+	       meth->param.pgt.pte_mask);
 	fputs("  pte_format=", stdout);
 	if (pf->pte_format < ARRAY_SIZE(pte_formats) &&
 	    pte_formats[pf->pte_format])

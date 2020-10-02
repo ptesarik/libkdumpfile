@@ -1,6 +1,7 @@
 @rootpgt: PGT
   target_as=MACHPHYSADDR
   root=KPHYSADDR:0x8b5000
+  pte_mask=0x0
   pte_format=s390x
   fields=12,8,11,11
 
