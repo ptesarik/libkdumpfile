@@ -422,6 +422,17 @@ INTERNAL_DECL(addrxlat_status, parse_opts,
 	      (struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 	       const char *opts));
 
+/** Get a numeric option, with fallback to default value.
+ * @param opt Parsed options.
+ * @param idx Option index.
+ * @param def Default value if the option is not set.
+ */
+static inline long
+opt_num_default(const struct parsed_opts *opts, enum optidx idx, long def)
+{
+	return opts->val[idx].set ? opts->val[idx].num : def;
+}
+
 /* Translation system */
 
 /** Data used during translation system initialization. */
