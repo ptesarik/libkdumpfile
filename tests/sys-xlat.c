@@ -950,6 +950,8 @@ int main(int argc, char *argv[])
 	}
 	data.sys = read_config(cfg);
 	fclose(cfg);
+	if (!data.sys)
+		return TEST_ERR;
 
 	for (i = optind; i < argc; ++i) {
 		rc = translate(&data, argv[i]);
