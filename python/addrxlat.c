@@ -521,6 +521,39 @@ set_addrspace(PyObject *self, PyObject *value, void *data)
 	return 0;
 }
 
+/** Getter for the addrxlat_pte_t type.
+ * @param self  any object
+ * @param data  offset of the addrxlat_pte_t member
+ * @returns     PyLong object (or @c NULL on failure)
+ */
+static PyObject *
+get_pte(PyObject *self, void *data)
+{
+	Py_ssize_t off = (intptr_t)data;
+	addrxlat_pte_t *pval = (addrxlat_pte_t*)((char*)self + off);
+	return PyLong_FromUnsignedLongLong(*pval);
+}
+
+/** Setter for the addrxlat_pte_t type.
+ * @param self   any object
+ * @param value  new value (a @c PyLong or @c PyInt)
+ * @param data   offset of the addrxlat_pte_t member
+ * @returns      zero on success, -1 otherwise
+ */
+static int
+set_pte(PyObject *self, PyObject *value, void *data)
+{
+	Py_ssize_t off = (intptr_t)data;
+	addrxlat_pte_t *pval = (addrxlat_pte_t*)((char*)self + off);
+	unsigned long long pte = Number_AsUnsignedLongLongMask(value);
+
+	if (PyErr_Occurred())
+		return -1;
+
+	*pval = pte;
+	return 0;
+}
+
 /** An object with a C pointer.
  * This object is used to create a Python object from a C pointer to
  * the corresponding libaddrxlat object passed as a _C_POINTER argument.
@@ -3110,10 +3143,15 @@ static fulladdr_loc pgtmeth_root_loc = {
 	"root"
 };
 
+PyDoc_STRVAR(pgtmeth_pte_mask__doc__,
+"page table entry mask");
+
 static PyGetSetDef pgtmeth_getset[] = {
 	{ "kind", meth_get_kind, 0, pgtmeth_kind__doc__ },
 	{ "root", get_fulladdr, set_fulladdr, pgtmeth_root__doc__,
 	  &pgtmeth_root_loc },
+	{ "pte_mask", get_pte, set_pte, pgtmeth_pte_mask__doc__,
+	  OFFSETOF_PTR(meth_object, meth.param.pgt.pte_mask) },
 	{ "pte_format", pgtmeth_get_pte_format, pgtmeth_set_pte_format,
 	  pgtmeth_pte_format__doc__ },
 	{ "fields", pgtmeth_get_fields, pgtmeth_set_fields,
