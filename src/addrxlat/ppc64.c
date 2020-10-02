@@ -113,22 +113,23 @@ hugepd_shift(addrxlat_pte_t hpde)
 
 /**  Translate a Linux huge page using its directory entry.
  * @param step  Current step state.
+ * @param pte   Page table entry value (possibly masked).
  * @returns     Error status.
  */
 static addrxlat_status
-huge_pd_linux(addrxlat_step_t *step)
+huge_pd_linux(addrxlat_step_t *step, addrxlat_pte_t pte)
 {
 	const addrxlat_paging_form_t *pf = &step->meth->param.pgt.pf;
 	addrxlat_addr_t off;
 	unsigned pdshift;
 	unsigned short i;
 
-	pdshift = hugepd_shift(step->raw.pte);
+	pdshift = hugepd_shift(pte);
 	if (!pdshift)
 		return set_error(step->ctx, ADDRXLAT_ERR_INVALID,
 				 "Invalid hugepd shift");
 
-	step->base.addr = (step->raw.pte & ~HUGEPD_SHIFT_MASK) | PD_HUGE;
+	step->base.addr = (pte & ~HUGEPD_SHIFT_MASK) | PD_HUGE;
 	step->base.as = ADDRXLAT_KVADDR;
 
 	/* Calculate the total byte offset below current table. */
@@ -151,7 +152,7 @@ huge_pd_linux(addrxlat_step_t *step)
 }
 
 /**  Check whether a Linux page table entry is huge.
- * @param pte  Page table entry (value).
+ * @param pte  Page table entry value (possibly masked).
  * @returns    Non-zero if this is a huge page entry.
  */
 static inline int
@@ -161,7 +162,8 @@ is_hugepte_linux(addrxlat_pte_t pte)
 }
 
 /** Update current step state for Linux huge page.
- * @param state      Current step state.
+ * @param step       Current step state.
+ * @param pte        Page table entry value (possibly masked).
  * @param rpn_shift  RPN shift.
  * @returns          Always @c ADDRXLAT_OK.
  *
@@ -170,11 +172,11 @@ is_hugepte_linux(addrxlat_pte_t pte)
  * offset and terminates.
  */
 static addrxlat_status
-huge_page_linux(addrxlat_step_t *step, unsigned rpn_shift)
+huge_page_linux(addrxlat_step_t *step, addrxlat_pte_t pte, unsigned rpn_shift)
 {
 	const addrxlat_paging_form_t *pf = &step->meth->param.pgt.pf;
 
-	step->base.addr = (step->raw.pte >> rpn_shift) << pf->fieldsz[0];
+	step->base.addr = (pte >> rpn_shift) << pf->fieldsz[0];
 	step->base.as = step->meth->target_as;
 	return pgt_huge_page(step);
 }
@@ -194,13 +196,14 @@ pgt_ppc64_linux(addrxlat_step_t *step, unsigned rpn_shift)
 		"pgd",
 	};
 	const addrxlat_paging_form_t *pf = &step->meth->param.pgt.pf;
+	addrxlat_pte_t pte;
 	addrxlat_status status;
 
-	status = read_pte64(step);
+	status = read_pte64(step, &pte);
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	if (!step->raw.pte)
+	if (!pte)
 		return !step->ctx->noerr.notpresent
 			? set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 				    "%s[%u] is none",
@@ -211,19 +214,18 @@ pgt_ppc64_linux(addrxlat_step_t *step, unsigned rpn_shift)
 	if (step->remain > 1) {
 		addrxlat_addr_t table_size;
 
-		if (is_hugepte_linux(step->raw.pte))
-			return huge_page_linux(step, rpn_shift);
+		if (is_hugepte_linux(pte))
+			return huge_page_linux(step, pte, rpn_shift);
 
-		if (is_hugepd_linux(step->raw.pte))
-			return huge_pd_linux(step);
+		if (is_hugepd_linux(pte))
+			return huge_pd_linux(step, pte);
 
 		table_size = ((addrxlat_addr_t)1 << PTE_SHIFT <<
 			      pf->fieldsz[step->remain - 1]);
-		step->base.addr = step->raw.pte & ~(table_size - 1);
+		step->base.addr = pte & ~(table_size - 1);
 		step->base.as = ADDRXLAT_KVADDR;
 	} else {
-		step->base.addr =
-			(step->raw.pte >> rpn_shift) << pf->fieldsz[0];
+		step->base.addr = (pte >> rpn_shift) << pf->fieldsz[0];
 		step->base.as = step->meth->target_as;
 		step->elemsz = 1;
 	}

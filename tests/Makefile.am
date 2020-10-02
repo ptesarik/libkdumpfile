@@ -153,6 +153,7 @@ test_scripts = \
 	addrxlat-s390x-5l \
 	addrxlat-x86_64-4l \
 	addrxlat-x86_64-5l \
+	addrxlat-x86_64-sme \
 	addrxlat-invalid-pfn32 \
 	addrxlat-invalid-pfn64 \
 	addrxlat-invalid-ia32 \

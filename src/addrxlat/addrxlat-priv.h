@@ -251,37 +251,43 @@ struct _addrxlat_sys {
 
 /** Read raw 32-bit PTE value.
  * @param step  Current step state.
+ * @param pte   Set to the (masked) PTE value on success.
  * @returns     Error status.
  *
  * On successful return, @c step->raw.pte contains the raw
  * PTE value for the current translation step.
  */
 static inline addrxlat_status
-read_pte32(addrxlat_step_t *step)
+read_pte32(addrxlat_step_t *step, addrxlat_pte_t *pte)
 {
 	uint32_t pte32;
 	addrxlat_status status;
 	status = read32(step, &step->base, &pte32, "PTE");
-	if (status == ADDRXLAT_OK)
+	if (status == ADDRXLAT_OK) {
 		step->raw.pte = pte32;
+		*pte = pte32 & ~step->meth->param.pgt.pte_mask;
+	}
 	return status;
 }
 
 /** Read raw 64-bit PTE value.
  * @param step  Current step state.
+ * @param pte   Set to the (masked) PTE value on success.
  * @returns     Error status.
  *
  * On successful return, @c step->raw.pte contains the raw
  * PTE value for the current translation step.
  */
 static inline addrxlat_status
-read_pte64(addrxlat_step_t *step)
+read_pte64(addrxlat_step_t *step, addrxlat_pte_t *pte)
 {
 	uint64_t pte64;
 	addrxlat_status status;
 	status = read64(step, &step->base, &pte64, "PTE");
-	if (status == ADDRXLAT_OK)
+	if (status == ADDRXLAT_OK) {
 		step->raw.pte = pte64;
+		*pte = pte64 & ~step->meth->param.pgt.pte_mask;
+	}
 	return status;
 }
 

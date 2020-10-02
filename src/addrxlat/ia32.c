@@ -90,13 +90,14 @@ pgt_ia32(addrxlat_step_t *step)
 		"pte",
 		"pgd",
 	};
+	addrxlat_pte_t pte;
 	addrxlat_status status;
 
-	status = read_pte32(step);
+	status = read_pte32(step, &pte);
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	if (!(step->raw.pte & _PAGE_PRESENT))
+	if (!(pte & _PAGE_PRESENT))
 		return !step->ctx->noerr.notpresent
 			? set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 				    "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
@@ -106,12 +107,12 @@ pgt_ia32(addrxlat_step_t *step)
 				    step->raw.pte)
 			: ADDRXLAT_ERR_NOTPRESENT;
 
-	step->base.addr = step->raw.pte;
+	step->base.addr = pte;
 	step->base.as = step->meth->target_as;
 
-	if (step->remain == 2 && (step->raw.pte & _PAGE_PSE)) {
+	if (step->remain == 2 && (pte & _PAGE_PSE)) {
 		step->base.addr &= ~PAGE_MASK_4M;
-		step->base.addr |= pgd_pse_high(step->raw.pte);
+		step->base.addr |= pgd_pse_high(pte);
 		return pgt_huge_page(step);
 	}
 
@@ -139,13 +140,14 @@ pgt_ia32_pae(addrxlat_step_t *step)
 		"pmd",
 		"pgd",
 	};
+	addrxlat_pte_t pte;
 	addrxlat_status status;
 
-	status = read_pte64(step);
+	status = read_pte64(step, &pte);
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	if (!(step->raw.pte & _PAGE_PRESENT))
+	if (!(pte & _PAGE_PRESENT))
 		return !step->ctx->noerr.notpresent
 			? set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 				    "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
@@ -155,10 +157,10 @@ pgt_ia32_pae(addrxlat_step_t *step)
 				    step->raw.pte)
 			: ADDRXLAT_ERR_NOTPRESENT;
 
-	step->base.addr = step->raw.pte & PHYSADDR_MASK_PAE;
+	step->base.addr = pte & PHYSADDR_MASK_PAE;
 	step->base.as = step->meth->target_as;
 
-	if (step->remain == 2 && (step->raw.pte & _PAGE_PSE)) {
+	if (step->remain == 2 && (pte & _PAGE_PSE)) {
 		step->base.addr &= ~PAGE_MASK_2M;
 		return pgt_huge_page(step);
 	}
@@ -212,6 +214,7 @@ check_pae(struct os_init_data *ctl, const addrxlat_fulladdr_t *root,
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot set up physical mappings");
+	meth.param.pgt.pte_mask = 0;
 	meth.param.pgt.pf = ia32_pf_pae;
 	step.ctx = ctl->ctx;
 	step.sys = ctl->sys;
@@ -294,6 +297,7 @@ sys_ia32_nonpae(struct os_init_data *ctl)
 		meth->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
 	else
 		meth->param.pgt.root.as = ADDRXLAT_NOADDR;
+	meth->param.pgt.pte_mask = 0;
 	meth->param.pgt.pf = ia32_pf;
 	return ADDRXLAT_OK;
 }
@@ -319,6 +323,7 @@ sys_ia32_pae(struct os_init_data *ctl)
 		meth->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
 	else
 		meth->param.pgt.root.as = ADDRXLAT_NOADDR;
+	meth->param.pgt.pte_mask = 0;
 	meth->param.pgt.pf = ia32_pf_pae;
 	return ADDRXLAT_OK;
 }

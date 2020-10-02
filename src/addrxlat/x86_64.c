@@ -139,13 +139,14 @@ pgt_x86_64(addrxlat_step_t *step)
 		"p4d",
 		"pgd",
 	};
+	addrxlat_pte_t pte;
 	addrxlat_status status;
 
-	status = read_pte64(step);
+	status = read_pte64(step, &pte);
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	if (!(step->raw.pte & _PAGE_PRESENT))
+	if (!(pte & _PAGE_PRESENT))
 		return !step->ctx->noerr.notpresent
 			? set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 				    "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
@@ -155,15 +156,15 @@ pgt_x86_64(addrxlat_step_t *step)
 				    step->raw.pte)
 			: ADDRXLAT_ERR_NOTPRESENT;
 
-	step->base.addr = step->raw.pte & PHYSADDR_MASK;
+	step->base.addr = pte & PHYSADDR_MASK;
 	step->base.as = step->meth->target_as;
 
-	if (step->remain == 3 && (step->raw.pte & _PAGE_PSE)) {
+	if (step->remain == 3 && (pte & _PAGE_PSE)) {
 		step->base.addr &= ~PAGE_MASK_1G;
 		return pgt_huge_page(step);
 	}
 
-	if (step->remain == 2 && (step->raw.pte & _PAGE_PSE)) {
+	if (step->remain == 2 && (pte & _PAGE_PSE)) {
 		step->base.addr &= ~PAGE_MASK_2M;
 		return pgt_huge_page(step);
 	}
@@ -655,6 +656,7 @@ set_xen_p2m(struct os_init_data *ctl)
 	meth->target_as = ADDRXLAT_MACHPHYSADDR;
 	meth->param.pgt.root.addr = p2m_maddr;
 	meth->param.pgt.root.as = ADDRXLAT_MACHPHYSADDR;
+	meth->param.pgt.pte_mask = 0;
 	meth->param.pgt.pf = xen_p2m_pf;
 
 	range.endoff = paging_max_index(&xen_p2m_pf);
@@ -961,6 +963,7 @@ sys_x86_64(struct os_init_data *ctl)
 		meth->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
 	else
 		meth->param.pgt.root.as = ADDRXLAT_NOADDR;
+	meth->param.pgt.pte_mask = 0;
 	meth->param.pgt.pf = x86_64_pf;
 
 	if (ctl->popt.val[OPT_levels].set) {

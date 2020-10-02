@@ -592,6 +592,12 @@ typedef struct _addrxlat_paging_form {
 /** Parameters of page table translation. */
 typedef struct _addrxlat_param_pgt {
 	addrxlat_fulladdr_t root;  /**< Root page table address. */
+
+	/** Page table entry mask.
+	 * Bits to be masked off the raw value. Zero means no masking.
+	 */
+	addrxlat_pte_t pte_mask;
+
 	addrxlat_paging_form_t pf; /**< Paging form. */
 } addrxlat_param_pgt_t;
 

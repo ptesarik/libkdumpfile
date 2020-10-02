@@ -112,19 +112,20 @@ pte_invalid(addrxlat_step_t *step)
 addrxlat_status
 pgt_aarch64(addrxlat_step_t *step)
 {
+	addrxlat_pte_t pte;
 	addrxlat_status status;
 
-	status = read_pte64(step);
+	status = read_pte64(step, &pte);
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	if (!PTE_VALID(step->raw.pte))
+	if (!PTE_VALID(pte))
 		return pte_not_present(step);
 
-	step->base.addr = step->raw.pte & PA_MASK;
+	step->base.addr = pte & PA_MASK;
 	step->base.as = step->meth->target_as;
 
-	if (PTE_TYPE(step->raw.pte) == PTE_TYPE_BLOCK) {
+	if (PTE_TYPE(pte) == PTE_TYPE_BLOCK) {
 		addrxlat_addr_t mask = pf_table_mask(
 			&step->meth->param.pgt.pf, step->remain);
 		if (mask > PAGE_MASK_1G)

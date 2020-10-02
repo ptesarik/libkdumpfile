@@ -1,0 +1,33 @@
+#! /bin/sh
+
+#
+# Check VTOP translation for X86-64 using 4-level paging with SME bit
+#
+
+pf="x86_64:12,9,9,9,9 -k 0x800000000000"
+
+ptes="-e 0x0000:0x800000001067"		# PGD[0] -> 1000
+ptes="$ptes -e 0x0008:0x800000005067"	# PGD[1] -> 5000
+ptes="$ptes -e 0x0880:0x800000008067"	# PGD[272] -> 8000
+ptes="$ptes -e 0x1000:0x800000002067"	# PGD[0] -> PUD[0] -> 2000
+ptes="$ptes -e 0x1010:0x8003c00000e7"	# PGD[0] -> PUD[2] -> 0x3c0000000 (1G)
+ptes="$ptes -e 0x2000:0x800000003067"	# PGD[0] -> PUD[0] -> PMD[0] -> 3000
+ptes="$ptes -e 0x2008:0x800000004067"	# PGD[0] -> PUD[0] -> PMD[1] -> 4000
+ptes="$ptes -e 0x2010:0x800000e000e7"	# PGD[0] -> PUD[0] -> PMD[2] -> e00000 (2M)
+ptes="$ptes -e 0x3000:0x80000000a067"	# PGD[0] -> PUD[0] -> PMD[0] -> PTE[0] -> a000
+ptes="$ptes -e 0x3008:0x80000000b067"	# PGD[0] -> PUD[0] -> PMD[0] -> PTE[1] -> b000
+ptes="$ptes -e 0x4800:0x80000000c067"	# PGD[0] -> PUD[0] -> PMD[1] -> PTE[256] -> c000
+ptes="$ptes -e 0x5010:0x800000006067"	# PGD[1] -> PUD[2] -> 6000
+ptes="$ptes -e 0x6018:0x800000007067"	# PGD[1] -> PUD[2] -> PMD[3] -> 7000
+ptes="$ptes -e 0x7020:0x80000000d067"	# PGD[0] -> PUD[1] -> PMD[3] -> PTE[4] -> d000
+ptes="$ptes -e 0x8240:0x8012000000e7"	# PGD[272] -> PUD[72] -> directmap (1G)
+
+list="0x123:0xa123"		# PGD[0] -> PUD[0] -> PMD[0] -> PTE[0]
+list="$list 0x1234:0xb234"	# PGD[0] -> PUD[0] -> PMD[0] -> PTE[1]
+list="$list 0x300567:0xc567"	# PGD[0] -> PUD[0] -> PMD[1] -> PTE[256]
+list="$list 0x808060489a:0xd89a" # PGD[1] -> PUD[2] -> PMD[3] -> PTE[4]
+list="$list 0x523456:0xf23456"	# PGD[0] -> PUD[0] -> PMD[1] (2M)
+list="$list 0xa1234567:0x3e1234567" # PGD[0] -> PUD[2] (1G)
+list="$list 0xffff88123456789a:0x123456789a" # PGD[272] -> PUD[72] (1G)
+
+. "$srcdir"/addrxlat-common

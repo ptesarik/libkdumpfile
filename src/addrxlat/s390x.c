@@ -81,13 +81,14 @@ pgt_s390x(addrxlat_step_t *step)
 		"rg1",		/* Invented; does not exist in the wild. */
 	};
 	const addrxlat_paging_form_t *pf = &step->meth->param.pgt.pf;
+	addrxlat_pte_t pte;
 	addrxlat_status status;
 
-	status = read_pte64(step);
+	status = read_pte64(step, &pte);
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	if (PTE_I(step->raw.pte))
+	if (PTE_I(pte))
 		return !step->ctx->noerr.notpresent
 			? set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 				    "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
@@ -97,21 +98,21 @@ pgt_s390x(addrxlat_step_t *step)
 				    step->raw.pte)
 			: ADDRXLAT_ERR_NOTPRESENT;
 
-	if (step->remain >= 2 && PTE_TT(step->raw.pte) != step->remain - 2)
+	if (step->remain >= 2 && PTE_TT(pte) != step->remain - 2)
 		return set_error(step->ctx, ADDRXLAT_ERR_INVALID,
 				 "Table type field %u in %s",
-				 (unsigned) PTE_TT(step->raw.pte),
+				 (unsigned) PTE_TT(pte),
 				 pgt_full_name[step->remain]);
 
-	step->base.addr = step->raw.pte;
+	step->base.addr = pte;
 	step->base.as = step->meth->target_as;
 
-	if (step->remain == 3 && PTE_FC(step->raw.pte)) {
+	if (step->remain == 3 && PTE_FC(pte)) {
 		step->base.addr &= ~RFAA_MASK;
 		return pgt_huge_page(step);
 	}
 
-	if (step->remain == 2 && PTE_FC(step->raw.pte)) {
+	if (step->remain == 2 && PTE_FC(pte)) {
 		step->base.addr &= ~SFAA_MASK;
 		return pgt_huge_page(step);
 	}
@@ -119,15 +120,14 @@ pgt_s390x(addrxlat_step_t *step)
 	if (step->remain >= 3) {
 		unsigned pgidx = step->idx[step->remain - 1] >>
 			(pf->fieldsz[step->remain - 1] - pf->fieldsz[0]);
-		if (pgidx < PTE_TF(step->raw.pte) ||
-		    pgidx > PTE_TL(step->raw.pte))
+		if (pgidx < PTE_TF(pte) || pgidx > PTE_TL(pte))
 			return !step->ctx->noerr.notpresent
 				? set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 					    "%s index %u not within %u and %u",
 					    pgt_full_name[step->remain-1],
 					    (unsigned) step->idx[step->remain-1],
-					    (unsigned) PTE_TF(step->raw.pte),
-					    (unsigned) PTE_TL(step->raw.pte))
+					    (unsigned) PTE_TF(pte),
+					    (unsigned) PTE_TL(pte))
 				: ADDRXLAT_ERR_NOTPRESENT;
 	}
 

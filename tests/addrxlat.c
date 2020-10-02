@@ -190,6 +190,20 @@ set_root(addrxlat_fulladdr_t *root, const char *spec)
 }
 
 static int
+set_pte_mask(addrxlat_pte_t *mask, const char *spec)
+{
+	char *endp;
+
+	*mask = strtoull(spec, &endp, 0);
+	if (*endp) {
+		fprintf(stderr, "Invalid mask value: %s\n", spec);
+		return TEST_ERR;
+	}
+
+	return TEST_OK;
+}
+
+static int
 set_linear(addrxlat_off_t *off, const char *spec)
 {
 	char *endp;
@@ -289,6 +303,7 @@ static const struct option opts[] = {
 	{ "entry", required_argument, NULL, 'e' },
 	{ "form", required_argument, NULL, 'f' },
 	{ "root", required_argument, NULL, 'r' },
+	{ "mask", required_argument, NULL, 'k' },
 	{ "linear", required_argument, NULL, 'l' },
 	{ "memarr", required_argument, NULL, 'm' },
 	{ "pgt", no_argument, NULL, 'p' },
@@ -309,6 +324,7 @@ usage(const char *name)
 		"  -m|--memarr params    Use memory array translation\n"
 		"  -f|--form fmt:fields  Set paging form\n"
 		"  -r|--root as:addr     Set the root page table address\n"
+		"  -k|--mask val         PTE mask for page table translation\n"
 		"  -e|--entry addr:val   Set table entry value\n",
 		name);
 }
@@ -336,6 +352,7 @@ main(int argc, char **argv)
 	pgt.target_as = ADDRXLAT_MACHPHYSADDR;
 	pgt.param.pgt.root.as = ADDRXLAT_NOADDR;
 	pgt.param.pgt.root.addr = 0;
+	pgt.param.pgt.pte_mask = 0;
 
 	linear.kind = ADDRXLAT_LINEAR;
 	linear.target_as = ADDRXLAT_MACHPHYSADDR;
@@ -349,7 +366,7 @@ main(int argc, char **argv)
 	memarr.target_as = ADDRXLAT_MACHPHYSADDR;
 	memarr.param.memarr.base.as = ADDRXLAT_NOADDR;
 
-	while ((opt = getopt_long(argc, argv, "he:f:l:m:pr:t:",
+	while ((opt = getopt_long(argc, argv, "he:f:k:l:m:pr:t:",
 				  opts, NULL)) != -1) {
 		switch (opt) {
 		case 'f':
@@ -362,6 +379,12 @@ main(int argc, char **argv)
 		case 'r':
 			meth = &pgt;
 			rc = set_root(&meth->param.pgt.root, optarg);
+			if (rc != TEST_OK)
+				return rc;
+			break;
+
+		case 'k':
+			rc = set_pte_mask(&meth->param.pgt.pte_mask, optarg);
 			if (rc != TEST_OK)
 				return rc;
 			break;
