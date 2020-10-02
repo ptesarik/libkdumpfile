@@ -217,6 +217,7 @@ static const struct {
 	char name[9];
 } opt8[] = {
 	DEF(pagesize, number),
+	DEF(pte_mask, number),
 	DEF(xen_xlat, bool),
 	END
 };

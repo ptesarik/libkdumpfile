@@ -377,6 +377,8 @@ map_linux_ppc64(struct os_init_data *ctl)
 	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT];
 	meth->kind = ADDRXLAT_PGT;
 	meth->target_as = ADDRXLAT_MACHPHYSADDR;
+	meth->param.pgt.pte_mask =
+		opt_num_default(&ctl->popt, OPT_pte_mask, 0);
 	meth->param.pgt.root.as = ADDRXLAT_NOADDR;
 	meth->param.pgt.pf = ppc64_pf_64k;
 

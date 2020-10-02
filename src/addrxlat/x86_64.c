@@ -963,7 +963,8 @@ sys_x86_64(struct os_init_data *ctl)
 		meth->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
 	else
 		meth->param.pgt.root.as = ADDRXLAT_NOADDR;
-	meth->param.pgt.pte_mask = 0;
+	meth->param.pgt.pte_mask =
+		opt_num_default(&ctl->popt, OPT_pte_mask, 0);
 	meth->param.pgt.pf = x86_64_pf;
 
 	if (ctl->popt.val[OPT_levels].set) {
