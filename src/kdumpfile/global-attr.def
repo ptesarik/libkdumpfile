@@ -46,6 +46,9 @@ ATTR(cache, "misses", cache_misses, number, unsigned long)
 ATTR(file, "format", file_format, string, const char *)
 ATTR(file, "description", file_description, string, const char *)
 
+/* mmap policy */
+ATTR(file, "mmap_policy", file_mmap_policy, number, kdump_mmap_policy_t)
+
 /* Linux */
 ATTR(root, "linux", dir_linux, directory, struct attr_data *)
 ATTR(linux, "version_code", linux_version_code, number, unsigned,

@@ -1264,6 +1264,11 @@ struct fcache {
 	/** Open file descriptor. */
 	int fd;
 
+	/** Policy for using mmap(2) vs. read(2).
+	 * @sa kdump_mmap_policy_t
+	 */
+	kdump_attr_value_t mmap_policy;
+
 	/** Page size (in bytes). */
 	size_t pgsz;
 

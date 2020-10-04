@@ -174,6 +174,8 @@ kdump_new(void)
 			ATTR_PERSIST, 0);
 	set_attr_number(ctx, gattr(ctx, GKI_cache_misses),
 			ATTR_PERSIST, 0);
+	set_attr_number(ctx, gattr(ctx, GKI_file_mmap_policy),
+			ATTR_PERSIST, KDUMP_MMAP_TRY);
 
 	return ctx;
 

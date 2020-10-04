@@ -138,6 +138,24 @@ typedef enum _kdump_byte_order {
 	KDUMP_LITTLE_ENDIAN = ADDRXLAT_LITTLE_ENDIAN,
 } kdump_byte_order_t;
 
+/**  File mmap policy.
+ *
+ * Control if and how mmap(2) should be used to access data from the
+ * underlying core file.
+ *
+ * @sa KDUMP_ATTR_FILE_MMAP_POLICY
+ */
+typedef enum _kdump_mmap_policy {
+	KDUMP_MMAP_NEVER,	/**< Never use mmap(2), always use read(2). */
+	KDUMP_MMAP_ALWAYS,	/**< Always use mmap(2), never use read(2). */
+	KDUMP_MMAP_TRY,		/**< Try mmap(2), fall back to read(2). */
+
+	/** Same as @c KDUMP_MMAP_TRY, but change to @c KDUMP_MMAP_NEVER
+	 *  or @c KDUMP_MMAP_ALWAYS based on the result of the next read.
+	 */
+	KDUMP_MMAP_TRY_ONCE,
+} kdump_mmap_policy_t;
+
 /**  Type of a Xen dump.
  * @sa KDUMP_ATTR_XEN_TYPE
  */
@@ -922,6 +940,12 @@ void kdump_attr_iter_end(kdump_ctx_t *ctx, kdump_attr_iter_t *iter);
 
 /** Fill excluded pages with zeroes? */
 #define KDUMP_ATTR_ZERO_EXCLUDED "file.zero_excluded"
+
+/** Policy for using mmap vs. read.
+ * Default is @c KDUMP_MMAP_TRY.
+ * @sa kdump_mmap_policy_t
+ */
+#define KDUMP_ATTR_FILE_MMAP_POLICY	"file.mmap_policy"
 
 /**  Get VMCOREINFO raw data.
  * @param ctx  Dump file object.
