@@ -1020,6 +1020,21 @@ attr_value(const struct attr_data *attr)
 	return attr->flags.indirect ? attr->pval : &attr->val;
 }
 
+/**  Make sure that attribute value is embedded (not indirect).
+ * @param attr  Attribute data.
+ *
+ * If the attribute is indirect, copy the value into the attribute
+ * data itself and clear the indirect flag.
+ */
+static inline void
+attr_embed_value(struct attr_data *attr)
+{
+	if (attr->flags.indirect) {
+		attr->val = *attr->pval;
+		attr->flags.indirect = 0;
+	}
+}
+
 /**  Revalidate attribute data.
  * @param ctx   Dump file object.
  * @param attr  Attribute data.
