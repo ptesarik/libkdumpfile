@@ -71,6 +71,17 @@ extern "C" {
  */
 typedef uint_fast64_t kdump_num_t;
 
+/** @name fprintf() macros for the libkdumpfile number type
+ * @{
+ *
+ * POSIX @c PRI_xxx style macros for use with @ref kdump_num_t.
+ */
+#define KDUMP_PRIoNUM	PRIoFAST64 /**< Octal @c kdump_num_t */
+#define KDUMP_PRIuNUM	PRIuFAST64 /**< Decimal @c kdump_num_t */
+#define KDUMP_PRIxNUM	PRIxFAST64 /**< Lowercase hex @c kdump_num_t */
+#define KDUMP_PRIXNUM	PRIXFAST64 /**< Uppercase hex @c kdump_num_t */
+/* @} */
+
 /**  Type of a physical or virtual address.
  *
  * This type is large enough to hold any possible address type on any
@@ -96,6 +107,18 @@ typedef kdump_addr_t kdump_paddr_t;
  * known to be a virtual address.
  */
 typedef kdump_addr_t kdump_vaddr_t;
+
+/** @name fprintf() macros for the libkdumpfile address type
+ * @{
+ *
+ * POSIX @c PRI_xxx style macros for use with @ref kdump_addr_t,
+ * @ref kdump_paddr_t and @ref kdump_vaddr_t.
+ */
+#define KDUMP_PRIoADDR	ADDRXLAT_PRIoADDR /**< Octal address */
+#define KDUMP_PRIuADDR	ADDRXLAT_PRIuADDR /**< Decimal address */
+#define KDUMP_PRIxADDR	ADDRXLAT_PRIxADDR /**< Lowercase hex address */
+#define KDUMP_PRIXADDR	ADDRXLAT_PRIXADDR /**< Uppercase hex address */
+/* @} */
 
 /**  Representation of a dump file.
  *
