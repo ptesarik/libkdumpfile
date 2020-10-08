@@ -148,7 +148,23 @@ shared_decref(struct kdump_shared *shared)
 kdump_ctx_t *
 kdump_new(void)
 {
+	/* Numeric attributes that to be initialized */
+	static const struct {
+		enum global_keyidx key;
+		kdump_num_t val;
+	} numeric_attrs[] = {
+		{ GKI_cache_hits, 0 },
+		{ GKI_cache_misses, 0 },
+		{ GKI_cache_size, DEFAULT_CACHE_SIZE },
+		{ GKI_file_mmap_policy, KDUMP_MMAP_TRY },
+		{ GKI_mmap_cache_hits, 0 },
+		{ GKI_mmap_cache_misses, 0 },
+		{ GKI_read_cache_hits, 0 },
+		{ GKI_read_cache_misses, 0 },
+	};
+
 	kdump_ctx_t *ctx;
+	int i;
 
 	ctx = alloc_ctx();
 	if (!ctx)
@@ -168,22 +184,9 @@ kdump_new(void)
 		goto err_xlat;
 	list_add(&ctx->xlat_list, &ctx->xlat->ctx);
 
-	set_attr_number(ctx, gattr(ctx, GKI_cache_size),
-			ATTR_PERSIST, DEFAULT_CACHE_SIZE);
-	set_attr_number(ctx, gattr(ctx, GKI_cache_hits),
-			ATTR_PERSIST, 0);
-	set_attr_number(ctx, gattr(ctx, GKI_cache_misses),
-			ATTR_PERSIST, 0);
-	set_attr_number(ctx, gattr(ctx, GKI_mmap_cache_hits),
-			ATTR_PERSIST, 0);
-	set_attr_number(ctx, gattr(ctx, GKI_mmap_cache_misses),
-			ATTR_PERSIST, 0);
-	set_attr_number(ctx, gattr(ctx, GKI_read_cache_hits),
-			ATTR_PERSIST, 0);
-	set_attr_number(ctx, gattr(ctx, GKI_read_cache_misses),
-			ATTR_PERSIST, 0);
-	set_attr_number(ctx, gattr(ctx, GKI_file_mmap_policy),
-			ATTR_PERSIST, KDUMP_MMAP_TRY);
+	for (i = 0; i < ARRAY_SIZE(numeric_attrs); ++i)
+		set_attr_number(ctx, gattr(ctx, numeric_attrs[i].key),
+				ATTR_PERSIST, numeric_attrs[i].val);
 
 	return ctx;
 
