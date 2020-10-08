@@ -1224,6 +1224,9 @@ INTERNAL_DECL(void, cache_put_entry,
 INTERNAL_DECL(void, cache_insert, (struct cache *, struct cache_entry *));
 INTERNAL_DECL(void, cache_discard, (struct cache *, struct cache_entry *));
 
+INTERNAL_DECL(kdump_status, cache_set_attrs,
+	      (struct cache *cache, kdump_ctx_t *ctx,
+	       struct attr_data *hits, struct attr_data *misses));
 INTERNAL_DECL(kdump_status, def_realloc_caches, (kdump_ctx_t *ctx));
 
 /**  Check if a cache entry is valid.

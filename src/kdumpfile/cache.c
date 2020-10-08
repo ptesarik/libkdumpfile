@@ -818,6 +818,34 @@ get_cache_size(kdump_ctx_t *ctx)
 		: DEFAULT_CACHE_SIZE;
 }
 
+/**  Set up cache statistics attributes.
+ * @param cache   Cache object.
+ * @param ctx     Dump file object containing the attributes.
+ * @param hits    Attribute for cache hits.
+ * @param misses  Attribute for cache misses.
+ * @returns       Error status.
+ */
+kdump_status
+cache_set_attrs(struct cache *cache, kdump_ctx_t *ctx,
+		struct attr_data *hits, struct attr_data *misses)
+{
+	kdump_status status;
+
+	status = set_attr(ctx, hits, ATTR_PERSIST_INDIRECT, &cache->hits);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status,
+				 "Cannot set up cache '%s' attribute",
+				 "hits");
+
+	status = set_attr(ctx, misses, ATTR_PERSIST_INDIRECT, &cache->misses);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status,
+				 "Cannot set up cache '%s' attribute",
+				 "misses");
+
+	return KDUMP_OK;
+}
+
 /**  Re-allocate a cache with default parameters.
  * @param ctx  Dump file object.
  * @returns    Error status.
@@ -831,6 +859,7 @@ def_realloc_caches(kdump_ctx_t *ctx)
 {
 	unsigned cache_size = get_cache_size(ctx);
 	struct cache *cache;
+	kdump_status status;
 
 	cache = cache_alloc(cache_size, get_page_size(ctx));
 	if (!cache)
@@ -838,10 +867,13 @@ def_realloc_caches(kdump_ctx_t *ctx)
 				 "Cannot allocate cache (%u * %zu bytes)",
 				 cache_size, get_page_size(ctx));
 
-	set_attr(ctx, gattr(ctx, GKI_cache_hits),
-		 ATTR_PERSIST_INDIRECT, &cache->hits);
-	set_attr(ctx, gattr(ctx, GKI_cache_misses),
-		 ATTR_PERSIST_INDIRECT, &cache->misses);
+	status = cache_set_attrs(cache, ctx,
+				 gattr(ctx, GKI_cache_hits),
+				 gattr(ctx, GKI_cache_misses));
+	if (status != KDUMP_OK) {
+		cache_free(cache);
+		return status;
+	}
 
 	if (ctx->shared->cache)
 		cache_free(ctx->shared->cache);
