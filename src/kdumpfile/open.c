@@ -87,6 +87,10 @@ file_fd_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 	mmap_attr = gattr(ctx, GKI_file_mmap_policy);
 	if (ctx->shared->fcache) {
 		attr_embed_value(mmap_attr);
+		attr_embed_value(gattr(ctx, GKI_mmap_cache_hits));
+		attr_embed_value(gattr(ctx, GKI_mmap_cache_misses));
+		attr_embed_value(gattr(ctx, GKI_read_cache_hits));
+		attr_embed_value(gattr(ctx, GKI_read_cache_misses));
 		fcache_decref(ctx->shared->fcache);
 	}
 	ctx->shared->fcache = fcache_new(get_file_fd(ctx),
@@ -97,6 +101,12 @@ file_fd_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 	ctx->shared->fcache->mmap_policy = *attr_value(mmap_attr);
 	set_attr(ctx, mmap_attr, ATTR_PERSIST_INDIRECT,
 		 &ctx->shared->fcache->mmap_policy);
+	cache_set_attrs(ctx->shared->fcache->cache, ctx,
+			gattr(ctx, GKI_mmap_cache_hits),
+			gattr(ctx, GKI_mmap_cache_misses));
+	cache_set_attrs(ctx->shared->fcache->fbcache, ctx,
+			gattr(ctx, GKI_read_cache_hits),
+			gattr(ctx, GKI_read_cache_misses));
 
 	ctx->xlat->dirty = true;
 
