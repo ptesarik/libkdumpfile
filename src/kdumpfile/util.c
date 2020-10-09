@@ -1031,7 +1031,8 @@ get_attr_blob(kdump_ctx_t *ctx, struct attr_data *attr,
 
 	raw = lookup_attr_child(attr->parent, tmpl);
 	if (!raw)
-		return set_error(ctx, KDUMP_ERR_NODATA, "PRSTATUS not found");
+		return set_error(ctx, KDUMP_ERR_NODATA,
+				 "%s raw attribute not found", tmpl->key);
 
 	*blob = raw->val.blob;
 	return KDUMP_OK;
