@@ -420,6 +420,7 @@ struct attr_template {
 		unsigned depth;
 	};
 	kdump_attr_type_t type;
+	unsigned override:1;	/**< Set iff this is a template override. */
 	const struct attr_ops *ops;
 };
 

@@ -934,6 +934,7 @@ attr_add_override(struct attr_data *attr, struct attr_override *override)
 	override->template.key = tmpl->key;
 	override->template.parent = attr->template;
 	override->template.type = tmpl->type;
+	override->template.override = 1;
 	override->template.ops = &override->ops;
 
 	attr->template = &override->template;
@@ -955,7 +956,7 @@ attr_remove_override(struct attr_data *attr, struct attr_override *override)
 			break;
 		}
 		pprev = &((struct attr_template*)tmpl)->parent;
-	} while (tmpl->parent != tmpl);
+	} while (tmpl->override);
 }
 
 DEFINE_ALIAS(get_attr);
