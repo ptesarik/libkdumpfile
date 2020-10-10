@@ -35,9 +35,10 @@
 #include <string.h>
 #include <stdlib.h>
 
-/** Allocate a new bitmap object.
- * @param ops  Bitmap operations.
- * @returns    New bitmap, or @c NULL on allocation error.
+/** Allocate a new blob object.
+ * @param data  Raw blob data.
+ * @param size  Length of data at @c data.
+ * @returns     New blob, or @c NULL on allocation error.
  *
  * The new object's reference count is initialized to 1.
  */
