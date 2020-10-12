@@ -79,6 +79,7 @@ read_os_info_from_lowcore(kdump_ctx_t *ctx)
 	uint64_t magic;
 	uint32_t csum, csum_expect;
 	void *vmcoreinfo;
+	kdump_attr_value_t val;
 	kdump_status ret;
 
 	sz = sizeof(addr);
@@ -141,9 +142,14 @@ read_os_info_from_lowcore(kdump_ctx_t *ctx)
 				 (unsigned long) csum_expect);
 	}
 
-	ret = set_attr_sized_string(ctx, gattr(ctx, GKI_linux_vmcoreinfo_raw),
-				    ATTR_DEFAULT, vmcoreinfo, sz);
-	free(vmcoreinfo);
+	val.blob = internal_blob_new(vmcoreinfo, sz);
+	if (!val.blob) {
+		free(vmcoreinfo);
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot allocate %s", "VMCOREINFO blob");
+	}
+	ret = set_attr(ctx, gattr(ctx, GKI_linux_vmcoreinfo_raw),
+		       ATTR_DEFAULT, &val);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret, "Cannot set VMCOREINFO");
 

@@ -39,23 +39,43 @@ static const char vmcore2[] =
 	"DIR.SUB=test2\n";
 
 static int
-check(kdump_ctx_t *ctx)
+set_vmcoreinfo_value(kdump_ctx_t *ctx, int cnt, const char *val)
 {
-	unsigned cnt;
+	kdump_blob_t *blob;
 	kdump_attr_t attr;
 	kdump_status status;
 
-	/* First value. */
-	cnt = 1;
-
-	attr.type = KDUMP_STRING;
-	attr.val.string = vmcore1;
+	blob = kdump_blob_new_dup(val, strlen(val));
+	if (!blob) {
+		fprintf(stderr, "#%d: Cannot allocate VMCOREINFO blob.\n",
+			cnt);
+		return TEST_ERR;
+	}
+	attr.type = KDUMP_BLOB;
+	attr.val.blob = blob;
 	status = kdump_set_attr(ctx, "linux.vmcoreinfo.raw", &attr);
 	if (status != KDUMP_OK) {
 		fprintf(stderr, "#%d: Cannot set vmcoreinfo: %s\n",
 			cnt, kdump_get_err(ctx));
 		return TEST_ERR;
 	}
+
+	return TEST_OK;
+}
+
+static int
+check(kdump_ctx_t *ctx)
+{
+	unsigned cnt;
+	kdump_attr_t attr;
+	kdump_status status;
+	int rc;
+
+	/* First value. */
+	cnt = 1;
+	rc = set_vmcoreinfo_value(ctx, cnt, vmcore1);
+	if (rc != TEST_OK)
+		return rc;
 
 	status = kdump_get_attr(ctx, "linux.vmcoreinfo.lines.DIR.SUB.VAL",
 				&attr);
@@ -73,15 +93,9 @@ check(kdump_ctx_t *ctx)
 
 	/* (Conflicting) second value */
 	cnt = 2;
-
-	attr.type = KDUMP_STRING;
-	attr.val.string = vmcore2;
-	status = kdump_set_attr(ctx, "linux.vmcoreinfo.raw", &attr);
-	if (status != KDUMP_OK) {
-		fprintf(stderr, "#%d: Cannot set vmcoreinfo: %s\n",
-			cnt, kdump_get_err(ctx));
-		return TEST_ERR;
-	}
+	rc = set_vmcoreinfo_value(ctx, cnt, vmcore2);
+	if (rc != TEST_OK)
+		return rc;
 
 	status = kdump_get_attr(ctx, "linux.vmcoreinfo.lines.DIR.SUB", &attr);
 	if (status != KDUMP_OK) {

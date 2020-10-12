@@ -348,12 +348,17 @@ static kdump_status
 set_vmcoreinfo(kdump_ctx_t *ctx, enum global_keyidx key,
 	       void *data, size_t sz, const char *what)
 {
+	kdump_attr_value_t val;
 	kdump_status res;
 
-	res = set_attr_sized_string(ctx, gattr(ctx, key),
-				    ATTR_DEFAULT, data, sz);
+	val.blob = internal_blob_new_dup(data, sz);
+	if (!val.blob)
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot allocate %s", what);
+	res = set_attr(ctx, gattr(ctx, key), ATTR_DEFAULT, &val);
 	if (res != KDUMP_OK)
 		return set_error(ctx, res, "Cannot set %s", what);
+
 	return KDUMP_OK;
 }
 

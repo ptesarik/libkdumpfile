@@ -80,6 +80,30 @@ static const char vmcore[] =
 	"";
 
 static int
+set_vmcoreinfo_value(kdump_ctx_t *ctx, const char *val)
+{
+	kdump_blob_t *blob;
+	kdump_attr_t attr;
+	kdump_status status;
+
+	blob = kdump_blob_new_dup(val, strlen(val));
+	if (!blob) {
+		fprintf(stderr, "#%d: Cannot allocate VMCOREINFO blob.\n");
+		return TEST_ERR;
+	}
+	attr.type = KDUMP_BLOB;
+	attr.val.blob = blob;
+	status = kdump_set_attr(ctx, "linux.vmcoreinfo.raw", &attr);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot set vmcoreinfo: %s\n",
+			kdump_get_err(ctx));
+		return TEST_ERR;
+	}
+
+	return TEST_OK;
+}
+
+static int
 check_string(kdump_ctx_t *ctx, const char *attrpath, const char *expect)
 {
 	kdump_attr_t attr;
@@ -151,16 +175,10 @@ check(kdump_ctx_t *ctx)
 		return TEST_ERR;
 	}
 
-	attr.type = KDUMP_STRING;
-	attr.val.string = vmcore;
-	status = kdump_set_attr(ctx, "linux.vmcoreinfo.raw", &attr);
-	if (status != KDUMP_OK) {
-		fprintf(stderr, "Cannot set vmcoreinfo: %s\n",
-			kdump_get_err(ctx));
-		return TEST_ERR;
-	}
+	rc = set_vmcoreinfo_value(ctx, vmcore);
+	if (rc != TEST_OK)
+		return rc;
 
-	rc = TEST_OK;
 	attr.type = KDUMP_STRING;
 
 	/* Check modifications */

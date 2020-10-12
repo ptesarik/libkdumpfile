@@ -214,7 +214,8 @@ static const struct attr_ops vmcoreinfo_lines_ops = {
 static kdump_status
 vmcoreinfo_raw_post_hook(kdump_ctx_t *ctx, struct attr_data *rawattr)
 {
-	const char *p, *endp, *val;
+	kdump_blob_t *blob;
+	const char *p, *endp, *endl, *val;
 	size_t len;
 	struct attr_data *dir;
 	kdump_status res;
@@ -222,24 +223,27 @@ vmcoreinfo_raw_post_hook(kdump_ctx_t *ctx, struct attr_data *rawattr)
 	dir = rawattr->parent;
 	dealloc_vmcoreinfo(dir);
 
-	for (p = attr_value(rawattr)->string; *p; p = endp) {
-		endp = strchrnul(p, '\n');
-		val = memchr(p, '=', endp - p);
+	blob = attr_value(rawattr)->blob;
+	p = internal_blob_pin(blob);
+	endp = p + blob->size;
+	while (p < endp) {
+		endl = memchr(p, '\n', endp - p) ?: endp;
+		val = memchr(p, '=', endl - p);
 		if (val) {
 			len = val - p;
 			++val;
 		} else {
-			val = endp;
+			val = endl;
 			len = val - p;
 		}
 
-		res = add_parsed_row(ctx, dir, p, len, val, endp - val);
+		res = add_parsed_row(ctx, dir, p, len, val, endl - val);
 		if (res != KDUMP_OK)
 			break;
 
-		if (*endp)
-			++endp;
+		p = endl + 1;
 	}
+	internal_blob_unpin(blob);
 
 	return res;
 }

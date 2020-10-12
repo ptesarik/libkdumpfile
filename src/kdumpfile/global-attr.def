@@ -77,7 +77,7 @@ ATTR(linux_uts, "domainname", linux_uts_domainname, string, const char *)
 ATTR(linux, "vmcoreinfo", dir_linux_vmcoreinfo, directory, struct attr_data *)
 ATTR(linux_vmcoreinfo, "lines", linux_vmcoreinfo_lines,
      directory, struct attr_data *)
-ATTR(linux_vmcoreinfo, "raw", linux_vmcoreinfo_raw, string, const char *,
+ATTR(linux_vmcoreinfo, "raw", linux_vmcoreinfo_raw, blob, kdump_blob_t *,
 	.ops = &vmcoreinfo_raw_ops)
 ATTR(linux_vmcoreinfo, "LENGTH", linux_length, directory, struct attr_data *)
 ATTR(linux_vmcoreinfo, "NUMBER", linux_number, directory, struct attr_data *)
@@ -103,7 +103,7 @@ ATTR(xen, "version_code", xen_version_code, number, unsigned,
 ATTR(xen, "vmcoreinfo", dir_xen_vmcoreinfo, directory, struct attr_data *)
 ATTR(xen_vmcoreinfo, "lines", xen_vmcoreinfo_lines,
      directory, struct attr_data *)
-ATTR(xen_vmcoreinfo, "raw", xen_vmcoreinfo_raw, string, const char *,
+ATTR(xen_vmcoreinfo, "raw", xen_vmcoreinfo_raw, blob, kdump_addr_t *,
 	.ops = &vmcoreinfo_raw_ops)
 ATTR(xen_vmcoreinfo, "LENGTH", xen_length, directory, struct attr_data *)
 ATTR(xen_vmcoreinfo, "NUMBER", xen_number, directory, struct attr_data *)

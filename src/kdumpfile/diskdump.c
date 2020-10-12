@@ -506,6 +506,7 @@ static kdump_status
 read_vmcoreinfo(kdump_ctx_t *ctx, off_t off, size_t size)
 {
 	struct fcache_chunk fch;
+	kdump_attr_value_t val;
 	kdump_status ret;
 
 	ret = fcache_get_chunk(ctx->shared->fcache, &fch, size, off);
@@ -514,9 +515,12 @@ read_vmcoreinfo(kdump_ctx_t *ctx, off_t off, size_t size)
 				 "Cannot read %zu VMCOREINFO bytes at %llu",
 				 size, (unsigned long long) off);
 
-	ret = set_attr_sized_string(
-		ctx, gattr(ctx, GKI_linux_vmcoreinfo_raw),
-		ATTR_DEFAULT, fch.data, size);
+	val.blob = internal_blob_new_dup(fch.data, size);
+	if (!val.blob)
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot allocate %s", "VMCOREINFO blob");
+	ret = set_attr(ctx, gattr(ctx, GKI_linux_vmcoreinfo_raw),
+		       ATTR_DEFAULT, &val);
 	if (ret != KDUMP_OK)
 		ret = set_error(ctx, ret, "Cannot set VMCOREINFO");
 
