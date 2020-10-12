@@ -948,7 +948,7 @@ init_cpu_blob_attr(kdump_ctx_t *ctx, unsigned cpu,
 				 "Buffer allocation failed");
 	memcpy(buffer, data, size);
 
-	val.blob = kdump_blob_new(buffer, size);
+	val.blob = internal_blob_new(buffer, size);
 	if (!val.blob) {
 		free(buffer);
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
@@ -957,14 +957,14 @@ init_cpu_blob_attr(kdump_ctx_t *ctx, unsigned cpu,
 
 	attr = new_attr(ctx->dict, dir, tmpl);
 	if (!attr) {
-		kdump_blob_decref(val.blob);
+		internal_blob_decref(val.blob);
 		return set_error(ctx, status,
 				 "Attribute allocation failed");
 	}
 
 	status = set_attr(ctx, attr, ATTR_DEFAULT, &val);
 	if (status != KDUMP_OK) {
-		kdump_blob_decref(val.blob);
+		internal_blob_decref(val.blob);
 		return set_error(ctx, status,
 				 "Cannot set attribute");
 	}

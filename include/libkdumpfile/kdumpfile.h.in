@@ -447,6 +447,22 @@ kdump_status kdump_bmp_find_clear(
  */
 typedef struct _kdump_blob kdump_blob_t;
 
+/** Create a new blob object.
+ * @param data  Raw data buffer (can be @c NULL).
+ * @param size  Length of data at @c data.
+ * @returns     New blob object, or @c NULL on allocation error.
+ *
+ * Create a new blob object from a dynamically allocated memory buffer.
+ * Keep in mind that the buffer will be eventually de-allocated with
+ * free(3) when the blob reference count drops to zero.
+ *
+ * If @c data is @c NULL, then the blob does not contain any data.
+ *
+ * The new object's reference count is initialized to 1 (the caller
+ * receives one reference), and the memory buffer is not pinned.
+ */
+kdump_blob_t *kdump_blob_new(void *data, size_t size);
+
 /** Increment kdump blob reference counter.
  * @param blob   Binary object.
  * @returns      New reference count.

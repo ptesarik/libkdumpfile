@@ -35,13 +35,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-/** Allocate a new blob object.
- * @param data  Raw blob data.
- * @param size  Length of data at @c data.
- * @returns     New blob, or @c NULL on allocation error.
- *
- * The new object's reference count is initialized to 1.
- */
 kdump_blob_t *
 kdump_blob_new(void *data, size_t size)
 {

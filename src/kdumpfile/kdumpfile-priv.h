@@ -294,9 +294,9 @@ struct _kdump_blob {
 	size_t size;		/**< Size of binary data. */
 };
 
-INTERNAL_DECL(kdump_blob_t *, kdump_blob_new,
-	      (void *data, size_t size));
-
+DECLARE_ALIAS(blob_new);
+DECLARE_ALIAS(blob_incref);
+DECLARE_ALIAS(blob_decref);
 DECLARE_ALIAS(blob_pin);
 DECLARE_ALIAS(blob_unpin);
 
