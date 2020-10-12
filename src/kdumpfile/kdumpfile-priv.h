@@ -295,6 +295,7 @@ struct _kdump_blob {
 };
 
 DECLARE_ALIAS(blob_new);
+DECLARE_ALIAS(blob_new_dup);
 DECLARE_ALIAS(blob_incref);
 DECLARE_ALIAS(blob_decref);
 DECLARE_ALIAS(blob_pin);

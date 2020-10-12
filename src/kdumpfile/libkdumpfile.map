@@ -23,6 +23,7 @@ LIBKDUMPFILE_0 {
     kdump_bmp_find_clear;
 
     kdump_blob_new;
+    kdump_blob_new_dup;
     kdump_blob_incref;
     kdump_blob_decref;
     kdump_blob_pin;

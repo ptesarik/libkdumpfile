@@ -933,7 +933,6 @@ init_cpu_blob_attr(kdump_ctx_t *ctx, unsigned cpu,
 		   const void *data, size_t size,
 		   const struct attr_template *tmpl)
 {
-	void *buffer;
 	struct attr_data *dir, *attr;
 	kdump_attr_value_t val;
 	kdump_status status;
@@ -942,18 +941,10 @@ init_cpu_blob_attr(kdump_ctx_t *ctx, unsigned cpu,
 	if (status != KDUMP_OK)
 		return status;
 
-	buffer = malloc(size);
-	if (!buffer)
-		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Buffer allocation failed");
-	memcpy(buffer, data, size);
-
-	val.blob = internal_blob_new(buffer, size);
-	if (!val.blob) {
-		free(buffer);
+	val.blob = internal_blob_new_dup(data, size);
+	if (!val.blob)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Blob allocation failed");
-	}
 
 	attr = new_attr(ctx->dict, dir, tmpl);
 	if (!attr) {

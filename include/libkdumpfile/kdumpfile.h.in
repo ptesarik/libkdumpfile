@@ -463,6 +463,19 @@ typedef struct _kdump_blob kdump_blob_t;
  */
 kdump_blob_t *kdump_blob_new(void *data, size_t size);
 
+/** Create a new blob object from a copy of a buffer.
+ * @param data  Raw data buffer (can be @c NULL).
+ * @param size  Length of data at @c data.
+ * @returns     New blob object, or @c NULL on allocation error.
+ *
+ * Create a new blob object by duplicating data from a buffer. The
+ * data is copied into a newly allocated buffer which is owned by
+ * the blob object itself.
+ *
+ * @sa kdump_blob_new
+ */
+kdump_blob_t *kdump_blob_new_dup(const void *data, size_t size);
+
 /** Increment kdump blob reference counter.
  * @param blob   Binary object.
  * @returns      New reference count.

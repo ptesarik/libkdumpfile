@@ -49,6 +49,26 @@ kdump_blob_new(void *data, size_t size)
 	return blob;
 }
 
+kdump_blob_t *
+kdump_blob_new_dup(const void *data, size_t size)
+{
+	kdump_blob_t *ret;
+	void *newdata;
+
+	if (data) {
+		newdata = malloc(size);
+		if (!newdata)
+			return NULL;
+		memcpy(newdata, data, size);
+		data = newdata;
+	} else
+		newdata = NULL;
+	ret = internal_blob_new(newdata, size);
+	if (!ret && newdata)
+		free(newdata);
+	return ret;
+}
+
 unsigned long
 kdump_blob_incref(kdump_blob_t *blob)
 {
