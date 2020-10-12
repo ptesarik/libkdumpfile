@@ -954,11 +954,9 @@ init_cpu_blob_attr(kdump_ctx_t *ctx, unsigned cpu,
 	}
 
 	status = set_attr(ctx, attr, ATTR_DEFAULT, &val);
-	if (status != KDUMP_OK) {
-		internal_blob_decref(val.blob);
+	if (status != KDUMP_OK)
 		return set_error(ctx, status,
 				 "Cannot set attribute");
-	}
 
 	return status;
 }

@@ -274,6 +274,9 @@ struct _kdump_bmp {
 	kdump_errmsg_t err;
 };
 
+DECLARE_ALIAS(bmp_incref);
+DECLARE_ALIAS(bmp_decref);
+
 INTERNAL_DECL(kdump_bmp_t *, kdump_bmp_new,
 	      (const struct kdump_bmp_ops *ops));
 

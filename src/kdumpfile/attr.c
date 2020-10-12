@@ -317,6 +317,66 @@ alloc_attr(struct attr_dict *dict, struct attr_data *parent,
 	return d;
 }
 
+/**  Discard an attribute's value.
+ * @param attr  The attribute whose value is being discarded.
+ *
+ * Call this function if the attribute data is no longer needed.
+ * If the value is dynamically allocated, free the associated memory.
+ * If the value is refcounted, drop the reference.
+ */
+static void
+discard_value(struct attr_data *attr)
+{
+	if (!attr_isset(attr))
+		return;
+
+	switch (attr->template->type) {
+	case KDUMP_NIL:
+	case KDUMP_DIRECTORY:
+	case KDUMP_NUMBER:
+	case KDUMP_ADDRESS:
+		/* Value is embedded: Nothing to be done. */
+		break;
+
+	case KDUMP_STRING:
+		if (attr->flags.dynstr) {
+			attr->flags.dynstr = 0;
+			free((void*) attr_value(attr)->string);
+		}
+		break;
+
+	case KDUMP_BITMAP:
+		internal_bmp_decref(attr_value(attr)->bitmap);
+		break;
+
+	case KDUMP_BLOB:
+		internal_blob_decref(attr_value(attr)->blob);
+		break;
+	}
+}
+
+/**  Discard the new value of an attribute.
+ * @param attr    Base attribute.
+ * @prarm flags   New value flags.
+ * @param newval  New value (which should be discarded).
+ *
+ * This helper is called when a new value cannot be set (the pre_set hook
+ * returns an error status). At that point the attribute should preserve its
+ * old value, but the new value should be discarded.
+ */
+static void
+discard_new_value(const struct attr_data *attr,
+		  struct attr_flags flags, kdump_attr_value_t *newval)
+{
+	struct attr_data tmp;
+	tmp.template = attr->template;
+	tmp.flags = flags;
+	tmp.flags.isset = 1;
+	tmp.flags.indirect = 0;
+	tmp.val = *newval;
+	discard_value(&tmp);
+}
+
 /**  Clear (unset) a single attribute.
  * @param ctx   Dump file object.
  * @param attr  Attribute to be cleared.
@@ -331,11 +391,8 @@ clear_single_attr(kdump_ctx_t *ctx, struct attr_data *attr)
 	if (ops && ops->pre_clear)
 		ops->pre_clear(ctx, attr);
 
+	discard_value(attr);
 	attr->flags.isset = 0;
-	if (attr->flags.dynstr) {
-		attr->flags.dynstr = 0;
-		free((void*) attr_value(attr)->string);
-	}
 }
 
 /**  Clear (unset) any attribute and its children recursively.
@@ -402,8 +459,7 @@ dealloc_attr(struct attr_data *attr)
 		}
 	}
 
-	if (attr->flags.dynstr)
-		free((void*) attr_value(attr)->string);
+	discard_value(attr);
 	if (attr->tflags.dyntmpl)
 		free((void*) attr->template);
 
@@ -768,6 +824,13 @@ attr_has_value(struct attr_data *attr, kdump_attr_value_t newval)
  * The idea is that you set @c flags.indirect, if @p pval should become
  * the new indirect value of @p attr. If you want to modify only the value
  * of @p attr, leave @c flags.indirect clear.
+ *
+ * The attribute object takes over ownership of the new value. If the
+ * attribute type is refcounted, then the reference is stolen from the
+ * caller. This is true even if the function fails and returns an error
+ * status. In other words, you must increase the reference count to the new
+ * value before calling this function if you use that object in the error
+ * path.
  */
 kdump_status
 set_attr(kdump_ctx_t *ctx, struct attr_data *attr,
@@ -780,8 +843,7 @@ set_attr(kdump_ctx_t *ctx, struct attr_data *attr,
 		const struct attr_ops *ops = attr->template->ops;
 		if (ops && ops->pre_set &&
 		    (res = ops->pre_set(ctx, attr, pval)) != KDUMP_OK) {
-			if (flags.dynstr)
-				free((void*) pval->string);
+			discard_new_value(attr, flags, pval);
 			return res;
 		}
 	}
@@ -789,8 +851,7 @@ set_attr(kdump_ctx_t *ctx, struct attr_data *attr,
 	instantiate_path(attr->parent);
 
 	if (attr->template->type != KDUMP_DIRECTORY) {
-		if (attr->flags.dynstr)
-			free((void*) attr_value(attr)->string);
+		discard_value(attr);
 
 		if (flags.indirect)
 			attr->pval = pval;
