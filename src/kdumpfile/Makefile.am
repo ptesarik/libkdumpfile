@@ -57,7 +57,7 @@ libkdumpfile_la_LIBADD = \
 	$(LZO_LIBS)	\
 	$(SNAPPY_LIBS)
 
-libkdumpfile_la_LDFLAGS = -version-info 9:0:1
+libkdumpfile_la_LDFLAGS = -version-info 9:0:0
 
 if HAVE_LD_VERSION_SCRIPT
 libkdumpfile_la_LDFLAGS += -Wl,--version-script=$(srcdir)/libkdumpfile.map
