@@ -212,14 +212,25 @@ process_lowcore_info(kdump_ctx_t *ctx)
 }
 
 static kdump_status
+s390x_post_ostype(kdump_ctx_t *ctx)
+{
+	return ctx->xlat->ostype == ADDRXLAT_OS_LINUX
+		? process_lowcore_info(ctx)
+		: KDUMP_OK;
+}
+
+static kdump_status
 s390x_init(kdump_ctx_t *ctx)
 {
-	process_lowcore_info(ctx);
-	clear_error(ctx);
+	if (ctx->xlat->ostype == ADDRXLAT_OS_LINUX) {
+		process_lowcore_info(ctx);
+		clear_error(ctx);
+	}
 
 	return KDUMP_OK;
 }
 
 const struct arch_ops s390x_ops = {
 	.init = s390x_init,
+	.post_ostype = s390x_post_ostype,
 };
