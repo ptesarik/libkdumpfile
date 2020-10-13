@@ -885,11 +885,6 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 
 	set_addrspace_caps(ctx->xlat, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
 
-	if (uts_looks_sane(&dh32->utsname))
-		set_uts(ctx, &dh32->utsname);
-	else if (uts_looks_sane(&dh64->utsname))
-		set_uts(ctx, &dh64->utsname);
-
 	ret = try_header_32(&sd, dh32);
 	if (ret == KDUMP_ERR_CORRUPT) {
 		clear_error(ctx);
@@ -912,6 +907,11 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 	bmp->priv = ctx->shared;
 	shared_incref_locked(ctx->shared);
 	set_file_pagemap(ctx, bmp);
+
+	if (uts_looks_sane(&dh32->utsname))
+		set_uts(ctx, &dh32->utsname);
+	else if (uts_looks_sane(&dh64->utsname))
+		set_uts(ctx, &dh64->utsname);
 
 	if (sd.note_sz) {
 		ret = read_notes(ctx, sd.note_off, sd.note_sz);
