@@ -221,6 +221,15 @@ struct arch_ops {
 	/** Process a Xen .xen_prstatus section. */
 	kdump_status (*process_xen_prstatus)(kdump_ctx_t *, const void *, size_t);
 
+	/** OS type post-hook.
+	 * @param ctx  Dump file object.
+	 * @returns    Status code.
+	 *
+	 * This hook is called after the OS type is changed to allow
+	 * arch-specific initialization (e.g. read OS_INFO on s390x).
+	 */
+	kdump_status (*post_ostype)(kdump_ctx_t *ctx);
+
 	/** Address translation post-hook.
 	 * @param ctx  Dump file object.
 	 * @returns    Status code.

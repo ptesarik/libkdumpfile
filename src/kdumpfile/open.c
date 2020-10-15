@@ -286,6 +286,12 @@ ostype_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 
 	ctx->xlat->dirty = true;
 
+	if (ctx->shared->arch_ops && ctx->shared->arch_ops->post_ostype) {
+		status = ctx->shared->arch_ops->post_ostype(ctx);
+		if (status != KDUMP_OK)
+			return status;
+	}
+
 	switch (ctx->xlat->ostype) {
 	case ADDRXLAT_OS_LINUX:
 		status = update_linux_utsname(ctx);
