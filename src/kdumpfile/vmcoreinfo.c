@@ -339,13 +339,17 @@ get_line_locked(kdump_ctx_t *ctx, const char *key,
 		return set_error(ctx, status,
 				 "Value cannot be revalidated");
 
-	*val = attr_value(attr)->string;
+	*val = strdup(attr_value(attr)->string);
+	if (!*val)
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot allocate attribute value");
+
 	return KDUMP_OK;
 }
 
 kdump_status
 kdump_vmcoreinfo_line(kdump_ctx_t *ctx, const char *key,
-		      const char **val)
+		      char **val)
 {
 	kdump_status ret;
 

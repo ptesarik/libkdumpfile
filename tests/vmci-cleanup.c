@@ -88,6 +88,28 @@ check_vmcoreinfo_raw(kdump_ctx_t *ctx, int cnt, const char *expect)
 }
 
 static int
+check_vmcoreinfo_line(kdump_ctx_t *ctx, int cnt, const char *key,
+		      const char *expect)
+{
+	char *lineval;
+	kdump_status status;
+
+	status = kdump_vmcoreinfo_line(ctx, key, &lineval);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "#%d: kdump_vmcoreinfo_line() failed: %s\n",
+			cnt, kdump_get_err(ctx));
+		return TEST_ERR;
+	}
+	if (strcmp(lineval, expect)) {
+		fprintf(stderr, "#%d: Invalid line value: %s\n",
+			cnt, lineval);
+		return TEST_FAIL;
+	}
+	printf("#%d: kdump_vmcoreinfo_line() value match\n", cnt);
+	free(lineval);
+}
+
+static int
 check(kdump_ctx_t *ctx)
 {
 	unsigned cnt;
@@ -126,6 +148,10 @@ check(kdump_ctx_t *ctx)
 	}
 	printf("#%d: DIR.SUB.VAL=%s\n", cnt, attr.val.string);
 
+	rc = check_vmcoreinfo_line(ctx, cnt, "DIR.SUB.VAL", attr.val.string);
+	if (rc != TEST_OK)
+		return rc;
+
 	/* (Conflicting) second value */
 	cnt = 2;
 	rc = set_vmcoreinfo_value(ctx, cnt, vmcore2);
@@ -148,6 +174,10 @@ check(kdump_ctx_t *ctx)
 		return TEST_FAIL;
 	}
 	printf("#%d: DIR.SUB=%s\n", cnt, attr.val.string);
+
+	rc = check_vmcoreinfo_line(ctx, cnt, "DIR.SUB", attr.val.string);
+	if (rc != TEST_OK)
+		return rc;
 
 	attr.type = KDUMP_NIL;
 	status = kdump_set_attr(ctx, "linux.vmcoreinfo.raw", &attr);

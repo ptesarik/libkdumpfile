@@ -1017,9 +1017,12 @@ kdump_status kdump_vmcoreinfo_raw(kdump_ctx_t *ctx, char **raw);
  * @param[in] key   Name of the VMCOREINFO variable (part before '=').
  * @param[out] val  Filled with the part after (first) '='.
  * @returns         Error status.
+ *
+ * The output string is dynamically allocated and must be eventually
+ * deallocated by the caller using @c free(3).
  */
 kdump_status kdump_vmcoreinfo_line(kdump_ctx_t *ctx, const char *key,
-				   const char **val);
+				   char **val);
 
 /**  Get VMCOREINFO symbol value.
  * @param ctx            Dump file object.
