@@ -178,6 +178,9 @@ INTERNAL_DECL(addrxlat_status, get_offsetof,
 	      (addrxlat_ctx_t *ctx, const char *type, const char *memb,
 	       addrxlat_addr_t *off));
 
+INTERNAL_DECL(addrxlat_status, get_number,
+	      (addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *num));
+
 /** Maximum symbol specifier name length. */
 #define SYM_SPEC_NAMELEN 24
 

@@ -546,6 +546,36 @@ get_offsetof(addrxlat_ctx_t *ctx, const char *type, const char *memb,
 	return status;
 }
 
+/** Resolve a number value.
+ * @param      ctx   Address translation context.
+ * @param      name  Number name.
+ * @param[out] num   Number value returned on success.
+ * @returns	     Error status.
+ *
+ * The size is determined using a user-supplied callback.
+ */
+addrxlat_status
+get_number(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *num)
+{
+	addrxlat_sym_t sym;
+	addrxlat_status status;
+
+	if (!ctx->cb.sym)
+		return set_error(ctx, ADDRXLAT_ERR_NODATA,
+				 "No symbolic information callback");
+
+	sym.type = ADDRXLAT_SYM_NUMBER;
+	sym.args[0] = name;
+	status = ctx->cb.sym(ctx->cb.data, &sym);
+	if (status != ADDRXLAT_OK)
+		return set_error(ctx, status, "Cannot get number(%s)",
+				 sym.args[0]);
+
+	*num = sym.val;
+	return status;
+}
+
+
 /** Get the first successfuly resolved value from a specifier list.
  * @param      ctx   Address translation context.
  * @param      spec  Vector of specifiers.

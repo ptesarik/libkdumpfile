@@ -578,6 +578,12 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 		{ ADDRXLAT_OS_UNKNOWN }
 	};
 
+	static const struct ostype_attr_map number_map[] = {
+		{ ADDRXLAT_OS_LINUX, GKI_linux_number },
+		{ ADDRXLAT_OS_XEN, GKI_xen_number },
+		{ ADDRXLAT_OS_UNKNOWN }
+	};
+
 	kdump_ctx_t *ctx = (kdump_ctx_t*) data;
 	const struct attr_data *base;
 	struct attr_data *attr;
@@ -602,6 +608,14 @@ addrxlat_sym(void *data, addrxlat_sym_t *sym)
 
 	case ADDRXLAT_SYM_OFFSETOF:
 		base = ostype_attr(ctx, offsetof_map);
+		if (!base)
+			return addrxlat_ctx_err(
+				ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
+				"Unsupported OS");
+		break;
+
+        case ADDRXLAT_SYM_NUMBER:
+		base = ostype_attr(ctx, number_map);
 		if (!base)
 			return addrxlat_ctx_err(
 				ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
