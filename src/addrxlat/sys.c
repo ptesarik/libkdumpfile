@@ -98,6 +98,8 @@ addrxlat_sys_os_init(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 		arch_fn = sys_s390x;
 	else if (!strcmp(osdesc->arch, "ppc64"))
 		arch_fn = sys_ppc64;
+	else if (!strcmp(osdesc->arch, "aarch64"))
+		arch_fn = sys_aarch64;
 	else
 		return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
 				"Unsupported architecture");
