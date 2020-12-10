@@ -143,6 +143,7 @@ get_symdata(void *data, addrxlat_sym_t *sym)
 		case ADDRXLAT_SYM_REG:
 		case ADDRXLAT_SYM_VALUE:
 		case ADDRXLAT_SYM_SIZEOF:
+		case ADDRXLAT_SYM_NUMBER:
 			if (sd->ss.args[0] &&
 			    !strcmp(sd->ss.args[0], sym->args[0])) {
 				sym->val = sd->val;
@@ -491,6 +492,9 @@ symheader(struct page_data *pg, char *p)
 	} else if (!strncmp(p, "OFFSETOF", 8)) {
 		ss->type = ADDRXLAT_SYM_OFFSETOF;
 		p += 8;
+	} else if (!strncmp(p, "NUMBER", 6)) {
+		ss->type = ADDRXLAT_SYM_NUMBER;
+		p += 6;
 	} else {
 		fprintf(stderr, "Invalid symbolic header: %s\n", p);
 		return TEST_FAIL;
