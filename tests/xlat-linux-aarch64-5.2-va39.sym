@@ -1,0 +1,8 @@
+@VALUE(swapper_pg_dir)
+ffffff8010b82000
+@NUMBER(VA_BITS)
+27
+@NUMBER(kimage_voffset)
+ffffff7fd0000000
+@NUMBER(PHYS_OFFSET)
+40000000

@@ -1,0 +1,13 @@
+#! /bin/sh
+
+#
+# Check Linux 5.2 AArch64 translation with 39-bit virtual addresses
+# using data from VMCOREINFO.
+#
+
+arch=aarch64
+ostype=1
+osver=0x050200
+opts=
+
+. "$srcdir"/xlat-os-common
