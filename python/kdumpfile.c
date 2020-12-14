@@ -1726,7 +1726,7 @@ bmp_new(kdump_bmp_t *bmp)
 {
 	bmp_object *self;
 
-	self = PyObject_GC_New(bmp_object, &bmp_object_type);
+	self = PyObject_New(bmp_object, &bmp_object_type);
 	if (!self)
 		return NULL;
 
@@ -1907,7 +1907,7 @@ blob_new(kdump_blob_t *blob)
 {
 	blob_object *self;
 
-	self = PyObject_GC_New(blob_object, &blob_object_type);
+	self = PyObject_New(blob_object, &blob_object_type);
 	if (!self)
 		return NULL;
 
