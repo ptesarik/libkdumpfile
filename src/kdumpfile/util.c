@@ -38,6 +38,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <errno.h>
+#include <limits.h>
 
 #if USE_ZLIB
 # include <zlib.h>
