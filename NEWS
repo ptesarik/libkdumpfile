@@ -1,3 +1,7 @@
+next
+----
+  * Zstandard compression algorithm
+
 0.3.0
 -----
   * Complete API re-design:
