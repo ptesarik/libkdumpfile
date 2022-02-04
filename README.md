@@ -9,8 +9,10 @@ To compile this package, you'll need the following:
   package.
 * [lzo](http://www.oberhumer.com/opensource/lzo/). Often found in a
   lzo-devel package.
-* [snappy](https://code.google.com/p/snappy/). Often found in a snappy-devel
+* [snappy](https://github.com/google/snappy). Often found in a snappy-devel
    package.
+* [libzstd](https://github.com/facebook/zstd). Often found in a libzstd-devel
+  package.
 * [GNU C Library](http://www.gnu.org/software/libc/libc.html). Almost
   any version will do. Other C libraries may also work, but since there
   is no standard interface for byte-order macros, this may need some porting.
