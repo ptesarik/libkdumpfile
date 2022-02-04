@@ -2,6 +2,35 @@ next
 ----
   * Zstandard compression algorithm
 
+0.4.1
+-----
+  * Automatic translation setup for Linux/aarch64
+  * Support AMD EPYC with SME active
+  * New attributes:
+    - file.mmap_policy
+    - file.mmap_cache.hits
+    - file.mmap_cache.misses
+    - file.read_cache.hits
+    - file.read_cache.misses
+  * Change *.vmcoreinfo.raw attributes from string to blob
+  * Change kdump_vmcoreinfo_raw() and kdump_vmcoreinfo_line()
+    - Caller is now the owner of the output string
+
+0.4.0
+-----
+  * AArch64 paging
+  * X86-64 5-level paging
+  * Kernel layout auto-detection with kASLR on X86-64
+  * Bitmap and blob attribute formats
+  * New attributes:
+    - file.bitmap attribute
+    - file.zero_excluded
+    - addrxlat.opts.pre
+    - addrxlat.opts.post
+    - xen.phys_start
+  * Improve libaddrxlat read callback API performance: whole page per call
+    instead of a 32-bit or 64-bit entity per call
+
 0.3.0
 -----
   * Complete API re-design:
