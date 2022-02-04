@@ -46,6 +46,9 @@
 #if USE_SNAPPY
 # include <snappy-c.h>
 #endif
+#if USE_ZSTD
+# include <zstd.h>
+#endif
 typedef int write_fn(FILE *);
 
 struct page_data_kdump {
@@ -80,6 +83,7 @@ enum compress_method {
 	COMPRESS_ZLIB,
 	COMPRESS_LZO,
 	COMPRESS_SNAPPY,
+	COMPRESS_ZSTD,
 };
 
 struct data_block {
@@ -437,6 +441,9 @@ parseheader(struct page_data *pg, char *p)
 		pgkdump->compress = compress_yes;
 	} else if (!strcmp(p, "exclude")) {
 		pgkdump->compress = compress_exclude;
+	} else if (!strcmp(p, "zstd")) {
+		pgkdump->flags |= DUMP_DH_COMPRESSED_ZSTD;
+		pgkdump->compress = compress_yes;
 	} else {
 		pgkdump->flags = strtoul(p, &endp, 0);
 		if (*endp) {
@@ -448,7 +455,7 @@ parseheader(struct page_data *pg, char *p)
 	return TEST_OK;
 }
 
-#if USE_ZLIB || USE_LZO || USE_SNAPPY
+#if USE_ZLIB || USE_LZO || USE_SNAPPY || USE_ZSTD
 static size_t
 enlarge_cbuf(struct page_data_kdump *pgkdump, size_t newsz)
 {
@@ -524,6 +531,27 @@ do_snappy(struct page_data *pg)
 }
 #endif
 
+#if USE_ZSTD
+static size_t
+do_zstd(struct page_data *pg)
+{
+	struct page_data_kdump *pgkdump = pg->priv;
+	size_t clen;
+
+	clen = ZSTD_compressBound(pg->len);
+	if (clen > pgkdump->cbufsz &&
+	    !(clen = enlarge_cbuf(pgkdump, clen)))
+		return clen;
+
+	clen = ZSTD_compress(pgkdump->cbuf, clen, pg->buf, pg->len, 1);
+	if (ZSTD_isError(clen)) {
+		fprintf(stderr, "zstd compression failed\n");
+		clen = 0;
+	}
+	return clen;
+}
+#endif
+
 static size_t
 compresspage(struct page_data *pg, uint32_t *pflags)
 {
@@ -538,6 +566,9 @@ compresspage(struct page_data *pg, uint32_t *pflags)
 		case COMPRESS_SNAPPY:
 			*pflags |= DUMP_DH_COMPRESSED_SNAPPY;
 			break;
+		case COMPRESS_ZSTD:
+			*pflags |= DUMP_DH_COMPRESSED_ZSTD;
+			break;
 		}
 
 #if USE_ZLIB
@@ -551,6 +582,10 @@ compresspage(struct page_data *pg, uint32_t *pflags)
 #if USE_SNAPPY
 	if (*pflags & DUMP_DH_COMPRESSED_SNAPPY)
 		return do_snappy(pg);
+#endif
+#if USE_ZSTD
+	if (*pflags & DUMP_DH_COMPRESSED_ZSTD)
+		return do_zstd(pg);
 #endif
 
 	fprintf(stderr, "Unsupported compression flags: %lu\n",

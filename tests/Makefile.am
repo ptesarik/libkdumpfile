@@ -58,12 +58,14 @@ err_addrxlat_LDADD = \
 mkdiskdump_CFLAGS = \
 	$(ZLIB_CFLAGS) \
 	$(LZO_CFLAGS) \
-	$(SNAPPY_CFLAGS)
+	$(SNAPPY_CFLAGS) \
+	$(ZSTD_CFLAGS)
 mkdiskdump_LDADD = \
 	$(LDADD) \
 	$(ZLIB_LIBS) \
 	$(LZO_LIBS) \
-	$(SNAPPY_LIBS)
+	$(SNAPPY_LIBS) \
+	$(ZSTD_LIBS)
 
 mklkcd_CFLAGS = \
 	$(ZLIB_CFLAGS)
@@ -172,6 +174,7 @@ test_scripts = \
 	diskdump-basic-zlib \
 	diskdump-basic-lzo \
 	diskdump-basic-snappy \
+	diskdump-basic-zstd \
 	diskdump-multiread \
 	diskdump-excluded \
 	early-version-code \

@@ -42,6 +42,9 @@
 #if USE_SNAPPY
 # include <snappy-c.h>
 #endif
+#if USE_ZSTD
+# include <zstd.h>
+#endif
 
 #define SIG_LEN	8
 
@@ -180,12 +183,14 @@ struct setup_data {
 #define DUMP_DH_COMPRESSED_ZLIB	0x1	/* page is compressed with zlib */
 #define DUMP_DH_COMPRESSED_LZO	0x2	/* page is compressed with lzo */
 #define DUMP_DH_COMPRESSED_SNAPPY 0x4	/* page is compressed with snappy */
+#define DUMP_DH_COMPRESSED_ZSTD	0x20	/* page is compressed with zstd */
 
 /* Any compression flag */
 #define DUMP_DH_COMPRESSED	( 0	\
 	| DUMP_DH_COMPRESSED_ZLIB	\
 	| DUMP_DH_COMPRESSED_LZO	\
 	| DUMP_DH_COMPRESSED_SNAPPY	\
+	| DUMP_DH_COMPRESSED_ZSTD	\
 		)
 
 static void diskdump_cleanup(struct kdump_shared *shared);
@@ -458,6 +463,23 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 		return set_error(ctx, KDUMP_ERR_NOTIMPL,
 				 "Unsupported compression method: %s",
 				 "snappy");
+#endif
+	} else if (pd.flags & DUMP_DH_COMPRESSED_ZSTD) {
+#if USE_ZSTD
+		size_t ret;
+		ret = ZSTD_decompress(pio->chunk.data, get_page_size(ctx),
+				      buf, pd.size);
+		if (ZSTD_isError(ret))
+			return set_error(ctx, KDUMP_ERR_CORRUPT,
+					 "Decompression failed: %s",
+					 ZSTD_getErrorName(ret));
+		if (ret != get_page_size(ctx))
+			return set_error(ctx, KDUMP_ERR_CORRUPT,
+					 "Wrong uncompressed size: %zu", ret);
+#else
+		return set_error(ctx, KDUMP_ERR_NOTIMPL,
+				 "Unsupported compression method: %s",
+				 "zstd");
 #endif
 	}
 

@@ -1,0 +1,4 @@
+#! /bin/sh
+pageflags=zstd
+. "$srcdir"/diskdump-basic
+exit 0

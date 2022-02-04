@@ -23,7 +23,8 @@ AM_CPPFLAGS = -I$(top_builddir)/include
 AM_CFLAGS = -fvisibility=hidden \
 	$(ZLIB_CFLAGS)	\
 	$(LZO_CFLAGS)	\
-	$(SNAPPY_CFLAGS)
+	$(SNAPPY_CFLAGS) \
+	$(ZSTD_CFLAGS)
 
 lib_LTLIBRARIES = libkdumpfile.la
 libkdumpfile_la_SOURCES = \
@@ -55,7 +56,8 @@ libkdumpfile_la_LIBADD = \
 	$(top_builddir)/src/addrxlat/libaddrxlat.la	\
 	$(ZLIB_LIBS)	\
 	$(LZO_LIBS)	\
-	$(SNAPPY_LIBS)
+	$(SNAPPY_LIBS)	\
+	$(ZSTD_LIBS)
 
 libkdumpfile_la_LDFLAGS = -version-info 9:0:0
 
