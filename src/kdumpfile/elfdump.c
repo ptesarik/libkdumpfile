@@ -142,6 +142,24 @@ struct elfdump_priv {
 
 static void elf_cleanup(struct kdump_shared *shared);
 
+static kdump_status
+set_read_error(kdump_ctx_t *ctx, kdump_status status,
+	       const char *what, off_t offset)
+{
+	return set_error(ctx, status,
+			 "Cannot read %s at %llu",
+			 what, (unsigned long long) offset);
+}
+
+static kdump_status
+set_hdr_error(kdump_ctx_t *ctx, kdump_status status,
+	      const char *type, uint64_t idx, off_t offset)
+{
+	return set_error(ctx, status,
+			 "Cannot read ELF %s header #%" PRIu64 " at %llu",
+			 type, idx, (unsigned long long) offset);
+}
+
 static const char *
 mach2arch(unsigned mach, int elfclass)
 {
@@ -282,9 +300,7 @@ elf_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 
  err_read:
 	mutex_unlock(&ctx->shared->cache_lock);
-	return set_error(ctx, status,
-			 "Cannot read page data at %llu",
-			 (unsigned long long) pos);
+	return set_read_error(ctx, status, "page data", pos);
 }
 
 static kdump_status
@@ -642,8 +658,7 @@ make_xen_pfn_map_auto(kdump_ctx_t *ctx, const struct section *sect)
 	return status;
 
  err_read:
-	return set_error(ctx, status, "Cannot read Xen map at %llu",
-			 (unsigned long long)pos);
+	return set_read_error(ctx, status, "Xen map", pos);
 }
 
 static kdump_status
@@ -717,8 +732,15 @@ err_mfn:
 	return status;
 
  err_read:
-	return set_error(ctx, status, "Cannot read Xen map at %llu",
-			 (unsigned long long)pos);
+	return set_read_error(ctx, status, "Xen map", pos);
+}
+
+static addrxlat_status
+addrxlat_read_error(addrxlat_ctx_t *ctx, const char *what, off_t offset)
+{
+	return addrxlat_ctx_err(ctx, ADDRXLAT_ERR_NODATA,
+				"Cannot read %s at %llu",
+				what, (unsigned long long) offset);
 }
 
 /** xc_core physical-to-machine first step function.
@@ -748,9 +770,7 @@ xc_p2m_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 	status = fcache_pread(shared->fcache, &p2m, sizeof p2m, pos);
 	mutex_unlock(&shared->cache_lock);
 	if (status != KDUMP_OK)
-		return addrxlat_ctx_err(step->ctx, ADDRXLAT_ERR_NODATA,
-					"Cannot read p2m entry at %llu",
-					(unsigned long long)pos);
+		return addrxlat_read_error(step->ctx, "p2m entry", pos);
 
 	step->base.addr = p2m.gmfn << shared->page_shift.number;
 	step->idx[0] = addr & (shared->page_size.number - 1);
@@ -786,9 +806,7 @@ xc_m2p_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 	status = fcache_pread(shared->fcache, &p2m, sizeof p2m, pos);
 	mutex_unlock(&shared->cache_lock);
 	if (status != KDUMP_OK)
-		return addrxlat_ctx_err(step->ctx, ADDRXLAT_ERR_NODATA,
-					"Cannot read p2m entry at %llu",
-					(unsigned long long)pos);
+		return addrxlat_read_error(step->ctx, "m2p entry", pos);
 
 	step->base.addr = p2m.pfn << shared->page_shift.number;
 	step->idx[0] = addr & (shared->page_size.number - 1);
@@ -993,9 +1011,8 @@ init_strtab(kdump_ctx_t *ctx, unsigned strtabidx)
 	if (status != KDUMP_OK) {
 		free(edp->strtab);
 		edp->strtab = NULL;
-		return set_error(ctx, status,
-				 "Cannot read %s at %llu", "ELF string table",
-				 (unsigned long long) ps->file_offset);
+		return set_read_error(ctx, status, "ELF string table",
+				      ps->file_offset);
 	}
 
 	return KDUMP_OK;
@@ -1031,10 +1048,7 @@ init_elf32(kdump_ctx_t *ctx, Elf32_Ehdr *ehdr)
 				       dump16toh(ctx, ehdr->e_shentsize),
 				       offset);
 		if (ret != KDUMP_OK)
-			return set_error(ctx, ret,
-					 "Cannot read ELF %s #%d at %llu",
-					 "section header", 0,
-					 (unsigned long long) offset);
+			return set_hdr_error(ctx, ret, "section", 0, offset);
 		sect = (Elf32_Shdr*) fch.data;
 
 		if (shnum == 0)
@@ -1062,10 +1076,7 @@ init_elf32(kdump_ctx_t *ctx, Elf32_Ehdr *ehdr)
 		ret = fcache_get_chunk(ctx->shared->fcache, &fch,
 				       entsz, offset);
 		if (ret != KDUMP_OK)
-			return set_error(ctx, ret,
-					 "Cannot read ELF %s #%" PRIu32 " at %llu",
-					 "program header", i,
-					 (unsigned long long) offset);
+			return set_hdr_error(ctx, ret, "program", i, offset);
 		offset += entsz;
 		prog = (Elf32_Phdr*) fch.data;
 
@@ -1090,10 +1101,7 @@ init_elf32(kdump_ctx_t *ctx, Elf32_Ehdr *ehdr)
 		ret = fcache_get_chunk(ctx->shared->fcache, &fch,
 				       entsz, offset);
 		if (ret != KDUMP_OK)
-			return set_error(ctx, ret,
-					 "Cannot read ELF %s #%" PRIu32 " at %llu",
-					 "section header", i,
-					 (unsigned long long) offset);
+			return set_hdr_error(ctx, ret, "section", i, offset);
 		offset += entsz;
 		sect = (Elf32_Shdr*) fch.data;
 
@@ -1133,10 +1141,7 @@ init_elf64(kdump_ctx_t *ctx, Elf64_Ehdr *ehdr)
 				       dump16toh(ctx, ehdr->e_shentsize),
 				       offset);
 		if (ret != KDUMP_OK)
-			return set_error(ctx, ret,
-					 "Cannot read ELF %s #%d at %llu",
-					 "section header", 0,
-					 (unsigned long long) offset);
+			return set_hdr_error(ctx, ret, "section", 0, offset);
 		sect = (Elf64_Shdr*) fch.data;
 
 		if (shnum == 0)
@@ -1164,10 +1169,7 @@ init_elf64(kdump_ctx_t *ctx, Elf64_Ehdr *ehdr)
 		ret = fcache_get_chunk(ctx->shared->fcache, &fch,
 				       entsz, offset);
 		if (ret != KDUMP_OK)
-			return set_error(ctx, ret,
-					 "Cannot read ELF %s #%" PRIu64 " at %llu",
-					 "program header", i,
-					 (unsigned long long) offset);
+			return set_hdr_error(ctx, ret, "program", i, offset);
 		offset += entsz;
 		prog = (Elf64_Phdr*) fch.data;
 
@@ -1192,10 +1194,7 @@ init_elf64(kdump_ctx_t *ctx, Elf64_Ehdr *ehdr)
 		ret = fcache_get_chunk(ctx->shared->fcache, &fch,
 				       entsz, offset);
 		if (ret != KDUMP_OK)
-			return set_error(ctx, ret,
-					 "Cannot read ELF %s #%" PRIu64 " at %llu",
-					 "section header", i,
-					 (unsigned long long) offset);
+			return set_hdr_error(ctx, ret, "section", i, offset);
 		offset += entsz;
 		sect = (Elf64_Shdr*) fch.data;
 
@@ -1229,9 +1228,8 @@ walk_elf_notes(kdump_ctx_t *ctx, walk_notes_fn *fn)
 		ret = fcache_get_chunk(ctx->shared->fcache, &fch,
 				       seg->filesz, seg->file_offset);
 		if (ret != KDUMP_OK)
-			return set_error(ctx, ret,
-					 "Cannot read ELF notes at %llu",
-					 (unsigned long long) seg->file_offset);
+			return set_read_error(ctx, ret, "ELF notes",
+					      seg->file_offset);
 
 		ret = fn(ctx, fch.data, seg->filesz);
 		fcache_put_chunk(&fch);
