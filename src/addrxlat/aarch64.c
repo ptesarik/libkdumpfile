@@ -257,10 +257,10 @@ map_linux_aarch64(struct os_init_data *ctl)
 	 * by swapper pgt anyway we don't bother to reflect it here.
 	 */
 	struct sys_region aarch64_layout_generic[] = {
-	    {  0,  0,			/* lower half	    */
-	       ADDRXLAT_SYS_METH_PGT },
+	    {  0,  0,			/* bottom VA range: user space */
+	       ADDRXLAT_SYS_METH_UPGT },
 
-	    {  0,  VIRTADDR_MAX,	 /* higher half	     */
+	    {  0,  VIRTADDR_MAX,	/* top VA range: kernel space */
 	       ADDRXLAT_SYS_METH_PGT },
 	    SYS_REGION_END
 	};
@@ -270,17 +270,9 @@ map_linux_aarch64(struct os_init_data *ctl)
 	addrxlat_status status;
 	addrxlat_addr_t va_bits;
 
-	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT];
 	meth->kind = ADDRXLAT_PGT;
 	meth->target_as = ADDRXLAT_MACHPHYSADDR;
-
-	if (ctl->popt.val[OPT_rootpgt].set)
-		meth->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
-	else {
-		status = get_linux_pgtroot(ctl, &meth->param.pgt.root);
-		if (status != ADDRXLAT_OK)
-			return status;
-	}
 
 	meth->param.pgt.pte_mask =
 		opt_num_default(&ctl->popt, OPT_pte_mask, 0);
@@ -299,6 +291,18 @@ map_linux_aarch64(struct os_init_data *ctl)
 		meth->param.pgt.pf.nfields = levels + 1;
 	} else
 		meth->param.pgt.pf.nfields = ((va_bits - 12) / 9) + 1;
+
+	meth->param.pgt.root.as = ADDRXLAT_NOADDR;
+
+	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	*meth = ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT];
+	if (ctl->popt.val[OPT_rootpgt].set)
+		meth->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
+	else {
+		status = get_linux_pgtroot(ctl, &meth->param.pgt.root);
+		if (status != ADDRXLAT_OK)
+			return status;
+	}
 
 	/* layout depends on current value of va_bits */
 	aarch64_layout_generic[0].last =  ~(-(1ull) << (va_bits));
