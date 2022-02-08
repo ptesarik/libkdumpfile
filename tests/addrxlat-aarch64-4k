@@ -26,7 +26,7 @@ list="0x123:0xa123"		# PGD[0] -> PUD[0] -> PMD[0] -> PTE[0]
 list="$list 0x1234:0xb234"	# PGD[0] -> PUD[0] -> PMD[0] -> PTE[1]
 list="$list 0x300567:0xc567"	# PGD[0] -> PUD[0] -> PMD[1] -> PTE[256]
 list="$list 0x808060489a:0xd89a" # PGD[1] -> PUD[2] -> PMD[3] -> PTE[4]
-list="$list 0x523456:0xf23456"	# PGD[0] -> PUD[0] -> PMD[1] (2M)
+list="$list 0x523456:0xf23456"	# PGD[0] -> PUD[0] -> PMD[2] (2M)
 list="$list 0xa1234567:0x3e1234567" # PGD[0] -> PUD[2] (1G)
 list="$list 0xffff123456789abc:0x123456789abc" # PGD[36] -> PUD[209] (1G)
 
