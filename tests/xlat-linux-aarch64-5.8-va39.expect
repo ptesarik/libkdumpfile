@@ -5,6 +5,13 @@
   pte_format=aarch64
   fields=12,9,9,9
 
+@userpgt: PGT
+  target_as=MACHPHYSADDR
+  root=NOADDR
+  pte_mask=0x0
+  pte_format=aarch64
+  fields=12,9,9,9
+
 @machphys_kphys: LINEAR
   target_as=KPHYSADDR
   off=0x0
@@ -14,12 +21,12 @@
   off=0x0
 
 KV -> HW:
-0-7fffffffff: @rootpgt
+0-7fffffffff: @userpgt
 8000000000-ffffff7fffffffff: NONE
 ffffff8000000000-ffffffffffffffff: @rootpgt
 
 KV -> PHYS:
-0-7fffffffff: @rootpgt
+0-7fffffffff: @userpgt
 8000000000-ffffff7fffffffff: NONE
 ffffff8000000000-ffffffffffffffff: @rootpgt
 
