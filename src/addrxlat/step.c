@@ -654,8 +654,11 @@ highest_mapped_tbl(addrxlat_step_t *step,
 		} else
 			return status;
 
-		for (i = 0; i < mystep.remain - 1; ++i)
-			mystep.idx[i] = nelem - 1;
+		for (i = 0; i < mystep.remain - 1; ++i) {
+			const addrxlat_paging_form_t *pf =
+				&mystep.meth->param.pgt.pf;
+			mystep.idx[i] = pf_table_size(pf, i) - 1;
+		}
 		if (!mystep.idx[i]--) {
 			bury_cache_buffer(&step->ctx->cache, &mystep.base);
 			return ADDRXLAT_ERR_NOTPRESENT;
