@@ -269,6 +269,7 @@ map_linux_aarch64(struct os_init_data *ctl)
 	addrxlat_meth_t *meth;
 	addrxlat_status status;
 	addrxlat_addr_t va_bits;
+	addrxlat_addr_t va_range;
 
 	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT];
 	meth->kind = ADDRXLAT_PGT;
@@ -305,8 +306,9 @@ map_linux_aarch64(struct os_init_data *ctl)
 	}
 
 	/* layout depends on current value of va_bits */
-	aarch64_layout_generic[0].last =  ~(-(1ull) << (va_bits));
-	aarch64_layout_generic[1].first =  (-(1ull) << (va_bits));
+	va_range = ((addrxlat_addr_t)1 << va_bits) - 1;
+	aarch64_layout_generic[0].last = va_range;
+	aarch64_layout_generic[1].first = VIRTADDR_MAX - va_range;
 
 	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_HW,
 				aarch64_layout_generic);
