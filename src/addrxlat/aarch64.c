@@ -216,11 +216,7 @@ get_linux_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 
 		page_offset = get_page_offset(kernel_ver, va_bits);
 
-		if (kernel_ver < KERNEL_VERSION(5, 4, 0)) {
-			 root->addr = ((root_va & ~page_offset) + phys_base);
-		} else {
-			 root->addr =  (root_va + phys_base - page_offset);
-		}
+		root->addr = root_va - page_offset + phys_base;
 	} else {
 	    root->addr = root_va - kimage_voffset;
 	}
