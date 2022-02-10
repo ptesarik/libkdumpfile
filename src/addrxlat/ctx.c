@@ -107,7 +107,7 @@ touch_cache_slot(struct read_cache *cache, struct read_cache_slot *slot)
  * @param[out] pbuf  Buffer (updated on success).
  * @returns          Error status.
  */
-static addrxlat_status
+addrxlat_status
 get_cache_buf(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr,
 	      addrxlat_buffer_t **pbuf)
 {

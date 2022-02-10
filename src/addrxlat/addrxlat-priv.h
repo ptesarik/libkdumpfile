@@ -149,6 +149,10 @@ struct _addrxlat_ctx {
 
 /* utils */
 
+INTERNAL_DECL(addrxlat_status, get_cache_buf,
+	      (addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr,
+	       addrxlat_buffer_t **pbuf));
+
 INTERNAL_DECL(addrxlat_status, read32,
 	      (addrxlat_step_t *step, const addrxlat_fulladdr_t *addr,
 	       uint32_t *val, const char *what));
