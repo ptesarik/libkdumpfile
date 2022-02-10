@@ -164,8 +164,6 @@ get_linux_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 {
 	addrxlat_status status;
 	addrxlat_addr_t root_va;
-
-	addrxlat_addr_t va_bits;
 	addrxlat_addr_t kimage_voffset;
 
 	status = get_symval(ctl->ctx, "swapper_pg_dir",
@@ -182,12 +180,6 @@ get_linux_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 	 * va_bits and phys_offset. This code does not support
 	 * such logic.
 	 */
-	status = get_number(ctl->ctx, "VA_BITS",
-			    &va_bits);
-	if (status != ADDRXLAT_OK)
-		return set_error(ctl->ctx, status,
-				 "Cannot determine VA_BITS");
-
 	status = get_number(ctl->ctx, "kimage_voffset",
 			    &kimage_voffset);
 	if (status != ADDRXLAT_OK)
