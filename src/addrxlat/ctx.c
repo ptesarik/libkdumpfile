@@ -132,6 +132,7 @@ get_cache_buf(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr,
 
 	/* Get the new page */
 	slot->buffer.addr = *addr;
+	slot->buffer.ptr = NULL;
 	status = ctx->cb.get_page(ctx->cb.data, &slot->buffer);
 	if (status != ADDRXLAT_OK) {
 		slot->buffer.size = 0;
@@ -139,6 +140,10 @@ get_cache_buf(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr,
 	}
 
  out:
+	if (!slot->buffer.ptr)
+		return set_error(ctx, ADDRXLAT_ERR_NODATA,
+				 "Infinite read recursion");
+
 	*pbuf = &slot->buffer;
 	touch_cache_slot(&ctx->cache, slot);
 	return ADDRXLAT_OK;
