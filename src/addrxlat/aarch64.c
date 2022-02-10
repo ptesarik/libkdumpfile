@@ -160,14 +160,13 @@ get_linux_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 		return set_error(ctl->ctx, status,
 				 "Cannot determine page table virtual address");
 
-	/*
-	 * This code will only work with vmcores produced by
-	 * Linux Kernel versions 4.12 and above. Makedumpfile
-	 * for kernels before 4.12 uses a heuristic based on
-	 * reading vmcore load segment addressess and finds
-	 * va_bits and phys_offset. This code does not support
-	 * such logic.
-	 */
+	/* If the read callback can handle virtual addresses, we're done. */
+	if (ctl->ctx->cb.read_caps & ADDRXLAT_CAPS(ADDRXLAT_KVADDR)) {
+		root->addr = root_va;
+		root->as = ADDRXLAT_KVADDR;
+		return ADDRXLAT_OK;
+	}
+
 	status = get_number(ctl->ctx, "kimage_voffset",
 			    &kimage_voffset);
 	if (status != ADDRXLAT_OK)
