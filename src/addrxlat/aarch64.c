@@ -142,18 +142,6 @@ pgt_aarch64(addrxlat_step_t *step)
 	return ADDRXLAT_OK;
 }
 
-static unsigned long
-get_page_offset(unsigned long kernel_ver, addrxlat_addr_t va_bits) {
-	unsigned long page_offset;
-
-	if (kernel_ver < KERNEL_VERSION(5, 4, 0))
-		page_offset = ((0xffffffffffffffffUL) -
-				((1UL) << (va_bits - 1)) + 1);
-	else
-		page_offset = (-(1UL << va_bits));
-	return page_offset;
-}
-
 /** Determine Linux page table root.
  * @param ctl	     Initialization data.
  * @param[out] root  Page table root address (set on successful return).
