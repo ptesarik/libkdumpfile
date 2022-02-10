@@ -171,13 +171,7 @@ get_linux_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 	addrxlat_addr_t root_va;
 
 	addrxlat_addr_t va_bits;
-	addrxlat_addr_t phys_base;
 	addrxlat_addr_t kimage_voffset;
-	int no_kimage_voffset = 0;
-
-	unsigned long page_offset;
-	unsigned long kernel_ver;
-
 
 	status = get_symval(ctl->ctx, "swapper_pg_dir",
 			    &root_va);
@@ -199,28 +193,13 @@ get_linux_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 		return set_error(ctl->ctx, status,
 				 "Cannot determine VA_BITS");
 
-	status = get_number(ctl->ctx, "kimage_voffset" ,
+	status = get_number(ctl->ctx, "kimage_voffset",
 			    &kimage_voffset);
 	if (status != ADDRXLAT_OK)
-		 no_kimage_voffset = 1;
+		return set_error(ctl->ctx, status,
+				 "Cannot determine kimage_voffset");
 
-	kernel_ver = ctl->osdesc->ver;
-
-
-	if (no_kimage_voffset || is_linear_addr(root_va, kernel_ver, va_bits)) {
-		status = get_number(ctl->ctx, "PHYS_OFFSET" ,
-				    &phys_base);
-		if (status != ADDRXLAT_OK)
-			return set_error(ctl->ctx, status,
-				 "Cannot determine PHYS_OFFSET");
-
-		page_offset = get_page_offset(kernel_ver, va_bits);
-
-		root->addr = root_va - page_offset + phys_base;
-	} else {
-	    root->addr = root_va - kimage_voffset;
-	}
-
+	root->addr = root_va - kimage_voffset;
 	root->as =  ADDRXLAT_KPHYSADDR;
 
 	return ADDRXLAT_OK;
