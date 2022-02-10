@@ -150,12 +150,10 @@ pgt_aarch64(addrxlat_step_t *step)
 static addrxlat_status
 get_linux_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 {
-	addrxlat_status status;
-	addrxlat_addr_t root_va;
 	addrxlat_addr_t kimage_voffset;
+	addrxlat_status status;
 
-	status = get_symval(ctl->ctx, "swapper_pg_dir",
-			    &root_va);
+	status = get_symval(ctl->ctx, "swapper_pg_dir", &root->addr);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot determine page table virtual address");
@@ -164,9 +162,7 @@ get_linux_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 	if (ctl->ctx->cb.read_caps & ADDRXLAT_CAPS(ADDRXLAT_KVADDR)) {
 		addrxlat_buffer_t *buffer;
 
-		root->addr = root_va;
 		root->as = ADDRXLAT_KVADDR;
-
 		status = get_cache_buf(ctl->ctx, root, &buffer);
 		if (status == ADDRXLAT_OK)
 			return ADDRXLAT_OK;
@@ -174,15 +170,13 @@ get_linux_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 		clear_error(ctl->ctx);
 	}
 
-	status = get_number(ctl->ctx, "kimage_voffset",
-			    &kimage_voffset);
+	status = get_number(ctl->ctx, "kimage_voffset", &kimage_voffset);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot determine kimage_voffset");
 
-	root->addr = root_va - kimage_voffset;
-	root->as =  ADDRXLAT_KPHYSADDR;
-
+	root->addr -= kimage_voffset;
+	root->as = ADDRXLAT_KPHYSADDR;
 	return ADDRXLAT_OK;
 }
 
