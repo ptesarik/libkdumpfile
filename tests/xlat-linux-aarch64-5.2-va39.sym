@@ -4,5 +4,3 @@ ffffff8010b82000
 27
 @NUMBER(kimage_voffset)
 ffffff7fd0000000
-@NUMBER(PHYS_OFFSET)
-40000000
