@@ -12,6 +12,14 @@
   pte_format=aarch64
   fields=12,9,9,9
 
+@direct: LINEAR
+  target_as=KPHYSADDR
+  off=0x8040000000
+
+@rdirect: LINEAR
+  target_as=KVADDR
+  off=0xffffff7fc0000000
+
 @machphys_kphys: LINEAR
   target_as=KPHYSADDR
   off=0x0
@@ -28,9 +36,13 @@ ffffff8000000000-ffffffffffffffff: @rootpgt
 KV -> PHYS:
 0-7fffffffff: @userpgt
 8000000000-ffffff7fffffffff: NONE
-ffffff8000000000-ffffffffffffffff: @rootpgt
+ffffff8000000000-ffffff803fffefff: @direct
+ffffff803ffff000-ffffffffffffffff: @rootpgt
 
 KPHYS -> DIRECT:
+0-3fffffff: NONE
+40000000-7fffefff: @rdirect
+7ffff000-ffffffffffffffff: NONE
 
 MACHPHYS -> KPHYS:
 0-fffffffffffff: @machphys_kphys

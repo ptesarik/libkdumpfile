@@ -1,0 +1,8 @@
+@VALUE(_stext)
+ffffd4c458401000
+@VALUE(swapper_pg_dir)
+ffffd4c459111000
+@NUMBER(VA_BITS)
+30
+@NUMBER(kimage_voffset)
+ffffd4c418200000
