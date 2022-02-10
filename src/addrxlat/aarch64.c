@@ -162,9 +162,16 @@ get_linux_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 
 	/* If the read callback can handle virtual addresses, we're done. */
 	if (ctl->ctx->cb.read_caps & ADDRXLAT_CAPS(ADDRXLAT_KVADDR)) {
+		addrxlat_buffer_t *buffer;
+
 		root->addr = root_va;
 		root->as = ADDRXLAT_KVADDR;
-		return ADDRXLAT_OK;
+
+		status = get_cache_buf(ctl->ctx, root, &buffer);
+		if (status == ADDRXLAT_OK)
+			return ADDRXLAT_OK;
+
+		clear_error(ctl->ctx);
 	}
 
 	status = get_number(ctl->ctx, "kimage_voffset",
