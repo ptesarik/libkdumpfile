@@ -142,11 +142,6 @@ pgt_aarch64(addrxlat_step_t *step)
 	return ADDRXLAT_OK;
 }
 
-#define is_linear_addr(addr, kernel_ver, va_bits)		   \
-	(((kernel_ver) < KERNEL_VERSION(5, 4, 0)) ?		   \
-	 (!!((unsigned long)(addr) & (1UL << ((va_bits) - 1)))) :  \
-	 (!((unsigned long)(addr) & (1UL << ((va_bits) - 1)))))
-
 static unsigned long
 get_page_offset(unsigned long kernel_ver, addrxlat_addr_t va_bits) {
 	unsigned long page_offset;
