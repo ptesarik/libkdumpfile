@@ -351,7 +351,6 @@ map_linux_aarch64(struct os_init_data *ctl)
 	addrxlat_meth_t *meth;
 	addrxlat_status status;
 	addrxlat_addr_t va_bits;
-	addrxlat_addr_t va_range;
 
 	status = get_number(ctl->ctx, "TCR_EL1_T1SZ", &va_bits);
 	if (status == ADDRXLAT_OK) {
@@ -379,9 +378,8 @@ map_linux_aarch64(struct os_init_data *ctl)
 	}
 
 	/* layout depends on current value of va_bits */
-	va_range = ((addrxlat_addr_t)1 << va_bits) - 1;
-	aarch64_layout_generic[0].last = va_range;
-	aarch64_layout_generic[1].first = VIRTADDR_MAX - va_range;
+	aarch64_layout_generic[0].last = ADDR_MASK(va_bits);
+	aarch64_layout_generic[1].first = VIRTADDR_MAX - ADDR_MASK(va_bits);
 
 	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_HW,
 				aarch64_layout_generic);
