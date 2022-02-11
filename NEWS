@@ -1,6 +1,7 @@
 next
 ----
   * Zstandard compression algorithm
+  * AArch64 52-bit VA
 
 0.4.1
 -----

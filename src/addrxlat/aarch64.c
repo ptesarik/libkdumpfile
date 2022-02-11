@@ -50,9 +50,6 @@ enum pte_type {
 	PTE_TYPE_TABLE = 3,	/**< Table descriptor. */
 };
 
-/** 1G page mask. */
-#define PAGE_MASK_1G		ADDR_MASK(30)
-
 /** Descriptive names for page tables.
  * These names are used in error messages.
  */
@@ -131,11 +128,12 @@ pgt_aarch64(addrxlat_step_t *step)
 	step->base.as = step->meth->target_as;
 
 	if (PTE_TYPE(pte) == PTE_TYPE_BLOCK) {
-		addrxlat_addr_t mask = pf_table_mask(
-			&step->meth->param.pgt.pf, step->remain);
-		if (mask > PAGE_MASK_1G)
+		if (step->remain > 4 ||
+		    (step->remain > 3 &&
+		     step->meth->param.pgt.pf.fieldsz[0] != 9))
 			return pte_invalid(step);
-		step->base.addr &= ~mask;
+		step->base.addr &= ~pf_table_mask(
+			&step->meth->param.pgt.pf, step->remain);
 		return pgt_huge_page(step);
 	}
 
