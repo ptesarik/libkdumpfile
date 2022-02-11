@@ -8,6 +8,6 @@
 arch=aarch64
 ostype=1
 osver=0
-opts=
+opts="pagesize=4096"
 
 . "$srcdir"/xlat-os-common

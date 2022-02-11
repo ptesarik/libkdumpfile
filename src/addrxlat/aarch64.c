@@ -29,6 +29,7 @@
 */
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "addrxlat-priv.h"
 #include <linux/version.h>
@@ -280,6 +281,53 @@ add_linux_linear_map(struct os_init_data *ctl, unsigned va_bits)
 	return sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KPHYS_DIRECT, layout);
 }
 
+/** Initialize the page table translation method.
+ * @param ctl      Initialization data.
+ * @param va_bits  Size of virtual addresses in bits (CONFIG_VA_BITS).
+ * @returns        Error status.
+ */
+static addrxlat_status
+init_pgt_meth(struct os_init_data *ctl, unsigned va_bits)
+{
+	addrxlat_meth_t *meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT];
+	addrxlat_param_pgt_t *pgt = &meth->param.pgt;
+	unsigned field_bits;
+	unsigned page_bits;
+	unsigned i;
+
+	meth->kind = ADDRXLAT_PGT;
+	meth->target_as = ADDRXLAT_MACHPHYSADDR;
+
+	pgt->root.as = ADDRXLAT_NOADDR;
+	pgt->pte_mask = opt_num_default(&ctl->popt, OPT_pte_mask, 0);
+
+	pgt->pf.pte_format = ADDRXLAT_PTE_AARCH64;
+
+	if (!ctl->popt.val[OPT_pagesize].set)
+		return set_error(ctl->ctx, ADDRXLAT_ERR_NODATA,
+				 "Cannot determine page size");
+	page_bits = ffsl(ctl->popt.val[OPT_pagesize].num) - 1;
+
+	if (ctl->popt.val[OPT_levels].set) {
+		long levels = ctl->popt.val[OPT_levels].num;
+		if (levels < 3 || levels > 5)
+			return bad_paging_levels(ctl->ctx, levels);
+		pgt->pf.nfields = levels + 1;
+	} else
+		pgt->pf.nfields = (va_bits - 4) / (page_bits - 3) + 1;
+
+	field_bits = page_bits;
+	for (i = 0; i < pgt->pf.nfields; ++i) {
+		pgt->pf.fieldsz[i] = field_bits;
+		va_bits -= field_bits;
+		field_bits = page_bits - 3;
+		if (field_bits > va_bits)
+			field_bits = va_bits;
+	}
+
+	return ADDRXLAT_OK;
+}
+
 /** Initialize a translation map for Linux/aarch64.
  * @param ctl  Initialization data.
  * @returns	  Error status.
@@ -287,12 +335,6 @@ add_linux_linear_map(struct os_init_data *ctl, unsigned va_bits)
 static addrxlat_status
 map_linux_aarch64(struct os_init_data *ctl)
 {
-	static const addrxlat_paging_form_t aarch64_pf = {
-		.pte_format = ADDRXLAT_PTE_AARCH64,
-		.nfields = 5,
-		.fieldsz = { 12, 9, 9, 9, 9, 9 }
-	};
-
 	/*
 	 * Generic aarch64 layout, depends on current va_bits
 	 */
@@ -311,29 +353,15 @@ map_linux_aarch64(struct os_init_data *ctl)
 	addrxlat_addr_t va_bits;
 	addrxlat_addr_t va_range;
 
-	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT];
-	meth->kind = ADDRXLAT_PGT;
-	meth->target_as = ADDRXLAT_MACHPHYSADDR;
-
-	meth->param.pgt.pte_mask =
-		opt_num_default(&ctl->popt, OPT_pte_mask, 0);
-	meth->param.pgt.pf = aarch64_pf;
-
 	status = get_number(ctl->ctx, "VA_BITS",
 			    &va_bits);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot determine VA_BITS");
 
-	if (ctl->popt.val[OPT_levels].set) {
-		long levels = ctl->popt.val[OPT_levels].num;
-		if (levels < 3 || levels > 5)
-			return bad_paging_levels(ctl->ctx, levels);
-		meth->param.pgt.pf.nfields = levels + 1;
-	} else
-		meth->param.pgt.pf.nfields = ((va_bits - 12) / 9) + 1;
-
-	meth->param.pgt.root.as = ADDRXLAT_NOADDR;
+	status = init_pgt_meth(ctl, va_bits);
+	if (status != ADDRXLAT_OK)
+		return status;
 
 	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	*meth = ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT];
