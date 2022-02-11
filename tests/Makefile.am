@@ -235,6 +235,7 @@ test_scripts = \
 	xlat-linux-aarch64-5.8-va39 \
 	xlat-linux-aarch64-5.8-va48 \
 	xlat-linux-aarch64-5.8-va48-nover \
+	xlat-linux-aarch64-5.16-64k \
 	xlat-linux-ia32 \
 	xlat-linux-ia32-pae \
 	xlat-linux-ppc64-64k \
@@ -346,6 +347,9 @@ dist_check_DATA = \
 	xlat-linux-aarch64-5.8-va48-nover.data \
 	xlat-linux-aarch64-5.8-va48-nover.expect \
 	xlat-linux-aarch64-5.8-va48-nover.sym \
+	xlat-linux-aarch64-5.16-64k.data \
+	xlat-linux-aarch64-5.16-64k.expect \
+	xlat-linux-aarch64-5.16-64k.sym \
 	xlat-linux-ia32.data \
 	xlat-linux-ia32.expect \
 	xlat-linux-ia32-pae.data \

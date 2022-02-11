@@ -1,0 +1,13 @@
+#! /bin/sh
+
+#
+# Check Linux 5.16 AArch64 translation with 48-bit virtual addresses
+# and 64k pages. No explicit version.
+#
+
+arch=aarch64
+ostype=1
+osver=0
+opts="pagesize=65536"
+
+. "$srcdir"/xlat-os-common
