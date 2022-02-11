@@ -61,6 +61,8 @@ static const char pgt_full_name[][16] = {
 	"Level 3 table",
 	"Level 2 table",
 	"Level 1 table",
+	"Level 0 table",
+	"Level -1 table",
 };
 
 /** Short names for page table entries.
@@ -72,6 +74,7 @@ static const char pte_name[][4] = {
 	"pte",
 	"pmd",
 	"pud",
+	"p4d",
 	"pgd",
 };
 
