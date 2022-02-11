@@ -353,8 +353,13 @@ map_linux_aarch64(struct os_init_data *ctl)
 	addrxlat_addr_t va_bits;
 	addrxlat_addr_t va_range;
 
-	status = get_number(ctl->ctx, "VA_BITS",
-			    &va_bits);
+	status = get_number(ctl->ctx, "TCR_EL1_T1SZ", &va_bits);
+	if (status == ADDRXLAT_OK) {
+		va_bits = 64 - va_bits;
+	} else if (status == ADDRXLAT_ERR_NODATA) {
+		clear_error(ctl->ctx);
+		status = get_number(ctl->ctx, "VA_BITS", &va_bits);
+	}
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot determine VA_BITS");
