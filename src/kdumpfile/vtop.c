@@ -219,36 +219,6 @@ get_linux_x86_levels(kdump_ctx_t *ctx, int *levels)
 	return KDUMP_OK;
 }
 
-/**  Determine number of paging levels for x86-64 Linux OS.
- * @param ctx     Dump file object.
- * @param levels  Set to number of levels on success.
- * @returns       Error status.
- *
- * If 5-level paging status is unknown, @c levels is unchanged, and
- * this function returns success.
- */
-static kdump_status
-get_linux_x86_64_levels(kdump_ctx_t *ctx, int *levels)
-{
-	static const char l5_enabled[] = "pgtable_l5_enabled";
-	struct attr_data *attr;
-
-	attr = lookup_dir_attr(ctx->dict, gattr(ctx, GKI_linux_number),
-			       l5_enabled, sizeof(l5_enabled) - 1);
-	if (attr && attr_isset(attr)) {
-		kdump_status status = attr_revalidate(ctx, attr);
-		if (status != KDUMP_OK)
-			return set_error(ctx, status,
-					 "Cannot get %s from vmcoreinfo",
-					 l5_enabled);
-		if (attr_value(attr)->number != 0)
-			*levels = 5;
-		else
-			*levels = 4;
-	}
-	return KDUMP_OK;
-}
-
 /**  Add "levels=" addrxlat option if possible.
  * @param ctx   Dump file object.
  * @param opts  Options.
@@ -268,10 +238,6 @@ set_linux_levels_opt(kdump_ctx_t *ctx, struct opts *opts)
 	switch (ctx->shared->arch) {
 	case ARCH_IA32:
 		status = get_linux_x86_levels(ctx, &levels);
-		break;
-
-	case ARCH_X86_64:
-		status = get_linux_x86_64_levels(ctx, &levels);
 		break;
 
 	default:

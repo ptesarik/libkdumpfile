@@ -1,2 +1,4 @@
 @VALUE(init_top_pgt)
 ffffffff8b40a000
+@NUMBER(pgtable_l5_enabled)
+1
