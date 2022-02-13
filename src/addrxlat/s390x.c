@@ -238,8 +238,7 @@ init_paging_form(struct os_init_data *ctl)
 
 	meth->kind = ADDRXLAT_PGT;
 	meth->target_as = ADDRXLAT_MACHPHYSADDR;
-	meth->param.pgt.pte_mask =
-		opt_num_default(&ctl->popt, OPT_pte_mask, 0);
+	meth->param.pgt.pte_mask = 0;
 	meth->param.pgt.pf = pf;
 	meth->param.pgt.pf.nfields = levels + 1;
 	return ADDRXLAT_OK;

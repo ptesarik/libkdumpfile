@@ -214,8 +214,7 @@ check_pae(struct os_init_data *ctl, const addrxlat_fulladdr_t *root,
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot set up physical mappings");
-	meth.param.pgt.pte_mask =
-		opt_num_default(&ctl->popt, OPT_pte_mask, 0);
+	meth.param.pgt.pte_mask = 0;
 	meth.param.pgt.pf = ia32_pf_pae;
 	step.ctx = ctl->ctx;
 	step.sys = ctl->sys;
@@ -298,8 +297,7 @@ sys_ia32_nonpae(struct os_init_data *ctl)
 		meth->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
 	else
 		meth->param.pgt.root.as = ADDRXLAT_NOADDR;
-	meth->param.pgt.pte_mask =
-		opt_num_default(&ctl->popt, OPT_pte_mask, 0);
+	meth->param.pgt.pte_mask = 0;
 	meth->param.pgt.pf = ia32_pf;
 	return ADDRXLAT_OK;
 }
@@ -325,8 +323,7 @@ sys_ia32_pae(struct os_init_data *ctl)
 		meth->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
 	else
 		meth->param.pgt.root.as = ADDRXLAT_NOADDR;
-	meth->param.pgt.pte_mask =
-		opt_num_default(&ctl->popt, OPT_pte_mask, 0);
+	meth->param.pgt.pte_mask = 0;
 	meth->param.pgt.pf = ia32_pf_pae;
 	return ADDRXLAT_OK;
 }

@@ -300,8 +300,7 @@ init_pgt_meth(struct os_init_data *ctl, unsigned va_bits)
 	meth->target_as = ADDRXLAT_MACHPHYSADDR;
 
 	pgt->root.as = ADDRXLAT_NOADDR;
-	pgt->pte_mask = opt_num_default(&ctl->popt, OPT_pte_mask, 0);
-
+	pgt->pte_mask = 0;
 	pgt->pf.pte_format = ADDRXLAT_PTE_AARCH64;
 
 	if (!ctl->popt.val[OPT_pagesize].set)

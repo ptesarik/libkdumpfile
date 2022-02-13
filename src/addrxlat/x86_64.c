@@ -684,12 +684,21 @@ map_linux_x86_64(struct os_init_data *ctl)
 	};
 
 	addrxlat_meth_t *meth;
+	addrxlat_addr_t sme_mask;
 	addrxlat_status status;
 
 	/* Set up page table translation. */
 	sys_sym_pgtroot(ctl, pgtspec);
 	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	meth->param.pgt.root.addr &= ~PAGE_MASK;
+
+	status = get_number(ctl->ctx, "sme_mask", &sme_mask);
+	if (status == ADDRXLAT_OK)
+		meth->param.pgt.pte_mask = sme_mask;
+	else if (status == ADDRXLAT_ERR_NODATA)
+		clear_error(ctl->ctx);
+	else
+		return status;
 
 	/* Take care of machine physical <-> kernel physical mapping. */
 	if (ctl->popt.val[OPT_xen_xlat].set &&
@@ -963,8 +972,7 @@ sys_x86_64(struct os_init_data *ctl)
 		meth->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
 	else
 		meth->param.pgt.root.as = ADDRXLAT_NOADDR;
-	meth->param.pgt.pte_mask =
-		opt_num_default(&ctl->popt, OPT_pte_mask, 0);
+	meth->param.pgt.pte_mask = 0;
 	meth->param.pgt.pf = x86_64_pf;
 
 	if (ctl->popt.val[OPT_levels].set) {

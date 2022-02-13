@@ -396,7 +396,6 @@ enum optidx {
 	OPT_levels,		/**< Number of page table levels. */
 	OPT_pagesize,		/**< Page size (number). */
 	OPT_phys_base,		/**< [x86-64] Linux physical base address. */
-	OPT_pte_mask,		/**< Page table entry mask. */
 	OPT_rootpgt,		/**< Root page table address. */
 	OPT_xen_p2m_mfn,	/**< Xen p2m root machine frame number. */
 	OPT_xen_xlat,		/**< Use Xen m2p and p2m translation. */
