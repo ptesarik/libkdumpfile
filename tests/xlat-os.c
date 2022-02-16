@@ -189,42 +189,15 @@ static const struct params params = {
 };
 
 static void
-print_addrspace(addrxlat_addrspace_t as)
-{
-	switch (as) {
-	case ADDRXLAT_KPHYSADDR:
-		fputs("KPHYSADDR", stdout);
-		break;
-
-	case ADDRXLAT_MACHPHYSADDR:
-		fputs("MACHPHYSADDR", stdout);
-		break;
-
-	case ADDRXLAT_KVADDR:
-		fputs("KVADDR", stdout);
-		break;
-
-	case ADDRXLAT_NOADDR:
-		fputs("NOADDR", stdout);
-		break;
-
-	default:
-		printf("<addrspace %ld>", (long) as);
-	}
-}
-
-static void
 print_target_as(const addrxlat_meth_t *meth)
 {
-	fputs("  target_as=", stdout);
-	print_addrspace(meth->target_as);
-	putchar('\n');
+	printf("  target_as=%s\n", addrxlat_addrspace_name(meth->target_as));
 }
 
 static void
 print_fulladdr(const addrxlat_fulladdr_t *addr)
 {
-	print_addrspace(addr->as);
+	fputs(addrxlat_addrspace_name(addr->as), stdout);
 	if (addr->as != ADDRXLAT_NOADDR)
 		printf(":0x%"ADDRXLAT_PRIxADDR, addr->addr);
 }
