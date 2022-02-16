@@ -362,7 +362,7 @@ map_linux_ppc64(struct os_init_data *ctl)
 	addrxlat_status status;
 
 	pagesize = ctl->popt.isset[OPT_pagesize]
-		? ctl->popt.val[OPT_pagesize].num
+		? ctl->popt.pagesize
 		: _64K;
 
 	if (pagesize != _64K)

@@ -423,8 +423,12 @@ struct parsed_opts {
 	/** Set/unset flag for each option. */
 	bool isset[OPT_NUM];
 
-	/** Parsed option values. */
-	union optval val[OPT_NUM];
+	unsigned long levels;		/**< Value of OPT_levels. */
+	unsigned long pagesize;		/**< Value of OPT_pagesize. */
+	addrxlat_addr_t phys_base;	/**< Value of OPT_phys_base. */
+	addrxlat_fulladdr_t rootpgt;	/**< Value of OPT_rootpgt. */
+	unsigned long xen_p2m_mfn;	/**< Value of OPT_xen_p2m_mfn. */
+	bool xen_xlat;			/**< Value of OPT_xen_xlat. */
 };
 
 INTERNAL_DECL(addrxlat_status, parse_opts,

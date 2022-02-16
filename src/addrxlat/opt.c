@@ -182,12 +182,15 @@ enum opttype {
 struct optdesc {
 	enum optidx idx;	/**< Option index */
 	enum opttype type;	/**< Type of option (string, number, ...) */
+	size_t off;		/**< Field offset in @ref parsed_opts */
 	const char name[];	/**< Option name */
 };
 
 /** Define an option without repeating its name. */
 #define DEF(name, type)				\
-	{ { OPT_ ## name, opt_ ## type }, #name }
+	{ { OPT_ ## name, opt_ ## type, offsetof(struct parsed_opts, name) }, \
+	  #name,				\
+	}
 
 /** Option table terminator. */
 #define END					\
@@ -264,32 +267,35 @@ static addrxlat_status
 parse_val(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 	  const struct optdesc *opt, const char *val)
 {
-	union optval *optval = &popt->val[opt->idx];
+	void *field = ((void*)popt) + opt->off;
 	char *endp;
 
 	switch (opt->type) {
 	case opt_string:
-		optval->str = val;
+		*(const char**)field = val;
 		break;
 
 	case opt_bool:
 		if (!val ||
 		    !strcasecmp(val, "yes") ||
 		    !strcasecmp(val, "true")) {
-			optval->num = 1;
+			*(bool*)field = 1;
 			break;
 		} else if (!strcasecmp(val, "no") ||
 			   !strcasecmp(val, "false")) {
-			optval->num = 0;
+			*(bool*)field = 0;
 			break;
 		}
-		/* else fall-through */
+		*(bool*)field = !!strtol(val, &endp, 0);
+		if (!*val || *endp)
+			goto err_badval;
+		break;
 
 	case opt_number:
 		if (!val)
 			goto err_noval;
 
-		optval->num = strtol(val, &endp, 0);
+		*(long*)field = strtol(val, &endp, 0);
 		if (!*val || *endp)
 			goto err_badval;
 
@@ -299,7 +305,7 @@ parse_val(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 		if (!val)
 			goto err_noval;
 
-		optval->addr = strtoull(val, &endp, 0);
+		*(addrxlat_addr_t*)field = strtoull(val, &endp, 0);
 		if (!*val || *endp)
 			goto err_badval;
 
@@ -309,12 +315,12 @@ parse_val(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 		if (!val)
 			goto err_noval;
 
-		optval->fulladdr.as = strtoas(val, &endp);
+		((addrxlat_fulladdr_t*)field)->as = strtoas(val, &endp);
 		if (*val == ':' || *endp != ':')
 			goto err_badval;
 
 		val = endp + 1;
-		optval->fulladdr.addr = strtoull(val, &endp, 0);
+		((addrxlat_fulladdr_t*)field)->addr = strtoull(val, &endp, 0);
 		if (!*val || *endp)
 			goto err_badval;
 
