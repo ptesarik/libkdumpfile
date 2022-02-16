@@ -504,6 +504,8 @@ INTERNAL_DECL(addrxlat_status, sys_sym_pgtroot,
 
 /* internal aliases */
 
+DECLARE_ALIAS(addrspace_name);
+
 #define set_error internal_ctx_err
 DECLARE_ALIAS(ctx_err);
 

@@ -153,6 +153,12 @@ typedef enum _addrxlat_addrspace {
 	ADDRXLAT_NOADDR = -1,	/**< Invalid address. */
 } addrxlat_addrspace_t;
 
+/** Get the (string) name of an address space.
+ * @param as  Address space.
+ * @returns   The (human-readable) name of the address space.
+ */
+const char *addrxlat_addrspace_name(addrxlat_addrspace_t as);
+
 /** Full address (including address space specification).
  */
 typedef struct _addrxlat_fulladdr {
