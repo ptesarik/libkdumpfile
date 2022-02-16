@@ -640,6 +640,29 @@ clone_attr(struct attr_dict *dict, struct attr_data *dir,
 	return newattr;
 }
 
+/** Clone an attribute subtree.
+ * @param dict    Destination attribute dictionary.
+ * @param dir     Target attribute directory.
+ * @param orig    Attribute directory to be cloned.
+ * @returns       @c true on success, @c false on allocation failure.
+ */
+static bool
+clone_subtree(struct attr_dict *dict, struct attr_data *dir,
+	      struct attr_data *orig)
+{
+	for (orig = orig->dir; orig; orig = orig->next) {
+		struct attr_data *newattr;
+		newattr = clone_attr(dict, dir, orig);
+		if (!newattr)
+			return false;
+		if (orig->template->type == KDUMP_DIRECTORY &&
+		    !clone_subtree(dict, newattr, orig))
+			return false;
+	}
+
+	return true;
+}
+
 /** Clone an attribute including full path.
  * @param dict    Destination attribute dictionary.
  * @param orig    Attribute to be cloned.
@@ -686,12 +709,9 @@ clone_attr_path(struct attr_dict *dict, struct attr_data *orig)
 		attr = newattr;
 	}
 
-	if (orig->template->type == KDUMP_DIRECTORY) {
-		struct attr_data *child;
-		for (child = orig->dir; child; child = child->next)
-			if (!clone_attr_path(dict, child))
-				goto err;
-	}
+	if (orig->template->type == KDUMP_DIRECTORY &&
+	    !clone_subtree(dict, attr, orig))
+		goto err;
 
 	return attr;
 
