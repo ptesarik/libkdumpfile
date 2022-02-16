@@ -201,7 +201,7 @@ kdump_new(void)
 }
 
 static bool
-clone_xlat_attrs(kdump_ctx_t *dest, const kdump_ctx_t *orig)
+clone_xlat_attrs(struct attr_dict *dest, const struct attr_dict *orig)
 {
 	static const enum global_keyidx globals[] = {
 		GKI_xlat_opts_pre,
@@ -211,8 +211,8 @@ clone_xlat_attrs(kdump_ctx_t *dest, const kdump_ctx_t *orig)
 
 	int i;
 	for (i = 0; i < ARRAY_SIZE(globals); ++i) {
-		struct attr_data *attr = dgattr(orig->dict, globals[i]);
-		if (! clone_attr_path(dest->dict, attr))
+		struct attr_data *attr = dgattr(orig, globals[i]);
+		if (! clone_attr_path(dest, attr))
 			return false;
 	}
 	return true;
@@ -262,7 +262,7 @@ kdump_clone(const kdump_ctx_t *orig, unsigned long flags)
 		ctx->xlat = xlat_clone(orig->xlat);
 		if (!ctx->xlat)
 			goto err_dict;
-		if (!clone_xlat_attrs(ctx, orig))
+		if (!clone_xlat_attrs(ctx->dict, orig->dict))
 			goto err_xlat;
 	} else {
 		ctx->xlat = orig->xlat;
