@@ -613,7 +613,7 @@ copy_data(struct attr_data *dest, const struct attr_data *src)
 
 /** Clone an attribute including full path.
  * @param dict    Destination attribute dictionary.
- * @param attr    Attribute to be cloned.
+ * @param orig    Attribute to be cloned.
  * @returns       Attribute data, or @c NULL on allocation failure.
  *
  * Make a copy of @p attr in the target dictionary @p dict. Make sure
@@ -664,6 +664,13 @@ clone_attr_path(struct attr_dict *dict, struct attr_data *orig)
 			enum global_keyidx idx = attr->template - global_keys;
 			dict->global_attrs[idx] = attr;
 		}
+	}
+
+	if (orig->template->type == KDUMP_DIRECTORY) {
+		struct attr_data *child;
+		for (child = orig->dir; child; child = child->next)
+			if (!clone_attr_path(dict, child))
+				goto err;
 	}
 
 	return attr;

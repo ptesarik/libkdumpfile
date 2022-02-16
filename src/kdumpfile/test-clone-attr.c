@@ -59,6 +59,16 @@ static const struct attr_template tmpld = {
 	.type = KDUMP_NUMBER,
 };
 
+static const struct attr_template tmplsub = {
+	.key = "sub",
+	.type = KDUMP_DIRECTORY,
+};
+
+static const struct attr_template tmplx = {
+	.key = "x",
+	.type = KDUMP_NUMBER,
+};
+
 static int
 test_value(kdump_ctx_t *ctx, const char *key, unsigned val)
 {
@@ -100,7 +110,7 @@ main(int argc, char **argv)
 {
 	kdump_ctx_t *ctx1, *ctx2;
 	const struct attr_template **t;
-	struct attr_data *a, *c;
+	struct attr_data *a, *c, *sub;
 	kdump_attr_ref_t ref;
 	kdump_num_t num;
 	kdump_status status;
@@ -116,6 +126,8 @@ main(int argc, char **argv)
 	 *  b = 2
 	 *  c is unset
 	 *  d is unset
+	 *  sub is a directory
+	 *  sub.x = 100
 	 */
 	ctx1 = kdump_new();
 	if (!ctx1) {
@@ -145,12 +157,25 @@ main(int argc, char **argv)
 		return TEST_FAIL;
 	}
 
+	sub = new_attr(ctx1->dict, gattr(ctx1, GKI_dir_root), &tmplsub);
+	if (!sub) {
+		perror("Cannot allocate attribute");
+		return TEST_FAIL;
+	}
+
+	if (!new_attr(ctx1->dict, sub, &tmplx)) {
+		perror("Cannot allocate attribute");
+		return TEST_FAIL;
+	}
+
 	if (test_change_value(ctx1, "a", 1))
 		ret = TEST_ERR;
 	if (test_change_value(ctx1, "b", 2))
 		ret = TEST_ERR;
+	if (test_change_value(ctx1, "sub.x", 100))
+		ret = TEST_ERR;
 
-	/* Clone the dictionary and attributes 'a' and 'c'. */
+	/* Clone the dictionary and attributes 'a', 'c' and 'sub'. */
 	ctx2 = kdump_clone(ctx1, KDUMP_CLONE_XLAT);
 	if (!ctx2) {
 		perror("Cannot clone kdump context");
@@ -161,6 +186,10 @@ main(int argc, char **argv)
 		return TEST_FAIL;
 	}
 	if (!clone_attr_path(ctx2->dict, c)) {
+		perror("Cannot clone attribute");
+		return TEST_FAIL;
+	}
+	if (!clone_attr_path(ctx2->dict, sub)) {
 		perror("Cannot clone attribute");
 		return TEST_FAIL;
 	}
@@ -201,6 +230,16 @@ main(int argc, char **argv)
 	if (test_change_value(ctx1, "d", 7))
 		ret = TEST_ERR;
 	if (test_value(ctx2, "d", 7))
+		ret = TEST_ERR;
+
+	/* Check that 'sub.x' was also cloned. */
+	if (test_change_value(ctx2, "sub.x", 101))
+		ret = TEST_ERR;
+	if (test_value(ctx1, "sub.x", 100))
+		ret = TEST_ERR;
+	if (test_change_value(ctx1, "sub.x", 102))
+		ret = TEST_ERR;
+	if (test_value(ctx2, "sub.x", 101))
 		ret = TEST_ERR;
 
 	kdump_free(ctx2);
