@@ -81,16 +81,6 @@ static_attr_value(struct kdump_shared *shared, enum global_keyidx idx)
 		((char*)shared + static_offsets[idx - GKI_static_first]);
 }
 
-/**  Calculate the hash index of a key path.
- * @param key  Key path.
- * @returns    Desired index in the hash table.
- */
-static unsigned
-key_hash_index(const char *key)
-{
-	return fold_hash(string_hash(key), ATTR_HASH_BITS);
-}
-
 /**  Get the length of an attribute path
  * @param attr  Attribute data.
  * @returns     Length of the full path string.
@@ -189,6 +179,24 @@ path_hash(struct phash *ph, const struct attr_data *dir)
 		phash_update(ph, tmpl->key, strlen(tmpl->key));
 		phash_update(ph, ".", 1);
 	}
+}
+
+/**  Calculate the hash index of an attribute.
+ * @param attr  Attribute.
+ * @returns     Desired index in the hash table.
+ */
+static unsigned
+attr_hash_index(const struct attr_data *attr)
+{
+	const struct attr_template *tmpl;
+	struct phash ph;
+
+	phash_init(&ph);
+	if (attr->parent)
+		path_hash(&ph, attr->parent);
+	tmpl = attr->template;
+	phash_update(&ph, tmpl->key, strlen(tmpl->key));
+	return fold_hash(phash_value(&ph), ATTR_HASH_BITS);
 }
 
 /**  Look up a child attribute of a given directory.
@@ -298,8 +306,6 @@ alloc_attr(struct attr_dict *dict, struct attr_data *parent,
 	   const struct attr_template *tmpl)
 {
 	struct attr_data *d;
-	size_t pathlen;
-	char *path;
 	unsigned hash;
 
 	d = calloc(1, sizeof *d);
@@ -308,10 +314,7 @@ alloc_attr(struct attr_dict *dict, struct attr_data *parent,
 
 	d->parent = parent;
 	d->template = tmpl;
-	pathlen = attr_pathlen(d);
-	path = alloca(pathlen + 1);
-	make_attr_path(d, path + pathlen);
-	hash = key_hash_index(path);
+	hash = attr_hash_index(d);
 	hlist_add_head(&d->list, &dict->attr.table[hash]);
 
 	return d;
