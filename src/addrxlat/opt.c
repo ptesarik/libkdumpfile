@@ -246,6 +246,7 @@ static const struct {
 /** Result of parsing a single value. */
 typedef enum {
 	PARSE_OK,		/**< Success. */
+	PARSE_UNKNOWN,		/**< Unknown option. */
 	PARSE_NOVAL,		/**< Missing value. */
 	PARSE_BADVAL,		/**< Invalid value. */
 }  parse_status;
@@ -343,52 +344,58 @@ parse_fulladdr(const char *str, addrxlat_fulladdr_t *var)
 
 /** Parse a single option value.
  * @param popt   Parsed options.
- * @param ctx    Translation context (for error handling).
- * @param opt    Option descriptor.
+ * @param opt    Option index.
  * @param val    Value.
  * @returns      Error status.
  */
-static addrxlat_status
-parse_val(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
-	  const struct optdesc *opt, const char *val)
+static parse_status
+parse_val(struct parsed_opts *popt, enum optidx opt, const char *val)
 {
-	parse_status status;
-
-	switch (opt->idx) {
+	switch (opt) {
 	case OPT_levels:
-		status = parse_number(val, &popt->levels);
-		break;
+		return parse_number(val, &popt->levels);
 
 	case OPT_pagesize:
-		status = parse_number(val, &popt->pagesize);
-		break;
+		return parse_number(val, &popt->pagesize);
 
 	case OPT_phys_base:
-		status = parse_addr(val, &popt->phys_base);
-		break;
+		return parse_addr(val, &popt->phys_base);
 
 	case OPT_rootpgt:
-		status = parse_fulladdr(val, &popt->rootpgt);
-		break;
+		return parse_fulladdr(val, &popt->rootpgt);
 
 	case OPT_xen_p2m_mfn:
-		status = parse_number(val, &popt->xen_p2m_mfn);
-		break;
+		return parse_number(val, &popt->xen_p2m_mfn);
 
 	case OPT_xen_xlat:
-		status = parse_bool(val, &popt->xen_xlat);
-		break;
+		return parse_bool(val, &popt->xen_xlat);
 
 	default:
+		return PARSE_UNKNOWN;
+	}
+}
+
+/** Parse a single option.
+ * @param ctx    Translation context.
+ * @param opt    Option descriptor.
+ * @param val    Option value.
+ * @param err    Parsing error code.
+ * @returns      Error status.
+ */
+static addrxlat_status
+parse_error(addrxlat_ctx_t *ctx, const struct optdesc *opt,
+	    const char *val, parse_status err)
+{
+	switch (err) {
+	case PARSE_UNKNOWN:
 		return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
 				 "Unknown option: %u",
 				 (unsigned) opt->idx);
-	}
 
-	switch (status) {
 	case PARSE_NOVAL:
 		return set_error(ctx, ADDRXLAT_ERR_INVALID,
-				 "Missing value for option '%s'", opt->name);
+				 "Missing value for option '%s'",
+				 opt->name);
 
 	case PARSE_BADVAL:
 		return set_error(ctx, ADDRXLAT_ERR_INVALID,
@@ -396,10 +403,9 @@ parse_val(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 				 val, opt->name);
 
 	default:
-		break;
+		return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
+				 "Unknown parser error");
 	}
-
-	return ADDRXLAT_OK;
 }
 
 /** Parse a single option.
@@ -415,6 +421,7 @@ parse_opt(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 	  const char *key, size_t klen, const char *val)
 {
 	const struct optdesc *opt;
+	parse_status status;
 
 	if (klen >= ARRAY_SIZE(options))
 		goto err;
@@ -426,7 +433,10 @@ parse_opt(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 	while (opt->idx != OPT_NUM) {
 		if (!strcasecmp(key, opt->name)) {
 			popt->isset[opt->idx] = true;
-			return parse_val(popt, ctx, opt, val);
+			status = parse_val(popt, opt->idx, val);
+			if (status != PARSE_OK)
+				return parse_error(ctx, opt, val, status);
+			return ADDRXLAT_OK;
 		}
 
 		opt = (void*)(opt) + options[klen].elemsz;
