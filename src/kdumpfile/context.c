@@ -179,6 +179,9 @@ kdump_new(void)
 	if (!ctx->dict)
 		goto err_shared;
 
+	if (create_addrxlat_attrs(ctx->dict) != KDUMP_OK)
+		goto err_dict;
+
 	ctx->xlat = xlat_new();
 	if (!ctx->xlat)
 		goto err_dict;
@@ -206,13 +209,15 @@ clone_xlat_attrs(struct attr_dict *dest, const struct attr_dict *orig)
 	static const enum global_keyidx globals[] = {
 		GKI_xlat_opts_pre,
 		GKI_xlat_opts_post,
+		GKI_dir_xlat_default,
+		GKI_dir_xlat_force,
 		GKI_ostype,
 	};
 
 	int i;
 	for (i = 0; i < ARRAY_SIZE(globals); ++i) {
 		struct attr_data *attr = dgattr(orig, globals[i]);
-		if (! clone_attr_path(dest, attr))
+		if (!clone_attr_path(dest, attr))
 			return false;
 	}
 	return true;

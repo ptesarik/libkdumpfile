@@ -954,6 +954,17 @@ void kdump_attr_iter_end(kdump_ctx_t *ctx, kdump_attr_iter_t *iter);
  */
 #define KDUMP_ATTR_OSTYPE	"addrxlat.ostype"
 
+/** Default libaddrxlat options.
+ * Atributes under this directory will be used if no better value
+ * can be inferred from the dump file.
+ */
+#define KDUMP_ATTR_XLAT_DEFAULT		"addrxlat.default"
+
+/** Forced libaddrxlat options.
+ * Atributes under this directory override whatever is auto-detected.
+ */
+#define KDUMP_ATTR_XLAT_FORCE		"addrxlat.force"
+
 /** Prepended libaddrxlat options.
  */
 #define KDUMP_ATTR_XLAT_OPTS_PRE	"addrxlat.opts.pre"

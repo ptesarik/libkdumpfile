@@ -931,6 +931,8 @@ INTERNAL_DECL(kdump_status, process_arch_notes,
 /* Virtual address space regions */
 INTERNAL_DECL(addrxlat_ctx_t *, init_addrxlat, (kdump_ctx_t *ctx));
 
+INTERNAL_DECL(kdump_status, create_addrxlat_attrs, (struct attr_dict *dict));
+
 INTERNAL_DECL(kdump_status, vtop_init, (kdump_ctx_t *ctx));
 
 /** Revalidate address translation.

@@ -106,7 +106,34 @@ get_version_code(kdump_ctx_t *ctx, unsigned long *pver)
 	 return KDUMP_OK;
 }
 
-#define MAX_OPTS	8
+#define DEFOPT(k, t) {			\
+		.key = (#k),		\
+		.type = (t),		\
+		.ops = &dirty_xlat_ops,	\
+	}
+
+static const struct attr_template options[] = {
+	DEFOPT(levels, KDUMP_NUMBER),
+	DEFOPT(pagesize, KDUMP_NUMBER),
+	DEFOPT(phys_base, KDUMP_ADDRESS),
+	DEFOPT(rootpgt, KDUMP_DIRECTORY),
+	DEFOPT(xen_p2m_mfn, KDUMP_NUMBER),
+	DEFOPT(xen_xlat, KDUMP_NUMBER),
+};
+
+static const struct attr_template fulladdr_as = {
+	.key = "as",
+	.type = KDUMP_NUMBER,
+	/* .ops = &dirty_xlat_ops, */
+};
+
+static const struct attr_template fulladdr_addr = {
+	.key = "addr",
+	.type = KDUMP_ADDRESS,
+	/* .ops = &dirty_xlat_ops, */
+};
+
+#define MAX_OPTS	(8 + 2*ARRAY_SIZE(options))
 struct opts {
 	unsigned n;
 	char *str[MAX_OPTS];
@@ -137,6 +164,159 @@ free_opts(struct opts *opts)
 {
 	while (opts->n)
 		free(opts->str[--opts->n]);
+}
+
+/** Create addrxlat attributes under a given directory.
+ * @param dict    Target attribute dictionary.
+ * @param dirkey  Global directory key index.
+ * @returns       New directory attribute, or @c NULL on allocation error.
+ */
+static struct attr_data *
+create_addrxlat_dir(struct attr_dict *dict, enum global_keyidx dirkey)
+{
+	const struct attr_template *tmpl;
+	struct attr_data *dir, *attr;
+
+	dir = dgattr(dict, dirkey);
+	dir->flags.isset = 1;
+
+	for (tmpl = options; tmpl < &options[ARRAY_SIZE(options)]; ++tmpl) {
+		attr = new_attr(dict, dir, tmpl);
+		if (!attr)
+			return NULL;
+		if (tmpl->type == KDUMP_DIRECTORY &&
+		    (!new_attr(dict, attr, &fulladdr_as) ||
+		     !new_attr(dict, attr, &fulladdr_addr)))
+			return NULL;
+	}
+
+	return dir;
+}
+
+/** Create and populate addrxlat attribute directories.
+ * @param dict  Target attribute dictionary.
+ * @returns     Error status.
+ *
+ * Create the standard addrxlat.default and addrxlat.force attribute
+ * directories.
+ */
+kdump_status
+create_addrxlat_attrs(struct attr_dict *dict)
+{
+	static const enum global_keyidx dirkeys[] = {
+		GKI_dir_xlat_default,
+		GKI_dir_xlat_force,
+	};
+
+	unsigned i;
+
+	for (i = 0; i < ARRAY_SIZE(dirkeys); ++i)
+		if (!create_addrxlat_dir(dict, dirkeys[i]))
+			return KDUMP_ERR_SYSTEM;
+
+	return KDUMP_OK;
+}
+
+/** Add one addrxlat option.
+ * @param ctx   Dump file object.
+ * @param opts  Options.
+ * @param dir   Attribute directory (addrxlat.default or addrxlat.force).
+ * @param tmpl  Template of the wanted child attribute.
+ * @returns     Error status.
+ *
+ * Take one option attribute and add the corresponding option to @p opts.
+ * If the attribute is not set, return @c KDUMP_OK and do nothing.
+ */
+static kdump_status
+add_addrxlat_opt(kdump_ctx_t *ctx, struct opts *opts,
+		 const struct attr_data *dir,
+		 const struct attr_template *tmpl)
+{
+	struct attr_data *attr, *sub;
+	addrxlat_fulladdr_t faddr;
+	kdump_status status;
+	int len;
+
+	attr = lookup_attr_child(dir, tmpl);
+	if (!attr || !attr_isset(attr))
+		return KDUMP_OK;
+	status = attr_revalidate(ctx, attr);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status,
+				 "Cannot get %s addrxlat option",
+				 tmpl->key);
+
+	switch (tmpl->type) {
+	case KDUMP_NUMBER:
+		len = asprintf(&opts->str[opts->n], "%s=%" KDUMP_PRIuNUM,
+			       tmpl->key, attr_value(attr)->number);
+		break;
+
+	case KDUMP_ADDRESS:
+		len = asprintf(&opts->str[opts->n], "%s=0x%" KDUMP_PRIxADDR,
+			       tmpl->key, attr_value(attr)->address);
+		break;
+
+	case KDUMP_DIRECTORY:
+		sub = lookup_attr_child(attr, &fulladdr_as);
+		if (!sub || !attr_isset(sub))
+			return KDUMP_OK;
+		status = attr_revalidate(ctx, sub);
+		if (status != KDUMP_OK)
+			return set_error(ctx, status, "Cannot get %s %s",
+					 tmpl->key, "address space");
+		faddr.as = attr_value(sub)->number;
+
+		sub = lookup_attr_child(attr, &fulladdr_addr);
+		if (!sub || !attr_isset(sub))
+			return KDUMP_OK;
+		status = attr_revalidate(ctx, sub);
+		if (status != KDUMP_OK)
+			return set_error(ctx, status, "Cannot get %s %s",
+					 tmpl->key, "address");
+		faddr.addr = attr_value(sub)->address;
+
+		len = asprintf(&opts->str[opts->n], "%s=%u:0x%" KDUMP_PRIxADDR,
+			       tmpl->key, faddr.as, faddr.addr);
+		break;
+
+	default:
+		return set_error(ctx, KDUMP_ERR_NOTIMPL,
+				 "Unimplemented addrxlat option type: %u",
+				 (unsigned) tmpl->type);
+	}
+
+	if (len < 0)
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot make %s addrxlat option", tmpl->key);
+	++opts->n;
+
+	return KDUMP_OK;
+}
+
+/** Add all addrxlat options under a given directory.
+ * @param ctx     Dump file object.
+ * @param opts    Options.
+ * @param dirkey  Global directory key index
+ *                (addrxlat.default, or addrxlat.force).
+ */
+static kdump_status
+add_addrxlat_opts(kdump_ctx_t *ctx, struct opts *opts,
+		  enum global_keyidx dirkey)
+{
+	const struct attr_template *tmpl;
+	struct attr_data *dir;
+	kdump_status status;
+
+	dir = gattr(ctx, dirkey);
+	if (!attr_isset(dir))
+		return KDUMP_OK;
+
+	for (tmpl = options; tmpl < &options[ARRAY_SIZE(options)]; ++tmpl) {
+		status = add_addrxlat_opt(ctx, opts, dir, tmpl);
+		if (status != KDUMP_OK)
+			return status;
+	}
 }
 
 static kdump_status
@@ -351,7 +531,9 @@ vtop_init(kdump_ctx_t *ctx)
 	clear_error(ctx);
 
 	opts.n = 0;
-	status = add_attr_opt(ctx, &opts, GKI_xlat_opts_pre);
+	status = add_addrxlat_opts(ctx, &opts, GKI_dir_xlat_default);
+	if (status == KDUMP_OK)
+		status = add_attr_opt(ctx, &opts, GKI_xlat_opts_pre);
 	if (status == KDUMP_OK)
 		status = set_page_size_opt(ctx, &opts);
 	if (status == KDUMP_OK) {
@@ -362,6 +544,8 @@ vtop_init(kdump_ctx_t *ctx)
 	}
 	if (status == KDUMP_OK)
 		status = add_attr_opt(ctx, &opts, GKI_xlat_opts_post);
+	if (status == KDUMP_OK)
+		status = add_addrxlat_opts(ctx, &opts, GKI_dir_xlat_force);
 	if (status != KDUMP_OK) {
 		free_opts(&opts);
 		return status;
