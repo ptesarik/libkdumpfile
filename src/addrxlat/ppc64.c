@@ -361,7 +361,7 @@ map_linux_ppc64(struct os_init_data *ctl)
 	addrxlat_meth_t *meth;
 	addrxlat_status status;
 
-	pagesize = ctl->popt.isset[OPT_pagesize]
+	pagesize = opt_isset(ctl->popt, pagesize)
 		? ctl->popt.pagesize
 		: _64K;
 

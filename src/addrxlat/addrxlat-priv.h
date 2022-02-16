@@ -431,6 +431,9 @@ struct parsed_opts {
 	bool xen_xlat;			/**< Value of OPT_xen_xlat. */
 };
 
+/** Check whether an option is set, using its bare name. */
+#define opt_isset(popt, name)	((popt).isset[OPT_ ## name])
+
 INTERNAL_DECL(addrxlat_status, parse_opts,
 	      (struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 	       const char *opts));

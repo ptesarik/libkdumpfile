@@ -471,7 +471,7 @@ linux_ktext_meth(struct os_init_data *ctl)
 	addrxlat_addr_t stext;
 	addrxlat_status status;
 
-	if (ctl->popt.isset[OPT_phys_base]) {
+	if (opt_isset(ctl->popt, phys_base)) {
 		set_ktext_offset(ctl->sys, (ctl->popt.phys_base -
 					    LINUX_KTEXT_START));
 		return ADDRXLAT_OK;
@@ -647,7 +647,7 @@ set_xen_p2m(struct os_init_data *ctl)
 
 	map = ctl->sys->map[ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS];
 	map_clear(map);
-	if (!ctl->popt.isset[OPT_xen_p2m_mfn])
+	if (!opt_isset(ctl->popt, xen_p2m_mfn))
 		return ADDRXLAT_OK; /* leave undefined */
 	p2m_maddr = ctl->popt.xen_p2m_mfn << PAGE_SHIFT;
 
@@ -701,7 +701,7 @@ map_linux_x86_64(struct os_init_data *ctl)
 		return status;
 
 	/* Take care of machine physical <-> kernel physical mapping. */
-	if (ctl->popt.isset[OPT_xen_xlat] &&
+	if (opt_isset(ctl->popt, xen_xlat) &&
 	    ctl->popt.xen_xlat) {
 		status = set_xen_p2m(ctl);
 		if (status != ADDRXLAT_OK)
@@ -826,7 +826,7 @@ setup_xen_pgt(struct os_init_data *ctl)
 	pgt = meth->param.pgt.root.addr;
 	if (pgt >= XEN_DIRECTMAP) {
 		off = -XEN_DIRECTMAP;
-	} else if (ctl->popt.isset[OPT_phys_base]) {
+	} else if (opt_isset(ctl->popt, phys_base)) {
 		addrxlat_addr_t xen_virt_start = pgt & ~(XEN_TEXT_SIZE - 1);
 		off = ctl->popt.phys_base - xen_virt_start;
 	} else
@@ -968,7 +968,7 @@ init_pgt_meth(struct os_init_data *ctl)
 	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	meth->kind = ADDRXLAT_PGT;
 	meth->target_as = ADDRXLAT_MACHPHYSADDR;
-	if (ctl->popt.isset[OPT_rootpgt])
+	if (opt_isset(ctl->popt, rootpgt))
 		meth->param.pgt.root = ctl->popt.rootpgt;
 	else
 		meth->param.pgt.root.as = ADDRXLAT_NOADDR;

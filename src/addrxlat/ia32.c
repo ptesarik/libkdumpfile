@@ -293,7 +293,7 @@ sys_ia32_nonpae(struct os_init_data *ctl)
 	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	meth->kind = ADDRXLAT_PGT;
 	meth->target_as = ADDRXLAT_MACHPHYSADDR;
-	if (ctl->popt.isset[OPT_rootpgt])
+	if (opt_isset(ctl->popt, rootpgt))
 		meth->param.pgt.root = ctl->popt.rootpgt;
 	else
 		meth->param.pgt.root.as = ADDRXLAT_NOADDR;
@@ -319,7 +319,7 @@ sys_ia32_pae(struct os_init_data *ctl)
 	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	meth->kind = ADDRXLAT_PGT;
 	meth->target_as = ADDRXLAT_MACHPHYSADDR;
-	if (ctl->popt.isset[OPT_rootpgt])
+	if (opt_isset(ctl->popt, rootpgt))
 		meth->param.pgt.root = ctl->popt.rootpgt;
 	else
 		meth->param.pgt.root.as = ADDRXLAT_NOADDR;
@@ -498,10 +498,10 @@ sys_ia32(struct os_init_data *ctl)
 	}
 
 	status = ADDRXLAT_OK;
-	if (!ctl->popt.isset[OPT_levels]) {
+	if (!opt_isset(ctl->popt, levels)) {
 		addrxlat_fulladdr_t *rootpgtopt = &ctl->popt.rootpgt;
 
-		if (!ctl->popt.isset[OPT_rootpgt])
+		if (!opt_isset(ctl->popt, rootpgt))
 			status = check_pae_sym(ctl);
 		else if (ctl->osdesc->type == ADDRXLAT_OS_LINUX)
 			status = check_pae(ctl, rootpgtopt,
