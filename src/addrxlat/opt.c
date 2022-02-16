@@ -432,10 +432,10 @@ parse_opt(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 
 	while (opt->idx != OPT_NUM) {
 		if (!strcasecmp(key, opt->name)) {
-			popt->isset[opt->idx] = true;
 			status = parse_val(popt, opt->idx, val);
 			if (status != PARSE_OK)
 				return parse_error(ctx, opt, val, status);
+			popt->isset[opt->idx] = true;
 			return ADDRXLAT_OK;
 		}
 
