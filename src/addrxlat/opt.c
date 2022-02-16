@@ -169,28 +169,15 @@ strtoas(const char *str, char **endptr)
 	return ADDRXLAT_NOADDR;
 }
 
-/** Type of option. */
-enum opttype {
-	opt_string,		/**< Unparsed string option */
-	opt_number,		/**< Signed number */
-	opt_bool,		/**< Boolean value */
-	opt_addr,		/**< Simple address or offset */
-	opt_fulladdr,		/**< Full address */
-};
-
 /** Option description. */
 struct optdesc {
 	enum optidx idx;	/**< Option index */
-	enum opttype type;	/**< Type of option (string, number, ...) */
-	size_t off;		/**< Field offset in @ref parsed_opts */
 	const char name[];	/**< Option name */
 };
 
 /** Define an option without repeating its name. */
-#define DEF(name, type)				\
-	{ { OPT_ ## name, opt_ ## type, offsetof(struct parsed_opts, name) }, \
-	  #name,				\
-	}
+#define DEF(name)				\
+	{ { OPT_ ## name, }, #name }
 
 /** Option table terminator. */
 #define END					\
@@ -201,7 +188,7 @@ static const struct {
 	struct optdesc opt;
 	char name[7];
 } opt6[] = {
-	DEF(levels, number),
+	DEF(levels),
 	END
 };
 
@@ -210,7 +197,7 @@ static const struct {
 	struct optdesc opt;
 	char name[8];
 } opt7[] = {
-	DEF(rootpgt, fulladdr),
+	DEF(rootpgt),
 	END
 };
 
@@ -219,8 +206,8 @@ static const struct {
 	struct optdesc opt;
 	char name[9];
 } opt8[] = {
-	DEF(pagesize, number),
-	DEF(xen_xlat, bool),
+	DEF(pagesize),
+	DEF(xen_xlat),
 	END
 };
 
@@ -229,7 +216,7 @@ static const struct {
 	struct optdesc opt;
 	char name[10];
 } opt9[] = {
-	DEF(phys_base, addr),
+	DEF(phys_base),
 	END
 };
 
@@ -238,7 +225,7 @@ static const struct {
 	struct optdesc opt;
 	char name[12];
 } opt11[] = {
-	DEF(xen_p2m_mfn, number),
+	DEF(xen_p2m_mfn),
 	END
 };
 
@@ -365,35 +352,37 @@ static addrxlat_status
 parse_val(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 	  const struct optdesc *opt, const char *val)
 {
-	void *field = ((void*)popt) + opt->off;
-	char *endp;
 	parse_status status;
 
-	switch (opt->type) {
-	case opt_string:
-		*(const char**)field = val;
-		return ADDRXLAT_OK;
-
-	case opt_bool:
-		status = parse_bool(val, (bool*)field);
+	switch (opt->idx) {
+	case OPT_levels:
+		status = parse_number(val, &popt->levels);
 		break;
 
-	case opt_number:
-		status = parse_number(val, (long*)field);
+	case OPT_pagesize:
+		status = parse_number(val, &popt->pagesize);
 		break;
 
-	case opt_addr:
-		status = parse_addr(val, (addrxlat_addr_t*)field);
+	case OPT_phys_base:
+		status = parse_addr(val, &popt->phys_base);
 		break;
 
-	case opt_fulladdr:
-		status = parse_fulladdr(val, (addrxlat_fulladdr_t*)field);
+	case OPT_rootpgt:
+		status = parse_fulladdr(val, &popt->rootpgt);
+		break;
+
+	case OPT_xen_p2m_mfn:
+		status = parse_number(val, &popt->xen_p2m_mfn);
+		break;
+
+	case OPT_xen_xlat:
+		status = parse_bool(val, &popt->xen_xlat);
 		break;
 
 	default:
 		return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
-				 "Unknown option type: %u",
-				 (unsigned) opt->type);
+				 "Unknown option: %u",
+				 (unsigned) opt->idx);
 	}
 
 	switch (status) {
