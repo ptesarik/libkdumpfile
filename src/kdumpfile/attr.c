@@ -574,6 +574,11 @@ create_attr_path(struct attr_dict *dict, struct attr_data *dir,
 	return attr;
 }
 
+/** Copy attribute data.
+ * @param dest  Destination attribute.
+ * @param src   Source attribute.
+ * @returns     @c true on success, @c false on allocation failure
+ */
 static bool
 copy_data(struct attr_data *dest, const struct attr_data *src)
 {
@@ -611,9 +616,9 @@ copy_data(struct attr_data *dest, const struct attr_data *src)
  * @param attr    Attribute to be cloned.
  * @returns       Attribute data, or @c NULL on allocation failure.
  *
- * Look up the attribute @p path under @p dir. If the attribute does not
- * exist yet, create it with type @p type. If @p path contains dots, then
- * all path elements are also created as necessary.
+ * Make a copy of @p attr in the target dictionary @p dict. Make sure
+ * that all path components of the new target are also cloned in the
+ * target dictionary.
  */
 struct attr_data *
 clone_attr_path(struct attr_dict *dict, struct attr_data *orig)
@@ -622,6 +627,7 @@ clone_attr_path(struct attr_dict *dict, struct attr_data *orig)
 	const char *p, *endp, *endpath;
 	size_t pathlen;
 	struct attr_data *attr;
+	struct attr_data *base;
 
 	pathlen = attr_pathlen(orig) + 1;
 	path = alloca(pathlen + 1);
@@ -636,17 +642,21 @@ clone_attr_path(struct attr_dict *dict, struct attr_data *orig)
 			break;
 		}
 
+	base = attr;
 	while (endp && endp != endpath) {
+		struct attr_data *newattr;
+
 		p = endp + 1;
 		endp = memchr(p, '.', endpath - p);
 		orig = endp
 			? lookup_attr_part(dict, path + 1, endp - path - 1)
 			: lookup_attr(dict, path + 1);
-		attr = new_attr(dict, attr, orig->template);
-		if (!attr)
-			return NULL;
+		newattr = new_attr(dict, attr, orig->template);
+		if (!newattr)
+			goto err;
+		attr = newattr;
 		if (attr_isset(orig) && !copy_data(attr, orig))
-			return NULL;
+			goto err;
 
 		/* If this is a global attribute, update global_attrs[] */
 		if (attr->template >= global_keys &&
@@ -657,6 +667,14 @@ clone_attr_path(struct attr_dict *dict, struct attr_data *orig)
 	}
 
 	return attr;
+
+ err:
+	while (attr != base) {
+		struct attr_data *next = attr->parent;
+		dealloc_attr(attr);
+		attr = next;
+	}
+	return NULL;
 }
 
 /**  Instantiate a directory path.
