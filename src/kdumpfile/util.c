@@ -164,12 +164,6 @@ mem_hash(const char *s, size_t len)
 	return hash;
 }
 
-unsigned long
-string_hash(const char *s)
-{
-	return mem_hash(s, strlen(s));
-}
-
 /**  Update a partial hash with a memory area.
  * @param[in,out] ph     Partial hash state.
  * @param[in]     s      Start of memory area with new data to be hashed.

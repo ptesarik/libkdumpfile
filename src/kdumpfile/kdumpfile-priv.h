@@ -828,7 +828,6 @@ INTERNAL_DECL(kdump_status, create_xen_cpu_regs,
 	       struct derived_attr_def *def, unsigned ndef));
 
 /* hashing */
-INTERNAL_DECL(unsigned long, string_hash, (const char *s));
 INTERNAL_DECL(unsigned long, mem_hash, (const char *s, size_t len));
 
 /**  Partial hash.
