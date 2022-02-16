@@ -74,7 +74,10 @@ noinst_HEADERS = \
 dist_noinst_DATA = \
 	libkdumpfile.map
 
-check_PROGRAMS = test-fcache test-blob
+check_PROGRAMS = \
+	test-blob \
+	test-clone-attr \
+	test-fcache
 
 test_fcache_LDFLAGS = -static
 test_fcache_LDADD = libkdumpfile.la -ldl
@@ -82,8 +85,12 @@ test_fcache_LDADD = libkdumpfile.la -ldl
 test_blob_LDFLAGS = -static
 test_blob_LDADD = libkdumpfile.la -ldl
 
+test_clone_attr_LDFLAGS = -static
+test_clone_attr_LDADD = libkdumpfile.la -ldl
+
 TESTS = \
 	test-blob \
+	test-clone-attr \
 	test-fcache
 
 clean-local:

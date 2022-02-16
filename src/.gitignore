@@ -1,4 +1,6 @@
 # Test binaries
+test-blob
+test-clone-attr
 test-fcache
 
 # Test results
