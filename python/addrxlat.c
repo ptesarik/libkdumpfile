@@ -5422,6 +5422,30 @@ _addrxlat_strerror(PyObject *self, PyObject *args, PyObject *kwargs)
 	return Text_FromUTF8(addrxlat_strerror(status));
 }
 
+PyDoc_STRVAR(_addrxlat_addrspace_name__doc__,
+"addrspace_name(addrspace) -> name\n\
+\n\
+Return the name of an address space constant.");
+
+/** Wrapper for @ref addrxlat_addrspace_name
+ * @param self    module object
+ * @param args    positional arguments
+ * @param kwargs  keyword arguments
+ * @returns       error message string (or @c NULL on failure)
+ */
+static PyObject *
+_addrxlat_addrspace_name(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+	static char *keywords[] = {"addrspace", NULL};
+	long addrspace;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "l",
+					 keywords, &addrspace))
+		return NULL;
+
+	return Text_FromUTF8(addrxlat_addrspace_name(addrspace));
+}
+
 PyDoc_STRVAR(_addrxlat_CAPS__doc__,
 "CAPS(addrspace) -> capability bitmask\n\
 \n\
@@ -5548,6 +5572,9 @@ static PyMethodDef addrxlat_methods[] = {
 	{ "strerror", (PyCFunction)_addrxlat_strerror,
 	  METH_VARARGS | METH_KEYWORDS,
 	  _addrxlat_strerror__doc__ },
+	{ "addrspace_name", (PyCFunction)_addrxlat_addrspace_name,
+	  METH_VARARGS | METH_KEYWORDS,
+	  _addrxlat_addrspace_name__doc__ },
 	{ "CAPS", (PyCFunction)_addrxlat_CAPS, METH_VARARGS | METH_KEYWORDS,
 	  _addrxlat_CAPS__doc__ },
 	{ "VER_LINUX", (PyCFunction)_addrxlat_VER_LINUX,

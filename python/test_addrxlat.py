@@ -8,6 +8,19 @@ import sys
 if (sys.version_info.major >= 3):
     xrange = range
 
+class TestAddressSpace(unittest.TestCase):
+    names = (
+        'KPHYSADDR',
+        'MACHPHYSADDR',
+        'KVADDR',
+        'NOADDR',
+    )
+
+    def test_addrspace_name(self):
+        for name in self.names:
+            self.assertEqual(addrxlat.addrspace_name(addrxlat.__dict__[name]),
+                             name)
+
 class TestFullAddress(unittest.TestCase):
     def test_fulladdr_defaults(self):
         addr = addrxlat.FullAddress()
