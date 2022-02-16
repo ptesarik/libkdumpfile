@@ -71,14 +71,21 @@ dump_data(kdump_ctx_t *ctx, unsigned long long addr, unsigned long long len)
 	size_t sz, remain;
 	kdump_status res;
 	int iserr;
+	kdump_num_t rootas;
+	kdump_addr_t rootaddr;
 	int rc = TEST_OK;
 
-	res = kdump_get_string_attr(ctx, KDUMP_ATTR_XLAT_OPTS_POST, &opts);
+	res = kdump_get_number_attr(
+		ctx, KDUMP_ATTR_XLAT_FORCE ".rootpgt.as", &rootas);
 	if (res == KDUMP_OK)
-		printf("%s\n", opts);
+		res = kdump_get_address_attr(
+			ctx, KDUMP_ATTR_XLAT_FORCE ".rootpgt.addr", &rootaddr);
+	if (res == KDUMP_OK)
+		printf("rootpgt=%s:0x%" KDUMP_PRIxADDR "\n",
+		       addrxlat_addrspace_name(rootas), rootaddr);
 	else
 		fprintf(stderr, "WARNING: Cannot get %s: %s\n",
-			KDUMP_ATTR_XLAT_OPTS_POST, kdump_get_err(ctx));
+			KDUMP_ATTR_XLAT_FORCE ".rootpgt", kdump_get_err(ctx));
 
 	iserr = 0;
 	while (len > 0) {
@@ -119,17 +126,24 @@ dump_data(kdump_ctx_t *ctx, unsigned long long addr, unsigned long long len)
 static int
 dump_ctx(kdump_ctx_t *ctx, unsigned long long rootpgt)
 {
-	char opts[256];
+	const char *key;
 	kdump_status res;
 
-	sprintf(opts, "rootpgt=MACHPHYSADDR:0x%llx", rootpgt);
-	res = kdump_set_string_attr(ctx, KDUMP_ATTR_XLAT_OPTS_POST, opts);
-	if (res != KDUMP_OK) {
-		fprintf(stderr, "Cannot set option: %s\n", kdump_get_err(ctx));
-		return TEST_ERR;
-	}
+	key = KDUMP_ATTR_XLAT_FORCE ".rootpgt.as";
+	res = kdump_set_number_attr(ctx, key, ADDRXLAT_MACHPHYSADDR);
+	if (res != KDUMP_OK)
+		goto err_set;
+
+	key = KDUMP_ATTR_XLAT_FORCE ".rootpgt.addr";
+	res = kdump_set_address_attr(ctx, key, rootpgt);
+	if (res != KDUMP_OK)
+		goto err_set;
 
 	return dump_data(ctx, addr, len);
+
+ err_set:
+	fprintf(stderr, "Cannot set %s: %s\n", key, kdump_get_err(ctx));
+	return TEST_ERR;
 }
 
 static int
