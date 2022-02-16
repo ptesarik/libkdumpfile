@@ -34,9 +34,6 @@ ATTR(arch, "pteval_size", pteval_size, number, size_t)
 ATTR(root, "addrxlat", dir_addrxlat, directory, struct attr_data *)
 ATTR(addrxlat, "default", dir_xlat_default, directory, struct attr_data *)
 ATTR(addrxlat, "force", dir_xlat_force, directory, struct attr_data *)
-ATTR(addrxlat, "opts", dir_xlat_opts, directory, struct attr_data *)
-ATTR(xlat_opts, "pre", xlat_opts_pre, string, const char *, .ops = &dirty_xlat_ops)
-ATTR(xlat_opts, "post", xlat_opts_post, string, const char *, .ops = &dirty_xlat_ops)
 ATTR(addrxlat, "ostype", ostype, string, const char *, .ops = &ostype_ops)
 
 /* cache */

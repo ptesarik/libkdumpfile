@@ -965,14 +965,6 @@ void kdump_attr_iter_end(kdump_ctx_t *ctx, kdump_attr_iter_t *iter);
  */
 #define KDUMP_ATTR_XLAT_FORCE		"addrxlat.force"
 
-/** Prepended libaddrxlat options.
- */
-#define KDUMP_ATTR_XLAT_OPTS_PRE	"addrxlat.opts.pre"
-
-/** Appended libaddrxlat options.
- */
-#define KDUMP_ATTR_XLAT_OPTS_POST	"addrxlat.opts.post"
-
 /** Xen dump type file attribute.
  * @sa kdump_xen_type_t
  */

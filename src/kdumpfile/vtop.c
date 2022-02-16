@@ -319,32 +319,6 @@ add_addrxlat_opts(kdump_ctx_t *ctx, struct opts *opts,
 	}
 }
 
-static kdump_status
-add_attr_opt(kdump_ctx_t *ctx, struct opts *opts, enum global_keyidx key)
-{
-	struct attr_data *attr;
-	char *opt;
-	kdump_status status;
-
-	attr = gattr(ctx, key);
-	if (!attr_isset(attr))
-		return KDUMP_OK;
-	status = attr_revalidate(ctx, attr);
-	if (status != KDUMP_OK)
-		return set_error(ctx, status,
-				 "Cannot get the value of addrxlat %s option",
-				 attr->template->key);
-
-	opt = strdup(attr_value(attr)->string);
-	if (!opt)
-		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot allocate addrxlat %s option",
-				 attr->template->key);
-
-	opts->str[opts->n++] = opt;
-	return KDUMP_OK;
-}
-
 /**  Add "pagesize=" addrxlat option if page size is known.
  * @param ctx   Dump file object.
  * @param opts  Options.
@@ -533,8 +507,6 @@ vtop_init(kdump_ctx_t *ctx)
 	opts.n = 0;
 	status = add_addrxlat_opts(ctx, &opts, GKI_dir_xlat_default);
 	if (status == KDUMP_OK)
-		status = add_attr_opt(ctx, &opts, GKI_xlat_opts_pre);
-	if (status == KDUMP_OK)
 		status = set_page_size_opt(ctx, &opts);
 	if (status == KDUMP_OK) {
 		if (ctx->xlat->ostype == ADDRXLAT_OS_LINUX)
@@ -542,8 +514,6 @@ vtop_init(kdump_ctx_t *ctx)
 		else if (ctx->xlat->ostype == ADDRXLAT_OS_XEN)
 			status = set_xen_opts(ctx, &opts);
 	}
-	if (status == KDUMP_OK)
-		status = add_attr_opt(ctx, &opts, GKI_xlat_opts_post);
 	if (status == KDUMP_OK)
 		status = add_addrxlat_opts(ctx, &opts, GKI_dir_xlat_force);
 	if (status != KDUMP_OK) {

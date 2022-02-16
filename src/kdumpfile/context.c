@@ -207,8 +207,6 @@ static bool
 clone_xlat_attrs(struct attr_dict *dest, const struct attr_dict *orig)
 {
 	static const enum global_keyidx globals[] = {
-		GKI_xlat_opts_pre,
-		GKI_xlat_opts_post,
 		GKI_dir_xlat_default,
 		GKI_dir_xlat_force,
 		GKI_ostype,
