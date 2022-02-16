@@ -256,6 +256,104 @@ static const struct {
 	DEFPTR(11),
 };
 
+/** Result of parsing a single value. */
+typedef enum {
+	PARSE_OK,		/**< Success. */
+	PARSE_NOVAL,		/**< Missing value. */
+	PARSE_BADVAL,		/**< Invalid value. */
+}  parse_status;
+
+/** Parse a boolean option value.
+ * @param str[in]   String value.
+ * @param var[out]  Output variable.
+ * @returns         Error status.
+ */
+static parse_status
+parse_bool(const char *str, bool *var)
+{
+	char *endp;
+
+	if (!str ||
+	    !strcasecmp(str, "yes") ||
+	    !strcasecmp(str, "true")) {
+		*var = true;
+	} else if (!strcasecmp(str, "no") ||
+		   !strcasecmp(str, "false")) {
+		*var = false;
+	} else {
+		*var = !!strtol(str, &endp, 0);
+		if (!*str || *endp)
+			return PARSE_BADVAL;
+	}
+
+	return PARSE_OK;
+}
+
+/** Parse a number option value.
+ * @param str[in]   String value.
+ * @param var[out]  Output variable.
+ * @returns         Error status.
+ */
+static parse_status
+parse_number(const char *str, long *var)
+{
+	char *endp;
+
+	if (!str)
+		return PARSE_NOVAL;
+
+	*var = strtol(str, &endp, 0);
+	if (!*str || *endp)
+		return PARSE_BADVAL;
+
+	return PARSE_OK;
+}
+
+/** Parse an address option value.
+ * @param str[in]   String value.
+ * @param var[out]  Output variable.
+ * @returns         Error status.
+ */
+static parse_status
+parse_addr(const char *str, addrxlat_addr_t *var)
+{
+	char *endp;
+
+	if (!str)
+		return PARSE_NOVAL;
+
+	*var = strtoull(str, &endp, 0);
+	if (!*str || *endp)
+		return PARSE_BADVAL;
+
+	return PARSE_OK;
+}
+
+/** Parse a full address option value.
+ * @param str[in]   String value.
+ * @param var[out]  Output variable.
+ * @returns         Error status.
+ */
+static parse_status
+parse_fulladdr(const char *str, addrxlat_fulladdr_t *var)
+{
+	char *endp;
+
+	if (!str)
+		return PARSE_NOVAL;
+
+	var->as = strtoas(str, &endp);
+	if (*str == ':' || *endp != ':')
+		return PARSE_BADVAL;
+
+	str = endp + 1;
+	var->addr = strtoull(str, &endp, 0);
+	if (!*str || *endp)
+		return PARSE_BADVAL;
+
+	return PARSE_OK;
+}
+
 /** Parse a single option value.
  * @param popt   Parsed options.
  * @param ctx    Translation context (for error handling).
@@ -269,61 +367,27 @@ parse_val(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 {
 	void *field = ((void*)popt) + opt->off;
 	char *endp;
+	parse_status status;
 
 	switch (opt->type) {
 	case opt_string:
 		*(const char**)field = val;
-		break;
+		return ADDRXLAT_OK;
 
 	case opt_bool:
-		if (!val ||
-		    !strcasecmp(val, "yes") ||
-		    !strcasecmp(val, "true")) {
-			*(bool*)field = 1;
-			break;
-		} else if (!strcasecmp(val, "no") ||
-			   !strcasecmp(val, "false")) {
-			*(bool*)field = 0;
-			break;
-		}
-		*(bool*)field = !!strtol(val, &endp, 0);
-		if (!*val || *endp)
-			goto err_badval;
+		status = parse_bool(val, (bool*)field);
 		break;
 
 	case opt_number:
-		if (!val)
-			goto err_noval;
-
-		*(long*)field = strtol(val, &endp, 0);
-		if (!*val || *endp)
-			goto err_badval;
-
+		status = parse_number(val, (long*)field);
 		break;
 
 	case opt_addr:
-		if (!val)
-			goto err_noval;
-
-		*(addrxlat_addr_t*)field = strtoull(val, &endp, 0);
-		if (!*val || *endp)
-			goto err_badval;
-
+		status = parse_addr(val, (addrxlat_addr_t*)field);
 		break;
 
 	case opt_fulladdr:
-		if (!val)
-			goto err_noval;
-
-		((addrxlat_fulladdr_t*)field)->as = strtoas(val, &endp);
-		if (*val == ':' || *endp != ':')
-			goto err_badval;
-
-		val = endp + 1;
-		((addrxlat_fulladdr_t*)field)->addr = strtoull(val, &endp, 0);
-		if (!*val || *endp)
-			goto err_badval;
-
+		status = parse_fulladdr(val, (addrxlat_fulladdr_t*)field);
 		break;
 
 	default:
@@ -332,16 +396,21 @@ parse_val(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 				 (unsigned) opt->type);
 	}
 
+	switch (status) {
+	case PARSE_NOVAL:
+		return set_error(ctx, ADDRXLAT_ERR_INVALID,
+				 "Missing value for option '%s'", opt->name);
+
+	case PARSE_BADVAL:
+		return set_error(ctx, ADDRXLAT_ERR_INVALID,
+				 "'%s' is not a valid value for option '%s'",
+				 val, opt->name);
+
+	default:
+		break;
+	}
+
 	return ADDRXLAT_OK;
-
- err_noval:
-	return set_error(ctx, ADDRXLAT_ERR_INVALID,
-			 "Missing value for option '%s'", opt->name);
-
- err_badval:
-	return set_error(ctx, ADDRXLAT_ERR_INVALID,
-			 "'%s' is not a valid value for option '%s'",
-			 val, opt->name);
 }
 
 /** Parse a single option.
