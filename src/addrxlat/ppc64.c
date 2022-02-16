@@ -361,7 +361,10 @@ map_linux_ppc64(struct os_init_data *ctl)
 	addrxlat_meth_t *meth;
 	addrxlat_status status;
 
-	pagesize = opt_num_default(&ctl->popt, OPT_pagesize, _64K);
+	pagesize = ctl->popt.isset[OPT_pagesize]
+		? ctl->popt.val[OPT_pagesize].num
+		: _64K;
+
 	if (pagesize != _64K)
 		return set_error(ctl->ctx, ADDRXLAT_ERR_NOTIMPL,
 				 "Unsupported page size: %ld", pagesize);
