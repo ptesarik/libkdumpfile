@@ -611,6 +611,35 @@ copy_data(struct attr_data *dest, const struct attr_data *src)
 	}
 }
 
+/** Clone an attribute.
+ * @param dict    Destination attribute dictionary.
+ * @param dir     Target attribute directory.
+ * @param orig    Attribute to be cloned.
+ * @returns       Attribute data, or @c NULL on allocation failure.
+ */
+static struct attr_data *
+clone_attr(struct attr_dict *dict, struct attr_data *dir,
+	   struct attr_data *orig)
+{
+	struct attr_data *newattr;
+
+	newattr = new_attr(dict, dir, orig->template);
+	if (!newattr)
+		return NULL;
+
+	if (attr_isset(orig) && !copy_data(newattr, orig))
+		return NULL;
+
+	/* If this is a global attribute, update global_attrs[] */
+	if (newattr->template >= global_keys &&
+	    newattr->template < &global_keys[NR_GLOBAL_ATTRS]) {
+		enum global_keyidx idx = newattr->template - global_keys;
+		dict->global_attrs[idx] = newattr;
+	}
+
+	return newattr;
+}
+
 /** Clone an attribute including full path.
  * @param dict    Destination attribute dictionary.
  * @param orig    Attribute to be cloned.
@@ -651,19 +680,10 @@ clone_attr_path(struct attr_dict *dict, struct attr_data *orig)
 		orig = endp
 			? lookup_attr_part(dict, path + 1, endp - path - 1)
 			: lookup_attr(dict, path + 1);
-		newattr = new_attr(dict, attr, orig->template);
+		newattr = clone_attr(dict, attr, orig);
 		if (!newattr)
 			goto err;
 		attr = newattr;
-		if (attr_isset(orig) && !copy_data(attr, orig))
-			goto err;
-
-		/* If this is a global attribute, update global_attrs[] */
-		if (attr->template >= global_keys &&
-		    attr->template < &global_keys[NR_GLOBAL_ATTRS]) {
-			enum global_keyidx idx = attr->template - global_keys;
-			dict->global_attrs[idx] = attr;
-		}
 	}
 
 	if (orig->template->type == KDUMP_DIRECTORY) {
