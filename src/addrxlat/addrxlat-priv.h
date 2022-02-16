@@ -393,35 +393,13 @@ INTERNAL_DECL(addrxlat_status, highest_linear,
 
 /* Option parsing. */
 
-/** All options recognized by @ref parse_opts. */
-enum optidx {
-	OPT_levels,		/**< Number of page table levels. */
-	OPT_pagesize,		/**< Page size (number). */
-	OPT_phys_base,		/**< [x86-64] Linux physical base address. */
-	OPT_rootpgt,		/**< Root page table address. */
-	OPT_xen_p2m_mfn,	/**< Xen p2m root machine frame number. */
-	OPT_xen_xlat,		/**< Use Xen m2p and p2m translation. */
-
-	OPT_NUM			/**< Total number of options. */
-};
-
-/** Single option value. */
-union optval {
-	const char *str;	/**< String(-like) values. */
-	long num;		/**< Number(-like) values. */
-	addrxlat_addr_t addr;	/**< Simple address or offset. */
-
-	/** Full address (with address space).*/
-	addrxlat_fulladdr_t fulladdr;
-};
-
 /** This structure holds parsed options. */
 struct parsed_opts {
 	/** Buffer for parsed option values. */
 	char *buf;
 
 	/** Set/unset flag for each option. */
-	bool isset[OPT_NUM];
+	bool isset[ADDRXLAT_OPT_NUM];
 
 	unsigned long levels;		/**< Value of OPT_levels. */
 	unsigned long pagesize;		/**< Value of OPT_pagesize. */
@@ -432,7 +410,7 @@ struct parsed_opts {
 };
 
 /** Check whether an option is set, using its bare name. */
-#define opt_isset(popt, name)	((popt).isset[OPT_ ## name])
+#define opt_isset(popt, name)	((popt).isset[ADDRXLAT_OPT_ ## name])
 
 INTERNAL_DECL(addrxlat_status, parse_opts,
 	      (struct parsed_opts *popt, addrxlat_ctx_t *ctx,

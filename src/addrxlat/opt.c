@@ -171,17 +171,17 @@ strtoas(const char *str, char **endptr)
 
 /** Option description. */
 struct optdesc {
-	enum optidx idx;	/**< Option index */
+	addrxlat_optidx_t idx;	/**< Option index */
 	const char name[];	/**< Option name */
 };
 
 /** Define an option without repeating its name. */
 #define DEF(name)				\
-	{ { OPT_ ## name, }, #name }
+	{ { ADDRXLAT_OPT_ ## name, }, #name }
 
 /** Option table terminator. */
 #define END					\
-	{ { OPT_NUM } }
+	{ { ADDRXLAT_OPT_NUM } }
 
 /** Six-character options. */
 static const struct {
@@ -251,10 +251,10 @@ typedef enum {
 	PARSE_BADVAL,		/**< Invalid value. */
 }  parse_status;
 
-#define NAME(name)	[OPT_ ## name] = #name
+#define NAME(name)	[ADDRXLAT_OPT_ ## name] = #name
 
 /** Human-readable option names. */
-static const char optnames[OPT_NUM][16] = {
+static const char optnames[ADDRXLAT_OPT_NUM][16] = {
 	NAME(levels),
 	NAME(pagesize),
 	NAME(phys_base),
@@ -361,25 +361,25 @@ parse_fulladdr(const char *str, addrxlat_fulladdr_t *var)
  * @returns      Error status.
  */
 static parse_status
-parse_val(struct parsed_opts *popt, enum optidx opt, const char *val)
+parse_val(struct parsed_opts *popt, addrxlat_optidx_t opt, const char *val)
 {
 	switch (opt) {
-	case OPT_levels:
+	case ADDRXLAT_OPT_levels:
 		return parse_number(val, &popt->levels);
 
-	case OPT_pagesize:
+	case ADDRXLAT_OPT_pagesize:
 		return parse_number(val, &popt->pagesize);
 
-	case OPT_phys_base:
+	case ADDRXLAT_OPT_phys_base:
 		return parse_addr(val, &popt->phys_base);
 
-	case OPT_rootpgt:
+	case ADDRXLAT_OPT_rootpgt:
 		return parse_fulladdr(val, &popt->rootpgt);
 
-	case OPT_xen_p2m_mfn:
+	case ADDRXLAT_OPT_xen_p2m_mfn:
 		return parse_number(val, &popt->xen_p2m_mfn);
 
-	case OPT_xen_xlat:
+	case ADDRXLAT_OPT_xen_xlat:
 		return parse_bool(val, &popt->xen_xlat);
 
 	default:
@@ -395,7 +395,7 @@ parse_val(struct parsed_opts *popt, enum optidx opt, const char *val)
  * @returns      Error status.
  */
 static addrxlat_status
-parse_error(addrxlat_ctx_t *ctx, enum optidx opt,
+parse_error(addrxlat_ctx_t *ctx, addrxlat_optidx_t opt,
 	    const char *val, parse_status err)
 {
 	switch (err) {
@@ -441,7 +441,7 @@ parse_opt(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 	if (!opt)
 		goto err;
 
-	while (opt->idx != OPT_NUM) {
+	while (opt->idx != ADDRXLAT_OPT_NUM) {
 		if (!strcasecmp(key, opt->name)) {
 			status = parse_val(popt, opt->idx, val);
 			if (status != PARSE_OK)
@@ -466,12 +466,12 @@ parse_opt(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 addrxlat_status
 parse_opts(struct parsed_opts *popt, addrxlat_ctx_t *ctx, const char *opts)
 {
-	enum optidx idx;
+	addrxlat_optidx_t idx;
 	const char *p;
 	char *dst;
 	addrxlat_status status;
 
-	for (idx = 0; idx < OPT_NUM; ++idx)
+	for (idx = 0; idx < ADDRXLAT_OPT_NUM; ++idx)
 		popt->isset[idx] = false;
 
 	if (!opts)

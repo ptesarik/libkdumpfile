@@ -809,6 +809,60 @@ typedef enum _addrxlat_ostype {
 	ADDRXLAT_OS_XEN,	/**< Xen hypervisor. */
 } addrxlat_ostype_t;
 
+/** Option number. */
+typedef enum _addrxlat_optidx {
+	/** Number of page table levels.
+	 * Type: number
+	 */
+	ADDRXLAT_OPT_levels,
+
+	/** Page size.
+	 * Type: number
+	 */
+	ADDRXLAT_OPT_pagesize,
+
+	/** Physical base address.
+	 * Type: address
+	 *
+	 * Either the physical base address of an x86-64 Linux kernel,
+	 * or the physical start address of an x86-64 Xen hypervisor.
+	 */
+	ADDRXLAT_OPT_phys_base,
+
+	/** Root page table address.
+	 * Type: full address
+	 */
+	ADDRXLAT_OPT_rootpgt,
+
+	/** Xen p2m root machine frame number.
+	 * Type: address
+	 */
+	ADDRXLAT_OPT_xen_p2m_mfn,
+
+	/** Force the use of Xen m2p and p2m translation.
+	 * Type: number
+	 */
+	ADDRXLAT_OPT_xen_xlat,
+
+	/** Total number of addrxlat options. */
+	ADDRXLAT_OPT_NUM
+} addrxlat_optidx_t;
+
+/** Single option value. */
+typedef union _addrxlat_optval {
+	/** String(-like) values. */
+	const char *str;
+
+	/** Number(-like) values. */
+	unsigned long num;
+
+	/** Simple address or offset. */
+	addrxlat_addr_t addr;
+
+	/** Full address (with address space).*/
+	addrxlat_fulladdr_t fulladdr;
+} addrxlat_optval_t;
+
 /** Description of an operating system.
  * This structure is used to pass some details about the operating system
  * to set up a translation map.
