@@ -293,7 +293,7 @@ sys_ia32_nonpae(struct os_init_data *ctl)
 	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	meth->kind = ADDRXLAT_PGT;
 	meth->target_as = ADDRXLAT_MACHPHYSADDR;
-	if (ctl->popt.val[OPT_rootpgt].set)
+	if (ctl->popt.isset[OPT_rootpgt])
 		meth->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
 	else
 		meth->param.pgt.root.as = ADDRXLAT_NOADDR;
@@ -319,7 +319,7 @@ sys_ia32_pae(struct os_init_data *ctl)
 	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	meth->kind = ADDRXLAT_PGT;
 	meth->target_as = ADDRXLAT_MACHPHYSADDR;
-	if (ctl->popt.val[OPT_rootpgt].set)
+	if (ctl->popt.isset[OPT_rootpgt])
 		meth->param.pgt.root = ctl->popt.val[OPT_rootpgt].fulladdr;
 	else
 		meth->param.pgt.root.as = ADDRXLAT_NOADDR;
@@ -486,7 +486,6 @@ sys_ia32(struct os_init_data *ctl)
 
 	addrxlat_range_t range;
 	addrxlat_map_t *newmap;
-	struct optval *rootpgtopt;
 	long levels;
 	addrxlat_status status;
 
@@ -498,11 +497,11 @@ sys_ia32(struct os_init_data *ctl)
 					 "Cannot set up directmap");
 	}
 
-	rootpgtopt = &ctl->popt.val[OPT_rootpgt];
-
 	status = ADDRXLAT_OK;
-	if (!ctl->popt.val[OPT_levels].set) {
-		if (!rootpgtopt->set)
+	if (!ctl->popt.isset[OPT_levels]) {
+		union optval *rootpgtopt = &ctl->popt.val[OPT_rootpgt];
+
+		if (!ctl->popt.isset[OPT_rootpgt])
 			status = check_pae_sym(ctl);
 		else if (ctl->osdesc->type == ADDRXLAT_OS_LINUX)
 			status = check_pae(ctl, &rootpgtopt->fulladdr,

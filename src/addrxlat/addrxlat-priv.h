@@ -39,6 +39,8 @@
 #include "../internal.h"
 #include "../errmsg.h"
 
+#include <stdbool.h>
+
 /* Older glibc didn't have the byteorder macros */
 #ifndef be16toh
 
@@ -404,16 +406,13 @@ enum optidx {
 };
 
 /** Single option value. */
-struct optval {
-	unsigned char set;	/**< Non-zero if the option was specified. */
-	union {
-		const char *str;	/**< String(-like) values. */
-		long num;		/**< Number(-like) values. */
-		addrxlat_addr_t addr;  /**< Simple address or offset. */
+union optval {
+	const char *str;	/**< String(-like) values. */
+	long num;		/**< Number(-like) values. */
+	addrxlat_addr_t addr;	/**< Simple address or offset. */
 
-		/** Full address (with address space).*/
-		addrxlat_fulladdr_t fulladdr;
-	};
+	/** Full address (with address space).*/
+	addrxlat_fulladdr_t fulladdr;
 };
 
 /** This structure holds parsed options. */
@@ -421,8 +420,11 @@ struct parsed_opts {
 	/** Buffer for parsed option values. */
 	char *buf;
 
+	/** Set/unset flag for each option. */
+	bool isset[OPT_NUM];
+
 	/** Parsed option values. */
-	struct optval val[OPT_NUM];
+	union optval val[OPT_NUM];
 };
 
 INTERNAL_DECL(addrxlat_status, parse_opts,
@@ -437,7 +439,7 @@ INTERNAL_DECL(addrxlat_status, parse_opts,
 static inline long
 opt_num_default(const struct parsed_opts *opts, enum optidx idx, long def)
 {
-	return opts->val[idx].set ? opts->val[idx].num : def;
+	return opts->isset[idx] ? opts->val[idx].num : def;
 }
 
 /* Translation system */

@@ -264,7 +264,7 @@ static addrxlat_status
 parse_val(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 	  const struct optdesc *opt, const char *val)
 {
-	struct optval *optval = &popt->val[opt->idx];
+	union optval *optval = &popt->val[opt->idx];
 	char *endp;
 
 	switch (opt->type) {
@@ -326,7 +326,6 @@ parse_val(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 				 (unsigned) opt->type);
 	}
 
-	optval->set = 1;
 	return ADDRXLAT_OK;
 
  err_noval:
@@ -361,8 +360,11 @@ parse_opt(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 		goto err;
 
 	while (opt->idx != OPT_NUM) {
-		if (!strcasecmp(key, opt->name))
+		if (!strcasecmp(key, opt->name)) {
+			popt->isset[opt->idx] = true;
 			return parse_val(popt, ctx, opt, val);
+		}
+
 		opt = (void*)(opt) + options[klen].elemsz;
 	}
 
@@ -385,7 +387,7 @@ parse_opts(struct parsed_opts *popt, addrxlat_ctx_t *ctx, const char *opts)
 	addrxlat_status status;
 
 	for (idx = 0; idx < OPT_NUM; ++idx)
-		popt->val[idx].set = 0;
+		popt->isset[idx] = false;
 
 	if (!opts)
 		return ADDRXLAT_OK;
