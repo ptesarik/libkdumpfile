@@ -251,6 +251,18 @@ typedef enum {
 	PARSE_BADVAL,		/**< Invalid value. */
 }  parse_status;
 
+#define NAME(name)	[OPT_ ## name] = #name
+
+/** Human-readable option names. */
+static const char optnames[OPT_NUM][16] = {
+	NAME(levels),
+	NAME(pagesize),
+	NAME(phys_base),
+	NAME(rootpgt),
+	NAME(xen_p2m_mfn),
+	NAME(xen_xlat),
+};
+
 /** Parse a boolean option value.
  * @param str[in]   String value.
  * @param var[out]  Output variable.
@@ -377,30 +389,29 @@ parse_val(struct parsed_opts *popt, enum optidx opt, const char *val)
 
 /** Parse a single option.
  * @param ctx    Translation context.
- * @param opt    Option descriptor.
+ * @param opt    Option index.
  * @param val    Option value.
  * @param err    Parsing error code.
  * @returns      Error status.
  */
 static addrxlat_status
-parse_error(addrxlat_ctx_t *ctx, const struct optdesc *opt,
+parse_error(addrxlat_ctx_t *ctx, enum optidx opt,
 	    const char *val, parse_status err)
 {
 	switch (err) {
 	case PARSE_UNKNOWN:
 		return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
-				 "Unknown option: %u",
-				 (unsigned) opt->idx);
+				 "Unknown option: %u", (unsigned) opt);
 
 	case PARSE_NOVAL:
 		return set_error(ctx, ADDRXLAT_ERR_INVALID,
 				 "Missing value for option '%s'",
-				 opt->name);
+				 optnames[opt]);
 
 	case PARSE_BADVAL:
 		return set_error(ctx, ADDRXLAT_ERR_INVALID,
 				 "'%s' is not a valid value for option '%s'",
-				 val, opt->name);
+				 val, optnames[opt]);
 
 	default:
 		return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
@@ -434,7 +445,7 @@ parse_opt(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
 		if (!strcasecmp(key, opt->name)) {
 			status = parse_val(popt, opt->idx, val);
 			if (status != PARSE_OK)
-				return parse_error(ctx, opt, val, status);
+				return parse_error(ctx, opt->idx, val, status);
 			popt->isset[opt->idx] = true;
 			return ADDRXLAT_OK;
 		}
