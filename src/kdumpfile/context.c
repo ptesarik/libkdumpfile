@@ -177,11 +177,11 @@ kdump_new(void)
 
 	ctx->dict = attr_dict_new(ctx->shared);
 	if (!ctx->dict)
-		goto err_dict;
+		goto err_shared;
 
 	ctx->xlat = xlat_new();
 	if (!ctx->xlat)
-		goto err_xlat;
+		goto err_dict;
 	list_add(&ctx->xlat_list, &ctx->xlat->ctx);
 
 	for (i = 0; i < ARRAY_SIZE(numeric_attrs); ++i)
@@ -190,9 +190,9 @@ kdump_new(void)
 
 	return ctx;
 
- err_xlat:
-	attr_dict_decref(ctx->dict);
  err_dict:
+	attr_dict_decref(ctx->dict);
+ err_shared:
 	shared_decref(ctx->shared);
  err:
 	addrxlat_ctx_decref(ctx->xlatctx);
