@@ -31,6 +31,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <endian.h>
 
 #define TEST_OK     0
@@ -114,12 +115,14 @@ struct param {
 	const char *key;
 	enum {
 		param_string,
+		param_yesno,
 		param_number,
 		param_number_array,
 		param_blob,
 	} type;
 	union {
 		char **string;
+		bool *yesno;
 		unsigned long long *number;
 		struct number_array *number_array;
 		struct blob **blob;
@@ -133,6 +136,8 @@ struct params {
 
 #define PARAM_STRING(key, val) \
 	{ (key), param_string, { .string = &(val) } }
+#define PARAM_YESNO(key, val) \
+	{ (key), param_yesno, { .yesno = &(val) } }
 #define PARAM_NUMBER(key, val) \
 	{ (key), param_number, { .number = &(val) } }
 #define PARAM_NUMBER_ARRAY(key, val) \
