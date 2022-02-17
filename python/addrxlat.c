@@ -4200,7 +4200,7 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 		*rootpgt, *xen_p2m_mfn, *xen_xlat;
 	addrxlat_ctx_t *ctx;
 	addrxlat_osdesc_t osdesc;
-	char opts[200], *p;
+	addrxlat_opt_t opts[ADDRXLAT_OPT_NUM], *p;
 	addrxlat_status status;
 
 	type = ver = levels = pagesize = phys_base =
@@ -4230,31 +4230,40 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 		osdesc.ver = 0;
 
 	p = opts;
-	*p = 0;
 
-	if (levels && levels != Py_None)
-		p += sprintf(p, " levels=%llu",
-			     Number_AsUnsignedLongLong(levels));
-	if (pagesize && pagesize != Py_None)
-		p += sprintf(p, " pagesize=%llu",
-			     Number_AsUnsignedLongLong(pagesize));
-	if (phys_base && phys_base != Py_None)
-		p += sprintf(p, " phys_base=0x%llx",
-			     Number_AsUnsignedLongLong(phys_base));
+	if (levels && levels != Py_None) {
+		addrxlat_opt_levels(
+			p, Number_AsUnsignedLongLong(levels));
+		++p;
+	}
+	if (pagesize && pagesize != Py_None) {
+		addrxlat_opt_pagesize(
+			p, Number_AsUnsignedLongLong(pagesize));
+		++p;
+	}
+	if (phys_base && phys_base != Py_None) {
+		addrxlat_opt_phys_base(
+			p, Number_AsUnsignedLongLong(phys_base));
+		++p;
+	}
 	if (rootpgt && rootpgt != Py_None) {
 		addrxlat_fulladdr_t *faddr = fulladdr_AsPointer(rootpgt);
 		if (!faddr)
 			return NULL;
-		p += sprintf(p, " rootpgt=%s:0x%" ADDRXLAT_PRIxADDR,
-			     addrxlat_addrspace_name(faddr->as),
-			     faddr->addr);
+		addrxlat_opt_rootpgt(p, faddr);
+		++p;
 	}
-	if (xen_p2m_mfn && xen_p2m_mfn != Py_None)
-		p += sprintf(p, " xen_p2m_mfn=0x%llx",
-			     Number_AsUnsignedLongLong(xen_p2m_mfn));
-	if (xen_xlat && xen_xlat != Py_None && Number_AsLong(xen_xlat))
-		p += sprintf(p, " xen_xlat");
+	if (xen_p2m_mfn && xen_p2m_mfn != Py_None) {
+		addrxlat_opt_xen_p2m_mfn(
+			p, Number_AsUnsignedLongLong(xen_p2m_mfn));
+		++p;
+	}
+	if (xen_xlat && xen_xlat != Py_None && Number_AsLong(xen_xlat)) {
+		addrxlat_opt_xen_xlat(p, 1);
+		++p;
+	}
 
+	osdesc.optc = p - opts;
 	osdesc.opts = opts;
 	status = addrxlat_sys_os_init(self->sys, ctx, &osdesc);
 	return ctx_status_result(ctxobj, status);

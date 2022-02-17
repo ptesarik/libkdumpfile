@@ -216,65 +216,43 @@ static void clear_params(void)
 	xen_xlat = false;
 }
 
-static char *make_opts(void)
+static void make_opts(addrxlat_osdesc_t *osdesc)
 {
-	char *opts;
-	char *newopts;
-
-	opts = strdup("");
-	if (!opts)
-		goto err;
+	static addrxlat_opt_t opts[ADDRXLAT_OPT_NUM];
+	addrxlat_opt_t *opt = opts;
 
 	if (levels != ULLONG_MAX) {
-		asprintf(&newopts, "%s levels=%llu", opts, levels);
-		if (!newopts)
-			goto err;
-		opts = newopts;
+		addrxlat_opt_levels(opt, levels);
+		++opt;
 	}
 
 	if (pagesize != ULLONG_MAX) {
-		asprintf(&newopts, "%s pagesize=%llu", opts, pagesize);
-		if (!newopts)
-			goto err;
-		opts = newopts;
+		addrxlat_opt_pagesize(opt, pagesize);
+		++opt;
 	}
 
 	if (phys_base != ULLONG_MAX) {
-		asprintf(&newopts, "%s phys_base=%llu", opts, phys_base);
-		if (!newopts)
-			goto err;
-		opts = newopts;
+		addrxlat_opt_phys_base(opt, phys_base);
+		++opt;
 	}
 
 	if (rootpgt.as != ADDRXLAT_NOADDR) {
-		asprintf(&newopts, "%s rootpgt=%s:0x%" ADDRXLAT_PRIxADDR,
-			 opts, addrxlat_addrspace_name(rootpgt.as),
-			 rootpgt.addr);
-		if (!newopts)
-			goto err;
-		opts = newopts;
+		addrxlat_opt_rootpgt(opt, &rootpgt);
+		++opt;
 	}
 
 	if (xen_p2m_mfn != ULLONG_MAX) {
-		asprintf(&newopts, "%s xen_p2m_mfn=%llu", opts, xen_p2m_mfn);
-		if (!newopts)
-			goto err;
-		opts = newopts;
+		addrxlat_opt_xen_p2m_mfn(opt, xen_p2m_mfn);
+		++opt;
 	}
 
 	if (xen_xlat) {
-		asprintf(&newopts, "%s xen_xlat", opts);
-		if (!newopts)
-			goto err;
-		opts = newopts;
+		addrxlat_opt_xen_xlat(opt, 1);
+		++opt;
 	}
 
-	return opts;
-
- err:
-	if (opts)
-		free(opts);
-	return NULL;
+	osdesc->optc = opt - opts;
+	osdesc->opts = opts;
 }
 
 static void
@@ -468,11 +446,7 @@ os_map(void)
 	meth.type = ostype;
 	meth.ver = osver;
 	meth.arch = arch;
-	meth.opts = make_opts();
-	if (!meth.opts) {
-		perror("Cannot create addrxlat options");
-		return TEST_ERR;
-	}
+	make_opts(&meth);
 
 	data.ctx = addrxlat_ctx_new();
 	if (!data.ctx) {

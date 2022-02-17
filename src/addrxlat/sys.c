@@ -110,7 +110,7 @@ addrxlat_sys_os_init(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	ctl.ctx = ctx;
 	ctl.osdesc = osdesc;
 
-	status = parse_opts(&ctl.popt, ctx, osdesc->opts);
+	status = parse_opts(&ctl.popt, ctx, osdesc->optc, osdesc->opts);
 	if (status != ADDRXLAT_OK)
 		return status;
 

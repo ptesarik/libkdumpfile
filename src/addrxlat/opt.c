@@ -354,184 +354,72 @@ parse_fulladdr(const char *str, addrxlat_fulladdr_t *var)
 	return PARSE_OK;
 }
 
-/** Parse a single option value.
+/** Parse a single option.
  * @param popt   Parsed options.
- * @param opt    Option index.
- * @param val    Value.
- * @returns      Error status.
+ * @param opt    Option.
+ * @returns      @c true if option was parsed, @c false if option is unknown.
  */
-static parse_status
-parse_val(struct parsed_opts *popt, addrxlat_optidx_t opt, const char *val)
+static bool
+parse_opt(struct parsed_opts *popt, const addrxlat_opt_t *opt)
 {
-	switch (opt) {
+	switch (opt->idx) {
 	case ADDRXLAT_OPT_levels:
-		return parse_number(val, &popt->levels);
+		popt->levels = opt->val.num;
+		break;
 
 	case ADDRXLAT_OPT_pagesize:
-		return parse_number(val, &popt->pagesize);
+		popt->pagesize = opt->val.num;
+		break;
 
 	case ADDRXLAT_OPT_phys_base:
-		return parse_addr(val, &popt->phys_base);
+		popt->phys_base = opt->val.addr;
+		break;
 
 	case ADDRXLAT_OPT_rootpgt:
-		return parse_fulladdr(val, &popt->rootpgt);
+		popt->rootpgt = opt->val.fulladdr;
+		break;
 
 	case ADDRXLAT_OPT_xen_p2m_mfn:
-		return parse_number(val, &popt->xen_p2m_mfn);
+		popt->xen_p2m_mfn = opt->val.num;
+		break;
 
 	case ADDRXLAT_OPT_xen_xlat:
-		return parse_bool(val, &popt->xen_xlat);
+		popt->xen_xlat = opt->val.num;
+		break;
 
 	default:
-		return PARSE_UNKNOWN;
-	}
-}
-
-/** Parse a single option.
- * @param ctx    Translation context.
- * @param opt    Option index.
- * @param val    Option value.
- * @param err    Parsing error code.
- * @returns      Error status.
- */
-static addrxlat_status
-parse_error(addrxlat_ctx_t *ctx, addrxlat_optidx_t opt,
-	    const char *val, parse_status err)
-{
-	switch (err) {
-	case PARSE_UNKNOWN:
-		return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
-				 "Unknown option: %u", (unsigned) opt);
-
-	case PARSE_NOVAL:
-		return set_error(ctx, ADDRXLAT_ERR_INVALID,
-				 "Missing value for option '%s'",
-				 optnames[opt]);
-
-	case PARSE_BADVAL:
-		return set_error(ctx, ADDRXLAT_ERR_INVALID,
-				 "'%s' is not a valid value for option '%s'",
-				 val, optnames[opt]);
-
-	default:
-		return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
-				 "Unknown parser error");
-	}
-}
-
-/** Parse a single option.
- * @param popt   Parsed options.
- * @param ctx    Translation context (for error handling).
- * @param key    Option name.
- * @param klen   Name length.
- * @param val    Value.
- * @returns      Error status.
- */
-static addrxlat_status
-parse_opt(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
-	  const char *key, size_t klen, const char *val)
-{
-	const struct optdesc *opt;
-	parse_status status;
-
-	if (klen >= ARRAY_SIZE(options))
-		goto err;
-
-	opt = options[klen].opt;
-	if (!opt)
-		goto err;
-
-	while (opt->idx != ADDRXLAT_OPT_NUM) {
-		if (!strcasecmp(key, opt->name)) {
-			status = parse_val(popt, opt->idx, val);
-			if (status != PARSE_OK)
-				return parse_error(ctx, opt->idx, val, status);
-			popt->isset[opt->idx] = true;
-			return ADDRXLAT_OK;
-		}
-
-		opt = (void*)(opt) + options[klen].elemsz;
+		return false;
 	}
 
- err:
-	return set_error(ctx, ADDRXLAT_ERR_NOTIMPL, "Unknown option: %s", key);
+	return true;
 }
 
 /** OS map option parser.
  * @param popt  Parsed options.
  * @param ctx   Translation context (for error handling).
- * @param opts  Option string.
+ * @param optc  Number of options in @p opts.
+ * @param opts  Options.
  * @returns     Error status.
  */
 addrxlat_status
-parse_opts(struct parsed_opts *popt, addrxlat_ctx_t *ctx, const char *opts)
+parse_opts(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
+	   unsigned optc, const addrxlat_opt_t *opts)
 {
 	addrxlat_optidx_t idx;
-	const char *p;
-	char *dst;
-	addrxlat_status status;
 
 	for (idx = 0; idx < ADDRXLAT_OPT_NUM; ++idx)
 		popt->isset[idx] = false;
 
-	if (!opts)
-		return ADDRXLAT_OK;
+	while (optc) {
+		if (!parse_opt(popt, opts))
+			return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
+					 "Unknown option: %u",
+					 (unsigned) opts->idx);
+		popt->isset[opts->idx] = true;
 
-	popt->buf = realloc(NULL, strlen(opts) + 1);
-	if (!popt->buf)
-		return set_error(ctx, ADDRXLAT_ERR_NOMEM,
-				 "Cannot allocate options");
-
-	p = opts;
-	while (is_posix_space(*p))
-		++p;
-
-	dst = popt->buf;
-	while (*p) {
-		char quot, *key, *val;
-		size_t keylen;
-
-		quot = 0;
-		key = dst;
-		val = NULL;
-		while (*p) {
-			if (quot) {
-				if (*p == quot)
-					quot = 0;
-				else
-					*dst++ = *p;
-			} else if (*p == '\'' || *p == '"')
-				quot = *p;
-			else if (is_posix_space(*p))
-				break;
-			else if (*p == '=') {
-				*dst++ = '\0';
-				val = dst;
-			} else
-				*dst++ = *p;
-			++p;
-		}
-		if (quot) {
-			status = set_error(ctx, ADDRXLAT_ERR_INVALID,
-					   "Unterminated %s quotes",
-					   quot == '"' ? "double" : "single");
-			goto err;
-		}
-
-		*dst++ = '\0';
-
-		keylen = (val ? val - key : dst - key) - 1;
-		status = parse_opt(popt, ctx, key, keylen, val);
-		if (status != ADDRXLAT_OK)
-			goto err;
-
-		while (is_posix_space(*p))
-			++p;
+		++opts;
+		--optc;
 	}
 
 	return ADDRXLAT_OK;
-
- err:
-	free(popt->buf);
-	return status;
 }

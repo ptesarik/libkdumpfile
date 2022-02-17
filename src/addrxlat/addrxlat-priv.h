@@ -395,9 +395,6 @@ INTERNAL_DECL(addrxlat_status, highest_linear,
 
 /** This structure holds parsed options. */
 struct parsed_opts {
-	/** Buffer for parsed option values. */
-	char *buf;
-
 	/** Set/unset flag for each option. */
 	bool isset[ADDRXLAT_OPT_NUM];
 
@@ -414,7 +411,7 @@ struct parsed_opts {
 
 INTERNAL_DECL(addrxlat_status, parse_opts,
 	      (struct parsed_opts *popt, addrxlat_ctx_t *ctx,
-	       const char *opts));
+	       unsigned optc, const addrxlat_opt_t *opts));
 
 /* Translation system */
 

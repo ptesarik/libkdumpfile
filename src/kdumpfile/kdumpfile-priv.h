@@ -431,6 +431,9 @@ struct attr_template {
 		/** Derived attributes: number of levels below the directory
 		 *  that contains the corresponding blob attribute. */
 		unsigned depth;
+		/** Addrxlat option attributes: target option index.
+		 */
+		addrxlat_optidx_t optidx;
 	};
 	kdump_attr_type_t type;
 	unsigned override:1;	/**< Set iff this is a template override. */

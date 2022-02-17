@@ -110,6 +110,7 @@ get_version_code(kdump_ctx_t *ctx, unsigned long *pver)
 		.key = (#k),		\
 		.type = (t),		\
 		.ops = &dirty_xlat_ops,	\
+		.optidx = ADDRXLAT_OPT_ ## k,	\
 	}
 
 static const struct attr_template options[] = {
@@ -136,35 +137,8 @@ static const struct attr_template fulladdr_addr = {
 #define MAX_OPTS	(8 + 2*ARRAY_SIZE(options))
 struct opts {
 	unsigned n;
-	char *str[MAX_OPTS];
+	addrxlat_opt_t opts[MAX_OPTS];
 };
-
-static char *
-join_opts(const struct opts *opts)
-{
-	size_t len;
-	unsigned i;
-	char *ret, *p;
-
-	for (len = 0, i = 0; i < opts->n; ++i)
-		len += strlen(opts->str[i]) + 1;
-	ret = malloc(len);
-	if (!ret)
-		return ret;
-	for (p = ret, i = 0; i < opts->n; ++i) {
-		p = stpcpy(p, opts->str[i]);
-		*p++ = ' ';
-	}
-	p[-1] = '\0';
-	return ret;
-}
-
-static void
-free_opts(struct opts *opts)
-{
-	while (opts->n)
-		free(opts->str[--opts->n]);
-}
 
 /** Create addrxlat attributes under a given directory.
  * @param dict    Target attribute dictionary.
@@ -233,9 +207,8 @@ add_addrxlat_opt(kdump_ctx_t *ctx, struct opts *opts,
 		 const struct attr_template *tmpl)
 {
 	struct attr_data *attr, *sub;
-	addrxlat_fulladdr_t faddr;
+	addrxlat_opt_t *opt;
 	kdump_status status;
-	int len;
 
 	attr = lookup_attr_child(dir, tmpl);
 	if (!attr || !attr_isset(attr))
@@ -246,15 +219,15 @@ add_addrxlat_opt(kdump_ctx_t *ctx, struct opts *opts,
 				 "Cannot get %s addrxlat option",
 				 tmpl->key);
 
+	opt = &opts->opts[opts->n];
+	opt->idx = tmpl->optidx;
 	switch (tmpl->type) {
 	case KDUMP_NUMBER:
-		len = asprintf(&opts->str[opts->n], "%s=%" KDUMP_PRIuNUM,
-			       tmpl->key, attr_value(attr)->number);
+		opt->val.num = attr_value(attr)->number;
 		break;
 
 	case KDUMP_ADDRESS:
-		len = asprintf(&opts->str[opts->n], "%s=0x%" KDUMP_PRIxADDR,
-			       tmpl->key, attr_value(attr)->address);
+		opt->val.addr = attr_value(attr)->address;
 		break;
 
 	case KDUMP_DIRECTORY:
@@ -265,7 +238,7 @@ add_addrxlat_opt(kdump_ctx_t *ctx, struct opts *opts,
 		if (status != KDUMP_OK)
 			return set_error(ctx, status, "Cannot get %s %s",
 					 tmpl->key, "address space");
-		faddr.as = attr_value(sub)->number;
+		opt->val.fulladdr.as = attr_value(sub)->number;
 
 		sub = lookup_attr_child(attr, &fulladdr_addr);
 		if (!sub || !attr_isset(sub))
@@ -274,10 +247,7 @@ add_addrxlat_opt(kdump_ctx_t *ctx, struct opts *opts,
 		if (status != KDUMP_OK)
 			return set_error(ctx, status, "Cannot get %s %s",
 					 tmpl->key, "address");
-		faddr.addr = attr_value(sub)->address;
-
-		len = asprintf(&opts->str[opts->n], "%s=%u:0x%" KDUMP_PRIxADDR,
-			       tmpl->key, faddr.as, faddr.addr);
+		opt->val.fulladdr.addr = attr_value(sub)->address;
 		break;
 
 	default:
@@ -286,11 +256,7 @@ add_addrxlat_opt(kdump_ctx_t *ctx, struct opts *opts,
 				 (unsigned) tmpl->type);
 	}
 
-	if (len < 0)
-		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot make %s addrxlat option", tmpl->key);
 	++opts->n;
-
 	return KDUMP_OK;
 }
 
@@ -331,11 +297,8 @@ static kdump_status
 set_page_size_opt(kdump_ctx_t *ctx, struct opts *opts)
 {
 	if (isset_page_size(ctx)) {
-		int len = asprintf(&opts->str[opts->n], "pagesize=%zd",
-				   get_page_size(ctx));
-		if (len < 0)
-			return set_error(ctx, KDUMP_ERR_SYSTEM,
-					 "Cannot make %s option", "pagesize");
+		addrxlat_opt_pagesize(&opts->opts[opts->n],
+				      get_page_size(ctx));
 		++opts->n;
 	}
 	return KDUMP_OK;
@@ -354,7 +317,6 @@ get_linux_x86_levels(kdump_ctx_t *ctx, int *levels)
 {
 	static const char config_pae[] = "CONFIG_X86_PAE";
 	struct attr_data *attr;
-	int len;
 
 	attr = gattr(ctx, GKI_linux_vmcoreinfo_lines);
 	if (attr_isset(attr))
@@ -385,7 +347,6 @@ static kdump_status
 set_linux_levels_opt(kdump_ctx_t *ctx, struct opts *opts)
 {
 	int levels;
-	int len;
 	kdump_status status;
 
 	levels = 0;
@@ -402,10 +363,7 @@ set_linux_levels_opt(kdump_ctx_t *ctx, struct opts *opts)
 		return status;
 
 	if (levels != 0) {
-		len = asprintf(&opts->str[opts->n], "levels=%d", levels);
-		if (len < 0)
-			return set_error(ctx, KDUMP_ERR_SYSTEM,
-					 "Cannot make %s option", "levels");
+		addrxlat_opt_levels(&opts->opts[opts->n], levels);
 		++opts->n;
 	}
 
@@ -416,7 +374,6 @@ static kdump_status
 set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 {
 	struct attr_data *attr;
-	int len;
 	kdump_status status;
 
 	status = set_linux_levels_opt(ctx, opts);
@@ -424,20 +381,14 @@ set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 		return status;
 
 	if (isset_phys_base(ctx)) {
-		len = asprintf(&opts->str[opts->n],
-			       "phys_base=0x%"ADDRXLAT_PRIxADDR,
-			       get_phys_base(ctx));
-		if (len < 0)
-			return set_error(ctx, KDUMP_ERR_SYSTEM,
-					 "Cannot make %s option", "phys_base");
+		addrxlat_opt_phys_base(&opts->opts[opts->n],
+				       get_phys_base(ctx));
 		++opts->n;
 	}
 
 	if ((isset_xen_xlat(ctx) && get_xen_xlat(ctx) != KDUMP_XEN_AUTO) ||
 	    (isset_xen_type(ctx) && get_xen_type(ctx) == KDUMP_XEN_SYSTEM)) {
-		if (! (opts->str[opts->n] = strdup("xen_xlat=1")) )
-			return set_error(ctx, KDUMP_ERR_SYSTEM,
-					 "Cannot make %s option", "xen_xlat");
+		addrxlat_opt_xen_xlat(&opts->opts[opts->n], 1);
 		++opts->n;
 	}
 
@@ -448,13 +399,8 @@ set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 			return set_error(ctx, status,
 					 "Cannot get %s from vmcoreinfo",
 					 "p2m_mfn");
-		len = asprintf(&opts->str[opts->n],
-			"xen_p2m_mfn=0x%"ADDRXLAT_PRIxADDR,
-			attr_value(attr)->number);
-		if (len < 0)
-			return set_error(ctx, KDUMP_ERR_SYSTEM,
-					 "Cannot make %s option",
-					 "xen_p2m_mfn");
+		addrxlat_opt_xen_p2m_mfn(&opts->opts[opts->n],
+					 attr_value(attr)->number);
 		++opts->n;
 	}
 
@@ -465,7 +411,6 @@ static kdump_status
 set_xen_opts(kdump_ctx_t *ctx, struct opts *opts)
 {
 	struct attr_data *attr;
-	int len;
 
 	attr = gattr(ctx, GKI_xen_phys_start);
 	if (attr_isset(attr)) {
@@ -473,12 +418,8 @@ set_xen_opts(kdump_ctx_t *ctx, struct opts *opts)
 		if (status != KDUMP_OK)
 			return set_error(ctx, status, "Cannot get %s.%s",
 					 "xen", "phys_start");
-		len = asprintf(&opts->str[opts->n],
-			       "phys_base=0x%"ADDRXLAT_PRIxADDR,
-			       attr_value(attr)->address);
-		if (len < 0)
-			return set_error(ctx, KDUMP_ERR_SYSTEM,
-					 "Cannot make %s option", "phys_base");
+		addrxlat_opt_phys_base(&opts->opts[opts->n],
+				       attr_value(attr)->address);
 		++opts->n;
 	}
 
@@ -516,18 +457,10 @@ vtop_init(kdump_ctx_t *ctx)
 	}
 	if (status == KDUMP_OK)
 		status = add_addrxlat_opts(ctx, &opts, GKI_dir_xlat_force);
-	if (status != KDUMP_OK) {
-		free_opts(&opts);
+	if (status != KDUMP_OK)
 		return status;
-	}
-	if (opts.n) {
-		osdesc.opts = join_opts(&opts);
-		free_opts(&opts);
-		if (!osdesc.opts)
-			return set_error(ctx, KDUMP_ERR_SYSTEM,
-					 "Cannot allocate addrxlat options");
-	} else
-		osdesc.opts = NULL;
+	osdesc.optc = opts.n;
+	osdesc.opts = opts.opts;
 
 	ctx->xlat->dirty = false;
 
@@ -535,8 +468,6 @@ vtop_init(kdump_ctx_t *ctx)
 
 	axres = addrxlat_sys_os_init(ctx->xlat->xlatsys,
 				     ctx->xlatctx, &osdesc);
-	if (osdesc.opts)
-		free((void*)osdesc.opts);
 
 	rwlock_rdlock(&ctx->shared->lock);
 	if (axres != ADDRXLAT_OK)

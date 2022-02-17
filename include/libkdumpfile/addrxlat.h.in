@@ -863,6 +863,60 @@ typedef union _addrxlat_optval {
 	addrxlat_fulladdr_t fulladdr;
 } addrxlat_optval_t;
 
+/** Single option. */
+typedef struct _addrxlat_opt {
+	addrxlat_optidx_t idx;	/**< Option index. */
+	addrxlat_optval_t val;	/**< Option value. */
+} addrxlat_opt_t;
+
+/** Helper to set @xref ADDRXLAT_OPT_levels in a type-safe manner. */
+static inline void
+addrxlat_opt_levels(addrxlat_opt_t *opt, unsigned long val)
+{
+	opt->idx = ADDRXLAT_OPT_levels;
+	opt->val.num = val;
+}
+
+/** Helper to set @xref ADDRXLAT_OPT_pagesize in a type-safe manner. */
+static inline void
+addrxlat_opt_pagesize(addrxlat_opt_t *opt, unsigned long val)
+{
+	opt->idx = ADDRXLAT_OPT_pagesize;
+	opt->val.num = val;
+}
+
+/** Helper to set @xref ADDRXLAT_OPT_phys_base in a type-safe manner. */
+static inline void
+addrxlat_opt_phys_base(addrxlat_opt_t *opt, addrxlat_addr_t val)
+{
+	opt->idx = ADDRXLAT_OPT_phys_base;
+	opt->val.addr = val;
+}
+
+/** Helper to set @xref ADDRXLAT_OPT_rootpgt in a type-safe manner. */
+static inline void
+addrxlat_opt_rootpgt(addrxlat_opt_t *opt, const addrxlat_fulladdr_t *val)
+{
+	opt->idx = ADDRXLAT_OPT_rootpgt;
+	opt->val.fulladdr = *val;
+}
+
+/** Helper to set @xref ADDRXLAT_OPT_xen_p2m_mfn in a type-safe manner. */
+static inline void
+addrxlat_opt_xen_p2m_mfn(addrxlat_opt_t *opt, unsigned long val)
+{
+	opt->idx = ADDRXLAT_OPT_xen_p2m_mfn;
+	opt->val.num = val;
+}
+
+/** Helper to set @xref ADDRXLAT_OPT_xen_xlat in a type-safe manner. */
+static inline void
+addrxlat_opt_xen_xlat(addrxlat_opt_t *opt, unsigned long val)
+{
+	opt->idx = ADDRXLAT_OPT_xen_xlat;
+	opt->val.num = val;
+}
+
 /** Description of an operating system.
  * This structure is used to pass some details about the operating system
  * to set up a translation map.
@@ -883,11 +937,13 @@ typedef struct _addrxlat_osdesc {
 	 */
 	unsigned long ver;
 
+	/** Option count. */
+	unsigned optc;
+
 	/** Further options, e.g. architecture variant.
-	 * This member is optional. If there are no options, you can
-	 * eith set it to an empty string or @c NULL.
+	 * Ignored if the number of options is zero.
 	 */
-	const char *opts;
+	const addrxlat_opt_t *opts;
 } addrxlat_osdesc_t;
 
 /** Linux kernel version code.
