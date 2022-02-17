@@ -105,7 +105,7 @@ PyDoc_STRVAR(attr_convert__doc__,
 static long
 Number_AsLong(PyObject *num)
 {
-	unsigned long long result;
+	long result;
 
 	if (PyLong_Check(num))
 		return PyLong_AsLong(num);
