@@ -26,11 +26,15 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <endian.h>
 #include <ctype.h>
+#include <limits.h>
+
 #include <libkdumpfile/addrxlat.h>
 
 #include "testutil.h"
@@ -167,7 +171,13 @@ get_symdata(void *data, addrxlat_sym_t *sym)
 static unsigned long long ostype;
 static unsigned long long osver;
 static char *arch;
-static char *opts;
+
+static unsigned long long levels;
+static unsigned long long pagesize;
+static unsigned long long phys_base;
+static addrxlat_fulladdr_t rootpgt;
+static unsigned long long xen_p2m_mfn;
+static bool xen_xlat;
 
 static char *sym_file;
 static char *data_file;
@@ -176,7 +186,15 @@ static const struct param param_array[] = {
 	PARAM_NUMBER("ostype", ostype),
 	PARAM_NUMBER("osver", osver),
 	PARAM_STRING("arch", arch),
-	PARAM_STRING("opts", opts),
+
+	/* addrxlat options */
+	PARAM_NUMBER("levels", levels),
+	PARAM_NUMBER("pagesize", pagesize),
+	PARAM_NUMBER("phys_base", phys_base),
+	PARAM_FULLADDR("rootpgt", rootpgt),
+	PARAM_NUMBER("xen_p2m_mfn", xen_p2m_mfn),
+	PARAM_YESNO("xen_xlat", xen_xlat),
+
 	PARAM_NUMBER("data_as", entry_as),
 
 	PARAM_STRING("SYM", sym_file),
@@ -187,6 +205,77 @@ static const struct params params = {
 	ARRAY_SIZE(param_array),
 	param_array
 };
+
+static void clear_params(void)
+{
+	levels = ULLONG_MAX;
+	pagesize = ULLONG_MAX;
+	phys_base = ULLONG_MAX;
+	rootpgt.as = ADDRXLAT_NOADDR;
+	xen_p2m_mfn = ULLONG_MAX;
+	xen_xlat = false;
+}
+
+static char *make_opts(void)
+{
+	char *opts;
+	char *newopts;
+
+	opts = strdup("");
+	if (!opts)
+		goto err;
+
+	if (levels != ULLONG_MAX) {
+		asprintf(&newopts, "%s levels=%llu", opts, levels);
+		if (!newopts)
+			goto err;
+		opts = newopts;
+	}
+
+	if (pagesize != ULLONG_MAX) {
+		asprintf(&newopts, "%s pagesize=%llu", opts, pagesize);
+		if (!newopts)
+			goto err;
+		opts = newopts;
+	}
+
+	if (phys_base != ULLONG_MAX) {
+		asprintf(&newopts, "%s phys_base=%llu", opts, phys_base);
+		if (!newopts)
+			goto err;
+		opts = newopts;
+	}
+
+	if (rootpgt.as != ADDRXLAT_NOADDR) {
+		asprintf(&newopts, "%s rootpgt=%s:0x%" ADDRXLAT_PRIxADDR,
+			 opts, addrxlat_addrspace_name(rootpgt.as),
+			 rootpgt.addr);
+		if (!newopts)
+			goto err;
+		opts = newopts;
+	}
+
+	if (xen_p2m_mfn != ULLONG_MAX) {
+		asprintf(&newopts, "%s xen_p2m_mfn=%llu", opts, xen_p2m_mfn);
+		if (!newopts)
+			goto err;
+		opts = newopts;
+	}
+
+	if (xen_xlat) {
+		asprintf(&newopts, "%s xen_xlat", opts);
+		if (!newopts)
+			goto err;
+		opts = newopts;
+	}
+
+	return opts;
+
+ err:
+	if (opts)
+		free(opts);
+	return NULL;
+}
 
 static void
 print_target_as(const addrxlat_meth_t *meth)
@@ -379,7 +468,11 @@ os_map(void)
 	meth.type = ostype;
 	meth.ver = osver;
 	meth.arch = arch;
-	meth.opts = opts;
+	meth.opts = make_opts();
+	if (!meth.opts) {
+		perror("Cannot create addrxlat options");
+		return TEST_ERR;
+	}
 
 	data.ctx = addrxlat_ctx_new();
 	if (!data.ctx) {
@@ -620,6 +713,7 @@ main(int argc, char **argv)
 	} else
 		param = stdin;
 
+	clear_params();
 	rc = parse_params_file(&params, param);
 	if (param != stdin)
 		fclose(param);

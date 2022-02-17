@@ -7,6 +7,8 @@
 arch=ia32
 ostype=1
 osver=0
-opts=rootpgt=MACHPHYSADDR:0x911000
+opts=(
+    rootpgt=MACHPHYSADDR:0x911000
+)
 
 . "$srcdir"/xlat-os-common

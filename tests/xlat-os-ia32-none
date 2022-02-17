@@ -5,8 +5,10 @@
 #
 
 arch=ia32
-opts="levels=2"
 ostype=0
 osver=0
+opts=(
+    levels=2
+)
 
 . "$srcdir"/xlat-os-common

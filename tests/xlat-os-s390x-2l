@@ -7,6 +7,8 @@
 arch=s390x
 ostype=0
 osver=0
-opts=rootpgt=MACHPHYSADDR:0x8b5000
+opts=(
+    rootpgt=MACHPHYSADDR:0x8b5000
+)
 
 . "$srcdir"/xlat-os-common

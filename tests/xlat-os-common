@@ -12,7 +12,11 @@ datafile="$srcdir/$name.data"
 cfgfile="out/${name}.cfg"
 
 optspec=
-test -n "$opts" && optspec="opts=$opts"
+old_IFS="$IFS"
+IFS=$'\n'
+optspec="${opts[*]}"
+IFS="$old_IFS"
+
 symspec=
 test -f "$symfile" && symspec="SYM=$symfile"
 dataspec=

@@ -9,6 +9,8 @@
 arch=x86_64
 ostype=1
 osver=0
-opts="xen_xlat=true"
+opts=(
+    xen_xlat=true
+)
 
 . "$srcdir"/xlat-os-common
