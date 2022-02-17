@@ -34,6 +34,8 @@
 #include <stdbool.h>
 #include <endian.h>
 
+#include <libkdumpfile/addrxlat.h>
+
 #define TEST_OK     0
 #define TEST_FAIL   1
 #define TEST_SKIP  77
@@ -119,6 +121,7 @@ struct param {
 		param_number,
 		param_number_array,
 		param_blob,
+		param_fulladdr,
 	} type;
 	union {
 		char **string;
@@ -126,6 +129,7 @@ struct param {
 		unsigned long long *number;
 		struct number_array *number_array;
 		struct blob **blob;
+		addrxlat_fulladdr_t *fulladdr;
 	};
 };
 
@@ -142,6 +146,8 @@ struct params {
 	{ (key), param_number, { .number = &(val) } }
 #define PARAM_NUMBER_ARRAY(key, val) \
 	{ (key), param_number_array, { .number_array = &(val) } }
+#define PARAM_FULLADDR(key, val) \
+	{ (key), param_fulladdr, { .fulladdr = &(val) } }
 
 int parse_key_val(char *line, char **key, char **val);
 

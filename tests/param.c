@@ -290,6 +290,66 @@ set_param_blob(const struct param *param, const char *val)
 	return TEST_OK;
 }
 
+static int
+set_param_fulladdr(const struct param *param, const char *val)
+{
+	const char *p = val;
+	const char *q;
+	char *endp;
+
+	if (isdigit(*p)) {
+		param->fulladdr->as = strtoul(p, &endp, 0);
+		if (!*p || *endp)
+			goto err;
+		p = endp;
+	} else {
+		q = p;
+		while (isalnum(*q))
+			++q;
+
+		switch (q - p) {
+		case 6:
+			if (!strncasecmp(p, "KVADDR", 6))
+				param->fulladdr->as = ADDRXLAT_KVADDR;
+			else
+				goto err;
+			break;
+
+		case 9:
+			if (!strncasecmp(p, "KPHYSADDR", 9))
+				param->fulladdr->as = ADDRXLAT_KPHYSADDR;
+			else
+				goto err;
+			break;
+
+		case 12:
+			if (!strncasecmp(p, "MACHPHYSADDR", 12))
+				param->fulladdr->as = ADDRXLAT_MACHPHYSADDR;
+			else
+				goto err;
+			break;
+
+		default:
+			goto err;
+		}
+		p = q;
+	}
+
+	if (*p != ':')
+		goto err;
+	++p;
+
+	param->fulladdr->addr = strtoull(p, &endp, 0);
+	if (!*p || *endp)
+		goto err;
+
+	return TEST_OK;
+
+ err:
+	fprintf(stderr, "Invalid full address: %s\n", val);
+	return TEST_FAIL;
+}
+
 int
 set_param(const struct param *p, const char *val)
 {
@@ -308,6 +368,9 @@ set_param(const struct param *p, const char *val)
 
 	case param_blob:
 		return set_param_blob(p, val);
+
+	case param_fulladdr:
+		return set_param_fulladdr(p, val);
 	}
 
 	fprintf(stderr, "INTERNAL ERROR: Invalid param type: %d\n",
