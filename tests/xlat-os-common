@@ -9,6 +9,7 @@ resultfile="out/${name}.result"
 expectfile="$srcdir/$name.expect"
 symfile="$srcdir/$name.sym"
 datafile="$srcdir/$name.data"
+cfgfile="out/${name}.cfg"
 
 optspec=
 test -n "$opts" && optspec="opts=$opts"
@@ -19,8 +20,7 @@ test -f "$datafile" && dataspec="DATA=$datafile"
 test -n "$data_as" && dataspec="data_as=$data_as
 $dataspec"
 
-echo -n "Checking... "
-./xlat-os >"$resultfile" <<EOF
+cat >"$cfgfile" <<EOF
 ostype=$ostype
 osver=$osver
 arch=$arch
@@ -28,6 +28,9 @@ $optspec
 $symspec
 $dataspec
 EOF
+
+echo -n "Checking... "
+./xlat-os "$cfgfile" >"$resultfile"
 rc=$?
 if [ $rc -gt 1 ]; then
     echo ERROR
