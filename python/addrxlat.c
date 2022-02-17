@@ -4174,7 +4174,7 @@ sys_richcompare(PyObject *v, PyObject *w, int op)
 }
 
 PyDoc_STRVAR(sys_os_init__doc__,
-"SYS.os_init(ctx, arch[, type[, ver[, opts]]]) -> status\n\
+"SYS.os_init(ctx, arch, type=None, ver=None, levels=None, pagesize=None, phys_base=None, rootpgt=None, xen_p2m_mfn=None, xen_xlat=None) -> status\n\
 \n\
 Set up a translation system for a pre-defined operating system.");
 
@@ -4183,28 +4183,79 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 {
 	sys_object *self = (sys_object*)_self;
 	static char *keywords[] = {
-		"ctx", "arch", "type", "ver", "opts",
+		"ctx",
+		"arch",
+		"type",
+		"ver",
+		"levels",
+		"pagesize",
+		"phys_base",
+		"rootpgt",
+		"xen_p2m_mfn",
+		"xen_xlat",
 		NULL
 	};
 	PyObject *ctxobj;
+	PyObject *type, *ver, *levels, *pagesize, *phys_base,
+		*rootpgt, *xen_p2m_mfn, *xen_xlat;
 	addrxlat_ctx_t *ctx;
 	addrxlat_osdesc_t osdesc;
-	long type;
+	char opts[200], *p;
 	addrxlat_status status;
 
-	type = ADDRXLAT_OS_UNKNOWN;
-	osdesc.ver = 0;
-	osdesc.opts = NULL;
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Os|lkz:os_init",
-					 keywords, &ctxobj, &osdesc.arch,
-					 &type, &osdesc.ver, &osdesc.opts))
+	type = ver = levels = pagesize = phys_base =
+		rootpgt = xen_p2m_mfn = xen_xlat = NULL;
+	if (!PyArg_ParseTupleAndKeywords(
+		    args, kwargs, "Os|PPPPPPPP:os_init", keywords,
+		    &ctxobj, &osdesc.arch, &type, &ver, &levels, &pagesize,
+		    &phys_base, &rootpgt, &xen_p2m_mfn, &xen_xlat))
 		return NULL;
 
 	ctx = ctx_AsPointer(ctxobj);
 	if (!ctx)
 		return NULL;
 
-	osdesc.type = type;
+	if (type && type != Py_None) {
+		osdesc.type = Number_AsUnsignedLongLong(type);
+		if (PyErr_Occurred())
+			return NULL;
+	} else
+		osdesc.type = ADDRXLAT_OS_UNKNOWN;
+
+	if (ver && ver != Py_None) {
+		osdesc.ver = Number_AsUnsignedLongLong(ver);
+		if (PyErr_Occurred())
+			return NULL;
+	} else
+		osdesc.ver = 0;
+
+	p = opts;
+	*p = 0;
+
+	if (levels && levels != Py_None)
+		p += sprintf(p, " levels=%llu",
+			     Number_AsUnsignedLongLong(levels));
+	if (pagesize && pagesize != Py_None)
+		p += sprintf(p, " pagesize=%llu",
+			     Number_AsUnsignedLongLong(pagesize));
+	if (phys_base && phys_base != Py_None)
+		p += sprintf(p, " phys_base=0x%llx",
+			     Number_AsUnsignedLongLong(phys_base));
+	if (rootpgt && rootpgt != Py_None) {
+		addrxlat_fulladdr_t *faddr = fulladdr_AsPointer(rootpgt);
+		if (!faddr)
+			return NULL;
+		p += sprintf(p, " rootpgt=%s:0x%" ADDRXLAT_PRIxADDR,
+			     addrxlat_addrspace_name(faddr->as),
+			     faddr->addr);
+	}
+	if (xen_p2m_mfn && xen_p2m_mfn != Py_None)
+		p += sprintf(p, " xen_p2m_mfn=0x%llx",
+			     Number_AsUnsignedLongLong(xen_p2m_mfn));
+	if (xen_xlat && xen_xlat != Py_None && Number_AsLong(xen_xlat))
+		p += sprintf(p, " xen_xlat");
+
+	osdesc.opts = opts;
 	status = addrxlat_sys_os_init(self->sys, ctx, &osdesc);
 	return ctx_status_result(ctxobj, status);
 }
