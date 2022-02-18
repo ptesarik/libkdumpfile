@@ -412,10 +412,6 @@ struct parsed_opts {
 /** Check whether an option is set, using its bare name. */
 #define opt_isset(popt, name)	((popt).isset[ADDRXLAT_OPT_ ## name])
 
-INTERNAL_DECL(addrxlat_status, parse_opts,
-	      (struct parsed_opts *popt, addrxlat_ctx_t *ctx,
-	       unsigned optc, const addrxlat_opt_t *opts));
-
 /* Translation system */
 
 /** Data used during translation system initialization. */

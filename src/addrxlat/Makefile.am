@@ -26,7 +26,6 @@ lib_LTLIBRARIES = libaddrxlat.la
 libaddrxlat_la_SOURCES = \
 	ctx.c \
 	map.c \
-	opt.c \
 	step.c \
 	sys.c \
 	aarch64.c \

@@ -77,6 +77,88 @@ addrxlat_sys_decref(addrxlat_sys_t *sys)
 	return refcnt;
 }
 
+/** Parse a single option.
+ * @param popt   Parsed options.
+ * @param opt    Option.
+ * @returns      @c true if option was parsed, @c false if option is unknown.
+ */
+static bool
+parse_opt(struct parsed_opts *popt, const addrxlat_opt_t *opt)
+{
+	switch (opt->idx) {
+	case ADDRXLAT_OPT_arch:
+		popt->arch = opt->val.str;
+		break;
+
+	case ADDRXLAT_OPT_os_type:
+		popt->os_type = opt->val.num;
+		break;
+
+	case ADDRXLAT_OPT_version_code:
+		popt->version_code = opt->val.num;
+		break;
+
+	case ADDRXLAT_OPT_levels:
+		popt->levels = opt->val.num;
+		break;
+
+	case ADDRXLAT_OPT_page_shift:
+		popt->page_shift = opt->val.num;
+		break;
+
+	case ADDRXLAT_OPT_phys_base:
+		popt->phys_base = opt->val.addr;
+		break;
+
+	case ADDRXLAT_OPT_rootpgt:
+		popt->rootpgt = opt->val.fulladdr;
+		break;
+
+	case ADDRXLAT_OPT_xen_p2m_mfn:
+		popt->xen_p2m_mfn = opt->val.num;
+		break;
+
+	case ADDRXLAT_OPT_xen_xlat:
+		popt->xen_xlat = opt->val.num;
+		break;
+
+	default:
+		return false;
+	}
+
+	return true;
+}
+
+/** OS map option parser.
+ * @param popt  Parsed options.
+ * @param ctx   Translation context (for error handling).
+ * @param optc  Number of options in @p opts.
+ * @param opts  Options.
+ * @returns     Error status.
+ */
+static addrxlat_status
+parse_opts(struct parsed_opts *popt, addrxlat_ctx_t *ctx,
+	   unsigned optc, const addrxlat_opt_t *opts)
+{
+	addrxlat_optidx_t idx;
+
+	for (idx = 0; idx < ADDRXLAT_OPT_NUM; ++idx)
+		popt->isset[idx] = false;
+
+	while (optc) {
+		if (!parse_opt(popt, opts))
+			return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
+					 "Unknown option: %u",
+					 (unsigned) opts->idx);
+		popt->isset[opts->idx] = true;
+
+		++opts;
+		--optc;
+	}
+
+	return ADDRXLAT_OK;
+}
+
 addrxlat_status
 addrxlat_sys_os_init(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 		     unsigned optc, const addrxlat_opt_t *opts)
