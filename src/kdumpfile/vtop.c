@@ -290,46 +290,19 @@ set_os_type_opt(kdump_ctx_t *ctx, struct opts *opts)
 static kdump_status
 set_version_code(kdump_ctx_t *ctx, struct opts *opts)
 {
-	static const char attrname[] = "version_code";
 	struct attr_data *attr;
-	const char *ostype;
 	kdump_status status;
 
-	/* Get OS type name */
-	attr = gattr(ctx, GKI_ostype);
-	if (!attr_isset(attr))
+	status = ostype_attr(ctx, "version_code", &attr);
+	if (status == KDUMP_ERR_NODATA) {
+		clear_error(ctx);
 		return KDUMP_OK;
-	status = attr_revalidate(ctx, attr);
-	if (status != KDUMP_OK)
-		return set_error(ctx, status, "Cannot get OS type");
-	ostype = attr_value(attr)->string;
-
-	/* Get OS directory attribute */
-	attr = lookup_attr(ctx->dict, ostype);
-	if (!attr || attr->template->type != KDUMP_DIRECTORY)
-		return set_error(ctx, KDUMP_ERR_NOTIMPL,
-				 "Unknown operating system type: %s", ostype);
-	if (!attr_isset(attr))
-		return KDUMP_OK;
-	status = attr_revalidate(ctx, attr);
-	if (status != KDUMP_OK)
-		return set_error(ctx, status, "Cannot get %s.%s",
-				 ostype, attrname);
-
-	/* Get version_code in the OS directory. */
-	attr = lookup_dir_attr(
-		ctx->dict, attr, attrname, sizeof(attrname) - 1);
-	if (!attr || !attr_isset(attr))
-		return KDUMP_OK;
-	status = attr_revalidate(ctx, attr);
-	if (status != KDUMP_OK)
-		return set_error(ctx, status, "Cannot get %s.%s",
-				 ostype, attrname);
+	} else if (status != KDUMP_OK)
+		return status;
 
 	if (attr->template->type != KDUMP_NUMBER)
-		status = set_error(ctx, KDUMP_ERR_INVALID,
-				   "Attribute %s.%s is not a number",
-				   ostype, attrname);
+		return set_error(ctx, KDUMP_ERR_INVALID,
+				 "Version code is not a number");
 
 	addrxlat_opt_version_code(&opts->opts[opts->n],
 				  attr_value(attr)->number);
