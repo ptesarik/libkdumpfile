@@ -7,7 +7,7 @@
 
 opts=(
     arch=x86_64
-    ostype=2
+    ostype=xen
     rootpgt=MACHPHYSADDR:0xffc94000
 )
 

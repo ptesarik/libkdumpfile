@@ -8,7 +8,7 @@
 
 opts=(
     arch=x86_64
-    ostype=1
+    ostype=linux
     xen_xlat=true
 )
 

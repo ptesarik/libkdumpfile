@@ -6,7 +6,7 @@
 
 opts=(
     arch=x86_64
-    ostype=2
+    ostype=xen
     osver=0x030001
 )
 

@@ -6,7 +6,7 @@
 
 opts=(
     arch=s390x
-    ostype=1
+    ostype=linux
 )
 
 . "$srcdir"/xlat-os-common

@@ -264,8 +264,7 @@ check_pae_sym(struct os_init_data *ctl)
 	addrxlat_fulladdr_t rootpgt;
 	addrxlat_status status;
 
-	if (!opt_isset(ctl->popt, os_type) ||
-	    ctl->popt.os_type != ADDRXLAT_OS_LINUX)
+	if (ctl->os_type != ADDRXLAT_OS_LINUX)
 		return set_error(ctl->ctx, ADDRXLAT_ERR_NOTIMPL,
 				 "Unsupported OS");
 
@@ -490,8 +489,7 @@ sys_ia32(struct os_init_data *ctl)
 	long levels;
 	addrxlat_status status;
 
-	if (opt_isset(ctl->popt, os_type) &&
-	    ctl->popt.os_type == ADDRXLAT_OS_LINUX) {
+	if (ctl->os_type == ADDRXLAT_OS_LINUX) {
 		status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS,
 					linux_directmap);
 		if (status != ADDRXLAT_OK)
@@ -505,12 +503,10 @@ sys_ia32(struct os_init_data *ctl)
 
 		if (!opt_isset(ctl->popt, rootpgt))
 			status = check_pae_sym(ctl);
-		else if (opt_isset(ctl->popt, os_type) &&
-			 ctl->popt.os_type == ADDRXLAT_OS_LINUX)
+		else if (ctl->os_type == ADDRXLAT_OS_LINUX)
 			status = check_pae(ctl, rootpgtopt,
 					   LINUX_DIRECTMAP);
-		else if (opt_isset(ctl->popt, os_type) &&
-			 ctl->popt.os_type == ADDRXLAT_OS_XEN)
+		else if (ctl->os_type == ADDRXLAT_OS_XEN)
 			status = check_pae(ctl, rootpgtopt,
 					   XEN_DIRECTMAP);
 		else
@@ -554,8 +550,7 @@ sys_ia32(struct os_init_data *ctl)
 				 "Cannot set up virt-to-phys mapping");
 	}
 
-	if (opt_isset(ctl->popt, os_type) &&
-	    ctl->popt.os_type == ADDRXLAT_OS_LINUX)  {
+	if (ctl->os_type == ADDRXLAT_OS_LINUX)  {
 		sys_sym_pgtroot(ctl, pgtspec);
 
 		status = set_linux_directmap(ctl, newmap);

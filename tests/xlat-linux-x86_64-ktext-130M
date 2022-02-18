@@ -6,7 +6,7 @@
 
 opts=(
     arch=x86_64
-    ostype=1
+    ostype=linux
     phys_base=0
 )
 

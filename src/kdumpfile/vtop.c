@@ -64,7 +64,7 @@ set_pteval_size(kdump_ctx_t *ctx)
 
 static const struct attr_template options[] = {
 	DEFOPT(arch, KDUMP_STRING),
-	DEFOPT(os_type, KDUMP_NUMBER),
+	DEFOPT(os_type, KDUMP_STRING),
 	DEFOPT(version_code, KDUMP_NUMBER),
 	DEFOPT(levels, KDUMP_NUMBER),
 	DEFOPT(page_shift, KDUMP_NUMBER),
@@ -271,11 +271,19 @@ set_arch_opt(kdump_ctx_t *ctx, struct opts *opts)
 static kdump_status
 set_os_type_opt(kdump_ctx_t *ctx, struct opts *opts)
 {
-	if (ctx->xlat->ostype != ADDRXLAT_OS_UNKNOWN) {
-		addrxlat_opt_os_type(&opts->opts[opts->n],
-				     ctx->xlat->ostype);
-		++opts->n;
-	}
+	struct attr_data *attr;
+	kdump_status status;
+
+	attr = gattr(ctx, GKI_ostype);
+	if (!attr_isset(attr))
+		return KDUMP_OK;
+	status = attr_revalidate(ctx, attr);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Cannot get OS type");
+
+	addrxlat_opt_os_type(&opts->opts[opts->n],
+			     attr_value(attr)->string);
+	++opts->n;
 	return KDUMP_OK;
 }
 

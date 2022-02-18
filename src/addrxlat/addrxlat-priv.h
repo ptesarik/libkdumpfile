@@ -399,7 +399,7 @@ struct parsed_opts {
 	bool isset[ADDRXLAT_OPT_NUM];
 
 	const char *arch;		/**< Value of OPT_arch. */
-	addrxlat_ostype_t os_type;	/**< Value of OPT_os_type. */
+	const char *os_type;		/**< Value of OPT_os_type. */
 	unsigned long version_code;	/**< Value of OPT_version_code. */
 	unsigned long levels;		/**< Value of OPT_levels. */
 	unsigned long page_shift;	/**< Value of OPT_page_shift. */
@@ -424,6 +424,11 @@ struct os_init_data {
 
 	/** Parsed options. */
 	struct parsed_opts popt;
+
+	/** OS type.
+	 * This field is set to @c ADDRXLAT_OS_UNKNOWN if the OS type
+	 * attribute was not specified or is not understood. */
+	addrxlat_ostype_t os_type;
 };
 
 /** Arch-specific translation system initialization funciton.

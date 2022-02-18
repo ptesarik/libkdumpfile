@@ -6,7 +6,7 @@
 
 opts=(
     arch=ia32
-    ostype=2
+    ostype=xen
     rootpgt=MACHPHYSADDR:0x100120
 )
 

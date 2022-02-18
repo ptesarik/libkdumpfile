@@ -91,7 +91,7 @@ parse_opt(struct parsed_opts *popt, const addrxlat_opt_t *opt)
 		break;
 
 	case ADDRXLAT_OPT_os_type:
-		popt->os_type = opt->val.num;
+		popt->os_type = opt->val.str;
 		break;
 
 	case ADDRXLAT_OPT_version_code:
@@ -197,6 +197,13 @@ addrxlat_sys_os_init(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 
 	ctl.sys = sys;
 	ctl.ctx = ctx;
+	ctl.os_type = ADDRXLAT_OS_UNKNOWN;
+	if (opt_isset(ctl.popt, os_type)) {
+		if (!strcmp(ctl.popt.os_type, "linux"))
+			ctl.os_type = ADDRXLAT_OS_LINUX;
+		else if (!strcmp(ctl.popt.os_type, "xen"))
+			ctl.os_type = ADDRXLAT_OS_XEN;
+	}
 
 	return arch_fn(&ctl);
 }

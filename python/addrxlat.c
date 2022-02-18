@@ -4224,10 +4224,10 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 		++p;
 	}
 	if (type && type != Py_None) {
-		addrxlat_opt_os_type(
-			p, Number_AsUnsignedLongLong(type));
-		if (PyErr_Occurred())
+		const char *str = Text_AsUTF8(type);
+		if (!str)
 			return NULL;
+		addrxlat_opt_os_type(p, str);
 		++p;
 	}
 	if (ver && ver != Py_None) {

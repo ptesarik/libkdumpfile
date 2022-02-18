@@ -817,7 +817,7 @@ typedef enum _addrxlat_optidx {
 	ADDRXLAT_OPT_arch,
 
 	/** Operating system type.
-	 * Type: number (addrxlat_ostype_t)
+	 * Type: string
 	 */
 	ADDRXLAT_OPT_os_type,
 
@@ -894,10 +894,10 @@ addrxlat_opt_arch(addrxlat_opt_t *opt, const char *val)
 
 /** Helper to set @xref ADDRXLAT_OPT_os_type in a type-safe manner. */
 static inline void
-addrxlat_opt_os_type(addrxlat_opt_t *opt, addrxlat_ostype_t val)
+addrxlat_opt_os_type(addrxlat_opt_t *opt, const char *val)
 {
 	opt->idx = ADDRXLAT_OPT_os_type;
-	opt->val.num = val;
+	opt->val.str = val;
 }
 
 /** Helper to set @xref ADDRXLAT_OPT_version_code in a type-safe manner. */

@@ -7,7 +7,7 @@
 
 opts=(
     arch=aarch64
-    ostype=1
+    ostype=linux
     page_shift=12
 )
 
