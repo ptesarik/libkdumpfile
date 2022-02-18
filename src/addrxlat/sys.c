@@ -197,12 +197,12 @@ addrxlat_sys_os_init(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 
 	ctl.sys = sys;
 	ctl.ctx = ctx;
-	ctl.os_type = ADDRXLAT_OS_UNKNOWN;
+	ctl.os_type = OS_UNKNOWN;
 	if (opt_isset(ctl.popt, os_type)) {
 		if (!strcmp(ctl.popt.os_type, "linux"))
-			ctl.os_type = ADDRXLAT_OS_LINUX;
+			ctl.os_type = OS_LINUX;
 		else if (!strcmp(ctl.popt.os_type, "xen"))
-			ctl.os_type = ADDRXLAT_OS_XEN;
+			ctl.os_type = OS_XEN;
 	}
 
 	return arch_fn(&ctl);

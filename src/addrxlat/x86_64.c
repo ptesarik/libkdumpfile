@@ -977,7 +977,7 @@ init_pgt_meth(struct os_init_data *ctl)
 	meth->param.pgt.pte_mask = 0;
 	meth->param.pgt.pf = x86_64_pf;
 
-	if (ctl->os_type == ADDRXLAT_OS_LINUX) {
+	if (ctl->os_type == OS_LINUX) {
 		addrxlat_addr_t l5_enabled;
 
 		status = get_number(ctl->ctx, "pgtable_l5_enabled",
@@ -1027,10 +1027,10 @@ sys_x86_64(struct os_init_data *ctl)
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	if (ctl->os_type == ADDRXLAT_OS_LINUX)
+	if (ctl->os_type == OS_LINUX)
 		return map_linux_x86_64(ctl);
 
-	if (ctl->os_type == ADDRXLAT_OS_XEN)
+	if (ctl->os_type == OS_XEN)
 		return map_xen_x86_64(ctl);
 
 	return ADDRXLAT_OK;

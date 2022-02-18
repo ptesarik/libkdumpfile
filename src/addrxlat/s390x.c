@@ -158,7 +158,7 @@ get_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 
 	if (!opt_isset(ctl->popt, os_type))
 		status = ADDRXLAT_ERR_NODATA;
-	else if (ctl->os_type == ADDRXLAT_OS_LINUX) {
+	else if (ctl->os_type == OS_LINUX) {
 		status = get_symval(ctl->ctx, "swapper_pg_dir", &root->addr);
 		if (status == ADDRXLAT_OK) {
 			root->as = ADDRXLAT_KPHYSADDR;

@@ -414,6 +414,13 @@ struct parsed_opts {
 
 /* Translation system */
 
+/** Operating system type. */
+enum os_type {
+	OS_UNKNOWN,		/**< Unknown OS. */
+	OS_LINUX,		/**< Linux kernel. */
+	OS_XEN,			/**< Xen hypervisor. */
+};
+
 /** Data used during translation system initialization. */
 struct os_init_data {
 	/** Target translation system. */
@@ -426,9 +433,9 @@ struct os_init_data {
 	struct parsed_opts popt;
 
 	/** OS type.
-	 * This field is set to @c ADDRXLAT_OS_UNKNOWN if the OS type
+	 * This field is set to @xref OS_UNKNOWN if the OS type
 	 * attribute was not specified or is not understood. */
-	addrxlat_ostype_t os_type;
+	enum os_type os_type;
 };
 
 /** Arch-specific translation system initialization funciton.
