@@ -4174,7 +4174,7 @@ sys_richcompare(PyObject *v, PyObject *w, int op)
 }
 
 PyDoc_STRVAR(sys_os_init__doc__,
-"SYS.os_init(ctx, arch=None, type=None, ver=None, levels=None, pagesize=None, phys_base=None, rootpgt=None, xen_p2m_mfn=None, xen_xlat=None) -> status\n\
+"SYS.os_init(ctx, arch=None, os_type=None, version_code=None, levels=None, pagesize=None, phys_base=None, rootpgt=None, xen_p2m_mfn=None, xen_xlat=None) -> status\n\
 \n\
 Set up a translation system for a pre-defined operating system.");
 
@@ -4185,8 +4185,8 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 	static char *keywords[] = {
 		"ctx",
 		"arch",
-		"type",
-		"ver",
+		"os_type",
+		"version_code",
 		"levels",
 		"pagesize",
 		"phys_base",
