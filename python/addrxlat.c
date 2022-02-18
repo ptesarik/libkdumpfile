@@ -4227,26 +4227,36 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 	if (type && type != Py_None) {
 		addrxlat_opt_os_type(
 			p, Number_AsUnsignedLongLong(type));
+		if (PyErr_Occurred())
+			return NULL;
 		++p;
 	}
 	if (ver && ver != Py_None) {
 		addrxlat_opt_version_code(
 			p, Number_AsUnsignedLongLong(ver));
+		if (PyErr_Occurred())
+			return NULL;
 		++p;
 	}
 	if (levels && levels != Py_None) {
 		addrxlat_opt_levels(
 			p, Number_AsUnsignedLongLong(levels));
+		if (PyErr_Occurred())
+			return NULL;
 		++p;
 	}
 	if (pagesize && pagesize != Py_None) {
 		addrxlat_opt_pagesize(
 			p, Number_AsUnsignedLongLong(pagesize));
+		if (PyErr_Occurred())
+			return NULL;
 		++p;
 	}
 	if (phys_base && phys_base != Py_None) {
 		addrxlat_opt_phys_base(
 			p, Number_AsUnsignedLongLong(phys_base));
+		if (PyErr_Occurred())
+			return NULL;
 		++p;
 	}
 	if (rootpgt && rootpgt != Py_None) {
@@ -4259,6 +4269,8 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 	if (xen_p2m_mfn && xen_p2m_mfn != Py_None) {
 		addrxlat_opt_xen_p2m_mfn(
 			p, Number_AsUnsignedLongLong(xen_p2m_mfn));
+		if (PyErr_Occurred())
+			return NULL;
 		++p;
 	}
 	if (xen_xlat && xen_xlat != Py_None && Number_AsLong(xen_xlat)) {
