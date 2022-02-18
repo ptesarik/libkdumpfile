@@ -171,7 +171,6 @@ get_symdata(void *data, addrxlat_sym_t *sym)
 static char *arch;
 static char *ostype;
 static unsigned long long osver;
-static unsigned long long levels;
 static unsigned long long phys_bits;
 static unsigned long long virt_bits;
 static unsigned long long page_shift;
@@ -188,7 +187,6 @@ static const struct param param_array[] = {
 	PARAM_STRING("arch", arch),
 	PARAM_STRING("ostype", ostype),
 	PARAM_NUMBER("osver", osver),
-	PARAM_NUMBER("levels", levels),
 	PARAM_NUMBER("phys_bits", phys_bits),
 	PARAM_NUMBER("virt_bits", virt_bits),
 	PARAM_NUMBER("page_shift", page_shift),
@@ -213,7 +211,6 @@ static void clear_params(void)
 	arch = NULL;
 	ostype = NULL;
 	osver = ULLONG_MAX;
-	levels = ULLONG_MAX;
 	phys_bits = ULLONG_MAX;
 	virt_bits = ULLONG_MAX;
 	page_shift = ULLONG_MAX;
@@ -239,11 +236,6 @@ static unsigned make_opts(addrxlat_opt_t *opts)
 
 	if (osver != ULLONG_MAX) {
 		addrxlat_opt_version_code(opt, osver);
-		++opt;
-	}
-
-	if (levels != ULLONG_MAX) {
-		addrxlat_opt_levels(opt, levels);
 		++opt;
 	}
 

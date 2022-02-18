@@ -401,7 +401,6 @@ struct parsed_opts {
 	const char *arch;		/**< Value of OPT_arch. */
 	const char *os_type;		/**< Value of OPT_os_type. */
 	unsigned long version_code;	/**< Value of OPT_version_code. */
-	unsigned long levels;		/**< Value of OPT_levels. */
 	unsigned long phys_bits;	/**< Value of OPT_phys_bits. */
 	unsigned long virt_bits;	/**< Value of OPT_virt_bits. */
 	unsigned long page_shift;	/**< Value of OPT_page_shift. */
@@ -511,13 +510,6 @@ static inline void
 clear_error(addrxlat_ctx_t *ctx)
 {
 	err_clear(&ctx->err);
-}
-
-static inline addrxlat_status
-bad_paging_levels(addrxlat_ctx_t *ctx, long levels)
-{
-	return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
-			 "%ld-level paging not implemented", levels);
 }
 
 static inline addrxlat_status

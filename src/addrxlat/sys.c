@@ -98,10 +98,6 @@ parse_opt(struct parsed_opts *popt, const addrxlat_opt_t *opt)
 		popt->version_code = opt->val.num;
 		break;
 
-	case ADDRXLAT_OPT_levels:
-		popt->levels = opt->val.num;
-		break;
-
 	case ADDRXLAT_OPT_phys_bits:
 		popt->phys_bits = opt->val.num;
 		break;

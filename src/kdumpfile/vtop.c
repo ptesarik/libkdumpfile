@@ -66,7 +66,6 @@ static const struct attr_template options[] = {
 	DEFOPT(arch, KDUMP_STRING),
 	DEFOPT(os_type, KDUMP_STRING),
 	DEFOPT(version_code, KDUMP_NUMBER),
-	DEFOPT(levels, KDUMP_NUMBER),
 	DEFOPT(phys_bits, KDUMP_NUMBER),
 	DEFOPT(virt_bits, KDUMP_NUMBER),
 	DEFOPT(page_shift, KDUMP_NUMBER),
