@@ -4204,7 +4204,7 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 	addrxlat_status status;
 
 	arch = type = ver = page_shift = phys_base = rootpgt =
-		xen_p2m_mfn = xen_xlat = phys_bits = virt_bits = NULL;
+		xen_p2m_mfn = xen_xlat = phys_bits = virt_bits = Py_None;
 	if (!PyArg_ParseTupleAndKeywords(
 		    args, kwargs, "O|PPPPPPPPPP:os_init", keywords,
 		    &ctxobj, &arch, &type, &ver, &phys_bits, &virt_bits,
@@ -4218,70 +4218,70 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 
 	p = opts;
 
-	if (arch && arch != Py_None) {
+	if (arch != Py_None) {
 		const char *str = Text_AsUTF8(arch);
 		if (!str)
 			return NULL;
 		addrxlat_opt_arch(p, str);
 		++p;
 	}
-	if (type && type != Py_None) {
+	if (type != Py_None) {
 		const char *str = Text_AsUTF8(type);
 		if (!str)
 			return NULL;
 		addrxlat_opt_os_type(p, str);
 		++p;
 	}
-	if (ver && ver != Py_None) {
+	if (ver != Py_None) {
 		addrxlat_opt_version_code(
 			p, Number_AsUnsignedLongLong(ver));
 		if (PyErr_Occurred())
 			return NULL;
 		++p;
 	}
-	if (phys_bits && phys_bits != Py_None) {
+	if (phys_bits != Py_None) {
 		addrxlat_opt_phys_bits(
 			p, Number_AsUnsignedLongLong(phys_bits));
 		if (PyErr_Occurred())
 			return NULL;
 		++p;
 	}
-	if (virt_bits && virt_bits != Py_None) {
+	if (virt_bits != Py_None) {
 		addrxlat_opt_virt_bits(
 			p, Number_AsUnsignedLongLong(virt_bits));
 		if (PyErr_Occurred())
 			return NULL;
 		++p;
 	}
-	if (page_shift && page_shift != Py_None) {
+	if (page_shift != Py_None) {
 		addrxlat_opt_page_shift(
 			p, Number_AsUnsignedLongLong(page_shift));
 		if (PyErr_Occurred())
 			return NULL;
 		++p;
 	}
-	if (phys_base && phys_base != Py_None) {
+	if (phys_base != Py_None) {
 		addrxlat_opt_phys_base(
 			p, Number_AsUnsignedLongLong(phys_base));
 		if (PyErr_Occurred())
 			return NULL;
 		++p;
 	}
-	if (rootpgt && rootpgt != Py_None) {
+	if (rootpgt != Py_None) {
 		addrxlat_fulladdr_t *faddr = fulladdr_AsPointer(rootpgt);
 		if (!faddr)
 			return NULL;
 		addrxlat_opt_rootpgt(p, faddr);
 		++p;
 	}
-	if (xen_p2m_mfn && xen_p2m_mfn != Py_None) {
+	if (xen_p2m_mfn != Py_None) {
 		addrxlat_opt_xen_p2m_mfn(
 			p, Number_AsUnsignedLongLong(xen_p2m_mfn));
 		if (PyErr_Occurred())
 			return NULL;
 		++p;
 	}
-	if (xen_xlat && xen_xlat != Py_None && Number_AsLong(xen_xlat)) {
+	if (xen_xlat != Py_None && Number_AsLong(xen_xlat)) {
 		addrxlat_opt_xen_xlat(p, 1);
 		++p;
 	}
