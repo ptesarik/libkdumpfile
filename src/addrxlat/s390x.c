@@ -49,11 +49,17 @@
 /** Page-Table Origin mask. */
 #define PTO_MASK	ADDR_MASK(11)
 
+/** Segment-Frame Absolute Address bits */
+#define SFAA_BITS	20
+
 /** Segment-Frame Absolute Address mask when FC=0 */
-#define SFAA_MASK	ADDR_MASK(20)
+#define SFAA_MASK	ADDR_MASK(SFAA_BITS)
 
 /** Region-Frame Absolute Address mask when FC=0 */
 #define RFAA_MASK	ADDR_MASK(31)
+
+/** Region 1,2,3 table index bits */
+#define REGTBL_BITS	11
 
 /* Maximum pointers in the root page table */
 #define ROOT_PGT_LEN	2048
@@ -171,12 +177,13 @@ get_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 			 "Cannot determine page table root address");
 }
 
-/* Use the content of the root page table to determine paging levels.
+/* Use the content of the root page table to determine the number
+ * of virtual address bits.
  * @param ctl  Initialization data.
  * @returns    Error status.
  */
 static addrxlat_status
-get_levels_from_pgt(struct os_init_data *ctl)
+get_virt_bits_from_pgt(struct os_init_data *ctl)
 {
 	addrxlat_step_t step =	/* step state surrogate */
 		{ .ctx = ctl->ctx, .sys = ctl->sys };
@@ -191,7 +198,8 @@ get_levels_from_pgt(struct os_init_data *ctl)
 		if (status != ADDRXLAT_OK)
 			return status;
 		if (!PTE_I(entry)) {
-			ctl->popt.levels = PTE_TT(entry) + 2;
+			ctl->popt.virt_bits =
+				SFAA_BITS + REGTBL_BITS * (PTE_TT(entry) + 1);
 			return ADDRXLAT_OK;
 		}
 		ptr.addr += sizeof(uint64_t);
@@ -214,26 +222,27 @@ init_paging_form(struct os_init_data *ctl)
 	};
 
 	addrxlat_meth_t *meth;
-	long levels;
+	long virt_bits;
 	addrxlat_status status;
 
 	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 
 	status = get_pgtroot(ctl, &meth->param.pgt.root);
-	if (status == ADDRXLAT_OK && !opt_isset(ctl->popt, levels))
-		status = get_levels_from_pgt(ctl);
+	if (status == ADDRXLAT_OK && !opt_isset(ctl->popt, virt_bits))
+		status = get_virt_bits_from_pgt(ctl);
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	levels = ctl->popt.levels;
-	if (levels < 2 || levels > 5)
-		return bad_paging_levels(ctl->ctx, levels);
+	virt_bits = ctl->popt.virt_bits;
+	if (virt_bits < 31 || virt_bits > 64 ||
+	    (virt_bits - SFAA_BITS) % REGTBL_BITS != 0)
+		return bad_virt_bits(ctl->ctx, virt_bits);
 
 	meth->kind = ADDRXLAT_PGT;
 	meth->target_as = ADDRXLAT_MACHPHYSADDR;
 	meth->param.pgt.pte_mask = 0;
 	meth->param.pgt.pf = pf;
-	meth->param.pgt.pf.nfields = levels + 1;
+	meth->param.pgt.pf.nfields = 2 + (virt_bits - SFAA_BITS) / REGTBL_BITS;
 	return ADDRXLAT_OK;
 }
 

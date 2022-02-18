@@ -308,13 +308,7 @@ init_pgt_meth(struct os_init_data *ctl, unsigned va_bits)
 				 "Cannot determine page size");
 	page_bits = ctl->popt.page_shift;
 
-	if (opt_isset(ctl->popt, levels)) {
-		long levels = ctl->popt.levels;
-		if (levels < 3 || levels > 5)
-			return bad_paging_levels(ctl->ctx, levels);
-		pgt->pf.nfields = levels + 1;
-	} else
-		pgt->pf.nfields = (va_bits - 4) / (page_bits - 3) + 1;
+	pgt->pf.nfields = (va_bits - 4) / (page_bits - 3) + 1;
 
 	field_bits = page_bits;
 	for (i = 0; i < pgt->pf.nfields; ++i) {
@@ -352,16 +346,20 @@ map_linux_aarch64(struct os_init_data *ctl)
 	addrxlat_status status;
 	addrxlat_addr_t va_bits;
 
-	status = get_number(ctl->ctx, "TCR_EL1_T1SZ", &va_bits);
-	if (status == ADDRXLAT_OK) {
-		va_bits = 64 - va_bits;
-	} else if (status == ADDRXLAT_ERR_NODATA) {
-		clear_error(ctl->ctx);
-		status = get_number(ctl->ctx, "VA_BITS", &va_bits);
+	if (opt_isset(ctl->popt, virt_bits)) {
+		va_bits = ctl->popt.virt_bits;
+	} else {
+		status = get_number(ctl->ctx, "TCR_EL1_T1SZ", &va_bits);
+		if (status == ADDRXLAT_OK) {
+			va_bits = 64 - va_bits;
+		} else if (status == ADDRXLAT_ERR_NODATA) {
+			clear_error(ctl->ctx);
+			status = get_number(ctl->ctx, "VA_BITS", &va_bits);
+		}
+		if (status != ADDRXLAT_OK)
+			return set_error(ctl->ctx, status,
+					 "Cannot determine VA_BITS");
 	}
-	if (status != ADDRXLAT_OK)
-		return set_error(ctl->ctx, status,
-				 "Cannot determine VA_BITS");
 
 	status = init_pgt_meth(ctl, va_bits);
 	if (status != ADDRXLAT_OK)

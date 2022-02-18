@@ -4174,7 +4174,7 @@ sys_richcompare(PyObject *v, PyObject *w, int op)
 }
 
 PyDoc_STRVAR(sys_os_init__doc__,
-"SYS.os_init(ctx, arch=None, os_type=None, version_code=None, levels=None, phys_bits=None, page_shift=None, phys_base=None, rootpgt=None, xen_p2m_mfn=None, xen_xlat=None) -> status\n\
+"SYS.os_init(ctx, arch=None, os_type=None, version_code=None, levels=None, phys_bits=None, virt_bits=None, page_shift=None, phys_base=None, rootpgt=None, xen_p2m_mfn=None, xen_xlat=None) -> status\n\
 \n\
 Set up a translation system for a pre-defined operating system.");
 
@@ -4189,6 +4189,7 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 		"version_code",
 		"levels",
 		"phys_bits",
+		"virt_bits",
 		"page_shift",
 		"phys_base",
 		"rootpgt",
@@ -4198,16 +4199,16 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 	};
 	PyObject *ctxobj;
 	PyObject *arch, *type, *ver, *levels, *page_shift, *phys_base,
-		*rootpgt, *xen_p2m_mfn, *xen_xlat, *phys_bits;
+		*rootpgt, *xen_p2m_mfn, *xen_xlat, *phys_bits, *virt_bits;
 	addrxlat_ctx_t *ctx;
 	addrxlat_opt_t opts[ADDRXLAT_OPT_NUM], *p;
 	addrxlat_status status;
 
 	arch = type = ver = levels = page_shift = phys_base =
-		rootpgt = xen_p2m_mfn = xen_xlat = phys_bits = NULL;
+		rootpgt = xen_p2m_mfn = xen_xlat = phys_bits = virt_bits = NULL;
 	if (!PyArg_ParseTupleAndKeywords(
-		    args, kwargs, "O|PPPPPPPPPP:os_init", keywords,
-		    &ctxobj, &arch, &type, &ver, &levels, &phys_bits,
+		    args, kwargs, "O|PPPPPPPPPPP:os_init", keywords,
+		    &ctxobj, &arch, &type, &ver, &levels, &phys_bits, &virt_bits,
 		    &page_shift, &phys_base, &rootpgt, &xen_p2m_mfn,
 		    &xen_xlat))
 		return NULL;
@@ -4249,6 +4250,13 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 	if (phys_bits && phys_bits != Py_None) {
 		addrxlat_opt_phys_bits(
 			p, Number_AsUnsignedLongLong(phys_bits));
+		if (PyErr_Occurred())
+			return NULL;
+		++p;
+	}
+	if (virt_bits && virt_bits != Py_None) {
+		addrxlat_opt_virt_bits(
+			p, Number_AsUnsignedLongLong(virt_bits));
 		if (PyErr_Occurred())
 			return NULL;
 		++p;

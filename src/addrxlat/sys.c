@@ -106,6 +106,10 @@ parse_opt(struct parsed_opts *popt, const addrxlat_opt_t *opt)
 		popt->phys_bits = opt->val.num;
 		break;
 
+	case ADDRXLAT_OPT_virt_bits:
+		popt->virt_bits = opt->val.num;
+		break;
+
 	case ADDRXLAT_OPT_page_shift:
 		popt->page_shift = opt->val.num;
 		break;

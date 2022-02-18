@@ -829,6 +829,11 @@ typedef enum _addrxlat_optidx {
 	 */
 	ADDRXLAT_OPT_phys_bits,
 
+	/** Number of virtual address bits.
+	 * Type: number
+	 */
+	ADDRXLAT_OPT_virt_bits,
+
 	/** Page shift.
 	 * Type: number
 	 */
@@ -919,6 +924,14 @@ static inline void
 addrxlat_opt_phys_bits(addrxlat_opt_t *opt, unsigned long val)
 {
 	opt->idx = ADDRXLAT_OPT_phys_bits;
+	opt->val.num = val;
+}
+
+/** Helper to set @xref ADDRXLAT_OPT_virt_bits in a type-safe manner. */
+static inline void
+addrxlat_opt_virt_bits(addrxlat_opt_t *opt, unsigned long val)
+{
+	opt->idx = ADDRXLAT_OPT_virt_bits;
 	opt->val.num = val;
 }
 

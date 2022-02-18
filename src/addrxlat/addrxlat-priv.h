@@ -403,6 +403,7 @@ struct parsed_opts {
 	unsigned long version_code;	/**< Value of OPT_version_code. */
 	unsigned long levels;		/**< Value of OPT_levels. */
 	unsigned long phys_bits;	/**< Value of OPT_phys_bits. */
+	unsigned long virt_bits;	/**< Value of OPT_virt_bits. */
 	unsigned long page_shift;	/**< Value of OPT_page_shift. */
 	addrxlat_addr_t phys_base;	/**< Value of OPT_phys_base. */
 	addrxlat_fulladdr_t rootpgt;	/**< Value of OPT_rootpgt. */
@@ -525,6 +526,14 @@ bad_phys_bits(addrxlat_ctx_t *ctx, unsigned long bits)
 	return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
 			 "%lu-bit %s addresses not implemented",
 			 bits, "physical");
+}
+
+static inline addrxlat_status
+bad_virt_bits(addrxlat_ctx_t *ctx, unsigned long bits)
+{
+	return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
+			 "%lu-bit %s addresses not implemented",
+			 bits, "virtual");
 }
 
 #endif	/* addrxlat-priv.h */
