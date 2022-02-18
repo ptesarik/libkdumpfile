@@ -4206,7 +4206,7 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 	arch = type = ver = page_shift = phys_base = rootpgt =
 		xen_p2m_mfn = xen_xlat = phys_bits = virt_bits = Py_None;
 	if (!PyArg_ParseTupleAndKeywords(
-		    args, kwargs, "O|PPPPPPPPPP:os_init", keywords,
+		    args, kwargs, "O|OOOOOOOOOO:os_init", keywords,
 		    &ctxobj, &arch, &type, &ver, &phys_bits, &virt_bits,
 		    &page_shift, &phys_base, &rootpgt, &xen_p2m_mfn,
 		    &xen_xlat))
