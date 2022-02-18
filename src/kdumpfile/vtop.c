@@ -624,81 +624,49 @@ addrxlat_put_page(void *data, const addrxlat_buffer_t *buf)
 static addrxlat_status
 addrxlat_sym(void *data, addrxlat_sym_t *sym)
 {
-	static const struct ostype_attr_map value_map[] = {
-		{ ADDRXLAT_OS_LINUX, GKI_linux_symbol },
-		{ ADDRXLAT_OS_XEN, GKI_xen_symbol },
-		{ ADDRXLAT_OS_UNKNOWN }
-	};
-	static const struct ostype_attr_map sizeof_map[] = {
-		{ ADDRXLAT_OS_LINUX, GKI_linux_size },
-		{ ADDRXLAT_OS_XEN, GKI_xen_size },
-		{ ADDRXLAT_OS_UNKNOWN }
-	};
-	static const struct ostype_attr_map offsetof_map[] = {
-		{ ADDRXLAT_OS_LINUX, GKI_linux_offset },
-		{ ADDRXLAT_OS_XEN, GKI_xen_offset },
-		{ ADDRXLAT_OS_UNKNOWN }
-	};
-
-	static const struct ostype_attr_map number_map[] = {
-		{ ADDRXLAT_OS_LINUX, GKI_linux_number },
-		{ ADDRXLAT_OS_XEN, GKI_xen_number },
-		{ ADDRXLAT_OS_UNKNOWN }
-	};
-
 	kdump_ctx_t *ctx = (kdump_ctx_t*) data;
-	const struct attr_data *base;
+	struct attr_data *base;
 	struct attr_data *attr;
+	kdump_status status;
 	addrxlat_status ret;
+
+	rwlock_rdlock(&ctx->shared->lock);
+
+	status = KDUMP_OK;
+	ret = ADDRXLAT_OK;
 
 	switch (sym->type) {
 	case ADDRXLAT_SYM_VALUE:
-		base = ostype_attr(ctx, value_map);
-		if (!base)
-			return addrxlat_ctx_err(
-				ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
-				"Unsupported OS");
+		status = ostype_attr(ctx, "vmcoreinfo.SYMBOL", &base);
 		break;
 
 	case ADDRXLAT_SYM_SIZEOF:
-		base = ostype_attr(ctx, sizeof_map);
-		if (!base)
-			return addrxlat_ctx_err(
-				ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
-				"Unsupported OS");
+		status = ostype_attr(ctx, "vmcoreinfo.SIZE", &base);
 		break;
 
 	case ADDRXLAT_SYM_OFFSETOF:
-		base = ostype_attr(ctx, offsetof_map);
-		if (!base)
-			return addrxlat_ctx_err(
-				ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
-				"Unsupported OS");
+		status = ostype_attr(ctx, "vmcoreinfo.OFFSET", &base);
 		break;
 
         case ADDRXLAT_SYM_NUMBER:
-		base = ostype_attr(ctx, number_map);
-		if (!base)
-			return addrxlat_ctx_err(
-				ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
-				"Unsupported OS");
+		status = ostype_attr(ctx, "vmcoreinfo.NUMBER", &base);
 		break;
 
 	case ADDRXLAT_SYM_REG:
-		rwlock_rdlock(&ctx->shared->lock);
 		base = lookup_attr(ctx->dict, "cpu.0.reg");
-		rwlock_unlock(&ctx->shared->lock);
 		if (!base)
-			return addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
-						"No registers");
+			ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
+					   "No registers");
 		break;
 
 	default:
-		return addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
-					"Unhandled symbolic type");
+		ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
+				       "Unhandled symbolic type");
 	}
-
-	rwlock_rdlock(&ctx->shared->lock);
+	if (status != KDUMP_OK)
+		ret = kdump2addrxlat(ctx, status);
+	if (ret != ADDRXLAT_OK)
+		goto out;
 
 	attr = lookup_dir_attr(ctx->dict, base,
 			       sym->args[0], strlen(sym->args[0]));

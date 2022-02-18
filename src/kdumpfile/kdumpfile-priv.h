@@ -530,16 +530,8 @@ struct attr_dict {
 	struct kdump_shared *shared;
 };
 
-/** OS type to attribute key mapping.
- */
-struct ostype_attr_map {
-	addrxlat_ostype_t ostype;   /**< OS type */
-	enum global_keyidx attrkey; /**< Corresponding attribute key */
-};
-
-INTERNAL_DECL(struct attr_data *, ostype_attr,
-	      (const kdump_ctx_t *ctx,
-	       const struct ostype_attr_map *map));
+INTERNAL_DECL(kdump_status, ostype_attr,
+	      (kdump_ctx_t *ctx, const char *name, struct attr_data **attr));
 
 struct cache;
 

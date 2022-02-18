@@ -1400,19 +1400,52 @@ kdump_attr_iter_end(kdump_ctx_t *ctx, kdump_attr_iter_t *iter)
 }
 
 /**  Use a map to choose an attribute by current OS type.
- * @param ctx     Dump file object.
- * @param map     OS type -> global attribute index.
- * @returns       Attribute, or @c NULL if OS type not found.
+ * @param      ctx   Dump file object.
+ * @param[in]  name  Attribute name under the OS directory.
+ * @param[out] attr  Attribute data (set on success).
+ * @returns          Error status.
  */
-struct attr_data *
-ostype_attr(const kdump_ctx_t *ctx,
-	    const struct ostype_attr_map *map)
+kdump_status
+ostype_attr(kdump_ctx_t *ctx, const char *name, struct attr_data **attr)
 {
-	while (map->ostype != ADDRXLAT_OS_UNKNOWN) {
-		if (map->ostype == ctx->xlat->ostype)
-			return dgattr(ctx->dict, map->attrkey);
-		++map;
-	}
+	struct attr_data *d;
+	const char *ostype;
+	kdump_status status;
 
-	return NULL;
+	/* Get OS type name */
+	ostype = "addrxlat.ostype"; /* used in error messages */
+	d = gattr(ctx, GKI_ostype);
+	if (!attr_isset(d))
+		return set_error(ctx, KDUMP_ERR_NODATA,
+				 "%s is not set", ostype);
+	status = attr_revalidate(ctx, d);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Cannot get %s", ostype);
+	ostype = attr_value(d)->string;
+
+	/* Get OS directory attribute */
+	d = lookup_attr(ctx->dict, ostype);
+	if (!d || d->template->type != KDUMP_DIRECTORY)
+		return set_error(ctx, KDUMP_ERR_NOTIMPL,
+				 "Unknown OS type: %s", ostype);
+	if (!attr_isset(d))
+		return set_error(ctx, KDUMP_ERR_NODATA,
+				 "%s OS attributes are not set", ostype);
+	status = attr_revalidate(ctx, d);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status,
+				 "Cannot get %s OS attributes", ostype);
+
+	/* Get attribute under the OS directory. */
+	d = lookup_dir_attr(ctx->dict, d, name, strlen(name));
+	if (!d || !attr_isset(d))
+		return set_error(ctx, KDUMP_ERR_NODATA,
+				 "%s.%s is not set", ostype, name);
+	status = attr_revalidate(ctx, d);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status,
+				 "Cannot get %s.%s", ostype, name);
+
+	*attr = d;
+	return KDUMP_OK;
 }
