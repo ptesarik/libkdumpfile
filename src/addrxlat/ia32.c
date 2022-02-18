@@ -222,7 +222,7 @@ check_pae(struct os_init_data *ctl, const addrxlat_fulladdr_t *root,
 	step.base.addr = direct;
 	status = internal_walk(&step);
 	if (status == ADDRXLAT_OK && step.base.addr == 0) {
-		ctl->popt.levels = 3;
+		ctl->popt.phys_bits = PHYSADDR_BITS_MAX_PAE;
 		return ADDRXLAT_OK;
 	}
 
@@ -241,7 +241,7 @@ check_pae(struct os_init_data *ctl, const addrxlat_fulladdr_t *root,
 	step.base.addr = direct;
 	status = internal_walk(&step);
 	if (status == ADDRXLAT_OK && step.base.addr == 0) {
-		ctl->popt.levels = 2;
+		ctl->popt.phys_bits = PHYSADDR_BITS_MAX_NONPAE;
 		return ADDRXLAT_OK;
 	}
 
@@ -486,7 +486,7 @@ sys_ia32(struct os_init_data *ctl)
 
 	addrxlat_range_t range;
 	addrxlat_map_t *newmap;
-	long levels;
+	long phys_bits;
 	addrxlat_status status;
 
 	if (ctl->os_type == OS_LINUX) {
@@ -498,7 +498,7 @@ sys_ia32(struct os_init_data *ctl)
 	}
 
 	status = ADDRXLAT_OK;
-	if (!opt_isset(ctl->popt, levels)) {
+	if (!opt_isset(ctl->popt, phys_bits)) {
 		addrxlat_fulladdr_t *rootpgtopt = &ctl->popt.rootpgt;
 
 		if (!opt_isset(ctl->popt, rootpgt))
@@ -529,13 +529,13 @@ sys_ia32(struct os_init_data *ctl)
 		return set_error(ctl->ctx, status,
 				 "Cannot set up hardware mapping");
 
-	levels = ctl->popt.levels;
-	if (levels == 2)
+	phys_bits = ctl->popt.phys_bits;
+	if (phys_bits == PHYSADDR_BITS_MAX_NONPAE)
 		status = sys_ia32_nonpae(ctl);
-	else if (levels == 3)
+	else if (phys_bits == PHYSADDR_BITS_MAX_PAE)
 		status = sys_ia32_pae(ctl);
 	else
-		return bad_paging_levels(ctl->ctx, levels);
+		return bad_phys_bits(ctl->ctx, phys_bits);
 	if (status != ADDRXLAT_OK)
 		return status;
 

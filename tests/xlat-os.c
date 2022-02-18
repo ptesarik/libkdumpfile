@@ -172,6 +172,7 @@ static char *arch;
 static char *ostype;
 static unsigned long long osver;
 static unsigned long long levels;
+static unsigned long long phys_bits;
 static unsigned long long page_shift;
 static unsigned long long phys_base;
 static addrxlat_fulladdr_t rootpgt;
@@ -187,6 +188,7 @@ static const struct param param_array[] = {
 	PARAM_STRING("ostype", ostype),
 	PARAM_NUMBER("osver", osver),
 	PARAM_NUMBER("levels", levels),
+	PARAM_NUMBER("phys_bits", phys_bits),
 	PARAM_NUMBER("page_shift", page_shift),
 	PARAM_NUMBER("phys_base", phys_base),
 	PARAM_FULLADDR("rootpgt", rootpgt),
@@ -210,6 +212,7 @@ static void clear_params(void)
 	ostype = NULL;
 	osver = ULLONG_MAX;
 	levels = ULLONG_MAX;
+	phys_bits = ULLONG_MAX;
 	page_shift = ULLONG_MAX;
 	phys_base = ULLONG_MAX;
 	rootpgt.as = ADDRXLAT_NOADDR;
@@ -238,6 +241,11 @@ static unsigned make_opts(addrxlat_opt_t *opts)
 
 	if (levels != ULLONG_MAX) {
 		addrxlat_opt_levels(opt, levels);
+		++opt;
+	}
+
+	if (phys_bits != ULLONG_MAX) {
+		addrxlat_opt_phys_bits(opt, phys_bits);
 		++opt;
 	}
 

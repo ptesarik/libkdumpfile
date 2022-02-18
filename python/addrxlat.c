@@ -4174,7 +4174,7 @@ sys_richcompare(PyObject *v, PyObject *w, int op)
 }
 
 PyDoc_STRVAR(sys_os_init__doc__,
-"SYS.os_init(ctx, arch=None, os_type=None, version_code=None, levels=None, page_shift=None, phys_base=None, rootpgt=None, xen_p2m_mfn=None, xen_xlat=None) -> status\n\
+"SYS.os_init(ctx, arch=None, os_type=None, version_code=None, levels=None, phys_bits=None, page_shift=None, phys_base=None, rootpgt=None, xen_p2m_mfn=None, xen_xlat=None) -> status\n\
 \n\
 Set up a translation system for a pre-defined operating system.");
 
@@ -4188,6 +4188,7 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 		"os_type",
 		"version_code",
 		"levels",
+		"phys_bits",
 		"page_shift",
 		"phys_base",
 		"rootpgt",
@@ -4197,17 +4198,18 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 	};
 	PyObject *ctxobj;
 	PyObject *arch, *type, *ver, *levels, *page_shift, *phys_base,
-		*rootpgt, *xen_p2m_mfn, *xen_xlat;
+		*rootpgt, *xen_p2m_mfn, *xen_xlat, *phys_bits;
 	addrxlat_ctx_t *ctx;
 	addrxlat_opt_t opts[ADDRXLAT_OPT_NUM], *p;
 	addrxlat_status status;
 
 	arch = type = ver = levels = page_shift = phys_base =
-		rootpgt = xen_p2m_mfn = xen_xlat = NULL;
+		rootpgt = xen_p2m_mfn = xen_xlat = phys_bits = NULL;
 	if (!PyArg_ParseTupleAndKeywords(
-		    args, kwargs, "O|PPPPPPPPP:os_init", keywords,
-		    &ctxobj, &arch, &type, &ver, &levels, &page_shift,
-		    &phys_base, &rootpgt, &xen_p2m_mfn, &xen_xlat))
+		    args, kwargs, "O|PPPPPPPPPP:os_init", keywords,
+		    &ctxobj, &arch, &type, &ver, &levels, &phys_bits,
+		    &page_shift, &phys_base, &rootpgt, &xen_p2m_mfn,
+		    &xen_xlat))
 		return NULL;
 
 	ctx = ctx_AsPointer(ctxobj);
@@ -4240,6 +4242,13 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 	if (levels && levels != Py_None) {
 		addrxlat_opt_levels(
 			p, Number_AsUnsignedLongLong(levels));
+		if (PyErr_Occurred())
+			return NULL;
+		++p;
+	}
+	if (phys_bits && phys_bits != Py_None) {
+		addrxlat_opt_phys_bits(
+			p, Number_AsUnsignedLongLong(phys_bits));
 		if (PyErr_Occurred())
 			return NULL;
 		++p;

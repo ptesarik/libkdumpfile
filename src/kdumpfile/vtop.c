@@ -67,6 +67,7 @@ static const struct attr_template options[] = {
 	DEFOPT(os_type, KDUMP_STRING),
 	DEFOPT(version_code, KDUMP_NUMBER),
 	DEFOPT(levels, KDUMP_NUMBER),
+	DEFOPT(phys_bits, KDUMP_NUMBER),
 	DEFOPT(page_shift, KDUMP_NUMBER),
 	DEFOPT(phys_base, KDUMP_ADDRESS),
 	DEFOPT(rootpgt, KDUMP_DIRECTORY),
@@ -337,23 +338,23 @@ set_page_shift_opt(kdump_ctx_t *ctx, struct opts *opts)
 	return KDUMP_OK;
 }
 
-/**  Determine number of paging levels for x86 Linux OS.
+/**  Determine number of physical address bits for x86 Linux OS.
  * @param ctx     Dump file object.
- * @param levels  Set to number of levels on success.
+ * @param bits    Set to number of physical address bits on success.
  * @returns       Error status.
  *
- * If PAE status is unknown, @c levels is unchanged, and this function
+ * If PAE status is unknown, @p bits is unchanged, and this function
  * returns success.
  */
 static kdump_status
-get_linux_x86_levels(kdump_ctx_t *ctx, int *levels)
+get_linux_x86_phys_bits(kdump_ctx_t *ctx, int *bits)
 {
 	static const char config_pae[] = "CONFIG_X86_PAE";
 	struct attr_data *attr;
 
 	attr = gattr(ctx, GKI_linux_vmcoreinfo_lines);
 	if (attr_isset(attr))
-		*levels = 2;
+		*bits = 32;
 	attr = lookup_dir_attr(ctx->dict, attr,
 			       config_pae, sizeof(config_pae) - 1);
 	if (attr && attr_isset(attr)) {
@@ -363,40 +364,38 @@ get_linux_x86_levels(kdump_ctx_t *ctx, int *levels)
 					 "Cannot get %s from vmcoreinfo",
 					 config_pae);
 		if (!strcmp(attr_value(attr)->string, "y"))
-			*levels = 3;
+			*bits = 52;
 	}
 	return KDUMP_OK;
 }
 
-/**  Add "levels=" addrxlat option if possible.
+/** Add an ADDRXLAT_OPT_phys_bits option.
  * @param ctx   Dump file object.
  * @param opts  Options.
  * @returns     Error status.
  *
- * If paging levels cannot be determined, nothing is added and this
- * function returns success.
+ * If the number of physical address bits cannot be determined,
+ * nothing is added and this function returns success.
  */
 static kdump_status
-set_linux_levels_opt(kdump_ctx_t *ctx, struct opts *opts)
+set_linux_phys_bits_opt(kdump_ctx_t *ctx, struct opts *opts)
 {
-	int levels;
+	int bits;
 	kdump_status status;
 
-	levels = 0;
 	switch (ctx->shared->arch) {
 	case ARCH_IA32:
-		status = get_linux_x86_levels(ctx, &levels);
+		status = get_linux_x86_phys_bits(ctx, &bits);
 		break;
 
 	default:
-		status = KDUMP_OK;
-		break;
+		return KDUMP_OK;
 	}
 	if (status != KDUMP_OK)
 		return status;
 
-	if (levels != 0) {
-		addrxlat_opt_levels(&opts->opts[opts->n], levels);
+	if (bits != 0) {
+		addrxlat_opt_phys_bits(&opts->opts[opts->n], bits);
 		++opts->n;
 	}
 
@@ -409,7 +408,7 @@ set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 	struct attr_data *attr;
 	kdump_status status;
 
-	status = set_linux_levels_opt(ctx, opts);
+	status = set_linux_phys_bits_opt(ctx, opts);
 	if (status != KDUMP_OK)
 		return status;
 

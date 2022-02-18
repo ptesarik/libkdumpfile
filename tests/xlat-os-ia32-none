@@ -6,7 +6,7 @@
 
 opts=(
     arch=ia32
-    levels=2
+    phys_bits=32
 )
 
 . "$srcdir"/xlat-os-common
