@@ -1412,29 +1412,11 @@ ostype_attr(kdump_ctx_t *ctx, const char *name, struct attr_data **attr)
 	const char *ostype;
 	kdump_status status;
 
-	/* Get OS type name */
-	ostype = "addrxlat.ostype"; /* used in error messages */
-	d = gattr(ctx, GKI_ostype);
-	if (!attr_isset(d))
-		return set_error(ctx, KDUMP_ERR_NODATA,
-				 "%s is not set", ostype);
-	status = attr_revalidate(ctx, d);
-	if (status != KDUMP_OK)
-		return set_error(ctx, status, "Cannot get %s", ostype);
-	ostype = attr_value(d)->string;
-
 	/* Get OS directory attribute */
-	d = lookup_attr(ctx->dict, ostype);
-	if (!d || d->template->type != KDUMP_DIRECTORY)
-		return set_error(ctx, KDUMP_ERR_NOTIMPL,
-				 "Unknown OS type: %s", ostype);
-	if (!attr_isset(d))
+	if (ctx->xlat->osdir == NR_GLOBAL_ATTRS)
 		return set_error(ctx, KDUMP_ERR_NODATA,
-				 "%s OS attributes are not set", ostype);
-	status = attr_revalidate(ctx, d);
-	if (status != KDUMP_OK)
-		return set_error(ctx, status,
-				 "Cannot get %s OS attributes", ostype);
+				 "OS type is not set");
+	d = gattr(ctx, ctx->xlat->osdir);
 
 	/* Get attribute under the OS directory. */
 	d = lookup_dir_attr(ctx->dict, d, name, strlen(name));

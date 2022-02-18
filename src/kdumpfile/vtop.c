@@ -763,6 +763,8 @@ xlat_new(void)
 	xlat->refcnt = 1;
 	list_init(&xlat->ctx);
 
+	xlat->osdir = NR_GLOBAL_ATTRS;
+
 	xlat->xlatsys = addrxlat_sys_new();
 	if (!xlat->xlatsys)
 		goto err;
