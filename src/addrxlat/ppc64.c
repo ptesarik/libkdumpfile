@@ -85,8 +85,8 @@ static unsigned mmu_pshift[MMU_PAGE_COUNT] = {
 	[MMU_PAGE_64G] = 36,
 };
 
-/** Symbolic constant to be used for 64KB (to avoid typos). */
-#define _64K (1<<16)
+/** Page shift of 64K pages. */
+#define PAGE_SHIFT_64K	16
 
 /**  Check whether a Linux page directory is huge.
  * @param pte  Page table entry (value).
@@ -357,17 +357,17 @@ map_linux_ppc64(struct os_init_data *ctl)
 		.fieldsz = { 16, 12, 12, 4 }
 	};
 
-	long pagesize;
+	unsigned long page_shift;
 	addrxlat_meth_t *meth;
 	addrxlat_status status;
 
-	pagesize = opt_isset(ctl->popt, pagesize)
-		? ctl->popt.pagesize
-		: _64K;
+	page_shift = opt_isset(ctl->popt, page_shift)
+		? ctl->popt.page_shift
+		: PAGE_SHIFT_64K;
 
-	if (pagesize != _64K)
+	if (page_shift != PAGE_SHIFT_64K)
 		return set_error(ctl->ctx, ADDRXLAT_ERR_NOTIMPL,
-				 "Unsupported page size: %ld", pagesize);
+				 "Unsupported page shift: %lu", page_shift);
 
 	status = sys_set_physmaps(ctl, (1ULL << (64 - 30 + 16)) - 1);
 	if (status != ADDRXLAT_OK)
@@ -403,7 +403,7 @@ map_linux_ppc64(struct os_init_data *ctl)
 		return status;
 	meth->kind = ADDRXLAT_LOOKUP;
 	meth->target_as = ADDRXLAT_KPHYSADDR;
-	meth->param.lookup.endoff = pagesize - 1;
+	meth->param.lookup.endoff = ADDR_MASK(page_shift);
 
 	return ADDRXLAT_OK;
 }

@@ -9,7 +9,7 @@ opts=(
     arch=aarch64
     ostype=1
     osver=0x050800
-    pagesize=4096
+    page_shift=12
 )
 
 . "$srcdir"/xlat-os-common

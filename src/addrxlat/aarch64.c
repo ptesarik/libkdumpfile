@@ -303,10 +303,10 @@ init_pgt_meth(struct os_init_data *ctl, unsigned va_bits)
 	pgt->pte_mask = 0;
 	pgt->pf.pte_format = ADDRXLAT_PTE_AARCH64;
 
-	if (!opt_isset(ctl->popt, pagesize))
+	if (!opt_isset(ctl->popt, page_shift))
 		return set_error(ctl->ctx, ADDRXLAT_ERR_NODATA,
 				 "Cannot determine page size");
-	page_bits = ffsl(ctl->popt.pagesize) - 1;
+	page_bits = ctl->popt.page_shift;
 
 	if (opt_isset(ctl->popt, levels)) {
 		long levels = ctl->popt.levels;

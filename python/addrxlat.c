@@ -4174,7 +4174,7 @@ sys_richcompare(PyObject *v, PyObject *w, int op)
 }
 
 PyDoc_STRVAR(sys_os_init__doc__,
-"SYS.os_init(ctx, arch=None, os_type=None, version_code=None, levels=None, pagesize=None, phys_base=None, rootpgt=None, xen_p2m_mfn=None, xen_xlat=None) -> status\n\
+"SYS.os_init(ctx, arch=None, os_type=None, version_code=None, levels=None, page_shift=None, phys_base=None, rootpgt=None, xen_p2m_mfn=None, xen_xlat=None) -> status\n\
 \n\
 Set up a translation system for a pre-defined operating system.");
 
@@ -4188,7 +4188,7 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 		"os_type",
 		"version_code",
 		"levels",
-		"pagesize",
+		"page_shift",
 		"phys_base",
 		"rootpgt",
 		"xen_p2m_mfn",
@@ -4196,17 +4196,17 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 		NULL
 	};
 	PyObject *ctxobj;
-	PyObject *arch, *type, *ver, *levels, *pagesize, *phys_base,
+	PyObject *arch, *type, *ver, *levels, *page_shift, *phys_base,
 		*rootpgt, *xen_p2m_mfn, *xen_xlat;
 	addrxlat_ctx_t *ctx;
 	addrxlat_opt_t opts[ADDRXLAT_OPT_NUM], *p;
 	addrxlat_status status;
 
-	arch = type = ver = levels = pagesize = phys_base =
+	arch = type = ver = levels = page_shift = phys_base =
 		rootpgt = xen_p2m_mfn = xen_xlat = NULL;
 	if (!PyArg_ParseTupleAndKeywords(
 		    args, kwargs, "O|PPPPPPPPP:os_init", keywords,
-		    &ctxobj, &arch, &type, &ver, &levels, &pagesize,
+		    &ctxobj, &arch, &type, &ver, &levels, &page_shift,
 		    &phys_base, &rootpgt, &xen_p2m_mfn, &xen_xlat))
 		return NULL;
 
@@ -4244,9 +4244,9 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 			return NULL;
 		++p;
 	}
-	if (pagesize && pagesize != Py_None) {
-		addrxlat_opt_pagesize(
-			p, Number_AsUnsignedLongLong(pagesize));
+	if (page_shift && page_shift != Py_None) {
+		addrxlat_opt_page_shift(
+			p, Number_AsUnsignedLongLong(page_shift));
 		if (PyErr_Occurred())
 			return NULL;
 		++p;

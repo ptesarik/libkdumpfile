@@ -67,7 +67,7 @@ static const struct attr_template options[] = {
 	DEFOPT(os_type, KDUMP_NUMBER),
 	DEFOPT(version_code, KDUMP_NUMBER),
 	DEFOPT(levels, KDUMP_NUMBER),
-	DEFOPT(pagesize, KDUMP_NUMBER),
+	DEFOPT(page_shift, KDUMP_NUMBER),
 	DEFOPT(phys_base, KDUMP_ADDRESS),
 	DEFOPT(rootpgt, KDUMP_DIRECTORY),
 	DEFOPT(xen_p2m_mfn, KDUMP_NUMBER),
@@ -337,7 +337,7 @@ set_version_code(kdump_ctx_t *ctx, struct opts *opts)
 	return KDUMP_OK;
 }
 
-/**  Add "pagesize=" addrxlat option if page size is known.
+/** Add an ADDRXLAT_OPT_page_shift option.
  * @param ctx   Dump file object.
  * @param opts  Options.
  * @returns     Error status.
@@ -346,11 +346,11 @@ set_version_code(kdump_ctx_t *ctx, struct opts *opts)
  * returns success.
  */
 static kdump_status
-set_page_size_opt(kdump_ctx_t *ctx, struct opts *opts)
+set_page_shift_opt(kdump_ctx_t *ctx, struct opts *opts)
 {
-	if (isset_page_size(ctx)) {
-		addrxlat_opt_pagesize(&opts->opts[opts->n],
-				      get_page_size(ctx));
+	if (isset_page_shift(ctx)) {
+		addrxlat_opt_page_shift(&opts->opts[opts->n],
+					get_page_shift(ctx));
 		++opts->n;
 	}
 	return KDUMP_OK;
@@ -497,7 +497,7 @@ vtop_init(kdump_ctx_t *ctx)
 	if (status == KDUMP_OK)
 		status = set_version_code(ctx, &opts);
 	if (status == KDUMP_OK)
-		status = set_page_size_opt(ctx, &opts);
+		status = set_page_shift_opt(ctx, &opts);
 	if (status == KDUMP_OK) {
 		if (ctx->xlat->ostype == ADDRXLAT_OS_LINUX)
 			status = set_linux_opts(ctx, &opts);

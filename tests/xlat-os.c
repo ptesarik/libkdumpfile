@@ -172,7 +172,7 @@ static char *arch;
 static unsigned long long ostype;
 static unsigned long long osver;
 static unsigned long long levels;
-static unsigned long long pagesize;
+static unsigned long long page_shift;
 static unsigned long long phys_base;
 static addrxlat_fulladdr_t rootpgt;
 static unsigned long long xen_p2m_mfn;
@@ -187,7 +187,7 @@ static const struct param param_array[] = {
 	PARAM_NUMBER("ostype", ostype),
 	PARAM_NUMBER("osver", osver),
 	PARAM_NUMBER("levels", levels),
-	PARAM_NUMBER("pagesize", pagesize),
+	PARAM_NUMBER("page_shift", page_shift),
 	PARAM_NUMBER("phys_base", phys_base),
 	PARAM_FULLADDR("rootpgt", rootpgt),
 	PARAM_NUMBER("xen_p2m_mfn", xen_p2m_mfn),
@@ -210,7 +210,7 @@ static void clear_params(void)
 	ostype = ULLONG_MAX;
 	osver = ULLONG_MAX;
 	levels = ULLONG_MAX;
-	pagesize = ULLONG_MAX;
+	page_shift = ULLONG_MAX;
 	phys_base = ULLONG_MAX;
 	rootpgt.as = ADDRXLAT_NOADDR;
 	xen_p2m_mfn = ULLONG_MAX;
@@ -241,8 +241,8 @@ static unsigned make_opts(addrxlat_opt_t *opts)
 		++opt;
 	}
 
-	if (pagesize != ULLONG_MAX) {
-		addrxlat_opt_pagesize(opt, pagesize);
+	if (page_shift != ULLONG_MAX) {
+		addrxlat_opt_page_shift(opt, page_shift);
 		++opt;
 	}
 

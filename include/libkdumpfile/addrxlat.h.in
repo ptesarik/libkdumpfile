@@ -831,10 +831,10 @@ typedef enum _addrxlat_optidx {
 	 */
 	ADDRXLAT_OPT_levels,
 
-	/** Page size.
+	/** Page shift.
 	 * Type: number
 	 */
-	ADDRXLAT_OPT_pagesize,
+	ADDRXLAT_OPT_page_shift,
 
 	/** Physical base address.
 	 * Type: address
@@ -916,11 +916,11 @@ addrxlat_opt_levels(addrxlat_opt_t *opt, unsigned long val)
 	opt->val.num = val;
 }
 
-/** Helper to set @xref ADDRXLAT_OPT_pagesize in a type-safe manner. */
+/** Helper to set @xref ADDRXLAT_OPT_page_shift in a type-safe manner. */
 static inline void
-addrxlat_opt_pagesize(addrxlat_opt_t *opt, unsigned long val)
+addrxlat_opt_page_shift(addrxlat_opt_t *opt, unsigned long val)
 {
-	opt->idx = ADDRXLAT_OPT_pagesize;
+	opt->idx = ADDRXLAT_OPT_page_shift;
 	opt->val.num = val;
 }
 

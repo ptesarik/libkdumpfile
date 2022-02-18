@@ -58,8 +58,8 @@ parse_opt(struct parsed_opts *popt, const addrxlat_opt_t *opt)
 		popt->levels = opt->val.num;
 		break;
 
-	case ADDRXLAT_OPT_pagesize:
-		popt->pagesize = opt->val.num;
+	case ADDRXLAT_OPT_page_shift:
+		popt->page_shift = opt->val.num;
 		break;
 
 	case ADDRXLAT_OPT_phys_base:
