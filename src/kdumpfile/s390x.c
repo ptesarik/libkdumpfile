@@ -214,7 +214,7 @@ process_lowcore_info(kdump_ctx_t *ctx)
 static kdump_status
 s390x_post_ostype(kdump_ctx_t *ctx)
 {
-	return ctx->xlat->ostype == ADDRXLAT_OS_LINUX
+	return ctx->xlat->osdir == GKI_dir_linux
 		? process_lowcore_info(ctx)
 		: KDUMP_OK;
 }
@@ -222,7 +222,7 @@ s390x_post_ostype(kdump_ctx_t *ctx)
 static kdump_status
 s390x_init(kdump_ctx_t *ctx)
 {
-	if (ctx->xlat->ostype == ADDRXLAT_OS_LINUX) {
+	if (ctx->xlat->osdir == GKI_dir_linux) {
 		process_lowcore_info(ctx);
 		clear_error(ctx);
 	}

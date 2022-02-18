@@ -5891,11 +5891,6 @@ init_addrxlat (void)
 	/* Other paging form constants */
 	CONSTDEF(FIELDS_MAX);
 
-	/* OS types */
-	CONSTDEF(OS_UNKNOWN);
-	CONSTDEF(OS_LINUX);
-	CONSTDEF(OS_XEN);
-
 	/* system map indices */
 	CONSTDEF(SYS_MAP_HW);
 	CONSTDEF(SYS_MAP_KV_PHYS);

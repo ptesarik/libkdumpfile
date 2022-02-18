@@ -633,7 +633,6 @@ struct kdump_xlat {
 	 */
 	struct list_head ctx;
 
-	addrxlat_ostype_t ostype; /**< OS for address translation. */
 	/** OS attribute base directory.
 	 * If OS type is not set, this field contains @xref NR_GLOBAL_ATTRS,
 	 * which is an invalid value.

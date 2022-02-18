@@ -184,7 +184,7 @@ x86_64_post_addrxlat(kdump_ctx_t *ctx)
 	kdump_status status;
 
 	if (isset_phys_base(ctx) ||
-	    ctx->xlat->ostype != ADDRXLAT_OS_LINUX)
+	    ctx->xlat->osdir != GKI_dir_linux)
 		return KDUMP_OK;
 
 	meth = addrxlat_sys_get_meth(ctx->xlat->xlatsys,

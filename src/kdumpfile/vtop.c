@@ -480,9 +480,9 @@ vtop_init(kdump_ctx_t *ctx)
 	if (status == KDUMP_OK)
 		status = set_page_shift_opt(ctx, &opts);
 	if (status == KDUMP_OK) {
-		if (ctx->xlat->ostype == ADDRXLAT_OS_LINUX)
+		if (ctx->xlat->osdir == GKI_dir_linux)
 			status = set_linux_opts(ctx, &opts);
-		else if (ctx->xlat->ostype == ADDRXLAT_OS_XEN)
+		else if (ctx->xlat->osdir == GKI_dir_xen)
 			status = set_xen_opts(ctx, &opts);
 	}
 	if (status == KDUMP_OK)
@@ -532,7 +532,7 @@ const struct attr_ops dirty_xlat_ops = {
 static kdump_status
 linux_dirty_xlat_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
-	if (ctx->xlat->ostype == ADDRXLAT_OS_LINUX)
+	if (ctx->xlat->osdir == GKI_dir_linux)
 		ctx->xlat->dirty = true;
 	return KDUMP_OK;
 }
@@ -545,7 +545,7 @@ const struct attr_ops linux_dirty_xlat_ops = {
 static kdump_status
 xen_dirty_xlat_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
-	if (ctx->xlat->ostype == ADDRXLAT_OS_XEN)
+	if (ctx->xlat->osdir == GKI_dir_xen)
 		ctx->xlat->dirty = true;
 	return KDUMP_OK;
 }
