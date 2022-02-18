@@ -168,10 +168,9 @@ get_symdata(void *data, addrxlat_sym_t *sym)
 	return ADDRXLAT_ERR_NODATA;
 }
 
+static char *arch;
 static unsigned long long ostype;
 static unsigned long long osver;
-static char *arch;
-
 static unsigned long long levels;
 static unsigned long long pagesize;
 static unsigned long long phys_base;
@@ -183,11 +182,10 @@ static char *sym_file;
 static char *data_file;
 
 static const struct param param_array[] = {
+	/* addrxlat options */
+	PARAM_STRING("arch", arch),
 	PARAM_NUMBER("ostype", ostype),
 	PARAM_NUMBER("osver", osver),
-	PARAM_STRING("arch", arch),
-
-	/* addrxlat options */
 	PARAM_NUMBER("levels", levels),
 	PARAM_NUMBER("pagesize", pagesize),
 	PARAM_NUMBER("phys_base", phys_base),
@@ -208,6 +206,9 @@ static const struct params params = {
 
 static void clear_params(void)
 {
+	arch = NULL;
+	ostype = ULLONG_MAX;
+	osver = ULLONG_MAX;
 	levels = ULLONG_MAX;
 	pagesize = ULLONG_MAX;
 	phys_base = ULLONG_MAX;
@@ -220,6 +221,21 @@ static void make_opts(addrxlat_osdesc_t *osdesc)
 {
 	static addrxlat_opt_t opts[ADDRXLAT_OPT_NUM];
 	addrxlat_opt_t *opt = opts;
+
+	if (arch) {
+		addrxlat_opt_arch(opt, arch);
+		++opt;
+	}
+
+	if (ostype != ULLONG_MAX) {
+		addrxlat_opt_os_type(opt, ostype);
+		++opt;
+	}
+
+	if (osver != ULLONG_MAX) {
+		addrxlat_opt_version_code(opt, osver);
+		++opt;
+	}
 
 	if (levels != ULLONG_MAX) {
 		addrxlat_opt_levels(opt, levels);
@@ -443,9 +459,6 @@ os_map(void)
 	addrxlat_osdesc_t meth;
 	addrxlat_status status;
 
-	meth.type = ostype;
-	meth.ver = osver;
-	meth.arch = arch;
 	make_opts(&meth);
 
 	data.ctx = addrxlat_ctx_new();

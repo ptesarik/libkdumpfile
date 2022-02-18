@@ -5,10 +5,9 @@
 # and 64k pages. No explicit version.
 #
 
-arch=aarch64
-ostype=1
-osver=0
 opts=(
+    arch=aarch64
+    ostype=1
     pagesize=65536
 )
 

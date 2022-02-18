@@ -4174,7 +4174,7 @@ sys_richcompare(PyObject *v, PyObject *w, int op)
 }
 
 PyDoc_STRVAR(sys_os_init__doc__,
-"SYS.os_init(ctx, arch, type=None, ver=None, levels=None, pagesize=None, phys_base=None, rootpgt=None, xen_p2m_mfn=None, xen_xlat=None) -> status\n\
+"SYS.os_init(ctx, arch=None, type=None, ver=None, levels=None, pagesize=None, phys_base=None, rootpgt=None, xen_p2m_mfn=None, xen_xlat=None) -> status\n\
 \n\
 Set up a translation system for a pre-defined operating system.");
 
@@ -4196,18 +4196,18 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 		NULL
 	};
 	PyObject *ctxobj;
-	PyObject *type, *ver, *levels, *pagesize, *phys_base,
+	PyObject *arch, *type, *ver, *levels, *pagesize, *phys_base,
 		*rootpgt, *xen_p2m_mfn, *xen_xlat;
 	addrxlat_ctx_t *ctx;
 	addrxlat_osdesc_t osdesc;
 	addrxlat_opt_t opts[ADDRXLAT_OPT_NUM], *p;
 	addrxlat_status status;
 
-	type = ver = levels = pagesize = phys_base =
+	arch = type = ver = levels = pagesize = phys_base =
 		rootpgt = xen_p2m_mfn = xen_xlat = NULL;
 	if (!PyArg_ParseTupleAndKeywords(
-		    args, kwargs, "Os|PPPPPPPP:os_init", keywords,
-		    &ctxobj, &osdesc.arch, &type, &ver, &levels, &pagesize,
+		    args, kwargs, "O|PPPPPPPPP:os_init", keywords,
+		    &ctxobj, &arch, &type, &ver, &levels, &pagesize,
 		    &phys_base, &rootpgt, &xen_p2m_mfn, &xen_xlat))
 		return NULL;
 
@@ -4215,22 +4215,25 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 	if (!ctx)
 		return NULL;
 
-	if (type && type != Py_None) {
-		osdesc.type = Number_AsUnsignedLongLong(type);
-		if (PyErr_Occurred())
-			return NULL;
-	} else
-		osdesc.type = ADDRXLAT_OS_UNKNOWN;
-
-	if (ver && ver != Py_None) {
-		osdesc.ver = Number_AsUnsignedLongLong(ver);
-		if (PyErr_Occurred())
-			return NULL;
-	} else
-		osdesc.ver = 0;
-
 	p = opts;
 
+	if (arch && arch != Py_None) {
+		const char *str = Text_AsUTF8(arch);
+		if (!str)
+			return NULL;
+		addrxlat_opt_arch(p, str);
+		++p;
+	}
+	if (type && type != Py_None) {
+		addrxlat_opt_os_type(
+			p, Number_AsUnsignedLongLong(type));
+		++p;
+	}
+	if (ver && ver != Py_None) {
+		addrxlat_opt_version_code(
+			p, Number_AsUnsignedLongLong(ver));
+		++p;
+	}
 	if (levels && levels != Py_None) {
 		addrxlat_opt_levels(
 			p, Number_AsUnsignedLongLong(levels));

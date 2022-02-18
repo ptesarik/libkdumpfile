@@ -811,6 +811,21 @@ typedef enum _addrxlat_ostype {
 
 /** Option number. */
 typedef enum _addrxlat_optidx {
+	/** Architecture name.
+	 * Type: string
+	 */
+	ADDRXLAT_OPT_arch,
+
+	/** Operating system type.
+	 * Type: number (addrxlat_ostype_t)
+	 */
+	ADDRXLAT_OPT_os_type,
+
+	/** Operating system version.
+	 * Type: number
+	 */
+	ADDRXLAT_OPT_version_code,
+
 	/** Number of page table levels.
 	 * Type: number
 	 */
@@ -869,6 +884,30 @@ typedef struct _addrxlat_opt {
 	addrxlat_optval_t val;	/**< Option value. */
 } addrxlat_opt_t;
 
+/** Helper to set @xref ADDRXLAT_OPT_arch in a type-safe manner. */
+static inline void
+addrxlat_opt_arch(addrxlat_opt_t *opt, const char *val)
+{
+	opt->idx = ADDRXLAT_OPT_arch;
+	opt->val.str = val;
+}
+
+/** Helper to set @xref ADDRXLAT_OPT_os_type in a type-safe manner. */
+static inline void
+addrxlat_opt_os_type(addrxlat_opt_t *opt, addrxlat_ostype_t val)
+{
+	opt->idx = ADDRXLAT_OPT_os_type;
+	opt->val.num = val;
+}
+
+/** Helper to set @xref ADDRXLAT_OPT_version_code in a type-safe manner. */
+static inline void
+addrxlat_opt_version_code(addrxlat_opt_t *opt, unsigned long val)
+{
+	opt->idx = ADDRXLAT_OPT_version_code;
+	opt->val.num = val;
+}
+
 /** Helper to set @xref ADDRXLAT_OPT_levels in a type-safe manner. */
 static inline void
 addrxlat_opt_levels(addrxlat_opt_t *opt, unsigned long val)
@@ -922,21 +961,6 @@ addrxlat_opt_xen_xlat(addrxlat_opt_t *opt, unsigned long val)
  * to set up a translation map.
  */
 typedef struct _addrxlat_osdesc {
-	/** Architecture name.
-	 * This member must be set and not @c NULL.
-	 */
-	const char *arch;
-
-	/** Operating system type.
-	 * If undetermined, use @c ADDRXLAT_OS_UNKNOWN.
-	 */
-	addrxlat_ostype_t type;
-
-	/** Operating system version.
-	 * Use zero if uknown.
-	 */
-	unsigned long ver;
-
 	/** Option count. */
 	unsigned optc;
 

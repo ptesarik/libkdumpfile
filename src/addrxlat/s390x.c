@@ -156,23 +156,16 @@ get_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 	if (root->as != ADDRXLAT_NOADDR)
 		return ADDRXLAT_OK;
 
-	switch (ctl->osdesc->type) {
-	case ADDRXLAT_OS_UNKNOWN:
+	if (!opt_isset(ctl->popt, os_type))
 		status = ADDRXLAT_ERR_NODATA;
-		break;
-
-	case ADDRXLAT_OS_LINUX:
+	else if (ctl->popt.os_type == ADDRXLAT_OS_LINUX) {
 		status = get_symval(ctl->ctx, "swapper_pg_dir", &root->addr);
 		if (status == ADDRXLAT_OK) {
 			root->as = ADDRXLAT_KPHYSADDR;
 			return ADDRXLAT_OK;
 		}
-		break;
-
-	default:
+	} else
 		status = ADDRXLAT_ERR_NOTIMPL;
-		break;
-	}
 
 	return set_error(ctl->ctx, status,
 			 "Cannot determine page table root address");

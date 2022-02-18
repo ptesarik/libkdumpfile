@@ -398,6 +398,9 @@ struct parsed_opts {
 	/** Set/unset flag for each option. */
 	bool isset[ADDRXLAT_OPT_NUM];
 
+	const char *arch;		/**< Value of OPT_arch. */
+	addrxlat_ostype_t os_type;	/**< Value of OPT_os_type. */
+	unsigned long version_code;	/**< Value of OPT_version_code. */
 	unsigned long levels;		/**< Value of OPT_levels. */
 	unsigned long pagesize;		/**< Value of OPT_pagesize. */
 	addrxlat_addr_t phys_base;	/**< Value of OPT_phys_base. */

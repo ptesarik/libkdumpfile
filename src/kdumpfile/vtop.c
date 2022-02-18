@@ -55,57 +55,6 @@ set_pteval_size(kdump_ctx_t *ctx)
 	}
 }
 
-static kdump_status
-get_version_code(kdump_ctx_t *ctx, unsigned long *pver)
-{
-	static const char attrname[] = "version_code";
-	struct attr_data *attr;
-	const char *ostype;
-	kdump_status status;
-
-	/* Default to unknown version */
-	*pver = 0UL;
-
-	/* Get OS type name */
-	attr = gattr(ctx, GKI_ostype);
-	if (!attr_isset(attr))
-		return KDUMP_OK;
-	status = attr_revalidate(ctx, attr);
-	if (status != KDUMP_OK)
-		return set_error(ctx, status, "Cannot get OS type");
-	ostype = attr_value(attr)->string;
-
-	/* Get OS directory attribute */
-	attr = lookup_attr(ctx->dict, ostype);
-	if (!attr || attr->template->type != KDUMP_DIRECTORY)
-		return set_error(ctx, KDUMP_ERR_NOTIMPL,
-				 "Unknown operating system type: %s", ostype);
-	if (!attr_isset(attr))
-		return KDUMP_OK;
-	status = attr_revalidate(ctx, attr);
-	if (status != KDUMP_OK)
-		return set_error(ctx, status, "Cannot get %s.%s",
-				 ostype, attrname);
-
-	/* Get version_code in the OS directory. */
-	attr = lookup_dir_attr(
-		ctx->dict, attr, attrname, sizeof(attrname) - 1);
-	if (!attr || !attr_isset(attr))
-		return KDUMP_OK;
-	status = attr_revalidate(ctx, attr);
-	if (status != KDUMP_OK)
-		return set_error(ctx, status, "Cannot get %s.%s",
-				 ostype, attrname);
-
-	if (attr->template->type != KDUMP_NUMBER)
-		status = set_error(ctx, KDUMP_ERR_INVALID,
-				   "Attribute %s.%s is not a number",
-				   ostype, attrname);
-
-	 *pver = attr_value(attr)->number;
-	 return KDUMP_OK;
-}
-
 #define DEFOPT(k, t) {			\
 		.key = (#k),		\
 		.type = (t),		\
@@ -114,6 +63,9 @@ get_version_code(kdump_ctx_t *ctx, unsigned long *pver)
 	}
 
 static const struct attr_template options[] = {
+	DEFOPT(arch, KDUMP_STRING),
+	DEFOPT(os_type, KDUMP_NUMBER),
+	DEFOPT(version_code, KDUMP_NUMBER),
 	DEFOPT(levels, KDUMP_NUMBER),
 	DEFOPT(pagesize, KDUMP_NUMBER),
 	DEFOPT(phys_base, KDUMP_ADDRESS),
@@ -134,7 +86,7 @@ static const struct attr_template fulladdr_addr = {
 	/* .ops = &dirty_xlat_ops, */
 };
 
-#define MAX_OPTS	(8 + 2*ARRAY_SIZE(options))
+#define MAX_OPTS	(11 + 2*ARRAY_SIZE(options))
 struct opts {
 	unsigned n;
 	addrxlat_opt_t opts[MAX_OPTS];
@@ -230,6 +182,10 @@ add_addrxlat_opt(kdump_ctx_t *ctx, struct opts *opts,
 		opt->val.addr = attr_value(attr)->address;
 		break;
 
+	case KDUMP_STRING:
+		opt->val.str = attr_value(attr)->string;
+		break;
+
 	case KDUMP_DIRECTORY:
 		sub = lookup_attr_child(attr, &fulladdr_as);
 		if (!sub || !attr_isset(sub))
@@ -283,6 +239,102 @@ add_addrxlat_opts(kdump_ctx_t *ctx, struct opts *opts,
 		if (status != KDUMP_OK)
 			return status;
 	}
+}
+
+/** Add an ADDRXLAT_OPT_arch option if set.
+ * @param ctx   Dump file object.
+ * @param opts  Options.
+ * @returns     Error status.
+ *
+ * If the architecture is unknown, nothing is added, and this function
+ * returns success.
+ */
+static kdump_status
+set_arch_opt(kdump_ctx_t *ctx, struct opts *opts)
+{
+	if (isset_arch_name(ctx)) {
+		addrxlat_opt_arch(&opts->opts[opts->n],
+				  get_arch_name(ctx));
+		++opts->n;
+	}
+	return KDUMP_OK;
+}
+
+/** Add an ADDRXLAT_OPT_os_type option.
+ * @param ctx   Dump file object.
+ * @param opts  Options.
+ * @returns     Error status.
+ *
+ * If the OS type is unknown, nothing is added, and this function
+ * returns success.
+ */
+static kdump_status
+set_os_type_opt(kdump_ctx_t *ctx, struct opts *opts)
+{
+	if (ctx->xlat->ostype != ADDRXLAT_OS_UNKNOWN) {
+		addrxlat_opt_os_type(&opts->opts[opts->n],
+				     ctx->xlat->ostype);
+		++opts->n;
+	}
+	return KDUMP_OK;
+}
+
+/** Add an ADDRXLAT_OPT_version_code option.
+ * @param ctx   Dump file object.
+ * @param opts  Options.
+ * @returns     Error status.
+ *
+ * If the version is unknown, nothing is added, and this function
+ * returns success.
+ */
+static kdump_status
+set_version_code(kdump_ctx_t *ctx, struct opts *opts)
+{
+	static const char attrname[] = "version_code";
+	struct attr_data *attr;
+	const char *ostype;
+	kdump_status status;
+
+	/* Get OS type name */
+	attr = gattr(ctx, GKI_ostype);
+	if (!attr_isset(attr))
+		return KDUMP_OK;
+	status = attr_revalidate(ctx, attr);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Cannot get OS type");
+	ostype = attr_value(attr)->string;
+
+	/* Get OS directory attribute */
+	attr = lookup_attr(ctx->dict, ostype);
+	if (!attr || attr->template->type != KDUMP_DIRECTORY)
+		return set_error(ctx, KDUMP_ERR_NOTIMPL,
+				 "Unknown operating system type: %s", ostype);
+	if (!attr_isset(attr))
+		return KDUMP_OK;
+	status = attr_revalidate(ctx, attr);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Cannot get %s.%s",
+				 ostype, attrname);
+
+	/* Get version_code in the OS directory. */
+	attr = lookup_dir_attr(
+		ctx->dict, attr, attrname, sizeof(attrname) - 1);
+	if (!attr || !attr_isset(attr))
+		return KDUMP_OK;
+	status = attr_revalidate(ctx, attr);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Cannot get %s.%s",
+				 ostype, attrname);
+
+	if (attr->template->type != KDUMP_NUMBER)
+		status = set_error(ctx, KDUMP_ERR_INVALID,
+				   "Attribute %s.%s is not a number",
+				   ostype, attrname);
+
+	addrxlat_opt_version_code(&opts->opts[opts->n],
+				  attr_value(attr)->number);
+	++opts->n;
+	return KDUMP_OK;
 }
 
 /**  Add "pagesize=" addrxlat option if page size is known.
@@ -437,16 +489,14 @@ vtop_init(kdump_ctx_t *ctx)
 	if (!isset_arch_name(ctx))
 		return KDUMP_OK;
 
-	osdesc.type = ctx->xlat->ostype;
-	osdesc.arch = get_arch_name(ctx);
-
-	status = get_version_code(ctx, &osdesc.ver);
-	if (status != KDUMP_OK)
-		return status;
-	clear_error(ctx);
-
 	opts.n = 0;
 	status = add_addrxlat_opts(ctx, &opts, GKI_dir_xlat_default);
+	if (status == KDUMP_OK)
+		status = set_arch_opt(ctx, &opts);
+	if (status == KDUMP_OK)
+		status = set_os_type_opt(ctx, &opts);
+	if (status == KDUMP_OK)
+		status = set_version_code(ctx, &opts);
 	if (status == KDUMP_OK)
 		status = set_page_size_opt(ctx, &opts);
 	if (status == KDUMP_OK) {

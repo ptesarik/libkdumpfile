@@ -4,10 +4,8 @@
 # Check IA32 PAE translation with no OS
 #
 
-arch=ia32
-ostype=0
-osver=0
 opts=(
+    arch=ia32
     levels=3
 )
 

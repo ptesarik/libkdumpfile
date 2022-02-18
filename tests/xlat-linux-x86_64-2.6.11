@@ -4,8 +4,10 @@
 # Check Linux 2.6.11 X86_64 translation
 #
 
-arch=x86_64
-ostype=1
-osver=0x02060b
+opts=(
+    arch=x86_64
+    ostype=1
+    osver=0x02060b
+)
 
 . "$srcdir"/xlat-os-common

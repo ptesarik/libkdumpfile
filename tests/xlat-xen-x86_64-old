@@ -4,8 +4,10 @@
 # Check Xen pre-3.2 X86_64 translation
 #
 
-arch=x86_64
-ostype=2
-osver=0x030001
+opts=(
+    arch=x86_64
+    ostype=2
+    osver=0x030001
+)
 
 . "$srcdir"/xlat-os-common

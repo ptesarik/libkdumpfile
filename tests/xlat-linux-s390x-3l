@@ -4,8 +4,9 @@
 # Check 2-level Linux s390x translation
 #
 
-arch=s390x
-ostype=1
-osver=0
+opts=(
+    arch=s390x
+    ostype=1
+)
 
 . "$srcdir"/xlat-os-common

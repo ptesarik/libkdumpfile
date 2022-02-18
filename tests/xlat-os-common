@@ -25,9 +25,6 @@ test -n "$data_as" && dataspec="data_as=$data_as
 $dataspec"
 
 cat >"$cfgfile" <<EOF
-ostype=$ostype
-osver=$osver
-arch=$arch
 $optspec
 $symspec
 $dataspec

@@ -5,10 +5,9 @@
 # using page table content alone
 #
 
-arch=x86_64
-ostype=2
-osver=0
 opts=(
+    arch=x86_64
+    ostype=2
     rootpgt=MACHPHYSADDR:0xffc94000
 )
 

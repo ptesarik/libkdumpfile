@@ -415,12 +415,10 @@ map_linux_ppc64(struct os_init_data *ctl)
 addrxlat_status
 sys_ppc64(struct os_init_data *ctl)
 {
-	switch (ctl->osdesc->type) {
-	case ADDRXLAT_OS_LINUX:
+	if (opt_isset(ctl->popt, os_type) &&
+	    ctl->popt.os_type == ADDRXLAT_OS_LINUX)
 		return map_linux_ppc64(ctl);
 
-	default:
-		return set_error(ctl->ctx, ADDRXLAT_ERR_NOTIMPL,
-				 "OS type not implemented");
-	}
+	return set_error(ctl->ctx, ADDRXLAT_ERR_NOTIMPL,
+			 "OS type not implemented");
 }

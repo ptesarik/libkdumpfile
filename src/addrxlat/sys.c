@@ -87,18 +87,25 @@ addrxlat_sys_os_init(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 
 	clear_error(ctx);
 
-	if (!strcmp(osdesc->arch, "x86_64"))
+	status = parse_opts(&ctl.popt, ctx, osdesc->optc, osdesc->opts);
+	if (status != ADDRXLAT_OK)
+		return status;
+
+	if (!opt_isset(ctl.popt, arch))
+		return set_error(ctx, ADDRXLAT_ERR_NODATA,
+				 "Cannot determine architecture");
+	if (!strcmp(ctl.popt.arch, "x86_64"))
 		arch_fn = sys_x86_64;
-	else if ((osdesc->arch[0] == 'i' &&
-		  (osdesc->arch[1] >= '3' && osdesc->arch[1] <= '6') &&
-		  !strcmp(osdesc->arch + 2, "86")) ||
-		 !strcmp(osdesc->arch, "ia32"))
+	else if ((ctl.popt.arch[0] == 'i' &&
+		  (ctl.popt.arch[1] >= '3' && ctl.popt.arch[1] <= '6') &&
+		  !strcmp(ctl.popt.arch + 2, "86")) ||
+		 !strcmp(ctl.popt.arch, "ia32"))
 		arch_fn = sys_ia32;
-	else if (!strcmp(osdesc->arch, "s390x"))
+	else if (!strcmp(ctl.popt.arch, "s390x"))
 		arch_fn = sys_s390x;
-	else if (!strcmp(osdesc->arch, "ppc64"))
+	else if (!strcmp(ctl.popt.arch, "ppc64"))
 		arch_fn = sys_ppc64;
-	else if (!strcmp(osdesc->arch, "aarch64"))
+	else if (!strcmp(ctl.popt.arch, "aarch64"))
 		arch_fn = sys_aarch64;
 	else
 		return set_error(ctx, ADDRXLAT_ERR_NOTIMPL,
@@ -109,10 +116,6 @@ addrxlat_sys_os_init(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 	ctl.sys = sys;
 	ctl.ctx = ctx;
 	ctl.osdesc = osdesc;
-
-	status = parse_opts(&ctl.popt, ctx, osdesc->optc, osdesc->opts);
-	if (status != ADDRXLAT_OK)
-		return status;
 
 	return arch_fn(&ctl);
 }

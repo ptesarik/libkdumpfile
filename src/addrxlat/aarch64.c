@@ -219,8 +219,8 @@ linux_page_offset(struct os_init_data *ctl, unsigned va_bits,
 	} else if (status == ADDRXLAT_ERR_NODATA) {
 		/* Fall back to checking kernel version number. */
 		clear_error(ctl->ctx);
-		if (ctl->osdesc->ver) {
-			*off = (ctl->osdesc->ver >= KERNEL_VERSION(5, 4, 0))
+		if (opt_isset(ctl->popt, version_code)) {
+			*off = (ctl->popt.version_code >= KERNEL_VERSION(5, 4, 0))
 				? top
 				: half;
 			status = ADDRXLAT_OK;
@@ -410,12 +410,10 @@ map_linux_aarch64(struct os_init_data *ctl)
 addrxlat_status
 sys_aarch64(struct os_init_data *ctl)
 {
-	switch (ctl->osdesc->type) {
-	case ADDRXLAT_OS_LINUX:
+	if (opt_isset(ctl->popt, os_type) &&
+	    ctl->popt.os_type == ADDRXLAT_OS_LINUX)
 		return map_linux_aarch64(ctl);
 
-	default:
-		return set_error(ctl->ctx, ADDRXLAT_ERR_NOTIMPL,
-				 "OS type not implemented");
-	}
+	return set_error(ctl->ctx, ADDRXLAT_ERR_NOTIMPL,
+			 "OS type not implemented");
 }

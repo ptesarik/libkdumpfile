@@ -326,8 +326,9 @@ linux_directmap(struct os_init_data *ctl)
 	addrxlat_status status;
 
 	status = linux_directmap_by_pgt(&layout[0], ctl->sys, ctl->ctx);
-	if (status != ADDRXLAT_OK && ctl->osdesc->ver)
-		status = linux_directmap_by_ver(&layout[0], ctl->osdesc->ver);
+	if (status != ADDRXLAT_OK && opt_isset(ctl->popt, version_code))
+		status = linux_directmap_by_ver(&layout[0],
+						ctl->popt.version_code);
 	remove_rdirect(ctl->sys);
 	if (status == ADDRXLAT_OK) {
 		layout[0].meth = ADDRXLAT_SYS_METH_DIRECT;
@@ -893,20 +894,21 @@ map_xen_x86_64(struct os_init_data *ctl)
 		layout[0].last =
 			XEN_DIRECTMAP_BIGMEM + XEN_DIRECTMAP_SIZE_3_5T - 1;
 		layout[1].first = XEN_TEXT_4_4;
-	} else if (ctl->osdesc->ver >= ADDRXLAT_VER_XEN(4, 0)) {
+	} else if (opt_isset(ctl->popt, version_code) &&
+		   ctl->popt.version_code >= ADDRXLAT_VER_XEN(4, 0)) {
 		/* !BIGMEM is assumed for Xen 4.6+. Can we do better? */
 
-		if (ctl->osdesc->ver >= ADDRXLAT_VER_XEN(4, 4))
+		if (ctl->popt.version_code >= ADDRXLAT_VER_XEN(4, 4))
 			layout[1].first = XEN_TEXT_4_4;
-		else if (ctl->osdesc->ver >= ADDRXLAT_VER_XEN(4, 3))
+		else if (ctl->popt.version_code >= ADDRXLAT_VER_XEN(4, 3))
 			layout[1].first = XEN_TEXT_4_3;
 		else
 			layout[1].first = XEN_TEXT_4_0;
-	} else if (ctl->osdesc->ver) {
+	} else if (opt_isset(ctl->popt, version_code)) {
 		layout[0].last =
 			XEN_DIRECTMAP + XEN_DIRECTMAP_SIZE_1T - 1;
 
-		if (ctl->osdesc->ver >= ADDRXLAT_VER_XEN(3, 2))
+		if (ctl->popt.version_code >= ADDRXLAT_VER_XEN(3, 2))
 			layout[1].first = XEN_TEXT_3_2;
 		else
 			/* Prior to Xen 3.2, text was in direct mapping. */
@@ -975,7 +977,8 @@ init_pgt_meth(struct os_init_data *ctl)
 	meth->param.pgt.pte_mask = 0;
 	meth->param.pgt.pf = x86_64_pf;
 
-	if (ctl->osdesc->type == ADDRXLAT_OS_LINUX) {
+	if (opt_isset(ctl->popt, os_type) &&
+	    ctl->popt.os_type == ADDRXLAT_OS_LINUX) {
 		addrxlat_addr_t l5_enabled;
 
 		status = get_number(ctl->ctx, "pgtable_l5_enabled",
@@ -1025,14 +1028,13 @@ sys_x86_64(struct os_init_data *ctl)
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	switch (ctl->osdesc->type) {
-	case ADDRXLAT_OS_LINUX:
+	if (opt_isset(ctl->popt, os_type) &&
+	    ctl->popt.os_type == ADDRXLAT_OS_LINUX)
 		return map_linux_x86_64(ctl);
 
-	case ADDRXLAT_OS_XEN:
+	if (opt_isset(ctl->popt, os_type) &&
+	    ctl->popt.os_type == ADDRXLAT_OS_XEN)
 		return map_xen_x86_64(ctl);
 
-	default:
-		return ADDRXLAT_OK;
-	}
+	return ADDRXLAT_OK;
 }

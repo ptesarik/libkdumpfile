@@ -4,10 +4,9 @@
 # Check Xen IA32 translation
 #
 
-arch=ia32
-ostype=2
-osver=0
 opts=(
+    arch=ia32
+    ostype=2
     rootpgt=MACHPHYSADDR:0x1e3000
 )
 

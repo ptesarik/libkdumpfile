@@ -4,10 +4,10 @@
 # Check Linux 2.6.31 X86_64 translation with relocated kernel
 #
 
-arch=x86_64
-ostype=1
-osver=0x02061f
 opts=(
+    arch=x86_64
+    ostype=1
+    osver=0x02061f
     phys_base=0x1000000
 )
 

@@ -4,10 +4,9 @@
 # Check Linux 64k page PPC64 translation
 #
 
-arch=ppc64
-ostype=1
-osver=0
 opts=(
+    arch=ppc64
+    ostype=1
     pagesize=65536
 )
 

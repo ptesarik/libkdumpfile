@@ -5,10 +5,10 @@
 # using data from VMCOREINFO.
 #
 
-arch=aarch64
-ostype=1
-osver=0x050800
 opts=(
+    arch=aarch64
+    ostype=1
+    osver=0x050800
     pagesize=4096
 )
 

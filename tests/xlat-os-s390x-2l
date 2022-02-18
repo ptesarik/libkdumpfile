@@ -4,10 +4,8 @@
 # Check 2-level s390x translation with no OS
 #
 
-arch=s390x
-ostype=0
-osver=0
 opts=(
+    arch=s390x
     rootpgt=MACHPHYSADDR:0x8b5000
 )
 

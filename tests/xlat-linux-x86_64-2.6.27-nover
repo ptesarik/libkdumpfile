@@ -5,10 +5,9 @@
 # using page table content alone
 #
 
-arch=x86_64
-ostype=1
-osver=0
 opts=(
+    arch=x86_64
+    ostype=1
     phys_base=0
 )
 
