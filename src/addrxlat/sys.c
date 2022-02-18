@@ -79,7 +79,7 @@ addrxlat_sys_decref(addrxlat_sys_t *sys)
 
 addrxlat_status
 addrxlat_sys_os_init(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
-		     const addrxlat_osdesc_t *osdesc)
+		     unsigned optc, const addrxlat_opt_t *opts)
 {
 	struct os_init_data ctl;
 	sys_arch_fn *arch_fn;
@@ -87,7 +87,7 @@ addrxlat_sys_os_init(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 
 	clear_error(ctx);
 
-	status = parse_opts(&ctl.popt, ctx, osdesc->optc, osdesc->opts);
+	status = parse_opts(&ctl.popt, ctx, optc, opts);
 	if (status != ADDRXLAT_OK)
 		return status;
 
@@ -115,7 +115,6 @@ addrxlat_sys_os_init(addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
 
 	ctl.sys = sys;
 	ctl.ctx = ctx;
-	ctl.osdesc = osdesc;
 
 	return arch_fn(&ctl);
 }

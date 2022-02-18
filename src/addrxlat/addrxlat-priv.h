@@ -426,9 +426,6 @@ struct os_init_data {
 	/** Translation context used for initialization. */
 	addrxlat_ctx_t *ctx;
 
-	/** OS description. */
-	const addrxlat_osdesc_t *osdesc;
-
 	/** Parsed options. */
 	struct parsed_opts popt;
 };

@@ -956,30 +956,16 @@ addrxlat_opt_xen_xlat(addrxlat_opt_t *opt, unsigned long val)
 	opt->val.num = val;
 }
 
-/** Description of an operating system.
- * This structure is used to pass some details about the operating system
- * to set up a translation map.
- */
-typedef struct _addrxlat_osdesc {
-	/** Option count. */
-	unsigned optc;
-
-	/** Further options, e.g. architecture variant.
-	 * Ignored if the number of options is zero.
-	 */
-	const addrxlat_opt_t *opts;
-} addrxlat_osdesc_t;
-
 /** Linux kernel version code.
  * This macro can be used to convert a three-part Linux kernel version
- * to a single number for use as @c ver in @ref addrxlat_osdesc_t.
+ * to a single number for use as @xref ADDRXLAT_OPT_version_code.
  */
 #define ADDRXLAT_VER_LINUX(a,b,c)	\
 	(((a) << 16) + ((b) << 8) + (c))
 
 /** Xen version code.
  * This macro can be used to convert a Xen major/minor version pair
- * to a single number for use as @c ver in @ref addrxlat_osdesc_t.
+ * to a single number for use as @xref ADDRXLAT_OPT_version_code.
  */
 #define ADDRXLAT_VER_XEN(major,minor)	\
 	(((major) << 16) | (minor))
@@ -1015,7 +1001,8 @@ unsigned long addrxlat_sys_decref(addrxlat_sys_t *sys);
 /** Set up a translation system for a pre-defined operating system.
  * @param sys     Translation sytem.
  * @param ctx     Address translation context.
- * @param osdesc  Description of the operating system.
+ * @param optc    Number of options.
+ * @param opts    Additional options (ignored if @p optc is zero).
  * @returns       Error status.
  *
  * This function uses OS-specific data and built-in heuristics to
@@ -1024,7 +1011,7 @@ unsigned long addrxlat_sys_decref(addrxlat_sys_t *sys);
  */
 addrxlat_status addrxlat_sys_os_init(
 	addrxlat_sys_t *sys, addrxlat_ctx_t *ctx,
-	const addrxlat_osdesc_t *osdesc);
+	unsigned optc, const addrxlat_opt_t *opts);
 
 /** Translation system map index.
  *

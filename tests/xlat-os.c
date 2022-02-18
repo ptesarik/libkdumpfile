@@ -217,9 +217,8 @@ static void clear_params(void)
 	xen_xlat = false;
 }
 
-static void make_opts(addrxlat_osdesc_t *osdesc)
+static unsigned make_opts(addrxlat_opt_t *opts)
 {
-	static addrxlat_opt_t opts[ADDRXLAT_OPT_NUM];
 	addrxlat_opt_t *opt = opts;
 
 	if (arch) {
@@ -267,8 +266,7 @@ static void make_opts(addrxlat_osdesc_t *osdesc)
 		++opt;
 	}
 
-	osdesc->optc = opt - opts;
-	osdesc->opts = opts;
+	return opt - opts;
 }
 
 static void
@@ -456,10 +454,8 @@ os_map(void)
 		.read_caps = ADDRXLAT_CAPS(entry_as),
 		.sym = get_symdata
 	};
-	addrxlat_osdesc_t meth;
+	addrxlat_opt_t opts[ADDRXLAT_OPT_NUM];
 	addrxlat_status status;
-
-	make_opts(&meth);
 
 	data.ctx = addrxlat_ctx_new();
 	if (!data.ctx) {
@@ -475,7 +471,9 @@ os_map(void)
 		return TEST_ERR;
 	}
 
-	status = addrxlat_sys_os_init(data.sys, data.ctx, &meth);
+	status = addrxlat_sys_os_init(data.sys, data.ctx,
+				      make_opts(opts), opts);
+
 	if (status != ADDRXLAT_OK) {
 		fprintf(stderr, "OS map failed: %s\n",
 			addrxlat_ctx_get_err(data.ctx));

@@ -482,7 +482,6 @@ kdump_status
 vtop_init(kdump_ctx_t *ctx)
 {
 	kdump_status status;
-	addrxlat_osdesc_t osdesc;
 	addrxlat_status axres;
 	struct opts opts;
 
@@ -509,15 +508,13 @@ vtop_init(kdump_ctx_t *ctx)
 		status = add_addrxlat_opts(ctx, &opts, GKI_dir_xlat_force);
 	if (status != KDUMP_OK)
 		return status;
-	osdesc.optc = opts.n;
-	osdesc.opts = opts.opts;
 
 	ctx->xlat->dirty = false;
 
 	rwlock_unlock(&ctx->shared->lock);
 
-	axres = addrxlat_sys_os_init(ctx->xlat->xlatsys,
-				     ctx->xlatctx, &osdesc);
+	axres = addrxlat_sys_os_init(ctx->xlat->xlatsys, ctx->xlatctx,
+				     opts.n, opts.opts);
 
 	rwlock_rdlock(&ctx->shared->lock);
 	if (axres != ADDRXLAT_OK)

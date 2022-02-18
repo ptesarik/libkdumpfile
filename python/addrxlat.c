@@ -4199,7 +4199,6 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 	PyObject *arch, *type, *ver, *levels, *pagesize, *phys_base,
 		*rootpgt, *xen_p2m_mfn, *xen_xlat;
 	addrxlat_ctx_t *ctx;
-	addrxlat_osdesc_t osdesc;
 	addrxlat_opt_t opts[ADDRXLAT_OPT_NUM], *p;
 	addrxlat_status status;
 
@@ -4278,9 +4277,7 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 		++p;
 	}
 
-	osdesc.optc = p - opts;
-	osdesc.opts = opts;
-	status = addrxlat_sys_os_init(self->sys, ctx, &osdesc);
+	status = addrxlat_sys_os_init(self->sys, ctx, p - opts, opts);
 	return ctx_status_result(ctxobj, status);
 }
 
