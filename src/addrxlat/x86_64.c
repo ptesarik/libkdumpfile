@@ -951,6 +951,38 @@ static const struct sys_region layout_5level[] = {
 	SYS_REGION_END
 };
 
+/** Determine the number of virtual address bits.
+ * @param ctl      Initialization data.
+ * @returns        Error status.
+ *
+ * On successful return, the virt_bits option is valid.
+ */
+static addrxlat_status
+get_virt_bits(struct os_init_data *ctl)
+{
+	addrxlat_status status;
+
+	if (opt_isset(ctl->popt, virt_bits))
+		return ADDRXLAT_OK;
+
+	if (ctl->os_type == OS_LINUX) {
+		addrxlat_addr_t l5_enabled;
+		status = get_number(ctl->ctx, "pgtable_l5_enabled",
+				    &l5_enabled);
+		if (status == ADDRXLAT_OK) {
+			ctl->popt.virt_bits = l5_enabled
+				? VIRTADDR_5L_BITS_MAX
+				: VIRTADDR_BITS_MAX;
+			return ADDRXLAT_OK;
+		} else if (status != ADDRXLAT_ERR_NODATA)
+			return status;
+		clear_error(ctl->ctx);
+	}
+
+	ctl->popt.virt_bits = VIRTADDR_BITS_MAX;
+	return ADDRXLAT_OK;
+}
+
 /** Initialize the page table translation method.
  * @param ctl      Initialization data.
  * @returns        Error status.
@@ -977,19 +1009,16 @@ init_pgt_meth(struct os_init_data *ctl)
 	meth->param.pgt.pte_mask = 0;
 	meth->param.pgt.pf = x86_64_pf;
 
-	if (ctl->os_type == OS_LINUX) {
-		addrxlat_addr_t l5_enabled;
+	status = get_virt_bits(ctl);
+	if (status != ADDRXLAT_OK)
+		return status;
 
-		status = get_number(ctl->ctx, "pgtable_l5_enabled",
-				    &l5_enabled);
-		if (status == ADDRXLAT_OK)
-			meth->param.pgt.pf.nfields = !!l5_enabled + 5;
-		else if (status == ADDRXLAT_ERR_NODATA)
-			clear_error(ctl->ctx);
-		else
-			return set_error(ctl->ctx, status,
-					 "Cannot determine 5-level paging");
-	}
+	if (ctl->popt.virt_bits == VIRTADDR_BITS_MAX)
+		meth->param.pgt.pf.nfields = 5;
+	else if (ctl->popt.virt_bits == VIRTADDR_5L_BITS_MAX)
+		meth->param.pgt.pf.nfields = 6;
+	else
+		return bad_virt_bits(ctl->ctx, ctl->popt.virt_bits);
 
 	return ADDRXLAT_OK;
 }

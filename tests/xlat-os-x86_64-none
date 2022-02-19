@@ -6,6 +6,7 @@
 
 opts=(
     arch=x86_64
+    virt_bits=48
 )
 
 . "$srcdir"/xlat-os-common
