@@ -48,6 +48,12 @@
 /** Maximum virtual address bits for 5-level paging (architecture limit). */
 #define VIRTADDR_5L_BITS_MAX	57
 
+/** Position of the LA57 bit in CR4. */
+#define CR4_BIT_LA57		12
+
+/** Check whether LA57 (5-level paging) is enabled in CR4. */
+#define CR4_LA57_ISSET(val)	((val) & ((uint64_t)1 << CR4_BIT_LA57))
+
 /** Page shift (log2 4K). */
 #define PAGE_SHIFT		12
 
@@ -960,10 +966,21 @@ static const struct sys_region layout_5level[] = {
 static addrxlat_status
 get_virt_bits(struct os_init_data *ctl)
 {
+	addrxlat_addr_t cr4;
 	addrxlat_status status;
 
 	if (opt_isset(ctl->popt, virt_bits))
 		return ADDRXLAT_OK;
+
+	status = get_reg(ctl->ctx, "cr4", &cr4);
+	if (status == ADDRXLAT_OK) {
+		ctl->popt.virt_bits = CR4_LA57_ISSET(cr4)
+			? VIRTADDR_5L_BITS_MAX
+			: VIRTADDR_BITS_MAX;
+		return ADDRXLAT_OK;
+	} else if (status != ADDRXLAT_ERR_NODATA)
+		return status;
+	clear_error(ctl->ctx);
 
 	if (ctl->os_type == OS_LINUX) {
 		addrxlat_addr_t l5_enabled;
