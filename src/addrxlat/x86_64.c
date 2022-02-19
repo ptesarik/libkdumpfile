@@ -977,6 +977,10 @@ get_virt_bits(struct os_init_data *ctl)
 		} else if (status != ADDRXLAT_ERR_NODATA)
 			return status;
 		clear_error(ctl->ctx);
+	} else if (ctl->os_type == OS_XEN) {
+		/* Update this when/if Xen implements 5-level paging. */
+		ctl->popt.virt_bits = VIRTADDR_BITS_MAX;
+		return ADDRXLAT_OK;
 	}
 
 	ctl->popt.virt_bits = VIRTADDR_BITS_MAX;
