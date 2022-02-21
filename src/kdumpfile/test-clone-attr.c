@@ -109,10 +109,8 @@ int
 main(int argc, char **argv)
 {
 	kdump_ctx_t *ctx1, *ctx2;
-	const struct attr_template **t;
 	struct attr_data *a, *c, *sub;
 	kdump_attr_ref_t ref;
-	kdump_num_t num;
 	kdump_status status;
 	int ret;
 

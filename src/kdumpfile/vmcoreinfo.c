@@ -53,7 +53,7 @@ static const struct attr_ops vmcoreinfo_lines_ops;
 static void
 dealloc_vmcoreinfo(struct attr_data *dir)
 {
-	struct attr_data *child, *child2;
+	struct attr_data *child;
 
 	if (dir->template->type != KDUMP_DIRECTORY)
 		return;

@@ -44,7 +44,6 @@ static kdump_ctx_t *
 alloc_ctx(void)
 {
 	kdump_ctx_t *ctx;
-	unsigned i;
 
 	ctx = calloc(1, sizeof (kdump_ctx_t) + ERRBUF);
 	if (!ctx)

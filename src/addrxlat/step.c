@@ -631,12 +631,10 @@ highest_mapped_tbl(addrxlat_step_t *step,
 		   addrxlat_addr_t *addr, addrxlat_addr_t limit)
 {
 	int i;
-	addrxlat_addr_t nelem;
 	addrxlat_addr_t tblmask;
 	addrxlat_step_t mystep;
 	addrxlat_status status;
 
-	nelem = pf_table_size(&step->meth->param.pgt.pf, step->remain - 1);
 	tblmask = pf_table_mask(&step->meth->param.pgt.pf, step->remain - 1);
 	memcpy(&mystep, step, sizeof *step);
 	while (*addr >= limit) {

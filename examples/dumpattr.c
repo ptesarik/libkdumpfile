@@ -76,10 +76,8 @@ print_bitmap(kdump_ctx_t *ctx, kdump_bmp_t *bmp)
 static int
 print_blob(kdump_ctx_t *ctx, kdump_blob_t *blob)
 {
-	kdump_addr_t idx;
 	unsigned char *data;
 	size_t size;
-	kdump_status status;
 
 	data = kdump_blob_pin(blob);
 	size = kdump_blob_size(blob);
