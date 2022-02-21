@@ -222,6 +222,7 @@ add_addrxlat_opt(kdump_ctx_t *ctx, struct opts *opts,
  * @param opts    Options.
  * @param dirkey  Global directory key index
  *                (addrxlat.default, or addrxlat.force).
+ * @returns       Error status.
  */
 static kdump_status
 add_addrxlat_opts(kdump_ctx_t *ctx, struct opts *opts,
@@ -240,6 +241,8 @@ add_addrxlat_opts(kdump_ctx_t *ctx, struct opts *opts,
 		if (status != KDUMP_OK)
 			return status;
 	}
+
+	return KDUMP_OK;
 }
 
 /** Add an ADDRXLAT_OPT_arch option if set.
