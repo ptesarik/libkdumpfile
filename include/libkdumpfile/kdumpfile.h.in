@@ -828,6 +828,16 @@ kdump_status kdump_attr_ref_get(kdump_ctx_t *ctx, const kdump_attr_ref_t *ref,
 kdump_status kdump_attr_ref_set(kdump_ctx_t *ctx, kdump_attr_ref_t *ref,
 				const kdump_attr_t *valp);
 
+/**  Set a dump file attribute.
+ * @param ctx     Dump file object.
+ * @param base    Reference to a base attribute.
+ * @param subkey  Attribute key, relative to @p base.
+ * @param valp    New attribute value.
+ * @returns       Error status.
+ */
+kdump_status kdump_set_sub_attr(kdump_ctx_t *ctx, const kdump_attr_ref_t *base,
+				const char *subkey, const kdump_attr_t *valp);
+
 /**  Get an attribute iterator.
  * @param      ctx   Dump file object.
  * @param[in]  path  Path to an attribute directory.

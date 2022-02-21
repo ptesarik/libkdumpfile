@@ -1308,6 +1308,26 @@ kdump_attr_ref_set(kdump_ctx_t *ctx, kdump_attr_ref_t *ref,
 	return ret;
 }
 
+kdump_status
+kdump_set_sub_attr(kdump_ctx_t *ctx, const kdump_attr_ref_t *base,
+		   const char *subkey, const kdump_attr_t *valp)
+{
+	struct attr_data *dir, *attr;
+	kdump_status ret;
+
+	clear_error(ctx);
+	dir = ref_attr(base);
+	rwlock_wrlock(&ctx->shared->lock);
+
+	attr = lookup_dir_attr(ctx->dict, dir, subkey, strlen(subkey));
+	ret = attr
+		? check_set_attr(ctx, attr, valp)
+		: set_error(ctx, KDUMP_ERR_NOKEY, "No such key");
+
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
+}
+
 static kdump_status
 set_iter_pos(kdump_attr_iter_t *iter, struct attr_data *attr)
 {
