@@ -185,7 +185,6 @@ check_attr_blob(kdump_ctx_t *ctx, char *key, const struct blob *expect)
 	kdump_attr_t attr;
 	unsigned char *data;
 	size_t size;
-	kdump_status status;
 	size_t i;
 
 	printf("Checking %s... ", key);
@@ -217,7 +216,7 @@ check_attr_blob(kdump_ctx_t *ctx, char *key, const struct blob *expect)
 		if (data[i] != expect->data[i]) {
 			kdump_blob_unpin(attr.val.blob);
 			puts("FAILED");
-			fprintf(stderr, "%s value mismatch at index %u: ",
+			fprintf(stderr, "%s value mismatch at index %zu: ",
 				key, i);
 			fprintf(stderr, "expect 0x%02x, got 0x%02x\n",
 				expect->data[i], data[i]);

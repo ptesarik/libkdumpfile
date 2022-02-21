@@ -782,7 +782,6 @@ get_page(void *data, addrxlat_buffer_t *buf)
 {
 	struct cbdata *cbd = data;
 	struct entry *ent;
-	uint64_t *p;
 
 	if (buf->addr.as != ADDRXLAT_MACHPHYSADDR)
 		return addrxlat_ctx_err(cbd->ctx, ADDRXLAT_ERR_INVALID,

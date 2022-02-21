@@ -107,6 +107,8 @@ check_vmcoreinfo_line(kdump_ctx_t *ctx, int cnt, const char *key,
 	}
 	printf("#%d: kdump_vmcoreinfo_line() value match\n", cnt);
 	free(lineval);
+
+	return TEST_OK;
 }
 
 static int

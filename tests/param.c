@@ -155,9 +155,6 @@ set_param_string(const struct param *param, const char *val)
 static int
 set_param_yesno(const struct param *param, const char *val)
 {
-	unsigned long long num;
-	char *endp;
-
 	if (!strcasecmp(val, "yes") ||
 	    !strcasecmp(val, "true")) {
 		*param->yesno = true;
@@ -246,7 +243,6 @@ set_param_blob(const struct param *param, const char *val)
 	unsigned i, n;
 	const char *p;
 	unsigned char *valp;
-	char *endp;
 
 	p = strpbrk(val, ARRAY_SEPARATORS);
 	n = p ? p - val : strlen(val);
@@ -276,7 +272,7 @@ set_param_blob(const struct param *param, const char *val)
 			}
 		}
 		if (!isok) {
-			fprintf(stderr, "Invalid hex digit at %d: '%c'\n",
+			fprintf(stderr, "Invalid hex digit at %zu: '%c'\n",
 				p - val, *p);
 			free(blob);
 			return TEST_FAIL;

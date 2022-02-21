@@ -112,7 +112,8 @@ check(kdump_ctx_t *ctx)
 	if (rax != pr_rax) {
 		kdump_blob_unpin(blob);
 		fprintf(stderr, "RAX value mismatch:"
-			" attrs: %016llX, PRSTATUS: %016llX\n",
+			" attrs: %016" KDUMP_PRIxNUM
+			", PRSTATUS: %016" PRIx64 "\n",
 			rax, pr_rax);
 		return TEST_FAIL;
 	}
@@ -131,7 +132,8 @@ check(kdump_ctx_t *ctx)
 	if (rax != pr_rax) {
 		kdump_blob_unpin(blob);
 		fprintf(stderr, "PRSTATUS does not follow RAX attribute:"
-			" attrs: %016llX, PRSTATUS: %016llX\n",
+			" attrs: %016" KDUMP_PRIxNUM
+			", PRSTATUS: %016" PRIx64 "\n",
 			rax, pr_rax);
 		return TEST_FAIL;
 	}
@@ -151,7 +153,8 @@ check(kdump_ctx_t *ctx)
 	if (rax != pr_rax) {
 		kdump_blob_unpin(blob);
 		fprintf(stderr, "RAX attribute does not follow PRSTATUS:"
-			" attrs: %016llX, PRSTATUS: %016llX\n",
+			" attrs: %016" KDUMP_PRIxNUM
+			", PRSTATUS: %016" PRIx64 "\n",
 			rax, pr_rax);
 		return TEST_FAIL;
 	}

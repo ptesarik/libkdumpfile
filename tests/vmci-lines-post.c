@@ -88,7 +88,7 @@ set_vmcoreinfo_value(kdump_ctx_t *ctx, const char *val)
 
 	blob = kdump_blob_new_dup(val, strlen(val));
 	if (!blob) {
-		fprintf(stderr, "#%d: Cannot allocate VMCOREINFO blob.\n");
+		fprintf(stderr, "Cannot allocate VMCOREINFO blob.\n");
 		return TEST_ERR;
 	}
 	attr.type = KDUMP_BLOB;
