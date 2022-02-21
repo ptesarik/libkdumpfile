@@ -1,2 +1,4 @@
 @VALUE(init_level4_pgt)
 ffffffff81e10000
+@VALUE(_stext)
+ffffffff810002b8

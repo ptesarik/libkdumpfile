@@ -1012,10 +1012,11 @@ get_virt_bits(struct os_init_data *ctl)
 		/* Update this when/if Xen implements 5-level paging. */
 		ctl->popt.virt_bits = VIRTADDR_BITS_MAX;
 		return ADDRXLAT_OK;
-	}
+	} else
+		status = ADDRXLAT_ERR_NOTIMPL;
 
-	ctl->popt.virt_bits = VIRTADDR_BITS_MAX;
-	return ADDRXLAT_OK;
+	return set_error(ctl->ctx, status,
+			 "Cannot determine 5-level paging");
 }
 
 /** Initialize the page table translation method.

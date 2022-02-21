@@ -1,5 +1,7 @@
 @VALUE(init_top_pgt)
 ffffffff9300a000
+@VALUE(_stext)
+ffffffff93000000
 
 # Page encryption indicated by bit 47 => mask is 0x800000000000
 @NUMBER(sme_mask)

@@ -2,3 +2,5 @@
 ffffffff81e10000
 @VALUE(machine_to_phys_mapping)
 ffffffff8073e380
+@VALUE(_stext)
+ffffffff81000000
