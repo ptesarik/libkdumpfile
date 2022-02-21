@@ -133,7 +133,7 @@ main(int argc, char **argv)
 
 	/* Unpin blob */
 	cnt = kdump_blob_unpin(blob);
-	printf("Expected pin count %lu, found %lu\n", 0, cnt);
+	printf("Expected pin count %lu, found %lu\n", 0UL, cnt);
 	if (cnt != 0) {
 		fputs("Pin count mismatch!\n", stderr);
 		ret = TEST_ERR;
@@ -159,7 +159,7 @@ main(int argc, char **argv)
 
 	/* Unpin own data buffer */
 	cnt = kdump_blob_unpin(blob);
-	printf("Expected pin count %lu, found %lu\n", 0, cnt);
+	printf("Expected pin count %lu, found %lu\n", 0UL, cnt);
 	if (cnt != 0) {
 		fputs("Pin count mismatch!\n", stderr);
 		ret = TEST_ERR;
@@ -191,7 +191,7 @@ main(int argc, char **argv)
 
 	/* Unpin own data buffer again */
 	cnt = kdump_blob_unpin(blob);
-	printf("Expected pin count %lu, found %lu\n", 0, cnt);
+	printf("Expected pin count %lu, found %lu\n", 0UL, cnt);
 	if (cnt != 0) {
 		fputs("Pin count mismatch!\n", stderr);
 		ret = TEST_ERR;
@@ -221,5 +221,5 @@ main(int argc, char **argv)
 
 	kdump_free(ctx);
 
-	return TEST_OK;
+	return ret;
 }
