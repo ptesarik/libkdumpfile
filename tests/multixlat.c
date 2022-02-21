@@ -40,6 +40,16 @@
 #define CHUNKSZ 256
 #define BYTES_PER_LINE 16
 
+struct xlat_option {
+	const char *name;
+	const char *value;
+};
+
+#define MAX_OPTIONS	ADDRXLAT_OPT_NUM
+
+static struct xlat_option options[MAX_OPTIONS];
+static unsigned num_options;
+
 static unsigned long long rootpgt1, rootpgt2;
 static unsigned long long addr = 0;
 static unsigned long len = sizeof(long);
@@ -66,7 +76,6 @@ dump_buffer(unsigned long long addr, unsigned char *buf, size_t len)
 static int
 dump_data(kdump_ctx_t *ctx, unsigned long long addr, unsigned long long len)
 {
-	const char *opts;
 	unsigned char buf[CHUNKSZ];
 	size_t sz, remain;
 	kdump_status res;
@@ -124,26 +133,85 @@ dump_data(kdump_ctx_t *ctx, unsigned long long addr, unsigned long long len)
 }
 
 static int
-dump_ctx(kdump_ctx_t *ctx, unsigned long long rootpgt)
+dump_ctx_dir(kdump_ctx_t *ctx, unsigned long long rootpgt,
+	     const kdump_attr_ref_t *dir)
 {
+	kdump_status status;
+	kdump_attr_t attr;
 	const char *key;
-	kdump_status res;
+	unsigned i;
 
-	key = KDUMP_ATTR_XLAT_FORCE ".rootpgt.as";
-	res = kdump_set_number_attr(ctx, key, ADDRXLAT_MACHPHYSADDR);
-	if (res != KDUMP_OK)
+	key = "rootpgt.as";
+	attr.type = KDUMP_NUMBER;
+	attr.val.number = ADDRXLAT_MACHPHYSADDR;
+	status = kdump_set_sub_attr(ctx, dir, key, &attr);
+	if (status != KDUMP_OK)
 		goto err_set;
 
-	key = KDUMP_ATTR_XLAT_FORCE ".rootpgt.addr";
-	res = kdump_set_address_attr(ctx, key, rootpgt);
-	if (res != KDUMP_OK)
+	key = "rootpgt.addr";
+	attr.type = KDUMP_ADDRESS;
+	attr.val.address = rootpgt;
+	status = kdump_set_sub_attr(ctx, dir, key, &attr);
+	if (status != KDUMP_OK)
 		goto err_set;
+
+	for (i = 0; i < num_options; ++i) {
+		struct xlat_option *opt = &options[i];
+		kdump_attr_ref_t ref;
+
+		key = opt->name;
+		status = kdump_sub_attr_ref(ctx, dir, key, &ref);
+		if (status != KDUMP_OK)
+			goto err_set;
+
+		attr.type = kdump_attr_ref_type(&ref);
+		switch (attr.type) {
+		case KDUMP_STRING:
+			attr.val.string = opt->value;
+			break;
+
+		case KDUMP_NUMBER:
+			attr.val.number = strtoull(opt->value, NULL, 0);
+			break;
+
+		default:
+			fprintf(stderr, "%s: unimplemented option type: %ld\n",
+				opt->name, (long)attr.type);
+			kdump_attr_unref(ctx, &ref);
+			return TEST_ERR;
+		}
+
+		status = kdump_attr_ref_set(ctx, &ref, &attr);
+		if (status != KDUMP_OK)
+			goto err_set;
+
+		kdump_attr_unref(ctx, &ref);
+	}
 
 	return dump_data(ctx, addr, len);
 
  err_set:
 	fprintf(stderr, "Cannot set %s: %s\n", key, kdump_get_err(ctx));
 	return TEST_ERR;
+}
+
+static int
+dump_ctx(kdump_ctx_t *ctx, unsigned long long rootpgt)
+{
+	kdump_attr_ref_t dir;
+	kdump_status status;
+	int res;
+
+	status = kdump_attr_ref(ctx, KDUMP_ATTR_XLAT_FORCE, &dir);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot reference %s: %s\n",
+			KDUMP_ATTR_XLAT_FORCE, kdump_get_err(ctx));
+		return TEST_ERR;
+	}
+
+	res = dump_ctx_dir(ctx, rootpgt, &dir);
+	kdump_attr_unref(ctx, &dir);
+	return res;
 }
 
 static int
@@ -220,7 +288,8 @@ usage(const char *name)
 		"  -1 paddr   First root page table\n"
 		"  -2 paddr   Second root page table\n"
 		"  -a addr    Read start address (default: 0)\n"
-		"  -l len     Number of bytes to read (default: %lu)\n",
+		"  -l len     Number of bytes to read (default: %lu)\n"
+		"  -o opt=val Additional addrxlat options\n",
 		name, len);
 }
 
@@ -231,7 +300,7 @@ main(int argc, char **argv)
 	int fd;
 	int rc;
 
-	while ((opt = getopt(argc, argv, "h1:2:a:l:")) != -1) {
+	while ((opt = getopt(argc, argv, "h1:2:a:l:o:")) != -1) {
 		char *p;
 		switch (opt) {
 		case '1':
@@ -264,6 +333,24 @@ main(int argc, char **argv)
 				fprintf(stderr, "Invalid number: %s\n", optarg);
 				return TEST_ERR;
 			}
+			break;
+
+		case 'o':
+			if (num_options >= MAX_OPTIONS) {
+				fprintf(stderr, "Too many xlat options\n");
+				return TEST_ERR;
+			}
+
+			p = strchr(optarg, '=');
+			if (!p) {
+				fprintf(stderr, "Missing option value: %s\n",
+					optarg);
+				return TEST_ERR;
+			}
+			*p = '\0';
+			options[num_options].name = optarg;
+			options[num_options].value = p + 1;
+			++num_options;
 			break;
 
 		case 'h':
