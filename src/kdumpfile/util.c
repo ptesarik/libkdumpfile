@@ -1154,8 +1154,10 @@ create_derived_attr(kdump_ctx_t *ctx, struct attr_data *dir,
 
 	action = "allocate";
 	attr = new_attr(ctx->dict, dir, &def->tmpl);
-	if (!attr)
+	if (!attr) {
+		status = KDUMP_ERR_SYSTEM;
 		goto err;
+	}
 
 	action = "set";
 	status = set_attr_number(ctx, attr, ATTR_INVALID, 0);
