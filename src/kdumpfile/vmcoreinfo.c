@@ -295,9 +295,17 @@ kdump_vmcoreinfo_raw(kdump_ctx_t *ctx, char **raw)
 	return ret;
 }
 
+/**  Get a VMCOREINFO line.
+ * @param ctx       Dump file object.
+ * @param[in] key   Name of the VMCOREINFO variable (part before '=').
+ * @param[out] val  Filled with the part after (first) '='.
+ * @returns         Error status.
+ *
+ * This is the implementation of @xref kdump_vmcoreinfo_line, called
+ * with the shared lock held.
+ */
 static kdump_status
-get_line_locked(kdump_ctx_t *ctx, const char *key,
-		const char **val)
+get_line_locked(kdump_ctx_t *ctx, const char *key, char **val)
 {
 	struct attr_data *base;
 	struct attr_data *attr;
