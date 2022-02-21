@@ -23,7 +23,7 @@ if [ $rc -ne 0 ]; then
 fi
 echo "Created ELF dump: $dumpfile"
 
-./multixlat -1 0x2e10000 -2 0x1918000 -a 0 -l 8 "$dumpfile" >"$resultfile"
+./multixlat -o virt_bits=48 -1 0x2e10000 -2 0x1918000 -a 0 -l 8 "$dumpfile" >"$resultfile"
 rc=$?
 if [ $rc -ne 0 ]; then
     echo "Cannot dump ELF data" >&2
