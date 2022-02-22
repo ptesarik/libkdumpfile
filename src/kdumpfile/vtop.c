@@ -87,12 +87,6 @@ static const struct attr_template fulladdr_addr = {
 	/* .ops = &dirty_xlat_ops, */
 };
 
-#define MAX_OPTS	(11 + 2*ARRAY_SIZE(options))
-struct opts {
-	unsigned n;
-	addrxlat_opt_t opts[MAX_OPTS];
-};
-
 /** Create addrxlat attributes under a given directory.
  * @param dict    Target attribute dictionary.
  * @param dirkey  Global directory key index.
@@ -155,7 +149,7 @@ create_addrxlat_attrs(struct attr_dict *dict)
  * If the attribute is not set, return @c KDUMP_OK and do nothing.
  */
 static kdump_status
-add_addrxlat_opt(kdump_ctx_t *ctx, struct opts *opts,
+add_addrxlat_opt(kdump_ctx_t *ctx, addrxlat_opt_t *opts,
 		 const struct attr_data *dir,
 		 const struct attr_template *tmpl)
 {
@@ -172,8 +166,7 @@ add_addrxlat_opt(kdump_ctx_t *ctx, struct opts *opts,
 				 "Cannot get %s addrxlat option",
 				 tmpl->key);
 
-	opt = &opts->opts[opts->n];
-	opt->idx = tmpl->optidx;
+	opt = &opts[tmpl->optidx];
 	switch (tmpl->type) {
 	case KDUMP_NUMBER:
 		opt->val.num = attr_value(attr)->number;
@@ -212,8 +205,8 @@ add_addrxlat_opt(kdump_ctx_t *ctx, struct opts *opts,
 				 "Unimplemented addrxlat option type: %u",
 				 (unsigned) tmpl->type);
 	}
+	opt->idx = tmpl->optidx;
 
-	++opts->n;
 	return KDUMP_OK;
 }
 
@@ -225,7 +218,7 @@ add_addrxlat_opt(kdump_ctx_t *ctx, struct opts *opts,
  * @returns       Error status.
  */
 static kdump_status
-add_addrxlat_opts(kdump_ctx_t *ctx, struct opts *opts,
+add_addrxlat_opts(kdump_ctx_t *ctx, addrxlat_opt_t *opts,
 		  enum global_keyidx dirkey)
 {
 	const struct attr_template *tmpl;
@@ -254,13 +247,11 @@ add_addrxlat_opts(kdump_ctx_t *ctx, struct opts *opts,
  * returns success.
  */
 static kdump_status
-set_arch_opt(kdump_ctx_t *ctx, struct opts *opts)
+set_arch_opt(kdump_ctx_t *ctx, addrxlat_opt_t *opts)
 {
-	if (isset_arch_name(ctx)) {
-		addrxlat_opt_arch(&opts->opts[opts->n],
+	if (isset_arch_name(ctx))
+		addrxlat_opt_arch(&opts[ADDRXLAT_OPT_arch],
 				  get_arch_name(ctx));
-		++opts->n;
-	}
 	return KDUMP_OK;
 }
 
@@ -273,7 +264,7 @@ set_arch_opt(kdump_ctx_t *ctx, struct opts *opts)
  * returns success.
  */
 static kdump_status
-set_os_type_opt(kdump_ctx_t *ctx, struct opts *opts)
+set_os_type_opt(kdump_ctx_t *ctx, addrxlat_opt_t *opts)
 {
 	struct attr_data *attr;
 	kdump_status status;
@@ -285,9 +276,8 @@ set_os_type_opt(kdump_ctx_t *ctx, struct opts *opts)
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot get OS type");
 
-	addrxlat_opt_os_type(&opts->opts[opts->n],
+	addrxlat_opt_os_type(&opts[ADDRXLAT_OPT_os_type],
 			     attr_value(attr)->string);
-	++opts->n;
 	return KDUMP_OK;
 }
 
@@ -300,7 +290,7 @@ set_os_type_opt(kdump_ctx_t *ctx, struct opts *opts)
  * returns success.
  */
 static kdump_status
-set_version_code(kdump_ctx_t *ctx, struct opts *opts)
+set_version_code(kdump_ctx_t *ctx, addrxlat_opt_t *opts)
 {
 	struct attr_data *attr;
 	kdump_status status;
@@ -316,9 +306,8 @@ set_version_code(kdump_ctx_t *ctx, struct opts *opts)
 		return set_error(ctx, KDUMP_ERR_INVALID,
 				 "Version code is not a number");
 
-	addrxlat_opt_version_code(&opts->opts[opts->n],
+	addrxlat_opt_version_code(&opts[ADDRXLAT_OPT_version_code],
 				  attr_value(attr)->number);
-	++opts->n;
 	return KDUMP_OK;
 }
 
@@ -331,13 +320,11 @@ set_version_code(kdump_ctx_t *ctx, struct opts *opts)
  * returns success.
  */
 static kdump_status
-set_page_shift_opt(kdump_ctx_t *ctx, struct opts *opts)
+set_page_shift_opt(kdump_ctx_t *ctx, addrxlat_opt_t *opts)
 {
-	if (isset_page_shift(ctx)) {
-		addrxlat_opt_page_shift(&opts->opts[opts->n],
+	if (isset_page_shift(ctx))
+		addrxlat_opt_page_shift(&opts[ADDRXLAT_OPT_page_shift],
 					get_page_shift(ctx));
-		++opts->n;
-	}
 	return KDUMP_OK;
 }
 
@@ -381,7 +368,7 @@ get_linux_x86_phys_bits(kdump_ctx_t *ctx, int *bits)
  * nothing is added and this function returns success.
  */
 static kdump_status
-set_linux_phys_bits_opt(kdump_ctx_t *ctx, struct opts *opts)
+set_linux_phys_bits_opt(kdump_ctx_t *ctx, addrxlat_opt_t *opts)
 {
 	int bits;
 	kdump_status status;
@@ -397,16 +384,14 @@ set_linux_phys_bits_opt(kdump_ctx_t *ctx, struct opts *opts)
 	if (status != KDUMP_OK)
 		return status;
 
-	if (bits != 0) {
-		addrxlat_opt_phys_bits(&opts->opts[opts->n], bits);
-		++opts->n;
-	}
+	if (bits != 0)
+		addrxlat_opt_phys_bits(&opts[ADDRXLAT_OPT_phys_bits], bits);
 
 	return KDUMP_OK;
 }
 
 static kdump_status
-set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
+set_linux_opts(kdump_ctx_t *ctx, addrxlat_opt_t *opts)
 {
 	struct attr_data *attr;
 	kdump_status status;
@@ -415,17 +400,13 @@ set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 	if (status != KDUMP_OK)
 		return status;
 
-	if (isset_phys_base(ctx)) {
-		addrxlat_opt_phys_base(&opts->opts[opts->n],
+	if (isset_phys_base(ctx))
+		addrxlat_opt_phys_base(&opts[ADDRXLAT_OPT_phys_base],
 				       get_phys_base(ctx));
-		++opts->n;
-	}
 
 	if ((isset_xen_xlat(ctx) && get_xen_xlat(ctx) != KDUMP_XEN_AUTO) ||
-	    (isset_xen_type(ctx) && get_xen_type(ctx) == KDUMP_XEN_SYSTEM)) {
-		addrxlat_opt_xen_xlat(&opts->opts[opts->n], 1);
-		++opts->n;
-	}
+	    (isset_xen_type(ctx) && get_xen_type(ctx) == KDUMP_XEN_SYSTEM))
+		addrxlat_opt_xen_xlat(&opts[ADDRXLAT_OPT_xen_xlat], 1);
 
 	attr = gattr(ctx, GKI_xen_p2m_mfn);
 	if (attr_isset(attr)) {
@@ -434,16 +415,15 @@ set_linux_opts(kdump_ctx_t *ctx, struct opts *opts)
 			return set_error(ctx, status,
 					 "Cannot get %s from vmcoreinfo",
 					 "p2m_mfn");
-		addrxlat_opt_xen_p2m_mfn(&opts->opts[opts->n],
+		addrxlat_opt_xen_p2m_mfn(&opts[ADDRXLAT_OPT_xen_p2m_mfn],
 					 attr_value(attr)->number);
-		++opts->n;
 	}
 
 	return KDUMP_OK;
 }
 
 static kdump_status
-set_xen_opts(kdump_ctx_t *ctx, struct opts *opts)
+set_xen_opts(kdump_ctx_t *ctx, addrxlat_opt_t *opts)
 {
 	struct attr_data *attr;
 
@@ -453,9 +433,8 @@ set_xen_opts(kdump_ctx_t *ctx, struct opts *opts)
 		if (status != KDUMP_OK)
 			return set_error(ctx, status, "Cannot get %s.%s",
 					 "xen", "phys_start");
-		addrxlat_opt_phys_base(&opts->opts[opts->n],
+		addrxlat_opt_phys_base(&opts[ADDRXLAT_OPT_phys_base],
 				       attr_value(attr)->address);
-		++opts->n;
 	}
 
 	return KDUMP_OK;
@@ -466,29 +445,32 @@ vtop_init(kdump_ctx_t *ctx)
 {
 	kdump_status status;
 	addrxlat_status axres;
-	struct opts opts;
+	addrxlat_opt_t opts[ADDRXLAT_OPT_NUM];
+	unsigned i;
 
 	if (!isset_arch_name(ctx))
 		return KDUMP_OK;
 
-	opts.n = 0;
-	status = add_addrxlat_opts(ctx, &opts, GKI_dir_xlat_default);
+	for (i = 0; i < ARRAY_SIZE(opts); ++i)
+		opts[i].idx = ADDRXLAT_OPT_NULL;
+
+	status = add_addrxlat_opts(ctx, opts, GKI_dir_xlat_default);
 	if (status == KDUMP_OK)
-		status = set_arch_opt(ctx, &opts);
+		status = set_arch_opt(ctx, opts);
 	if (status == KDUMP_OK)
-		status = set_os_type_opt(ctx, &opts);
+		status = set_os_type_opt(ctx, opts);
 	if (status == KDUMP_OK)
-		status = set_version_code(ctx, &opts);
+		status = set_version_code(ctx, opts);
 	if (status == KDUMP_OK)
-		status = set_page_shift_opt(ctx, &opts);
+		status = set_page_shift_opt(ctx, opts);
 	if (status == KDUMP_OK) {
 		if (ctx->xlat->osdir == GKI_dir_linux)
-			status = set_linux_opts(ctx, &opts);
+			status = set_linux_opts(ctx, opts);
 		else if (ctx->xlat->osdir == GKI_dir_xen)
-			status = set_xen_opts(ctx, &opts);
+			status = set_xen_opts(ctx, opts);
 	}
 	if (status == KDUMP_OK)
-		status = add_addrxlat_opts(ctx, &opts, GKI_dir_xlat_force);
+		status = add_addrxlat_opts(ctx, opts, GKI_dir_xlat_force);
 	if (status != KDUMP_OK)
 		return status;
 
@@ -497,7 +479,7 @@ vtop_init(kdump_ctx_t *ctx)
 	rwlock_unlock(&ctx->shared->lock);
 
 	axres = addrxlat_sys_os_init(ctx->xlat->xlatsys, ctx->xlatctx,
-				     opts.n, opts.opts);
+				     ARRAY_SIZE(opts), opts);
 
 	rwlock_rdlock(&ctx->shared->lock);
 	if (axres != ADDRXLAT_OK)
