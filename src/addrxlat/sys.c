@@ -86,6 +86,9 @@ static bool
 parse_opt(struct parsed_opts *popt, const addrxlat_opt_t *opt)
 {
 	switch (opt->idx) {
+	case ADDRXLAT_OPT_NULL:
+		break;
+
 	case ADDRXLAT_OPT_arch:
 		popt->arch = opt->val.str;
 		break;

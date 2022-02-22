@@ -804,6 +804,11 @@ addrxlat_map_t *addrxlat_map_copy(const addrxlat_map_t *map);
 
 /** Option number. */
 typedef enum _addrxlat_optidx {
+	/** Null option (ignored, use for padding).
+	 * Type: none
+	 */
+	ADDRXLAT_OPT_NULL,
+
 	/** Architecture name.
 	 * Type: string
 	 */
