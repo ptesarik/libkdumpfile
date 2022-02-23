@@ -31,6 +31,8 @@
 #ifndef _ADDRXLAT_PRIV_H
 #define _ADDRXLAT_PRIV_H 1
 
+#include "config.h"
+
 #pragma GCC visibility push(default)
 #include <libkdumpfile/addrxlat.h>
 #pragma GCC visibility pop
