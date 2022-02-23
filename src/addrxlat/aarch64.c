@@ -284,43 +284,6 @@ add_linux_linear_map(struct os_init_data *ctl)
 	return sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KPHYS_DIRECT, layout);
 }
 
-/** Initialize the page table translation method.
- * @param ctl      Initialization data.
- * @returns        Error status.
- */
-static addrxlat_status
-init_pgt_meth(struct os_init_data *ctl)
-{
-	addrxlat_meth_t *meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT];
-	addrxlat_param_pgt_t *pgt = &meth->param.pgt;
-	unsigned field_bits;
-	unsigned page_bits;
-	unsigned num_bits;
-	unsigned i;
-
-	meth->kind = ADDRXLAT_PGT;
-	meth->target_as = ADDRXLAT_MACHPHYSADDR;
-
-	pgt->root.as = ADDRXLAT_NOADDR;
-	pgt->pte_mask = 0;
-	pgt->pf.pte_format = ADDRXLAT_PTE_AARCH64;
-
-	page_bits = ctl->popt.page_shift;
-	num_bits = ctl->popt.virt_bits;
-	pgt->pf.nfields = (num_bits - 4) / (page_bits - 3) + 1;
-
-	field_bits = page_bits;
-	for (i = 0; i < pgt->pf.nfields; ++i) {
-		pgt->pf.fieldsz[i] = field_bits;
-		num_bits -= field_bits;
-		field_bits = page_bits - 3;
-		if (field_bits > num_bits)
-			field_bits = num_bits;
-	}
-
-	return ADDRXLAT_OK;
-}
-
 /** Initialize a translation map for Linux/aarch64.
  * @param ctl  Initialization data.
  * @returns	  Error status.
@@ -344,12 +307,7 @@ map_linux_aarch64(struct os_init_data *ctl)
 	addrxlat_meth_t *meth;
 	addrxlat_status status;
 
-	status = init_pgt_meth(ctl);
-	if (status != ADDRXLAT_OK)
-		return status;
-
 	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
-	*meth = ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT];
 	if (opt_isset(ctl->popt, rootpgt))
 		meth->param.pgt.root = ctl->popt.rootpgt;
 	else {
@@ -417,6 +375,39 @@ determine_virt_bits(struct os_init_data *ctl)
 	return ADDRXLAT_OK;
 }
 
+/** Initialize the page table translation method.
+ * @param ctl      Initialization data.
+ */
+static void
+init_pgt_meth(struct os_init_data *ctl)
+{
+	addrxlat_meth_t *meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	addrxlat_param_pgt_t *pgt = &meth->param.pgt;
+	unsigned field_bits;
+	unsigned page_bits;
+	unsigned num_bits;
+
+	meth->kind = ADDRXLAT_PGT;
+	meth->target_as = ADDRXLAT_MACHPHYSADDR;
+
+	pgt->root.as = ADDRXLAT_NOADDR;
+	pgt->pte_mask = 0;
+	pgt->pf.pte_format = ADDRXLAT_PTE_AARCH64;
+
+	pgt->pf.nfields = 0;
+	field_bits = page_bits = ctl->popt.page_shift;
+	num_bits = ctl->popt.virt_bits;
+	while (num_bits) {
+		pgt->pf.fieldsz[pgt->pf.nfields++] = field_bits;
+		num_bits -= field_bits;
+		field_bits = page_bits - 3;
+		if (field_bits > num_bits)
+			field_bits = num_bits;
+	}
+
+	ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT] = *meth;
+}
+
 /** Initialize a translation map for an aarch64 OS.
  * @param ctl  Initialization data.
  * @returns    Error status.
@@ -441,6 +432,8 @@ sys_aarch64(struct os_init_data *ctl)
 	if (ctl->popt.virt_bits < va_min_bits ||
 	    ctl->popt.virt_bits > VA_MAX_BITS)
 		return bad_virt_bits(ctl->ctx, ctl->popt.virt_bits);
+
+	init_pgt_meth(ctl);
 
 	if (ctl->os_type == OS_LINUX)
 		return map_linux_aarch64(ctl);
