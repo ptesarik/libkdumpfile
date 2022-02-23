@@ -291,19 +291,6 @@ add_linux_linear_map(struct os_init_data *ctl)
 static addrxlat_status
 map_linux_aarch64(struct os_init_data *ctl)
 {
-	/*
-	 * Generic aarch64 layout, depends on current va_bits
-	 */
-	struct sys_region aarch64_layout_generic[] = {
-	    {  0,  0,			/* bottom VA range: user space */
-	       ADDRXLAT_SYS_METH_UPGT },
-
-	    {  0,  VIRTADDR_MAX,	/* top VA range: kernel space */
-	       ADDRXLAT_SYS_METH_PGT },
-	    SYS_REGION_END
-	};
-
-	addrxlat_map_t *map;
 	addrxlat_meth_t *meth;
 	addrxlat_status status;
 
@@ -315,21 +302,6 @@ map_linux_aarch64(struct os_init_data *ctl)
 		if (status != ADDRXLAT_OK)
 			return status;
 	}
-
-	/* layout depends on the number of virtual address bits */
-	aarch64_layout_generic[0].last = ADDR_MASK(ctl->popt.virt_bits);
-	aarch64_layout_generic[1].first = VIRTADDR_MAX - ADDR_MASK(ctl->popt.virt_bits);
-
-	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_HW,
-				aarch64_layout_generic);
-	if (status != ADDRXLAT_OK)
-		return status;
-
-	map = internal_map_copy(ctl->sys->map[ADDRXLAT_SYS_MAP_HW]);
-	if (!map)
-		return set_error(ctl->ctx, ADDRXLAT_ERR_NOMEM,
-				 "Cannot duplicate hardware mapping");
-	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = map;
 
 	status = sys_set_physmaps(ctl, PHYSADDR_MASK);
 	if (status != ADDRXLAT_OK)
@@ -408,6 +380,33 @@ init_pgt_meth(struct os_init_data *ctl)
 	ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT] = *meth;
 }
 
+/** Initialize the hardware translation map.
+ * @param ctl  Initialization data.
+ * @returns    Error status.
+ *
+ * Set up a generic aarch64 layout with two subranges.
+ * The number of virtual address bits must be determined before calling
+ * this function.
+ */
+static addrxlat_status
+init_hw_map(struct os_init_data *ctl)
+{
+	addrxlat_addr_t endoff = ADDR_MASK(ctl->popt.virt_bits);
+	struct sys_region layout[] = {
+		/* bottom VA range: user space */
+		{  0,  endoff,
+		   ADDRXLAT_SYS_METH_UPGT },
+
+		/* top VA range: kernel space */
+		{  VIRTADDR_MAX - endoff,  VIRTADDR_MAX,
+		   ADDRXLAT_SYS_METH_PGT },
+
+		SYS_REGION_END
+	};
+
+	return sys_set_layout(ctl, ADDRXLAT_SYS_MAP_HW, layout);
+}
+
 /** Initialize a translation map for an aarch64 OS.
  * @param ctl  Initialization data.
  * @returns    Error status.
@@ -416,6 +415,7 @@ addrxlat_status
 sys_aarch64(struct os_init_data *ctl)
 {
 	unsigned long va_min_bits;
+	addrxlat_map_t *map;
 	addrxlat_status status;
 
 	if (!opt_isset(ctl->popt, page_shift))
@@ -434,10 +434,18 @@ sys_aarch64(struct os_init_data *ctl)
 		return bad_virt_bits(ctl->ctx, ctl->popt.virt_bits);
 
 	init_pgt_meth(ctl);
+	status = init_hw_map(ctl);
+	if (status != ADDRXLAT_OK)
+		return status;
+
+	map = internal_map_copy(ctl->sys->map[ADDRXLAT_SYS_MAP_HW]);
+	if (!map)
+		return set_error(ctl->ctx, ADDRXLAT_ERR_NOMEM,
+				 "Cannot duplicate hardware mapping");
+	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = map;
 
 	if (ctl->os_type == OS_LINUX)
 		return map_linux_aarch64(ctl);
 
-	return set_error(ctl->ctx, ADDRXLAT_ERR_NOTIMPL,
-			 "OS type not implemented");
+	return ADDRXLAT_OK;
 }

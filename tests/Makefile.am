@@ -224,6 +224,7 @@ test_scripts = \
 	sys-xlat-x86_64-linux \
 	sys-xlat-x86_64-linux-xen \
 	xlatmap-check \
+	xlat-os-aarch64-none \
 	xlat-os-ia32-none \
 	xlat-os-ia32-pae-none \
 	xlat-os-s390x-2l \
@@ -324,6 +325,7 @@ dist_check_DATA = \
 	sys-xlat-x86_64-linux.expect \
 	sys-xlat-x86_64-linux-xen.expect \
 	xlatmap.expect \
+	xlat-os-aarch64-none.expect \
 	xlat-os-ia32-none.expect \
 	xlat-os-ia32-pae-none.expect \
 	xlat-os-s390x-2l.data \

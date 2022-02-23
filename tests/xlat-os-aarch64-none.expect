@@ -1,0 +1,29 @@
+@rootpgt: PGT
+  target_as=MACHPHYSADDR
+  root=NOADDR
+  pte_mask=0x0
+  pte_format=aarch64
+  fields=12,9,9,9
+
+@userpgt: PGT
+  target_as=MACHPHYSADDR
+  root=NOADDR
+  pte_mask=0x0
+  pte_format=aarch64
+  fields=12,9,9,9
+
+KV -> HW:
+0-7fffffffff: @userpgt
+8000000000-ffffff7fffffffff: NONE
+ffffff8000000000-ffffffffffffffff: @rootpgt
+
+KV -> PHYS:
+0-7fffffffff: @userpgt
+8000000000-ffffff7fffffffff: NONE
+ffffff8000000000-ffffffffffffffff: @rootpgt
+
+KPHYS -> DIRECT:
+
+MACHPHYS -> KPHYS:
+
+KPHYS -> MACHPHYS:

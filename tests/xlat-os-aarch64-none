@@ -1,0 +1,13 @@
+#! /bin/sh
+
+#
+# Check AArch64 translation with no OS
+#
+
+opts=(
+    arch=aarch64
+    page_shift=12
+    virt_bits=39
+)
+
+. "$srcdir"/xlat-os-common
