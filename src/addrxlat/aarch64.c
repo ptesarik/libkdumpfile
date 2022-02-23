@@ -302,11 +302,7 @@ init_pgt_meth(struct os_init_data *ctl)
 	pgt->pte_mask = 0;
 	pgt->pf.pte_format = ADDRXLAT_PTE_AARCH64;
 
-	if (!opt_isset(ctl->popt, page_shift))
-		return set_error(ctl->ctx, ADDRXLAT_ERR_NODATA,
-				 "Cannot determine page size");
 	page_bits = ctl->popt.page_shift;
-
 	num_bits = ctl->popt.virt_bits;
 	pgt->pf.nfields = (num_bits - 4) / (page_bits - 3) + 1;
 
@@ -426,6 +422,10 @@ addrxlat_status
 sys_aarch64(struct os_init_data *ctl)
 {
 	addrxlat_status status;
+
+	if (!opt_isset(ctl->popt, page_shift))
+		return set_error(ctl->ctx, ADDRXLAT_ERR_NODATA,
+				 "Cannot determine page size");
 
 	status = determine_virt_bits(ctl);
 	if (status != ADDRXLAT_OK)
