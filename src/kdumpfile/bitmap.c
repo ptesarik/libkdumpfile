@@ -111,6 +111,8 @@ kdump_bmp_incref(kdump_bmp_t *bmp)
 	return ++bmp->refcnt;
 }
 
+DEFINE_ALIAS(bmp_decref);
+
 unsigned long
 kdump_bmp_decref(kdump_bmp_t *bmp)
 {

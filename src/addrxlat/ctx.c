@@ -259,6 +259,8 @@ addrxlat_ctx_get_ecb(addrxlat_ctx_t *ctx)
 	return &ctx->cb;
 }
 
+DEFINE_ALIAS(addrspace_name);
+
 const char *
 addrxlat_addrspace_name(addrxlat_addrspace_t as)
 {

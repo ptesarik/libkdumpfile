@@ -35,6 +35,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+DEFINE_ALIAS(blob_new);
+
 kdump_blob_t *
 kdump_blob_new(void *data, size_t size)
 {
@@ -48,6 +50,8 @@ kdump_blob_new(void *data, size_t size)
 	}
 	return blob;
 }
+
+DEFINE_ALIAS(blob_new_dup);
 
 kdump_blob_t *
 kdump_blob_new_dup(const void *data, size_t size)
@@ -74,6 +78,8 @@ kdump_blob_incref(kdump_blob_t *blob)
 {
 	return ++blob->refcnt;
 }
+
+DEFINE_ALIAS(blob_decref);
 
 unsigned long
 kdump_blob_decref(kdump_blob_t *blob)
