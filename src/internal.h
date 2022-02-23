@@ -57,23 +57,22 @@
 #endif
 
 #ifndef ENABLE_DEBUG
-#define INTERNAL_ALIAS(x)		PUB_NAME(x)
-#define _DECLARE_ALIAS(s, a)		\
-	extern typeof(s) (a) __asm__(XSTRINGIFY(ASM_NAME(s)))
-#define _DEFINE_ALIAS(s, a)		_DECLARE_ALIAS(s, a)
+#define _ALIAS_ASM(sym)			\
+	__asm__(XSTRINGIFY(ASM_NAME(PRIV_NAME(sym))))
 #else
-#define INTERNAL_ALIAS(x)		internal_ ## x
-#define _DECLARE_ALIAS(s, a)		\
-	extern typeof(s) (a)
-#define _DEFINE_ALIAS(s, a)		\
-	extern typeof(s) (a)		\
-	__attribute__((alias(STRINGIFY(s))))
+#define _ALIAS_ASM(sym)
 #endif
 
 /** Internal alias declaration. */
-#define DECLARE_ALIAS(x) _DECLARE_ALIAS(PUB_NAME(x), internal_ ## x)
+#define DECLARE_ALIAS(sym)		\
+	extern typeof(PUB_NAME(sym))	\
+	(internal_ ## sym)		\
+	_ALIAS_ASM(sym)
 
 /** Define an internal alias for a symbol. */
-#define DEFINE_ALIAS(x) _DEFINE_ALIAS(PUB_NAME(x), internal_ ## x)
+#define DEFINE_ALIAS(sym)		\
+	extern typeof(PUB_NAME(sym))	\
+	(internal_ ## sym)		\
+	__attribute__((alias(XSTRINGIFY(PUB_NAME(sym)))))
 
 #endif	/* internal.h */
