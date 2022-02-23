@@ -34,6 +34,9 @@
 #include "addrxlat-priv.h"
 #include <linux/version.h>
 
+/* Maximum virtual address bits (architectural limit) */
+#define VA_MAX_BITS	52
+
 /* Maximum physical address bits (architectural limit) */
 #define PA_MAX_BITS	48
 #define PA_MASK		ADDR_MASK(PA_MAX_BITS)
@@ -421,6 +424,7 @@ determine_virt_bits(struct os_init_data *ctl)
 addrxlat_status
 sys_aarch64(struct os_init_data *ctl)
 {
+	unsigned long va_min_bits;
 	addrxlat_status status;
 
 	if (!opt_isset(ctl->popt, page_shift))
@@ -430,6 +434,13 @@ sys_aarch64(struct os_init_data *ctl)
 	status = determine_virt_bits(ctl);
 	if (status != ADDRXLAT_OK)
 		return status;
+
+	va_min_bits = 16;
+	if (va_min_bits <= ctl->popt.page_shift)
+		va_min_bits = ctl->popt.page_shift + 1;
+	if (ctl->popt.virt_bits < va_min_bits ||
+	    ctl->popt.virt_bits > VA_MAX_BITS)
+		return bad_virt_bits(ctl->ctx, ctl->popt.virt_bits);
 
 	if (ctl->os_type == OS_LINUX)
 		return map_linux_aarch64(ctl);
