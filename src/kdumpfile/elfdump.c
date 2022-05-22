@@ -606,7 +606,7 @@ make_xen_pfn_map_auto(kdump_ctx_t *ctx, const struct section *sect)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	kdump_pfn_t max_pfn = 0;
-	uint64_t pfn, *p;
+	uint64_t pfn;
 	struct pfn2idx_range range;
 	off_t pos, endpos;
 	struct fcache_entry fce;
@@ -615,35 +615,35 @@ make_xen_pfn_map_auto(kdump_ctx_t *ctx, const struct section *sect)
 	pfn2idx_map_start(&edp->xen_pfnmap, &range);
 
 	pos = edp->xen_map_offset = sect->file_offset;
-	endpos = pos + sect->size - sizeof *p;
+	endpos = pos + sect->size - sizeof pfn;
 	fce.len = 0;
 	fce.cache = NULL;
 	while (pos <= endpos) {
-		if (fce.len < sizeof *p) {
+		if (fce.len < sizeof pfn) {
 			fcache_put(&fce);
 			status = fcache_get_fb(ctx->shared->fcache, &fce,
 					       pos, &pfn, sizeof pfn);
 			if (status != KDUMP_OK)
 				goto err_read;
 		}
-		p = fce.data;
+		pfn = dump64toh(ctx, *(uint64_t*)fce.data);
 
-		if (*p >= max_pfn)
-			max_pfn = *p + 1;
+		if (pfn >= max_pfn)
+			max_pfn = pfn + 1;
 
-		status = pfn2idx_map_add(&edp->xen_pfnmap, &range, *p);
+		status = pfn2idx_map_add(&edp->xen_pfnmap, &range, pfn);
 		if (status != KDUMP_OK)
 			goto err_pfn;
 
-		fce.data += sizeof *p;
-		fce.len -= sizeof *p;
-		pos += sizeof *p;
+		fce.data += sizeof pfn;
+		fce.len -= sizeof pfn;
+		pos += sizeof pfn;
 	}
 	status = pfn2idx_map_end(&edp->xen_pfnmap, &range);
 	if (status != KDUMP_OK)
 		goto err_pfn;
 
-	/* TODO: Warn if endpos - pos < sizeof *p */
+	/* TODO: Warn if endpos - pos < sizeof pfn */
 
 	fcache_put(&fce);
 
@@ -651,9 +651,9 @@ make_xen_pfn_map_auto(kdump_ctx_t *ctx, const struct section *sect)
 	return status;
 
  err_pfn:
-	p = fce.data;
+	pfn = dump64toh(ctx, *(uint64_t*)fce.data);
 	set_error(ctx, status, "Cannot map %s 0x%"PRIx64" -> 0x%"PRIxFAST64,
-		  "PFN", *p, range.idx);
+		  "PFN", pfn, range.idx);
 	fcache_put(&fce);
 	return status;
 
@@ -666,7 +666,7 @@ make_xen_pfn_map_nonauto(kdump_ctx_t *ctx, const struct section *sect)
 {
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	kdump_pfn_t max_pfn = 0;
-	struct xen_p2m p2m, *p;
+	struct xen_p2m p2m;
 	struct pfn2idx_range pfnrange, mfnrange;
 	off_t pos, endpos;
 	struct fcache_entry fce;
@@ -676,32 +676,33 @@ make_xen_pfn_map_nonauto(kdump_ctx_t *ctx, const struct section *sect)
 	pfn2idx_map_start(&edp->xen_mfnmap, &mfnrange);
 
 	pos = edp->xen_map_offset = sect->file_offset;
-	endpos = pos + sect->size - sizeof *p;
+	endpos = pos + sect->size - sizeof p2m;
 	fce.len = 0;
 	fce.cache = NULL;
 	while (pos <= endpos) {
-		if (fce.len < sizeof *p) {
+		if (fce.len < sizeof p2m) {
 			fcache_put(&fce);
 			status = fcache_get_fb(ctx->shared->fcache, &fce,
 					       pos, &p2m, sizeof p2m);
 			if (status != KDUMP_OK)
 				goto err_read;
 		}
-		p = fce.data;
+		p2m.pfn = dump64toh(ctx, ((struct xen_p2m*)fce.data)->pfn);
+		p2m.gmfn = dump64toh(ctx, ((struct xen_p2m*)fce.data)->gmfn);
 
-		if (p->pfn >= max_pfn)
-			max_pfn = p->pfn + 1;
+		if (p2m.pfn >= max_pfn)
+			max_pfn = p2m.pfn + 1;
 
-		status = pfn2idx_map_add(&edp->xen_pfnmap, &pfnrange, p->pfn);
+		status = pfn2idx_map_add(&edp->xen_pfnmap, &pfnrange, p2m.pfn);
 		if (status != KDUMP_OK)
 			goto err_pfn;
-		status = pfn2idx_map_add(&edp->xen_mfnmap, &mfnrange, p->gmfn);
+		status = pfn2idx_map_add(&edp->xen_mfnmap, &mfnrange, p2m.gmfn);
 		if (status != KDUMP_OK)
 			goto err_mfn;
 
-		fce.data += sizeof *p;
-		fce.len -= sizeof *p;
-		pos += sizeof *p;
+		fce.data += sizeof p2m;
+		fce.len -= sizeof p2m;
+		pos += sizeof p2m;
 	}
 	status = pfn2idx_map_end(&edp->xen_pfnmap, &pfnrange);
 	if (status != KDUMP_OK)
@@ -710,7 +711,7 @@ make_xen_pfn_map_nonauto(kdump_ctx_t *ctx, const struct section *sect)
 	if (status != KDUMP_OK)
 			goto err_mfn;
 
-	/* TODO: Warn if endpos - pos < sizeof *p */
+	/* TODO: Warn if endpos - pos < sizeof p2m */
 
 	fcache_put(&fce);
 
@@ -718,16 +719,16 @@ make_xen_pfn_map_nonauto(kdump_ctx_t *ctx, const struct section *sect)
 	return status;
 
  err_pfn:
-	p = fce.data;
+	p2m.pfn = dump64toh(ctx, ((struct xen_p2m*)fce.data)->pfn);
 	set_error(ctx, status, "Cannot map %s 0x%"PRIx64" -> 0x%"PRIxFAST64,
-		  "PFN", p->pfn, pfnrange.idx);
+		  "PFN", p2m.pfn, pfnrange.idx);
 	fcache_put(&fce);
 	return status;
 
 err_mfn:
-	p = fce.data;
+	p2m.gmfn = dump64toh(ctx, ((struct xen_p2m*)fce.data)->gmfn);
 	set_error(ctx, status, "Cannot map %s 0x%"PRIx64" -> 0x%"PRIxFAST64,
-			 "MFN", p->gmfn, mfnrange.idx);
+			 "MFN", p2m.gmfn, mfnrange.idx);
 	fcache_put(&fce);
 	return status;
 
