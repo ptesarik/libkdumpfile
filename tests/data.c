@@ -235,7 +235,9 @@ add_page_data(struct page_data *pg, char *p)
 			c = 0;
 			bufp = pg->buf + pg->len;
 			if (pg->endian == data_le)
-				bufp += (len + (len & 1)) / 2;
+				bufp += (len + 1) / 2;
+			else
+				bufp += sz - (len + 1) / 2;
 			for (i = len; i > 0; --i) {
 				c |= unhex(*p++);
 				if (i & 1) {
