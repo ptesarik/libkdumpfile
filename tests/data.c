@@ -59,7 +59,7 @@ make_room(struct page_data *pg, size_t sz)
 static int
 add_string(struct page_data *pg, char **pp)
 {
-	char tmp1, tmp2, tmp3;
+	signed char tmp1, tmp2, tmp3;
 	char *endp;
 
 	for (endp = *pp; *endp && *endp != '\"'; ++endp) {

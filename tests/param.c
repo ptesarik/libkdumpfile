@@ -38,7 +38,7 @@
 static char
 unescape_hex(const char **pp)
 {
-	char n, ret;
+	signed char n, ret;
 
 	ret = unhex(**pp);
 	if (ret < 0) {
@@ -60,7 +60,7 @@ unescape_hex(const char **pp)
 static char
 unescape_oct(const char **pp)
 {
-	char n, ret;
+	signed char n, ret;
 
 	ret = unoct(**pp);
 	++(*pp);

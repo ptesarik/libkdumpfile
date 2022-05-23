@@ -75,7 +75,7 @@ htodump64(endian_t endian, uint64_t x)
 }
 
 /* Hex/oct */
-static inline char
+static inline signed char
 unhex(char digit)
 {
 	if (digit >= '0' && digit <= '9')
@@ -90,7 +90,7 @@ unhex(char digit)
 	return -1;
 }
 
-static inline char
+static inline signed char
 unoct(char digit)
 {
 	if (digit >= '0' && digit <= '7')
