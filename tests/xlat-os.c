@@ -615,11 +615,9 @@ storesym(struct page_data *pg)
 		sz = sizeof(val);
 	val = 0;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-	memcpy(&val, pg->buf, pg->len);
+	memcpy(&val, pg->buf, sz);
 #else
-	memcpy((char*)(&val + 1) - sz,
-	       pg->buf + sizeof(val) - pg->len,
-	       pg->len);
+	memcpy((char*)(&val + 1) - sz, pg->buf, sz);
 #endif
 	return add_symdata(ss, val);
 }
