@@ -92,10 +92,18 @@ add_entry(const char *spec)
 	}
 
 	entries[nentries].orig = addr;
-	entries[nentries].dest = htole64(val);
+	entries[nentries].dest = val;
 	++nentries;
 
 	return TEST_OK;
+}
+
+static void
+entries_htole64(void)
+{
+	size_t i;
+	for (i = 0; i < nentries; ++i)
+		entries[i].dest = htole64(entries[i].dest);
 }
 
 static int
@@ -444,8 +452,11 @@ main(int argc, char **argv)
 		return TEST_ERR;
 	}
 
-	lookup.param.lookup.nelem = nentries;
-	lookup.param.lookup.tbl = entries;
+	if (meth == &lookup) {
+		lookup.param.lookup.nelem = nentries;
+		lookup.param.lookup.tbl = entries;
+	} else
+		entries_htole64();
 
 	ctx = addrxlat_ctx_new();
 	if (!ctx) {
