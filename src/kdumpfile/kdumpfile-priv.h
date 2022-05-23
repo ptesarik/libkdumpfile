@@ -1526,7 +1526,7 @@ is_posix_space(int c)
 static inline kdump_addr_t
 page_align(kdump_ctx_t *ctx, kdump_addr_t addr)
 {
-	return addr & (-get_page_size(ctx));
+	return addr & (-(kdump_addr_t)get_page_size(ctx));
 }
 
 INTERNAL_DECL(kdump_status, status_err,
