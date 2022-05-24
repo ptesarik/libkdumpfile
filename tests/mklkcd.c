@@ -203,7 +203,7 @@ writeheader(FILE *f)
 	hdr.dh_dump_compress = htodump32(be, compression);
 	hdr.dh_dump_buffer_size = htodump64(be, buffer_size);
 
-	if (fseek(f, 0, SEEK_SET) != 0) {
+	if (fseeko(f, 0, SEEK_SET) != 0) {
 		perror("seek header");
 		return -1;
 	}
@@ -244,7 +244,7 @@ writeheader_asm_x86_64(FILE *f)
 
 	off = NR_CPUS * sizeof(struct pt_regs_x86_64);
 
-	if (fseek(f, off, SEEK_CUR) != 0) {
+	if (fseeko(f, off, SEEK_CUR) != 0) {
 		perror("seek dha_smp_current_task");
 		return -1;
 	}
@@ -257,7 +257,7 @@ writeheader_asm_x86_64(FILE *f)
 	}
 	off = (NR_CPUS - current_task.n) * sizeof(uint64_t);
 
-	if (fseek(f, off, SEEK_CUR) != 0) {
+	if (fseeko(f, off, SEEK_CUR) != 0) {
 		perror("seek dha_stack");
 		return -1;
 	}
@@ -270,7 +270,7 @@ writeheader_asm_x86_64(FILE *f)
 	}
 	off = (NR_CPUS - stack.n) * sizeof(uint64_t);
 
-	if (fseek(f, off, SEEK_CUR) != 0) {
+	if (fseeko(f, off, SEEK_CUR) != 0) {
 		perror("seek dha_stack_ptr");
 		return -1;
 	}
@@ -313,7 +313,7 @@ writeheader_asm_ia32(FILE *f)
 
 	off = NR_CPUS * sizeof(struct pt_regs_ia32);
 
-	if (fseek(f, off, SEEK_CUR) != 0) {
+	if (fseeko(f, off, SEEK_CUR) != 0) {
 		perror("seek dha_smp_current_task");
 		return -1;
 	}
@@ -326,7 +326,7 @@ writeheader_asm_ia32(FILE *f)
 	}
 	off = (NR_CPUS - current_task.n) * sizeof(uint32_t);
 
-	if (fseek(f, off, SEEK_CUR) != 0) {
+	if (fseeko(f, off, SEEK_CUR) != 0) {
 		perror("seek dha_stack");
 		return -1;
 	}
@@ -339,7 +339,7 @@ writeheader_asm_ia32(FILE *f)
 	}
 	off = (NR_CPUS - stack.n) * sizeof(uint32_t);
 
-	if (fseek(f, off, SEEK_CUR) != 0) {
+	if (fseeko(f, off, SEEK_CUR) != 0) {
 		perror("seek dha_stack_ptr");
 		return -1;
 	}
@@ -382,7 +382,7 @@ writeheader_asm_ppc64(FILE *f)
 
 	off = NR_CPUS * sizeof(struct pt_regs_ppc64);
 
-	if (fseek(f, off, SEEK_CUR) != 0) {
+	if (fseeko(f, off, SEEK_CUR) != 0) {
 		perror("seek dha_smp_current_task");
 		return -1;
 	}
@@ -395,7 +395,7 @@ writeheader_asm_ppc64(FILE *f)
 	}
 	off = (NR_CPUS - current_task.n) * sizeof(uint64_t);
 
-	if (fseek(f, off, SEEK_CUR) != 0) {
+	if (fseeko(f, off, SEEK_CUR) != 0) {
 		perror("seek dha_stack");
 		return -1;
 	}
@@ -408,7 +408,7 @@ writeheader_asm_ppc64(FILE *f)
 	}
 	off = (NR_CPUS - stack.n) * sizeof(uint64_t);
 
-	if (fseek(f, off, SEEK_CUR) != 0) {
+	if (fseeko(f, off, SEEK_CUR) != 0) {
 		perror("seek dha_stack_ptr");
 		return -1;
 	}
@@ -597,7 +597,7 @@ writepage(struct page_data *pg)
 	}
 
 	if (pglkcd->skip &&
-	    fseek(pglkcd->f, pglkcd->skip, SEEK_CUR) != 0) {
+	    fseeko(pglkcd->f, pglkcd->skip, SEEK_CUR) != 0) {
 		perror("skip page data");
 		return TEST_ERR;
 	}
@@ -615,7 +615,7 @@ writedata(FILE *f)
 	if (!data_file)
 		return TEST_OK;
 
-	if (fseek(f, buffer_size, SEEK_SET) != 0) {
+	if (fseeko(f, buffer_size, SEEK_SET) != 0) {
 		perror("seek data");
 		return TEST_ERR;
 	}
