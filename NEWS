@@ -5,6 +5,7 @@ next
   * Address translation tuning with addrxlat.default.* and addrxlat.force.*
     attributes.
     The old mechanism using addrxlat.opts is no longer available.
+  * Fix Xen DomU translation type detection for /dev/mem.
 
 0.4.1
 -----
