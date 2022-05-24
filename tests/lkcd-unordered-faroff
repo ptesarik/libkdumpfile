@@ -5,6 +5,9 @@
 # 32-bit offset. Verify that the data from the out-of-order page can be read.
 #
 
+# Skip this test if off_t is 32 bits (or less)
+test $SIZEOF_OFF_T -gt 4 || exit 77
+
 mkdir -p out || exit 99
 
 name=$( basename "$0" )

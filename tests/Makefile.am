@@ -21,6 +21,8 @@
 AM_CPPFLAGS = -I$(top_builddir)/include
 LDADD = libtestutil.a
 
+export SIZEOF_OFF_T = @SIZEOF_OFF_T@
+
 libtestutil_a_SOURCES = \
 	data.c \
 	param.c \

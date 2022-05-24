@@ -58,6 +58,8 @@ AS_IF([test "x$enable_internal_doc" != xno],
     [DX_ENV_APPEND(ENABLE_INTERNAL, NO)])
 
 AC_CHECK_SIZEOF(long)
+AC_CHECK_SIZEOF(off_t)
+AC_SUBST(SIZEOF_OFF_T, $ac_cv_sizeof_off_t)
 
 dnl This makes sure pkg.m4 is available.
 m4_pattern_forbid([^_?PKG_[A-Z_]+$],[*** pkg.m4 missing, please install pkg-config])
