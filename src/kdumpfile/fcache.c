@@ -118,11 +118,11 @@ fcache_get_mmap(struct fcache *fc, struct fcache_entry *fce, off_t pos)
 	off_t blkpos;
 	size_t off;
 
-	blkpos = pos & ~(fc->pgsz - 1);
+	blkpos = pos & ~(off_t)(fc->pgsz - 1);
 	if (blkpos >= fc->filesz)
 		return KDUMP_ERR_NODATA;
 
-	blkpos = pos & ~(fc->mmapsz - 1);
+	blkpos = pos & ~(off_t)(fc->mmapsz - 1);
 	ce = cache_get_entry(fc->cache, blkpos);
 	if (!ce)
 		return KDUMP_ERR_BUSY;
@@ -157,7 +157,7 @@ fcache_get_read(struct fcache *fc, struct fcache_entry *fce, off_t pos)
 	off_t blkpos;
 	size_t off;
 
-	blkpos = pos & ~(fc->pgsz - 1);
+	blkpos = pos & ~(off_t)(fc->pgsz - 1);
 	ce = cache_get_entry(fc->fbcache, blkpos);
 	if (!ce)
 		return KDUMP_ERR_BUSY;
@@ -341,8 +341,8 @@ fcache_get_chunk(struct fcache *fc, struct fcache_chunk *fch,
 		return KDUMP_OK;
 	}
 
-	first = pos & ~(fc->pgsz - 1);
-	last = (pos + len - 1) & ~(fc->pgsz - 1);
+	first = pos & ~(off_t)(fc->pgsz - 1);
+	last = (pos + len - 1) & ~(off_t)(fc->pgsz - 1);
 	nent = (last - first) / fc->pgsz + 1;
 	if (nent > MAX_EMBED_FCES) {
 		fces = malloc(nent * sizeof(*fces));
