@@ -613,7 +613,7 @@ search_page_desc(kdump_ctx_t *ctx, kdump_pfn_t pfn,
 			realloc_pfn_offs(block, block->n);
 			block = lookup_pfn_block(ctx, curpfn, MAX_PFN_GAP);
 		}
-		if (block && off > block->filepos + UINT32_MAX) {
+		if (block && off - block->filepos > UINT32_MAX) {
 			idx = pfn_idx3(curpfn) - block->idx3;
 			res = split_pfn_block(ctx, block, idx);
 			if (res != KDUMP_OK)
