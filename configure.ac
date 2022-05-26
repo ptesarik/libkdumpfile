@@ -65,7 +65,7 @@ dnl This makes sure pkg.m4 is available.
 m4_pattern_forbid([^_?PKG_[A-Z_]+$],[*** pkg.m4 missing, please install pkg-config])
 
 kdump_COMPRESSION(zlib, ZLIB, z, uncompress)
-kdump_COMPRESSION(lzo, LZO, lzo2, lzo1x_decompress_safe)
+kdump_COMPRESSION(lzo2, LZO, lzo2, lzo1x_decompress_safe)
 kdump_COMPRESSION(snappy, SNAPPY, snappy, snappy_uncompress)
 kdump_COMPRESSION(libzstd, ZSTD, zstd, ZSTD_decompress)
 
