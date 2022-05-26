@@ -1,5 +1,6 @@
 from distutils.core import setup, Extension
 import libtoolize
+import disthelpers
 import os
 
 try:
@@ -45,5 +46,6 @@ setup(name='libkdumpfile',
       cmdclass={
           'build_ext': libtoolize.build_ext,
           'install_lib': libtoolize.install_lib,
+          'get_build_platlib': disthelpers.get_build_platlib,
       },
 )

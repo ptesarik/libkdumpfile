@@ -72,6 +72,7 @@ EXTRA__test_addrxlat_la_DEPENDENCIES = test_addrxlat.sym
 
 dist_noinst_SCRIPTS = \
 	setup.py \
+	disthelpers.py \
 	libtoolize.py \
 	addrxlat/__init__.py \
 	addrxlat/exceptions.py \
@@ -101,4 +102,5 @@ LOG_COMPILER = $(PYTHON)
 
 AM_TESTS_ENVIRONMENT = \
 eval " $$($(LIBTOOL) --config)"; \
-PYTHONPATH="$$srcdir:$$objdir"
+platlib=$$($(PYTHON) $(srcdir)/setup.py -q get_build_platlib); \
+PYTHONPATH="$$srcdir:$$objdir:$$platlib/$$objdir"
