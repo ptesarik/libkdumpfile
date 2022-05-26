@@ -9,7 +9,7 @@ URL: https://github.com/ptesarik/libkdumpfile
 Version: @PACKAGE_VERSION@
 
 Requires:
-Requires.private: libaddrxlat @ZLIB_REQUIRES@ @LZO_REQUIRES@ @SNAPPY_REQUIRES@
+Requires.private: libaddrxlat @ZLIB_REQUIRES@ @LZO_REQUIRES@ @SNAPPY_REQUIRES@ @ZSTD_REQUIRES@
 Libs: -L${libdir} -lkdumpfile
-Libs.private: @ZLIB_LIBS@ @LZO_LIBS@ @SNAPPY_LIBS@
+Libs.private: @ZLIB_LIBS@ @LZO_LIBS@ @SNAPPY_LIBS@ @ZSTD_LIBS@
 Cflags: -I${includedir}
