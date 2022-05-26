@@ -11,5 +11,5 @@ Version: @PACKAGE_VERSION@
 Requires:
 Requires.private: libaddrxlat @ZLIB_REQUIRES@ @LZO_REQUIRES@ @SNAPPY_REQUIRES@ @ZSTD_REQUIRES@
 Libs: -L${libdir} -lkdumpfile
-Libs.private: @ZLIB_LIBS@ @LZO_LIBS@ @SNAPPY_LIBS@ @ZSTD_LIBS@
+Libs.private: @ZLIB_PC_LIBS@ @LZO_PC_LIBS@ @SNAPPY_PC_LIBS@ @ZSTD_PC_LIBS@
 Cflags: -I${includedir}

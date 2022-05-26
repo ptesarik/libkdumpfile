@@ -9,7 +9,5 @@ URL: https://github.com/ptesarik/libkdumpfile
 Version: @PACKAGE_VERSION@
 
 Requires:
-Requires.private:
 Libs: -L${libdir} -laddrxlat
-Libs.private:
 Cflags: -I${includedir}

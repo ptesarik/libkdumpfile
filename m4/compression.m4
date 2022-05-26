@@ -11,6 +11,7 @@ AS_IF([test "x$with_$1" != xno],
       saved_LIBS="$LIBS"
       AC_SEARCH_LIBS([$4],[$3],[dnl
         AS_VAR_SET([$2][_LIBS], [-l$3])
+        AS_VAR_SET([$2][_PC_LIBS], [-l$3])
         have_$1=yes
       ],[dnl
         have_$1=no
@@ -30,4 +31,5 @@ AS_IF([test "x$have_$1" = xyes],
 AC_SUBST([$2][_REQUIRES])
 AC_SUBST([$2][_CFLAGS])
 AC_SUBST([$2][_LIBS])
+AC_SUBST([$2][_PC_LIBS])
 ])
