@@ -74,19 +74,18 @@ noinst_HEADERS = \
 dist_noinst_DATA = \
 	libkdumpfile.map
 
+check_LTLIBRARIES = libcheck.la
+libcheck_la_SOURCES = $(libkdumpfile_la_SOURCES)
+libcheck_la_LIBADD = $(libkdumpfile_la_LIBADD)
+
 check_PROGRAMS = \
 	test-blob \
 	test-clone-attr \
 	test-fcache
 
-test_fcache_LDFLAGS = -static
-test_fcache_LDADD = libkdumpfile.la -ldl
-
-test_blob_LDFLAGS = -static
-test_blob_LDADD = libkdumpfile.la -ldl
-
-test_clone_attr_LDFLAGS = -static
-test_clone_attr_LDADD = libkdumpfile.la -ldl
+test_fcache_LDADD = libcheck.la -ldl
+test_blob_LDADD = libcheck.la
+test_clone_attr_LDADD = libcheck.la
 
 TESTS = \
 	test-blob \
