@@ -527,7 +527,7 @@ addrxlat_walk(addrxlat_step_t *step)
 	clear_error(step->ctx);
 
 	status = first_step(step, step->base.addr);
-	if (status != ADDRXLAT_OK)
+	if (status != ADDRXLAT_OK || !step->remain)
 		return status;
 
 	while (--step->remain) {

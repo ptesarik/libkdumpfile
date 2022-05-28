@@ -26,6 +26,7 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -141,14 +142,16 @@ set_paging_form(addrxlat_paging_form_t *pf, const char *spec)
 	}
 
 	pf->nfields = 0;
-	do {
+	while (isdigit(*++endp)) {
 		if (pf->nfields >= ADDRXLAT_FIELDS_MAX) {
 			fprintf(stderr, "Too many paging levels!\n");
 			return TEST_ERR;
 		}
 		pf->fieldsz[pf->nfields++] =
-			strtoul(endp + 1, &endp, 0);
-	} while (*endp == ',');
+			strtoul(endp, &endp, 0);
+		if (*endp != ',')
+			break;
+	}
 
 	if (*endp) {
 		fprintf(stderr, "Invalid paging form: %s\n", spec);

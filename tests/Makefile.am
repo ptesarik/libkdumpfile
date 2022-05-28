@@ -142,6 +142,7 @@ test_scripts = \
 	addrmap-overlap-begin \
 	addrmap-overlap-end \
 	addrmap-reduce \
+	addrxlat-null \
 	addrxlat-identity \
 	addrxlat-pfn32 \
 	addrxlat-pfn64 \

@@ -1,0 +1,15 @@
+#! /bin/sh
+
+#
+# Check zero-bit address translation.
+#
+
+pf="none:"
+ptes=
+input="0x0 0x2 0x30 0x400 0x5000 0x123456789abcdef"
+list=
+for addr in $input; do
+    list="$list $addr:0x0"
+done
+
+. "$srcdir"/addrxlat-common
