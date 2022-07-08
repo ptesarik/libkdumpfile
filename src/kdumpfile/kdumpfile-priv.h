@@ -1073,8 +1073,6 @@ attr_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
 		: KDUMP_OK;
 }
 
-INTERNAL_DECL(kdump_status, attr_revalidate,
-	      (kdump_ctx_t *ctx, struct attr_data *attr));
 INTERNAL_DECL(kdump_status, set_attr,
 	      (kdump_ctx_t *ctx, struct attr_data *attr,
 	       struct attr_flags flags, kdump_attr_value_t *pval));
