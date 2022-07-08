@@ -301,7 +301,7 @@ devmem_probe(kdump_ctx_t *ctx)
 	struct stat st;
 	kdump_status ret;
 
-	if (fstat(get_file_fd(ctx), &st))
+	if (fstat(fcache_fd(ctx->shared->fcache, 0), &st))
 		return set_error(ctx, KDUMP_ERR_SYSTEM, "Cannot stat file");
 
 	if (!S_ISCHR(st.st_mode) ||

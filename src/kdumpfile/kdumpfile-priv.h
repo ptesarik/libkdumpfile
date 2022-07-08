@@ -1354,6 +1354,17 @@ fcache_decref(struct fcache *fc)
 	return 0;
 }
 
+/** Get the file descriptor of an underlying open file.
+ * @param fc    File cache.
+ * @param fidx  File index.
+ * @returns     File descriptor of the referenced file.
+ */
+static inline int
+fcache_fd(struct fcache *fc, int fidx)
+{
+	return fc->info[fidx].fd;
+}
+
 INTERNAL_DECL(kdump_status, fcache_get,
 	      (struct fcache *fc, struct fcache_entry *fce,
 	       unsigned fidx, off_t pos));
