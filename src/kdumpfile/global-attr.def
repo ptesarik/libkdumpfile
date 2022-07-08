@@ -56,6 +56,9 @@ ATTR(file_read_cache, "misses", read_cache_misses, number, unsigned long)
 /* file descriptor set */
 ATTR(file, "fdset", dir_fdset, directory, struct attr_data *)
 
+/* dump file descriptor (for compatibility) */
+ATTR(file, "fd", file_fd, number, int, .ops = &file_fd_ops)
+
 /* mmap policy */
 ATTR(file, "mmap_policy", file_mmap_policy, number, kdump_mmap_policy_t)
 
