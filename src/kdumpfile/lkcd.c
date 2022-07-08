@@ -546,7 +546,7 @@ read_page_desc(kdump_ctx_t *ctx, struct dump_page *dp, off_t off)
 {
 	kdump_status ret;
 
-	ret = fcache_pread(ctx->shared->fcache, dp, sizeof *dp, off);
+	ret = fcache_pread(ctx->shared->fcache, dp, sizeof *dp, 0, off);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read page descriptor at %llu",
@@ -777,7 +777,7 @@ lkcd_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 
 	/* read page data */
 	mutex_lock(&ctx->shared->cache_lock);
-	ret = fcache_pread(ctx->shared->fcache, buf, dp.dp_size, off);
+	ret = fcache_pread(ctx->shared->fcache, buf, dp.dp_size, 0, off);
 	mutex_unlock(&ctx->shared->cache_lock);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
@@ -1001,7 +1001,7 @@ lkcd_probe(kdump_ctx_t *ctx)
 	char hdr[sizeof(struct dump_header_v8)];
 	kdump_status status;
 
-	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0);
+	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0, 0);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot read dump header");
 

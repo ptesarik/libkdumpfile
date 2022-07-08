@@ -1284,6 +1284,14 @@ struct fcache_fileinfo {
 };
 
 /** File cache.
+ *
+ * This file cache uses one memory cache to access data from multiple
+ * files. These files are denoted by an array of open file descriptors
+ * (see @ref fcache_new), and later referenced by an index into that
+ * array. This file index is stored in the low bits of the cache key,
+ * which are normally zero, because cache entries are aligned to a page
+ * boundary. As a consequence, the number of files is limited to (host)
+ * page size in bytes.
  */
 struct fcache {
 	/** Reference counter. */
@@ -1306,12 +1314,12 @@ struct fcache {
 	/** Fallback cache (for read regions). */
 	struct cache *fbcache;
 
-	/** Information about the file. */
-	struct fcache_fileinfo info;
+	/** Information about the files. */
+	struct fcache_fileinfo info[];
 };
 
 INTERNAL_DECL(struct fcache *, fcache_new,
-	      (int fd, unsigned n, unsigned order));
+	      (unsigned nfds, const int *fd, unsigned n, unsigned order));
 INTERNAL_DECL(void, fcache_free,
 	      (struct fcache *fc));
 
@@ -1343,10 +1351,12 @@ fcache_decref(struct fcache *fc)
 }
 
 INTERNAL_DECL(kdump_status, fcache_get,
-	      (struct fcache *fc, struct fcache_entry *fce, off_t pos));
+	      (struct fcache *fc, struct fcache_entry *fce,
+	       unsigned fidx, off_t pos));
 
 INTERNAL_DECL(kdump_status, fcache_get_fb,
-	      (struct fcache *fc, struct fcache_entry *fce, off_t pos,
+	      (struct fcache *fc, struct fcache_entry *fce,
+	       unsigned fidx, off_t pos,
 	       void *fb, size_t sz));
 
 static inline void
@@ -1358,7 +1368,8 @@ fcache_put(struct fcache_entry *fce)
 }
 
 INTERNAL_DECL(kdump_status, fcache_pread,
-	      (struct fcache *fc, void *buf, size_t len, off_t pos));
+	      (struct fcache *fc, void *buf, size_t len,
+	       unsigned fidx, off_t pos));
 
 /** Number of file cache entries embedded in a chunk descriptor. */
 #define MAX_EMBED_FCES	2
@@ -1383,7 +1394,7 @@ struct fcache_chunk {
 
 INTERNAL_DECL(kdump_status, fcache_get_chunk,
 	      (struct fcache *fc, struct fcache_chunk *fch,
-	       size_t len, off_t pos));
+	       size_t len, unsigned fidx, off_t pos));
 INTERNAL_DECL(void, fcache_put_chunk, (struct fcache_chunk *fch));
 
 /**  Page I/O information.

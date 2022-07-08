@@ -51,25 +51,34 @@ unmap_entry(void *data, struct cache_entry *ce)
 }
 
 /** Allocate and initialize a new file cache.
- * @param fd     File descriptor.
+ * @param nfds   Number of file descriptors in @p fd.
+ * @param fd     File descriptors.
  * @param n      Number of elements in the cache.
  * @param order  Page order of mmap regions.
  * @returns      File cache object, or @c NULL on allocation failure.
+ *
+ * The @p fd array need not stay valid after calling this function,
+ * because a copy of the array is stored in the file cache.
  */
 struct fcache *
-fcache_new(int fd, unsigned n, unsigned order)
+fcache_new(unsigned nfds, const int *fd, unsigned n, unsigned order)
 {
 	struct fcache *fc;
 	struct stat st;
+	size_t pgsz;
+	unsigned i;
 
-	fc = malloc(sizeof *fc);
+	pgsz = sysconf(_SC_PAGESIZE);
+	if (nfds > pgsz)
+		return NULL;
+
+	fc = malloc(sizeof *fc + nfds * sizeof(fc->info[0]));
 	if (!fc)
 		return fc;
 
 	fc->refcnt = 1;
-	fc->info.fd = fd;
 	fc->mmap_policy.number = KDUMP_MMAP_TRY;
-	fc->pgsz = sysconf(_SC_PAGESIZE);
+	fc->pgsz = pgsz;
 	fc->mmapsz = fc->pgsz << order;
 
 	fc->cache = cache_alloc(1 << order, 0);
@@ -81,10 +90,13 @@ fcache_new(int fd, unsigned n, unsigned order)
 	if (!fc->fbcache)
 		goto err_cache;
 
-	fc->info.filesz = (
-		fstat(fd, &st) == 0 && S_ISREG(st.st_mode)
-		? st.st_size
-		: ((unsigned long long) ~(off_t)0) >> 1);
+	for (i = 0; i < nfds; ++i) {
+		fc->info[i].fd = fd[i];
+		fc->info[i].filesz = (
+			fstat(fd[i], &st) == 0 && S_ISREG(st.st_mode)
+			? st.st_size
+			: ((unsigned long long) ~(off_t)0) >> 1);
+	}
 
 	return fc;
 
@@ -109,28 +121,30 @@ fcache_free(struct fcache *fc)
 /** Get file cache content using mmap(2).
  * @param fc   File cache object.
  * @param fce  File cache entry, updated on success.
+ * @param fidx Index of the file to read from.
  * @param pos  File position.
  * @returns    Error status.
  */
 kdump_status
-fcache_get_mmap(struct fcache *fc, struct fcache_entry *fce, off_t pos)
+fcache_get_mmap(struct fcache *fc, struct fcache_entry *fce,
+		unsigned fidx, off_t pos)
 {
 	struct cache_entry *ce;
 	off_t blkpos;
 	size_t off;
 
 	blkpos = pos & ~(off_t)(fc->pgsz - 1);
-	if (blkpos >= fc->info.filesz)
+	if (blkpos >= fc->info[fidx].filesz)
 		return KDUMP_ERR_NODATA;
 
 	blkpos = pos & ~(off_t)(fc->mmapsz - 1);
-	ce = cache_get_entry(fc->cache, blkpos);
+	ce = cache_get_entry(fc->cache, blkpos | fidx);
 	if (!ce)
 		return KDUMP_ERR_BUSY;
 
 	if (!cache_entry_valid(ce)) {
 		ce->data = mmap(NULL, fc->mmapsz, PROT_READ,
-				MAP_SHARED, fc->info.fd, blkpos);
+				MAP_SHARED, fc->info[fidx].fd, blkpos);
 		cache_insert(fc->cache, ce);
 	}
 
@@ -148,23 +162,26 @@ fcache_get_mmap(struct fcache *fc, struct fcache_entry *fce, off_t pos)
 /** Get file cache content using read(2).
  * @param fc   File cache object.
  * @param fce  File cache entry, updated on success.
+ * @param fidx Index of the file to read from.
  * @param pos  File position.
  * @returns    Error status.
  */
 kdump_status
-fcache_get_read(struct fcache *fc, struct fcache_entry *fce, off_t pos)
+fcache_get_read(struct fcache *fc, struct fcache_entry *fce,
+		unsigned fidx, off_t pos)
 {
 	struct cache_entry *ce;
 	off_t blkpos;
 	size_t off;
 
 	blkpos = pos & ~(off_t)(fc->pgsz - 1);
-	ce = cache_get_entry(fc->fbcache, blkpos);
+	ce = cache_get_entry(fc->fbcache, blkpos | fidx);
 	if (!ce)
 		return KDUMP_ERR_BUSY;
 
 	if (!cache_entry_valid(ce)) {
-		ssize_t rd = pread(fc->info.fd, ce->data, fc->pgsz, blkpos);
+		ssize_t rd = pread(fc->info[fidx].fd,
+				   ce->data, fc->pgsz, blkpos);
 		if (rd < 0) {
 			cache_discard(fc->fbcache, ce);
 			return KDUMP_ERR_SYSTEM;
@@ -185,17 +202,19 @@ fcache_get_read(struct fcache *fc, struct fcache_entry *fce, off_t pos)
 /** Get file cache content.
  * @param fc   File cache object.
  * @param fce  File cache entry, updated on success.
+ * @param fidx Index of the file to read from.
  * @param pos  File position.
  * @returns    Error status.
  */
 kdump_status
-fcache_get(struct fcache *fc, struct fcache_entry *fce, off_t pos)
+fcache_get(struct fcache *fc, struct fcache_entry *fce,
+	   unsigned fidx, off_t pos)
 {
 	kdump_mmap_policy_t policy = fc->mmap_policy.number;
 	kdump_status status;
 
 	if (policy != KDUMP_MMAP_NEVER) {
-		status = fcache_get_mmap(fc, fce, pos);
+		status = fcache_get_mmap(fc, fce, fidx, pos);
 
 		if (policy == KDUMP_MMAP_TRY_ONCE)
 			fc->mmap_policy.number =
@@ -208,12 +227,13 @@ fcache_get(struct fcache *fc, struct fcache_entry *fce, off_t pos)
 			return status;
 	}
 
-	return fcache_get_read(fc, fce, pos);
+	return fcache_get_read(fc, fce, fidx, pos);
 }
 
 /** Get file cache content with a fallback buffer.
  * @param fc   File cache object.
  * @param fce  File cache entry, updated on success.
+ * @param fidx Index of the file to read from.
  * @param pos  File position.
  * @param fb   Fallback buffer.
  * @param sz   Minimum buffer size.
@@ -226,12 +246,12 @@ fcache_get(struct fcache *fc, struct fcache_entry *fce, off_t pos)
  * is set to @c NULL.
  */
 kdump_status
-fcache_get_fb(struct fcache *fc, struct fcache_entry *fce, off_t pos,
-	      void *fb, size_t sz)
+fcache_get_fb(struct fcache *fc, struct fcache_entry *fce,
+	      unsigned fidx, off_t pos, void *fb, size_t sz)
 {
 	kdump_status ret;
 
-	ret = fcache_get(fc, fce, pos);
+	ret = fcache_get(fc, fce, fidx, pos);
 	if (ret != KDUMP_OK)
 		return ret;
 	if (fce->len < sz) {
@@ -239,7 +259,7 @@ fcache_get_fb(struct fcache *fc, struct fcache_entry *fce, off_t pos,
 		fce->data = fb;
 		fce->len = sz;
 		fce->cache = NULL;
-		ret = fcache_pread(fc, fb, sz, pos);
+		ret = fcache_pread(fc, fb, sz, fidx, pos);
 	}
 	return ret;
 }
@@ -247,12 +267,14 @@ fcache_get_fb(struct fcache *fc, struct fcache_entry *fce, off_t pos,
 /** Read file cache content into a pre-allocated buffer.
  * @param fc   File cache object.
  * @param buf  Target buffer.
+ * @param fidx Index of the file to read from.
  * @param pos  File position.
  * @param len  Length of data.
  * @returns    Error status.
  */
 kdump_status
-fcache_pread(struct fcache *fc, void *buf, size_t len, off_t pos)
+fcache_pread(struct fcache *fc, void *buf, size_t len,
+	     unsigned fidx, off_t pos)
 {
 	struct fcache_entry fce;
 	kdump_status ret;
@@ -260,7 +282,7 @@ fcache_pread(struct fcache *fc, void *buf, size_t len, off_t pos)
 	while (len) {
 		size_t partlen;
 
-		ret = fcache_get(fc, &fce, pos);
+		ret = fcache_get(fc, &fce, fidx, pos);
 		if (ret != KDUMP_OK)
 			return ret;
 
@@ -321,12 +343,13 @@ copy_data(void *data, struct fcache_entry *fces, size_t n)
  * @param fc   File cache.
  * @param fch  File cache chunk, updated on success.
  * @param len  Length of data.
+ * @param fidx Index of the file to read from.
  * @param pos  File position.
  * @returns    Error status.
  */
 kdump_status
 fcache_get_chunk(struct fcache *fc, struct fcache_chunk *fch,
-		 size_t len, off_t pos)
+		 size_t len, unsigned fidx, off_t pos)
 {
 	off_t first, last;
 	struct fcache_entry fce;
@@ -359,7 +382,7 @@ fcache_get_chunk(struct fcache *fc, struct fcache_chunk *fch,
 	data = NULL;
 	remain = len;
 	while (remain) {
-		status = fcache_get(fc, curfce, pos);
+		status = fcache_get(fc, curfce, fidx, pos);
 		if (status != KDUMP_OK) {
 			put_fces(curfce - nent, nent);
 			if (fces)

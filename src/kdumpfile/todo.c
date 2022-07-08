@@ -43,7 +43,7 @@ qemu_probe(kdump_ctx_t *ctx)
 	char hdr[sizeof magic];
 	kdump_status status;
 
-	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0);
+	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0, 0);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot read dump header");
 
@@ -69,7 +69,7 @@ libvirt_probe(kdump_ctx_t *ctx)
 	char hdr[sizeof magic];
 	kdump_status status;
 
-	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0);
+	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0, 0);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot read dump header");
 
@@ -96,7 +96,7 @@ xc_save_probe(kdump_ctx_t *ctx)
 	char hdr[sizeof magic];
 	kdump_status status;
 
-	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0);
+	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0, 0);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot read dump header");
 
@@ -122,7 +122,7 @@ xc_core_probe(kdump_ctx_t *ctx)
 	char hdr[sizeof magic + 1];
 	kdump_status status;
 
-	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0);
+	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0, 0);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot read dump header");
 
@@ -154,7 +154,7 @@ mclxcd_probe(kdump_ctx_t *ctx)
 	char hdr[sizeof magic + 1];
 	kdump_status status;
 
-	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0);
+	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0, 0);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot read dump header");
 

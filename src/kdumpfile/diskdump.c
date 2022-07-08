@@ -387,7 +387,7 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 	}
 
 	mutex_lock(&ctx->shared->cache_lock);
-	ret = fcache_pread(ctx->shared->fcache, &pd, sizeof pd, pd_pos);
+	ret = fcache_pread(ctx->shared->fcache, &pd, sizeof pd, 0, pd_pos);
 	mutex_unlock(&ctx->shared->cache_lock);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
@@ -415,7 +415,7 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 
 	/* read page data */
 	mutex_lock(&ctx->shared->cache_lock);
-	ret = fcache_pread(ctx->shared->fcache, buf, pd.size, pd.offset);
+	ret = fcache_pread(ctx->shared->fcache, buf, pd.size, 0, pd.offset);
 	mutex_unlock(&ctx->shared->cache_lock);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
@@ -531,7 +531,7 @@ read_vmcoreinfo(kdump_ctx_t *ctx, off_t off, size_t size)
 	kdump_attr_value_t val;
 	kdump_status ret;
 
-	ret = fcache_get_chunk(ctx->shared->fcache, &fch, size, off);
+	ret = fcache_get_chunk(ctx->shared->fcache, &fch, size, 0, off);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read %zu VMCOREINFO bytes at %llu",
@@ -557,7 +557,7 @@ read_notes(kdump_ctx_t *ctx, off_t off, size_t size)
 	struct fcache_chunk fch;
 	kdump_status ret;
 
-	ret = fcache_get_chunk(ctx->shared->fcache, &fch, size, off);
+	ret = fcache_get_chunk(ctx->shared->fcache, &fch, size, 0, off);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read %zu note bytes at %llu",
@@ -654,7 +654,7 @@ read_bitmap(kdump_ctx_t *ctx, int32_t sub_hdr_size,
 	if (get_max_pfn(ctx) > max_bitmap_pfn)
 		set_max_pfn(ctx, max_bitmap_pfn);
 
-	ret = fcache_get_chunk(ctx->shared->fcache, &fch, bitmapsize, off);
+	ret = fcache_get_chunk(ctx->shared->fcache, &fch, bitmapsize, 0, off);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read %zu bytes of page bitmap"
@@ -730,7 +730,7 @@ read_sub_hdr_32(struct setup_data *sdp, int32_t header_version)
 		return KDUMP_OK;
 
 	ret = fcache_pread(ctx->shared->fcache, &subhdr, sizeof subhdr,
-			   get_page_size(ctx));
+			   0, get_page_size(ctx));
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read subheader");
@@ -813,7 +813,7 @@ read_sub_hdr_64(struct setup_data *sdp, int32_t header_version)
 		return KDUMP_OK;
 
 	ret = fcache_pread(ctx->shared->fcache, &subhdr, sizeof subhdr,
-			   get_page_size(ctx));
+			   0, get_page_size(ctx));
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read subheader");
@@ -959,7 +959,7 @@ diskdump_probe(kdump_ctx_t *ctx)
 	char hdr[sizeof(struct disk_dump_header_64)];
 	kdump_status status;
 
-	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0);
+	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0, 0);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot read dump header");
 

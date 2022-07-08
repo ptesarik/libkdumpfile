@@ -91,6 +91,7 @@ file_fd_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 
 	struct attr_data *mmap_attr;
 	kdump_status ret;
+	int fdset[1];
 	int i;
 
 	if (ctx->shared->fcache) {
@@ -98,7 +99,9 @@ file_fd_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 			attr_embed_value(gattr(ctx, fcache_attrs[i]));
 		fcache_decref(ctx->shared->fcache);
 	}
-	ctx->shared->fcache = fcache_new(get_file_fd(ctx),
+
+	fdset[0] = get_file_fd(ctx);
+	ctx->shared->fcache = fcache_new(1, fdset,
 					 FCACHE_SIZE, FCACHE_ORDER);
 	if (!ctx->shared->fcache)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,

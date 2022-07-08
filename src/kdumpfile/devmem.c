@@ -243,7 +243,7 @@ devmem_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 	ce->key = pio->addr.addr;
 	mutex_lock(&ctx->shared->cache_lock);
 	ret = fcache_get_chunk(ctx->shared->fcache, &pio->chunk,
-			       get_page_size(ctx), pio->addr.addr);
+			       get_page_size(ctx), 0, pio->addr.addr);
 	mutex_unlock(&ctx->shared->cache_lock);
 	if (ret != KDUMP_OK) {
 		--ce->refcnt;
