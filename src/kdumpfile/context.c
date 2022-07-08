@@ -288,6 +288,33 @@ kdump_clone(const kdump_ctx_t *orig, unsigned long flags)
 	return NULL;
 }
 
+void
+kdump_free(kdump_ctx_t *ctx)
+{
+	struct kdump_shared *shared = ctx->shared;
+	int slot;
+
+	rwlock_wrlock(&shared->lock);
+
+	for (slot = 0; slot < PER_CTX_SLOTS; ++slot)
+		if (shared->per_ctx_size[slot])
+			free(ctx->data[slot]);
+
+	addrxlat_ctx_decref(ctx->xlatctx);
+
+	list_del(&ctx->xlat_list);
+	xlat_decref(ctx->xlat);
+
+	attr_dict_decref(ctx->dict);
+
+	list_del(&ctx->list);
+	if (shared_decref_locked(shared))
+		rwlock_unlock(&shared->lock);
+
+	err_cleanup(&ctx->err);
+	free(ctx);
+}
+
 const char *
 kdump_get_err(kdump_ctx_t *ctx)
 {
