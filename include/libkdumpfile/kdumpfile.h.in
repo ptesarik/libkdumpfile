@@ -317,6 +317,29 @@ uint_fast32_t kdump_d32toh(kdump_ctx_t *ctx, uint_fast32_t val);
  */
 uint_fast64_t kdump_d64toh(kdump_ctx_t *ctx, uint_fast64_t val);
 
+/** Open a set of dump files.
+ * @param ctx   Dump file object.
+ * @param nfds  Number of file descriptors in @p fds.
+ * @param fds   Open file descriptors.
+ * @returns     Error status.
+ *
+ * Set up file.fdset attribute subtree to open a set of dump files.
+ */
+kdump_status kdump_open_fdset(kdump_ctx_t *ctx, unsigned nfds, const int *fds);
+
+/** Open a dump file.
+ * @param ctx  Dump file object.
+ * @param fd   Open file descriptor.
+ * @returns    Error status.
+ *
+ * This is a shortcut for opening a single-file dump.
+ */
+static inline kdump_status
+kdump_open_fd(kdump_ctx_t *ctx, int fd)
+{
+	return kdump_open_fdset(ctx, 1, &fd);
+}
+
 /**  Address spaces used by kdump_read()
  *
  * When passing an address to kdump_read(), this type is used to

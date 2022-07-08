@@ -354,6 +354,36 @@ finish_open_dump(kdump_ctx_t *ctx)
 	return KDUMP_OK;
 }
 
+kdump_status
+kdump_open_fdset(kdump_ctx_t *ctx, unsigned nfds, const int *fds)
+{
+	struct attr_data *attr;
+	kdump_status status;
+
+	/* Make sure we do not use a stale file descriptor value. */
+	clear_attr(ctx, gattr(ctx, GKI_num_files));
+
+	status = set_attr_number(ctx, gattr(ctx, GKI_num_files),
+				 ATTR_DEFAULT, nfds);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status,
+				 "Cannot initialize fdset size");
+
+	for (attr = gattr(ctx, GKI_dir_fdset)->dir; attr; attr = attr->next) {
+		if (attr->template->ops != &fdset_ops)
+			continue;
+
+		status = set_attr_number(ctx, attr, ATTR_PERSIST,
+					 fds[attr->template->fidx]);
+		if (status != KDUMP_OK)
+			return set_error(ctx, status,
+					 "Cannot set fdset.%zu",
+					 attr->template->fidx);
+	}
+
+	return KDUMP_OK;
+}
+
 /* struct new_utsname is inside struct uts_namespace, preceded by a struct
  * kref, but the offset is not stored in VMCOREINFO. So, search some sane
  * amount of memory for UTS_SYSNAME, which can be used as kind of a magic
