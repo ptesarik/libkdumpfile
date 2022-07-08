@@ -434,6 +434,8 @@ struct attr_template {
 		/** Addrxlat option attributes: target option index.
 		 */
 		addrxlat_optidx_t optidx;
+		/** File set attributes: index inside file.fdset.*/
+		size_t fidx;
 	};
 	kdump_attr_type_t type;
 	unsigned override:1;	/**< Set iff this is a template override. */
@@ -1138,6 +1140,7 @@ INTERNAL_DECL(struct attr_data *, clone_attr_path,
 
 /* Attribute ops */
 INTERNAL_DECL(extern const struct attr_ops, file_fd_ops, );
+INTERNAL_DECL(extern const struct attr_ops, num_files_ops, );
 INTERNAL_DECL(extern const struct attr_ops, page_size_ops, );
 INTERNAL_DECL(extern const struct attr_ops, page_shift_ops, );
 INTERNAL_DECL(extern const struct attr_ops, cache_size_ops, );

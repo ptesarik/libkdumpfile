@@ -8,6 +8,7 @@ custom-meth
 dumpdata
 elf-prstatus-mod-x86_64
 err-addrxlat
+fdset
 mkdiskdump
 mkelf
 mklkcd

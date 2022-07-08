@@ -56,6 +56,9 @@ elf_prstatus_mod_x86_64_LDADD = \
 	$(top_builddir)/src/kdumpfile/libkdumpfile.la
 err_addrxlat_LDADD = \
 	$(top_builddir)/src/addrxlat/libaddrxlat.la
+fdset_LDADD = \
+	$(LDADD) \
+	$(top_builddir)/src/kdumpfile/libkdumpfile.la
 
 mkdiskdump_CFLAGS = \
 	$(ZLIB_CFLAGS) \
@@ -117,6 +120,7 @@ check_PROGRAMS = \
 	dumpdata \
 	elf-prstatus-mod-x86_64 \
 	err-addrxlat \
+	fdset \
 	mkdiskdump \
 	mkelf \
 	mklkcd \

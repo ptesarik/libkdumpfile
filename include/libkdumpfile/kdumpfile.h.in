@@ -897,6 +897,19 @@ void kdump_attr_iter_end(kdump_ctx_t *ctx, kdump_attr_iter_t *iter);
 /** File descriptor attribute. */
 #define KDUMP_ATTR_FILE_FD	"file.fd"
 
+/** Base directory of a file set.
+ * The @ref KDUMP_ATTR_FILE_FD attribute can be used only if the
+ * dump is contained in a single file. If the dump is split across
+ * multiple files (e.g. SADUMP), use @c file.fdset:
+ *   - Set the @c number sub-attribute first. This creates numbered
+ *     sub-attributes 0 to n-1.
+ *   - Set the numbered attributes to the file descriptor (in any
+ *     order).
+ *   - When all file descriptors are set, the dump file gets
+ *     initialized automatically.
+ */
+#define KDUMP_ATTR_FDSET	"file.fdset"
+
 /** File format name attribute.
  * This attribute is intended to be presented to humans rather than
  * machine-parsed. In fact, some format handlers create the string

@@ -160,6 +160,7 @@ kdump_new(void)
 		{ GKI_mmap_cache_misses, 0 },
 		{ GKI_read_cache_hits, 0 },
 		{ GKI_read_cache_misses, 0 },
+		{ GKI_num_files, 0 },
 	};
 
 	kdump_ctx_t *ctx;

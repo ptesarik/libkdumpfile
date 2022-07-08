@@ -32,6 +32,7 @@
 
 #include "kdumpfile-priv.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -69,6 +70,73 @@ static const struct format_ops *formats[] = {
 	&mclxcd_ops,
 	&s390dump_ops,
 	&devmem_ops
+};
+
+static const struct attr_ops fdset_ops = {
+};
+
+/**  Set number of dump files.
+ * @param ctx   Dump file object.
+ * @param attr  Attribute data to be changed.
+ * @param val   New attribute value.
+ * @returns     Error status.
+ *
+ * Set up attributes for a set of dump files.
+ */
+static kdump_status
+num_files_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
+		   kdump_attr_value_t *val)
+{
+	struct attr_template tmpl = {
+		.type = KDUMP_NUMBER,
+		.ops = &fdset_ops,
+	};
+
+	struct attr_data *parent = attr->parent;
+	char fdkey[21];
+	size_t keylen;
+	size_t n, i;
+	kdump_status ret;
+
+	/* Check that the new value fits into a size_t. */
+	n = val->number;
+	if (n != val->number)
+		return set_error(ctx, KDUMP_ERR_INVALID, "Number too big");
+
+	/* Allocate new attributes */
+	ret = KDUMP_OK;
+	for (i = attr_value(attr)->number; i < n; ++i) {
+		tmpl.fidx = i;
+		keylen = sprintf(fdkey, "%zd", i);
+		if (!create_attr_path(ctx->dict, parent,
+				      fdkey, keylen, &tmpl)) {
+			ret = set_error(ctx, KDUMP_ERR_SYSTEM,
+					"Cannot allocate fdset attributes");
+			n = attr_value(attr)->number;
+			break;
+		}
+	}
+
+	/* Delete superfluous attributes. */
+	if (i > n) {
+		struct attr_data **pprev = &parent->dir;
+		while (*pprev) {
+			struct attr_data *child = *pprev;
+			if (child->template->ops == &fdset_ops &&
+			    child->template->fidx >= n) {
+				*pprev = child->next;
+				dealloc_attr(child);
+			} else
+				pprev = &child->next;
+		}
+	}
+
+	return ret;
+}
+
+/** Attribute operations for file.fdset.number. */
+const struct attr_ops num_files_ops = {
+	.pre_set = num_files_pre_hook,
 };
 
 /**  Set dump file descriptor.
