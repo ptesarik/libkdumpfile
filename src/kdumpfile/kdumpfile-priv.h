@@ -1039,6 +1039,12 @@ attr_value(const struct attr_data *attr)
 	return attr->flags.indirect ? attr->pval : &attr->val;
 }
 
+static inline kdump_attr_value_t *
+attr_mut_value(struct attr_data *attr)
+{
+	return attr->flags.indirect ? attr->pval : &attr->val;
+}
+
 /**  Make sure that attribute value is embedded (not indirect).
  * @param attr  Attribute data.
  *
