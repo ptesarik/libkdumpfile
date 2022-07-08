@@ -267,9 +267,11 @@ open_dump(kdump_ctx_t *ctx)
 		GKI_read_cache_misses,
 	};
 
+	size_t nfiles = get_num_files(ctx);
 	struct attr_data *mmap_attr;
+	struct attr_data *attr;
 	kdump_status ret;
-	int fdset[1];
+	int fdset[nfiles];
 	int i;
 
 	if (ctx->shared->fcache) {
@@ -278,8 +280,10 @@ open_dump(kdump_ctx_t *ctx)
 		fcache_decref(ctx->shared->fcache);
 	}
 
-	fdset[0] = get_file_fd(ctx);
-	ctx->shared->fcache = fcache_new(1, fdset,
+	for (attr = gattr(ctx, GKI_dir_fdset)->dir; attr; attr = attr->next)
+		if (attr->template->ops == &fdset_ops)
+			fdset[attr->template->fidx] = attr_value(attr)->number;
+	ctx->shared->fcache = fcache_new(nfiles, fdset,
 					 FCACHE_SIZE, FCACHE_ORDER);
 	if (!ctx->shared->fcache)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
