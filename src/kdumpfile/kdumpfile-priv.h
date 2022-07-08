@@ -568,6 +568,7 @@ struct kdump_shared {
 	enum kdump_arch arch;	/**< Internal-only arch index. */
 	int arch_init_done;	/**< Non-zero if arch init has been called. */
 
+	size_t pendfiles;	/**< Number of unspecified files. */
 	struct cache *cache;	/**< Page cache. */
 	struct fcache *fcache;	/**< File cache. */
 	mutex_t cache_lock;	/**< Cache access lock. */

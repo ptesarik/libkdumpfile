@@ -73,7 +73,65 @@ static const struct format_ops *formats[] = {
 	&devmem_ops
 };
 
+/**  Open the dump if all file descriptors have been specified.
+ * @param ctx  Dump file object.
+ */
+static inline kdump_status
+maybe_open_dump(kdump_ctx_t *ctx)
+{
+	return get_num_files(ctx) && !ctx->shared->pendfiles
+		? open_dump(ctx)
+		: KDUMP_OK;
+}
+
+/**  Set a file descriptor.
+ * @param ctx   Dump file object.
+ * @param attr  File descriptor attribute data.
+ * @param val   New attribute value.
+ * @returns     Error status.
+ *
+ * Adjust number of pending dump files if appropriate.
+ */
+static kdump_status
+fdset_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
+	       kdump_attr_value_t *val)
+{
+	if (!attr_isset(attr))
+		--ctx->shared->pendfiles;
+	return KDUMP_OK;
+}
+
+/**  Unset a file descriptor.
+ * @param ctx   Dump file object.
+ * @param attr  File descriptor attribute data.
+ */
+static void
+fdset_clear_hook(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	if (attr_isset(attr))
+		++ctx->shared->pendfiles;
+}
+
+/**  Maybe open the dump after setting a file descriptor.
+ * @param ctx   Dump file object.
+ * @param attr  File descriptor attribute data.
+ * @returns     Error status.
+ *
+ * If no more files are pending, open the dump.
+ */
+static kdump_status
+fdset_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	if (!get_num_files(ctx) || ctx->shared->pendfiles)
+		return KDUMP_OK;
+
+	return maybe_open_dump(ctx);
+}
+
 static const struct attr_ops fdset_ops = {
+	.pre_set = fdset_pre_hook,
+	.pre_clear = fdset_clear_hook,
+	.post_set = fdset_post_hook,
 };
 
 /**  Set number of dump files.
@@ -135,9 +193,29 @@ num_files_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
 	return ret;
 }
 
+/**  Set number of dump files pending open.
+ * @param ctx   Dump file object.
+ * @param attr  Number of files attribute.
+ * @returns     Error status.
+ *
+ * Set up the number of pending files.
+ */
+static kdump_status
+num_files_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	size_t pendfiles = 0;
+	for (attr = attr->parent->dir; attr; attr = attr->next)
+		if (attr->template->ops == &fdset_ops && !attr_isset(attr))
+			++pendfiles;
+	ctx->shared->pendfiles = pendfiles;
+
+	return maybe_open_dump(ctx);
+}
+
 /** Attribute operations for file.fdset.number. */
 const struct attr_ops num_files_ops = {
 	.pre_set = num_files_pre_hook,
+	.post_set = num_files_post_hook,
 };
 
 /**  Set dump file descriptor.
@@ -147,7 +225,23 @@ const struct attr_ops num_files_ops = {
 static kdump_status
 file_fd_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
-	return open_dump(ctx);
+	struct attr_data *fdset0;
+	kdump_status status;
+
+	/* Make sure we do not use a stale file descriptor value. */
+	clear_attr(ctx, gattr(ctx, GKI_num_files));
+
+	status = set_attr_number(ctx, gattr(ctx, GKI_num_files),
+				 ATTR_DEFAULT, 1);
+	if (status != KDUMP_OK)
+		return status;
+
+	fdset0 = lookup_dir_attr(ctx->dict, gattr(ctx, GKI_dir_fdset), "0", 1);
+	if (!fdset0)
+		return set_error(ctx, KDUMP_ERR_NOKEY,
+				 "Cannot find %s.0 ???", KDUMP_ATTR_FDSET);
+	return set_attr_number(ctx, fdset0, ATTR_PERSIST,
+			       attr_value(attr)->number);
 }
 
 const struct attr_ops file_fd_ops = {
