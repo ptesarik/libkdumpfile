@@ -1266,6 +1266,10 @@ open_common(kdump_ctx_t *ctx)
 	kdump_status ret;
 	int i;
 
+	if (get_num_files(ctx) > 1)
+		return set_error(ctx, KDUMP_ERR_NOTIMPL,
+				 "Multiple files not implemented");
+
 	if (!edp->num_load_segments && !edp->num_sections)
 		return set_error(ctx, KDUMP_ERR_NOTIMPL, "No content found");
 

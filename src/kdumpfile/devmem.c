@@ -323,6 +323,10 @@ devmem_probe(kdump_ctx_t *ctx)
 	set_byte_order(ctx, KDUMP_BIG_ENDIAN);
 #endif
 
+	if (get_num_files(ctx) > 1)
+		return set_error(ctx, KDUMP_ERR_NOTIMPL,
+				 "Multiple files not implemented");
+
 	ret = set_page_size(ctx, sysconf(_SC_PAGESIZE));
 	if (ret != KDUMP_OK)
 		return ret;

@@ -129,6 +129,10 @@ do_probe(kdump_ctx_t *ctx, struct dump_header *dh)
 	set_file_description(ctx, "S390 Dump");
 	set_byte_order(ctx, KDUMP_BIG_ENDIAN);
 
+	if (get_num_files(ctx) > 1)
+		return set_error(ctx, KDUMP_ERR_NOTIMPL,
+				 "Multiple files not implemented");
+
 	pos = dump32toh(ctx, dh->h1.hdr_size) +
 		dump64toh(ctx, dh->h1.mem_size);
 	ret = fcache_get_chunk(ctx->shared->fcache, &fch, sizeof *marker, 0, pos);

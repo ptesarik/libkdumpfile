@@ -890,6 +890,10 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 	kdump_bmp_t *bmp;
 	kdump_status ret;
 
+	if (get_num_files(ctx) > 1)
+		return set_error(ctx, KDUMP_ERR_NOTIMPL,
+				 "Multiple files not implemented");
+
 	memset(&sd, 0, sizeof sd);
 	sd.ctx = ctx;
 

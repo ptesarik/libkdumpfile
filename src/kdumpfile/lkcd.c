@@ -917,6 +917,10 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 	struct lkcd_priv *lkcdp;
 	kdump_status ret;
 
+	if (get_num_files(ctx) > 1)
+		return set_error(ctx, KDUMP_ERR_NOTIMPL,
+				 "Multiple files not implemented");
+
 	lkcdp = ctx_malloc(sizeof *lkcdp, ctx, "LKCD private data");
 	if (!lkcdp)
 		return KDUMP_ERR_SYSTEM;
