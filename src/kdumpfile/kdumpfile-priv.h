@@ -1273,14 +1273,21 @@ struct fcache_entry {
 	struct cache *cache;
 };
 
+/** Information about an open file in a file cache.
+ */
+struct fcache_fileinfo {
+	/** Open file descriptor. */
+	int fd;
+
+	/** File size (if known) or maximum off_t. */
+	off_t filesz;
+};
+
 /** File cache.
  */
 struct fcache {
 	/** Reference counter. */
 	unsigned long refcnt;
-
-	/** Open file descriptor. */
-	int fd;
 
 	/** Policy for using mmap(2) vs. read(2).
 	 * @sa kdump_mmap_policy_t
@@ -1293,14 +1300,14 @@ struct fcache {
 	/** Size of mmap'ed regions. */
 	size_t mmapsz;
 
-	/** File size (if known) or maximum off_t. */
-	off_t filesz;
-
 	/** Main cache (for mmap'ed regions). */
 	struct cache *cache;
 
 	/** Fallback cache (for read regions). */
 	struct cache *fbcache;
+
+	/** Information about the file. */
+	struct fcache_fileinfo info;
 };
 
 INTERNAL_DECL(struct fcache *, fcache_new,

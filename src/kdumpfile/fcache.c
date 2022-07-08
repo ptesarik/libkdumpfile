@@ -67,7 +67,7 @@ fcache_new(int fd, unsigned n, unsigned order)
 		return fc;
 
 	fc->refcnt = 1;
-	fc->fd = fd;
+	fc->info.fd = fd;
 	fc->mmap_policy.number = KDUMP_MMAP_TRY;
 	fc->pgsz = sysconf(_SC_PAGESIZE);
 	fc->mmapsz = fc->pgsz << order;
@@ -81,9 +81,10 @@ fcache_new(int fd, unsigned n, unsigned order)
 	if (!fc->fbcache)
 		goto err_cache;
 
-	fc->filesz = (fstat(fd, &st) == 0 && S_ISREG(st.st_mode)
-		      ? st.st_size
-		      : ((unsigned long long) ~(off_t)0) >> 1);
+	fc->info.filesz = (
+		fstat(fd, &st) == 0 && S_ISREG(st.st_mode)
+		? st.st_size
+		: ((unsigned long long) ~(off_t)0) >> 1);
 
 	return fc;
 
@@ -119,7 +120,7 @@ fcache_get_mmap(struct fcache *fc, struct fcache_entry *fce, off_t pos)
 	size_t off;
 
 	blkpos = pos & ~(off_t)(fc->pgsz - 1);
-	if (blkpos >= fc->filesz)
+	if (blkpos >= fc->info.filesz)
 		return KDUMP_ERR_NODATA;
 
 	blkpos = pos & ~(off_t)(fc->mmapsz - 1);
@@ -129,7 +130,7 @@ fcache_get_mmap(struct fcache *fc, struct fcache_entry *fce, off_t pos)
 
 	if (!cache_entry_valid(ce)) {
 		ce->data = mmap(NULL, fc->mmapsz, PROT_READ,
-				MAP_SHARED, fc->fd, blkpos);
+				MAP_SHARED, fc->info.fd, blkpos);
 		cache_insert(fc->cache, ce);
 	}
 
@@ -163,7 +164,7 @@ fcache_get_read(struct fcache *fc, struct fcache_entry *fce, off_t pos)
 		return KDUMP_ERR_BUSY;
 
 	if (!cache_entry_valid(ce)) {
-		ssize_t rd = pread(fc->fd, ce->data, fc->pgsz, blkpos);
+		ssize_t rd = pread(fc->info.fd, ce->data, fc->pgsz, blkpos);
 		if (rd < 0) {
 			cache_discard(fc->fbcache, ce);
 			return KDUMP_ERR_SYSTEM;
