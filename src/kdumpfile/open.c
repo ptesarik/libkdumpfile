@@ -57,7 +57,8 @@
  */
 #define FCACHE_ORDER	10
 
-static kdump_status kdump_open_known(kdump_ctx_t *pctx);
+static kdump_status open_dump(kdump_ctx_t *ctx);
+static kdump_status finish_open_dump(kdump_ctx_t *ctx);
 
 static const struct format_ops *formats[] = {
 	&elfdump_ops,
@@ -142,11 +143,26 @@ const struct attr_ops num_files_ops = {
 /**  Set dump file descriptor.
  * @param ctx   Dump file object.
  * @returns     Error status.
- *
- * Probe the given file for known file formats and initialize it for use.
  */
 static kdump_status
 file_fd_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	return open_dump(ctx);
+}
+
+const struct attr_ops file_fd_ops = {
+	.post_set = file_fd_post_hook,
+};
+
+/**  Open the dump.
+ * @param ctx   Dump file object.
+ * @returns     Error status.
+ *
+ * Probe a dump file for known file formats.
+ * On success, initialize the dump file context for use.
+ */
+static kdump_status
+open_dump(kdump_ctx_t *ctx)
 {
 	/* Attributes that point into ctx->shared->fcache */
 	static const enum global_keyidx fcache_attrs[] = {
@@ -193,7 +209,7 @@ file_fd_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 		ctx->shared->ops = formats[i];
 		ret = ctx->shared->ops->probe(ctx);
 		if (ret == KDUMP_OK)
-			return kdump_open_known(ctx);
+			return finish_open_dump(ctx);
 		if (ret != KDUMP_NOPROBE)
 			return ret;
 
@@ -209,18 +225,18 @@ file_fd_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 	return set_error(ctx, KDUMP_ERR_NOTIMPL, "Unknown file format");
 }
 
+/** Finish opening a dump file of a known file format.
+ * @param ctx   Dump file object.
+ * @returns     Error status.
+ */
 static kdump_status
-kdump_open_known(kdump_ctx_t *ctx)
+finish_open_dump(kdump_ctx_t *ctx)
 {
 	set_attr_static_string(ctx, gattr(ctx, GKI_file_format),
 			       ATTR_DEFAULT, ctx->shared->ops->name);
 
 	return KDUMP_OK;
 }
-
-const struct attr_ops file_fd_ops = {
-	.post_set = file_fd_post_hook,
-};
 
 /* struct new_utsname is inside struct uts_namespace, preceded by a struct
  * kref, but the offset is not stored in VMCOREINFO. So, search some sane
