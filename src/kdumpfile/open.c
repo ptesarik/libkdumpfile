@@ -243,23 +243,8 @@ const struct attr_ops num_files_ops = {
 static kdump_status
 file_fd_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
-	struct attr_data *fdset0;
-	kdump_status status;
-
-	/* Make sure we do not use a stale file descriptor value. */
-	clear_attr(ctx, gattr(ctx, GKI_num_files));
-
-	status = set_attr_number(ctx, gattr(ctx, GKI_num_files),
-				 ATTR_DEFAULT, 1);
-	if (status != KDUMP_OK)
-		return status;
-
-	fdset0 = lookup_dir_attr(ctx->dict, gattr(ctx, GKI_dir_fdset), "0", 1);
-	if (!fdset0)
-		return set_error(ctx, KDUMP_ERR_NOKEY,
-				 "Cannot find %s.0 ???", KDUMP_ATTR_FDSET);
-	return set_attr_number(ctx, fdset0, ATTR_PERSIST,
-			       attr_value(attr)->number);
+	int fd = attr_value(attr)->number;
+	return internal_open_fdset(ctx, 1, &fd);
 }
 
 const struct attr_ops file_fd_ops = {
@@ -353,6 +338,8 @@ finish_open_dump(kdump_ctx_t *ctx)
 
 	return KDUMP_OK;
 }
+
+DEFINE_ALIAS(open_fdset);
 
 kdump_status
 kdump_open_fdset(kdump_ctx_t *ctx, unsigned nfds, const int *fds)

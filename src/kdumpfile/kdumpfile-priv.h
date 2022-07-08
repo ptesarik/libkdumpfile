@@ -535,6 +535,8 @@ struct attr_dict {
 INTERNAL_DECL(kdump_status, ostype_attr,
 	      (kdump_ctx_t *ctx, const char *name, struct attr_data **attr));
 
+DECLARE_ALIAS(open_fdset);
+
 struct cache;
 
 /** Number of per-context data slots.
