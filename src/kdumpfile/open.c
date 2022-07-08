@@ -110,6 +110,9 @@ fdset_clear_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	if (attr_isset(attr))
 		++ctx->shared->pendfiles;
+
+	if (attr->template->fidx == 0)
+		clear_attr(ctx, gattr(ctx, GKI_file_fd));
 }
 
 /**  Maybe open the dump after setting a file descriptor.
@@ -122,6 +125,14 @@ fdset_clear_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 static kdump_status
 fdset_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
+	if (attr->template->fidx == 0) {
+		kdump_status status =
+			set_attr(ctx, gattr(ctx, GKI_file_fd),
+				 ATTR_PERSIST, attr_mut_value(attr));
+		if (status != KDUMP_OK)
+			return status;
+	}
+
 	if (!get_num_files(ctx) || ctx->shared->pendfiles)
 		return KDUMP_OK;
 
@@ -165,14 +176,21 @@ num_files_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
 	/* Allocate new attributes */
 	ret = KDUMP_OK;
 	for (i = attr_value(attr)->number; i < n; ++i) {
+		struct attr_data *child;
+
 		tmpl.fidx = i;
 		keylen = sprintf(fdkey, "%zd", i);
-		if (!create_attr_path(ctx->dict, parent,
-				      fdkey, keylen, &tmpl)) {
+		child = create_attr_path(ctx->dict, parent,
+					 fdkey, keylen, &tmpl);
+		if (!child) {
 			ret = set_error(ctx, KDUMP_ERR_SYSTEM,
 					"Cannot allocate fdset attributes");
 			n = attr_value(attr)->number;
 			break;
+		}
+		if (i == 0) {
+			child->flags.indirect = 1;
+			child->pval = attr_mut_value(gattr(ctx, GKI_file_fd));
 		}
 	}
 
