@@ -351,7 +351,7 @@ kdump_open_fdset(kdump_ctx_t *ctx, unsigned nfds, const int *fds)
 	clear_attr(ctx, gattr(ctx, GKI_num_files));
 
 	status = set_attr_number(ctx, gattr(ctx, GKI_num_files),
-				 ATTR_DEFAULT, nfds);
+				 ATTR_PERSIST, nfds);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status,
 				 "Cannot initialize fdset size");
