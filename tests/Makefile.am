@@ -490,6 +490,7 @@ TESTS = $(test_scripts) \
 	clearattr \
 	custom-meth \
 	err-addrxlat \
+	fdset \
 	nometh \
 	subattr \
 	thread-errstr \
