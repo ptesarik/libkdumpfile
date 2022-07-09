@@ -446,7 +446,7 @@ struct attr_template {
  */
 struct attr_flags {
 	uint8_t isset : 1;	/**< Zero if attribute has no value */
-	uint8_t persist : 1;	/**< Persistent (never cleared) */
+	uint8_t persist : 1;	/**< Persistent (not cleared on re-open) */
 	uint8_t dynstr : 1;	/**< Dynamically allocated string */
 	uint8_t indirect : 1;	/**< Actual value is at @c *pval */
 	uint8_t invalid : 1;	/**< Value needs revalidation */

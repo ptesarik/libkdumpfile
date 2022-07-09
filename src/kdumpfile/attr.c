@@ -419,8 +419,10 @@ clear_attr(kdump_ctx_t *ctx, struct attr_data *attr)
  * @param attr  Attribute to be cleared.
  * @returns     Non-zero if the entry could not be cleared.
  *
- * It is not possible to clear a persistent attribute, or a directory
- * attribute which contains at least one persistent attribute.
+ * This function clears only volatile attributes, i.e. those that were
+ * set automatically and should not be preserved when re-opening a dump.
+ * Persistent attributes (e.g. those that have been set explicitly) are
+ * kept. The complete path to each persistent attributes is also kept.
  */
 static unsigned
 clear_volatile(kdump_ctx_t *ctx, struct attr_data *attr)
