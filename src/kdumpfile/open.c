@@ -483,7 +483,7 @@ ostype_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
 	if (!(strcmp(val->string, "linux"))) {
 		ctx->xlat->osdir = GKI_dir_linux;
 	} else if (!strcmp(val->string, "xen")) {
-		ctx->xlat->osdir = GKI_dir_linux;
+		ctx->xlat->osdir = GKI_dir_xen;
 	} else
 		return set_error(ctx, KDUMP_ERR_NOTIMPL,
 				 "Unsupported OS type");
