@@ -1,5 +1,7 @@
 next
 ----
+  * Add kdump_open_fd() and kdump_open_fdset(). Keep KDUMP_ATTR_FILE_FD
+    for (partial) backward compatibility.
   * Zstandard compression algorithm
   * AArch64 52-bit VA
   * Address translation tuning with addrxlat.default.* and addrxlat.force.*
