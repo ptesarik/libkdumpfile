@@ -31,7 +31,6 @@ echo "Created empty diskdump dump: $dumpfile"
 
 ./checkattr "$dumpfile" <<EOF
 file = directory:
-file.fd = number
 file.fdset.number = number:1
 file.fdset.0 = number
 file.format = string: diskdump

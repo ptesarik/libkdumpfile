@@ -159,7 +159,7 @@ main(int argc, char **argv)
 		return -1;
 	}
 
-	res = kdump_set_number_attr(ctx, KDUMP_ATTR_FILE_FD, fd);
+	res = kdump_open_fd(ctx, fd);
 	if (res != KDUMP_OK) {
 		fprintf(stderr, "File initialization failed: %s\n",
 			kdump_get_err(ctx));

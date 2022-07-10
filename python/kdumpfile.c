@@ -108,8 +108,7 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 		goto fail;
 	}
 
-	status = kdump_set_number_attr(self->ctx, KDUMP_ATTR_FILE_FD,
-				       self->fd);
+	status = kdump_open_fd(self->ctx, self->fd);
 	if (status != KDUMP_OK) {
 		PyErr_Format(exception_map(status),
 			     "Cannot open dump: %s", kdump_get_err(self->ctx));
