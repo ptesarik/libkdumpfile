@@ -125,9 +125,6 @@ fdset_clear_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 static kdump_status
 fdset_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
-	if (!get_num_files(ctx) || ctx->shared->pendfiles)
-		return KDUMP_OK;
-
 	return maybe_open_dump(ctx);
 }
 
