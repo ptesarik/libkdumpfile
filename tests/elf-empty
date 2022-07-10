@@ -34,6 +34,8 @@ fi
 ./checkattr "$dumpfile" <<EOF
 file = directory:
 file.fd = number
+file.fdset.number = number:1
+file.fdset.0 = number
 file.format = string: elf
 
 cache = directory:

@@ -34,6 +34,8 @@ echo "Created empty LKCD dump: $dumpfile"
 ./checkattr "$dumpfile" <<EOF
 file = directory:
 file.fd = number
+file.fdset.number = number:1
+file.fdset.0 = number
 file.format = string: lkcd
 
 cache = directory:
