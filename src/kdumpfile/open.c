@@ -125,14 +125,6 @@ fdset_clear_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 static kdump_status
 fdset_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
-	if (attr->template->fidx == 0) {
-		kdump_status status =
-			set_attr(ctx, gattr(ctx, GKI_file_fd),
-				 ATTR_PERSIST, attr_mut_value(attr));
-		if (status != KDUMP_OK)
-			return status;
-	}
-
 	if (!get_num_files(ctx) || ctx->shared->pendfiles)
 		return KDUMP_OK;
 
@@ -221,6 +213,9 @@ num_files_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
 static kdump_status
 num_files_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 {
+	if (attr_value(attr)->number != 1)
+		clear_attr(ctx, gattr(ctx, GKI_file_fd));
+
 	size_t pendfiles = 0;
 	for (attr = attr->parent->dir; attr; attr = attr->next)
 		if (attr->template->ops == &fdset_ops && !attr_isset(attr))

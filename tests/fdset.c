@@ -98,12 +98,69 @@ check_unset_file(kdump_ctx_t *ctx, kdump_attr_ref_t *fdset, const char *key)
 	return ret;
 }
 
+static int
+check_fdset_size(kdump_ctx_t *ctx, int num)
+{
+	kdump_attr_t attr;
+	kdump_status status;
+	int ret;
+
+	ret = TEST_OK;
+
+	status = kdump_get_attr(ctx, KDUMP_ATTR_FDSET ".number", &attr);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "%s cannot be retrieved: %s\n",
+			"fdset.number", kdump_get_err(ctx));
+		ret = TEST_FAIL;
+	} else if (attr.val.number != num) {
+		fprintf(stderr, "Wrong %s value: %" KDUMP_PRIuNUM " != %d\n",
+			"fdset.number", attr.val.number, num);
+		ret = TEST_FAIL;
+	}
+
+	return ret;
+}
+
+static int
+check_fdset_zero(kdump_ctx_t *ctx, kdump_attr_ref_t *fdset, int fd)
+{
+	kdump_attr_ref_t tmpref;
+	kdump_attr_t attr;
+	kdump_status status;
+	int ret;
+
+	ret = TEST_OK;
+
+	status = kdump_sub_attr_ref(ctx, fdset, "0", &tmpref);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot reference attribute %s: %s\n",
+			KDUMP_ATTR_FDSET ".0", kdump_get_err(ctx));
+		return TEST_ERR;
+	}
+	status = kdump_attr_ref_get(ctx, &tmpref, &attr);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot get fdset.0: %s\n",
+			kdump_get_err(ctx));
+		ret = TEST_FAIL;
+	} else if (attr.type != KDUMP_NUMBER) {
+		fprintf(stderr, "Wrong fdset.0 attribute type: %d\n",
+			(int)attr.type);
+		ret = TEST_FAIL;
+	} else if (attr.val.number != fd) {
+		fprintf(stderr, "Wrong %s value: %" KDUMP_PRIuNUM " != %d\n",
+			"fdset.0", attr.val.number, fd);
+		ret = TEST_FAIL;
+	}
+	kdump_attr_unref(ctx, &tmpref);
+
+	return ret;
+}
+
 int
 main(int argc, char **argv)
 {
 	kdump_attr_ref_t fdset;
 	kdump_attr_ref_t number;
-	kdump_attr_ref_t tmpref;
 	kdump_attr_t attr;
 	kdump_ctx_t *ctx;
 	kdump_status status;
@@ -290,42 +347,75 @@ main(int argc, char **argv)
 		return TEST_ERR;
 	}
 
-	/* Check that the file descriptor is found as fdset.0. */
-	status = kdump_sub_attr_ref(ctx, &fdset, "0", &tmpref);
-	if (status != KDUMP_OK) {
-		fprintf(stderr, "Cannot reference attribute %s: %s\n",
-			KDUMP_ATTR_FDSET ".0", kdump_get_err(ctx));
-		return TEST_ERR;
-	}
-	status = kdump_attr_ref_get(ctx, &tmpref, &attr);
-	if (status != KDUMP_OK) {
-		fprintf(stderr, "Cannot get fdset.0: %s\n",
-			kdump_get_err(ctx));
-		ret = TEST_FAIL;
-	} else if (attr.type != KDUMP_NUMBER) {
-		fprintf(stderr, "Wrong fdset.0 attribute type: %d\n",
-			(int)attr.type);
-		ret = TEST_FAIL;
-	} else if (attr.val.number != fd) {
-		fprintf(stderr, "Wrong %s value: %" KDUMP_PRIuNUM " != %d\n",
-			"fdset.0", attr.val.number, fd);
-		ret = TEST_FAIL;
-	}
-	kdump_attr_unref(ctx, &tmpref);
+	/* Check that fdset size is one. */
+	rc = check_fdset_size(ctx, 1);
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
 
-	/* Check that file.fd is also set. */
-	status = kdump_get_number_attr(ctx, KDUMP_ATTR_FILE_FD,
-				       &attr.val.number);
-	if (status != KDUMP_OK) {
-		fprintf(stderr, "Cannot get %s: %s\n",
+	/* Check that the file descriptor is found as fdset.0. */
+	rc = check_fdset_zero(ctx, &fdset, fd);
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+
+	/* Check that legacy file.fd is not set. */
+	status = kdump_get_attr(ctx, KDUMP_ATTR_FILE_FD, &attr);
+	if (status == KDUMP_OK) {
+		fprintf(stderr, "%s has a value, but it should not!\n",
+			KDUMP_ATTR_FILE_FD);
+		ret = TEST_FAIL;
+	} else if (status != KDUMP_ERR_NODATA) {
+		fprintf(stderr, "%s cannot be retrieved: %s\n",
 			KDUMP_ATTR_FILE_FD, kdump_get_err(ctx));
 		ret = TEST_FAIL;
 	}
-	if (attr.val.number != fd) {
+
+	/* Close dump. */
+	status = kdump_set_number_attr(ctx, KDUMP_ATTR_FDSET ".number", 0);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot set dump number to zero: %s\n",
+			kdump_get_err(ctx));
+		return TEST_ERR;
+	}
+
+	/*************************************************************
+	 * Interaction with legacy file.fd attribute.
+	 */
+	status = kdump_set_number_attr(ctx, KDUMP_ATTR_FILE_FD, fd);
+	if (status != KDUMP_OK && status != KDUMP_ERR_NOTIMPL) {
+		fprintf(stderr, "Cannot set dump file descriptor: %s\n",
+			kdump_get_err(ctx));
+		return TEST_ERR;
+	}
+
+	/* Check that legacy file.fd is set. */
+	status = kdump_get_attr(ctx, KDUMP_ATTR_FILE_FD, &attr);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "%s cannot be retrieved: %s\n",
+			KDUMP_ATTR_FILE_FD, kdump_get_err(ctx));
+		ret = TEST_FAIL;
+	} else if (attr.val.number != fd) {
 		fprintf(stderr, "Wrong %s value: %" KDUMP_PRIuNUM " != %d\n",
 			KDUMP_ATTR_FILE_FD, attr.val.number, fd);
 		ret = TEST_FAIL;
 	}
+
+	/* Check that fdset size is one. */
+	rc = check_fdset_size(ctx, 1);
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+
+	/* Check that the file descriptor is also found as fdset.0. */
+	rc = check_fdset_zero(ctx, &fdset, fd);
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
 
 	/*************************************************************
 	 * Clean up.
