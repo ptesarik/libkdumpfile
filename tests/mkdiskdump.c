@@ -130,6 +130,8 @@ static char *note_file;
 static char *eraseinfo_file;
 static char *data_file;
 
+static unsigned long start_pdidx;
+
 static const struct param param_array[] = {
 	/* meta-data */
 	PARAM_STRING("arch_name", arch_name),
@@ -646,10 +648,15 @@ writepage(struct page_data *pg)
 	struct page_desc pd;
 	unsigned long pdidx;
 	unsigned char *buf;
+	unsigned long pfn;
 	size_t buflen;
 	uint32_t flags;
 
 	if (pgkdump->compress == compress_exclude)
+		return TEST_OK;
+
+	pfn = pgkdump->addr / block_size;
+	if (split && (start_pfn > pfn || pfn >= end_pfn))
 		return TEST_OK;
 
 	flags = pgkdump->flags;
@@ -679,7 +686,7 @@ writepage(struct page_data *pg)
 	pd.flags = htodump32(be, flags);
 	pd.page_flags = htodump64(be, 0);
 
-	pdidx = bitmap_index(bitmap2, pgkdump->addr / block_size);
+	pdidx = bitmap_index(bitmap2, pfn) - start_pdidx;
 	if (fseek(pgkdump->f, pdoff + pdidx * sizeof pd, SEEK_SET) != 0) {
 		perror("seek page desc");
 		return TEST_ERR;
@@ -790,6 +797,8 @@ writedata(FILE *f)
 
 	printf("Creating page data\n");
 
+	if (split)
+		start_pdidx = bitmap_index(bitmap2, start_pfn);
 	dataoff += block_size - (dataoff - 1) % block_size - 1;
 
 	pg.endian = be;
