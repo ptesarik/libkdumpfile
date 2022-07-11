@@ -154,7 +154,7 @@ get_addrspace(const char *p, const char *endp)
 }
 
 static int
-dump_data_fd(int fd, char **argv)
+dump_data_fds(unsigned long nfds, const int *fds, char **argv)
 {
 	kdump_ctx_t *ctx;
 	kdump_status res;
@@ -184,7 +184,7 @@ dump_data_fd(int fd, char **argv)
 		}
 	}
 
-	res = kdump_open_fd(ctx, fd);
+	res = kdump_open_fdset(ctx, nfds, fds);
 	if (res != KDUMP_OK) {
 		fprintf(stderr, "Cannot open dump: %s\n", kdump_get_err(ctx));
 		goto err;
@@ -241,25 +241,60 @@ static void
 usage(const char *name)
 {
 	fprintf(stderr,
-		"Usage: %s [<options>] <dump> <addr> <len> [...]\n"
+		"Usage: %s [<options>] <dump> [<dump>...] <addr> <len> [...]\n"
 		"\n"
 		"Options:\n"
+		"  -n num     Number of dump files\n"
 		"  -o ostype  Set OS type\n"
 		"  -s size    Set value size in bytes\n"
 		"  -z         Fill excluded pages with zeroes\n",
 		name);
 }
 
+static int
+dump_data_args(unsigned long nfiles, char **argv)
+{
+	unsigned long i;
+	int fds[nfiles];
+	int rc;
+
+	for (i = 0; i < nfiles; ++i) {
+		fds[i] = open(argv[i], O_RDONLY);
+		if (fds[i] < 0) {
+			perror("open dump");
+			return TEST_ERR;
+		}
+	}
+
+	rc = dump_data_fds(nfiles, fds, argv + nfiles);
+
+	for (i = 0; i < nfiles; ++i)
+		if (close(fds[i]) < 0) {
+			perror("close dump");
+			rc = TEST_ERR;
+		}
+
+	return rc;
+}
+
 int
 main(int argc, char **argv)
 {
+	unsigned long nfiles = 1;
 	char *endp;
 	int opt;
-	int fd;
-	int rc;
 
-	while ((opt = getopt(argc, argv, "ho:s:z")) != -1) {
+	while ((opt = getopt(argc, argv, "hn:o:s:z")) != -1) {
 		switch (opt) {
+		case 'n':
+			nfiles = strtoul(optarg, &endp, 0);
+			if (endp == optarg || *endp || nfiles < 1) {
+				fprintf(stderr, "Invalid number of files: %s\n",
+					optarg);
+				return TEST_ERR;
+			}
+			break;
+
 		case 'o':
 			ostype = optarg;
 			break;
@@ -285,23 +320,11 @@ main(int argc, char **argv)
 		}
 	}
 
-	if ((argc - optind) < 3 || (argc - optind) % 2 != 1) {
+	if ((argc - optind) < nfiles + 2 ||
+	    (argc - optind - nfiles) % 2 != 0) {
 		usage(argv[0]);
 		return TEST_ERR;
 	}
 
-	fd = open(argv[optind], O_RDONLY);
-	if (fd < 0) {
-		perror("open dump");
-		return TEST_ERR;
-	}
-
-	rc = dump_data_fd(fd, argv + optind + 1);
-
-	if (close(fd) < 0) {
-		perror("close dump");
-		rc = TEST_ERR;
-	}
-
-	return rc;
+	return dump_data_args(nfiles, argv + optind);
 }
