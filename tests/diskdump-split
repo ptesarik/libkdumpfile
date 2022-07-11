@@ -1,0 +1,128 @@
+#
+# Check reading data from a split dump file
+#
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+dumpfile="out/${name}.dump"
+resultfile="out/${name}.result"
+datafile="$srcdir/${name}.data"
+expectfile="$srcdir/${name}.expect"
+
+desc="
+version = 6
+arch_name = x86_64
+block_size = 4096
+phys_base = 0
+max_mapnr = 0x100
+sub_hdr_size = 1
+
+uts.sysname = Linux
+uts.nodename = test-node
+uts.release = 3.4.5-test
+uts.version = #1 SMP Fri Jan 22 14:02:42 UTC 2016 (1234567)
+uts.machine = x86_64
+uts.domainname = (none)
+
+nr_cpus = 1
+
+split = 1
+
+DATA = $datafile
+"
+
+# Create three split dump files
+
+./mkdiskdump "$dumpfile.1" <<EOF
+$desc
+start_pfn = 1
+end_pfn = 2
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create diskdump file" >&2
+    exit $rc
+fi
+echo "Created split diskdump dump: $dumpfile.1"
+
+./mkdiskdump "$dumpfile.2" <<EOF
+$desc
+start_pfn = 2
+end_pfn = 3
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create diskdump file" >&2
+    exit $rc
+fi
+echo "Created split diskdump dump: $dumpfile.2"
+
+./mkdiskdump "$dumpfile.3" <<EOF
+$desc
+start_pfn = 3
+end_pfn = 5
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create diskdump file" >&2
+    exit $rc
+fi
+echo "Created split diskdump dump: $dumpfile.3"
+
+echo "Check that file 1 only contains PFN 1"
+./dumpdata "$dumpfile.1" 0x1000 8 > "$resultfile.1"
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot dump DISKDUMP data" >&2
+    exit $rc
+fi
+if ! diff "$expectfile.1" "$resultfile.1"; then
+    echo "Results do not match" >&2
+    exit 1
+fi
+./dumpdata "$dumpfile.1" 0x2000 8 > "$resultfile.1.err" 2>/dev/null
+rc=$?
+if [ $rc -eq 0 ]; then
+    echo "Unexpected success!" >&2
+    exit 1
+fi
+
+echo "Check that file 2 only contains PFN 2"
+./dumpdata "$dumpfile.2" 0x2000 8 > "$resultfile.2"
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot dump DISKDUMP data" >&2
+    exit $rc
+fi
+if ! diff "$expectfile.2" "$resultfile.2"; then
+    echo "Results do not match" >&2
+    exit 1
+fi
+./dumpdata "$dumpfile.2" 0x1000 8 > "$resultfile.2.err" 2>/dev/null
+rc=$?
+if [ $rc -eq 0 ]; then
+    echo "Unexpected success!" >&2
+    exit 1
+fi
+
+echo "Check that file 3 contains PFN 3 and PFN 4"
+./dumpdata "$dumpfile.3" 0x3ffc 8 > "$resultfile.3"
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot dump DISKDUMP data" >&2
+    exit $rc
+fi
+if ! diff "$expectfile.3" "$resultfile.3"; then
+    echo "Results do not match" >&2
+    exit 1
+fi
+./dumpdata "$dumpfile.3" 0x2000 8 > "$resultfile.3.err" 2>/dev/null
+rc=$?
+if [ $rc -eq 0 ]; then
+    echo "Unexpected success!" >&2
+    exit 1
+fi

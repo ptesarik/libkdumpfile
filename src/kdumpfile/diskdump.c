@@ -168,6 +168,11 @@ struct disk_dump_priv {
 	struct pfn_rgn *pfn_rgn; /**< PFN region map. */
 	size_t pfn_rgn_num;	 /**< Number of elements in the map. */
 
+	/** PFN of the first page descriptor. */
+	kdump_pfn_t pd_start;
+	/** PFN of one beyond the page descriptor array. */
+	kdump_pfn_t pd_end;
+
 	/** Overridden methods for arch.page_size attribute. */
 	struct attr_override page_size_override;
 	int cbuf_slot;		/**< Compressed data per-context slot. */
@@ -630,6 +635,7 @@ static kdump_status
 read_bitmap(kdump_ctx_t *ctx, int32_t sub_hdr_size,
 	    int32_t bitmap_blocks)
 {
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	off_t off = (1 + sub_hdr_size) * get_page_size(ctx);
 	off_t descoff;
 	size_t bitmapsize;
@@ -662,10 +668,14 @@ read_bitmap(kdump_ctx_t *ctx, int32_t sub_hdr_size,
 				 bitmapsize, (unsigned long long) off);
 
 	rgn.pos = descoff;
-	pfn = 0;
+	pfn = ddp->pd_start;
+	if (max_bitmap_pfn > ddp->pd_end)
+		max_bitmap_pfn = ddp->pd_end;
 	while (pfn < max_bitmap_pfn) {
 		rgn.pfn = skip_clear(fch.data, bitmapsize, pfn);
 		pfn = skip_set(fch.data, bitmapsize, rgn.pfn);
+		if (pfn > max_bitmap_pfn)
+			pfn = max_bitmap_pfn;
 		rgn.cnt = pfn - rgn.pfn;
 		if (rgn.cnt) {
 			ret = add_pfn_rgn(ctx, &rgn);
@@ -718,6 +728,7 @@ static kdump_status
 read_sub_hdr_32(struct setup_data *sdp, int32_t header_version)
 {
 	kdump_ctx_t *ctx = sdp->ctx;
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	struct kdump_sub_header_32 subhdr;
 	kdump_status ret;
 
@@ -748,8 +759,19 @@ read_sub_hdr_32(struct setup_data *sdp, int32_t header_version)
 			return ret;
 	}
 
-	if (header_version >= 6)
+	ddp->pd_start = 0;
+	ddp->pd_end = KDUMP_PFN_MAX;
+	if (header_version >= 2 && subhdr.split) {
+		ddp->pd_start = subhdr.start_pfn;
+		ddp->pd_end = subhdr.end_pfn;
+	}
+	if (header_version >= 6) {
+		if (subhdr.split) {
+			ddp->pd_start = subhdr.start_pfn_64;
+			ddp->pd_end = subhdr.end_pfn_64;
+		}
 		set_max_pfn(ctx, dump64toh(ctx, subhdr.max_mapnr_64));
+	}
 
 	return KDUMP_OK;
 }
@@ -801,6 +823,7 @@ static kdump_status
 read_sub_hdr_64(struct setup_data *sdp, int32_t header_version)
 {
 	kdump_ctx_t *ctx = sdp->ctx;
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	struct kdump_sub_header_64 subhdr;
 	kdump_status ret;
 
@@ -831,8 +854,19 @@ read_sub_hdr_64(struct setup_data *sdp, int32_t header_version)
 			return ret;
 	}
 
-	if (header_version >= 6)
+	ddp->pd_start = 0;
+	ddp->pd_end = KDUMP_PFN_MAX;
+	if (header_version >= 2 && subhdr.split) {
+		ddp->pd_start = subhdr.start_pfn;
+		ddp->pd_end = subhdr.end_pfn;
+	}
+	if (header_version >= 6) {
+		if (subhdr.split) {
+			ddp->pd_start = subhdr.start_pfn_64;
+			ddp->pd_end = subhdr.end_pfn_64;
+		}
 		set_max_pfn(ctx, dump64toh(ctx, subhdr.max_mapnr_64));
+	}
 
 	return KDUMP_OK;
 }
