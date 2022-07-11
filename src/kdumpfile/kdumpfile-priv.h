@@ -109,6 +109,10 @@
  */
 typedef kdump_addr_t kdump_pfn_t;
 
+/**  Maximum value represented by @ref kdump_pfn_t.
+ */
+#define KDUMP_PFN_MAX	KDUMP_ADDR_MAX
+
 /** Bits for kdump_pfn_t */
 #define PFN_BITS		(BITS_PER_BYTE * sizeof(kdump_pfn_t))
 
