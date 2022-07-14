@@ -420,7 +420,7 @@ elf_find_set(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 	if (!pls) {
 		rwlock_unlock(&shared->lock);
 		return status_err(err, KDUMP_ERR_NODATA,
-				  "No such bit not found");
+				  "No such bit found");
 	}
 	pfn = addr_to_pfn(shared, pls->phys);
 	if (pfn > *idx)

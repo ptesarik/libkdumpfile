@@ -389,7 +389,7 @@ diskdump_find_set(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 	if (!rgn) {
 		rwlock_unlock(&shared->lock);
 		return status_err(err, KDUMP_ERR_NODATA,
-				  "No such bit not found");
+				  "No such bit found");
 	}
 
 	if (rgn->pfn > *idx)
