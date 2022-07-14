@@ -132,12 +132,21 @@ check_attr(kdump_ctx_t *ctx, char *key, const kdump_attr_t *expect, int chkval)
 	return TEST_OK;
 }
 
+static inline int
+bit_value(const struct number_array *nums, unsigned bit)
+{
+	unsigned off = bit >> 3;
+	return off < nums->n
+		? nums->val[off] & (1ULL << (bit & 7))
+		: 0;
+}
 static int
 check_attr_bmp(kdump_ctx_t *ctx, char *key, const struct number_array *expect)
 {
 	kdump_attr_t attr;
 	unsigned char bits[expect->n];
 	kdump_status status;
+	kdump_addr_t bit;
 	unsigned i;
 
 	printf("Checking %s... ", key);
@@ -173,6 +182,51 @@ check_attr_bmp(kdump_ctx_t *ctx, char *key, const struct number_array *expect)
 				(unsigned) expect->val[i], bits[i]);
 			return TEST_FAIL;
 		}
+	}
+
+	bit = 0;
+	while (bit < (expect->n << 3)) {
+		kdump_addr_t clear = bit;
+		kdump_addr_t set = bit;
+		kdump_addr_t next;
+
+		status = kdump_bmp_find_clear(attr.val.bitmap, &clear);
+		if (status != KDUMP_OK) {
+			puts("FAILED");
+			fprintf(stderr, "Cannot find %s bit at %" KDUMP_PRIuADDR ": %s\n",
+				"clear", bit, kdump_bmp_get_err(attr.val.bitmap));
+			return TEST_FAIL;
+
+		}
+
+		status = kdump_bmp_find_set(attr.val.bitmap, &set);
+		if (status == KDUMP_ERR_NODATA) {
+			set = expect->n << 3;
+		} else if (status != KDUMP_OK) {
+			puts("FAILED");
+			fprintf(stderr, "Cannot find %s bit at %" KDUMP_PRIuADDR ": %s\n",
+				"set", bit, kdump_bmp_get_err(attr.val.bitmap));
+			return TEST_FAIL;
+
+		}
+
+		for (next = bit; next < clear; ++next)
+			if (bit_value(expect, next) == 0) {
+				puts("FAILED");
+				fprintf(stderr, "%s %s bit %" KDUMP_PRIuADDR " not found!\n",
+					key, "clear", next);
+				return TEST_FAIL;
+			}
+
+		for (next = bit; next < set; ++next)
+			if (bit_value(expect, next) != 0) {
+				puts("FAILED");
+				fprintf(stderr, "%s %s bit %" KDUMP_PRIuADDR " not found!\n",
+					key, "set", next);
+				return TEST_FAIL;
+			}
+
+		bit = clear > set ? clear : set;
 	}
 
 	puts("OK");
