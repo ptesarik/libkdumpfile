@@ -93,4 +93,4 @@ TESTS = \
 	test-fcache
 
 clean-local:
-	-rm -f tmp.fcache
+	-rm -f tmp.fcache.*
