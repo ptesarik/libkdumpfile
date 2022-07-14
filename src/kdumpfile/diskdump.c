@@ -174,6 +174,9 @@ struct page_desc_map {
 	kdump_pfn_t pd_start;
 	/** PFN of one beyond the page descriptor array. */
 	kdump_pfn_t pd_end;
+
+	/** File index in dump file set. */
+	unsigned fidx;
 };
 
 struct disk_dump_priv {
@@ -210,21 +213,34 @@ struct setup_data {
 
 static void diskdump_cleanup(struct kdump_shared *shared);
 
-/** Find a split file by PFN.
+/** Compare two pdmaps for @c qsort.
+ * @param a  Pointer to first pdmap.
+ * @param b  Pointer to second pdmap.
+ * @returns  Result of comparison.
+ */
+static int
+pdmap_cmp(const void *a, const void *b)
+{
+	const struct page_desc_map *pda = a, *pdb = b;
+	return pda->pd_end != pdb->pd_end
+		? (pda->pd_end > pdb->pd_end ? 1 : -1)
+		: 0;
+}
+
+/** Find a page descriptor map by PFN.
  * @param ddp  Diskdump private data.
  * @param pfn  Page frame number.
- * @returns    Index of the file which contains @c pfn or a closest
- *             higher PFN. If there is no such file, an out-of-range
- *             index is returned.
+ * @returns    Page descriptor map whic contains @p pfn or a closest
+ *             higher PFN. If there is no such file, returns @c NULL.
  */
-static unsigned
-find_pfn_file(const struct disk_dump_priv *ddp, unsigned long pfn)
+static const struct page_desc_map *
+find_pdmap(const struct disk_dump_priv *ddp, unsigned long pfn)
 {
-	unsigned fidx;
-	for (fidx = 0; fidx < ddp->num_files; ++fidx)
-		if (pfn < ddp->pdmap[fidx].pd_end)
-			break;
-	return fidx;
+	unsigned i;
+	for (i = 0; i < ddp->num_files; ++i)
+		if (pfn < ddp->pdmap[i].pd_end)
+			return &ddp->pdmap[i];
+	return NULL;
 }
 
 /** Add a new PFN region.
@@ -298,9 +314,8 @@ diskdump_get_bits(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 {
 	struct kdump_shared *shared = bmp->priv;
 	struct disk_dump_priv *ddp;
-	struct page_desc_map *pdmap;
+	const struct page_desc_map *pdmap, *pdend;
 	const struct pfn_rgn *rgn, *end;
-	unsigned fidx;
 	kdump_addr_t cur, next;
 
 	/* Clear extra bits in the last byte of the raw bitmap. */
@@ -309,9 +324,9 @@ diskdump_get_bits(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 	rwlock_rdlock(&shared->lock);
 	ddp = shared->fmtdata;
 	rgn = NULL;
-	fidx = find_pfn_file(ddp, first);
-	if (fidx < ddp->num_files)
-		rgn = find_pfn_rgn(&ddp->pdmap[fidx], first);
+	pdmap = find_pdmap(ddp, first);
+	if (pdmap)
+		rgn = find_pfn_rgn(pdmap, first);
 	if (!rgn) {
 		rwlock_unlock(&shared->lock);
 		memset(bits, 0, ((last - first) >> 3) + 1);
@@ -319,8 +334,8 @@ diskdump_get_bits(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 	}
 
 	/* Clear bits beyond last PFN region. */
-	pdmap = &ddp->pdmap[ddp->num_files - 1];
-	end = pdmap->pfn_rgn + pdmap->pfn_rgn_num - 1;
+	pdend = &ddp->pdmap[ddp->num_files - 1];
+	end = pdend->pfn_rgn + pdend->pfn_rgn_num - 1;
 	next = end->pfn + end->cnt;
 	if (next <= last) {
 		clear_bits(bits, next - first, last - first);
@@ -328,7 +343,6 @@ diskdump_get_bits(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 	}
 
 	cur = first;
-	pdmap = &ddp->pdmap[fidx];
 	for ( ;; ) {
 		next = rgn->pfn;
 		if (cur < next) {
@@ -363,15 +377,15 @@ diskdump_find_set(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 {
 	struct kdump_shared *shared = bmp->priv;
 	struct disk_dump_priv *ddp;
+	const struct page_desc_map *pdmap;
 	const struct pfn_rgn *rgn;
-	unsigned fidx;
 
 	rwlock_rdlock(&shared->lock);
 	ddp = shared->fmtdata;
 	rgn = NULL;
-	fidx = find_pfn_file(ddp, *idx);
-	if (fidx < ddp->num_files)
-		rgn = find_pfn_rgn(&ddp->pdmap[fidx], *idx);
+	pdmap = find_pdmap(ddp, *idx);
+	if (pdmap)
+		rgn = find_pfn_rgn(pdmap, *idx);
 	if (!rgn) {
 		rwlock_unlock(&shared->lock);
 		return status_err(err, KDUMP_ERR_NODATA,
@@ -390,14 +404,14 @@ diskdump_find_clear(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 {
 	struct kdump_shared *shared = bmp->priv;
 	struct disk_dump_priv *ddp;
-	unsigned fidx;
+	const struct page_desc_map *pdmap;
 
 	rwlock_rdlock(&shared->lock);
 	ddp = shared->fmtdata;
-	fidx = find_pfn_file(ddp, *idx);
-	if (fidx < ddp->num_files && ddp->pdmap[fidx].pd_start <= *idx) {
+	pdmap = find_pdmap(ddp, *idx);
+	if (pdmap && pdmap->pd_start <= *idx) {
 		const struct pfn_rgn *rgn =
-			find_pfn_rgn(&ddp->pdmap[fidx], *idx);
+			find_pfn_rgn(pdmap, *idx);
 		if (rgn && rgn->pfn <= *idx)
 			*idx = rgn->pfn + rgn->cnt;
 	}
@@ -424,7 +438,7 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	kdump_pfn_t pfn;
-	unsigned fidx;
+	const struct page_desc_map *pdmap;
 	struct page_desc pd;
 	off_t pd_pos;
 	void *buf;
@@ -434,9 +448,9 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 	if (pfn >= get_max_pfn(ctx))
 		return set_error(ctx, KDUMP_ERR_NODATA, "Out-of-bounds PFN");
 
-	fidx = find_pfn_file(ddp, pfn);
-	pd_pos = fidx < ddp->num_files && ddp->pdmap[fidx].pd_start <= pfn
-		? pfn_to_pdpos(&ddp->pdmap[fidx], pfn)
+	pdmap = find_pdmap(ddp, pfn);
+	pd_pos = pdmap && pdmap->pd_start <= pfn
+		? pfn_to_pdpos(pdmap, pfn)
 		: (off_t) -1;
 	if (pd_pos == (off_t)-1) {
 		if (get_zero_excluded(ctx)) {
@@ -447,7 +461,8 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 	}
 
 	mutex_lock(&ctx->shared->cache_lock);
-	ret = fcache_pread(ctx->shared->fcache, &pd, sizeof pd, fidx, pd_pos);
+	ret = fcache_pread(ctx->shared->fcache, &pd, sizeof pd,
+			   pdmap->fidx, pd_pos);
 	mutex_unlock(&ctx->shared->cache_lock);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
@@ -475,7 +490,8 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 
 	/* read page data */
 	mutex_lock(&ctx->shared->cache_lock);
-	ret = fcache_pread(ctx->shared->fcache, buf, pd.size, fidx, pd.offset);
+	ret = fcache_pread(ctx->shared->fcache, buf, pd.size,
+			   pdmap->fidx, pd.offset);
 	mutex_unlock(&ctx->shared->cache_lock);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
@@ -686,12 +702,17 @@ skip_set(unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
 	return pfn;
 }
 
+/** Read the page bitmap and translate it to PFN regions.
+ * @param ctx            Dump file object.
+ * @param pdmap          Target page descriptor map.
+ * @param sub_hdr_size   Size of the sub header (in blocks).
+ * @param bitmap_blocks  Number of page bitmap blocks.
+ * @returns              Error status.
+ */
 static kdump_status
-read_bitmap(kdump_ctx_t *ctx, unsigned fidx, int32_t sub_hdr_size,
-	    int32_t bitmap_blocks)
+read_bitmap(kdump_ctx_t *ctx, struct page_desc_map *pdmap,
+	    int32_t sub_hdr_size, int32_t bitmap_blocks)
 {
-	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
-	struct page_desc_map *pdmap = &ddp->pdmap[fidx];
 	off_t off = (1 + sub_hdr_size) * get_page_size(ctx);
 	off_t descoff;
 	size_t bitmapsize;
@@ -717,7 +738,7 @@ read_bitmap(kdump_ctx_t *ctx, unsigned fidx, int32_t sub_hdr_size,
 		set_max_pfn(ctx, max_bitmap_pfn);
 
 	ret = fcache_get_chunk(ctx->shared->fcache,
-			       &fch, bitmapsize, fidx, off);
+			       &fch, bitmapsize, pdmap->fidx, off);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read %zu bytes of page bitmap"
@@ -782,11 +803,10 @@ try_header(kdump_ctx_t *ctx, int32_t block_size,
 }
 
 static kdump_status
-read_sub_hdr_32(struct setup_data *sdp, unsigned fidx, int32_t header_version)
+read_sub_hdr_32(struct setup_data *sdp, struct page_desc_map *pdmap,
+		int32_t header_version)
 {
 	kdump_ctx_t *ctx = sdp->ctx;
-	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
-	struct page_desc_map *pdmap = &ddp->pdmap[fidx];
 	struct kdump_sub_header_32 subhdr;
 	kdump_status ret;
 
@@ -799,7 +819,7 @@ read_sub_hdr_32(struct setup_data *sdp, unsigned fidx, int32_t header_version)
 		return KDUMP_OK;
 
 	ret = fcache_pread(ctx->shared->fcache, &subhdr, sizeof subhdr,
-			   fidx, get_page_size(ctx));
+			   pdmap->fidx, get_page_size(ctx));
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read subheader");
@@ -839,6 +859,7 @@ do_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh,
 	     kdump_byte_order_t byte_order)
 {
 	kdump_ctx_t *ctx = sdp->ctx;
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	kdump_status ret;
 	unsigned fidx;
 
@@ -847,6 +868,9 @@ do_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh,
 
 	ret = KDUMP_OK;
 	for (fidx = 0; fidx < get_num_files(ctx); ++fidx) {
+		struct page_desc_map *pdmap = &ddp->pdmap[fidx];
+		pdmap->fidx = fidx;
+
 		ret = fcache_pread(ctx->shared->fcache, dh, sizeof *dh,
 				   fidx, 0);
 		if (ret != KDUMP_OK) {
@@ -860,12 +884,12 @@ do_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh,
 		if (ret != KDUMP_OK)
 			break;
 
-		ret = read_sub_hdr_32(sdp, fidx,
+		ret = read_sub_hdr_32(sdp, pdmap,
 				      dump32toh(ctx, dh->header_version));
 		if (ret != KDUMP_OK)
 			break;
 
-		ret = read_bitmap(ctx, fidx, dump32toh(ctx, dh->sub_hdr_size),
+		ret = read_bitmap(ctx, pdmap, dump32toh(ctx, dh->sub_hdr_size),
 				  dump32toh(ctx, dh->bitmap_blocks));
 		if (ret != KDUMP_OK)
 			break;
@@ -900,11 +924,10 @@ try_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh)
 }
 
 static kdump_status
-read_sub_hdr_64(struct setup_data *sdp, unsigned fidx, int32_t header_version)
+read_sub_hdr_64(struct setup_data *sdp, struct page_desc_map *pdmap,
+		int32_t header_version)
 {
 	kdump_ctx_t *ctx = sdp->ctx;
-	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
-	struct page_desc_map *pdmap = &ddp->pdmap[fidx];
 	struct kdump_sub_header_64 subhdr;
 	kdump_status ret;
 
@@ -917,7 +940,7 @@ read_sub_hdr_64(struct setup_data *sdp, unsigned fidx, int32_t header_version)
 		return KDUMP_OK;
 
 	ret = fcache_pread(ctx->shared->fcache, &subhdr, sizeof subhdr,
-			   fidx, get_page_size(ctx));
+			   pdmap->fidx, get_page_size(ctx));
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read subheader");
@@ -957,6 +980,7 @@ do_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh,
 	     kdump_byte_order_t byte_order)
 {
 	kdump_ctx_t *ctx = sdp->ctx;
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	kdump_status ret;
 	unsigned fidx;
 
@@ -965,6 +989,9 @@ do_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh,
 
 	ret = KDUMP_OK;
 	for (fidx = 0; fidx < get_num_files(ctx); ++fidx) {
+		struct page_desc_map *pdmap = &ddp->pdmap[fidx];
+		pdmap->fidx = fidx;
+
 		ret = fcache_pread(ctx->shared->fcache, dh, sizeof *dh,
 				   fidx, 0);
 		if (ret != KDUMP_OK) {
@@ -978,12 +1005,12 @@ do_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh,
 		if (ret != KDUMP_OK)
 			break;
 
-		ret = read_sub_hdr_64(sdp, fidx,
+		ret = read_sub_hdr_64(sdp, pdmap,
 				      dump32toh(ctx, dh->header_version));
 		if (ret != KDUMP_OK)
 			break;
 
-		ret = read_bitmap(ctx, fidx, dump32toh(ctx, dh->sub_hdr_size),
+		ret = read_bitmap(ctx, pdmap, dump32toh(ctx, dh->sub_hdr_size),
 				  dump32toh(ctx, dh->bitmap_blocks));
 		if (ret != KDUMP_OK)
 			break;
@@ -1058,6 +1085,8 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 	}
 	if (ret != KDUMP_OK)
 		goto err_cleanup;
+
+	qsort(ddp->pdmap, ddp->num_files, sizeof *ddp->pdmap, pdmap_cmp);
 
 	bmp = kdump_bmp_new(&diskdump_bmp_ops);
 	if (!bmp) {
