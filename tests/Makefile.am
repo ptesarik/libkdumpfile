@@ -331,6 +331,7 @@ dist_check_DATA = \
 	diskdump-excluded.data \
 	diskdump-excluded.expect \
 	diskdump-split.data \
+	diskdump-split.expect \
 	diskdump-split.expect.1 \
 	diskdump-split.expect.2 \
 	diskdump-split.expect.3 \
