@@ -41,7 +41,7 @@ class build_ext(_build_ext):
         self.libtoolize('linker_exe', 'link')
         self.libtoolize('linker_so', 'link',
                         '-module', '-avoid-version',
-                        '-export-symbols-regex', 'init.*|PyInit_.*',
+                        '-export-symbols-regex', 'init.*|PyInit_.*|kdumpfile_object_from_native',
                         '-rpath', self.pyexecdir)
         _build_ext.build_extensions(self)
 

@@ -78,67 +78,97 @@ exception_map(kdump_status status)
 	};
 }
 
-static PyObject *
-kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
+static int
+kdumpfile_object_init (PyObject *obj, kdump_ctx_t *ctx, int fd_to_close)
 {
-	kdumpfile_object *self = NULL;
-	static char *keywords[] = {"file", NULL};
+	kdumpfile_object *self = (kdumpfile_object *)obj;
 	kdump_attr_ref_t rootref;
 	kdump_status status;
+	PyObject *attr = NULL;
+
+	status = kdump_attr_ref(ctx, NULL, &rootref);
+	if (status != KDUMP_OK) {
+		PyErr_Format(exception_map(status),
+			     "Cannot reference root attribute: %s",
+			     kdump_get_err(ctx));
+		return -1;
+	}
+
+	attr = attr_dir_new(self, &rootref);
+	if (!attr) {
+		kdump_attr_unref(ctx, &rootref);
+		return -1;
+	}
+
+	if (self->ctx)
+		kdump_free(self->ctx);
+	if (self->fd >= 0)
+		close(self->fd);
+	Py_XDECREF(self->attr);
+
+	self->ctx = ctx;
+	self->fd = fd_to_close;
+	self->attr = attr;
+
+	Py_INCREF(addrxlat_API->convert);
+	self->addrxlat_convert = addrxlat_API->convert;
+
+	return 0;
+}
+
+static int
+kdumpfile_init (PyObject *obj, PyObject *args, PyObject *kw)
+{
+	static char *keywords[] = {"file", NULL};
+	kdump_status status;
 	const char *filepath;
+	int fd = -1;
+	kdump_ctx_t *ctx = NULL;
 
 	if (!PyArg_ParseTupleAndKeywords (args, kw, "s", keywords, &filepath))
-		    return NULL;
+		    return -1;
 
-
-	self = (kdumpfile_object*) type->tp_alloc (type, 0);
-	if (!self)
-		return NULL;
-
-	self->ctx = kdump_new();
-	if (!self->ctx) {
+	ctx = kdump_new();
+	if (!ctx) {
 		PyErr_SetString(PyExc_MemoryError,
 				"Couldn't allocate kdump context");
 		goto fail;
 	}
 
-	self->fd = open (filepath, O_RDONLY);
-	if (self->fd < 0) {
+	fd = open (filepath, O_RDONLY);
+	if (fd < 0) {
 		PyErr_Format(OSErrorException, "Couldn't open dump file");
 		goto fail;
 	}
 
-	status = kdump_open_fd(self->ctx, self->fd);
+	status = kdump_open_fd(ctx, fd);
 	if (status != KDUMP_OK) {
 		PyErr_Format(exception_map(status),
-			     "Cannot open dump: %s", kdump_get_err(self->ctx));
+			     "Cannot open dump: %s", kdump_get_err(ctx));
 		goto fail;
 	}
 
-	status = kdump_attr_ref(self->ctx, NULL, &rootref);
-	if (status != KDUMP_OK) {
-		PyErr_Format(exception_map(status),
-			     "Cannot reference root attribute: %s",
-			     kdump_get_err(self->ctx));
-		goto fail;
-	}
-
-	self->attr = attr_dir_new(self, &rootref);
-	if (!self->attr) {
-		kdump_attr_unref(self->ctx, &rootref);
-		goto fail;
-	}
-
-	Py_INCREF(addrxlat_API->convert);
-	self->addrxlat_convert = addrxlat_API->convert;
-
-	return (PyObject*)self;
+	return kdumpfile_object_init(obj, ctx, fd);
 
 fail:
-	Py_XDECREF(self->attr);
-	Py_XDECREF(self);
-	close(self->fd);
-	return NULL;
+	if (fd >= 0)
+		close(fd);
+	kdump_free(ctx);
+	return -1;
+}
+
+static PyObject *
+kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
+{
+	PyObject *obj = type->tp_alloc (type, 0);
+	kdumpfile_object *self = (kdumpfile_object *)obj;
+
+	self->fd = -1;
+	self->ctx = NULL;
+	self->attr = NULL;
+	self->addrxlat_convert = NULL;
+
+	return obj;
 }
 
 static void
@@ -151,7 +181,7 @@ kdumpfile_dealloc(PyObject *_self)
 		self->ctx = NULL;
 	}
 
-	if (self->fd) close(self->fd);
+	if (self->fd >= 0 ) close(self->fd);
 	Py_XDECREF(self->addrxlat_convert);
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -418,11 +448,38 @@ static PyTypeObject kdumpfile_object_type =
 	0,                              /* tp_dict */
 	0,                              /* tp_descr_get */
 	0,                              /* tp_descr_set */
-	0, 				  /* tp_dictoffset */
-	0,                              /* tp_init */
+	0, 				/* tp_dictoffset */
+	kdumpfile_init,                 /* tp_init */
 	0,                              /* tp_alloc */
 	kdumpfile_new,                  /* tp_new */
 };
+
+static int module_initialized;
+
+PyObject *
+kdumpfile_object_from_native(kdump_ctx_t *ctx, int fd_to_close)
+{
+	PyObject *obj = NULL;
+
+	if (!module_initialized)
+		return NULL;
+
+	if (ctx == NULL)
+		return NULL;
+
+	obj =  kdumpfile_object_type.tp_new (&kdumpfile_object_type, NULL, NULL);
+	if (!obj)
+		goto fail;
+
+	if (kdumpfile_object_init(obj, ctx, fd_to_close))
+		goto fail;
+
+	return obj;
+fail:
+	Py_XDECREF(obj);
+	return NULL;
+}
+
 
 /* Attribute dictionary type */
 
@@ -2168,6 +2225,8 @@ init_kdumpfile (void)
 			     addrxlat_CAPI_VER, addrxlat_API->ver);
 		goto fail;
 	}
+
+	module_initialized = 1;
 
 	return MOD_SUCCESS_VAL(mod);
 

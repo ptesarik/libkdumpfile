@@ -1,2 +1,3 @@
 init_kdumpfile
 PyInit__kdumpfile
+kdumpfile_object_from_native
