@@ -125,12 +125,8 @@ struct kdump_sub_header_64 {
 	uint64_t	phys_base;
 	int32_t		dump_level;	   /* header_version 1 and later */
 	int32_t		split;		   /* header_version 2 and later */
-	uint64_t	start_pfn;	   /* header_version 2 and later,
-					      OBSOLETE! 32bit only, full
-					      64bit in start_pfn_64. */
-	uint64_t	end_pfn;	   /* header_version 2 and later,
-					      OBSOLETE! 32bit only, full
-					      64bit in end_pfn_64. */
+	uint64_t	start_pfn;	   /* header_version 2 and later */
+	uint64_t	end_pfn;	   /* header_version 2 and later */
 	uint64_t	offset_vmcoreinfo; /* header_version 3 and later */
 	uint64_t	size_vmcoreinfo;   /* header_version 3 and later */
 	uint64_t	offset_note;	   /* header_version 4 and later */
@@ -840,13 +836,13 @@ read_sub_hdr_32(struct setup_data *sdp, struct page_desc_map *pdmap,
 	pdmap->pd_start = 0;
 	pdmap->pd_end = KDUMP_PFN_MAX;
 	if (header_version >= 2 && subhdr.split) {
-		pdmap->pd_start = subhdr.start_pfn;
-		pdmap->pd_end = subhdr.end_pfn;
+		pdmap->pd_start = dump32toh(ctx, subhdr.start_pfn);
+		pdmap->pd_end = dump32toh(ctx, subhdr.end_pfn);
 	}
 	if (header_version >= 6) {
 		if (subhdr.split) {
-			pdmap->pd_start = subhdr.start_pfn_64;
-			pdmap->pd_end = subhdr.end_pfn_64;
+			pdmap->pd_start = dump64toh(ctx, subhdr.start_pfn_64);
+			pdmap->pd_end = dump64toh(ctx, subhdr.end_pfn_64);
 		}
 		set_max_pfn(ctx, dump64toh(ctx, subhdr.max_mapnr_64));
 	}
@@ -961,13 +957,13 @@ read_sub_hdr_64(struct setup_data *sdp, struct page_desc_map *pdmap,
 	pdmap->pd_start = 0;
 	pdmap->pd_end = KDUMP_PFN_MAX;
 	if (header_version >= 2 && subhdr.split) {
-		pdmap->pd_start = subhdr.start_pfn;
-		pdmap->pd_end = subhdr.end_pfn;
+		pdmap->pd_start = dump64toh(ctx, subhdr.start_pfn);
+		pdmap->pd_end = dump64toh(ctx, subhdr.end_pfn);
 	}
 	if (header_version >= 6) {
 		if (subhdr.split) {
-			pdmap->pd_start = subhdr.start_pfn_64;
-			pdmap->pd_end = subhdr.end_pfn_64;
+			pdmap->pd_start = dump64toh(ctx, subhdr.start_pfn_64);
+			pdmap->pd_end = dump64toh(ctx, subhdr.end_pfn_64);
 		}
 		set_max_pfn(ctx, dump64toh(ctx, subhdr.max_mapnr_64));
 	}
