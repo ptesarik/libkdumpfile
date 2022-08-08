@@ -129,6 +129,44 @@ skip_clear_lsb0(const unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
 	return pfn;
 }
 
+/** Skip clear bits in a PFN bitmap with MSB 0 bit numbering.
+ * @param bitmap  PFN bitmap.
+ * @param size    Size of the bitmap in bytes.
+ * @param pfn     Starting PFN.
+ * @returns       Index of the next PFN bit that is not clear.
+ *
+ * If there are no set bits in @p bitmap beyond @p pfn, this function
+ * returns one beyond the maximum index (i.e. size of the bitmap in bits).
+ */
+static kdump_pfn_t
+skip_clear_msb0(const unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
+{
+	const unsigned char *bp = bitmap + (pfn >> 3);
+	const unsigned char *endp = bitmap + size;
+	unsigned char val;
+
+	if (bp >= endp)
+		return pfn;
+
+	val = *bp << (pfn & 7);
+	if (val)
+		return pfn + clz((uint32_t)val << 24);
+
+	pfn = (pfn | 7) + 1;
+	++bp;
+	for (; endp - bp >= 1 && ((uintptr_t)bp & 3) != 0; pfn += 8, ++bp)
+		if (*bp)
+			return pfn + clz((uint32_t)*bp << 24);
+	for (; endp - bp >= 4; pfn += 32, bp += 4)
+		if (*(uint32_t*)bp)
+			return pfn + clz(be32toh(*(uint32_t*)bp));
+	for (; endp - bp >= 1; pfn += 8, ++bp)
+		if (*bp)
+			return pfn + clz((uint32_t)*bp << 24);
+
+	return pfn;
+}
+
 /** Skip set bits in a PFN bitmap with LSB 0 bit numbering.
  * @param bitmap  PFN bitmap.
  * @param size    Size of the bitmap in bytes.
@@ -167,10 +205,50 @@ skip_set_lsb0(const unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
 	return pfn;
 }
 
+/** Skip set bits in a PFN bitmap with MSB 0 bit numbering.
+ * @param bitmap  PFN bitmap.
+ * @param size    Size of the bitmap in bytes.
+ * @param pfn     Starting PFN.
+ * @returns       Index of the next PFN bit that is not set.
+ *
+ * If there are no clear bits in @p bitmap beyond @p pfn, this function
+ * returns one beyond the maximum index (i.e. size of the bitmap in bits).
+ */
+static kdump_pfn_t
+skip_set_msb0(const unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
+{
+	const unsigned char *bp = bitmap + (pfn >> 3);
+	const unsigned char *endp = bitmap + size;
+	unsigned char val;
+
+	if (bp >= endp)
+		return pfn;
+
+	val = ~(*bp << (pfn & 7));
+	if (val)
+		return pfn + clz((uint32_t)val << 24);
+
+	pfn = (pfn | 7) + 1;
+	++bp;
+	for (; endp - bp >= 1 && ((uintptr_t)bp & 3) != 0; pfn += 8, ++bp)
+		if (~*bp)
+			return pfn + clz(~((uint32_t)*bp << 24));
+	for (; endp - bp >= 4; pfn += 32, bp += 4)
+		if (~*(uint32_t*)bp)
+			return pfn + clz(~be32toh(*(uint32_t*)bp));
+	for (; endp - bp >= 1; pfn += 8, ++bp)
+		if (~*bp)
+			return pfn + clz(~((uint32_t)*bp << 24));
+
+	return pfn;
+}
+
 /** Create PFN regions from a PFN bitmap.
  * @param err        Error context.
  * @param pfm        Target PFN-to-file mapping.
  * @param bitmap     Source PFN bitmap.
+ * @param is_msb0    @c true means @p bitmap uses MSB 0 bit numbering,
+ *                   @c false means @p bitmap uses LSB 0 bit numbering.
  * @param start_pfn  Lowest PFN to process.
  * @param end_pfn    One above the highest PFN to process.
  * @param fileoff    First target file offset.
@@ -179,8 +257,9 @@ skip_set_lsb0(const unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
  */
 kdump_status
 pfn_regions_from_bitmap(kdump_errmsg_t *err, struct pfn_file_map *pfm,
-			const unsigned char *bitmap, kdump_pfn_t start_pfn,
-			kdump_pfn_t end_pfn, off_t fileoff, off_t elemsz)
+			const unsigned char *bitmap, bool is_msb0,
+			kdump_pfn_t start_pfn, kdump_pfn_t end_pfn,
+			off_t fileoff, off_t elemsz)
 {
 	size_t bitmapsize = end_pfn << 3;
 	kdump_pfn_t pfn = start_pfn;
@@ -188,8 +267,13 @@ pfn_regions_from_bitmap(kdump_errmsg_t *err, struct pfn_file_map *pfm,
 
 	rgn.pos = fileoff;
 	while (pfn < end_pfn) {
-		rgn.pfn = skip_clear_lsb0(bitmap, bitmapsize, pfn);
-		pfn = skip_set_lsb0(bitmap, bitmapsize, rgn.pfn);
+		if (is_msb0) {
+			rgn.pfn = skip_clear_msb0(bitmap, bitmapsize, pfn);
+			pfn = skip_set_msb0(bitmap, bitmapsize, rgn.pfn);
+		} else {
+			rgn.pfn = skip_clear_lsb0(bitmap, bitmapsize, pfn);
+			pfn = skip_set_lsb0(bitmap, bitmapsize, rgn.pfn);
+		}
 		if (pfn > end_pfn)
 			pfn = end_pfn;
 		rgn.cnt = pfn - rgn.pfn;

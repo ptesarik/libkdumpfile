@@ -522,7 +522,7 @@ read_bitmap(kdump_ctx_t *ctx, struct pfn_file_map *pdmap,
 
 	if (max_bitmap_pfn > pdmap->end_pfn)
 		max_bitmap_pfn = pdmap->end_pfn;
-	ret = pfn_regions_from_bitmap(&ctx->err, pdmap, fch.data,
+	ret = pfn_regions_from_bitmap(&ctx->err, pdmap, fch.data, false,
 				      pdmap->start_pfn, max_bitmap_pfn,
 				      descoff, sizeof(struct page_desc));
 

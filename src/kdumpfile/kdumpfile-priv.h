@@ -1647,8 +1647,9 @@ INTERNAL_DECL(const struct pfn_region *, find_pfn_region,
 	      (const struct pfn_file_map *map, kdump_pfn_t pfn));
 INTERNAL_DECL(kdump_status, pfn_regions_from_bitmap,
 	      (kdump_errmsg_t *err, struct pfn_file_map *pfm,
-	       const unsigned char *bitmap, kdump_pfn_t start_pfn,
-	       kdump_pfn_t end_pfn, off_t fileoff, off_t elemsz));
+	       const unsigned char *bitmap, bool is_msb0,
+	       kdump_pfn_t start_pfn, kdump_pfn_t end_pfn,
+	       off_t fileoff, off_t elemsz));
 
 INTERNAL_DECL(bool, find_mapped_pfn,
 	      (const struct pfn_file_map *maps, size_t nmaps,
