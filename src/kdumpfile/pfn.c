@@ -91,6 +91,48 @@ find_pfn_region(const struct pfn_file_map *map, kdump_pfn_t pfn)
 		: NULL;
 }
 
+/** Find the next mapped PFN.
+ * @param maps   Array of PFN-to-file maps.
+ * @param nmaps  Number of elements in @p maps.
+ * @param ppfn   Pointer to a PFN (updated on success).
+ * @returns      @c true if a mapped PFN was found, @c false otherwise.
+ */
+bool
+find_mapped_pfn(const struct pfn_file_map *maps, size_t nmaps,
+		kdump_pfn_t *ppfn)
+{
+	const struct pfn_file_map *pfm;
+	const struct pfn_region *rgn;
+
+	if (! (pfm = find_pfn_file_map(maps, nmaps, *ppfn)) ||
+	    ! (rgn = find_pfn_region(pfm, *ppfn)))
+		return false;
+
+	if (rgn->pfn > *ppfn)
+		*ppfn = rgn->pfn;
+	return true;
+}
+
+/** Find the next unmapped PFN.
+ * @param maps   Array of PFN-to-file maps.
+ * @param nmaps  Number of elements in @p maps.
+ * @param pfn    Starting PFN.
+ */
+kdump_pfn_t
+find_unmapped_pfn(const struct pfn_file_map *maps, size_t nmaps,
+		  kdump_pfn_t pfn)
+{
+	const struct pfn_file_map *pfm;
+
+	if ( (pfm = find_pfn_file_map(maps, nmaps, pfn)) &&
+	     pfm->start_pfn <= pfn) {
+		const struct pfn_region *rgn = find_pfn_region(pfm, pfn);
+		if (rgn && rgn->pfn <= pfn)
+			return rgn->pfn + rgn->cnt;
+	}
+	return pfn;
+}
+
 /** Create a bitmap from PFN-to-file maps.
  * @param maps   Array of PFN-to-file maps.
  * @param nmaps  Number of elements in @p maps.

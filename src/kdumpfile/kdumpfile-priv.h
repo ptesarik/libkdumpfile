@@ -1586,6 +1586,12 @@ INTERNAL_DECL(struct pfn_region *, add_pfn_region,
 INTERNAL_DECL(const struct pfn_region *, find_pfn_region,
 	      (const struct pfn_file_map *map, kdump_pfn_t pfn));
 
+INTERNAL_DECL(bool, find_mapped_pfn,
+	      (const struct pfn_file_map *maps, size_t nmaps,
+	       kdump_pfn_t *ppfn));
+INTERNAL_DECL(kdump_pfn_t, find_unmapped_pfn,
+	      (const struct pfn_file_map *maps, size_t nmaps,
+	       kdump_pfn_t pfn));
 INTERNAL_DECL(void, get_pfn_map_bits,
 	      (const struct pfn_file_map *maps, size_t nmaps,
 	       kdump_addr_t first, kdump_addr_t last, unsigned char *bits));

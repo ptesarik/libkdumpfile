@@ -217,25 +217,15 @@ diskdump_find_set(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 {
 	struct kdump_shared *shared = bmp->priv;
 	struct disk_dump_priv *ddp;
-	const struct pfn_file_map *pdmap;
-	const struct pfn_region *rgn;
+	kdump_status ret;
 
 	rwlock_rdlock(&shared->lock);
 	ddp = shared->fmtdata;
-	rgn = NULL;
-	pdmap = find_pfn_file_map(ddp->pdmap, ddp->num_files, *idx);
-	if (pdmap)
-		rgn = find_pfn_region(pdmap, *idx);
-	if (!rgn) {
-		rwlock_unlock(&shared->lock);
-		return status_err(err, KDUMP_ERR_NODATA,
-				  "No such bit found");
-	}
-
-	if (rgn->pfn > *idx)
-		*idx = rgn->pfn;
+	ret = find_mapped_pfn(ddp->pdmap, ddp->num_files, idx)
+		? KDUMP_OK
+		: status_err(err, KDUMP_ERR_NODATA, "No such bit found");
 	rwlock_unlock(&shared->lock);
-	return KDUMP_OK;
+	return ret;
 }
 
 static kdump_status
@@ -244,17 +234,10 @@ diskdump_find_clear(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 {
 	struct kdump_shared *shared = bmp->priv;
 	struct disk_dump_priv *ddp;
-	const struct pfn_file_map *pdmap;
 
 	rwlock_rdlock(&shared->lock);
 	ddp = shared->fmtdata;
-	pdmap = find_pfn_file_map(ddp->pdmap, ddp->num_files, *idx);
-	if (pdmap && pdmap->start_pfn <= *idx) {
-		const struct pfn_region *rgn =
-			find_pfn_region(pdmap, *idx);
-		if (rgn && rgn->pfn <= *idx)
-			*idx = rgn->pfn + rgn->cnt;
-	}
+	*idx = find_unmapped_pfn(ddp->pdmap, ddp->num_files, *idx);
 	rwlock_unlock(&shared->lock);
 	return KDUMP_OK;
 }
