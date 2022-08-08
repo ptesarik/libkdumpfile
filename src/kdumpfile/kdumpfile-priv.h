@@ -1548,6 +1548,69 @@ pfn_to_addr(struct kdump_shared *shared, kdump_addr_t pfn)
 	return pfn << sget_page_shift(shared);
 }
 
+/** PFN region mapping. */
+struct pfn_region {
+	/** First PFN in the region. */
+	kdump_pfn_t pfn;
+
+	/** Number of pages in this region. */
+	kdump_pfn_t cnt;
+
+	/** File position corresponding to the first PFN. */
+	off_t pos;
+};
+
+/** Mapping from PFN to file position using @c struct @ref pfn_region.
+ */
+struct pfn_file_map {
+	/** PFN region map. */
+	struct pfn_region *regions;
+
+	/** Number of elements in the map. */
+	size_t nregions;
+
+	/** File index in dump file set. */
+	unsigned fidx;
+
+	/** Lowest PFN mapped to this file. */
+	kdump_pfn_t start_pfn;
+
+	/** One above the highest PFN mapped to this file.
+	 * This is the lowest next PFN which is not mapped.
+	 */
+	kdump_pfn_t end_pfn;
+};
+
+INTERNAL_DECL(struct pfn_region *, add_pfn_region,
+	      (struct pfn_file_map *map, const struct pfn_region *rgn));
+INTERNAL_DECL(const struct pfn_region *, find_pfn_region,
+	      (const struct pfn_file_map *map, kdump_pfn_t pfn));
+
+INTERNAL_DECL(void, get_pfn_map_bits,
+	      (const struct pfn_file_map *maps, size_t nmaps,
+	       kdump_addr_t first, kdump_addr_t last, unsigned char *bits));
+INTERNAL_DECL(void, sort_pfn_file_maps,
+	      (struct pfn_file_map *maps, size_t nmaps));
+
+/** Find a page descriptor map by PFN.
+ * @param maps   Array of PFN-to-file maps.
+ * @param nmaps  Number of elements in @p maps.
+ * @param pfn    Page frame number.
+ * @returns      PFN-to-file map which contains @p pfn or the closest
+ *               higher PFN. If there is no such map, returns @c NULL.
+ */
+static inline const struct pfn_file_map *
+find_pfn_file_map(const struct pfn_file_map *maps, size_t nmaps,
+		  unsigned long pfn)
+{
+	while (nmaps--) {
+		if (pfn < maps->end_pfn)
+			return maps;
+		++maps;
+	}
+	return NULL;
+}
+
 /** Check if a character is a POSIX white space.
  * @param c  Character to check.
  *

@@ -148,33 +148,6 @@ struct page_desc {
 	uint64_t	page_flags;	/**< Page flags. */
 };
 
-/** PFN region mapping. */
-struct pfn_rgn {
-	kdump_pfn_t pfn;	/**< Starting PFN. */
-	kdump_pfn_t cnt;	/**< Number of pages in this region. */
-	off_t pos;		/**< File position of the first descriptor. */
-};
-
-/** Region mapping allocation increment.
- * For optimal performance, this should be a power of two.
- */
-#define RGN_ALLOC_INC	1024
-
-/** Mapping from PFN to page descriptors.
- */
-struct page_desc_map {
-	struct pfn_rgn *pfn_rgn; /**< PFN region map. */
-	size_t pfn_rgn_num;	 /**< Number of elements in the map. */
-
-	/** PFN of the first page descriptor. */
-	kdump_pfn_t pd_start;
-	/** PFN of one beyond the page descriptor array. */
-	kdump_pfn_t pd_end;
-
-	/** File index in dump file set. */
-	unsigned fidx;
-};
-
 struct disk_dump_priv {
 	/** Overridden methods for arch.page_size attribute. */
 	struct attr_override page_size_override;
@@ -184,7 +157,7 @@ struct disk_dump_priv {
 	unsigned num_files;
 
 	/** Page descriptor mapping. */
-	struct page_desc_map pdmap[];
+	struct pfn_file_map pdmap[];
 };
 
 struct setup_data {
@@ -209,86 +182,6 @@ struct setup_data {
 
 static void diskdump_cleanup(struct kdump_shared *shared);
 
-/** Compare two pdmaps for @c qsort.
- * @param a  Pointer to first pdmap.
- * @param b  Pointer to second pdmap.
- * @returns  Result of comparison.
- */
-static int
-pdmap_cmp(const void *a, const void *b)
-{
-	const struct page_desc_map *pda = a, *pdb = b;
-	return pda->pd_end != pdb->pd_end
-		? (pda->pd_end > pdb->pd_end ? 1 : -1)
-		: 0;
-}
-
-/** Find a page descriptor map by PFN.
- * @param ddp  Diskdump private data.
- * @param pfn  Page frame number.
- * @returns    Page descriptor map whic contains @p pfn or a closest
- *             higher PFN. If there is no such file, returns @c NULL.
- */
-static const struct page_desc_map *
-find_pdmap(const struct disk_dump_priv *ddp, unsigned long pfn)
-{
-	unsigned i;
-	for (i = 0; i < ddp->num_files; ++i)
-		if (pfn < ddp->pdmap[i].pd_end)
-			return &ddp->pdmap[i];
-	return NULL;
-}
-
-/** Add a new PFN region.
- * @param ctx    Dump file context.
- * @param pdmap  Page descriptor mapping.
- * @param rgn    PFN region.
- * @returns      Error status.
- */
-static kdump_status
-add_pfn_rgn(kdump_ctx_t *ctx, struct page_desc_map *pdmap,
-	    const struct pfn_rgn *rgn)
-{
-	if (pdmap->pfn_rgn_num % RGN_ALLOC_INC == 0) {
-		size_t num = pdmap->pfn_rgn_num + RGN_ALLOC_INC;
-		struct pfn_rgn *rgn =
-			realloc(pdmap->pfn_rgn, num * sizeof(struct pfn_rgn));
-		if (!rgn)
-			return set_error(ctx, KDUMP_ERR_SYSTEM,
-					 "Cannot allocate space for"
-					 " %zu PFN region mappings", num);
-		pdmap->pfn_rgn = rgn;
-	}
-
-	pdmap->pfn_rgn[pdmap->pfn_rgn_num++] = *rgn;
-	return KDUMP_OK;
-}
-
-/** Find a PFN region by PFN.
- * @param pdmap  Page descriptor mapping.
- * @param pfn    Page frame number.
- * @returns      Pointer to a PFN region which contains @c pfn or a closest
- *               higher PFN, or @c NULL if there is no such region.
- */
-static const struct pfn_rgn *
-find_pfn_rgn(const struct page_desc_map *pdmap, kdump_pfn_t pfn)
-{
-	size_t left = 0, right = pdmap->pfn_rgn_num;
-	while (left != right) {
-		size_t mid = (left + right) / 2;
-		const struct pfn_rgn *rgn = pdmap->pfn_rgn + mid;
-		if (pfn < rgn->pfn)
-			right = mid;
-		else if (pfn >= rgn->pfn + rgn->cnt)
-			left = mid + 1;
-		else
-			return rgn;
-	}
-	return right < pdmap->pfn_rgn_num
-		? pdmap->pfn_rgn + right
-		: NULL;
-}
-
 /** Convert a PFN to a page descriptor file offset.
  * @param pdmap  Page descriptor mapping.
  * @param pfn    Page frame number.
@@ -296,9 +189,9 @@ find_pfn_rgn(const struct page_desc_map *pdmap, kdump_pfn_t pfn)
  *               or @c (off_t)-1 if not found.
  */
 static off_t
-pfn_to_pdpos(const struct page_desc_map *pdmap, unsigned long pfn)
+pfn_to_pdpos(const struct pfn_file_map *pdmap, unsigned long pfn)
 {
-	const struct pfn_rgn *rgn = find_pfn_rgn(pdmap, pfn);
+	const struct pfn_region *rgn = find_pfn_region(pdmap, pfn);
 	return rgn && pfn >= rgn->pfn
 		? rgn->pos + (pfn - rgn->pfn) * sizeof(struct page_desc)
 		: (off_t) -1;
@@ -310,8 +203,8 @@ diskdump_get_bits(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 {
 	struct kdump_shared *shared = bmp->priv;
 	struct disk_dump_priv *ddp;
-	const struct page_desc_map *pdmap, *pdend;
-	const struct pfn_rgn *rgn, *end;
+	const struct pfn_file_map *pdmap, *pdend;
+	const struct pfn_region *rgn, *end;
 	kdump_addr_t cur, next;
 
 	/* Clear extra bits in the last byte of the raw bitmap. */
@@ -320,9 +213,9 @@ diskdump_get_bits(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 	rwlock_rdlock(&shared->lock);
 	ddp = shared->fmtdata;
 	rgn = NULL;
-	pdmap = find_pdmap(ddp, first);
+	pdmap = find_pfn_file_map(ddp->pdmap, ddp->num_files, first);
 	if (pdmap)
-		rgn = find_pfn_rgn(pdmap, first);
+		rgn = find_pfn_region(pdmap, first);
 	if (!rgn) {
 		rwlock_unlock(&shared->lock);
 		memset(bits, 0, ((last - first) >> 3) + 1);
@@ -331,7 +224,7 @@ diskdump_get_bits(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 
 	/* Clear bits beyond last PFN region. */
 	pdend = &ddp->pdmap[ddp->num_files - 1];
-	end = pdend->pfn_rgn + pdend->pfn_rgn_num - 1;
+	end = pdend->regions + pdend->nregions - 1;
 	next = end->pfn + end->cnt;
 	if (next <= last) {
 		clear_bits(bits, next - first, last - first);
@@ -357,9 +250,9 @@ diskdump_get_bits(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 		}
 		set_bits(bits, cur - first, next - first);
 		cur = next + 1;
-		if (++rgn == &pdmap->pfn_rgn[pdmap->pfn_rgn_num]) {
+		if (++rgn == &pdmap->regions[pdmap->nregions]) {
 			++pdmap;
-			rgn = pdmap->pfn_rgn;
+			rgn = pdmap->regions;
 		}
 	}
 
@@ -373,15 +266,15 @@ diskdump_find_set(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 {
 	struct kdump_shared *shared = bmp->priv;
 	struct disk_dump_priv *ddp;
-	const struct page_desc_map *pdmap;
-	const struct pfn_rgn *rgn;
+	const struct pfn_file_map *pdmap;
+	const struct pfn_region *rgn;
 
 	rwlock_rdlock(&shared->lock);
 	ddp = shared->fmtdata;
 	rgn = NULL;
-	pdmap = find_pdmap(ddp, *idx);
+	pdmap = find_pfn_file_map(ddp->pdmap, ddp->num_files, *idx);
 	if (pdmap)
-		rgn = find_pfn_rgn(pdmap, *idx);
+		rgn = find_pfn_region(pdmap, *idx);
 	if (!rgn) {
 		rwlock_unlock(&shared->lock);
 		return status_err(err, KDUMP_ERR_NODATA,
@@ -400,14 +293,14 @@ diskdump_find_clear(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 {
 	struct kdump_shared *shared = bmp->priv;
 	struct disk_dump_priv *ddp;
-	const struct page_desc_map *pdmap;
+	const struct pfn_file_map *pdmap;
 
 	rwlock_rdlock(&shared->lock);
 	ddp = shared->fmtdata;
-	pdmap = find_pdmap(ddp, *idx);
-	if (pdmap && pdmap->pd_start <= *idx) {
-		const struct pfn_rgn *rgn =
-			find_pfn_rgn(pdmap, *idx);
+	pdmap = find_pfn_file_map(ddp->pdmap, ddp->num_files, *idx);
+	if (pdmap && pdmap->start_pfn <= *idx) {
+		const struct pfn_region *rgn =
+			find_pfn_region(pdmap, *idx);
 		if (rgn && rgn->pfn <= *idx)
 			*idx = rgn->pfn + rgn->cnt;
 	}
@@ -434,7 +327,7 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 {
 	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	kdump_pfn_t pfn;
-	const struct page_desc_map *pdmap;
+	const struct pfn_file_map *pdmap;
 	struct page_desc pd;
 	off_t pd_pos;
 	void *buf;
@@ -444,8 +337,8 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 	if (pfn >= get_max_pfn(ctx))
 		return set_error(ctx, KDUMP_ERR_NODATA, "Out-of-bounds PFN");
 
-	pdmap = find_pdmap(ddp, pfn);
-	pd_pos = pdmap && pdmap->pd_start <= pfn
+	pdmap = find_pfn_file_map(ddp->pdmap, ddp->num_files, pfn);
+	pd_pos = pdmap && pdmap->start_pfn <= pfn
 		? pfn_to_pdpos(pdmap, pfn)
 		: (off_t) -1;
 	if (pd_pos == (off_t)-1) {
@@ -706,7 +599,7 @@ skip_set(unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
  * @returns              Error status.
  */
 static kdump_status
-read_bitmap(kdump_ctx_t *ctx, struct page_desc_map *pdmap,
+read_bitmap(kdump_ctx_t *ctx, struct pfn_file_map *pdmap,
 	    int32_t sub_hdr_size, int32_t bitmap_blocks)
 {
 	off_t off = (1 + sub_hdr_size) * get_page_size(ctx);
@@ -714,7 +607,7 @@ read_bitmap(kdump_ctx_t *ctx, struct page_desc_map *pdmap,
 	size_t bitmapsize;
 	kdump_pfn_t max_bitmap_pfn;
 	kdump_pfn_t pfn;
-	struct pfn_rgn rgn;
+	struct pfn_region rgn;
 	struct fcache_chunk fch;
 	kdump_status ret;
 
@@ -742,21 +635,26 @@ read_bitmap(kdump_ctx_t *ctx, struct page_desc_map *pdmap,
 				 bitmapsize, (unsigned long long) off);
 
 	rgn.pos = descoff;
-	pfn = pdmap->pd_start;
-	if (max_bitmap_pfn > pdmap->pd_end)
-		max_bitmap_pfn = pdmap->pd_end;
+	pfn = pdmap->start_pfn;
+	if (max_bitmap_pfn > pdmap->end_pfn)
+		max_bitmap_pfn = pdmap->end_pfn;
 	while (pfn < max_bitmap_pfn) {
 		rgn.pfn = skip_clear(fch.data, bitmapsize, pfn);
 		pfn = skip_set(fch.data, bitmapsize, rgn.pfn);
 		if (pfn > max_bitmap_pfn)
 			pfn = max_bitmap_pfn;
 		rgn.cnt = pfn - rgn.pfn;
-		if (rgn.cnt) {
-			ret = add_pfn_rgn(ctx, pdmap, &rgn);
-			if (ret != KDUMP_OK)
-				goto out;
-			rgn.pos += rgn.cnt * sizeof(struct page_desc);
+		if (!rgn.cnt)
+			continue;
+
+		if (!add_pfn_region(pdmap, &rgn)) {
+			ret = set_error(ctx, KDUMP_ERR_SYSTEM,
+					"Cannot allocate more than"
+					" %zu PFN region mappings",
+					pdmap->nregions);
+			goto out;
 		}
+		rgn.pos += rgn.cnt * sizeof(struct page_desc);
 	}
 
 	ret = KDUMP_OK;
@@ -799,7 +697,7 @@ try_header(kdump_ctx_t *ctx, int32_t block_size,
 }
 
 static kdump_status
-read_sub_hdr_32(struct setup_data *sdp, struct page_desc_map *pdmap,
+read_sub_hdr_32(struct setup_data *sdp, struct pfn_file_map *pdmap,
 		int32_t header_version)
 {
 	kdump_ctx_t *ctx = sdp->ctx;
@@ -833,16 +731,16 @@ read_sub_hdr_32(struct setup_data *sdp, struct page_desc_map *pdmap,
 			return ret;
 	}
 
-	pdmap->pd_start = 0;
-	pdmap->pd_end = KDUMP_PFN_MAX;
+	pdmap->start_pfn = 0;
+	pdmap->end_pfn = KDUMP_PFN_MAX;
 	if (header_version >= 2 && subhdr.split) {
-		pdmap->pd_start = dump32toh(ctx, subhdr.start_pfn);
-		pdmap->pd_end = dump32toh(ctx, subhdr.end_pfn);
+		pdmap->start_pfn = dump32toh(ctx, subhdr.start_pfn);
+		pdmap->end_pfn = dump32toh(ctx, subhdr.end_pfn);
 	}
 	if (header_version >= 6) {
 		if (subhdr.split) {
-			pdmap->pd_start = dump64toh(ctx, subhdr.start_pfn_64);
-			pdmap->pd_end = dump64toh(ctx, subhdr.end_pfn_64);
+			pdmap->start_pfn = dump64toh(ctx, subhdr.start_pfn_64);
+			pdmap->end_pfn = dump64toh(ctx, subhdr.end_pfn_64);
 		}
 		set_max_pfn(ctx, dump64toh(ctx, subhdr.max_mapnr_64));
 	}
@@ -864,7 +762,7 @@ do_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh,
 
 	ret = KDUMP_OK;
 	for (fidx = 0; fidx < get_num_files(ctx); ++fidx) {
-		struct page_desc_map *pdmap = &ddp->pdmap[fidx];
+		struct pfn_file_map *pdmap = &ddp->pdmap[fidx];
 		pdmap->fidx = fidx;
 
 		ret = fcache_pread(ctx->shared->fcache, dh, sizeof *dh,
@@ -920,7 +818,7 @@ try_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh)
 }
 
 static kdump_status
-read_sub_hdr_64(struct setup_data *sdp, struct page_desc_map *pdmap,
+read_sub_hdr_64(struct setup_data *sdp, struct pfn_file_map *pdmap,
 		int32_t header_version)
 {
 	kdump_ctx_t *ctx = sdp->ctx;
@@ -954,16 +852,16 @@ read_sub_hdr_64(struct setup_data *sdp, struct page_desc_map *pdmap,
 			return ret;
 	}
 
-	pdmap->pd_start = 0;
-	pdmap->pd_end = KDUMP_PFN_MAX;
+	pdmap->start_pfn = 0;
+	pdmap->end_pfn = KDUMP_PFN_MAX;
 	if (header_version >= 2 && subhdr.split) {
-		pdmap->pd_start = dump64toh(ctx, subhdr.start_pfn);
-		pdmap->pd_end = dump64toh(ctx, subhdr.end_pfn);
+		pdmap->start_pfn = dump64toh(ctx, subhdr.start_pfn);
+		pdmap->end_pfn = dump64toh(ctx, subhdr.end_pfn);
 	}
 	if (header_version >= 6) {
 		if (subhdr.split) {
-			pdmap->pd_start = dump64toh(ctx, subhdr.start_pfn_64);
-			pdmap->pd_end = dump64toh(ctx, subhdr.end_pfn_64);
+			pdmap->start_pfn = dump64toh(ctx, subhdr.start_pfn_64);
+			pdmap->end_pfn = dump64toh(ctx, subhdr.end_pfn_64);
 		}
 		set_max_pfn(ctx, dump64toh(ctx, subhdr.max_mapnr_64));
 	}
@@ -985,7 +883,7 @@ do_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh,
 
 	ret = KDUMP_OK;
 	for (fidx = 0; fidx < get_num_files(ctx); ++fidx) {
-		struct page_desc_map *pdmap = &ddp->pdmap[fidx];
+		struct pfn_file_map *pdmap = &ddp->pdmap[fidx];
 		pdmap->fidx = fidx;
 
 		ret = fcache_pread(ctx->shared->fcache, dh, sizeof *dh,
@@ -1082,7 +980,7 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 	if (ret != KDUMP_OK)
 		goto err_cleanup;
 
-	qsort(ddp->pdmap, ddp->num_files, sizeof *ddp->pdmap, pdmap_cmp);
+	sort_pfn_file_maps(ddp->pdmap, ddp->num_files);
 
 	bmp = kdump_bmp_new(&diskdump_bmp_ops);
 	if (!bmp) {
@@ -1155,9 +1053,9 @@ diskdump_cleanup(struct kdump_shared *shared)
 	if (ddp) {
 		unsigned fidx;
 		for (fidx = 0; fidx < ddp->num_files; ++fidx) {
-			struct page_desc_map *pdmap = &ddp->pdmap[fidx];
-			if (pdmap->pfn_rgn)
-				free(pdmap->pfn_rgn);
+			struct pfn_file_map *pdmap = &ddp->pdmap[fidx];
+			if (pdmap->regions)
+				free(pdmap->regions);
 		}
 		if (ddp->cbuf_slot >= 0)
 			per_ctx_free(shared, ddp->cbuf_slot);
