@@ -1472,10 +1472,70 @@ put_page(kdump_ctx_t *ctx, struct page_io *pio)
 /* Inline utility functions */
 
 static inline unsigned
-bitcount(unsigned x)
+popcount(uint32_t x)
 {
-	return (uint32_t)((((x * 0x08040201) >> 3) & 0x11111111) * 0x11111111)
-		>> 28;
+#ifdef __GNUC__
+	return __builtin_popcount(x);
+#else
+	x -= (x >> 1) & 0x55555555;
+	x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
+	x = (x + (x >> 4)) & 0x0f0f0f0f;
+	return (x * 0x01010101) >> 24;
+#endif
+}
+
+static inline unsigned
+ctz(uint32_t x)
+{
+#ifdef __GNUC__
+	return __builtin_ctz(x);
+#else
+	unsigned c = 1;
+	if (!(x & 0xffff)) {
+		x >>= 16;
+		c += 16;
+	}
+	if (!(x & 0xff)) {
+		x >>= 8;
+		c += 8;
+	}
+	if (!(x & 0xf)) {
+		x >>= 4;
+		c += 4;
+	}
+	if (!(x & 0x3)) {
+		x >>= 2;
+		c += 2;
+	}
+	return c - (x & 0x1);
+#endif
+}
+
+static inline unsigned
+clz(uint32_t x)
+{
+#ifdef __GNUC__
+	return __builtin_clz(x);
+#else
+	unsigned c = 0;
+	if (!(x & 0xffff0000)) {
+		x <<= 16;
+		c += 16;
+	}
+	if (!(x & 0xff000000)) {
+		x <<= 8;
+		c += 8;
+	}
+	if (!(x & 0xf0000000)) {
+		x <<= 4;
+		c += 4;
+	}
+	if (!(x & 0xc0000000)) {
+		x <<= 2;
+		c += 2;
+	}
+	return c + !(x & 0x80000000);
+#endif
 }
 
 static inline uint16_t
