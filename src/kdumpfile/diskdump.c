@@ -203,59 +203,10 @@ diskdump_get_bits(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 {
 	struct kdump_shared *shared = bmp->priv;
 	struct disk_dump_priv *ddp;
-	const struct pfn_file_map *pdmap, *pdend;
-	const struct pfn_region *rgn, *end;
-	kdump_addr_t cur, next;
-
-	/* Clear extra bits in the last byte of the raw bitmap. */
-	bits[(last - first) >> 3] = 0;
 
 	rwlock_rdlock(&shared->lock);
 	ddp = shared->fmtdata;
-	rgn = NULL;
-	pdmap = find_pfn_file_map(ddp->pdmap, ddp->num_files, first);
-	if (pdmap)
-		rgn = find_pfn_region(pdmap, first);
-	if (!rgn) {
-		rwlock_unlock(&shared->lock);
-		memset(bits, 0, ((last - first) >> 3) + 1);
-		return KDUMP_OK;
-	}
-
-	/* Clear bits beyond last PFN region. */
-	pdend = &ddp->pdmap[ddp->num_files - 1];
-	end = pdend->regions + pdend->nregions - 1;
-	next = end->pfn + end->cnt;
-	if (next <= last) {
-		clear_bits(bits, next - first, last - first);
-		last = next - 1;
-	}
-
-	cur = first;
-	for ( ;; ) {
-		next = rgn->pfn;
-		if (cur < next) {
-			if (next > last) {
-				clear_bits(bits, cur - first, last - first);
-				break;
-			}
-			clear_bits(bits, cur - first, next - 1 - first);
-			cur = next;
-		}
-
-		next += rgn->cnt - 1;
-		if (next >= last) {
-			set_bits(bits, cur - first, last - first);
-			break;
-		}
-		set_bits(bits, cur - first, next - first);
-		cur = next + 1;
-		if (++rgn == &pdmap->regions[pdmap->nregions]) {
-			++pdmap;
-			rgn = pdmap->regions;
-		}
-	}
-
+	get_pfn_map_bits(ddp->pdmap, ddp->num_files, first, last, bits);
 	rwlock_unlock(&shared->lock);
 	return KDUMP_OK;
 }

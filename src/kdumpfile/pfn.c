@@ -33,6 +33,7 @@
 #include "kdumpfile-priv.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 /** Region mapping allocation increment.
  * For optimal performance, this should be a power of two.
@@ -88,6 +89,65 @@ find_pfn_region(const struct pfn_file_map *map, kdump_pfn_t pfn)
 	return right < map->nregions
 		? map->regions + right
 		: NULL;
+}
+
+/** Create a bitmap from PFN-to-file maps.
+ * @param maps   Array of PFN-to-file maps.
+ * @param nmaps  Number of elements in @p maps.
+ * @param first  First PFN in @p bits.
+ * @param last   Last PFN in @p bits.
+ * @param bits   Buffer for the resulting bitmap.
+ */
+void
+get_pfn_map_bits(const struct pfn_file_map *maps, size_t nmaps,
+		 kdump_addr_t first, kdump_addr_t last, unsigned char *bits)
+{
+	const struct pfn_file_map *pfm, *last_pfm;
+	const struct pfn_region *rgn, *end;
+	kdump_addr_t cur, next;
+
+	if (! (pfm = find_pfn_file_map(maps, nmaps, first)) ||
+	    ! (rgn = find_pfn_region(pfm, first))) {
+		memset(bits, 0, ((last - first) >> 3) + 1);
+		return;
+	}
+
+	/* Clear extra bits in the last byte of the raw bitmap. */
+	bits[(last - first) >> 3] = 0;
+
+	/* Clear bits beyond last PFN region. */
+	last_pfm = &maps[nmaps - 1];
+	end = last_pfm->regions + last_pfm->nregions - 1;
+	next = end->pfn + end->cnt;
+	if (next <= last) {
+		clear_bits(bits, next - first, last - first);
+		last = next - 1;
+	}
+
+	cur = first;
+	for ( ;; ) {
+		next = rgn->pfn;
+		if (cur < next) {
+			if (next > last) {
+				clear_bits(bits, cur - first, last - first);
+				break;
+			}
+			clear_bits(bits, cur - first, next - 1 - first);
+			cur = next;
+		}
+
+		next += rgn->cnt - 1;
+		if (next >= last) {
+			set_bits(bits, cur - first, last - first);
+			break;
+		}
+		set_bits(bits, cur - first, next - first);
+		cur = next + 1;
+		if (++rgn == &pfm->regions[pfm->nregions]) {
+			++pfm;
+			rgn = pfm->regions;
+		}
+	}
 }
 
 /** Compare two PFN-to-file maps for @c qsort.
