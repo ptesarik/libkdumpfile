@@ -35,6 +35,7 @@ check_LIBRARIES = \
 check_HEADERS = \
 	diskdump.h \
 	lkcd.h \
+	sadump.h \
 	testutil.h
 
 addrmap_LDADD = \
@@ -122,6 +123,7 @@ check_PROGRAMS = \
 	err-addrxlat \
 	fdset \
 	mkdiskdump \
+	mksadump \
 	mkelf \
 	mklkcd \
 	multiread \

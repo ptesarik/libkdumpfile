@@ -12,6 +12,7 @@ fdset
 mkdiskdump
 mkelf
 mklkcd
+mksadump
 multiread
 multixlat
 nometh
