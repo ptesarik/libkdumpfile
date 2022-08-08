@@ -101,21 +101,21 @@ static kdump_pfn_t
 skip_clear(const unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
 {
 	const unsigned char *bp = bitmap + (pfn >> 3);
-	int lead;
+	unsigned char val;
 
 	if (bp >= bitmap + size)
 		return pfn;
 
-	lead = ffs(*bp >> (pfn & 7));
-	if (lead)
-		return pfn + lead - 1;
+	val = *bp >> (pfn & 7);
+	if (val)
+		return pfn + ctz(val);
 
 	pfn = (pfn | 7) + 1;
 	++bp;
 	while (bp < bitmap + size && *bp == 0x00)
 		pfn += 8, ++bp;
 	if (bp < bitmap + size)
-		pfn += ffs(*bp) - 1;
+		pfn += ctz(*bp);
 
 	return pfn;
 }
@@ -130,21 +130,21 @@ static kdump_pfn_t
 skip_set(const unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
 {
 	const unsigned char *bp = bitmap + (pfn >> 3);
-	int lead;
+	unsigned char val;
 
 	if (bp >= bitmap + size)
 		return pfn;
 
-	lead = ffs(~((signed char)*bp >> (pfn & 7)));
-	if (lead)
-		return pfn + lead - 1;
+	val = ~((signed char)*bp >> (pfn & 7));
+	if (val)
+		return pfn + ctz(val);
 
 	pfn = (pfn | 7) + 1;
 	++bp;
 	while (bp < bitmap + size && *bp == 0xff)
 		pfn += 8, ++bp;
 	if (bp < bitmap + size)
-		pfn += ffs(~(signed char)*bp) - 1;
+		pfn += ctz(~*bp);
 
 	return pfn;
 }
