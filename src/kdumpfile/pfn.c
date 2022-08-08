@@ -91,6 +91,104 @@ find_pfn_region(const struct pfn_file_map *map, kdump_pfn_t pfn)
 		: NULL;
 }
 
+/** Skip clear bits in a PFN bitmap.
+ * @param bitmap  PFN bitmap.
+ * @param size    Size of the bitmap in bytes.
+ * @param pfn     Starting PFN.
+ * @returns       Next PFN that is not clear.
+ */
+static kdump_pfn_t
+skip_clear(const unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
+{
+	const unsigned char *bp = bitmap + (pfn >> 3);
+	int lead;
+
+	if (bp >= bitmap + size)
+		return pfn;
+
+	lead = ffs(*bp >> (pfn & 7));
+	if (lead)
+		return pfn + lead - 1;
+
+	pfn = (pfn | 7) + 1;
+	++bp;
+	while (bp < bitmap + size && *bp == 0x00)
+		pfn += 8, ++bp;
+	if (bp < bitmap + size)
+		pfn += ffs(*bp) - 1;
+
+	return pfn;
+}
+
+/** Skip set bits in a PFN bitmap.
+ * @param bitmap  PFN bitmap.
+ * @param size    Size of the bitmap in bytes.
+ * @param pfn     Starting PFN.
+ * @returns       Next PFN that is not set.
+ */
+static kdump_pfn_t
+skip_set(const unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
+{
+	const unsigned char *bp = bitmap + (pfn >> 3);
+	int lead;
+
+	if (bp >= bitmap + size)
+		return pfn;
+
+	lead = ffs(~((signed char)*bp >> (pfn & 7)));
+	if (lead)
+		return pfn + lead - 1;
+
+	pfn = (pfn | 7) + 1;
+	++bp;
+	while (bp < bitmap + size && *bp == 0xff)
+		pfn += 8, ++bp;
+	if (bp < bitmap + size)
+		pfn += ffs(~(signed char)*bp) - 1;
+
+	return pfn;
+}
+
+/** Create PFN regions from a PFN bitmap.
+ * @param err        Error context.
+ * @param pfm        Target PFN-to-file mapping.
+ * @param bitmap     Source PFN bitmap.
+ * @param start_pfn  Lowest PFN to process.
+ * @param end_pfn    One above the highest PFN to process.
+ * @param fileoff    First target file offset.
+ * @param elemsz     Size of the mapped file object.
+ * @returns          Error status.
+ */
+kdump_status
+pfn_regions_from_bitmap(kdump_errmsg_t *err, struct pfn_file_map *pfm,
+			const unsigned char *bitmap, kdump_pfn_t start_pfn,
+			kdump_pfn_t end_pfn, off_t fileoff, off_t elemsz)
+{
+	size_t bitmapsize = end_pfn << 3;
+	kdump_pfn_t pfn = start_pfn;
+	struct pfn_region rgn;
+
+	rgn.pos = fileoff;
+	while (pfn < end_pfn) {
+		rgn.pfn = skip_clear(bitmap, bitmapsize, pfn);
+		pfn = skip_set(bitmap, bitmapsize, rgn.pfn);
+		if (pfn > end_pfn)
+			pfn = end_pfn;
+		rgn.cnt = pfn - rgn.pfn;
+		if (!rgn.cnt)
+			continue;
+
+		if (!add_pfn_region(pfm, &rgn))
+			return status_err(err, KDUMP_ERR_SYSTEM,
+					  "Cannot allocate more than"
+					  " %zu PFN region mappings",
+					  pfm->nregions);
+		rgn.pos += rgn.cnt * elemsz;
+	}
+
+	return KDUMP_OK;
+}
+
 /** Find the next mapped PFN.
  * @param maps   Array of PFN-to-file maps.
  * @param nmaps  Number of elements in @p maps.

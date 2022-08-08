@@ -479,52 +479,6 @@ read_notes(kdump_ctx_t *ctx, off_t off, size_t size)
 	return ret;
 }
 
-static kdump_pfn_t
-skip_clear(unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
-{
-	unsigned char *bp = bitmap + (pfn >> 3);
-	int lead;
-
-	if (bp >= bitmap + size)
-		return pfn;
-
-	lead = ffs(*bp >> (pfn & 7));
-	if (lead)
-		return pfn + lead - 1;
-
-	pfn = (pfn | 7) + 1;
-	++bp;
-	while (bp < bitmap + size && *bp == 0x00)
-		pfn += 8, ++bp;
-	if (bp < bitmap + size)
-		pfn += ffs(*bp) - 1;
-
-	return pfn;
-}
-
-static kdump_pfn_t
-skip_set(unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
-{
-	unsigned char *bp = bitmap + (pfn >> 3);
-	int lead;
-
-	if (bp >= bitmap + size)
-		return pfn;
-
-	lead = ffs(~((signed char)*bp >> (pfn & 7)));
-	if (lead)
-		return pfn + lead - 1;
-
-	pfn = (pfn | 7) + 1;
-	++bp;
-	while (bp < bitmap + size && *bp == 0xff)
-		pfn += 8, ++bp;
-	if (bp < bitmap + size)
-		pfn += ffs(~(signed char)*bp) - 1;
-
-	return pfn;
-}
-
 /** Read the page bitmap and translate it to PFN regions.
  * @param ctx            Dump file object.
  * @param pdmap          Target page descriptor map.
@@ -540,8 +494,6 @@ read_bitmap(kdump_ctx_t *ctx, struct pfn_file_map *pdmap,
 	off_t descoff;
 	size_t bitmapsize;
 	kdump_pfn_t max_bitmap_pfn;
-	kdump_pfn_t pfn;
-	struct pfn_region rgn;
 	struct fcache_chunk fch;
 	kdump_status ret;
 
@@ -568,32 +520,12 @@ read_bitmap(kdump_ctx_t *ctx, struct pfn_file_map *pdmap,
 				 " at %llu",
 				 bitmapsize, (unsigned long long) off);
 
-	rgn.pos = descoff;
-	pfn = pdmap->start_pfn;
 	if (max_bitmap_pfn > pdmap->end_pfn)
 		max_bitmap_pfn = pdmap->end_pfn;
-	while (pfn < max_bitmap_pfn) {
-		rgn.pfn = skip_clear(fch.data, bitmapsize, pfn);
-		pfn = skip_set(fch.data, bitmapsize, rgn.pfn);
-		if (pfn > max_bitmap_pfn)
-			pfn = max_bitmap_pfn;
-		rgn.cnt = pfn - rgn.pfn;
-		if (!rgn.cnt)
-			continue;
+	ret = pfn_regions_from_bitmap(&ctx->err, pdmap, fch.data,
+				      pdmap->start_pfn, max_bitmap_pfn,
+				      descoff, sizeof(struct page_desc));
 
-		if (!add_pfn_region(pdmap, &rgn)) {
-			ret = set_error(ctx, KDUMP_ERR_SYSTEM,
-					"Cannot allocate more than"
-					" %zu PFN region mappings",
-					pdmap->nregions);
-			goto out;
-		}
-		rgn.pos += rgn.cnt * sizeof(struct page_desc);
-	}
-
-	ret = KDUMP_OK;
-
- out:
 	fcache_put_chunk(&fch);
 	return ret;
 }
