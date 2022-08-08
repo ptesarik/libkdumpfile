@@ -91,14 +91,17 @@ find_pfn_region(const struct pfn_file_map *map, kdump_pfn_t pfn)
 		: NULL;
 }
 
-/** Skip clear bits in a PFN bitmap.
+/** Skip clear bits in a PFN bitmap with LSB 0 bit numbering.
  * @param bitmap  PFN bitmap.
  * @param size    Size of the bitmap in bytes.
  * @param pfn     Starting PFN.
- * @returns       Next PFN that is not clear.
+ * @returns       Index of the next PFN bit that is not clear.
+ *
+ * If there are no set bits in @p bitmap beyond @p pfn, this function
+ * returns one beyond the maximum index (i.e. size of the bitmap in bits).
  */
 static kdump_pfn_t
-skip_clear(const unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
+skip_clear_lsb0(const unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
 {
 	const unsigned char *bp = bitmap + (pfn >> 3);
 	const unsigned char *endp = bitmap + size;
@@ -126,14 +129,17 @@ skip_clear(const unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
 	return pfn;
 }
 
-/** Skip set bits in a PFN bitmap.
+/** Skip set bits in a PFN bitmap with LSB 0 bit numbering.
  * @param bitmap  PFN bitmap.
  * @param size    Size of the bitmap in bytes.
  * @param pfn     Starting PFN.
- * @returns       Next PFN that is not set.
+ * @returns       Index of the next PFN bit that is not set.
+ *
+ * If there are no clear bits in @p bitmap beyond @p pfn, this function
+ * returns one beyond the maximum index (i.e. size of the bitmap in bits).
  */
 static kdump_pfn_t
-skip_set(const unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
+skip_set_lsb0(const unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
 {
 	const unsigned char *bp = bitmap + (pfn >> 3);
 	const unsigned char *endp = bitmap + size;
@@ -182,8 +188,8 @@ pfn_regions_from_bitmap(kdump_errmsg_t *err, struct pfn_file_map *pfm,
 
 	rgn.pos = fileoff;
 	while (pfn < end_pfn) {
-		rgn.pfn = skip_clear(bitmap, bitmapsize, pfn);
-		pfn = skip_set(bitmap, bitmapsize, rgn.pfn);
+		rgn.pfn = skip_clear_lsb0(bitmap, bitmapsize, pfn);
+		pfn = skip_set_lsb0(bitmap, bitmapsize, rgn.pfn);
 		if (pfn > end_pfn)
 			pfn = end_pfn;
 		rgn.cnt = pfn - rgn.pfn;
