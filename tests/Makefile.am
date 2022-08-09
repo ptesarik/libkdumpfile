@@ -126,6 +126,7 @@ check_PROGRAMS = \
 	mksadump \
 	mkelf \
 	mklkcd \
+	mksadump \
 	multiread \
 	multixlat \
 	nometh \
@@ -231,6 +232,9 @@ test_scripts = \
 	lkcd-duplicate-middle \
 	multixlat-elf \
 	multixlat-same \
+	sadump-basic-diskset \
+	sadump-basic-media \
+	sadump-basic-single \
 	sys-xlat-x86_64-linux \
 	sys-xlat-x86_64-linux-xen \
 	xlatmap-check \
@@ -489,6 +493,7 @@ dist_check_SCRIPTS = \
 	lkcd-empty \
 	lkcd-basic \
 	lkcd-wrong-page-size \
+	sadump-basic \
 	sys-xlat-common \
 	xlat-os-common \
 	$(test_scripts)

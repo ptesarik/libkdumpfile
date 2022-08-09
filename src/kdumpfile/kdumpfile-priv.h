@@ -729,6 +729,7 @@ INTERNAL_DECL(extern const struct format_ops, diskdump_ops, );
 INTERNAL_DECL(extern const struct format_ops, lkcd_ops, );
 INTERNAL_DECL(extern const struct format_ops, mclxcd_ops, );
 INTERNAL_DECL(extern const struct format_ops, s390dump_ops, );
+INTERNAL_DECL(extern const struct format_ops, sadump_ops, );
 INTERNAL_DECL(extern const struct format_ops, devmem_ops, );
 
 INTERNAL_DECL(kdump_status, linux_iomem_kcode,

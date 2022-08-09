@@ -1,5 +1,6 @@
 next
 ----
+  * Support SADUMP file format.
   * Add kdump_open_fd() and kdump_open_fdset(). Keep KDUMP_ATTR_FILE_FD
     for (partial) backward compatibility.
   * Support KDUMP file sets created by makedumpfile --split.

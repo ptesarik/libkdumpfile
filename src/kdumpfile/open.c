@@ -70,6 +70,7 @@ static const struct format_ops *formats[] = {
 	&lkcd_ops,
 	&mclxcd_ops,
 	&s390dump_ops,
+	&sadump_ops,
 	&devmem_ops
 };
 

@@ -1,0 +1,5 @@
+#! /bin/sh
+type=diskset
+set_disk_set=1
+. "$srcdir"/sadump-basic
+exit 0

@@ -1,0 +1,51 @@
+#
+# The actual call to mksadump and dumpdata
+#
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+datafile="out/${name}.data"
+dumpfile="out/${name}.dump"
+resultfile="out/${name}.result"
+expectfile="$srcdir/basic.expect"
+
+echo "@0" > "$datafile"
+cat "$expectfile" >> "$datafile"
+
+./mksadump "$dumpfile" <<EOF
+type = $type
+disk_num = 1
+set_disk_set = $set_disk_set
+block_size = 4096
+max_mapnr = 0x2000
+nr_cpus = 1
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create SADUMP file" >&2
+    exit $rc
+fi
+echo "Created SADUMP dump: $dumpfile"
+
+./checkattr "$dumpfile" <<EOF
+file.pagemap = bitmap: 1
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Attribute check failed" >&2
+    exit $rc
+fi
+
+./dumpdata "$dumpfile" 0 4096 >"$resultfile"
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot dump SADUMP data" >&2
+    exit $rc
+fi
+
+if ! diff "$expectfile" "$resultfile"; then
+    echo "Results do not match" >&2
+    exit 1
+fi
