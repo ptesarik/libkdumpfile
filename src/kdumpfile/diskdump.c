@@ -257,8 +257,9 @@ static const struct kdump_bmp_ops diskdump_bmp_ops = {
 };
 
 static kdump_status
-diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
+diskdump_read_page(struct page_io *pio)
 {
+	kdump_ctx_t *ctx = pio->ctx;
 	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	kdump_pfn_t pfn;
 	const struct pfn_file_map *pdmap;
@@ -386,9 +387,9 @@ diskdump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 }
 
 static kdump_status
-diskdump_get_page(kdump_ctx_t *ctx, struct page_io *pio)
+diskdump_get_page(struct page_io *pio)
 {
-	return cache_get_page(ctx, pio, diskdump_read_page);
+	return cache_get_page(pio, diskdump_read_page);
 }
 
 /** Reallocate buffer for compressed data.

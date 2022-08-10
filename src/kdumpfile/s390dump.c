@@ -96,8 +96,9 @@ struct s390dump_priv {
 static void s390_cleanup(struct kdump_shared *shared);
 
 static kdump_status
-s390_get_page(kdump_ctx_t *ctx, struct page_io *pio)
+s390_get_page(struct page_io *pio)
 {
+	kdump_ctx_t *ctx = pio->ctx;
 	struct s390dump_priv *sdp = ctx->shared->fmtdata;
 	off_t pos;
 	kdump_status status;

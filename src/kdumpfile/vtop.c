@@ -562,9 +562,10 @@ addrxlat_get_page(void *data, addrxlat_buffer_t *buf)
 	buf->byte_order = get_byte_order(ctx);
 	buf->priv = pio;
 
+	pio->ctx = ctx;
 	pio->addr.addr = buf->addr.addr;
 	pio->addr.as = buf->addr.as;
-	status = get_page(ctx, pio);
+	status = get_page(pio);
 	if (status != KDUMP_OK)
 		return kdump2addrxlat(ctx, status);
 
@@ -580,9 +581,8 @@ addrxlat_get_page(void *data, addrxlat_buffer_t *buf)
 static void
 addrxlat_put_page(void *data, const addrxlat_buffer_t *buf)
 {
-	kdump_ctx_t *ctx = (kdump_ctx_t*) data;
 	struct page_io *pio = buf->priv;
-	put_page(ctx, pio);
+	put_page(pio);
 	free(pio);
 }
 

@@ -451,8 +451,9 @@ read_bitmap(kdump_ctx_t *ctx, struct pfn_file_map *pfm,
 }
 
 static kdump_status
-sadump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
+sadump_read_page(struct page_io *pio)
 {
+	kdump_ctx_t *ctx = pio->ctx;
 	struct sadump_priv *sp = ctx->shared->fmtdata;
 	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
 	const struct pfn_region *rgn;
@@ -495,9 +496,9 @@ sadump_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 }
 
 static kdump_status
-sadump_get_page(kdump_ctx_t *ctx, struct page_io *pio)
+sadump_get_page(struct page_io *pio)
 {
-	return cache_get_page(ctx, pio, sadump_read_page);
+	return cache_get_page(pio, sadump_read_page);
 }
 
 /* Initialize data structures for SADUMP.

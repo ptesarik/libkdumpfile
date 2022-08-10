@@ -170,7 +170,6 @@ struct format_ops {
 	kdump_status (*probe)(kdump_ctx_t *ctx);
 
 	/** Get page data.
-	 * @param ctx  Dump file object.
 	 * @param pio  Page I/O control.
 	 *
 	 * Note: The requested address space is specified in @c pio.
@@ -178,13 +177,12 @@ struct format_ops {
 	 * Since most file formats specify only one capability, their
 	 * get_page methods do not have to care.
 	 */
-	kdump_status (*get_page)(kdump_ctx_t *ctx, struct page_io *pio);
+	kdump_status (*get_page)(struct page_io *pio);
 
 	/** Drop a reference to a page.
-	 * @param ctx  Dump file object.
 	 * @param pio  Page I/O control.
 	 */
-	void (*put_page)(kdump_ctx_t *ctx, struct page_io *pio);
+	void (*put_page)(struct page_io *pio);
 
 	/** Address translation post-hook.
 	 * @param ctx  Dump file object.
@@ -1428,46 +1426,44 @@ INTERNAL_DECL(void, fcache_put_chunk, (struct fcache_chunk *fch));
  * and the format-specific I/O methods.
  */
 struct page_io {
+	kdump_ctx_t *ctx;	   /**< Associated dump file object. */
 	addrxlat_fulladdr_t addr;  /**< Address of page under I/O. */
 	struct fcache_chunk chunk; /**< File cache chunk. */
 };
 
-typedef kdump_status read_page_fn(
-	kdump_ctx_t *ctx, struct page_io *pio);
+typedef kdump_status read_page_fn(struct page_io *pio);
 
 INTERNAL_DECL(kdump_status, cache_get_page,
-	      (kdump_ctx_t *ctx, struct page_io *pio, read_page_fn *fn));
+	      (struct page_io *pio, read_page_fn *fn));
 INTERNAL_DECL(void, cache_put_page,
-	      (kdump_ctx_t *ctx, struct page_io *pio));
+	      (struct page_io *pio));
 
 /** Get page data.
- * @param ctx  Dump file object.
  * @param pio  Page I/O control.
  * @returns    Error status.
  *
  * Intended use of this function:
- * - Fill in @c pio.addr.
+ * - Fill in @c pio.ctx and @c pio.addr.
  * - Call @c get_page.
  * - Check return status. If successful, @c pio.chunk.data
  *   contains a pointer to the cached page data.
  */
 static inline kdump_status
-get_page(kdump_ctx_t *ctx, struct page_io *pio)
+get_page(struct page_io *pio)
 {
-	return ctx->shared->ops->get_page(ctx, pio);
+	return pio->ctx->shared->ops->get_page(pio);
 }
 
 /** Release page data.
- * @param ctx  Dump file object.
  * @param pio  Page I/O control.
  *
  * Call this function to let the cache know that the data structures
  * used to provide the buffer are no longer needed.
  */
 static inline void
-put_page(kdump_ctx_t *ctx, struct page_io *pio)
+put_page(struct page_io *pio)
 {
-	ctx->shared->ops->put_page(ctx, pio);
+	pio->ctx->shared->ops->put_page(pio);
 }
 
 /* Inline utility functions */

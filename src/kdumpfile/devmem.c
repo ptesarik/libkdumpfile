@@ -219,8 +219,9 @@ linux_iomem_kcode(kdump_ctx_t *ctx, kdump_paddr_t *paddr)
 }
 
 static kdump_status
-devmem_get_page(kdump_ctx_t *ctx, struct page_io *pio)
+devmem_get_page(struct page_io *pio)
 {
+	kdump_ctx_t *ctx = pio->ctx;
 	struct devmem_priv *dmp = ctx->shared->fmtdata;
 	struct cache_entry *ce;
 	unsigned i;
@@ -255,7 +256,7 @@ devmem_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 }
 
 static void
-devmem_put_page(kdump_ctx_t *ctx, struct page_io *pio)
+devmem_put_page(struct page_io *pio)
 {
 	--pio->chunk.embed_fces->ce->refcnt;
 }

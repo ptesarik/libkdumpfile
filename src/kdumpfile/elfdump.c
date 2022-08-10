@@ -238,8 +238,9 @@ find_closest_vload(struct elfdump_priv *edp, kdump_vaddr_t vaddr,
 }
 
 static kdump_status
-elf_read_page(kdump_ctx_t *ctx, struct page_io *pio)
+elf_read_page(struct page_io *pio)
 {
+	kdump_ctx_t *ctx = pio->ctx;
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	kdump_addr_t addr;
 	struct load_segment *pls;
@@ -304,8 +305,9 @@ elf_read_page(kdump_ctx_t *ctx, struct page_io *pio)
 }
 
 static kdump_status
-elf_get_page(kdump_ctx_t *ctx, struct page_io *pio)
+elf_get_page(struct page_io *pio)
 {
+	kdump_ctx_t *ctx = pio->ctx;
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	struct load_segment *pls;
 	kdump_paddr_t addr, loadaddr;
@@ -347,7 +349,7 @@ elf_get_page(kdump_ctx_t *ctx, struct page_io *pio)
 
 	/* Handle reads crossing a LOAD boundary. */
 	if (! (loadaddr <= addr && pls->filesz >= addr - loadaddr + sz))
-		return cache_get_page(ctx, pio, elf_read_page);
+		return cache_get_page(pio, elf_read_page);
 
 	mutex_lock(&ctx->shared->cache_lock);
 	status = fcache_get_chunk(ctx->shared->fcache, &pio->chunk, sz,
@@ -888,8 +890,9 @@ xc_post_addrxlat(kdump_ctx_t *ctx)
 }
 
 static kdump_status
-xc_get_page(kdump_ctx_t *ctx, struct page_io *pio)
+xc_get_page(struct page_io *pio)
 {
+	kdump_ctx_t *ctx = pio->ctx;
 	struct elfdump_priv *edp = ctx->shared->fmtdata;
 	kdump_pfn_t pfn = pio->addr.addr >> get_page_shift(ctx);
 	uint_fast64_t idx;

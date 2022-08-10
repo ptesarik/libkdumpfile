@@ -37,7 +37,6 @@
 
 /** Get a page from the default cache.
  *
- * @param ctx  Dump file object.
  * @param pio  Page I/O control.
  * @param fn   Read function.
  * @returns    Error status.
@@ -46,8 +45,9 @@
  * the read function.
  */
 kdump_status
-cache_get_page(kdump_ctx_t *ctx, struct page_io *pio, read_page_fn *fn)
+cache_get_page(struct page_io *pio, read_page_fn *fn)
 {
+	kdump_ctx_t *ctx = pio->ctx;
 	struct cache_entry *entry;
 	kdump_status ret;
 
@@ -66,7 +66,7 @@ cache_get_page(kdump_ctx_t *ctx, struct page_io *pio, read_page_fn *fn)
 	if (cache_entry_valid(entry))
 		return KDUMP_OK;
 
-	ret = fn(ctx, pio);
+	ret = fn(pio);
 	mutex_lock(&ctx->shared->cache_lock);
 	if (ret == KDUMP_OK)
 		cache_insert(pio->chunk.embed_fces->cache, entry);
@@ -77,11 +77,10 @@ cache_get_page(kdump_ctx_t *ctx, struct page_io *pio, read_page_fn *fn)
 }
 
 /**  Drop a reference to an I/O page from the default cache.
- * @param ctx  Dump file object.
  * @param pio  Page I/O control.
  */
 void
-cache_put_page(kdump_ctx_t *ctx, struct page_io *pio)
+cache_put_page(struct page_io *pio)
 {
 	fcache_put_chunk(&pio->chunk);
 }
@@ -95,7 +94,6 @@ xlat_pio_op(void *data, const addrxlat_fulladdr_t *addr)
 }
 
 /**  Get page with address tranlation.
- * @param ctx  Dump file object.
  * @param pio  Page I/O control.
  *
  * This function translates the page I/O address to an address space that
@@ -103,8 +101,9 @@ xlat_pio_op(void *data, const addrxlat_fulladdr_t *addr)
  * a @c get_page method.
  */
 static kdump_status
-get_page_xlat(kdump_ctx_t *ctx, struct page_io *pio)
+get_page_xlat(struct page_io *pio)
 {
+	kdump_ctx_t *ctx = pio->ctx;
 	addrxlat_op_ctl_t ctl;
 	kdump_status status;
 	addrxlat_status xlaterr;
@@ -124,19 +123,18 @@ get_page_xlat(kdump_ctx_t *ctx, struct page_io *pio)
 		return set_error(ctx, addrxlat2kdump(ctx, xlaterr),
 				 "Cannot get page I/O address");
 
-	return get_page(ctx, pio);
+	return get_page(pio);
 }
 
 /**  Get a page, performing address translation if necessary.
- * @param ctx  Dump file object.
  * @param pio  Page I/O control.
  */
 static inline kdump_status
-get_page_maybe_xlat(kdump_ctx_t *ctx, struct page_io *pio)
+get_page_maybe_xlat(struct page_io *pio)
 {
-	return ctx->xlat->xlat_caps & ADDRXLAT_CAPS(pio->addr.as)
-		? get_page(ctx, pio)
-		: get_page_xlat(ctx, pio);
+	return pio->ctx->xlat->xlat_caps & ADDRXLAT_CAPS(pio->addr.as)
+		? get_page(pio)
+		: get_page_xlat(pio);
 }
 
 /**  Internal version of @ref kdump_read
@@ -165,9 +163,10 @@ read_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	while (remain) {
 		size_t off, partlen;
 
+		pio.ctx = ctx;
 		pio.addr.as = as;
 		pio.addr.addr = page_align(ctx, addr);
-		ret = get_page_maybe_xlat(ctx, &pio);
+		ret = get_page_maybe_xlat(&pio);
 		if (ret != KDUMP_OK)
 			break;
 
@@ -176,7 +175,7 @@ read_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		if (partlen > remain)
 			partlen = remain;
 		memcpy(buffer, pio.chunk.data + off, partlen);
-		put_page(ctx, &pio);
+		put_page(&pio);
 		addr += partlen;
 		buffer += partlen;
 		remain -= partlen;
@@ -223,9 +222,10 @@ read_string_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	do {
 		size_t off, partlen;
 
+		pio.ctx = ctx;
 		pio.addr.as = as;
 		pio.addr.addr = page_align(ctx, addr);
-		ret = get_page_maybe_xlat(ctx, &pio);
+		ret = get_page_maybe_xlat(&pio);
 		if (ret != KDUMP_OK)
 			return ret;
 
@@ -238,7 +238,7 @@ read_string_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 		newlength = length + partlen;
 		newstr = realloc(str, newlength + 1);
 		if (!newstr) {
-			put_page(ctx, &pio);
+			put_page(&pio);
 			if (str)
 				free(str);
 			return set_error(ctx, KDUMP_ERR_SYSTEM,
@@ -246,7 +246,7 @@ read_string_locked(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 					 newlength + 1);
 		}
 		memcpy(newstr + length, pio.chunk.data + off, partlen);
-		put_page(ctx, &pio);
+		put_page(&pio);
 		length = newlength;
 		str = newstr;
 
