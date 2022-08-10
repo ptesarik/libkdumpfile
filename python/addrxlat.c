@@ -1524,6 +1524,13 @@ cb_sym(void *_self, addrxlat_sym_t *sym)
 	return ctx_error_status(self);
 }
 
+
+static void
+cb_put_page(const addrxlat_buffer_t *buf)
+{
+	PyMem_Free(buf->priv);
+}
+
 static addrxlat_status
 cb_get_page(void *_self, addrxlat_buffer_t *buf)
 {
@@ -1575,6 +1582,7 @@ cb_get_page(void *_self, addrxlat_buffer_t *buf)
 		return ctx_error_status(self);
 	}
 	Py_DECREF(bufferobj);
+	buf->put_page = cb_put_page;
 	buf->priv = PyMem_Malloc(view.len);
 	if (buf->priv == NULL) {
 		PyBuffer_Release(&view);
@@ -1593,12 +1601,6 @@ cb_get_page(void *_self, addrxlat_buffer_t *buf)
 	return ADDRXLAT_OK;
 }
 
-static void
-cb_put_page(void *_self, const addrxlat_buffer_t *buf)
-{
-	PyMem_Free(buf->priv);
-}
-
 static void cb_hook(void *_self, addrxlat_cb_t *cb);
 
 static void
@@ -1610,7 +1612,6 @@ install_cb_hook(ctx_object *self, addrxlat_cb_t *cb)
 	cb->cb_hook = cb_hook;
 	cb->sym = cb_sym;
 	cb->get_page = cb_get_page;
-	cb->put_page = cb_put_page;
 
 	Py_INCREF((PyObject *)self);
 }

@@ -56,24 +56,19 @@ init_cache(struct read_cache *cache)
 
 /**  Clean up the read cache.
  * @param cache  Read cache.
- * @param cb     Callback definitions.
  *
- * Release all cached pages using @c put_page function from the
- * provided callback definition.
+ * Release all cached pages.
  */
 static void
-cleanup_cache(struct read_cache *cache, const addrxlat_cb_t *cb)
+cleanup_cache(struct read_cache *cache)
 {
 	struct read_cache_slot *slot;
-
-	if (!cb->put_page)
-		return;
 
 	slot = &cache->slot[0];
 	do {
 		addrxlat_buffer_t *buf = &slot->buffer;
-		if (buf->size)
-			cb->put_page(cb->data, buf);
+		if (buf->size && buf->put_page)
+			buf->put_page(buf);
 	} while (++slot < &cache->slot[READ_CACHE_SLOTS]);
 }
 
@@ -127,12 +122,13 @@ get_cache_buf(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr,
 	slot = ctx->cache.mru->prev;
 
 	/* Free up the slot if necessary */
-	if (slot->buffer.size && ctx->cb.put_page)
-		ctx->cb.put_page(ctx->cb.data, &slot->buffer);
+	if (slot->buffer.size && slot->buffer.put_page)
+		slot->buffer.put_page(&slot->buffer);
 
 	/* Get the new page */
 	slot->buffer.addr = *addr;
 	slot->buffer.ptr = NULL;
+	slot->buffer.put_page = NULL;
 	status = ctx->cb.get_page(ctx->cb.data, &slot->buffer);
 	if (status != ADDRXLAT_OK) {
 		slot->buffer.size = 0;
@@ -213,7 +209,7 @@ addrxlat_ctx_decref(addrxlat_ctx_t *ctx)
 {
 	unsigned long refcnt = --ctx->refcnt;
 	if (!refcnt) {
-		cleanup_cache(&ctx->cache, &ctx->cb);
+		cleanup_cache(&ctx->cache);
 		err_cleanup(&ctx->err);
 		free(ctx);
 	}

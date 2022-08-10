@@ -539,6 +539,18 @@ const struct attr_ops xen_dirty_xlat_ops = {
 	.pre_clear = (attr_pre_clear_fn*)xen_dirty_xlat_hook,
 };
 
+/**  Addrxlat put_page callback.
+ * @param buf   Page buffer metadata.
+ * @returns     Error status.
+ */
+static void
+addrxlat_put_page(const addrxlat_buffer_t *buf)
+{
+	struct page_io *pio = buf->priv;
+	put_page(pio);
+	free(pio);
+}
+
 /**  Addrxlat get_page callback.
  * @param data  Dump file object.
  * @param buf   Page buffer metadata.
@@ -560,6 +572,7 @@ addrxlat_get_page(void *data, addrxlat_buffer_t *buf)
 	buf->addr.addr = page_align(ctx, buf->addr.addr);
 	buf->size = get_page_size(ctx);
 	buf->byte_order = get_byte_order(ctx);
+	buf->put_page = addrxlat_put_page;
 	buf->priv = pio;
 
 	pio->ctx = ctx;
@@ -571,19 +584,6 @@ addrxlat_get_page(void *data, addrxlat_buffer_t *buf)
 
 	buf->ptr = pio->chunk.data;
 	return ADDRXLAT_OK;
-}
-
-/**  Addrxlat put_page callback.
- * @param data  Dump file object.
- * @param buf   Page buffer metadata.
- * @returns     Error status.
- */
-static void
-addrxlat_put_page(void *data, const addrxlat_buffer_t *buf)
-{
-	struct page_io *pio = buf->priv;
-	put_page(pio);
-	free(pio);
 }
 
 static addrxlat_status
@@ -698,7 +698,6 @@ init_addrxlat(kdump_ctx_t *ctx)
 	addrxlat_cb_t cb = {
 		.data = ctx,
 		.get_page = addrxlat_get_page,
-		.put_page = addrxlat_put_page,
 		.read_caps = (ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR) |
 			      ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR) |
 			      ADDRXLAT_CAPS(ADDRXLAT_KVADDR)),

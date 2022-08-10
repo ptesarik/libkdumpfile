@@ -342,6 +342,14 @@ typedef enum _addrxlat_byte_order {
 	ADDRXLAT_HOST_ENDIAN = -1
 } addrxlat_byte_order_t;
 
+/** Read buffer metadata. */
+typedef struct _addrxlat_buffer addrxlat_buffer_t;
+
+/** Type of the put-page callback.
+ * @param[in] buf   Page buffer metadata.
+ */
+typedef void addrxlat_put_page_fn(const addrxlat_buffer_t *buf);
+
 /** Read buffer metadata.
  *
  * This structure is used to pass data between the library and a
@@ -360,7 +368,7 @@ typedef enum _addrxlat_byte_order {
  * The library does NOT implement reads across page boundary.
  * Keep that in mind when writing your own custom implementation.
  */
-typedef struct _addrxlat_buffer {
+struct _addrxlat_buffer {
 	/** Buffer start address.
 	 * This field is set to the desired read address before calling
 	 * the get-page callback. The callback should adjust it to the
@@ -380,11 +388,14 @@ typedef struct _addrxlat_buffer {
 	/** Page data byte order. */
 	addrxlat_byte_order_t byte_order;
 
+	/** Callback to release a page buffer. */
+	addrxlat_put_page_fn *put_page;
+
 	/** Private data to be used by the callback.
 	 * The library will preserve this value between a call
 	 * to the get-page and put-page callbacks.  */
 	void *priv;
-} addrxlat_buffer_t;
+};
 
 /** Type of the get-page callback.
  * @param data         Arbitrary user-supplied data.
@@ -393,13 +404,6 @@ typedef struct _addrxlat_buffer {
  */
 typedef addrxlat_status addrxlat_get_page_fn(
 	void *data, addrxlat_buffer_t *buf);
-
-/** Type of the put-page callback.
- * @param data      Arbitrary user-supplied data.
- * @param[in] buf   Page buffer metadata.
- */
-typedef void addrxlat_put_page_fn(
-	void *data, const addrxlat_buffer_t *buf);
 
 /** Callback function pointers and data. */
 struct _addrxlat_cb {
@@ -414,9 +418,6 @@ struct _addrxlat_cb {
 
 	/** Callback to get a page buffer. */
 	addrxlat_get_page_fn *get_page;
-
-	/** Callback to release a page buffer. */
-	addrxlat_put_page_fn *put_page;
 
 	/** Read capabilities.
 	 * This is a bit mask of address spaces that can be read
