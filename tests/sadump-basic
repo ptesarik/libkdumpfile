@@ -13,6 +13,45 @@ expectfile="$srcdir/basic.expect"
 echo "@0" > "$datafile"
 cat "$expectfile" >> "$datafile"
 
+cat >> "$datafile" <<EOF
+@cpu 0
+0000000000000000*58	# _reserved1
+"gdth" "ldth" "idth"
+00000000*3		# _reserved2
+"io_eip  "
+0000000000000000*10	# _reserved3
+"cr4 "
+00000000*18		# _reserved4
+"gdtl" "gdtx"
+"idtl" "idtx"
+"ldtl" "ldtx"
+"ldti"
+0000000000000000*6	# _reserved5
+"eptp    "
+"eptp"		# eptp_setting
+00000000*5	# _reserved6
+"smbs"		# smbase
+"smid"		# smm_revision_id
+"io"		# io_instruction_restart
+"hl"		# auto_halt_restart
+00000000*6	# _reserved7
+"r15     " "r14     " "r13     " "r12     "
+"r11     " "r10     " "r9      " "r8      "
+"rax     " "rcx     " "rdx     " "rbx     "
+"rsp     " "rbp     " "rsi     " "rdi     "
+"io_mem_a"	# io_mem_addr
+"io_m"		# io_misc
+"es  " "cs  " "ss  " "ds  " "fs  " "gs  "
+"ldtr"
+"tr  "
+"dr7     " "dr6     "
+"rip     "
+$ia32_efer
+0000000000000046	# rflags (ZF PF)
+"cr3     "
+0000000080050033	# cr0 (PG AM WP NE ET MP PE)
+EOF
+
 ./mksadump "$dumpfile" <<EOF
 type = $type
 disk_num = 1
@@ -30,6 +69,7 @@ fi
 echo "Created SADUMP dump: $dumpfile"
 
 ./checkattr "$dumpfile" <<EOF
+arch.name = string:$arch
 file.pagemap = bitmap: 1
 EOF
 rc=$?

@@ -1,5 +1,7 @@
 #! /bin/sh
 type=media
 set_disk_set=0
+ia32_efer=0000000000000d01	# NXE LMA LME SCE
+arch=x86_64
 . "$srcdir"/sadump-basic
 exit 0

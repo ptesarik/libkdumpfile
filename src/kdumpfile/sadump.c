@@ -723,6 +723,61 @@ init_disk_set(kdump_ctx_t *ctx, unsigned fidx, off_t *pos,
 /** Open a SADUMP file.
  * @param ctx   Dump file object.
  * @param fidx  File index in file cache.
+ * @param pos   Position of the SADUMP arch-dependent header within the file.
+ * @param len   Length of the arch-dependent header.
+ * @param cpus  Number of CPUs in the system.
+ * @returns     Error status.
+ */
+static kdump_status
+setup_arch(kdump_ctx_t *ctx, unsigned fidx, off_t pos, off_t len,
+	   uint32_t cpus)
+{
+	struct sadump_smram_cpu_state cpu_state;
+	uint32_t sz;
+	uint_fast32_t i;
+	kdump_status status;
+
+	if (isset_arch_name(ctx)) {
+		if (strcmp(get_arch_name(ctx), KDUMP_ARCH_X86_64) &&
+		    strcmp(get_arch_name(ctx), KDUMP_ARCH_IA32))
+			return set_error(ctx, KDUMP_ERR_NOTIMPL,
+					 "Unsupported SADUMP architecture: %s",
+					 get_arch_name(ctx));
+		return KDUMP_OK;
+	}
+
+	status = fcache_pread(ctx->shared->fcache, &sz, sizeof sz, fidx, pos);
+	sz /= cpus;
+	if (sz < sizeof(struct sadump_smram_cpu_state))
+		return set_error(ctx, KDUMP_ERR_NOTIMPL,
+				 "CPU state too small: %" PRIu32, sz);
+
+	pos += sizeof sz;
+	pos += cpus * sizeof(struct sadump_apic_state);
+
+	for (i = 0; i < cpus; ++i) {
+		uint_fast64_t ia32_efer;
+		status = fcache_pread(ctx->shared->fcache,
+				      &cpu_state, sizeof cpu_state, fidx, pos);
+		if (status != KDUMP_OK)
+			return set_error(ctx, status,
+					 "Cannot read CPU #%" PRIuFAST32 " state",
+					 i);
+		ia32_efer = dump64toh(ctx, cpu_state.ia32_efer);
+		if (ia32_efer & ((uint64_t)1 << IA32_EFER_LMA)) {
+			set_arch_name(ctx, KDUMP_ARCH_X86_64);
+			return KDUMP_OK;
+		}
+		pos += sz;
+	}
+
+	set_arch_name(ctx, KDUMP_ARCH_IA32);
+	return KDUMP_OK;
+}
+
+/** Open a SADUMP file.
+ * @param ctx   Dump file object.
+ * @param fidx  File index in file cache.
  * @param dsi   Disk set info. Updated on success.
  * @param dmap  Disk identification (indexed by disk number).
  *              Updated on success.
@@ -845,15 +900,11 @@ open_common(kdump_ctx_t *ctx, unsigned fidx,
 				 "Block size mismatch",
 				 block_size, sp->block_size);
 
-	/* Check architecture. */
-	if (isset_arch_name(ctx)) {
-		if (strcmp(get_arch_name(ctx), KDUMP_ARCH_X86_64) &&
-		    strcmp(get_arch_name(ctx), KDUMP_ARCH_IA32))
-			return set_error(ctx, KDUMP_ERR_NOTIMPL,
-					 "Unsupported SADUMP architecture: %s",
-					 get_arch_name(ctx));
-	} else
-		set_arch_name(ctx, KDUMP_ARCH_X86_64);
+	status = setup_arch(ctx, fidx, hdr_pos + block_size,
+			    dump32toh(ctx, sh.sub_hdr_size) * block_size,
+			    dump32toh(ctx, sh.nr_cpus));
+	if (status != KDUMP_OK)
+		return status;
 
 	if (dump32toh(ctx, sh.header_version) < 1)
 		set_max_pfn(ctx, dump32toh(ctx, sh.max_mapnr));

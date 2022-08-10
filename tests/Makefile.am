@@ -235,6 +235,7 @@ test_scripts = \
 	sadump-basic-diskset \
 	sadump-basic-media \
 	sadump-basic-single \
+	sadump-basic-single-ia32 \
 	sys-xlat-x86_64-linux \
 	sys-xlat-x86_64-linux-xen \
 	xlatmap-check \
