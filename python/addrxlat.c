@@ -1336,7 +1336,7 @@ typedef struct tag_ctx_object {
 	PyObject_HEAD
 
 	addrxlat_ctx_t *ctx;
-	addrxlat_cb_t next_cb;
+	addrxlat_cb_t *cb;
 
 	PyObject *exc_type, *exc_val, *exc_tb;
 
@@ -1601,35 +1601,6 @@ cb_get_page(const addrxlat_cb_t *cb, addrxlat_buffer_t *buf)
 	return ADDRXLAT_OK;
 }
 
-static void cb_hook(void *_self, addrxlat_cb_t *cb);
-
-static void
-install_cb_hook(ctx_object *self, addrxlat_cb_t *cb)
-{
-	self->next_cb = *cb;
-
-	cb->priv = self;
-	cb->cb_hook = cb_hook;
-	cb->sym = cb_sym;
-	cb->get_page = cb_get_page;
-
-	Py_INCREF((PyObject *)self);
-}
-
-static void
-cb_hook(void *_self, addrxlat_cb_t *cb)
-{
-	ctx_object *self = (ctx_object*)_self;
-
-	if (self->next_cb.cb_hook)
-		self->next_cb.cb_hook(self->next_cb.priv, cb);
-
-	if (self->ctx)
-		install_cb_hook(self, cb);
-
-	Py_DECREF((PyObject *)self);
-}
-
 PyDoc_STRVAR(ctx__doc__,
 "Context() -> address translation context");
 
@@ -1661,7 +1632,15 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 			goto err;
 	}
 
-	install_cb_hook(self, addrxlat_ctx_get_ecb(self->ctx));
+	self->cb = addrxlat_ctx_add_cb(self->ctx);
+	if (!self->cb) {
+		addrxlat_ctx_decref(self->ctx);
+		Py_DECREF(self);
+		return PyErr_NoMemory();
+	}
+	self->cb->priv = self;
+	self->cb->sym = cb_sym;
+	self->cb->get_page = cb_get_page;
 
 	Py_INCREF(convert);
 	self->convert = convert;
@@ -1710,10 +1689,8 @@ ctx_dealloc(PyObject *_self)
 	Py_XDECREF(self->exc_tb);
 
 	if (self->ctx) {
-		addrxlat_ctx_t *ctx = self->ctx;
-		self->ctx = NULL;
-		addrxlat_ctx_set_cb(ctx, addrxlat_ctx_get_cb(ctx));
-		addrxlat_ctx_decref(ctx);
+		addrxlat_ctx_del_cb(self->ctx, self->cb);
+		addrxlat_ctx_decref(self->ctx);
 	}
 
 	Py_TYPE(self)->tp_free((PyObject*)self);
@@ -1808,8 +1785,8 @@ static PyObject *
 cb_status_result(ctx_object *self, addrxlat_status status,
 		 unsigned long long value)
 {
-	if (self->next_cb.cb_hook == cb_hook &&
-	    handle_cb_exception((ctx_object*)self->next_cb.priv, status))
+	if (self->cb->next->sym == cb_sym &&
+	    handle_cb_exception((ctx_object*)self->cb->next->priv, status))
 		return NULL;
 
 	if (status != ADDRXLAT_OK)
@@ -1882,7 +1859,7 @@ ctx_next_cb_sym(PyObject *_self, PyObject *args)
 		sym.args[i - 1] = arg;
 	}
 
-	status = self->next_cb.sym(&self->next_cb, &sym);
+	status = self->cb->next->sym(self->cb->next, &sym);
 	return cb_status_result(self, status, sym.val);
 }
 
@@ -1916,11 +1893,11 @@ ctx_next_cb_get_page(PyObject *_self, PyObject *args)
 		return NULL;
 
 	buffer.addr = *addr;
-	status = self->next_cb.get_page(&self->next_cb, &buffer);
+	status = self->cb->next->get_page(self->cb->next, &buffer);
 	*addr = buffer.addr;
 
-	if (self->next_cb.cb_hook == cb_hook &&
-	    handle_cb_exception((ctx_object*)self->next_cb.priv, status))
+	if (self->cb->next->get_page == cb_get_page &&
+	    handle_cb_exception((ctx_object*)self->cb->next->priv, status))
 		return NULL;
 
 	if (status != ADDRXLAT_OK)
@@ -1986,14 +1963,12 @@ static int
 ctx_set_read_caps(PyObject *_self, PyObject *value, void *data)
 {
 	ctx_object *self = (ctx_object*)_self;
-	addrxlat_cb_t cb = *addrxlat_ctx_get_cb(self->ctx);
 	long read_caps = Number_AsLong(value);
 
 	if (PyErr_Occurred())
 		return -1;
 
-	cb.read_caps = read_caps;
-	addrxlat_ctx_set_cb(self->ctx, &cb);
+	self->cb->read_caps = read_caps;
 	return 0;
 }
 

@@ -346,11 +346,7 @@ main(int argc, char **argv)
 	unsigned long long vaddr;
 	char *endp;
 	addrxlat_ctx_t *ctx;
-	addrxlat_cb_t cb = {
-		.get_page = get_page,
-		.read_caps = (ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR) |
-			      ADDRXLAT_CAPS(ADDRXLAT_KVADDR))
-	};
+	addrxlat_cb_t *cb;
 	addrxlat_meth_t pgt, linear, lookup, memarr, *meth;
 	int opt;
 	unsigned long refcnt;
@@ -467,9 +463,16 @@ main(int argc, char **argv)
 		rc = TEST_ERR;
 		goto out;
 	}
-	cb.priv = ctx;
-	addrxlat_ctx_set_cb(ctx, &cb);
-
+	cb = addrxlat_ctx_add_cb(ctx);
+	if (!cb) {
+		perror("Cannot initialize address translation callbacks");
+		rc = TEST_ERR;
+		goto out;
+	}
+	cb->priv = ctx;
+	cb->get_page = get_page;
+	cb->read_caps = (ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR) |
+			 ADDRXLAT_CAPS(ADDRXLAT_KVADDR));
 	rc = do_xlat(ctx, meth, vaddr);
 
  out:

@@ -86,13 +86,9 @@ nullop(void *data, const addrxlat_fulladdr_t *paddr)
 int
 main(int argc, char **argv)
 {
-	static addrxlat_cb_t cb = {
-		.get_page = mygetpage,
-		.read_caps = ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR)
-	};
-
 	addrxlat_ctx_t *ctx;
-	addrxlat_cb_t def_cb;
+	const addrxlat_cb_t *def_cb;
+	addrxlat_cb_t *cb;
 	addrxlat_sys_t *sys;
 	addrxlat_fulladdr_t faddr;
 	addrxlat_op_ctl_t opctl;
@@ -105,8 +101,14 @@ main(int argc, char **argv)
 		return TEST_ERR;
 	}
 
-	def_cb = *addrxlat_ctx_get_ecb(ctx);
-	addrxlat_ctx_set_cb(ctx, &cb);
+	def_cb = addrxlat_ctx_get_cb(ctx);
+	cb = addrxlat_ctx_add_cb(ctx);
+	if (!cb) {
+		fputs("Cannot allocate translation callbacks", stderr);
+		return TEST_ERR;
+	}
+	cb->get_page = mygetpage;
+	cb->read_caps = ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR);
 
 	sys = addrxlat_sys_new();
 	if (!sys) {
@@ -142,8 +144,7 @@ main(int argc, char **argv)
 		printf("OK (%s)\n", addrxlat_ctx_get_err(ctx));
 
 	fputs("Callback with no capabilities: ", stdout);
-	cb.read_caps = 0;
-	addrxlat_ctx_set_cb(ctx, &cb);
+	cb->read_caps = 0;
 	status = addrxlat_op(&opctl, &faddr);
 	if (status == ADDRXLAT_OK) {
 		puts("FAIL");
@@ -158,10 +159,9 @@ main(int argc, char **argv)
 		printf("OK (%s)\n", addrxlat_ctx_get_err(ctx));
 
 	fputs("Missing callback: ", stdout);
-	cb.priv = def_cb.priv;
-	cb.get_page = def_cb.get_page;
-	cb.read_caps = ADDRXLAT_CAPS(ADDRXLAT_KVADDR);
-	addrxlat_ctx_set_cb(ctx, &cb);
+	cb->priv = def_cb->priv;
+	cb->get_page = def_cb->get_page;
+	cb->read_caps = ADDRXLAT_CAPS(ADDRXLAT_KVADDR);
 	status = addrxlat_op(&opctl, &faddr);
 	if (status == ADDRXLAT_OK) {
 		puts("FAIL");

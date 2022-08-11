@@ -137,7 +137,7 @@ get_cache_buf(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr,
 	slot->buffer.addr = *addr;
 	slot->buffer.ptr = NULL;
 	slot->buffer.put_page = def_put_page_cb;
-	status = ctx->cb.get_page(&ctx->cb, &slot->buffer);
+	status = ctx->cb->get_page(ctx->cb, &slot->buffer);
 	if (status != ADDRXLAT_OK) {
 		slot->buffer.size = 0;
 		return status;
@@ -224,9 +224,10 @@ addrxlat_ctx_new(void)
 	addrxlat_ctx_t *ctx = calloc(1, sizeof(addrxlat_ctx_t) + ERRBUF);
 	if (ctx) {
 		ctx->refcnt = 1;
-		ctx->cb.priv = ctx;
-		ctx->cb.sym = def_sym_cb;
-		ctx->cb.get_page = def_get_page_cb;
+		ctx->cb = &ctx->def_cb;
+		ctx->def_cb.priv = ctx;
+		ctx->def_cb.sym = def_sym_cb;
+		ctx->def_cb.get_page = def_get_page_cb;
 		init_cache(&ctx->cache);
 		err_init(&ctx->err, ERRBUF);
 	}
@@ -245,6 +246,12 @@ addrxlat_ctx_decref(addrxlat_ctx_t *ctx)
 	unsigned long refcnt = --ctx->refcnt;
 	if (!refcnt) {
 		cleanup_cache(&ctx->cache);
+		addrxlat_cb_t *p = (addrxlat_cb_t *)ctx->cb;
+		while (p != &ctx->def_cb) {
+			const addrxlat_cb_t *next = p->next;
+			free(p);
+			p = (addrxlat_cb_t *)next;
+		}
 		err_cleanup(&ctx->err);
 		free(ctx);
 	}
@@ -268,26 +275,68 @@ addrxlat_ctx_get_errmsg(addrxlat_ctx_t *ctx)
 	return &ctx->err;
 }
 
-void
-addrxlat_ctx_set_cb(addrxlat_ctx_t *ctx, const addrxlat_cb_t *cb)
+/** Call the next symbol callback.
+ * @param cb    This callback definition.
+ * @param sym   Symbolic information metadata (unused).
+ * @returns     Error status.
+ */
+static addrxlat_status
+next_sym_cb(const addrxlat_cb_t *cb, addrxlat_sym_t *sym)
 {
-	addrxlat_cb_hook_fn *hook = ctx->cb.cb_hook;
-	void *data = ctx->cb.priv;
-	ctx->cb = ctx->orig_cb = *cb;
-	if (hook)
-		hook(data, &ctx->cb);
+	return cb->next->sym(cb->next, sym);
+}
+
+/** Call the next get-page callback.
+ * @param cb    This callback definition.
+ * @param buf   Read buffer metadata.
+ * @returns     Error status.
+ */
+static addrxlat_status
+next_get_page_cb(const addrxlat_cb_t *cb, addrxlat_buffer_t *buf)
+{
+	return cb->next->get_page(cb->next, buf);
+}
+
+addrxlat_cb_t *
+addrxlat_ctx_add_cb(addrxlat_ctx_t *ctx)
+{
+	addrxlat_cb_t *cb;
+
+	cb = malloc(sizeof *cb);
+	if (!cb)
+		return cb;
+
+	cb->next = ctx->cb;
+	cb->priv = NULL;
+	cb->sym = next_sym_cb;
+	cb->get_page = next_get_page_cb;
+	cb->read_caps = ctx->cb->read_caps;
+
+	ctx->cb = cb;
+
+	return cb;
+}
+
+void
+addrxlat_ctx_del_cb(addrxlat_ctx_t *ctx, addrxlat_cb_t *cb)
+{
+	const addrxlat_cb_t **pprev = &ctx->cb;
+	const addrxlat_cb_t *p = ctx->cb;
+
+	while (p && p != cb) {
+		pprev = (const addrxlat_cb_t **) &p->next;
+		p = p->next;
+	}
+	if (p) {
+		*pprev = cb->next;
+		free(cb);
+	}
 }
 
 const addrxlat_cb_t *
 addrxlat_ctx_get_cb(const addrxlat_ctx_t *ctx)
 {
-	return &ctx->orig_cb;
-}
-
-addrxlat_cb_t *
-addrxlat_ctx_get_ecb(addrxlat_ctx_t *ctx)
-{
-	return &ctx->cb;
+	return ctx->cb;
 }
 
 DEFINE_ALIAS(addrspace_name);
@@ -360,7 +409,7 @@ read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
 	addrxlat_ctx_t *ctx = step->ctx;
 	addrxlat_status status;
 
-	if (ctx->cb.read_caps & ADDRXLAT_CAPS(addr->as)) {
+	if (ctx->cb->read_caps & ADDRXLAT_CAPS(addr->as)) {
 		status = do_read32(ctx, addr, val);
 	} else {
 		addrxlat_op_ctl_t ctl;
@@ -370,7 +419,7 @@ read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
 		ctl.sys = step->sys;
 		ctl.op = read32_op;
 		ctl.data = &param;
-		ctl.caps = ctx->cb.read_caps;
+		ctl.caps = ctx->cb->read_caps;
 		status = internal_op(&ctl, addr);
 	}
 
@@ -428,7 +477,7 @@ read64(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint64_t *val,
 	addrxlat_ctx_t *ctx = step->ctx;
 	addrxlat_status status;
 
-	if (ctx->cb.read_caps & ADDRXLAT_CAPS(addr->as)) {
+	if (ctx->cb->read_caps & ADDRXLAT_CAPS(addr->as)) {
 		status = do_read64(ctx, addr, val);
 	} else {
 		addrxlat_op_ctl_t ctl;
@@ -438,7 +487,7 @@ read64(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint64_t *val,
 		ctl.sys = step->sys;
 		ctl.op = read64_op;
 		ctl.data = &param;
-		ctl.caps = ctx->cb.read_caps;
+		ctl.caps = ctx->cb->read_caps;
 		status = internal_op(&ctl, addr);
 	}
 
@@ -465,7 +514,7 @@ get_reg(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 
 	sym.type = ADDRXLAT_SYM_REG;
 	sym.args[0] = name;
-	status = ctx->cb.sym(&ctx->cb, &sym);
+	status = ctx->cb->sym(ctx->cb, &sym);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status,
 				 "Cannot read register \"%s\"", sym.args[0]);
@@ -490,7 +539,7 @@ get_symval(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 
 	sym.type = ADDRXLAT_SYM_VALUE;
 	sym.args[0] = name;
-	status = ctx->cb.sym(&ctx->cb, &sym);
+	status = ctx->cb->sym(ctx->cb, &sym);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status,
 				 "Cannot resolve \"%s\"", sym.args[0]);
@@ -515,7 +564,7 @@ get_sizeof(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *sz)
 
 	sym.type = ADDRXLAT_SYM_SIZEOF;
 	sym.args[0] = name;
-	status = ctx->cb.sym(&ctx->cb, &sym);
+	status = ctx->cb->sym(ctx->cb, &sym);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status, "Cannot get sizeof(%s)",
 				 sym.args[0]);
@@ -543,7 +592,7 @@ get_offsetof(addrxlat_ctx_t *ctx, const char *type, const char *memb,
 	sym.type = ADDRXLAT_SYM_OFFSETOF;
 	sym.args[0] = type;
 	sym.args[1] = memb;
-	status = ctx->cb.sym(&ctx->cb, &sym);
+	status = ctx->cb->sym(ctx->cb, &sym);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status, "Cannot get offsetof(%s, %s)",
 				 sym.args[0], sym.args[1]);
@@ -568,7 +617,7 @@ get_number(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *num)
 
 	sym.type = ADDRXLAT_SYM_NUMBER;
 	sym.args[0] = name;
-	status = ctx->cb.sym(&ctx->cb, &sym);
+	status = ctx->cb->sym(ctx->cb, &sym);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status, "Cannot get number(%s)",
 				 sym.args[0]);
@@ -596,7 +645,7 @@ get_first_sym(addrxlat_ctx_t *ctx, const struct sym_spec *spec,
 		addrxlat_sym_t sym;
 		sym.type = spec->type;
 		sym.args[0] = spec->name;
-		status = ctx->cb.sym(&ctx->cb, &sym);
+		status = ctx->cb->sym(ctx->cb, &sym);
 		if (status == ADDRXLAT_OK) {
 			addr->addr = sym.val;
 			addr->as = spec->as;

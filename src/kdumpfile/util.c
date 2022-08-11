@@ -851,10 +851,10 @@ kdump_status
 get_symbol_val(kdump_ctx_t *ctx, const char *name, kdump_addr_t *val)
 {
 	addrxlat_sym_t sym;
-	addrxlat_cb_t *cb;
+	const addrxlat_cb_t *cb;
 	addrxlat_status status;
 
-	cb = addrxlat_ctx_get_ecb(ctx->xlatctx);
+	cb = addrxlat_ctx_get_cb(ctx->xlatctx);
 	sym.type = ADDRXLAT_SYM_VALUE;
 	sym.args[0] = name;
 	status = cb->sym(cb, &sym);

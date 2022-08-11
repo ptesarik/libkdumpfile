@@ -225,16 +225,6 @@ const char *addrxlat_ctx_get_err(const addrxlat_ctx_t *ctx);
 /* Forward declaration to solve circular reference. */
 typedef struct _addrxlat_cb addrxlat_cb_t;
 
-/** Type of the callback hook function.
- * @param data  Arbitrary user-supplied data.
- * @param cb    New callbacks (already installed).
- *
- * This callback is called after installing new callbacks. This function
- * may change the new callbacks, and the modified version will then be
- * used instead of the original values.
- */
-typedef void addrxlat_cb_hook_fn(void *data, addrxlat_cb_t *cb);
-
 /** Type of symbolic information. */
 typedef enum _addrxlat_sym_type {
 	/** Register value.
@@ -408,13 +398,13 @@ typedef addrxlat_status addrxlat_get_page_fn(
 
 /** Callback function pointers and data. */
 struct _addrxlat_cb {
+	/** Next chained callback definitions. */
+	const addrxlat_cb_t *next;
+
 	/** Private data to be used by the callback.
 	 * This field is reserved for use by the callbacks.
 	 * The library will not touch it.  */
 	void *priv;
-
-	/** Callback update hook. */
-	addrxlat_cb_hook_fn *cb_hook;
 
 	/** Symbolic information callback. */
 	addrxlat_sym_fn *sym;
@@ -434,37 +424,38 @@ struct _addrxlat_cb {
 /** Translate an enum value into a capability bitmask. */
 #define ADDRXLAT_CAPS(val)	(1UL << (unsigned)(val))
 
-/** Set callback information.
+/** Add a callback implementation.
  * @param ctx  Address translation context.
- * @param cb   New callback settings.
+ * @returns    New callback settings, or @c NULL on allocation error.
+ *
+ * The caller should override the callback settings in the returned
+ * structure as necessary. Callbacks that are not modified will use
+ * the previously installed implementation.
  */
-void addrxlat_ctx_set_cb(addrxlat_ctx_t *ctx, const addrxlat_cb_t *cb);
+addrxlat_cb_t *addrxlat_ctx_add_cb(addrxlat_ctx_t *ctx);
+
+/** Remove a callback implementation.
+ * @param ctx  Address translation context.
+ * @param cb   Callback settings previously returned by
+ *             @ref addrxlat_ctx_add_cb.
+ *
+ * The @p cb parameter is invalid and must not be used after
+ * calling this function. It is an error to call this function
+ * twice on the same value.
+ * It is also an error to pass a pointer that was not obtained
+ * by calling @ref addrxlat_ctx_add_cb.
+ */
+void addrxlat_ctx_del_cb(addrxlat_ctx_t *ctx, addrxlat_cb_t *cb);
 
 /** Get the callback information.
  * @param ctx  Address translation context.
- * @returns    Pointer to callback settings.
+ * @returns    Pointer to the current callback settings.
  *
- * Note that this function returns a pointer into context private data.
- * The location of this data does not change (i.e. when called with the
- * same translation context, this function always returns the same value).
- * However, the referenced data may change non-atomically during a call
- * to @ref addrxlat_ctx_set_cb.
+ * The return value is @c const to indicate that it should not be modified
+ * by the caller, but the value can be modified non-atomically by another
+ * caller who obtained the pointer through @ref addrxlat_ctx_add_cb.
  */
 const addrxlat_cb_t *addrxlat_ctx_get_cb(const addrxlat_ctx_t *ctx);
-
-/** Get the effective callback information.
- * @param ctx  Address translation context.
- * @returns    Pointer to effective callback settings.
- *
- * This function returns a pointer to the effective callback information,
- * i.e. after modifications by callback hook(s). The effective callbacks
- * may be modified by the caller, e.g. to install a new hook.
- *
- * The callback hook cannot be installed through @ref addrxlat_ctx_set_cb,
- * because that would call the existing hook on it instead of letting the
- * new hook decide if it wants to override the behaviour.
- */
-addrxlat_cb_t *addrxlat_ctx_get_ecb(addrxlat_ctx_t *ctx);
 
 /** Address translation kind.
  */

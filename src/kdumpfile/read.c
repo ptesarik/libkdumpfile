@@ -282,9 +282,6 @@ set_addrspace_caps(struct kdump_xlat *xlat, unsigned long caps)
 
 	xlat->xlat_caps = caps;
 	list_for_each_entry(ctx, &xlat->ctx, xlat_list) {
-		addrxlat_ctx_t *xlatctx = ctx->xlatctx;
-		addrxlat_cb_t cb = *addrxlat_ctx_get_cb(xlatctx);
-		cb.read_caps = caps;
-		addrxlat_ctx_set_cb(xlatctx, &cb);
+		ctx->xlatcb->read_caps = caps;
 	}
 }

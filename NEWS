@@ -3,6 +3,7 @@ next
   * Support SADUMP file format.
   * Add kdump_open_fd() and kdump_open_fdset(). Keep KDUMP_ATTR_FILE_FD
     for (partial) backward compatibility.
+  * Redesigned addrxlat callback API.
   * Support KDUMP file sets created by makedumpfile --split.
   * Zstandard compression algorithm
   * AArch64 52-bit VA

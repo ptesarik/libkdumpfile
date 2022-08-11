@@ -131,14 +131,11 @@ struct _addrxlat_ctx {
 		int notpresent : 1;
 	} noerr;
 
-	/** Callback definitions. */
-	addrxlat_cb_t cb;
+	/** Currently active callback definitions. */
+	const addrxlat_cb_t *cb;
 
-	/** Original callback definitions.
-	 * This is the value originally passed to @ref addrxlat_ctx_set_cb,
-	 * i.e. before being modified by a callback hook.
-	 */
-	addrxlat_cb_t orig_cb;
+	/** Default callback definitions. */
+	addrxlat_cb_t def_cb;
 
 	/** In-flight translations. */
 	struct inflight *inflight;

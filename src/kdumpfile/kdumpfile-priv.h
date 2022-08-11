@@ -703,6 +703,9 @@ struct _kdump_ctx {
 	/** Address translation context. */
 	addrxlat_ctx_t *xlatctx;
 
+	/** Address translation callbacks. */
+	addrxlat_cb_t *xlatcb;
+
 	/** Per-context data. */
 	void *data[PER_CTX_SLOTS];
 

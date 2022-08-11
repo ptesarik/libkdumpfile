@@ -700,14 +700,7 @@ kdump_status
 init_addrxlat(kdump_ctx_t *ctx)
 {
 	addrxlat_ctx_t *addrxlat;
-	addrxlat_cb_t cb = {
-		.priv = ctx,
-		.get_page = addrxlat_get_page,
-		.read_caps = (ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR) |
-			      ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR) |
-			      ADDRXLAT_CAPS(ADDRXLAT_KVADDR)),
-		.sym = addrxlat_sym
-	};
+	addrxlat_cb_t *cb;
 
 	addrxlat = addrxlat_ctx_new();
 	if (!addrxlat)
@@ -715,9 +708,23 @@ init_addrxlat(kdump_ctx_t *ctx)
 				 "Cannot allocate %s",
 				 "address translation context");
 
-	addrxlat_ctx_set_cb(addrxlat, &cb);
+	cb = addrxlat_ctx_add_cb(addrxlat);
+	if (!cb) {
+		addrxlat_ctx_decref(addrxlat);
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot allocate %s",
+				 "address translation callbacks");
+	}
+
+	cb->priv = ctx;
+	cb->sym = addrxlat_sym;
+	cb->get_page = addrxlat_get_page;
+	cb->read_caps = (ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR) |
+			 ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR) |
+			 ADDRXLAT_CAPS(ADDRXLAT_KVADDR));
 
 	ctx->xlatctx = addrxlat;
+	ctx->xlatcb = cb;
 	return KDUMP_OK;
 }
 

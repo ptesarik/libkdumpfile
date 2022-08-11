@@ -164,7 +164,7 @@ get_linux_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 				 "Cannot determine page table virtual address");
 
 	/* If the read callback can handle virtual addresses, we're done. */
-	if (ctl->ctx->cb.read_caps & ADDRXLAT_CAPS(ADDRXLAT_KVADDR)) {
+	if (ctl->ctx->cb->read_caps & ADDRXLAT_CAPS(ADDRXLAT_KVADDR)) {
 		addrxlat_buffer_t *buffer;
 
 		root->as = ADDRXLAT_KVADDR;
