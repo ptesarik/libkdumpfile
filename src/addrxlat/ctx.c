@@ -67,7 +67,7 @@ cleanup_cache(struct read_cache *cache)
 	slot = &cache->slot[0];
 	do {
 		addrxlat_buffer_t *buf = &slot->buffer;
-		if (buf->size && buf->put_page)
+		if (buf->size)
 			buf->put_page(buf);
 	} while (++slot < &cache->slot[READ_CACHE_SLOTS]);
 }
@@ -96,6 +96,14 @@ touch_cache_slot(struct read_cache *cache, struct read_cache_slot *slot)
 	cache->mru = slot;
 }
 
+/** Default put-page callback.
+ * @param buf  Read buffer metadata (unused).
+ */
+static void
+def_put_page_cb(const addrxlat_buffer_t *buf)
+{
+}
+
 /** Get a cache slot for a given address.
  * @param      ctx   Address translation context.
  * @param      addr  Desired address.
@@ -122,13 +130,13 @@ get_cache_buf(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr,
 	slot = ctx->cache.mru->prev;
 
 	/* Free up the slot if necessary */
-	if (slot->buffer.size && slot->buffer.put_page)
+	if (slot->buffer.size)
 		slot->buffer.put_page(&slot->buffer);
 
 	/* Get the new page */
 	slot->buffer.addr = *addr;
 	slot->buffer.ptr = NULL;
-	slot->buffer.put_page = NULL;
+	slot->buffer.put_page = def_put_page_cb;
 	status = ctx->cb.get_page(ctx->cb.data, &slot->buffer);
 	if (status != ADDRXLAT_OK) {
 		slot->buffer.size = 0;
