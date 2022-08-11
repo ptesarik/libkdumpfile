@@ -194,12 +194,39 @@ bury_cache_buffer(struct read_cache *cache, const addrxlat_fulladdr_t *addr)
 	} while (++slot < &cache->slot[READ_CACHE_SLOTS]);
 }
 
+/** Default symbolic callback.
+ * @param data  Address translation context.
+ * @param sym   Symbolic information metadata (unused).
+ */
+static addrxlat_status
+def_sym_cb(void *data, addrxlat_sym_t *sym)
+{
+	addrxlat_ctx_t *ctx = data;
+	return set_error(ctx, ADDRXLAT_ERR_NODATA,
+			 "No symbolic information callback");
+}
+
+/** Default get-page callback.
+ * @param data  Address translation context.
+ * @param buf   Read buffer metadata (unused).
+ */
+static addrxlat_status
+def_get_page_cb(void *data, addrxlat_buffer_t *buf)
+{
+	addrxlat_ctx_t *ctx = data;
+	return set_error(ctx, ADDRXLAT_ERR_NODATA,
+			 "No get-page callback");
+}
+
 addrxlat_ctx_t *
 addrxlat_ctx_new(void)
 {
 	addrxlat_ctx_t *ctx = calloc(1, sizeof(addrxlat_ctx_t) + ERRBUF);
 	if (ctx) {
 		ctx->refcnt = 1;
+		ctx->cb.data = ctx;
+		ctx->cb.sym = def_sym_cb;
+		ctx->cb.get_page = def_get_page_cb;
 		init_cache(&ctx->cache);
 		err_init(&ctx->err, ERRBUF);
 	}
@@ -277,10 +304,6 @@ addrxlat_addrspace_name(addrxlat_addrspace_t as)
 	}
 }
 
-/** Common format string for missing read callback. */
-static const char read_nocb_fmt[] =
-	"No read callback for %s";
-
 /** Common format string for read callback failures. */
 static const char read_err_fmt[] =
 	"Cannot read %d-bit %s at %s:0x%"ADDRXLAT_PRIxADDR;
@@ -336,10 +359,6 @@ read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
 {
 	addrxlat_ctx_t *ctx = step->ctx;
 	addrxlat_status status;
-
-	if (!ctx->cb.get_page)
-		return set_error(ctx, ADDRXLAT_ERR_NODATA, read_nocb_fmt,
-				 internal_addrspace_name(addr->as));
 
 	if (ctx->cb.read_caps & ADDRXLAT_CAPS(addr->as)) {
 		status = do_read32(ctx, addr, val);
@@ -409,10 +428,6 @@ read64(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint64_t *val,
 	addrxlat_ctx_t *ctx = step->ctx;
 	addrxlat_status status;
 
-	if (!ctx->cb.get_page)
-		return set_error(ctx, ADDRXLAT_ERR_NODATA, read_nocb_fmt,
-				 internal_addrspace_name(addr->as));
-
 	if (ctx->cb.read_caps & ADDRXLAT_CAPS(addr->as)) {
 		status = do_read64(ctx, addr, val);
 	} else {
@@ -448,10 +463,6 @@ get_reg(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 	addrxlat_sym_t sym;
 	addrxlat_status status;
 
-	if (!ctx->cb.sym)
-		return set_error(ctx, ADDRXLAT_ERR_NODATA,
-				 "No symbolic information callback");
-
 	sym.type = ADDRXLAT_SYM_REG;
 	sym.args[0] = name;
 	status = ctx->cb.sym(ctx->cb.data, &sym);
@@ -477,10 +488,6 @@ get_symval(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 	addrxlat_sym_t sym;
 	addrxlat_status status;
 
-	if (!ctx->cb.sym)
-		return set_error(ctx, ADDRXLAT_ERR_NODATA,
-				 "No symbolic information callback");
-
 	sym.type = ADDRXLAT_SYM_VALUE;
 	sym.args[0] = name;
 	status = ctx->cb.sym(ctx->cb.data, &sym);
@@ -505,10 +512,6 @@ get_sizeof(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *sz)
 {
 	addrxlat_sym_t sym;
 	addrxlat_status status;
-
-	if (!ctx->cb.sym)
-		return set_error(ctx, ADDRXLAT_ERR_NODATA,
-				 "No symbolic information callback");
 
 	sym.type = ADDRXLAT_SYM_SIZEOF;
 	sym.args[0] = name;
@@ -537,10 +540,6 @@ get_offsetof(addrxlat_ctx_t *ctx, const char *type, const char *memb,
 	addrxlat_sym_t sym;
 	addrxlat_status status;
 
-	if (!ctx->cb.sym)
-		return set_error(ctx, ADDRXLAT_ERR_NODATA,
-				 "No symbolic information callback");
-
 	sym.type = ADDRXLAT_SYM_OFFSETOF;
 	sym.args[0] = type;
 	sym.args[1] = memb;
@@ -567,10 +566,6 @@ get_number(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *num)
 	addrxlat_sym_t sym;
 	addrxlat_status status;
 
-	if (!ctx->cb.sym)
-		return set_error(ctx, ADDRXLAT_ERR_NODATA,
-				 "No symbolic information callback");
-
 	sym.type = ADDRXLAT_SYM_NUMBER;
 	sym.args[0] = name;
 	status = ctx->cb.sym(ctx->cb.data, &sym);
@@ -596,10 +591,6 @@ get_first_sym(addrxlat_ctx_t *ctx, const struct sym_spec *spec,
 	      addrxlat_fulladdr_t *addr)
 {
 	addrxlat_status status = ADDRXLAT_ERR_NODATA;
-
-	if (!ctx->cb.sym)
-		return set_error(ctx, status,
-				 "No symbolic information callback");
 
 	while (spec->type != ADDRXLAT_SYM_NONE) {
 		addrxlat_sym_t sym;

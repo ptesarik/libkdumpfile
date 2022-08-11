@@ -416,8 +416,7 @@ linux_rdirect_map(struct os_init_data *ctl)
 	addrxlat_fulladdr_t page_offset;
 	addrxlat_status status;
 
-	if (!ctl->ctx->cb.get_page ||
-	    !(ctl->ctx->cb.read_caps & ADDRXLAT_CAPS(ADDRXLAT_KVADDR)))
+	if (!(ctl->ctx->cb.read_caps & ADDRXLAT_CAPS(ADDRXLAT_KVADDR)))
 		return ADDRXLAT_ERR_NOMETH;
 
 	layout[0].first = 0;

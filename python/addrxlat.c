@@ -1846,8 +1846,6 @@ ctx_next_cb_sym(PyObject *_self, PyObject *args)
 	addrxlat_status status;
 
 	addrxlat_ctx_clear_err(self->ctx);
-	if (!self->next_cb.sym)
-		return raise_exception(self->ctx, cb_null(self));
 
 	argc = PyTuple_GET_SIZE(args);
 	if (argc < 1) {
@@ -1910,8 +1908,6 @@ ctx_next_cb_get_page(PyObject *_self, PyObject *args)
 	addrxlat_status status;
 
 	addrxlat_ctx_clear_err(self->ctx);
-	if (!self->next_cb.get_page)
-		return raise_exception(self->ctx, cb_null(self));
 
 	if (!PyArg_ParseTuple(args, "O", &addrobj))
 		return NULL;
