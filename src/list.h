@@ -39,7 +39,7 @@
  * @param field  Name of the field within the containing struct.
  */
 #define container_of(ptr, type, field) \
-	(type *)((char*)(ptr) - offsetof(type, field))
+	((type *)((char*)(ptr) - offsetof(type, field)))
 
 /**  Get a pointer to the structure which contains the list.
  * @param node   Pointer to a @c struct @ref list_head.
