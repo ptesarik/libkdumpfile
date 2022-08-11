@@ -51,8 +51,7 @@ alloc_ctx(void)
 
 	err_init(&ctx->err, ERRBUF);
 
-	ctx->xlatctx = init_addrxlat(ctx);
-	if (!ctx->xlatctx)
+	if (init_addrxlat(ctx) != KDUMP_OK)
 		goto err;
 
 	return ctx;

@@ -696,7 +696,7 @@ addrxlat_sym(const addrxlat_cb_t *cb, addrxlat_sym_t *sym)
 	return ret;
 }
 
-addrxlat_ctx_t *
+kdump_status
 init_addrxlat(kdump_ctx_t *ctx)
 {
 	addrxlat_ctx_t *addrxlat;
@@ -711,11 +711,14 @@ init_addrxlat(kdump_ctx_t *ctx)
 
 	addrxlat = addrxlat_ctx_new();
 	if (!addrxlat)
-		return addrxlat;
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot allocate %s",
+				 "address translation context");
 
 	addrxlat_ctx_set_cb(addrxlat, &cb);
 
-	return addrxlat;
+	ctx->xlatctx = addrxlat;
+	return KDUMP_OK;
 }
 
 /**  Allocate a new translation definition.
