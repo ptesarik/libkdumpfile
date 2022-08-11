@@ -92,6 +92,7 @@ main(int argc, char **argv)
 	};
 
 	addrxlat_ctx_t *ctx;
+	addrxlat_cb_t def_cb;
 	addrxlat_sys_t *sys;
 	addrxlat_fulladdr_t faddr;
 	addrxlat_op_ctl_t opctl;
@@ -104,6 +105,7 @@ main(int argc, char **argv)
 		return TEST_ERR;
 	}
 
+	def_cb = *addrxlat_ctx_get_ecb(ctx);
 	addrxlat_ctx_set_cb(ctx, &cb);
 
 	sys = addrxlat_sys_new();
@@ -156,7 +158,9 @@ main(int argc, char **argv)
 		printf("OK (%s)\n", addrxlat_ctx_get_err(ctx));
 
 	fputs("Missing callback: ", stdout);
-	cb.get_page = NULL;
+	cb.priv = def_cb.priv;
+	cb.get_page = def_cb.get_page;
+	cb.read_caps = ADDRXLAT_CAPS(ADDRXLAT_KVADDR);
 	addrxlat_ctx_set_cb(ctx, &cb);
 	status = addrxlat_op(&opctl, &faddr);
 	if (status == ADDRXLAT_OK) {
