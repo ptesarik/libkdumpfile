@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 #
 # Check Linux pre-2.6.11 X86_64 translation

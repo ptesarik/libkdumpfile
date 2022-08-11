@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 #
 # Check Linux X86_64 translation with 128M ktext mapping

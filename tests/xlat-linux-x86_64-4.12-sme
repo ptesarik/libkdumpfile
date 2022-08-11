@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 #
 # Check Linux 4.12 X86_64 translation with SME active

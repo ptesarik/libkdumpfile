@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 #
 # Check Xen 4.6 X86_64 BIGMEM translation without explicit version,

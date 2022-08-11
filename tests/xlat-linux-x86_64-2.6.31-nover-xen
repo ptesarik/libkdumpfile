@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 #
 # Check Linux 2.6.31 X86_64 translation without explicit version,

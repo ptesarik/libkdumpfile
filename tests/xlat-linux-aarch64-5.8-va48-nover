@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 #
 # Check Linux 5.8 AArch64 translation with 48-bit virtual addresses

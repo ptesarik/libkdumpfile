@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 #
 # Check Linux 4.13 X86_64 translation with kASLR without explicit version,

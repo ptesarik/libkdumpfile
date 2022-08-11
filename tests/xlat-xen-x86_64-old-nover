@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 #
 # Check Xen pre-3.2 X86_64 translation without explicit version,
