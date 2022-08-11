@@ -137,7 +137,7 @@ get_cache_buf(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr,
 	slot->buffer.addr = *addr;
 	slot->buffer.ptr = NULL;
 	slot->buffer.put_page = def_put_page_cb;
-	status = ctx->cb.get_page(ctx->cb.data, &slot->buffer);
+	status = ctx->cb.get_page(&ctx->cb, &slot->buffer);
 	if (status != ADDRXLAT_OK) {
 		slot->buffer.size = 0;
 		return status;
@@ -195,25 +195,25 @@ bury_cache_buffer(struct read_cache *cache, const addrxlat_fulladdr_t *addr)
 }
 
 /** Default symbolic callback.
- * @param data  Address translation context.
+ * @param cb    This callback definition.
  * @param sym   Symbolic information metadata (unused).
  */
 static addrxlat_status
-def_sym_cb(void *data, addrxlat_sym_t *sym)
+def_sym_cb(const addrxlat_cb_t *cb, addrxlat_sym_t *sym)
 {
-	addrxlat_ctx_t *ctx = data;
+	addrxlat_ctx_t *ctx = cb->priv;
 	return set_error(ctx, ADDRXLAT_ERR_NODATA,
 			 "No symbolic information callback");
 }
 
 /** Default get-page callback.
- * @param data  Address translation context.
+ * @param cb    This callback definition.
  * @param buf   Read buffer metadata (unused).
  */
 static addrxlat_status
-def_get_page_cb(void *data, addrxlat_buffer_t *buf)
+def_get_page_cb(const addrxlat_cb_t *cb, addrxlat_buffer_t *buf)
 {
-	addrxlat_ctx_t *ctx = data;
+	addrxlat_ctx_t *ctx = cb->priv;
 	return set_error(ctx, ADDRXLAT_ERR_NODATA,
 			 "No get-page callback");
 }
@@ -224,7 +224,7 @@ addrxlat_ctx_new(void)
 	addrxlat_ctx_t *ctx = calloc(1, sizeof(addrxlat_ctx_t) + ERRBUF);
 	if (ctx) {
 		ctx->refcnt = 1;
-		ctx->cb.data = ctx;
+		ctx->cb.priv = ctx;
 		ctx->cb.sym = def_sym_cb;
 		ctx->cb.get_page = def_get_page_cb;
 		init_cache(&ctx->cache);
@@ -272,7 +272,7 @@ void
 addrxlat_ctx_set_cb(addrxlat_ctx_t *ctx, const addrxlat_cb_t *cb)
 {
 	addrxlat_cb_hook_fn *hook = ctx->cb.cb_hook;
-	void *data = ctx->cb.data;
+	void *data = ctx->cb.priv;
 	ctx->cb = ctx->orig_cb = *cb;
 	if (hook)
 		hook(data, &ctx->cb);
@@ -465,7 +465,7 @@ get_reg(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 
 	sym.type = ADDRXLAT_SYM_REG;
 	sym.args[0] = name;
-	status = ctx->cb.sym(ctx->cb.data, &sym);
+	status = ctx->cb.sym(&ctx->cb, &sym);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status,
 				 "Cannot read register \"%s\"", sym.args[0]);
@@ -490,7 +490,7 @@ get_symval(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 
 	sym.type = ADDRXLAT_SYM_VALUE;
 	sym.args[0] = name;
-	status = ctx->cb.sym(ctx->cb.data, &sym);
+	status = ctx->cb.sym(&ctx->cb, &sym);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status,
 				 "Cannot resolve \"%s\"", sym.args[0]);
@@ -515,7 +515,7 @@ get_sizeof(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *sz)
 
 	sym.type = ADDRXLAT_SYM_SIZEOF;
 	sym.args[0] = name;
-	status = ctx->cb.sym(ctx->cb.data, &sym);
+	status = ctx->cb.sym(&ctx->cb, &sym);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status, "Cannot get sizeof(%s)",
 				 sym.args[0]);
@@ -543,7 +543,7 @@ get_offsetof(addrxlat_ctx_t *ctx, const char *type, const char *memb,
 	sym.type = ADDRXLAT_SYM_OFFSETOF;
 	sym.args[0] = type;
 	sym.args[1] = memb;
-	status = ctx->cb.sym(ctx->cb.data, &sym);
+	status = ctx->cb.sym(&ctx->cb, &sym);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status, "Cannot get offsetof(%s, %s)",
 				 sym.args[0], sym.args[1]);
@@ -568,7 +568,7 @@ get_number(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *num)
 
 	sym.type = ADDRXLAT_SYM_NUMBER;
 	sym.args[0] = name;
-	status = ctx->cb.sym(ctx->cb.data, &sym);
+	status = ctx->cb.sym(&ctx->cb, &sym);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, status, "Cannot get number(%s)",
 				 sym.args[0]);
@@ -596,7 +596,7 @@ get_first_sym(addrxlat_ctx_t *ctx, const struct sym_spec *spec,
 		addrxlat_sym_t sym;
 		sym.type = spec->type;
 		sym.args[0] = spec->name;
-		status = ctx->cb.sym(ctx->cb.data, &sym);
+		status = ctx->cb.sym(&ctx->cb, &sym);
 		if (status == ADDRXLAT_OK) {
 			addr->addr = sym.val;
 			addr->as = spec->as;

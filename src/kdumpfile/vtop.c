@@ -552,14 +552,14 @@ addrxlat_put_page(const addrxlat_buffer_t *buf)
 }
 
 /**  Addrxlat get_page callback.
- * @param data  Dump file object.
+ * @param cb    This callback definition.
  * @param buf   Page buffer metadata.
  * @returns     Error status.
  */
 static addrxlat_status
-addrxlat_get_page(void *data, addrxlat_buffer_t *buf)
+addrxlat_get_page(const addrxlat_cb_t *cb, addrxlat_buffer_t *buf)
 {
-	kdump_ctx_t *ctx = (kdump_ctx_t*) data;
+	kdump_ctx_t *ctx = (kdump_ctx_t*) cb->priv;
 	struct page_io *pio;
 	kdump_status status;
 
@@ -586,10 +586,15 @@ addrxlat_get_page(void *data, addrxlat_buffer_t *buf)
 	return ADDRXLAT_OK;
 }
 
+/** Symbolic callback using vmcoreinfo.
+ * @param cb   This callback definition.
+ * @param sym  Symbolic info metadata.
+ * @returns    Error status.
+ */
 static addrxlat_status
-addrxlat_sym(void *data, addrxlat_sym_t *sym)
+addrxlat_sym(const addrxlat_cb_t *cb, addrxlat_sym_t *sym)
 {
-	kdump_ctx_t *ctx = (kdump_ctx_t*) data;
+	kdump_ctx_t *ctx = (kdump_ctx_t*) cb->priv;
 	struct attr_data *base;
 	struct attr_data *attr;
 	kdump_status status;
@@ -696,7 +701,7 @@ init_addrxlat(kdump_ctx_t *ctx)
 {
 	addrxlat_ctx_t *addrxlat;
 	addrxlat_cb_t cb = {
-		.data = ctx,
+		.priv = ctx,
 		.get_page = addrxlat_get_page,
 		.read_caps = (ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR) |
 			      ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR) |

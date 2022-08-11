@@ -857,7 +857,7 @@ get_symbol_val(kdump_ctx_t *ctx, const char *name, kdump_addr_t *val)
 	cb = addrxlat_ctx_get_ecb(ctx->xlatctx);
 	sym.type = ADDRXLAT_SYM_VALUE;
 	sym.args[0] = name;
-	status = cb->sym(cb->data, &sym);
+	status = cb->sym(cb, &sym);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctx, addrxlat2kdump(ctx, status),
 				 "Cannot resolve \"%s\"", sym.args[0]);

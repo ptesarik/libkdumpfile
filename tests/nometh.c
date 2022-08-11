@@ -71,7 +71,7 @@ setup_pgt(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 }
 
 static addrxlat_status
-mygetpage(void *data, addrxlat_buffer_t *buf)
+mygetpage(const addrxlat_cb_t *cb, addrxlat_buffer_t *buf)
 {
 	fputs("read callback called?!\n", stderr);
 	return ADDRXLAT_OK;

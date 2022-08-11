@@ -1466,9 +1466,9 @@ cb_none(ctx_object *self)
 }
 
 static addrxlat_status
-cb_sym(void *_self, addrxlat_sym_t *sym)
+cb_sym(const addrxlat_cb_t *cb, addrxlat_sym_t *sym)
 {
-	ctx_object *self = (ctx_object*)_self;
+	ctx_object *self = (ctx_object*)cb->priv;
 	PyObject *cb_sym;
 	PyObject *args;
 	PyObject *obj;
@@ -1532,9 +1532,9 @@ cb_put_page(const addrxlat_buffer_t *buf)
 }
 
 static addrxlat_status
-cb_get_page(void *_self, addrxlat_buffer_t *buf)
+cb_get_page(const addrxlat_cb_t *cb, addrxlat_buffer_t *buf)
 {
-	ctx_object *self = (ctx_object*)_self;
+	ctx_object *self = (ctx_object*)cb->priv;
 	PyObject *addrobj, *result, *bufferobj;
 	addrxlat_fulladdr_t *addr;
 	int byte_order;
@@ -1608,7 +1608,7 @@ install_cb_hook(ctx_object *self, addrxlat_cb_t *cb)
 {
 	self->next_cb = *cb;
 
-	cb->data = self;
+	cb->priv = self;
 	cb->cb_hook = cb_hook;
 	cb->sym = cb_sym;
 	cb->get_page = cb_get_page;
@@ -1622,7 +1622,7 @@ cb_hook(void *_self, addrxlat_cb_t *cb)
 	ctx_object *self = (ctx_object*)_self;
 
 	if (self->next_cb.cb_hook)
-		self->next_cb.cb_hook(self->next_cb.data, cb);
+		self->next_cb.cb_hook(self->next_cb.priv, cb);
 
 	if (self->ctx)
 		install_cb_hook(self, cb);
@@ -1809,7 +1809,7 @@ cb_status_result(ctx_object *self, addrxlat_status status,
 		 unsigned long long value)
 {
 	if (self->next_cb.cb_hook == cb_hook &&
-	    handle_cb_exception((ctx_object*)self->next_cb.data, status))
+	    handle_cb_exception((ctx_object*)self->next_cb.priv, status))
 		return NULL;
 
 	if (status != ADDRXLAT_OK)
@@ -1882,7 +1882,7 @@ ctx_next_cb_sym(PyObject *_self, PyObject *args)
 		sym.args[i - 1] = arg;
 	}
 
-	status = self->next_cb.sym(self->next_cb.data, &sym);
+	status = self->next_cb.sym(&self->next_cb, &sym);
 	return cb_status_result(self, status, sym.val);
 }
 
@@ -1916,11 +1916,11 @@ ctx_next_cb_get_page(PyObject *_self, PyObject *args)
 		return NULL;
 
 	buffer.addr = *addr;
-	status = self->next_cb.get_page(self->next_cb.data, &buffer);
+	status = self->next_cb.get_page(&self->next_cb, &buffer);
 	*addr = buffer.addr;
 
 	if (self->next_cb.cb_hook == cb_hook &&
-	    handle_cb_exception((ctx_object*)self->next_cb.data, status))
+	    handle_cb_exception((ctx_object*)self->next_cb.priv, status))
 		return NULL;
 
 	if (status != ADDRXLAT_OK)

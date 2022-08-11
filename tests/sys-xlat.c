@@ -778,9 +778,9 @@ find_entry(addrxlat_addr_t addr, size_t sz)
 }
 
 static addrxlat_status
-get_page(void *data, addrxlat_buffer_t *buf)
+get_page(const addrxlat_cb_t *cb, addrxlat_buffer_t *buf)
 {
-	struct cbdata *cbd = data;
+	struct cbdata *cbd = cb->priv;
 	struct entry *ent;
 
 	if (buf->addr.as != ADDRXLAT_MACHPHYSADDR)
@@ -904,7 +904,7 @@ int main(int argc, char *argv[])
 	FILE *param, *cfg;
 	struct cbdata data;
 	addrxlat_cb_t cb = {
-		.data = &data,
+		.priv = &data,
 		.get_page = get_page,
 		.read_caps = ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR)
 	};

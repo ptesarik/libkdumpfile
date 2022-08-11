@@ -317,7 +317,7 @@ typedef struct _addrxlat_sym {
 } addrxlat_sym_t;
 
 /** Type of the symbolic information callback.
- * @param data  Arbitrary user-supplied data.
+ * @param cb    This callback definition.
  * @param sym   Symbolic information, updated on success.
  * @returns     Error status.
  *
@@ -326,7 +326,8 @@ typedef struct _addrxlat_sym {
  * handled (including an unknown type, not listed above), it must return
  * @ref ADDRXLAT_ERR_NOTIMPL.
  */
-typedef addrxlat_status addrxlat_sym_fn(void *data, addrxlat_sym_t *sym);
+typedef addrxlat_status addrxlat_sym_fn(
+	const addrxlat_cb_t *cb, addrxlat_sym_t *sym);
 
 /**  Data byte order.
  *
@@ -398,17 +399,19 @@ struct _addrxlat_buffer {
 };
 
 /** Type of the get-page callback.
- * @param data         Arbitrary user-supplied data.
+ * @param cb           This callback definition.
  * @param[in,out] buf  Page buffer metadata.
  * @returns            Error status.
  */
 typedef addrxlat_status addrxlat_get_page_fn(
-	void *data, addrxlat_buffer_t *buf);
+	const addrxlat_cb_t *cb, addrxlat_buffer_t *buf);
 
 /** Callback function pointers and data. */
 struct _addrxlat_cb {
-	/** Arbitrary callback data, passed to callback functions. */
-	void *data;
+	/** Private data to be used by the callback.
+	 * This field is reserved for use by the callbacks.
+	 * The library will not touch it.  */
+	void *priv;
 
 	/** Callback update hook. */
 	addrxlat_cb_hook_fn *cb_hook;

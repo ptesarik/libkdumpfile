@@ -51,9 +51,9 @@ find_entry(addrxlat_addr_t addr)
 }
 
 static addrxlat_status
-get_page(void *data, addrxlat_buffer_t *buf)
+get_page(const addrxlat_cb_t *cb, addrxlat_buffer_t *buf)
 {
-	addrxlat_ctx_t *ctx = data;
+	addrxlat_ctx_t *ctx = cb->priv;
 	addrxlat_lookup_elem_t *ent = find_entry(buf->addr.addr);
 	if (!ent)
 		return addrxlat_ctx_err(ctx, ADDRXLAT_ERR_NODATA, "No data");
@@ -467,7 +467,7 @@ main(int argc, char **argv)
 		rc = TEST_ERR;
 		goto out;
 	}
-	cb.data = ctx;
+	cb.priv = ctx;
 	addrxlat_ctx_set_cb(ctx, &cb);
 
 	rc = do_xlat(ctx, meth, vaddr);
