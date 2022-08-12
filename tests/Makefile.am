@@ -84,6 +84,7 @@ dumpdata_LDADD = \
 multiread_LDADD = \
 	$(top_builddir)/src/kdumpfile/libkdumpfile.la
 multixlat_LDADD = \
+	$(top_builddir)/src/addrxlat/libaddrxlat.la \
 	$(top_builddir)/src/kdumpfile/libkdumpfile.la
 nometh_LDADD = \
 	$(top_builddir)/src/addrxlat/libaddrxlat.la
