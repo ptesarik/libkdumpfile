@@ -597,6 +597,39 @@ addrxlat_get_page(const addrxlat_cb_t *cb, addrxlat_buffer_t *buf)
 	return ADDRXLAT_OK;
 }
 
+/** Get a sub-attribute, using the addrxlat context for error reporting.
+ * @param ctx   Dump file object.
+ * @param base  Base attribute.
+ * @param name  Name of the sub-attribute under @p base.
+ * @param what  Human-readable description of the object
+ *              (used in error messages).
+ * @returns     Attribute data, or @c NULL on error.
+ */
+static struct attr_data *
+sub_attr_addrxlat(kdump_ctx_t *ctx, struct attr_data *base, const char *name,
+		  const char *what)
+{
+	struct attr_data *attr;
+
+	attr = lookup_dir_attr(ctx->dict, base, name, strlen(name));
+	if (!attr) {
+		addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
+				 "%s not found", what);
+		return NULL;
+	}
+	if (!attr_isset(attr)) {
+		addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
+				 "%s has no value", what);
+		return NULL;
+	}
+	if (attr_revalidate(ctx, attr) != KDUMP_OK) {
+		addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
+				 "%s cannot be revalidated", what);
+		return NULL;
+	}
+	return attr;
+}
+
 /** Symbolic callback using vmcoreinfo.
  * @param cb   This callback definition.
  * @param sym  Symbolic info metadata.
@@ -649,40 +682,16 @@ addrxlat_sym(const addrxlat_cb_t *cb, addrxlat_sym_t *sym)
 	if (ret != ADDRXLAT_OK)
 		goto out;
 
-	attr = lookup_dir_attr(ctx->dict, base,
-			       sym->args[0], strlen(sym->args[0]));
+	attr = sub_attr_addrxlat(ctx, base, sym->args[0], "Symbol");
 	if (!attr) {
-		ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
-				       "Symbol not found");
-		goto out;
-	}
-	if (!attr_isset(attr)) {
-		ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
-				       "Symbol has no value");
-		goto out;
-	}
-	if (attr_revalidate(ctx, attr) != KDUMP_OK) {
-		ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
-				       "Symbol value cannot be revalidated");
+		ret = ADDRXLAT_ERR_NODATA;
 		goto out;
 	}
 
 	if (sym->type == ADDRXLAT_SYM_OFFSETOF) {
-		attr = lookup_dir_attr(ctx->dict, attr,
-				       sym->args[1], strlen(sym->args[1]));
+		attr = sub_attr_addrxlat(ctx, attr, sym->args[1], "Field");
 		if (!attr) {
-			ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
-					       "Field not found");
-			goto out;
-		}
-		if (!attr_isset(attr)) {
-			ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
-					       "Field has no value");
-			goto out;
-		}
-		if (attr_revalidate(ctx, attr) != KDUMP_OK) {
-			ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
-					       "Field cannot be revalidated");
+			ret = ADDRXLAT_ERR_NODATA;
 			goto out;
 		}
 	}
