@@ -1443,17 +1443,6 @@ ctx_status_result(PyObject *_self, addrxlat_status status)
 		: NULL;
 }
 
-/** Null callback function.
- * @param self  Python Context object
- * @returns     Always ADDRXLAT_ERR_NODATA
- */
-static addrxlat_status
-cb_null(ctx_object *self)
-{
-	return addrxlat_ctx_err(self->ctx, ADDRXLAT_ERR_NODATA,
-				"NULL callback");
-}
-
 /** Callback function return on None return.
  * @param self  Python Context object
  * @returns     Always ADDRXLAT_ERR_NODATA
@@ -1464,66 +1453,6 @@ cb_none(ctx_object *self)
 	return addrxlat_ctx_err(self->ctx, ADDRXLAT_ERR_NODATA,
 				"Callback returned None");
 }
-
-static addrxlat_status
-cb_sym(const addrxlat_cb_t *cb, addrxlat_sym_t *sym)
-{
-	ctx_object *self = (ctx_object*)cb->priv;
-	PyObject *cb_sym;
-	PyObject *args;
-	PyObject *obj;
-	PyObject *result;
-	int argc, i;
-	unsigned long long tmpval;
-
-	cb_sym = PyObject_GetAttrString((PyObject*)self, "cb_sym");
-	if (!cb_sym || cb_sym == Py_None)
-		return cb_null(self);
-
-	argc = addrxlat_sym_argc(sym->type);
-	if (argc == -1)
-		return addrxlat_ctx_err(self->ctx, ADDRXLAT_ERR_NOTIMPL,
-					"Unknown symbolic info type: %d",
-					(int)sym->type);
-	args = PyTuple_New(1 + argc);
-	if (!args)
-		goto err;
-
-	obj = PyInt_FromLong(sym->type);
-	if (!obj)
-		goto err_args;
-	PyTuple_SET_ITEM(args, 0, obj);
-
-	for (i = 0; i < argc; ++i) {
-		obj = Text_FromUTF8(sym->args[i]);
-		if (!obj)
-			goto err_args;
-		PyTuple_SET_ITEM(args, 1 + i, obj);
-	}
-
-	result = PyObject_Call(cb_sym, args, NULL);
-	Py_DECREF(args);
-	if (!result)
-		goto err;
-	if (result == Py_None) {
-		Py_DECREF(result);
-		return cb_none(self);
-	}
-
-	tmpval = Number_AsUnsignedLongLong(result);
-	Py_DECREF(result);
-	if (PyErr_Occurred())
-		goto err;
-
-	sym->val = tmpval;
-	return ADDRXLAT_OK;
-
- err_args:
-	Py_DECREF(args);
- err:
-	return ctx_error_status(self);
-}
-
 
 static void
 cb_put_page(const addrxlat_buffer_t *buf)
@@ -1624,6 +1553,81 @@ cb_read_caps(const addrxlat_cb_t *cb)
 	return caps;
 }
 
+static addrxlat_status
+cb_sym_offsetof(const addrxlat_cb_t *cb, const char *obj,
+		const char *elem, addrxlat_addr_t *val)
+{
+	ctx_object *self = (ctx_object*)cb->priv;
+	PyObject *result;
+	unsigned long tmpval;
+
+	result = PyObject_CallMethod((PyObject*)self, "cb_sym_offsetof",
+				     "ss", obj, elem);
+	if (!result)
+		return ctx_error_status(self);
+	if (result == Py_None) {
+		Py_DECREF(result);
+		return cb_none(self);
+	}
+
+	tmpval = Number_AsUnsignedLongLong(result);
+	Py_DECREF(result);
+	if (PyErr_Occurred())
+		return ctx_error_status(self);
+
+	*val = tmpval;
+	return ADDRXLAT_OK;
+}
+
+static addrxlat_status
+cb_arg1_value(const addrxlat_cb_t *cb, const char *name, addrxlat_addr_t *val,
+	      const char *method)
+{
+	ctx_object *self = (ctx_object*)cb->priv;
+	PyObject *result;
+	unsigned long tmpval;
+
+	result = PyObject_CallMethod((PyObject*)self, method, "s", name);
+	if (!result)
+		return ctx_error_status(self);
+	if (result == Py_None) {
+		Py_DECREF(result);
+		return cb_none(self);
+	}
+
+	tmpval = Number_AsUnsignedLongLong(result);
+	Py_DECREF(result);
+	if (PyErr_Occurred())
+		return ctx_error_status(self);
+
+	*val = tmpval;
+	return ADDRXLAT_OK;
+}
+
+static addrxlat_status
+cb_reg_value(const addrxlat_cb_t *cb, const char *name, addrxlat_addr_t *val)
+{
+	return cb_arg1_value(cb, name, val, "cb_reg_value");
+}
+
+static addrxlat_status
+cb_sym_value(const addrxlat_cb_t *cb, const char *name, addrxlat_addr_t *val)
+{
+	return cb_arg1_value(cb, name, val, "cb_sym_value");
+}
+
+static addrxlat_status
+cb_sym_sizeof(const addrxlat_cb_t *cb, const char *name, addrxlat_addr_t *val)
+{
+	return cb_arg1_value(cb, name, val, "cb_sym_sizeof");
+}
+
+static addrxlat_status
+cb_num_value(const addrxlat_cb_t *cb, const char *name, addrxlat_addr_t *val)
+{
+	return cb_arg1_value(cb, name, val, "cb_num_value");
+}
+
 PyDoc_STRVAR(ctx__doc__,
 "Context() -> address translation context");
 
@@ -1649,9 +1653,17 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	} else {
 		addrxlat_ctx_incref(self->ctx);
 
-		if (copy_attr((PyObject*)self, "next_cb_sym", "cb_sym"))
-			goto err;
 		if (copy_attr((PyObject*)self, "next_cb_get_page", "cb_get_page"))
+			goto err;
+		if (copy_attr((PyObject*)self, "next_cb_reg_value", "cb_reg_value"))
+			goto err;
+		if (copy_attr((PyObject*)self, "next_cb_sym_value", "cb_sym_value"))
+			goto err;
+		if (copy_attr((PyObject*)self, "next_cb_sym_sizeof", "cb_sym_sizeof"))
+			goto err;
+		if (copy_attr((PyObject*)self, "next_cb_sym_offsetof", "cb_sym_offsetof"))
+			goto err;
+		if (copy_attr((PyObject*)self, "next_cb_num_value", "cb_num_value"))
 			goto err;
 	}
 
@@ -1662,9 +1674,13 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		return PyErr_NoMemory();
 	}
 	self->cb->priv = self;
-	self->cb->sym = cb_sym;
 	self->cb->get_page = cb_get_page;
 	self->cb->read_caps = cb_read_caps;
+	self->cb->reg_value = cb_reg_value;
+	self->cb->sym_value = cb_sym_value;
+	self->cb->sym_sizeof = cb_sym_sizeof;
+	self->cb->sym_offsetof = cb_sym_offsetof;
+	self->cb->num_value = cb_num_value;
 
 	Py_INCREF(convert);
 	self->convert = convert;
@@ -1805,88 +1821,6 @@ ctx_get_err(PyObject *_self, PyObject *args)
 		: (Py_INCREF(Py_None), Py_None);
 }
 
-static PyObject *
-cb_status_result(ctx_object *self, addrxlat_status status,
-		 unsigned long long value)
-{
-	if (self->cb->next->sym == cb_sym &&
-	    handle_cb_exception((ctx_object*)self->cb->next->priv, status))
-		return NULL;
-
-	if (status != ADDRXLAT_OK)
-		return raise_exception(self->ctx, status);
-
-	return PyLong_FromUnsignedLongLong(value);
-}
-
-PyDoc_STRVAR(ctx_cb_sym__doc__,
-"CTX.cb_sym(type, *args) -> value\n\
-\n\
-Callback function to resolve symbolic information. The function\n\
-can be called as:\n\
-\n\
-  - CTX.cb_sym(SYM_REG, regname) -> register value\n\
-  - CTX.cb_sym(SYM_VALUE, symname) -> symbol value\n\
-  - CTX.cb_sym(SYM_SIZEOF, symname) -> size\n\
-  - CTX.cb_sym(SYM_OFFSETOF, typename, member) -> offset");
-
-PyDoc_STRVAR(ctx_next_cb_sym__doc__,
-"CTX.next_cb_sym(type, *args) -> value\n\
-\n\
-Call the next symbolic information callback.");
-
-static PyObject *
-ctx_next_cb_sym(PyObject *_self, PyObject *args)
-{
-	ctx_object *self = (ctx_object*)_self;
-	PyObject *obj;
-	addrxlat_sym_type_t type;
-	Py_ssize_t argc, i;
-	int symargc;
-	addrxlat_sym_t sym;
-	addrxlat_status status;
-
-	addrxlat_ctx_clear_err(self->ctx);
-
-	argc = PyTuple_GET_SIZE(args);
-	if (argc < 1) {
-		PyErr_Format(PyExc_TypeError,
-			     "%s() takes at least one argument",
-			     "next_cb_sym");
-		return NULL;
-	}
-
-	obj = PyTuple_GET_ITEM(args, 0);
-	type = Number_AsLong(obj);
-	Py_DECREF(obj);
-	if (PyErr_Occurred())
-		return NULL;
-
-	symargc = addrxlat_sym_argc(type);
-	if (symargc == -1) {
-		PyErr_Format(PyExc_NotImplementedError,
-			     "Unknown symbolic info type: %d", (int)type);
-		return NULL;
-	}
-	if (argc != symargc + 1) {
-		PyErr_Format(PyExc_TypeError,
-			     "%s(%d, ...) requires exactly %d arguments",
-			     "next_cb_sym", (int)type, symargc + 1);
-		return NULL;
-	}
-
-	sym.type = type;
-	for (i = 1; i < argc; ++i) {
-		char *arg = Text_AsUTF8(PyTuple_GET_ITEM(args, i));
-		if (!arg)
-			return NULL;
-		sym.args[i - 1] = arg;
-	}
-
-	status = self->cb->next->sym(self->cb->next, &sym);
-	return cb_status_result(self, status, sym.val);
-}
-
 PyDoc_STRVAR(ctx_cb_get_page__doc__,
 "CTX.cb_get_page(fulladdr) -> (value, [byte_order])\n\
 \n\
@@ -1969,6 +1903,181 @@ ctx_next_cb_read_caps(PyObject *_self, PyObject *args)
 	return result;
 }
 
+PyDoc_STRVAR(ctx_cb_reg_value__doc__,
+"CTX.cb_reg_value(type, name) -> value\n\
+\n\
+Callback function to read register value.");
+
+PyDoc_STRVAR(ctx_next_cb_reg_value__doc__,
+"CTX.next_cb_reg_value(type, name) -> value\n\
+\n\
+Call the next register value callback.");
+
+static PyObject *
+ctx_next_cb_reg_value(PyObject *_self, PyObject *args)
+{
+	ctx_object *self = (ctx_object*)_self;
+	const char *name;
+	addrxlat_addr_t val;
+	addrxlat_status status;
+
+	addrxlat_ctx_clear_err(self->ctx);
+
+	if (!PyArg_ParseTuple(args, "s", &name))
+		return NULL;
+
+	status = self->cb->next->reg_value(self->cb->next, name, &val);
+
+	if (self->cb->next->reg_value == cb_reg_value &&
+	    handle_cb_exception((ctx_object*)self->cb->next->priv, status))
+		return NULL;
+
+	if (status != ADDRXLAT_OK)
+		return raise_exception(self->ctx, status);
+
+	return PyLong_FromUnsignedLongLong(val);
+}
+
+PyDoc_STRVAR(ctx_cb_sym_value__doc__,
+"CTX.cb_sym_value(type, name) -> value\n\
+\n\
+Callback function to get the value of a symbol.");
+
+PyDoc_STRVAR(ctx_next_cb_sym_value__doc__,
+"CTX.next_cb_sym_value(type, name) -> value\n\
+\n\
+Call the next symbol value callback.");
+
+static PyObject *
+ctx_next_cb_sym_value(PyObject *_self, PyObject *args)
+{
+	ctx_object *self = (ctx_object*)_self;
+	const char *name;
+	addrxlat_addr_t val;
+	addrxlat_status status;
+
+	addrxlat_ctx_clear_err(self->ctx);
+
+	if (!PyArg_ParseTuple(args, "s", &name))
+		return NULL;
+
+	status = self->cb->next->sym_value(self->cb->next, name, &val);
+
+	if (self->cb->next->sym_value == cb_sym_value &&
+	    handle_cb_exception((ctx_object*)self->cb->next->priv, status))
+		return NULL;
+
+	if (status != ADDRXLAT_OK)
+		return raise_exception(self->ctx, status);
+
+	return PyLong_FromUnsignedLongLong(val);
+}
+
+PyDoc_STRVAR(ctx_cb_sym_sizeof__doc__,
+"CTX.cb_sym_sizeof(type, name) -> value\n\
+\n\
+Callback function to get the size of a symbol.");
+
+PyDoc_STRVAR(ctx_next_cb_sym_sizeof__doc__,
+"CTX.next_cb_sym_sizeof(type, name) -> value\n\
+\n\
+Call the next symbol size callback.");
+
+static PyObject *
+ctx_next_cb_sym_sizeof(PyObject *_self, PyObject *args)
+{
+	ctx_object *self = (ctx_object*)_self;
+	const char *name;
+	addrxlat_addr_t val;
+	addrxlat_status status;
+
+	addrxlat_ctx_clear_err(self->ctx);
+
+	if (!PyArg_ParseTuple(args, "s", &name))
+		return NULL;
+
+	status = self->cb->next->sym_sizeof(self->cb->next, name, &val);
+
+	if (self->cb->next->sym_sizeof == cb_sym_sizeof &&
+	    handle_cb_exception((ctx_object*)self->cb->next->priv, status))
+		return NULL;
+
+	if (status != ADDRXLAT_OK)
+		return raise_exception(self->ctx, status);
+
+	return PyLong_FromUnsignedLongLong(val);
+}
+
+PyDoc_STRVAR(ctx_cb_sym_offsetof__doc__,
+"CTX.cb_sym_offsetof(type, obj, elem) -> value\n\
+\n\
+Callback function to get the offset of an element within a container object.");
+
+PyDoc_STRVAR(ctx_next_cb_sym_offsetof__doc__,
+"CTX.next_cb_sym_offsetof(type, obj, elem) -> value\n\
+\n\
+Call the next element offset callback.");
+
+static PyObject *
+ctx_next_cb_sym_offsetof(PyObject *_self, PyObject *args)
+{
+	ctx_object *self = (ctx_object*)_self;
+	const char *obj, *elem;
+	addrxlat_addr_t val;
+	addrxlat_status status;
+
+	addrxlat_ctx_clear_err(self->ctx);
+
+	if (!PyArg_ParseTuple(args, "ss", &obj, &elem))
+		return NULL;
+
+	status = self->cb->next->sym_offsetof(self->cb->next, obj, elem, &val);
+
+	if (self->cb->next->sym_offsetof == cb_sym_offsetof &&
+	    handle_cb_exception((ctx_object*)self->cb->next->priv, status))
+		return NULL;
+
+	if (status != ADDRXLAT_OK)
+		return raise_exception(self->ctx, status);
+
+	return PyLong_FromUnsignedLongLong(val);
+}
+
+PyDoc_STRVAR(ctx_cb_num_value__doc__,
+"CTX.cb_num_value(type, name) -> value\n\
+\n\
+Callback function to get the value of a numeric parameter.");
+
+PyDoc_STRVAR(ctx_next_cb_num_value__doc__,
+"CTX.next_cb_num_value(type, name) -> value\n\
+\n\
+Call the next numeric parameter callback.");
+
+static PyObject *
+ctx_next_cb_num_value(PyObject *_self, PyObject *args)
+{
+	ctx_object *self = (ctx_object*)_self;
+	const char *name;
+	addrxlat_addr_t val;
+	addrxlat_status status;
+
+	addrxlat_ctx_clear_err(self->ctx);
+
+	if (!PyArg_ParseTuple(args, "s", &name))
+		return NULL;
+
+	status = self->cb->next->num_value(self->cb->next, name, &val);
+
+	if (self->cb->next->num_value == cb_num_value &&
+	    handle_cb_exception((ctx_object*)self->cb->next->priv, status))
+		return NULL;
+
+	if (status != ADDRXLAT_OK)
+		return raise_exception(self->ctx, status);
+
+	return PyLong_FromUnsignedLongLong(val);
+}
+
 static PyMethodDef ctx_methods[] = {
 	{ "err", (PyCFunction)ctx_err, METH_VARARGS | METH_KEYWORDS,
 	  ctx_err__doc__ },
@@ -1978,19 +2087,35 @@ static PyMethodDef ctx_methods[] = {
 	  ctx_get_err__doc__ },
 
 	/* Callbacks */
-	{ "cb_sym", ctx_next_cb_sym, METH_VARARGS,
-	  ctx_cb_sym__doc__ },
 	{ "cb_get_page", ctx_next_cb_get_page, METH_VARARGS,
 	  ctx_cb_get_page__doc__ },
 	{ "cb_read_caps", ctx_next_cb_read_caps, METH_VARARGS,
 	  ctx_cb_read_caps__doc__ },
+	{ "cb_reg_value", ctx_next_cb_reg_value, METH_VARARGS,
+	  ctx_cb_reg_value__doc__ },
+	{ "cb_sym_value", ctx_next_cb_sym_value, METH_VARARGS,
+	  ctx_cb_sym_value__doc__ },
+	{ "cb_sym_sizeof", ctx_next_cb_sym_sizeof, METH_VARARGS,
+	  ctx_cb_sym_sizeof__doc__ },
+	{ "cb_sym_offsetof", ctx_next_cb_sym_offsetof, METH_VARARGS,
+	  ctx_cb_sym_offsetof__doc__ },
+	{ "cb_num_value", ctx_next_cb_num_value, METH_VARARGS,
+	  ctx_cb_num_value__doc__ },
 
-	{ "next_cb_sym", ctx_next_cb_sym, METH_VARARGS,
-	  ctx_next_cb_sym__doc__ },
 	{ "next_cb_get_page", ctx_next_cb_get_page, METH_VARARGS,
 	  ctx_next_cb_get_page__doc__ },
 	{ "next_read_caps", ctx_next_cb_read_caps, METH_VARARGS,
 	  ctx_next_cb_read_caps__doc__ },
+	{ "next_cb_reg_value", ctx_next_cb_reg_value, METH_VARARGS,
+	  ctx_next_cb_reg_value__doc__ },
+	{ "next_cb_sym_value", ctx_next_cb_sym_value, METH_VARARGS,
+	  ctx_next_cb_sym_value__doc__ },
+	{ "next_cb_sym_sizeof", ctx_next_cb_sym_sizeof, METH_VARARGS,
+	  ctx_next_cb_sym_sizeof__doc__ },
+	{ "next_cb_sym_offsetof", ctx_next_cb_sym_offsetof, METH_VARARGS,
+	  ctx_next_cb_sym_offsetof__doc__ },
+	{ "next_cb_num_value", ctx_next_cb_num_value, METH_VARARGS,
+	  ctx_next_cb_num_value__doc__ },
 
 	{ NULL }
 };
@@ -5619,31 +5744,6 @@ _addrxlat_pteval_shift(PyObject *self, PyObject *args, PyObject *kwargs)
 	return PyInt_FromLong(addrxlat_pteval_shift(fmt));
 }
 
-PyDoc_STRVAR(_addrxlat_sym_argc__doc__,
-"sym_argc(type) -> number of arguments\n\
-\n\
-Get the number of arguments for a given type of symbolic info.\n\
-See SYM_xxx for valid values of type.");
-
-/** Wrapper for @ref addrxlat_sym_argc
- * @param self    module object
- * @param args    positional arguments
- * @param kwargs  keyword arguments
- * @returns       Log2 value of the PTE size, -1 if unknown / invalid
- */
-static PyObject *
-_addrxlat_sym_argc(PyObject *self, PyObject *args, PyObject *kwargs)
-{
-	static char *keywords[] = {"type", NULL};
-	unsigned long fmt;
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "k",
-					 keywords, &fmt))
-		return NULL;
-
-	return PyInt_FromLong(addrxlat_sym_argc(fmt));
-}
-
 static PyMethodDef addrxlat_methods[] = {
 	{ "strerror", (PyCFunction)_addrxlat_strerror,
 	  METH_VARARGS | METH_KEYWORDS,
@@ -5662,9 +5762,6 @@ static PyMethodDef addrxlat_methods[] = {
 	{ "pteval_shift", (PyCFunction)_addrxlat_pteval_shift,
 	  METH_VARARGS | METH_KEYWORDS,
 	  _addrxlat_pteval_shift__doc__ },
-	{ "sym_argc", (PyCFunction)_addrxlat_sym_argc,
-	  METH_VARARGS | METH_KEYWORDS,
-	  _addrxlat_sym_argc__doc__ },
 	{ NULL }
 };
 
@@ -5866,12 +5963,6 @@ init_addrxlat (void)
 	CONSTDEF(BIG_ENDIAN);
 	CONSTDEF(LITTLE_ENDIAN);
 	CONSTDEF(HOST_ENDIAN);
-
-	/* symbolic info types */
-	CONSTDEF(SYM_REG);
-	CONSTDEF(SYM_VALUE);
-	CONSTDEF(SYM_SIZEOF);
-	CONSTDEF(SYM_OFFSETOF);
 
 	/* translation kinds */
 	CONSTDEF(NOMETH);

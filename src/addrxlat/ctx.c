@@ -194,17 +194,17 @@ bury_cache_buffer(struct read_cache *cache, const addrxlat_fulladdr_t *addr)
 	} while (++slot < &cache->slot[READ_CACHE_SLOTS]);
 }
 
-/** Default symbolic callback.
- * @param cb    This callback definition.
- * @param sym   Symbolic information metadata (unused).
+/** Missing callback handler.
+ * @param cb    Default callback definition.
+ * @param name  Name of the callback.
  * @returns     Error status.
  */
 static addrxlat_status
-def_sym_cb(const addrxlat_cb_t *cb, addrxlat_sym_t *sym)
+no_callback(const addrxlat_cb_t *cb, const char *name)
 {
 	addrxlat_ctx_t *ctx = cb->priv;
 	return set_error(ctx, ADDRXLAT_ERR_NODATA,
-			 "No symbolic information callback");
+			 "No %s callback", name);
 }
 
 /** Default get-page callback.
@@ -215,9 +215,7 @@ def_sym_cb(const addrxlat_cb_t *cb, addrxlat_sym_t *sym)
 static addrxlat_status
 def_get_page_cb(const addrxlat_cb_t *cb, addrxlat_buffer_t *buf)
 {
-	addrxlat_ctx_t *ctx = cb->priv;
-	return set_error(ctx, ADDRXLAT_ERR_NODATA,
-			 "No get-page callback");
+	return no_callback(cb, "get_page");
 }
 
 /** Default read capabilities callback.
@@ -230,6 +228,72 @@ def_read_caps_cb(const addrxlat_cb_t *cb)
 	return 0;
 }
 
+/** Default register value callback.
+ * @param cb        This callback definition.
+ * @param name[in]  Register name.
+ * @param val[out]  Register value.
+ * @returns         Error status.
+ */
+static addrxlat_status
+def_reg_value_cb(const addrxlat_cb_t *cb, const char *name,
+		 addrxlat_addr_t *val)
+{
+	return no_callback(cb, "reg_value");
+}
+
+/** Default symbol value callback.
+ * @param cb        This callback definition.
+ * @param name[in]  Symbol name.
+ * @param val[out]  Symbol value (e.g. address of a variable).
+ * @returns         Error status.
+ */
+static addrxlat_status
+def_sym_value_cb(const addrxlat_cb_t *cb, const char *name,
+		 addrxlat_addr_t *val)
+{
+	return no_callback(cb, "sym_value");
+}
+
+/** Default symbol size callback.
+ * @param cb        This callback definition.
+ * @param name[in]  Name of a symbol or data type.
+ * @param val[out]  Symbol size, @c sizeof(name).
+ * @returns         Error status.
+ */
+static addrxlat_status
+def_sym_sizeof_cb(const addrxlat_cb_t *cb, const char *name,
+		  addrxlat_addr_t *val)
+{
+	return no_callback(cb, "sym_sizeof");
+}
+
+/** Default element offset callback.
+ * @param cb        This callback definition.
+ * @param obj[in]   Name of the container object (e.g. of a @c struct).
+ * @param elem[in]  Name of the element (e.g. a structure field).
+ * @param val[out]  Offset of @p elem within @p obj, @c offsetof(obj, elem).
+ * @returns         Error status.
+ */
+static addrxlat_status
+def_sym_offsetof_cb(const addrxlat_cb_t *cb, const char *obj,
+		    const char *elem, addrxlat_addr_t *val)
+{
+	return no_callback(cb, "sym_offsetof");
+}
+
+/** Default number value callback.
+ * @param cb        This callback definition.
+ * @param name[in]  Name of the numeric parameter.
+ * @param val[out]  Parameter value.
+ * @returns         Error status.
+ */
+static addrxlat_status
+def_num_value_cb(const addrxlat_cb_t *cb, const char *name,
+		 addrxlat_addr_t *val)
+{
+	return no_callback(cb, "sym_offsetof");
+}
+
 addrxlat_ctx_t *
 addrxlat_ctx_new(void)
 {
@@ -238,9 +302,13 @@ addrxlat_ctx_new(void)
 		ctx->refcnt = 1;
 		ctx->cb = &ctx->def_cb;
 		ctx->def_cb.priv = ctx;
-		ctx->def_cb.sym = def_sym_cb;
 		ctx->def_cb.get_page = def_get_page_cb;
 		ctx->def_cb.read_caps = def_read_caps_cb;
+		ctx->def_cb.reg_value = def_reg_value_cb;
+		ctx->def_cb.sym_value = def_sym_value_cb;
+		ctx->def_cb.sym_sizeof = def_sym_sizeof_cb;
+		ctx->def_cb.sym_offsetof = def_sym_offsetof_cb;
+		ctx->def_cb.num_value = def_num_value_cb;
 		init_cache(&ctx->cache);
 		err_init(&ctx->err, ERRBUF);
 	}
@@ -288,17 +356,6 @@ addrxlat_ctx_get_errmsg(addrxlat_ctx_t *ctx)
 	return &ctx->err;
 }
 
-/** Call the next symbol callback.
- * @param cb    This callback definition.
- * @param sym   Symbolic information metadata (unused).
- * @returns     Error status.
- */
-static addrxlat_status
-next_sym_cb(const addrxlat_cb_t *cb, addrxlat_sym_t *sym)
-{
-	return cb->next->sym(cb->next, sym);
-}
-
 /** Call the next get-page callback.
  * @param cb    This callback definition.
  * @param buf   Read buffer metadata.
@@ -320,6 +377,72 @@ next_read_caps_cb(const addrxlat_cb_t *cb)
 	return cb->next->read_caps(cb->next);
 }
 
+/** Call the next register value callback.
+ * @param cb        This callback definition.
+ * @param name[in]  Register name.
+ * @param val[out]  Register value.
+ * @returns         Error status.
+ */
+static addrxlat_status
+next_reg_value_cb(const addrxlat_cb_t *cb, const char *name,
+		  addrxlat_addr_t *val)
+{
+	return cb->next->reg_value(cb, name, val);
+}
+
+/** Call the next symbol value callback.
+ * @param cb        This callback definition.
+ * @param name[in]  Symbol name.
+ * @param val[out]  Symbol value (e.g. address of a variable).
+ * @returns         Error status.
+ */
+static addrxlat_status
+next_sym_value_cb(const addrxlat_cb_t *cb, const char *name,
+		  addrxlat_addr_t *val)
+{
+	return cb->next->sym_value(cb, name, val);
+}
+
+/** Call the next symbol size callback.
+ * @param cb        This callback definition.
+ * @param name[in]  Name of a symbol or data type.
+ * @param val[out]  Symbol size, @c sizeof(name).
+ * @returns         Error status.
+ */
+static addrxlat_status
+next_sym_sizeof_cb(const addrxlat_cb_t *cb, const char *name,
+		   addrxlat_addr_t *val)
+{
+	return cb->next->sym_sizeof(cb, name, val);
+}
+
+/** Call the next element offset callback.
+ * @param cb        This callback definition.
+ * @param obj[in]   Name of the container object (e.g. of a @c struct).
+ * @param elem[in]  Name of the element (e.g. a structure field).
+ * @param val[out]  Offset of @p elem within @p obj, @c offsetof(obj, elem).
+ * @returns         Error status.
+ */
+static addrxlat_status
+next_sym_offsetof_cb(const addrxlat_cb_t *cb, const char *obj,
+		     const char *elem, addrxlat_addr_t *val)
+{
+	return cb->next->sym_offsetof(cb, obj, elem, val);
+}
+
+/** Call the next number value callback.
+ * @param cb        This callback definition.
+ * @param name[in]  Name of the numeric parameter.
+ * @param val[out]  Parameter value.
+ * @returns         Error status.
+ */
+static addrxlat_status
+next_num_value_cb(const addrxlat_cb_t *cb, const char *name,
+		  addrxlat_addr_t *val)
+{
+	return cb->next->num_value(cb, name, val);
+}
+
 addrxlat_cb_t *
 addrxlat_ctx_add_cb(addrxlat_ctx_t *ctx)
 {
@@ -331,9 +454,13 @@ addrxlat_ctx_add_cb(addrxlat_ctx_t *ctx)
 
 	cb->next = ctx->cb;
 	cb->priv = NULL;
-	cb->sym = next_sym_cb;
 	cb->get_page = next_get_page_cb;
 	cb->read_caps = next_read_caps_cb;
+	cb->reg_value = next_reg_value_cb;
+	cb->sym_value = next_sym_value_cb;
+	cb->sym_sizeof = next_sym_sizeof_cb;
+	cb->sym_offsetof = next_sym_offsetof_cb;
+	cb->num_value = next_num_value_cb;
 
 	ctx->cb = cb;
 
@@ -536,18 +663,12 @@ read64(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint64_t *val,
 addrxlat_status
 get_reg(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 {
-	addrxlat_sym_t sym;
-	addrxlat_status status;
-
-	sym.type = ADDRXLAT_SYM_REG;
-	sym.args[0] = name;
-	status = ctx->cb->sym(ctx->cb, &sym);
-	if (status != ADDRXLAT_OK)
-		return set_error(ctx, status,
-				 "Cannot read register \"%s\"", sym.args[0]);
-
-	*val = sym.val;
-	return status;
+	addrxlat_status status =
+		ctx->cb->reg_value(ctx->cb, name, val);
+	return status != ADDRXLAT_OK
+		? set_error(ctx, status,
+			    "Cannot read register \"%s\"", name)
+		: status;
 }
 
 /** Resolve a symbol value.
@@ -561,18 +682,12 @@ get_reg(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 addrxlat_status
 get_symval(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 {
-	addrxlat_sym_t sym;
-	addrxlat_status status;
-
-	sym.type = ADDRXLAT_SYM_VALUE;
-	sym.args[0] = name;
-	status = ctx->cb->sym(ctx->cb, &sym);
-	if (status != ADDRXLAT_OK)
-		return set_error(ctx, status,
-				 "Cannot resolve \"%s\"", sym.args[0]);
-
-	*val = sym.val;
-	return status;
+	addrxlat_status status =
+		ctx->cb->sym_value(ctx->cb, name, val);
+	return status != ADDRXLAT_OK
+		? set_error(ctx, status,
+			    "Cannot resolve \"%s\"", name)
+		: status;
 }
 
 /** Get the size of a symbol or type.
@@ -586,18 +701,11 @@ get_symval(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *val)
 addrxlat_status
 get_sizeof(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *sz)
 {
-	addrxlat_sym_t sym;
-	addrxlat_status status;
-
-	sym.type = ADDRXLAT_SYM_SIZEOF;
-	sym.args[0] = name;
-	status = ctx->cb->sym(ctx->cb, &sym);
-	if (status != ADDRXLAT_OK)
-		return set_error(ctx, status, "Cannot get sizeof(%s)",
-				 sym.args[0]);
-
-	*sz = sym.val;
-	return status;
+	addrxlat_status status =
+		ctx->cb->sym_sizeof(ctx->cb, name, sz);
+	return status != ADDRXLAT_OK
+		? set_error(ctx, status, "Cannot get sizeof(%s)", name)
+		: status;
 }
 
 /** Get the relative offset of a member inside a type.
@@ -613,19 +721,12 @@ addrxlat_status
 get_offsetof(addrxlat_ctx_t *ctx, const char *type, const char *memb,
 	     addrxlat_addr_t *off)
 {
-	addrxlat_sym_t sym;
-	addrxlat_status status;
-
-	sym.type = ADDRXLAT_SYM_OFFSETOF;
-	sym.args[0] = type;
-	sym.args[1] = memb;
-	status = ctx->cb->sym(ctx->cb, &sym);
-	if (status != ADDRXLAT_OK)
-		return set_error(ctx, status, "Cannot get offsetof(%s, %s)",
-				 sym.args[0], sym.args[1]);
-
-	*off = sym.val;
-	return status;
+	addrxlat_status status =
+		ctx->cb->sym_offsetof(ctx->cb, type, memb, off);
+	return status != ADDRXLAT_OK
+		? set_error(ctx, status, "Cannot get offsetof(%s, %s)",
+			    type, memb)
+		: status;
 }
 
 /** Resolve a number value.
@@ -639,18 +740,11 @@ get_offsetof(addrxlat_ctx_t *ctx, const char *type, const char *memb,
 addrxlat_status
 get_number(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *num)
 {
-	addrxlat_sym_t sym;
-	addrxlat_status status;
-
-	sym.type = ADDRXLAT_SYM_NUMBER;
-	sym.args[0] = name;
-	status = ctx->cb->sym(ctx->cb, &sym);
-	if (status != ADDRXLAT_OK)
-		return set_error(ctx, status, "Cannot get number(%s)",
-				 sym.args[0]);
-
-	*num = sym.val;
-	return status;
+	addrxlat_status status =
+		ctx->cb->num_value(ctx->cb, name, num);
+	return status != ADDRXLAT_OK
+		? set_error(ctx, status, "Cannot get number(%s)", name)
+		: status;
 }
 
 DEFINE_ALIAS(ctx_err);

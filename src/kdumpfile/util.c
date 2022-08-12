@@ -850,20 +850,15 @@ cksum32(void *buffer, size_t size, uint32_t csum)
 kdump_status
 get_symbol_val(kdump_ctx_t *ctx, const char *name, kdump_addr_t *val)
 {
-	addrxlat_sym_t sym;
 	const addrxlat_cb_t *cb;
 	addrxlat_status status;
 
 	cb = addrxlat_ctx_get_cb(ctx->xlatctx);
-	sym.type = ADDRXLAT_SYM_VALUE;
-	sym.args[0] = name;
-	status = cb->sym(cb, &sym);
-	if (status != ADDRXLAT_OK)
-		return set_error(ctx, addrxlat2kdump(ctx, status),
-				 "Cannot resolve \"%s\"", sym.args[0]);
-
-	*val = sym.val;
-	return KDUMP_OK;
+	status = cb->sym_value(cb, name, val);
+	return status != ADDRXLAT_OK
+		? set_error(ctx, addrxlat2kdump(ctx, status),
+			    "Cannot resolve \"%s\"", name)
+		: KDUMP_OK;
 }
 
 /**  Get the CPU directory attribute.

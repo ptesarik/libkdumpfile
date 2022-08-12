@@ -225,99 +225,52 @@ const char *addrxlat_ctx_get_err(const addrxlat_ctx_t *ctx);
 /* Forward declaration to solve circular reference. */
 typedef struct _addrxlat_cb addrxlat_cb_t;
 
-/** Type of symbolic information. */
-typedef enum _addrxlat_sym_type {
-	/** Register value.
-	 * Input:
-	 * - @c args[0] = register name
-	 * Output:
-	 * - @c val = register value
-	 */
-	ADDRXLAT_SYM_REG,
-
-	/** Symbol value.
-	 * Input:
-	 * - @c args[0] = symbol name
-	 * Output:
-	 * - @c val = symbol value (e.g. address of a variable)
-	 */
-	ADDRXLAT_SYM_VALUE,
-
-	/** Size of an object.
-	 * Input:
-	 * - @c args[0] = name of symbol or data type
-	 * Output:
-	 * - @c val = @c sizeof(args[0])
-	 */
-	ADDRXLAT_SYM_SIZEOF,
-
-	/** Offset of a member within a structure.
-	 * Input:
-	 * - @c args[0] = container name (e.g. of a @c struct)
-	 * - @c args[1] = element name (e.g. a structure member)
-	 * Output:
-	 * - @c val = @c offsetof(args[0],args[1])
-	 */
-	ADDRXLAT_SYM_OFFSETOF,
-
-	/** Number value.
-	 * Input:
-	 * - @c args[0] = number name
-	 * Output:
-	 * - @c val = number value
-	 */
-	ADDRXLAT_SYM_NUMBER,
-} addrxlat_sym_type_t;
-
-/** Maximum argument count for @ref addrxlat_sym_t. */
-#define ADDRXLAT_SYM_ARGC_MAX	2
-
-/** Get the number of arguments for a given type.
- * @param type  Type of symbolic information.
- * @returns     Number of arguments, or -1 if unknown.
- *
- * The return value must not be greater than @ref ADDRXLAT_SYM_ARGC_MAX.
+/** Type of the register value callback.
+ * @param cb        This callback definition.
+ * @param name[in]  Register name.
+ * @param val[out]  Register value.
+ * @returns         Error status.
  */
-static inline int
-addrxlat_sym_argc(addrxlat_sym_type_t type)
-{
-	switch (type) {
-	case ADDRXLAT_SYM_REG:
-	case ADDRXLAT_SYM_VALUE:
-	case ADDRXLAT_SYM_SIZEOF:
-	case ADDRXLAT_SYM_NUMBER:
-		return 1;
+typedef addrxlat_status addrxlat_cb_reg_value_fn(
+	const addrxlat_cb_t *cb, const char *name, addrxlat_addr_t *val);
 
-	case ADDRXLAT_SYM_OFFSETOF:
-		return 2;
-	}
-	return -1;
-}
-
-/** Data structure used to hold symbolic information. */
-typedef struct _addrxlat_sym {
-	/** [out] Resolved value. */
-	addrxlat_addr_t val;
-
-	/** [in] Type of information. */
-	addrxlat_sym_type_t type;
-
-	/** [in] Symbolic arguments. */
-	const char *args[ADDRXLAT_SYM_ARGC_MAX];
-} addrxlat_sym_t;
-
-/** Type of the symbolic information callback.
- * @param cb    This callback definition.
- * @param sym   Symbolic information, updated on success.
- * @returns     Error status.
- *
- * The callback function should check the information type and fill in
- * the output fields in @c sym. If it is called for a type that is not
- * handled (including an unknown type, not listed above), it must return
- * @ref ADDRXLAT_ERR_NOTIMPL.
+/** Type of the symbol value callback.
+ * @param cb        This callback definition.
+ * @param name[in]  Symbol name.
+ * @param val[out]  Symbol value (e.g. address of a variable).
+ * @returns         Error status.
  */
-typedef addrxlat_status addrxlat_sym_fn(
-	const addrxlat_cb_t *cb, addrxlat_sym_t *sym);
+typedef addrxlat_status addrxlat_cb_sym_value_fn(
+	const addrxlat_cb_t *cb, const char *name, addrxlat_addr_t *val);
+
+/** Type of the symbol size callback.
+ * @param cb        This callback definition.
+ * @param name[in]  Name of a symbol or data type.
+ * @param val[out]  Symbol size, @c sizeof(name).
+ * @returns         Error status.
+ */
+typedef addrxlat_status addrxlat_cb_sym_sizeof_fn(
+	const addrxlat_cb_t *cb, const char *name, addrxlat_addr_t *val);
+
+/** Type of the element offset callback.
+ * @param cb        This callback definition.
+ * @param obj[in]   Name of the container object (e.g. of a @c struct).
+ * @param elem[in]  Name of the element (e.g. a structure field).
+ * @param val[out]  Offset of @p elem within @p obj, @c offsetof(obj, elem).
+ * @returns         Error status.
+ */
+typedef addrxlat_status addrxlat_cb_sym_offsetof_fn(
+	const addrxlat_cb_t *cb, const char *obj, const char *elem,
+	addrxlat_addr_t *val);
+
+/** Type of the number value callback.
+ * @param cb        This callback definition.
+ * @param name[in]  Name of the numeric parameter.
+ * @param val[out]  Parameter value.
+ * @returns         Error status.
+ */
+typedef addrxlat_status addrxlat_cb_num_value_fn(
+	const addrxlat_cb_t *cb, const char *name, addrxlat_addr_t *val);
 
 /**  Data byte order.
  *
@@ -420,14 +373,26 @@ struct _addrxlat_cb {
 	 * The library will not touch it.  */
 	void *priv;
 
-	/** Symbolic information callback. */
-	addrxlat_sym_fn *sym;
-
 	/** Callback to get a page buffer. */
 	addrxlat_get_page_fn *get_page;
 
 	/** Read capabilities callback. */
 	addrxlat_read_caps_fn *read_caps;
+
+	/** Register value callback. */
+	addrxlat_cb_reg_value_fn *reg_value;
+
+	/** Symbol value callback. */
+	addrxlat_cb_sym_value_fn *sym_value;
+
+	/** Symbol size callback. */
+	addrxlat_cb_sym_sizeof_fn *sym_sizeof;
+
+	/** Element offset callback. */
+	addrxlat_cb_sym_offsetof_fn *sym_offsetof;
+
+	/** Number value callback. */
+	addrxlat_cb_num_value_fn *num_value;
 };
 
 /** Add a callback implementation.

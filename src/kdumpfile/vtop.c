@@ -606,7 +606,7 @@ addrxlat_get_page(const addrxlat_cb_t *cb, addrxlat_buffer_t *buf)
  * @returns     Attribute data, or @c NULL on error.
  */
 static struct attr_data *
-sub_attr_addrxlat(kdump_ctx_t *ctx, struct attr_data *base, const char *name,
+sub_attr_xlat(kdump_ctx_t *ctx, struct attr_data *base, const char *name,
 		  const char *what)
 {
 	struct attr_data *attr;
@@ -614,104 +614,193 @@ sub_attr_addrxlat(kdump_ctx_t *ctx, struct attr_data *base, const char *name,
 	attr = lookup_dir_attr(ctx->dict, base, name, strlen(name));
 	if (!attr) {
 		addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
-				 "%s not found", what);
+				 "%s attribute not found", what);
 		return NULL;
 	}
 	if (!attr_isset(attr)) {
 		addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
-				 "%s has no value", what);
+				 "%s attribute is unset", what);
 		return NULL;
 	}
 	if (attr_revalidate(ctx, attr) != KDUMP_OK) {
 		addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
-				 "%s cannot be revalidated", what);
+				 "%s attribute cannot be revalidated", what);
 		return NULL;
 	}
 	return attr;
 }
 
-/** Symbolic callback using vmcoreinfo.
- * @param cb   This callback definition.
- * @param sym  Symbolic info metadata.
- * @returns    Error status.
- */
+/** Get register value from attributes (with locks held). */
 static addrxlat_status
-addrxlat_sym(const addrxlat_cb_t *cb, addrxlat_sym_t *sym)
+reg_value_locked(const addrxlat_cb_t *cb, const char *name,
+		 addrxlat_addr_t *val)
 {
 	kdump_ctx_t *ctx = (kdump_ctx_t*) cb->priv;
-	struct attr_data *base;
 	struct attr_data *attr;
-	kdump_status status;
+
+	attr = lookup_attr(ctx->dict, "cpu.0.reg");
+	if (!attr)
+		return addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
+					"No registers");
+
+	attr = sub_attr_xlat(ctx, attr, name, "Register");
+	if (!attr)
+		return ADDRXLAT_ERR_NODATA;
+
+	*val = attr_value(attr)->number;
+	return ADDRXLAT_OK;
+}
+
+/** Register value callback. */
+static addrxlat_status
+reg_value(const addrxlat_cb_t *cb, const char *name, addrxlat_addr_t *val)
+{
+	kdump_ctx_t *ctx = (kdump_ctx_t*) cb->priv;
 	addrxlat_status ret;
 
 	rwlock_rdlock(&ctx->shared->lock);
+	ret = reg_value_locked(cb, name, val);
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
+}
 
-	status = KDUMP_OK;
-	ret = ADDRXLAT_OK;
+/** Get symbol value from attributes (with locks held). */
+static addrxlat_status
+sym_value_locked(const addrxlat_cb_t *cb, const char *name,
+		 addrxlat_addr_t *val)
+{
+	kdump_ctx_t *ctx = (kdump_ctx_t*) cb->priv;
+	struct attr_data *attr;
+	kdump_status status;
 
-	switch (sym->type) {
-	case ADDRXLAT_SYM_VALUE:
-		status = ostype_attr(ctx, "vmcoreinfo.SYMBOL", &base);
-		break;
-
-	case ADDRXLAT_SYM_SIZEOF:
-		status = ostype_attr(ctx, "vmcoreinfo.SIZE", &base);
-		break;
-
-	case ADDRXLAT_SYM_OFFSETOF:
-		status = ostype_attr(ctx, "vmcoreinfo.OFFSET", &base);
-		break;
-
-        case ADDRXLAT_SYM_NUMBER:
-		status = ostype_attr(ctx, "vmcoreinfo.NUMBER", &base);
-		break;
-
-	case ADDRXLAT_SYM_REG:
-		base = lookup_attr(ctx->dict, "cpu.0.reg");
-		if (!base)
-			ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NODATA,
-					   "No registers");
-		break;
-
-	default:
-		ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
-				       "Unhandled symbolic type");
-	}
+	status = ostype_attr(ctx, "vmcoreinfo.SYMBOL", &attr);
 	if (status != KDUMP_OK)
-		ret = kdump2addrxlat(ctx, status);
-	if (ret != ADDRXLAT_OK)
-		goto out;
+		return kdump2addrxlat(ctx, status);
 
-	attr = sub_attr_addrxlat(ctx, base, sym->args[0], "Symbol");
-	if (!attr) {
-		ret = ADDRXLAT_ERR_NODATA;
-		goto out;
-	}
+	attr = sub_attr_xlat(ctx, attr, name, "Symbol value");
+	if (!attr)
+		return ADDRXLAT_ERR_NODATA;
 
-	if (sym->type == ADDRXLAT_SYM_OFFSETOF) {
-		attr = sub_attr_addrxlat(ctx, attr, sym->args[1], "Field");
-		if (!attr) {
-			ret = ADDRXLAT_ERR_NODATA;
-			goto out;
-		}
-	}
+	*val = attr_value(attr)->address;
+	return ADDRXLAT_OK;
+}
 
-	ret = ADDRXLAT_OK;
-	switch (attr->template->type) {
-	case KDUMP_NUMBER:
-		sym->val = attr_value(attr)->number;
-		break;
+/** Symbol value callback. */
+static addrxlat_status
+sym_value(const addrxlat_cb_t *cb, const char *name, addrxlat_addr_t *val)
+{
+	kdump_ctx_t *ctx = (kdump_ctx_t*) cb->priv;
+	addrxlat_status ret;
 
-	case KDUMP_ADDRESS:
-		sym->val = attr_value(attr)->address;
-		break;
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = sym_value_locked(cb, name, val);
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
+}
 
-	default:
-		ret = addrxlat_ctx_err(ctx->xlatctx, ADDRXLAT_ERR_NOTIMPL,
-				       "Unhandled attribute type");
-	}
+/** Get symbol size from attributes (with locks held). */
+static addrxlat_status
+sym_sizeof_locked(const addrxlat_cb_t *cb, const char *name,
+		  addrxlat_addr_t *val)
+{
+	kdump_ctx_t *ctx = (kdump_ctx_t*) cb->priv;
+	struct attr_data *attr;
+	kdump_status status;
 
- out:
+	status = ostype_attr(ctx, "vmcoreinfo.SIZE", &attr);
+	if (status != KDUMP_OK)
+		return kdump2addrxlat(ctx, status);
+
+	attr = sub_attr_xlat(ctx, attr, name, "Symbol size");
+	if (!attr)
+		return ADDRXLAT_ERR_NODATA;
+
+	*val = attr_value(attr)->number;
+	return ADDRXLAT_OK;
+}
+
+/** Symbol size callback. */
+static addrxlat_status
+sym_sizeof(const addrxlat_cb_t *cb, const char *name, addrxlat_addr_t *val)
+{
+	kdump_ctx_t *ctx = (kdump_ctx_t*) cb->priv;
+	addrxlat_status ret;
+
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = sym_sizeof_locked(cb, name, val);
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
+}
+
+/** Get element offset within an object from attributes (with locks held). */
+static addrxlat_status
+sym_offsetof_locked(const addrxlat_cb_t *cb, const char *obj, const char *elem,
+		    addrxlat_addr_t *val)
+{
+	kdump_ctx_t *ctx = (kdump_ctx_t*) cb->priv;
+	struct attr_data *attr;
+	kdump_status status;
+
+	status = ostype_attr(ctx, "vmcoreinfo.OFFSET", &attr);
+	if (status != KDUMP_OK)
+		return kdump2addrxlat(ctx, status);
+
+	attr = sub_attr_xlat(ctx, attr, obj, "Container object");
+	if (!attr)
+		return ADDRXLAT_ERR_NODATA;
+
+	attr = sub_attr_xlat(ctx, attr, obj, "Field");
+	if (!attr)
+		return ADDRXLAT_ERR_NODATA;
+
+	*val = attr_value(attr)->number;
+	return ADDRXLAT_OK;
+}
+
+/** Element offset callback. */
+static addrxlat_status
+sym_offsetof(const addrxlat_cb_t *cb, const char *obj, const char *elem,
+	     addrxlat_addr_t *val)
+{
+	kdump_ctx_t *ctx = (kdump_ctx_t*) cb->priv;
+	addrxlat_status ret;
+
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = sym_offsetof_locked(cb, obj, elem, val);
+	rwlock_unlock(&ctx->shared->lock);
+	return ret;
+}
+
+/** Get number value from attributes (with locks held). */
+static addrxlat_status
+num_value_locked(const addrxlat_cb_t *cb, const char *name,
+		 addrxlat_addr_t *val)
+{
+	kdump_ctx_t *ctx = (kdump_ctx_t*) cb->priv;
+	struct attr_data *attr;
+	kdump_status status;
+
+	status = ostype_attr(ctx, "vmcoreinfo.NUMBER", &attr);
+	if (status != KDUMP_OK)
+		return kdump2addrxlat(ctx, status);
+
+	attr = sub_attr_xlat(ctx, attr, name, "Number");
+	if (!attr)
+		return ADDRXLAT_ERR_NODATA;
+
+	*val = attr_value(attr)->number;
+	return ADDRXLAT_OK;
+}
+
+/** Number value callback. */
+static addrxlat_status
+num_value(const addrxlat_cb_t *cb, const char *name, addrxlat_addr_t *val)
+{
+	kdump_ctx_t *ctx = (kdump_ctx_t*) cb->priv;
+	addrxlat_status ret;
+
+	rwlock_rdlock(&ctx->shared->lock);
+	ret = num_value_locked(cb, name, val);
 	rwlock_unlock(&ctx->shared->lock);
 	return ret;
 }
@@ -737,9 +826,13 @@ init_addrxlat(kdump_ctx_t *ctx)
 	}
 
 	cb->priv = ctx;
-	cb->sym = addrxlat_sym;
 	cb->get_page = addrxlat_get_page;
 	cb->read_caps = addrxlat_read_caps;
+	cb->reg_value = reg_value;
+	cb->sym_value = sym_value;
+	cb->sym_sizeof = sym_sizeof;
+	cb->sym_offsetof = sym_offsetof;
+	cb->num_value = num_value;
 
 	ctx->xlatctx = addrxlat;
 	ctx->xlatcb = cb;
