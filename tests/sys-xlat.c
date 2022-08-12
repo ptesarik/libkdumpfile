@@ -777,6 +777,12 @@ find_entry(addrxlat_addr_t addr, size_t sz)
 	return NULL;
 }
 
+static unsigned long
+read_caps(const addrxlat_cb_t *cb)
+{
+	return ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR);
+}
+
 static addrxlat_status
 get_page(const addrxlat_cb_t *cb, addrxlat_buffer_t *buf)
 {
@@ -953,7 +959,7 @@ int main(int argc, char *argv[])
 	}
 	cb->priv = &data;
 	cb->get_page = get_page;
-	cb->read_caps = ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR);
+	cb->read_caps = read_caps;
 
 	cfg = fopen(cfg_file, "r");
 	if (!cfg) {

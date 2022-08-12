@@ -551,6 +551,17 @@ addrxlat_put_page(const addrxlat_buffer_t *buf)
 	free(pio);
 }
 
+/**  Addrxlat read_caps callback.
+ * @param cb    This callback definition.
+ * @returns     Address spaces supported by @ref addrxlat_get_page.
+ */
+static unsigned long
+addrxlat_read_caps(const addrxlat_cb_t *cb)
+{
+	kdump_ctx_t *ctx = (kdump_ctx_t*) cb->priv;
+	return ctx->xlat->xlat_caps;
+}
+
 /**  Addrxlat get_page callback.
  * @param cb    This callback definition.
  * @param buf   Page buffer metadata.
@@ -719,9 +730,7 @@ init_addrxlat(kdump_ctx_t *ctx)
 	cb->priv = ctx;
 	cb->sym = addrxlat_sym;
 	cb->get_page = addrxlat_get_page;
-	cb->read_caps = (ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR) |
-			 ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR) |
-			 ADDRXLAT_CAPS(ADDRXLAT_KVADDR));
+	cb->read_caps = addrxlat_read_caps;
 
 	ctx->xlatctx = addrxlat;
 	ctx->xlatcb = cb;

@@ -1601,6 +1601,29 @@ cb_get_page(const addrxlat_cb_t *cb, addrxlat_buffer_t *buf)
 	return ADDRXLAT_OK;
 }
 
+static unsigned long
+cb_read_caps(const addrxlat_cb_t *cb)
+{
+	ctx_object *self = (ctx_object*)cb->priv;
+	PyObject *result;
+	unsigned long caps;
+
+	result = PyObject_CallMethod((PyObject*)self, "cb_read_caps", NULL);
+	if (!result)
+		return 0;
+	if (result == Py_None) {
+		Py_DECREF(result);
+		return 0;
+	}
+
+	caps = Number_AsUnsignedLongLong(result);
+	Py_DECREF(result);
+	if (PyErr_Occurred())
+		return 0;
+
+	return caps;
+}
+
 PyDoc_STRVAR(ctx__doc__,
 "Context() -> address translation context");
 
@@ -1641,6 +1664,7 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	self->cb->priv = self;
 	self->cb->sym = cb_sym;
 	self->cb->get_page = cb_get_page;
+	self->cb->read_caps = cb_read_caps;
 
 	Py_INCREF(convert);
 	self->convert = convert;
@@ -1917,6 +1941,34 @@ ctx_next_cb_get_page(PyObject *_self, PyObject *args)
 	return NULL;
 }
 
+PyDoc_STRVAR(ctx_cb_read_caps__doc__,
+"CTX.cb_read_caps() -> capabilities\n\
+\n\
+Callback function to get a bitmask of address spaces accepted by\n\
+the cb_get_page callback.");
+
+PyDoc_STRVAR(ctx_next_cb_read_caps__doc__,
+"CTX.next_cb_read_caps() -> value\n\
+\n\
+Call the next callback to get the capabilities.");
+
+static PyObject *
+ctx_next_cb_read_caps(PyObject *_self, PyObject *args)
+{
+	ctx_object *self = (ctx_object*)_self;
+	unsigned long caps;
+	PyObject *result;
+
+	caps = self->cb->next->read_caps(self->cb->next);
+	if (PyErr_Occurred())
+		return NULL;
+
+	result = Py_BuildValue("(k)", caps);
+	if (!result)
+		return NULL;
+	return result;
+}
+
 static PyMethodDef ctx_methods[] = {
 	{ "err", (PyCFunction)ctx_err, METH_VARARGS | METH_KEYWORDS,
 	  ctx_err__doc__ },
@@ -1930,11 +1982,15 @@ static PyMethodDef ctx_methods[] = {
 	  ctx_cb_sym__doc__ },
 	{ "cb_get_page", ctx_next_cb_get_page, METH_VARARGS,
 	  ctx_cb_get_page__doc__ },
+	{ "cb_read_caps", ctx_next_cb_read_caps, METH_VARARGS,
+	  ctx_cb_read_caps__doc__ },
 
 	{ "next_cb_sym", ctx_next_cb_sym, METH_VARARGS,
 	  ctx_next_cb_sym__doc__ },
 	{ "next_cb_get_page", ctx_next_cb_get_page, METH_VARARGS,
 	  ctx_next_cb_get_page__doc__ },
+	{ "next_read_caps", ctx_next_cb_read_caps, METH_VARARGS,
+	  ctx_next_cb_read_caps__doc__ },
 
 	{ NULL }
 };
@@ -1942,39 +1998,6 @@ static PyMethodDef ctx_methods[] = {
 static PyMemberDef ctx_members[] = {
 	{ "convert", T_OBJECT, offsetof(ctx_object, convert), 0,
 	  attr_convert__doc__ },
-	{ NULL }
-};
-
-PyDoc_STRVAR(ctx_read_caps__doc__,
-"read callback capabilities\n\
-\n\
-A bitmask of address spaces accepted by the read callback.");
-
-static PyObject *
-ctx_get_read_caps(PyObject *_self, void *data)
-{
-	ctx_object *self = (ctx_object*)_self;
-	unsigned long read_caps = addrxlat_ctx_get_cb(self->ctx)->read_caps;
-
-	return PyLong_FromUnsignedLong(read_caps);
-}
-
-static int
-ctx_set_read_caps(PyObject *_self, PyObject *value, void *data)
-{
-	ctx_object *self = (ctx_object*)_self;
-	long read_caps = Number_AsLong(value);
-
-	if (PyErr_Occurred())
-		return -1;
-
-	self->cb->read_caps = read_caps;
-	return 0;
-}
-
-static PyGetSetDef ctx_getset[] = {
-	{ "read_caps", ctx_get_read_caps, ctx_set_read_caps,
-	  ctx_read_caps__doc__ },
 	{ NULL }
 };
 
@@ -2011,7 +2034,7 @@ static PyTypeObject ctx_type =
 	0,				/* tp_iternext */
 	ctx_methods,			/* tp_methods */
 	ctx_members,			/* tp_members */
-	ctx_getset,			/* tp_getset */
+	0,				/* tp_getset */
 	0,				/* tp_base */
 	0,				/* tp_dict */
 	0,				/* tp_descr_get */

@@ -50,6 +50,13 @@ find_entry(addrxlat_addr_t addr)
 	return NULL;
 }
 
+static unsigned long
+read_caps(const addrxlat_cb_t *cb)
+{
+	return (ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR) |
+		ADDRXLAT_CAPS(ADDRXLAT_KVADDR));
+}
+
 static addrxlat_status
 get_page(const addrxlat_cb_t *cb, addrxlat_buffer_t *buf)
 {
@@ -471,8 +478,7 @@ main(int argc, char **argv)
 	}
 	cb->priv = ctx;
 	cb->get_page = get_page;
-	cb->read_caps = (ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR) |
-			 ADDRXLAT_CAPS(ADDRXLAT_KVADDR));
+	cb->read_caps = read_caps;
 	rc = do_xlat(ctx, meth, vaddr);
 
  out:

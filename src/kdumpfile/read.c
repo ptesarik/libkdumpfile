@@ -278,10 +278,5 @@ kdump_read_string(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 void
 set_addrspace_caps(struct kdump_xlat *xlat, unsigned long caps)
 {
-	kdump_ctx_t *ctx;
-
 	xlat->xlat_caps = caps;
-	list_for_each_entry(ctx, &xlat->ctx, xlat_list) {
-		ctx->xlatcb->read_caps = caps;
-	}
 }

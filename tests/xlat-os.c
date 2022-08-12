@@ -68,6 +68,12 @@ find_entry(addrxlat_addr_t addr, size_t sz)
 	return NULL;
 }
 
+static unsigned long
+read_caps(const addrxlat_cb_t *cb)
+{
+	return ADDRXLAT_CAPS(entry_as);
+}
+
 static addrxlat_status
 get_page(const addrxlat_cb_t *cb, addrxlat_buffer_t *buf)
 {
@@ -471,7 +477,7 @@ os_map(void)
 	}
 	cb->priv = &data;
 	cb->get_page = get_page;
-	cb->read_caps = ADDRXLAT_CAPS(entry_as);
+	cb->read_caps = read_caps;
 	cb->sym = get_symdata;
 
 	data.sys = addrxlat_sys_new();

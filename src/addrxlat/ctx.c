@@ -197,6 +197,7 @@ bury_cache_buffer(struct read_cache *cache, const addrxlat_fulladdr_t *addr)
 /** Default symbolic callback.
  * @param cb    This callback definition.
  * @param sym   Symbolic information metadata (unused).
+ * @returns     Error status.
  */
 static addrxlat_status
 def_sym_cb(const addrxlat_cb_t *cb, addrxlat_sym_t *sym)
@@ -209,6 +210,7 @@ def_sym_cb(const addrxlat_cb_t *cb, addrxlat_sym_t *sym)
 /** Default get-page callback.
  * @param cb    This callback definition.
  * @param buf   Read buffer metadata (unused).
+ * @returns     Error status.
  */
 static addrxlat_status
 def_get_page_cb(const addrxlat_cb_t *cb, addrxlat_buffer_t *buf)
@@ -216,6 +218,16 @@ def_get_page_cb(const addrxlat_cb_t *cb, addrxlat_buffer_t *buf)
 	addrxlat_ctx_t *ctx = cb->priv;
 	return set_error(ctx, ADDRXLAT_ERR_NODATA,
 			 "No get-page callback");
+}
+
+/** Default read capabilities callback.
+ * @param cb    This callback definition.
+ * @returns     Read capabilities.
+ */
+static unsigned long
+def_read_caps_cb(const addrxlat_cb_t *cb)
+{
+	return 0;
 }
 
 addrxlat_ctx_t *
@@ -228,6 +240,7 @@ addrxlat_ctx_new(void)
 		ctx->def_cb.priv = ctx;
 		ctx->def_cb.sym = def_sym_cb;
 		ctx->def_cb.get_page = def_get_page_cb;
+		ctx->def_cb.read_caps = def_read_caps_cb;
 		init_cache(&ctx->cache);
 		err_init(&ctx->err, ERRBUF);
 	}
@@ -297,6 +310,16 @@ next_get_page_cb(const addrxlat_cb_t *cb, addrxlat_buffer_t *buf)
 	return cb->next->get_page(cb->next, buf);
 }
 
+/** Call the next read capabilities callback.
+ * @param cb    This callback definition.
+ * @returns     Read capabilities.
+ */
+static unsigned long
+next_read_caps_cb(const addrxlat_cb_t *cb)
+{
+	return cb->next->read_caps(cb->next);
+}
+
 addrxlat_cb_t *
 addrxlat_ctx_add_cb(addrxlat_ctx_t *ctx)
 {
@@ -310,7 +333,7 @@ addrxlat_ctx_add_cb(addrxlat_ctx_t *ctx)
 	cb->priv = NULL;
 	cb->sym = next_sym_cb;
 	cb->get_page = next_get_page_cb;
-	cb->read_caps = ctx->cb->read_caps;
+	cb->read_caps = next_read_caps_cb;
 
 	ctx->cb = cb;
 
@@ -407,9 +430,11 @@ read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
        const char *what)
 {
 	addrxlat_ctx_t *ctx = step->ctx;
+	unsigned long read_caps;
 	addrxlat_status status;
 
-	if (ctx->cb->read_caps & ADDRXLAT_CAPS(addr->as)) {
+	read_caps = ctx->cb->read_caps(ctx->cb);
+	if (read_caps & ADDRXLAT_CAPS(addr->as)) {
 		status = do_read32(ctx, addr, val);
 	} else {
 		addrxlat_op_ctl_t ctl;
@@ -419,7 +444,7 @@ read32(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint32_t *val,
 		ctl.sys = step->sys;
 		ctl.op = read32_op;
 		ctl.data = &param;
-		ctl.caps = ctx->cb->read_caps;
+		ctl.caps = read_caps;
 		status = internal_op(&ctl, addr);
 	}
 
@@ -475,9 +500,11 @@ read64(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint64_t *val,
        const char *what)
 {
 	addrxlat_ctx_t *ctx = step->ctx;
+	unsigned long read_caps;
 	addrxlat_status status;
 
-	if (ctx->cb->read_caps & ADDRXLAT_CAPS(addr->as)) {
+	read_caps = ctx->cb->read_caps(ctx->cb);
+	if (read_caps & ADDRXLAT_CAPS(addr->as)) {
 		status = do_read64(ctx, addr, val);
 	} else {
 		addrxlat_op_ctl_t ctl;
@@ -487,7 +514,7 @@ read64(addrxlat_step_t *step, const addrxlat_fulladdr_t *addr, uint64_t *val,
 		ctl.sys = step->sys;
 		ctl.op = read64_op;
 		ctl.data = &param;
-		ctl.caps = ctx->cb->read_caps;
+		ctl.caps = read_caps;
 		status = internal_op(&ctl, addr);
 	}
 

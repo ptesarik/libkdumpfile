@@ -70,6 +70,18 @@ setup_pgt(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)
 	return TEST_OK;
 }
 
+static unsigned long
+machphysaddr_caps(const addrxlat_cb_t *cb)
+{
+	return ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR);
+}
+
+static unsigned long
+kvaddr_caps(const addrxlat_cb_t *cb)
+{
+	return ADDRXLAT_CAPS(ADDRXLAT_KVADDR);
+}
+
 static addrxlat_status
 mygetpage(const addrxlat_cb_t *cb, addrxlat_buffer_t *buf)
 {
@@ -108,7 +120,7 @@ main(int argc, char **argv)
 		return TEST_ERR;
 	}
 	cb->get_page = mygetpage;
-	cb->read_caps = ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR);
+	cb->read_caps = machphysaddr_caps;
 
 	sys = addrxlat_sys_new();
 	if (!sys) {
@@ -144,7 +156,7 @@ main(int argc, char **argv)
 		printf("OK (%s)\n", addrxlat_ctx_get_err(ctx));
 
 	fputs("Callback with no capabilities: ", stdout);
-	cb->read_caps = 0;
+	cb->read_caps = def_cb->read_caps;
 	status = addrxlat_op(&opctl, &faddr);
 	if (status == ADDRXLAT_OK) {
 		puts("FAIL");
@@ -161,7 +173,7 @@ main(int argc, char **argv)
 	fputs("Missing callback: ", stdout);
 	cb->priv = def_cb->priv;
 	cb->get_page = def_cb->get_page;
-	cb->read_caps = ADDRXLAT_CAPS(ADDRXLAT_KVADDR);
+	cb->read_caps = kvaddr_caps;
 	status = addrxlat_op(&opctl, &faddr);
 	if (status == ADDRXLAT_OK) {
 		puts("FAIL");

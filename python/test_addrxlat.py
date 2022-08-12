@@ -666,8 +666,11 @@ class TestTranslation(unittest.TestCase):
                 return (bytearray((0x00, 0x00, 0x00, 0xaa)),
                         addrxlat.BIG_ENDIAN)
 
+        def read_caps():
+            return addrxlat.CAPS(addrxlat.MACHPHYSADDR)
+
         self.ctx = addrxlat.Context()
-        self.ctx.read_caps = addrxlat.CAPS(addrxlat.MACHPHYSADDR)
+        self.ctx.cb_read_caps = read_caps
         self.ctx.cb_get_page = get_page
         self.sys = addrxlat.System()
 
@@ -803,7 +806,8 @@ class TestTranslation(unittest.TestCase):
         class mycontext(addrxlat.Context):
             def __init__(self, *args, **kwargs):
                 super(mycontext, self).__init__(*args, **kwargs)
-                self.read_caps = addrxlat.CAPS(addrxlat.MACHPHYSADDR)
+            def cb_read_caps(self):
+                return addrxlat.CAPS(addrxlat.MACHPHYSADDR)
             def cb_get_page(self, addr):
                 # Memory array at 0x40
                 if addr.addr == 0x11000 + 0x40 * 4:

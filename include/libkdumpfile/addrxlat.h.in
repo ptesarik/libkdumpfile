@@ -396,6 +396,20 @@ struct _addrxlat_buffer {
 typedef addrxlat_status addrxlat_get_page_fn(
 	const addrxlat_cb_t *cb, addrxlat_buffer_t *buf);
 
+/** Type of the read capabilities callback.
+ * @param cb  This callback definition.
+ * @returns   Read capabilities bit mask.
+ *
+ * The return value is a bit mask of address spaces that can be
+ * read directly by the read callbacks. Bits are enumerated by
+ * @ref addrxlat_addrspace_t (least significant bit first).
+ * @sa ADDRXLAT_CAPS
+ */
+typedef unsigned long addrxlat_read_caps_fn(const addrxlat_cb_t *cb);
+
+/** Translate an enum value into a capability bitmask. */
+#define ADDRXLAT_CAPS(val)	(1UL << (unsigned)(val))
+
 /** Callback function pointers and data. */
 struct _addrxlat_cb {
 	/** Next chained callback definitions. */
@@ -412,17 +426,9 @@ struct _addrxlat_cb {
 	/** Callback to get a page buffer. */
 	addrxlat_get_page_fn *get_page;
 
-	/** Read capabilities.
-	 * This is a bit mask of address spaces that can be read
-	 * directly by the read callbacks. Bits are enumerated by
-	 * @ref addrxlat_addrspace_t (least significant bit first).
-	 * @sa ADDRXLAT_CAPS
-	 */
-	unsigned long read_caps;
+	/** Read capabilities callback. */
+	addrxlat_read_caps_fn *read_caps;
 };
-
-/** Translate an enum value into a capability bitmask. */
-#define ADDRXLAT_CAPS(val)	(1UL << (unsigned)(val))
 
 /** Add a callback implementation.
  * @param ctx  Address translation context.

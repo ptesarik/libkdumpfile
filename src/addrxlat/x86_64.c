@@ -414,9 +414,11 @@ linux_rdirect_map(struct os_init_data *ctl)
 	struct sys_region layout[2];
 	int i;
 	addrxlat_fulladdr_t page_offset;
+	unsigned long read_caps;
 	addrxlat_status status;
 
-	if (!(ctl->ctx->cb->read_caps & ADDRXLAT_CAPS(ADDRXLAT_KVADDR)))
+	read_caps = ctl->ctx->cb->read_caps(ctl->ctx->cb);
+	if (!(read_caps & ADDRXLAT_CAPS(ADDRXLAT_KVADDR)))
 		return ADDRXLAT_ERR_NOMETH;
 
 	layout[0].first = 0;
@@ -691,6 +693,7 @@ map_linux_x86_64(struct os_init_data *ctl)
 
 	addrxlat_meth_t *meth;
 	addrxlat_addr_t sme_mask;
+	unsigned long read_caps;
 	addrxlat_status status;
 
 	/* Set up page table translation. */
@@ -719,8 +722,9 @@ map_linux_x86_64(struct os_init_data *ctl)
 	/* Make sure physical addresses can be accessed.
 	 * This is crucial for page table translation.
 	 */
-	if (!(ctl->ctx->cb->read_caps & ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR)) &&
-	    !(ctl->ctx->cb->read_caps & ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR))) {
+	read_caps = ctl->ctx->cb->read_caps(ctl->ctx->cb);
+	if (!(read_caps & ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR)) &&
+	    !(read_caps & ADDRXLAT_CAPS(ADDRXLAT_KPHYSADDR))) {
 		status = linux_rdirect_map(ctl);
 		if (status != ADDRXLAT_OK &&
 		    status != ADDRXLAT_ERR_NOMETH &&
