@@ -122,7 +122,16 @@ struct symdata {
 	addrxlat_addr_t val;
 };
 
-static struct symdata *symdata;
+struct symstore {
+	struct symdata **list;
+	struct symdata data;
+};
+
+static struct symdata *symdata_reg;
+static struct symdata *symdata_value;
+static struct symdata *symdata_sizeof;
+static struct symdata *symdata_offsetof;
+static struct symdata *symdata_number;
 
 static int
 add_symdata(struct symdata **list, const addrxlat_sym_t *ss,
@@ -142,36 +151,52 @@ add_symdata(struct symdata **list, const addrxlat_sym_t *ss,
 }
 
 static addrxlat_status
+get_symdata_offsetof(const addrxlat_cb_t *cb, const char *obj,
+		     const char *elem, addrxlat_addr_t *val)
+{
+	struct symdata *sd;
+	for (sd = symdata_offsetof; sd; sd = sd->next)
+		if (sd->ss.args[0] && sd->ss.args[1] &&
+		    !strcmp(sd->ss.args[0], obj) &&
+		    !strcmp(sd->ss.args[1], elem)) {
+			*val = sd->val;
+			return ADDRXLAT_OK;
+		}
+
+	return ADDRXLAT_ERR_NODATA;
+}
+
+static addrxlat_status
+get_symdata_list(const addrxlat_cb_t *cb, const char *name,
+		 addrxlat_addr_t *val, struct symdata *sd)
+{
+	for (; sd; sd = sd->next)
+		if (sd->ss.args[0] &&
+		    !strcmp(sd->ss.args[0], name)) {
+			*val = sd->val;
+			return ADDRXLAT_OK;
+		}
+
+	return ADDRXLAT_ERR_NODATA;
+}
+
+static addrxlat_status
 get_symdata(const addrxlat_cb_t *cb, addrxlat_sym_t *sym)
 {
 	struct symdata *sd;
-	for (sd = symdata; sd; sd = sd->next) {
-		if (sd->ss.type != sym->type)
-			continue;
-
-		switch (sd->ss.type) {
-		case ADDRXLAT_SYM_REG:
-		case ADDRXLAT_SYM_VALUE:
-		case ADDRXLAT_SYM_SIZEOF:
-		case ADDRXLAT_SYM_NUMBER:
-			if (sd->ss.args[0] &&
-			    !strcmp(sd->ss.args[0], sym->args[0])) {
-				sym->val = sd->val;
-				return ADDRXLAT_OK;
-			}
-			break;
-
-		case ADDRXLAT_SYM_OFFSETOF:
-			if (sd->ss.args[0] && sd->ss.args[1] &&
-			    !strcmp(sd->ss.args[0], sym->args[0]) &&
-			    !strcmp(sd->ss.args[1], sym->args[1])) {
-				sym->val = sd->val;
-				return ADDRXLAT_OK;
-			}
-		}
+	switch (sym->type) {
+	case ADDRXLAT_SYM_REG:      sd = symdata_reg; break;
+	case ADDRXLAT_SYM_VALUE:    sd = symdata_value; break;
+	case ADDRXLAT_SYM_SIZEOF:   sd = symdata_sizeof; break;
+	case ADDRXLAT_SYM_NUMBER:   sd = symdata_number; break;
+	case ADDRXLAT_SYM_OFFSETOF:
+		return get_symdata_offsetof(cb, sym->args[0], sym->args[1],
+					    &sym->val);
+	default:
+		return ADDRXLAT_ERR_NOTIMPL;
 	}
 
-	return ADDRXLAT_ERR_NODATA;
+	return get_symdata_list(cb, sym->args[0], &sym->val, sd);
 }
 
 static char *arch;
@@ -539,7 +564,7 @@ os_map(void)
 static int
 symheader(struct page_data *pg, char *p)
 {
-	addrxlat_sym_t *ss = pg->priv;
+	struct symstore *ss = pg->priv;
 	char *delim;
 	int argc;
 
@@ -550,19 +575,24 @@ symheader(struct page_data *pg, char *p)
 	}
 
 	if (!strncmp(p, "REG", 3)) {
-		ss->type = ADDRXLAT_SYM_REG;
+		ss->list = &symdata_reg;
+		ss->data.ss.type = ADDRXLAT_SYM_REG;
 		p += 3;
 	} else if (!strncmp(p, "VALUE", 5)) {
-		ss->type = ADDRXLAT_SYM_VALUE;
+		ss->list = &symdata_value;
+		ss->data.ss.type = ADDRXLAT_SYM_VALUE;
 		p += 5;
 	} else if (!strncmp(p, "SIZEOF", 6)) {
-		ss->type = ADDRXLAT_SYM_SIZEOF;
+		ss->list = &symdata_sizeof;
+		ss->data.ss.type = ADDRXLAT_SYM_SIZEOF;
 		p += 6;
 	} else if (!strncmp(p, "OFFSETOF", 8)) {
-		ss->type = ADDRXLAT_SYM_OFFSETOF;
+		ss->list = &symdata_offsetof;
+		ss->data.ss.type = ADDRXLAT_SYM_OFFSETOF;
 		p += 8;
 	} else if (!strncmp(p, "NUMBER", 6)) {
-		ss->type = ADDRXLAT_SYM_NUMBER;
+		ss->list = &symdata_number;
+		ss->data.ss.type = ADDRXLAT_SYM_NUMBER;
 		p += 6;
 	} else {
 		fprintf(stderr, "Invalid symbolic header: %s\n", p);
@@ -599,11 +629,11 @@ symheader(struct page_data *pg, char *p)
 		}
 		memcpy(arg, p, endp - p);
 		arg[endp - p] = '\0';
-		ss->args[argc] = arg;
+		ss->data.ss.args[argc] = arg;
 
 		if (*delim == ')') {
 			while (++argc < ADDRXLAT_SYM_ARGC_MAX)
-				ss->args[argc] = NULL;
+				ss->data.ss.args[argc] = NULL;
 			return TEST_OK;
 		}
 
@@ -617,7 +647,7 @@ symheader(struct page_data *pg, char *p)
 static int
 storesym(struct page_data *pg)
 {
-	addrxlat_sym_t *ss = pg->priv;
+	struct symstore *ss = pg->priv;
 	addrxlat_addr_t val;
 	size_t sz = pg->len;
 
@@ -629,13 +659,13 @@ storesym(struct page_data *pg)
 #else
 	memcpy((char*)(&val + 1) - sz, pg->buf, sz);
 #endif
-	return add_symdata(&symdata, ss, val);
+	return add_symdata(ss->list, &ss->data.ss, val);
 }
 
 static int
 read_sym(void)
 {
-	addrxlat_sym_t ss;
+	struct symstore ss;
 	struct page_data pg;
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
