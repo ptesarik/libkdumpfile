@@ -471,6 +471,42 @@ static const struct sys_region linux_directmap[] = {
 	SYS_REGION_END
 };
 
+/** Get the top-level page table address for a Linux kernel.
+ * @param ctx   Address translation object.
+ * @param addr  Root page table address. Updated on success.
+ * @returns     Error status.
+ *
+ * It is not an error if the root page table address cannot be
+ * determined; it merely stays uninitialized.
+ */
+static addrxlat_status
+get_linux_pgt_root(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *addr)
+{
+	static const char err_fmt[] = "Cannot resolve \"%s\"";
+	addrxlat_status status;
+
+	if (addr->as != ADDRXLAT_NOADDR)
+		return ADDRXLAT_OK;
+
+	status = get_reg(ctx, "cr3", &addr->addr);
+	if (status == ADDRXLAT_OK) {
+		addr->as = ADDRXLAT_MACHPHYSADDR;
+		return status;
+	} else if (status != ADDRXLAT_ERR_NODATA)
+		return set_error(ctx, status, err_fmt, "cr3");
+	clear_error(ctx);
+
+	status = get_symval(ctx, "swapper_pg_dir", &addr->addr);
+	if (status == ADDRXLAT_OK) {
+		addr->as = ADDRXLAT_KVADDR;
+		return status;
+	} else if (status != ADDRXLAT_ERR_NODATA)
+		return set_error(ctx, status, err_fmt, "swapper_pg_dir");
+	clear_error(ctx);
+
+	return ADDRXLAT_OK;
+}
+
 /** Initialize a translation map for an Intel IA32 OS.
  * @param ctl  Initialization data.
  * @returns    Error status.
@@ -478,12 +514,6 @@ static const struct sys_region linux_directmap[] = {
 addrxlat_status
 sys_ia32(struct os_init_data *ctl)
 {
-	static const struct sym_spec pgtspec[] = {
-		{ ADDRXLAT_SYM_REG, ADDRXLAT_MACHPHYSADDR, "cr3" },
-		{ ADDRXLAT_SYM_VALUE, ADDRXLAT_KVADDR, "swapper_pg_dir" },
-		{ ADDRXLAT_SYM_NONE }
-	};
-
 	addrxlat_range_t range;
 	addrxlat_map_t *newmap;
 	long phys_bits;
@@ -551,7 +581,12 @@ sys_ia32(struct os_init_data *ctl)
 	}
 
 	if (ctl->os_type == OS_LINUX)  {
-		sys_sym_pgtroot(ctl, pgtspec);
+		addrxlat_meth_t *meth;
+		meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+		status = get_linux_pgt_root(ctl->ctx, &meth->param.pgt.root);
+		if (status != ADDRXLAT_OK)
+			return set_error(ctl->ctx, status,
+					 "Cannot determine root page table");
 
 		status = set_linux_directmap(ctl, newmap);
 		if (status != ADDRXLAT_OK) {

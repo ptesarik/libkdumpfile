@@ -677,6 +677,50 @@ set_xen_p2m(struct os_init_data *ctl)
 	return ADDRXLAT_OK;
 }
 
+/** Get the top-level page table address for a Linux kernel.
+ * @param ctx   Address translation object.
+ * @param addr  Root page table address. Updated on success.
+ * @returns     Error status.
+ *
+ * It is not an error if the root page table address cannot be
+ * determined; it merely stays uninitialized.
+ */
+static addrxlat_status
+get_linux_pgt_root(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *addr)
+{
+	static const char err_fmt[] = "Cannot resolve \"%s\"";
+	addrxlat_status status;
+
+	if (addr->as != ADDRXLAT_NOADDR)
+		return ADDRXLAT_OK;
+
+	status = get_reg(ctx, "cr3", &addr->addr);
+	if (status == ADDRXLAT_OK) {
+		addr->as = ADDRXLAT_MACHPHYSADDR;
+		return status;
+	} else if (status != ADDRXLAT_ERR_NODATA)
+		return set_error(ctx, status, err_fmt, "cr3");
+	clear_error(ctx);
+
+	status = get_symval(ctx, "init_top_pgt", &addr->addr);
+	if (status == ADDRXLAT_OK) {
+		addr->as = ADDRXLAT_KVADDR;
+		return status;
+	} else if (status != ADDRXLAT_ERR_NODATA)
+		return set_error(ctx, status, err_fmt, "init_top_pgt");
+	clear_error(ctx);
+
+	status = get_symval(ctx, "init_level4_pgt", &addr->addr);
+	if (status == ADDRXLAT_OK) {
+		addr->as = ADDRXLAT_KVADDR;
+		return status;
+	} else if (status != ADDRXLAT_ERR_NODATA)
+		return set_error(ctx, status, err_fmt, "init_level4_pgt");
+	clear_error(ctx);
+
+	return ADDRXLAT_OK;
+}
+
 /** Initialize a translation map for Linux on x86_64.
  * @param ctl  Initialization data.
  * @returns    Error status.
@@ -684,21 +728,17 @@ set_xen_p2m(struct os_init_data *ctl)
 static addrxlat_status
 map_linux_x86_64(struct os_init_data *ctl)
 {
-	static const struct sym_spec pgtspec[] = {
-		{ ADDRXLAT_SYM_REG, ADDRXLAT_MACHPHYSADDR, "cr3" },
-		{ ADDRXLAT_SYM_VALUE, ADDRXLAT_KVADDR, "init_top_pgt" },
-		{ ADDRXLAT_SYM_VALUE, ADDRXLAT_KVADDR, "init_level4_pgt" },
-		{ ADDRXLAT_SYM_NONE }
-	};
-
 	addrxlat_meth_t *meth;
 	addrxlat_addr_t sme_mask;
 	unsigned long read_caps;
 	addrxlat_status status;
 
 	/* Set up page table translation. */
-	sys_sym_pgtroot(ctl, pgtspec);
 	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	status = get_linux_pgt_root(ctl->ctx, &meth->param.pgt.root);
+	if (status != ADDRXLAT_OK)
+		return set_error(ctl->ctx, status,
+				 "Cannot determine root page table");
 	meth->param.pgt.root.addr &= ~PAGE_MASK;
 
 	status = get_number(ctl->ctx, "sme_mask", &sme_mask);
@@ -808,6 +848,42 @@ is_xen_ktext(struct os_init_data *ctl, addrxlat_addr_t addr)
 	return status == ADDRXLAT_OK && steps == 4;
 }
 
+/** Get the top-level page table address for a Xen hypervisor.
+ * @param ctx   Address translation object.
+ * @param addr  Root page table address. Updated on success.
+ * @returns     Error status.
+ *
+ * It is not an error if the root page table address cannot be
+ * determined; it merely stays uninitialized.
+ */
+static addrxlat_status
+get_xen_pgt_root(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *addr)
+{
+	static const char err_fmt[] = "Cannot resolve \"%s\"";
+	addrxlat_status status;
+
+	if (addr->as != ADDRXLAT_NOADDR)
+		return ADDRXLAT_OK;
+
+	status = get_reg(ctx, "cr3", &addr->addr);
+	if (status == ADDRXLAT_OK) {
+		addr->as = ADDRXLAT_MACHPHYSADDR;
+		return status;
+	} else if (status != ADDRXLAT_ERR_NODATA)
+		return set_error(ctx, status, err_fmt, "cr3");
+	clear_error(ctx);
+
+	status = get_symval(ctx, "pgd_l4", &addr->addr);
+	if (status == ADDRXLAT_OK) {
+		addr->as = ADDRXLAT_KVADDR;
+		return status;
+	} else if (status != ADDRXLAT_ERR_NODATA)
+		return set_error(ctx, status, err_fmt, "pgd_l4");
+	clear_error(ctx);
+
+	return ADDRXLAT_OK;
+}
+
 /** Initialize temporary mapping to make the page table usable.
  * @param ctl  Initialization data.
  * @returns    Error status.
@@ -815,20 +891,14 @@ is_xen_ktext(struct os_init_data *ctl, addrxlat_addr_t addr)
 static addrxlat_status
 setup_xen_pgt(struct os_init_data *ctl)
 {
-	static const struct sym_spec pgtspec[] = {
-		{ ADDRXLAT_SYM_REG, ADDRXLAT_MACHPHYSADDR, "cr3" },
-		{ ADDRXLAT_SYM_VALUE, ADDRXLAT_KVADDR, "pgd_l4" },
-		{ ADDRXLAT_SYM_NONE }
-	};
-
 	struct sys_region layout[2];
 	addrxlat_meth_t *meth;
 	addrxlat_addr_t pgt;
 	addrxlat_off_t off;
 	addrxlat_status status;
 
-	status = sys_sym_pgtroot(ctl, pgtspec);
 	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+	status = get_xen_pgt_root(ctl->ctx, &meth->param.pgt.root);
 	meth->param.pgt.root.addr &= ~PAGE_MASK;
 	if (meth->param.pgt.root.as != ADDRXLAT_KVADDR)
 		return status;	/* either unset or physical */
