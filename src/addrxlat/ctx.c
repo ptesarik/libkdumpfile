@@ -653,41 +653,6 @@ get_number(addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *num)
 	return status;
 }
 
-
-/** Get the first successfuly resolved value from a specifier list.
- * @param      ctx   Address translation context.
- * @param      spec  Vector of specifiers.
- * @param[out] addr  Symbol full address, returned on sucess.
- * @returns          Error status.
- *
- * The symbol is resolved using a user-supplied callback.
- */
-addrxlat_status
-get_first_sym(addrxlat_ctx_t *ctx, const struct sym_spec *spec,
-	      addrxlat_fulladdr_t *addr)
-{
-	addrxlat_status status = ADDRXLAT_ERR_NODATA;
-
-	while (spec->type != ADDRXLAT_SYM_NONE) {
-		addrxlat_sym_t sym;
-		sym.type = spec->type;
-		sym.args[0] = spec->name;
-		status = ctx->cb->sym(ctx->cb, &sym);
-		if (status == ADDRXLAT_OK) {
-			addr->addr = sym.val;
-			addr->as = spec->as;
-			return status;
-		} else if (status != ADDRXLAT_ERR_NODATA)
-			break;
-
-		clear_error(ctx);
-		++spec;
-	}
-
-	return set_error(ctx, status,
-			 "Cannot resolve \"%s\"", spec->name);
-}
-
 DEFINE_ALIAS(ctx_err);
 
 addrxlat_status

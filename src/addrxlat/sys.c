@@ -414,28 +414,6 @@ sys_set_physmaps(struct os_init_data *ctl, addrxlat_addr_t maxaddr)
 	return sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KPHYS_MACHPHYS, layout);
 }
 
-/** Get page table root address using symbolic information.
- * @param ctl  Initialization data.
- * @param spec Symbolic name specifiers.
- * @returns    Error status.
- *
- * @sa get_first_sym
- */
-addrxlat_status
-sys_sym_pgtroot(struct os_init_data *ctl, const struct sym_spec *spec)
-{
-	addrxlat_meth_t *meth;
-	addrxlat_status status;
-
-	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
-	if (meth->param.pgt.root.as != ADDRXLAT_NOADDR)
-		return ADDRXLAT_OK;
-
-	status = get_first_sym(ctl->ctx, spec, &meth->param.pgt.root);
-	clear_error(ctl->ctx);
-	return status;
-}
-
 #define MAX_ALT_NUM	2
 struct xlat_alt {
 	unsigned num;

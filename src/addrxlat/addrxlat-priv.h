@@ -186,33 +186,6 @@ INTERNAL_DECL(addrxlat_status, get_offsetof,
 INTERNAL_DECL(addrxlat_status, get_number,
 	      (addrxlat_ctx_t *ctx, const char *name, addrxlat_addr_t *num));
 
-/** Maximum symbol specifier name length. */
-#define SYM_SPEC_NAMELEN 24
-
-/** Symbolic type specifier.
- * @sa get_first_sym
- */
-struct sym_spec {
-	/** Type of information.
-	 * Use @ref ADDRXLAT_SYM_NONE to terminate a vector.
-	 */
-	addrxlat_sym_type_t type;
-
-	/** Symbol address space. */
-	addrxlat_addrspace_t as;
-
-	/** Symbolic name.
-	 */
-	const char name[SYM_SPEC_NAMELEN];
-};
-
-/** Non-existent type of symbolic information. */
-#define ADDRXLAT_SYM_NONE	((addrxlat_sym_type_t)-1)
-
-INTERNAL_DECL(addrxlat_status, get_first_sym,
-	      (addrxlat_ctx_t *ctx, const struct sym_spec *spec,
-	       addrxlat_fulladdr_t *addr));
-
 /**  Internal definition of an address translation map.
  * Note that the start address does not have to be stored in the
  * structure. The first range in a map starts at address 0, and
@@ -479,9 +452,6 @@ INTERNAL_DECL(addrxlat_status, sys_set_layout,
 
 INTERNAL_DECL(addrxlat_status, sys_set_physmaps,
 	      (struct os_init_data *ctl, addrxlat_addr_t maxaddr));
-
-INTERNAL_DECL(addrxlat_status, sys_sym_pgtroot,
-	      (struct os_init_data *ctl, const struct sym_spec *spec));
 
 /* internal aliases */
 
