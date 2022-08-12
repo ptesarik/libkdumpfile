@@ -1,4 +1,4 @@
-/* Test file.fdset attribute creation/deletion.
+/* Test file.set attribute creation/deletion.
    Copyright (C) 2022 Petr Tesarik <ptesarik@suse.com>
 
    This file is free software; you can redistribute it and/or modify
@@ -32,10 +32,10 @@
 
 #include "testutil.h"
 
-/** Check that fdset.key does not exist.
+/** Check that file.set.key does not exist.
  */
 static int
-check_not_exist(kdump_ctx_t *ctx, kdump_attr_ref_t *fdset, const char *key)
+check_not_exist(kdump_ctx_t *ctx, kdump_attr_ref_t *fileset, const char *key)
 {
 	kdump_attr_ref_t tmpref;
 	kdump_status status;
@@ -43,13 +43,13 @@ check_not_exist(kdump_ctx_t *ctx, kdump_attr_ref_t *fdset, const char *key)
 
 	ret = TEST_OK;
 
-	status = kdump_sub_attr_ref(ctx, fdset, key, &tmpref);
+	status = kdump_sub_attr_ref(ctx, fileset, key, &tmpref);
 	if (status == KDUMP_OK) {
-		fprintf(stderr, "fdset.%s exists, but it should not!\n", key);
+		fprintf(stderr, "file.set.%s exists, but it should not!\n", key);
 		kdump_attr_unref(ctx, &tmpref);
 		ret = TEST_FAIL;
 	} else if (status != KDUMP_ERR_NOKEY) {
-		fprintf(stderr, "fdset.%s cannot be referenced: %s\n",
+		fprintf(stderr, "file.set.%s cannot be referenced: %s\n",
 			key, kdump_get_err(ctx));
 		ret = TEST_FAIL;
 	}
@@ -57,10 +57,10 @@ check_not_exist(kdump_ctx_t *ctx, kdump_attr_ref_t *fdset, const char *key)
 	return ret;
 }
 
-/** Check that fdset.key exists but has no value.
+/** Check that file.set.key exists but has no value.
  */
 static int
-check_unset_file(kdump_ctx_t *ctx, kdump_attr_ref_t *fdset, const char *key)
+check_unset_file(kdump_ctx_t *ctx, kdump_attr_ref_t *fileset, const char *key)
 {
 	kdump_attr_ref_t tmpref;
 	kdump_status status;
@@ -69,26 +69,26 @@ check_unset_file(kdump_ctx_t *ctx, kdump_attr_ref_t *fdset, const char *key)
 
 	ret = TEST_OK;
 
-	status = kdump_sub_attr_ref(ctx, fdset, key, &tmpref);
+	status = kdump_sub_attr_ref(ctx, fileset, key, &tmpref);
 	if (status != KDUMP_OK) {
-		fprintf(stderr, "fdset.%s cannot be referenced: %s\n",
+		fprintf(stderr, "file.set.%s cannot be referenced: %s\n",
 			key, kdump_get_err(ctx));
 		ret = TEST_FAIL;
 	} else {
 		kdump_attr_type_t type = kdump_attr_ref_type(&tmpref);
 		if (type != KDUMP_NUMBER) {
-			fprintf(stderr, "Wrong fdset.%s type: %d\n",
+			fprintf(stderr, "Wrong file.set.%s type: %d\n",
 				key, type);
 			ret = TEST_FAIL;
 		}
 
 		status = kdump_attr_ref_get(ctx, &tmpref, &attr);
 		if (status == KDUMP_OK) {
-			fprintf(stderr, "fdset.%s has an initial value!\n",
+			fprintf(stderr, "file.set.%s has an initial value!\n",
 				key);
 			ret = TEST_FAIL;
 		} else if (status != KDUMP_ERR_NODATA) {
-			fprintf(stderr, "Cannot get fdset.%s: %s\n",
+			fprintf(stderr, "Cannot get file.set.%s: %s\n",
 				key, kdump_get_err(ctx));
 			ret = TEST_FAIL;
 		}
@@ -99,7 +99,7 @@ check_unset_file(kdump_ctx_t *ctx, kdump_attr_ref_t *fdset, const char *key)
 }
 
 static int
-check_fdset_size(kdump_ctx_t *ctx, int num)
+check_fileset_size(kdump_ctx_t *ctx, int num)
 {
 	kdump_attr_t attr;
 	kdump_status status;
@@ -107,14 +107,14 @@ check_fdset_size(kdump_ctx_t *ctx, int num)
 
 	ret = TEST_OK;
 
-	status = kdump_get_attr(ctx, KDUMP_ATTR_FDSET ".number", &attr);
+	status = kdump_get_attr(ctx, KDUMP_ATTR_FILE_SET ".number", &attr);
 	if (status != KDUMP_OK) {
 		fprintf(stderr, "%s cannot be retrieved: %s\n",
-			"fdset.number", kdump_get_err(ctx));
+			"file.set.number", kdump_get_err(ctx));
 		ret = TEST_FAIL;
 	} else if (attr.val.number != num) {
 		fprintf(stderr, "Wrong %s value: %" KDUMP_PRIuNUM " != %d\n",
-			"fdset.number", attr.val.number, num);
+			"file.set.number", attr.val.number, num);
 		ret = TEST_FAIL;
 	}
 
@@ -122,7 +122,7 @@ check_fdset_size(kdump_ctx_t *ctx, int num)
 }
 
 static int
-check_fdset_zero(kdump_ctx_t *ctx, kdump_attr_ref_t *fdset, int fd)
+check_fileset_zero(kdump_ctx_t *ctx, kdump_attr_ref_t *fileset, int fd)
 {
 	kdump_attr_ref_t tmpref;
 	kdump_attr_t attr;
@@ -131,24 +131,24 @@ check_fdset_zero(kdump_ctx_t *ctx, kdump_attr_ref_t *fdset, int fd)
 
 	ret = TEST_OK;
 
-	status = kdump_sub_attr_ref(ctx, fdset, "0", &tmpref);
+	status = kdump_sub_attr_ref(ctx, fileset, "0.fd", &tmpref);
 	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot reference attribute %s: %s\n",
-			KDUMP_ATTR_FDSET ".0", kdump_get_err(ctx));
+			KDUMP_ATTR_FILE_SET ".0.fd", kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 	status = kdump_attr_ref_get(ctx, &tmpref, &attr);
 	if (status != KDUMP_OK) {
-		fprintf(stderr, "Cannot get fdset.0: %s\n",
+		fprintf(stderr, "Cannot get file.set.0.fd: %s\n",
 			kdump_get_err(ctx));
 		ret = TEST_FAIL;
 	} else if (attr.type != KDUMP_NUMBER) {
-		fprintf(stderr, "Wrong fdset.0 attribute type: %d\n",
+		fprintf(stderr, "Wrong file.set.0.fd attribute type: %d\n",
 			(int)attr.type);
 		ret = TEST_FAIL;
 	} else if (attr.val.number != fd) {
 		fprintf(stderr, "Wrong %s value: %" KDUMP_PRIuNUM " != %d\n",
-			"fdset.0", attr.val.number, fd);
+			"file.set.0.fd", attr.val.number, fd);
 		ret = TEST_FAIL;
 	}
 	kdump_attr_unref(ctx, &tmpref);
@@ -159,7 +159,7 @@ check_fdset_zero(kdump_ctx_t *ctx, kdump_attr_ref_t *fdset, int fd)
 int
 main(int argc, char **argv)
 {
-	kdump_attr_ref_t fdset;
+	kdump_attr_ref_t fileset;
 	kdump_attr_ref_t number;
 	kdump_attr_t attr;
 	kdump_ctx_t *ctx;
@@ -179,18 +179,18 @@ main(int argc, char **argv)
 		return TEST_ERR;
 	}
 
-	status = kdump_attr_ref(ctx, KDUMP_ATTR_FDSET, &fdset);
+	status = kdump_attr_ref(ctx, KDUMP_ATTR_FILE_SET, &fileset);
 	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot reference attribute %s: %s\n",
-			KDUMP_ATTR_FDSET, kdump_get_err(ctx));
+			KDUMP_ATTR_FILE_SET, kdump_get_err(ctx));
 		return TEST_ERR;
 	}
-	kdump_attr_unref(ctx, &fdset);
+	kdump_attr_unref(ctx, &fileset);
 
-	status = kdump_sub_attr_ref(ctx, &fdset, "number", &number);
+	status = kdump_sub_attr_ref(ctx, &fileset, "number", &number);
 	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot reference attribute %s: %s\n",
-			KDUMP_ATTR_FDSET ".number", kdump_get_err(ctx));
+			KDUMP_ATTR_FILE_SET ".number", kdump_get_err(ctx));
 		return TEST_ERR;
 	}
 
@@ -212,8 +212,8 @@ main(int argc, char **argv)
 		ret = TEST_FAIL;
 	}
 
-	/* Check that fdset.0 does not exist. */
-	rc = check_not_exist(ctx, &fdset, "0");
+	/* Check that file.set.0.fd does not exist. */
+	rc = check_not_exist(ctx, &fileset, "0.fd");
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
@@ -231,15 +231,15 @@ main(int argc, char **argv)
 		ret = TEST_FAIL;
 	}
 
-	/* Check that fdset.0 exists now but has no value. */
-	rc = check_unset_file(ctx, &fdset, "0");
+	/* Check that file.set.0.fd exists now but has no value. */
+	rc = check_unset_file(ctx, &fileset, "0.fd");
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
 		ret = rc;
 
-	/* Check that fdset.1 does not exist. */
-	rc = check_not_exist(ctx, &fdset, "1");
+	/* Check that file.set.1.fd does not exist. */
+	rc = check_not_exist(ctx, &fileset, "1.fd");
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
@@ -257,22 +257,22 @@ main(int argc, char **argv)
 		ret = TEST_FAIL;
 	}
 
-	/* Check that fdset.1 exists now but has no value. */
-	rc = check_unset_file(ctx, &fdset, "1");
+	/* Check that file.set.1.fd exists now but has no value. */
+	rc = check_unset_file(ctx, &fileset, "1.fd");
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
 		ret = rc;
 
-	/* Check that fdset.2 also exists and has no value. */
-	rc = check_unset_file(ctx, &fdset, "2");
+	/* Check that file.set.2.fd also exists and has no value. */
+	rc = check_unset_file(ctx, &fileset, "2.fd");
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
 		ret = rc;
 
-	/* Check that fdset.3 does not exist. */
-	rc = check_not_exist(ctx, &fdset, "3");
+	/* Check that file.set.3.fd does not exist. */
+	rc = check_not_exist(ctx, &fileset, "3.fd");
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
@@ -290,15 +290,15 @@ main(int argc, char **argv)
 		ret = TEST_FAIL;
 	}
 
-	/* Check that fdset.2 no longer exists. */
-	rc = check_not_exist(ctx, &fdset, "2");
+	/* Check that file.set.2.fd no longer exists. */
+	rc = check_not_exist(ctx, &fileset, "2.fd");
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
 		ret = rc;
 
-	/* But fdset.1 still exists. */
-	rc = check_unset_file(ctx, &fdset, "1");
+	/* But file.set.1.fd still exists. */
+	rc = check_unset_file(ctx, &fileset, "1.fd");
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
@@ -316,15 +316,15 @@ main(int argc, char **argv)
 		ret = TEST_FAIL;
 	}
 
-	/* Check that fdset.1 no longer exists. */
-	rc = check_not_exist(ctx, &fdset, "1");
+	/* Check that file.set.1.fd no longer exists. */
+	rc = check_not_exist(ctx, &fileset, "1.fd");
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
 		ret = rc;
 
-	/* Neither does fdset.0. */
-	rc = check_not_exist(ctx, &fdset, "0");
+	/* Neither does file.set.0.fd. */
+	rc = check_not_exist(ctx, &fileset, "0.fd");
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
@@ -348,14 +348,14 @@ main(int argc, char **argv)
 	}
 
 	/* Check that fdset size is one. */
-	rc = check_fdset_size(ctx, 1);
+	rc = check_fileset_size(ctx, 1);
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
 		ret = rc;
 
-	/* Check that the file descriptor is found as fdset.0. */
-	rc = check_fdset_zero(ctx, &fdset, fd);
+	/* Check that the file descriptor is found as file.set.0.fd. */
+	rc = check_fileset_zero(ctx, &fileset, fd);
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
@@ -374,7 +374,7 @@ main(int argc, char **argv)
 	}
 
 	/* Close dump. */
-	status = kdump_set_number_attr(ctx, KDUMP_ATTR_FDSET ".number", 0);
+	status = kdump_set_number_attr(ctx, KDUMP_ATTR_FILE_SET ".number", 0);
 	if (status != KDUMP_OK) {
 		fprintf(stderr, "Cannot set dump number to zero: %s\n",
 			kdump_get_err(ctx));
@@ -403,15 +403,15 @@ main(int argc, char **argv)
 		ret = TEST_FAIL;
 	}
 
-	/* Check that fdset size is one. */
-	rc = check_fdset_size(ctx, 1);
+	/* Check that file set size is one. */
+	rc = check_fileset_size(ctx, 1);
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
 		ret = rc;
 
-	/* Check that the file descriptor is also found as fdset.0. */
-	rc = check_fdset_zero(ctx, &fdset, fd);
+	/* Check that the file descriptor is also found as file.set.0.fd. */
+	rc = check_fileset_zero(ctx, &fileset, fd);
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
@@ -422,7 +422,7 @@ main(int argc, char **argv)
 	 */
 	close(fd);
 	kdump_attr_unref(ctx, &number);
-	kdump_attr_unref(ctx, &fdset);
+	kdump_attr_unref(ctx, &fileset);
 	kdump_free(ctx);
 	return ret;
 }

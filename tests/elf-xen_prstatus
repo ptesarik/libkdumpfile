@@ -29,8 +29,9 @@ totalrc=0
 
 ./checkattr "$dumpfile" <<EOF
 file = directory:
-file.fdset.number = number:1
-file.fdset.0 = number
+file.set.number = number:1
+file.set.0 = directory:
+file.set.0.fd = number
 file.format = string: xc_core_elf
 
 cpu = directory:

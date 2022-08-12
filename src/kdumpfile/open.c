@@ -112,7 +112,7 @@ fdset_clear_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 	if (attr_isset(attr))
 		++ctx->shared->pendfiles;
 
-	if (attr->template->fidx == 0)
+	if (attr->parent->template->fidx == 0)
 		clear_attr(ctx, gattr(ctx, GKI_file_fd));
 }
 
@@ -147,11 +147,15 @@ static kdump_status
 num_files_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
 		   kdump_attr_value_t *val)
 {
-	struct attr_template tmpl = {
+	static const struct attr_template tmpl = {
+		.key = "fd",
 		.type = KDUMP_NUMBER,
 		.ops = &fdset_ops,
 	};
 
+	struct attr_template dir_tmpl = {
+		.type = KDUMP_DIRECTORY,
+	};
 	struct attr_data *parent = attr->parent;
 	char fdkey[21];
 	size_t keylen;
@@ -166,15 +170,18 @@ num_files_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
 	/* Allocate new attributes */
 	ret = KDUMP_OK;
 	for (i = attr_value(attr)->number; i < n; ++i) {
-		struct attr_data *child;
+		struct attr_data *dir, *child;
 
-		tmpl.fidx = i;
 		keylen = sprintf(fdkey, "%zd", i);
-		child = create_attr_path(ctx->dict, parent,
-					 fdkey, keylen, &tmpl);
+		dir_tmpl.fidx = i;
+		dir = create_attr_path(ctx->dict, parent,
+				       fdkey, keylen, &dir_tmpl);
+		child = dir
+			? new_attr(ctx->dict, dir, &tmpl)
+			: NULL;
 		if (!child) {
 			ret = set_error(ctx, KDUMP_ERR_SYSTEM,
-					"Cannot allocate fdset attributes");
+					"Cannot allocate file.set attributes");
 			n = attr_value(attr)->number;
 			break;
 		}
@@ -188,13 +195,13 @@ num_files_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
 	if (i > n) {
 		struct attr_data **pprev = &parent->dir;
 		while (*pprev) {
-			struct attr_data *child = *pprev;
-			if (child->template->ops == &fdset_ops &&
-			    child->template->fidx >= n) {
-				*pprev = child->next;
-				dealloc_attr(child);
+			struct attr_data *dir = *pprev;
+			if (dir->template->type == KDUMP_DIRECTORY &&
+			    dir->template->fidx >= n) {
+				*pprev = dir->next;
+				dealloc_attr(dir);
 			} else
-				pprev = &child->next;
+				pprev = &dir->next;
 		}
 	}
 
@@ -215,15 +222,21 @@ num_files_post_hook(kdump_ctx_t *ctx, struct attr_data *attr)
 		clear_attr(ctx, gattr(ctx, GKI_file_fd));
 
 	size_t pendfiles = 0;
-	for (attr = attr->parent->dir; attr; attr = attr->next)
-		if (attr->template->ops == &fdset_ops && !attr_isset(attr))
+	struct attr_data *dir;
+	for (dir = attr->parent->dir; dir; dir = dir->next) {
+		struct attr_data *child;
+		if (dir->template->type != KDUMP_DIRECTORY ||
+		    !(child = lookup_dir_attr(ctx->dict, dir, "fd", 2)))
+			continue;
+		if (!attr_isset(child))
 			++pendfiles;
+	}
 	ctx->shared->pendfiles = pendfiles;
 
 	return maybe_open_dump(ctx);
 }
 
-/** Attribute operations for file.fdset.number. */
+/** Attribute operations for file.set.number. */
 const struct attr_ops num_files_ops = {
 	.pre_set = num_files_pre_hook,
 	.post_set = num_files_post_hook,
@@ -264,8 +277,8 @@ open_dump(kdump_ctx_t *ctx)
 	};
 
 	size_t nfiles = get_num_files(ctx);
+	struct attr_data *dir;
 	struct attr_data *mmap_attr;
-	struct attr_data *attr;
 	kdump_status ret;
 	int fdset[nfiles];
 	int i;
@@ -276,9 +289,13 @@ open_dump(kdump_ctx_t *ctx)
 		fcache_decref(ctx->shared->fcache);
 	}
 
-	for (attr = gattr(ctx, GKI_dir_fdset)->dir; attr; attr = attr->next)
-		if (attr->template->ops == &fdset_ops)
-			fdset[attr->template->fidx] = attr_value(attr)->number;
+	for (dir = gattr(ctx, GKI_dir_file_set)->dir; dir; dir = dir->next) {
+		struct attr_data *child;
+		if (dir->template->type != KDUMP_DIRECTORY ||
+		    !(child = lookup_dir_attr(ctx->dict, dir, "fd", 2)))
+			continue;
+		fdset[dir->template->fidx] = attr_value(child)->number;
+	}
 	ctx->shared->fcache = fcache_new(nfiles, fdset,
 					 FCACHE_SIZE, FCACHE_ORDER);
 	if (!ctx->shared->fcache)
@@ -337,7 +354,7 @@ DEFINE_ALIAS(open_fdset);
 kdump_status
 kdump_open_fdset(kdump_ctx_t *ctx, unsigned nfds, const int *fds)
 {
-	struct attr_data *attr;
+	struct attr_data *dir;
 	kdump_status status;
 
 	/* Make sure we do not use a stale file descriptor value. */
@@ -347,18 +364,20 @@ kdump_open_fdset(kdump_ctx_t *ctx, unsigned nfds, const int *fds)
 				 ATTR_PERSIST, nfds);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status,
-				 "Cannot initialize fdset size");
+				 "Cannot initialize file set size");
 
-	for (attr = gattr(ctx, GKI_dir_fdset)->dir; attr; attr = attr->next) {
-		if (attr->template->ops != &fdset_ops)
+	for (dir = gattr(ctx, GKI_dir_file_set)->dir; dir; dir = dir->next) {
+		struct attr_data *child;
+		if (dir->template->type != KDUMP_DIRECTORY ||
+		    !(child = lookup_dir_attr(ctx->dict, dir, "fd", 2)))
 			continue;
 
-		status = set_attr_number(ctx, attr, ATTR_PERSIST,
-					 fds[attr->template->fidx]);
+		status = set_attr_number(ctx, child, ATTR_PERSIST,
+					 fds[dir->template->fidx]);
 		if (status != KDUMP_OK)
 			return set_error(ctx, status,
-					 "Cannot set fdset.%zu",
-					 attr->template->fidx);
+					 "Cannot set file.set.%zu.fd",
+					 dir->template->fidx);
 	}
 
 	return KDUMP_OK;

@@ -46,7 +46,7 @@ ATTR(arch, "page_shift", page_shift, number, unsigned, .ops = &page_shift_ops)
 ATTR(cpu, "number", num_cpus, number, unsigned)
 
 /* dump file descriptor set */
-ATTR(fdset, "number", num_files, number, unsigned, .ops = &num_files_ops)
+ATTR(file_set, "number", num_files, number, unsigned, .ops = &num_files_ops)
 
 /* file page map */
 ATTR(file, "pagemap", file_pagemap, bitmap, kdump_bmp_t *)
