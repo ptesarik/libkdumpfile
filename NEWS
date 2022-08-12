@@ -1,5 +1,5 @@
-next
-----
+0.5.0
+-----
   * Support SADUMP file format.
   * Add kdump_open_fd() and kdump_open_fdset(). Keep KDUMP_ATTR_FILE_FD
     for (partial) backward compatibility.
