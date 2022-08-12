@@ -125,7 +125,8 @@ struct symdata {
 static struct symdata *symdata;
 
 static int
-add_symdata(const addrxlat_sym_t *ss, addrxlat_addr_t val)
+add_symdata(struct symdata **list, const addrxlat_sym_t *ss,
+	    addrxlat_addr_t val)
 {
 	struct symdata *sd = malloc(sizeof(*sd));
 	if (!sd) {
@@ -135,8 +136,8 @@ add_symdata(const addrxlat_sym_t *ss, addrxlat_addr_t val)
 
 	sd->ss = *ss;
 	sd->val = val;
-	sd->next = symdata;
-	symdata = sd;
+	sd->next = *list;
+	*list = sd;
 	return TEST_OK;
 }
 
@@ -628,7 +629,7 @@ storesym(struct page_data *pg)
 #else
 	memcpy((char*)(&val + 1) - sz, pg->buf, sz);
 #endif
-	return add_symdata(ss, val);
+	return add_symdata(&symdata, ss, val);
 }
 
 static int
