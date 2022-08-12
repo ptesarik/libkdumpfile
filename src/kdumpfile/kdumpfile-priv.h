@@ -762,8 +762,6 @@ INTERNAL_DECL(kdump_status, read_string_locked,
 INTERNAL_DECL(kdump_status, read_locked,
 	      (kdump_ctx_t *ctx, kdump_addrspace_t as,
 	       kdump_addr_t addr, void *buffer, size_t *plength));
-INTERNAL_DECL(void, set_addrspace_caps,
-	      (struct kdump_xlat *xlat, unsigned long caps));
 
 
 /* utils */
@@ -955,6 +953,16 @@ revalidate_xlat(kdump_ctx_t *ctx)
 	return ctx->xlat->dirty
 		? vtop_init(ctx)
 		: KDUMP_OK;
+}
+
+/**  Set read address spaces.
+ * @param xlat    Address translation.
+ * @param caps    Addrxlat capabilities.
+ */
+static inline void
+set_addrspace_caps(struct kdump_xlat *xlat, unsigned long caps)
+{
+	xlat->xlat_caps = caps;
 }
 
 /* Attribute handling */

@@ -270,13 +270,3 @@ kdump_read_string(kdump_ctx_t *ctx, kdump_addrspace_t as, kdump_addr_t addr,
 	rwlock_unlock(&ctx->shared->lock);
 	return ret;
 }
-
-/**  Set read address spaces.
- * @param xlat    Address translation.
- * @param caps    Addrxlat capabilities.
- */
-void
-set_addrspace_caps(struct kdump_xlat *xlat, unsigned long caps)
-{
-	xlat->xlat_caps = caps;
-}
