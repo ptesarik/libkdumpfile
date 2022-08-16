@@ -9,21 +9,24 @@ mkdir -p out || exit 99
 TIMEOUT=2
 NTHREADS=8
 
+pagesize=4096
+maxpfn=128
+
 name=$( basename "$0" )
 datafile="out/${name}.data"
 dumpfile="out/${name}.dump"
 
 awk 'BEGIN {
-  for(pfn = 0; pfn < 0x80; ++pfn)
-    printf "@0x%x zlib\n%02x*0x1000\n", pfn * 0x1000, pfn
+  for(pfn = 0; pfn < '$maxpfn'; ++pfn)
+    printf "@0x%x zlib\n%02x*'$pagesize'\n", pfn * '$pagesize', pfn
 }' >"$datafile"
 
 ./mkdiskdump "$dumpfile" <<EOF
 version = 6
 arch_name = x86_64
-block_size = 0x1000
+block_size = $pagesize
 phys_base = 0
-max_mapnr = 0x80
+max_mapnr = $maxpfn
 sub_hdr_size = 1
 
 uts.sysname = Linux
@@ -44,7 +47,7 @@ if [ $rc -ne 0 ]; then
 fi
 echo "Created DISKDUMP file: $dumpfile"
 
-./multiread -t $TIMEOUT -n $NTHREADS "$dumpfile" 0x0 0x80
+./multiread -t $TIMEOUT -n $NTHREADS "$dumpfile" 0 $maxpfn
 rc=$?
 if [ $rc -ne 0 ]; then
     echo "Multi-threaded read failed" >&2
