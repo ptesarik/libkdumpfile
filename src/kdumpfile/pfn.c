@@ -194,13 +194,13 @@ skip_set_lsb0(const unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
 	++bp;
 	for (; endp - bp >= 1 && ((uintptr_t)bp & 3) != 0; pfn += 8, ++bp)
 		if (~*(signed char*)bp)
-			return pfn + ctz(~*bp);
+			return pfn + ctz(~*(signed char*)bp);
 	for (; endp - bp >= 4; pfn += 32, bp += 4)
 		if (~*(uint32_t*)bp)
 			return pfn + ctz(~*(uint32_t*)bp);
 	for (; endp - bp >= 1; pfn += 8, ++bp)
 		if (~*(signed char*)bp)
-			return pfn + ctz(~*bp);
+			return pfn + ctz(~*(signed char*)bp);
 
 	return pfn;
 }
@@ -231,13 +231,13 @@ skip_set_msb0(const unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
 	pfn = (pfn | 7) + 1;
 	++bp;
 	for (; endp - bp >= 1 && ((uintptr_t)bp & 3) != 0; pfn += 8, ++bp)
-		if (~*(signed char*)bp)
+		if (*bp != 0xff)
 			return pfn + clz(~((uint32_t)*bp << 24));
 	for (; endp - bp >= 4; pfn += 32, bp += 4)
 		if (~*(uint32_t*)bp)
 			return pfn + clz(~be32toh(*(uint32_t*)bp));
 	for (; endp - bp >= 1; pfn += 8, ++bp)
-		if (~*(signed char*)bp)
+		if (*bp != 0xff)
 			return pfn + clz(~((uint32_t)*bp << 24));
 
 	return pfn;
