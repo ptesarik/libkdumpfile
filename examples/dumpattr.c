@@ -58,7 +58,7 @@ print_bitmap(kdump_ctx_t *ctx, kdump_bmp_t *bmp)
 		kdump_addr_t start = idx;
 		status = kdump_bmp_find_clear(bmp, &idx);
 		if (status != KDUMP_OK) {
-			fprintf(stderr, "kdump_bmp_find_clear faild: %s\n",
+			fprintf(stderr, "kdump_bmp_find_clear failed: %s\n",
 				kdump_bmp_get_err(bmp));
 			return -1;
 		}

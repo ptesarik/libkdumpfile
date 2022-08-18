@@ -2321,7 +2321,7 @@ typedef struct {
 PyDoc_STRVAR(meth__doc__,
 "Method(kind) -> address translation method\n\
 \n\
-This is a generic base class for all translation desriptions.\n\
+This is a generic base class for all translation descriptions.\n\
 Use a subclass to get a more suitable interface to the parameters\n\
 of a specific translation kind.");
 
