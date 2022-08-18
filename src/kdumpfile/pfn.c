@@ -274,6 +274,8 @@ pfn_regions_from_bitmap(kdump_errmsg_t *err, struct pfn_file_map *pfm,
 			rgn.pfn = skip_clear_lsb0(bitmap, bitmapsize, pfn);
 			pfn = skip_set_lsb0(bitmap, bitmapsize, rgn.pfn);
 		}
+		if (rgn.pfn > end_pfn)
+			rgn.pfn = end_pfn;
 		if (pfn > end_pfn)
 			pfn = end_pfn;
 		rgn.cnt = pfn - rgn.pfn;
