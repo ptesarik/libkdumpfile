@@ -261,7 +261,7 @@ pfn_regions_from_bitmap(kdump_errmsg_t *err, struct pfn_file_map *pfm,
 			kdump_pfn_t start_pfn, kdump_pfn_t end_pfn,
 			off_t fileoff, off_t elemsz)
 {
-	size_t bitmapsize = end_pfn << 3;
+	size_t bitmapsize = (end_pfn + 7) >> 3;
 	kdump_pfn_t pfn = start_pfn;
 	struct pfn_region rgn;
 
