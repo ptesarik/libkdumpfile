@@ -26,6 +26,7 @@ ATTR(root, "arch", dir_arch, directory, struct attr_data *)
 ATTR(root, "cache", dir_cache, directory, struct attr_data *)
 ATTR(root, "cpu", dir_cpu, directory, struct attr_data *)
 ATTR(root, "file", dir_file, directory, struct attr_data *)
+ATTR(root, "memory", dir_memory, directory, struct attr_data *)
 
 /* arch */
 ATTR(arch, "pteval_size", pteval_size, number, size_t)
@@ -89,6 +90,9 @@ ATTR(linux_vmcoreinfo, "NUMBER", linux_number, directory, struct attr_data *)
 ATTR(linux_vmcoreinfo, "OFFSET", linux_offset, directory, struct attr_data *)
 ATTR(linux_vmcoreinfo, "SIZE", linux_size, directory, struct attr_data *)
 ATTR(linux_vmcoreinfo, "SYMBOL", linux_symbol, directory, struct attr_data *)
+
+/* memory page map */
+ATTR(memory, "pagemap", memory_pagemap, bitmap, kdump_bmp_t *)
 
 /* Xen */
 ATTR(root, "xen", dir_xen, directory, struct attr_data *)
