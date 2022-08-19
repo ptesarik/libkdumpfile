@@ -190,8 +190,8 @@ mach2arch(unsigned mach, int elfclass)
  * @returns	 Pointer to the closest LOAD segment, or @c NULL if none.
  */
 static struct load_segment *
-find_closest_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
-		  unsigned long dist)
+find_closest_mem_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
+		      unsigned long dist)
 {
 	int i;
 
@@ -203,6 +203,33 @@ find_closest_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
 	for (i = 0; i < edp->num_load_sorted; i++) {
 		struct load_segment *pls = &edp->load_sorted[i];
 		if (paddr >= pls->phys + pls->memsz)
+			continue;
+		if (paddr >= pls->phys || pls->phys - paddr < dist)
+			return edp->last_load = pls;
+	}
+	return NULL;
+}
+
+/**  Find the file-backed LOAD segment that is closest to a physical address.
+ * @param edp	 ELF dump private data.
+ * @param paddr	 Requested physical address.
+ * @param dist	 Maximum allowed distance from @c paddr.
+ * @returns	 Pointer to the closest LOAD segment, or @c NULL if none.
+ */
+static struct load_segment *
+find_closest_file_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
+		       unsigned long dist)
+{
+	int i;
+
+	if (edp->last_load &&
+	    paddr >= edp->last_load->phys &&
+	    paddr < edp->last_load->phys + edp->last_load->filesz)
+		return edp->last_load;
+
+	for (i = 0; i < edp->num_load_sorted; i++) {
+		struct load_segment *pls = &edp->load_sorted[i];
+		if (paddr >= pls->phys + pls->filesz)
 			continue;
 		if (paddr >= pls->phys || pls->phys - paddr < dist)
 			return edp->last_load = pls;
@@ -258,7 +285,7 @@ elf_read_page(struct page_io *pio)
 	while (p < endp) {
 		pls = (pio->addr.as == ADDRXLAT_KVADDR
 		       ? find_closest_vload(edp, addr, endp - p)
-		       : find_closest_load(edp, addr, endp - p));
+		       : find_closest_mem_load(edp, addr, endp - p));
 		if (!pls) {
 			memset(p, 0, endp - p);
 			break;
@@ -317,7 +344,7 @@ elf_get_page(struct page_io *pio)
 	sz = get_page_size(ctx);
 	pls = (pio->addr.as == ADDRXLAT_KVADDR
 	       ? find_closest_vload(edp, pio->addr.addr, sz)
-	       : find_closest_load(edp, pio->addr.addr, sz));
+	       : find_closest_mem_load(edp, pio->addr.addr, sz));
 	if (!pls) {
 		addrxlat_status status;
 		kdump_status ret;
@@ -336,7 +363,7 @@ elf_get_page(struct page_io *pio)
 		if (status != ADDRXLAT_OK)
 			return addrxlat2kdump(ctx, status);
 
-		pls = find_closest_load(edp, pio->addr.addr, sz);
+		pls = find_closest_mem_load(edp, pio->addr.addr, sz);
 		if (!pls)
 			return set_error(ctx, KDUMP_ERR_NODATA,
 					 "Page not found");
@@ -360,14 +387,18 @@ elf_get_page(struct page_io *pio)
 
 static void
 elf_get_bits(struct kdump_shared *shared,
-	     kdump_addr_t first, kdump_addr_t last, unsigned char *bits)
+	     kdump_addr_t first, kdump_addr_t last, unsigned char *bits,
+	     bool ismem)
 {
 	struct elfdump_priv *edp = shared->fmtdata;
 	const struct load_segment *pls;
-	kdump_paddr_t cur, next;
+	kdump_paddr_t cur, next, size;
 
-	pls = find_closest_load(edp, pfn_to_addr(shared, first),
-				pfn_to_addr(shared, last - first + 1));
+	cur = pfn_to_addr(shared, first);
+	next = pfn_to_addr(shared, last - first  + 1);
+	pls = ismem
+		? find_closest_mem_load(edp, cur, next)
+		: find_closest_file_load(edp, cur, next);
 	if (!pls) {
 		memset(bits, 0, ((last - first) >> 3) + 1);
 		return;
@@ -384,7 +415,8 @@ elf_get_bits(struct kdump_shared *shared,
 			cur = next;
 		}
 
-		next = addr_to_pfn(shared, pls->phys + pls->memsz - 1);
+		size = ismem ? pls->memsz : pls->filesz;
+		next = addr_to_pfn(shared, pls->phys + size - 1);
 		if (next >= last) {
 			set_bits(bits, cur - first, last - first);
 			return;
@@ -405,21 +437,36 @@ elf_file_get_bits(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 	struct kdump_shared *shared = bmp->priv;
 
 	rwlock_rdlock(&shared->lock);
-	elf_get_bits(shared, first, last, bits);
+	elf_get_bits(shared, first, last, bits, false);
+	rwlock_unlock(&shared->lock);
+	return KDUMP_OK;
+}
+
+static kdump_status
+elf_mem_get_bits(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
+		 kdump_addr_t first, kdump_addr_t last, unsigned char *bits)
+{
+	struct kdump_shared *shared = bmp->priv;
+
+	rwlock_rdlock(&shared->lock);
+	elf_get_bits(shared, first, last, bits, true);
 	rwlock_unlock(&shared->lock);
 	return KDUMP_OK;
 }
 
 static kdump_status
 elf_find_set(kdump_errmsg_t *err, struct kdump_shared *shared,
-	     kdump_addr_t *idx)
+	     kdump_addr_t *idx, bool ismem)
 {
 	struct elfdump_priv *edp = shared->fmtdata;
 	const struct load_segment *pls;
 	kdump_paddr_t pfn;
 
-	pls = find_closest_load(edp, pfn_to_addr(shared, *idx),
-				KDUMP_ADDR_MAX);
+	pls = ismem
+		? find_closest_mem_load(edp, pfn_to_addr(shared, *idx),
+					KDUMP_ADDR_MAX)
+		: find_closest_file_load(edp, pfn_to_addr(shared, *idx),
+					 KDUMP_ADDR_MAX);
 	if (!pls)
 		return status_err(err, KDUMP_ERR_NODATA,
 				  "No such bit found");
@@ -437,27 +484,45 @@ elf_file_find_set(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 	kdump_status ret;
 
 	rwlock_rdlock(&shared->lock);
-	ret = elf_find_set(err, shared, idx);
+	ret = elf_find_set(err, shared, idx, false);
+	rwlock_unlock(&shared->lock);
+	return ret;
+}
+
+static kdump_status
+elf_mem_find_set(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
+		  kdump_addr_t *idx)
+{
+	struct kdump_shared *shared = bmp->priv;
+	kdump_status ret;
+
+	rwlock_rdlock(&shared->lock);
+	ret = elf_find_set(err, shared, idx, true);
 	rwlock_unlock(&shared->lock);
 	return ret;
 }
 
 static void
 elf_find_clear(kdump_errmsg_t *err, struct kdump_shared *shared,
-	       kdump_addr_t *idx)
+	       kdump_addr_t *idx, bool ismem)
 {
 	struct elfdump_priv *edp = shared->fmtdata;
 	const struct load_segment *pls;
 
-	pls = find_closest_load(edp, pfn_to_addr(shared, *idx),
-				KDUMP_ADDR_MAX);
-	if (pls)
-		while (pls < &edp->load_sorted[edp->num_load_sorted] &&
-		       *idx >= addr_to_pfn(shared, pls->phys)) {
-			*idx = addr_to_pfn(shared, pls->phys + pls->memsz - 1);
-			++(*idx);
-			++pls;
-		}
+	pls = ismem
+		? find_closest_mem_load(edp, pfn_to_addr(shared, *idx),
+					KDUMP_ADDR_MAX)
+		: find_closest_file_load(edp, pfn_to_addr(shared, *idx),
+					 KDUMP_ADDR_MAX);
+	if (!pls)
+		return;
+	while (pls < &edp->load_sorted[edp->num_load_sorted] &&
+	       *idx >= addr_to_pfn(shared, pls->phys)) {
+		kdump_paddr_t size = ismem ? pls->memsz : pls->filesz;
+		*idx = addr_to_pfn(shared, pls->phys + size - 1);
+		++(*idx);
+		++pls;
+	}
 }
 
 static kdump_status
@@ -467,7 +532,19 @@ elf_file_find_clear(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 	struct kdump_shared *shared = bmp->priv;
 
 	rwlock_rdlock(&shared->lock);
-	elf_find_clear(err, shared, idx);
+	elf_find_clear(err, shared, idx, false);
+	rwlock_unlock(&shared->lock);
+	return KDUMP_OK;
+}
+
+static kdump_status
+elf_mem_find_clear(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
+		    kdump_addr_t *idx)
+{
+	struct kdump_shared *shared = bmp->priv;
+
+	rwlock_rdlock(&shared->lock);
+	elf_find_clear(err, shared, idx, true);
 	rwlock_unlock(&shared->lock);
 	return KDUMP_OK;
 }
@@ -479,10 +556,17 @@ elf_bmp_cleanup(const kdump_bmp_t *bmp)
 	shared_decref(shared);
 }
 
-static const struct kdump_bmp_ops elf_bmp_ops = {
+static const struct kdump_bmp_ops elf_file_bmp_ops = {
 	.get_bits = elf_file_get_bits,
 	.find_set = elf_file_find_set,
 	.find_clear = elf_file_find_clear,
+	.cleanup = elf_bmp_cleanup,
+};
+
+static const struct kdump_bmp_ops elf_mem_bmp_ops = {
+	.get_bits = elf_mem_get_bits,
+	.find_set = elf_mem_find_set,
+	.find_clear = elf_mem_find_clear,
 	.cleanup = elf_bmp_cleanup,
 };
 
@@ -1284,6 +1368,7 @@ open_common(kdump_ctx_t *ctx)
 	kdump_pfn_t max_pfn;
 	unsigned long as_caps;
 	kdump_bmp_t *bmp;
+	kdump_attr_value_t val;
 	kdump_status ret;
 	int i;
 
@@ -1301,13 +1386,24 @@ open_common(kdump_ctx_t *ctx)
 		return KDUMP_ERR_SYSTEM;
 	edp->load_vsorted = edp->load_sorted + edp->num_load_segments;
 
-	bmp = kdump_bmp_new(&elf_bmp_ops);
+	bmp = kdump_bmp_new(&elf_file_bmp_ops);
 	if (!bmp)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot allocate file pagemap");
+				 "Cannot allocate %s", "file pagemap");
 	bmp->priv = ctx->shared;
 	shared_incref_locked(ctx->shared);
 	set_file_pagemap(ctx, bmp);
+
+	val.bitmap = kdump_bmp_new(&elf_mem_bmp_ops);
+	if (!val.bitmap)
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot allocate %s", "memory pagemap");
+	val.bitmap->priv = ctx->shared;
+	shared_incref_locked(ctx->shared);
+	ret = set_attr(ctx, gattr(ctx, GKI_memory_pagemap), ATTR_DEFAULT, &val);
+	if (ret != KDUMP_OK)
+		return set_error(ctx, ret,
+				 "Cannot set %s attribute", "memory pagemap");
 
 	/* process NOTE segments */
 	ret = walk_elf_notes(ctx, process_noarch_notes);
