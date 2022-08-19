@@ -348,13 +348,9 @@ elf_get_page(struct page_io *pio)
 	pls = (pio->addr.as == ADDRXLAT_KVADDR
 	       ? find_closest_vload(edp, pio->addr.addr, sz)
 	       : find_closest_mem_load(edp, pio->addr.addr, sz));
-	if (!pls) {
+	if (!pls && pio->addr.as == ADDRXLAT_KVADDR) {
 		addrxlat_status status;
 		kdump_status ret;
-
-		if (pio->addr.as != ADDRXLAT_KVADDR)
-			return set_error(ctx, KDUMP_ERR_NODATA,
-					 "Page not found");
 
 		ret = revalidate_xlat(ctx);
 		if (ret != KDUMP_OK)
@@ -367,10 +363,9 @@ elf_get_page(struct page_io *pio)
 			return addrxlat2kdump(ctx, status);
 
 		pls = find_closest_mem_load(edp, pio->addr.addr, sz);
-		if (!pls)
-			return set_error(ctx, KDUMP_ERR_NODATA,
-					 "Page not found");
 	}
+	if (!pls)
+		return set_error(ctx, KDUMP_ERR_NODATA, "Page not found");
 
 	addr = pio->addr.addr;
 	loadaddr = (pio->addr.as == ADDRXLAT_KVADDR
