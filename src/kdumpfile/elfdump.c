@@ -246,8 +246,8 @@ find_closest_file_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
  * @returns	 Pointer to the closest LOAD segment, or @c NULL if none.
  */
 static struct load_segment *
-find_closest_vload(struct elfdump_priv *edp, kdump_vaddr_t vaddr,
-		   unsigned long dist)
+find_closest_mem_vload(struct elfdump_priv *edp, kdump_vaddr_t vaddr,
+		       unsigned long dist)
 {
 	int i;
 
@@ -259,6 +259,34 @@ find_closest_vload(struct elfdump_priv *edp, kdump_vaddr_t vaddr,
 	for (i = 0; i < edp->num_load_vsorted; i++) {
 		struct load_segment *pls = &edp->load_vsorted[i];
 		if (pls->memsz && vaddr <= pls->virt + pls->memsz - 1) {
+			if (vaddr < pls->virt && pls->virt - vaddr > dist)
+				break;
+			return edp->last_load = pls;
+		}
+	}
+	return NULL;
+}
+
+/**  Find the file-backed LOAD segment that is closest to a virtual address.
+ * @param edp	 ELF dump private data.
+ * @param vaddr	 Requested virtual address.
+ * @param dist	 Maximum allowed distance from @c vaddr.
+ * @returns	 Pointer to the closest LOAD segment, or @c NULL if none.
+ */
+static struct load_segment *
+find_closest_file_vload(struct elfdump_priv *edp, kdump_vaddr_t vaddr,
+			unsigned long dist)
+{
+	int i;
+
+	if (edp->last_vload &&
+	    vaddr >= edp->last_vload->virt &&
+	    vaddr - edp->last_vload->virt < edp->last_vload->filesz)
+		return edp->last_vload;
+
+	for (i = 0; i < edp->num_load_vsorted; i++) {
+		struct load_segment *pls = &edp->load_vsorted[i];
+		if (pls->filesz && vaddr <= pls->virt + pls->filesz - 1) {
 			if (vaddr < pls->virt && pls->virt - vaddr > dist)
 				break;
 			return edp->last_load = pls;
@@ -287,7 +315,7 @@ elf_read_page(struct page_io *pio)
 	endp = p + get_page_size(ctx);
 	while (p < endp) {
 		pls = (pio->addr.as == ADDRXLAT_KVADDR
-		       ? find_closest_vload(edp, addr, endp - p)
+		       ? find_closest_mem_vload(edp, addr, endp - p)
 		       : find_closest_mem_load(edp, addr, endp - p));
 		if (!pls) {
 			memset(p, 0, endp - p);
@@ -345,9 +373,13 @@ elf_get_page(struct page_io *pio)
 	kdump_status status;
 
 	sz = get_page_size(ctx);
-	pls = (pio->addr.as == ADDRXLAT_KVADDR
-	       ? find_closest_vload(edp, pio->addr.addr, sz)
-	       : find_closest_mem_load(edp, pio->addr.addr, sz));
+	pls = pio->addr.as == ADDRXLAT_KVADDR
+		? (get_zero_excluded(ctx)
+		   ? find_closest_mem_vload(edp, pio->addr.addr, sz)
+		   : find_closest_file_vload(edp, pio->addr.addr, sz))
+		: (get_zero_excluded(ctx)
+		   ? find_closest_mem_load(edp, pio->addr.addr, sz)
+		   : find_closest_file_load(edp, pio->addr.addr, sz));
 	if (!pls && pio->addr.as == ADDRXLAT_KVADDR) {
 		addrxlat_status status;
 		kdump_status ret;
