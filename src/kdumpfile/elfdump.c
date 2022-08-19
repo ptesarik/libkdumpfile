@@ -197,15 +197,16 @@ find_closest_mem_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
 
 	if (edp->last_load &&
 	    paddr >= edp->last_load->phys &&
-	    paddr < edp->last_load->phys + edp->last_load->memsz)
+	    paddr - edp->last_load->phys < edp->last_load->memsz)
 		return edp->last_load;
 
 	for (i = 0; i < edp->num_load_sorted; i++) {
 		struct load_segment *pls = &edp->load_sorted[i];
-		if (paddr >= pls->phys + pls->memsz)
-			continue;
-		if (paddr >= pls->phys || pls->phys - paddr < dist)
+		if (pls->memsz && paddr <= pls->phys + pls->memsz - 1) {
+			if (paddr < pls->phys && pls->phys - paddr > dist)
+				break;
 			return edp->last_load = pls;
+		}
 	}
 	return NULL;
 }
@@ -224,15 +225,16 @@ find_closest_file_load(struct elfdump_priv *edp, kdump_paddr_t paddr,
 
 	if (edp->last_load &&
 	    paddr >= edp->last_load->phys &&
-	    paddr < edp->last_load->phys + edp->last_load->filesz)
+	    paddr - edp->last_load->phys < edp->last_load->filesz)
 		return edp->last_load;
 
 	for (i = 0; i < edp->num_load_sorted; i++) {
 		struct load_segment *pls = &edp->load_sorted[i];
-		if (paddr >= pls->phys + pls->filesz)
-			continue;
-		if (paddr >= pls->phys || pls->phys - paddr < dist)
+		if (pls->filesz && paddr <= pls->phys + pls->filesz - 1) {
+			if (paddr < pls->phys && pls->phys - paddr > dist)
+				break;
 			return edp->last_load = pls;
+		}
 	}
 	return NULL;
 }
@@ -251,15 +253,16 @@ find_closest_vload(struct elfdump_priv *edp, kdump_vaddr_t vaddr,
 
 	if (edp->last_vload &&
 	    vaddr >= edp->last_vload->virt &&
-	    vaddr < edp->last_vload->virt + edp->last_vload->memsz)
+	    vaddr - edp->last_vload->virt < edp->last_vload->memsz)
 		return edp->last_vload;
 
 	for (i = 0; i < edp->num_load_vsorted; i++) {
 		struct load_segment *pls = &edp->load_vsorted[i];
-		if (vaddr >= pls->virt + pls->memsz)
-			continue;
-		if (vaddr >= pls->virt || pls->virt - vaddr < dist)
+		if (pls->memsz && vaddr <= pls->virt + pls->memsz - 1) {
+			if (vaddr < pls->virt && pls->virt - vaddr > dist)
+				break;
 			return edp->last_load = pls;
+		}
 	}
 	return NULL;
 }
