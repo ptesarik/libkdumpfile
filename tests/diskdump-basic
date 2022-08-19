@@ -41,6 +41,7 @@ echo "Created DISKDUMP dump: $dumpfile"
 
 ./checkattr "$dumpfile" <<EOF
 file.pagemap = bitmap: 1
+memory.pagemap = bitmap: 1
 EOF
 rc=$?
 if [ $rc -ne 0 ]; then

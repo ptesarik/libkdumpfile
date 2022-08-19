@@ -156,6 +156,18 @@ struct disk_dump_priv {
 	/** Number of split files in this dump. */
 	unsigned num_files;
 
+	/** Overridden methods for memory.bitmap attribute. */
+	struct attr_override mem_pagemap_override;
+
+	/** File offset of memory bitmap. */
+	off_t mem_pagemap_off;
+
+	/** Size of the memory bitmap. */
+	size_t mem_pagemap_size;
+
+	/** Memory region mapping. */
+	struct pfn_file_map mem_pagemap;
+
 	/** Page descriptor mapping. */
 	struct pfn_file_map pdmap[];
 };
@@ -253,6 +265,59 @@ static const struct kdump_bmp_ops diskdump_bmp_ops = {
 	.get_bits = diskdump_get_bits,
 	.find_set = diskdump_find_set,
 	.find_clear = diskdump_find_clear,
+	.cleanup = diskdump_bmp_cleanup,
+};
+
+static kdump_status
+mem_pagemap_get_bits(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
+		     kdump_addr_t first, kdump_addr_t last,
+		     unsigned char *bits)
+{
+	struct kdump_shared *shared = bmp->priv;
+	struct disk_dump_priv *ddp;
+
+	rwlock_rdlock(&shared->lock);
+	ddp = shared->fmtdata;
+	get_pfn_map_bits(&ddp->mem_pagemap, 1, first, last, bits);
+	rwlock_unlock(&shared->lock);
+	return KDUMP_OK;
+}
+
+static kdump_status
+mem_pagemap_find_set(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
+		     kdump_addr_t *idx)
+{
+	struct kdump_shared *shared = bmp->priv;
+	struct disk_dump_priv *ddp;
+	kdump_status ret;
+
+	rwlock_rdlock(&shared->lock);
+	ddp = shared->fmtdata;
+	ret = find_mapped_pfn(&ddp->mem_pagemap, 1, idx)
+		? KDUMP_OK
+		: status_err(err, KDUMP_ERR_NODATA, "No such bit found");
+	rwlock_unlock(&shared->lock);
+	return ret;
+}
+
+static kdump_status
+mem_pagemap_find_clear(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
+		       kdump_addr_t *idx)
+{
+	struct kdump_shared *shared = bmp->priv;
+	struct disk_dump_priv *ddp;
+
+	rwlock_rdlock(&shared->lock);
+	ddp = shared->fmtdata;
+	*idx = find_unmapped_pfn(&ddp->mem_pagemap, 1, *idx);
+	rwlock_unlock(&shared->lock);
+	return KDUMP_OK;
+}
+
+static const struct kdump_bmp_ops mem_pagemap_ops = {
+	.get_bits = mem_pagemap_get_bits,
+	.find_set = mem_pagemap_find_set,
+	.find_clear = mem_pagemap_find_clear,
 	.cleanup = diskdump_bmp_cleanup,
 };
 
@@ -491,6 +556,7 @@ static kdump_status
 read_bitmap(kdump_ctx_t *ctx, struct pfn_file_map *pdmap,
 	    int32_t sub_hdr_size, int32_t bitmap_blocks)
 {
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	off_t off = (1 + sub_hdr_size) * get_page_size(ctx);
 	off_t descoff;
 	size_t bitmapsize;
@@ -498,6 +564,8 @@ read_bitmap(kdump_ctx_t *ctx, struct pfn_file_map *pdmap,
 	struct fcache_chunk fch;
 	kdump_status ret;
 
+	if (pdmap->fidx == 0)
+		ddp->mem_pagemap_off = off;
 	descoff = off + bitmap_blocks * get_page_size(ctx);
 
 	bitmapsize = bitmap_blocks * get_page_size(ctx);
@@ -509,6 +577,8 @@ read_bitmap(kdump_ctx_t *ctx, struct pfn_file_map *pdmap,
 		off += bitmapsize;
 		max_bitmap_pfn = (kdump_pfn_t)bitmapsize * 8;
 	}
+	if (pdmap->fidx == 0)
+		ddp->mem_pagemap_size = bitmapsize;
 
 	if (get_max_pfn(ctx) > max_bitmap_pfn)
 		set_max_pfn(ctx, max_bitmap_pfn);
@@ -806,6 +876,63 @@ try_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh)
 }
 
 static kdump_status
+mem_pagemap_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
+	attr_revalidate_fn *parent_revalidate;
+	const struct attr_ops *parent_ops;
+	struct fcache_chunk fch;
+	kdump_pfn_t maxpfn;
+	kdump_status status;
+
+	status = fcache_get_chunk(ctx->shared->fcache, &fch,
+				  ddp->mem_pagemap_size, 0,
+				  ddp->mem_pagemap_off);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status,
+				 "Cannot read %zu bytes of page bitmap"
+				 " at %llu",
+				 ddp->mem_pagemap_size,
+				 (unsigned long long) ddp->mem_pagemap_off);
+
+	ddp->mem_pagemap.start_pfn = 0;
+	ddp->mem_pagemap.end_pfn = KDUMP_PFN_MAX;
+	maxpfn = (kdump_pfn_t) ddp->mem_pagemap_size * 8;
+	status = pfn_regions_from_bitmap(&ctx->err, &ddp->mem_pagemap,
+					 fch.data, false, 0, maxpfn, 0, 0);
+	fcache_put_chunk(&fch);
+
+	parent_ops = ddp->mem_pagemap_override.template.parent->ops;
+	parent_revalidate = parent_ops ? parent_ops->revalidate : NULL;
+	if (status == KDUMP_OK && parent_revalidate)
+		status = parent_revalidate(ctx, attr);
+	if (status == KDUMP_OK) {
+		ddp->mem_pagemap_override.ops.revalidate = parent_revalidate;
+		attr->flags.invalid = 0;
+	}
+	return status;
+}
+
+static kdump_status
+init_mem_pagemap(kdump_ctx_t *ctx)
+{
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
+	struct attr_data *attr = gattr(ctx, GKI_memory_pagemap);
+	kdump_attr_value_t val;
+
+	val.bitmap = kdump_bmp_new(&mem_pagemap_ops);
+	if (!val.bitmap)
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot allocate memory pagemap");
+	val.bitmap->priv = ctx->shared;
+	shared_incref_locked(ctx->shared);
+
+	attr_add_override(attr, &ddp->mem_pagemap_override);
+	ddp->mem_pagemap_override.ops.revalidate = mem_pagemap_revalidate;
+	return set_attr(ctx, attr, ATTR_INVALID, &val);
+}
+
+static kdump_status
 open_common(kdump_ctx_t *ctx, void *hdr)
 {
 	struct disk_dump_header_32 *dh32 = hdr;
@@ -859,6 +986,10 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 	shared_incref_locked(ctx->shared);
 	set_file_pagemap(ctx, bmp);
 
+	ret = init_mem_pagemap(ctx);
+	if (ret != KDUMP_OK)
+		goto err_cleanup;
+
 	if (uts_looks_sane(&dh32->utsname))
 		set_uts(ctx, &dh32->utsname);
 	else if (uts_looks_sane(&dh64->utsname))
@@ -910,6 +1041,8 @@ diskdump_attr_cleanup(struct attr_dict *dict)
 
 	attr_remove_override(dgattr(dict, GKI_page_size),
 			     &ddp->page_size_override);
+	attr_remove_override(dgattr(dict, GKI_memory_pagemap),
+			     &ddp->mem_pagemap_override);
 }
 
 static void

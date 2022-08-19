@@ -1,5 +1,6 @@
 next
 ----
+  * Bitmap of all RAM in the memory.pagemap attribute.
 
 0.5.0
 -----

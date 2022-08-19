@@ -37,6 +37,8 @@ file.set.0.fd = number
 file.format = string: diskdump
 file.pagemap = bitmap: 0
 
+memory.pagemap = bitmap: 0
+
 cache = directory:
 cache.size = number
 cache.hits = number:0
