@@ -358,23 +358,19 @@ elf_get_page(struct page_io *pio)
 	return status;
 }
 
-static kdump_status
-elf_get_bits(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
+static void
+elf_get_bits(struct kdump_shared *shared,
 	     kdump_addr_t first, kdump_addr_t last, unsigned char *bits)
 {
-	struct kdump_shared *shared = bmp->priv;
-	struct elfdump_priv *edp;
+	struct elfdump_priv *edp = shared->fmtdata;
 	const struct load_segment *pls;
 	kdump_paddr_t cur, next;
-
-	rwlock_rdlock(&shared->lock);
-	edp = shared->fmtdata;
 
 	pls = find_closest_load(edp, pfn_to_addr(shared, first),
 				pfn_to_addr(shared, last - first + 1));
 	if (!pls) {
 		memset(bits, 0, ((last - first) >> 3) + 1);
-		goto out;
+		return;
 	}
 
 	/* Clear extra bits in the last byte of the raw bitmap. */
@@ -391,7 +387,7 @@ elf_get_bits(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 		next = addr_to_pfn(shared, pls->phys + pls->memsz - 1);
 		if (next >= last) {
 			set_bits(bits, cur - first, last - first);
-			goto out;
+			return;
 		}
 		set_bits(bits, cur - first, next - first);
 
@@ -400,47 +396,59 @@ elf_get_bits(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 	} while (pls < &edp->load_sorted[edp->num_load_sorted]);
 
 	clear_bits(bits, cur - first, last - first);
+}
 
- out:
+static kdump_status
+elf_file_get_bits(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
+		  kdump_addr_t first, kdump_addr_t last, unsigned char *bits)
+{
+	struct kdump_shared *shared = bmp->priv;
+
+	rwlock_rdlock(&shared->lock);
+	elf_get_bits(shared, first, last, bits);
 	rwlock_unlock(&shared->lock);
 	return KDUMP_OK;
 }
 
 static kdump_status
-elf_find_set(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
+elf_find_set(kdump_errmsg_t *err, struct kdump_shared *shared,
 	     kdump_addr_t *idx)
 {
-	struct kdump_shared *shared = bmp->priv;
-	struct elfdump_priv *edp;
+	struct elfdump_priv *edp = shared->fmtdata;
 	const struct load_segment *pls;
 	kdump_paddr_t pfn;
 
-	rwlock_rdlock(&shared->lock);
-	edp = shared->fmtdata;
 	pls = find_closest_load(edp, pfn_to_addr(shared, *idx),
 				KDUMP_ADDR_MAX);
-	if (!pls) {
-		rwlock_unlock(&shared->lock);
+	if (!pls)
 		return status_err(err, KDUMP_ERR_NODATA,
 				  "No such bit found");
-	}
 	pfn = addr_to_pfn(shared, pls->phys);
 	if (pfn > *idx)
 		*idx = pfn;
-	rwlock_unlock(&shared->lock);
 	return KDUMP_OK;
 }
 
 static kdump_status
-elf_find_clear(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
-	       kdump_addr_t *idx)
+elf_file_find_set(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
+		  kdump_addr_t *idx)
 {
 	struct kdump_shared *shared = bmp->priv;
-	struct elfdump_priv *edp;
-	const struct load_segment *pls;
+	kdump_status ret;
 
 	rwlock_rdlock(&shared->lock);
-	edp = shared->fmtdata;
+	ret = elf_find_set(err, shared, idx);
+	rwlock_unlock(&shared->lock);
+	return ret;
+}
+
+static void
+elf_find_clear(kdump_errmsg_t *err, struct kdump_shared *shared,
+	       kdump_addr_t *idx)
+{
+	struct elfdump_priv *edp = shared->fmtdata;
+	const struct load_segment *pls;
+
 	pls = find_closest_load(edp, pfn_to_addr(shared, *idx),
 				KDUMP_ADDR_MAX);
 	if (pls)
@@ -450,6 +458,16 @@ elf_find_clear(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 			++(*idx);
 			++pls;
 		}
+}
+
+static kdump_status
+elf_file_find_clear(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
+		    kdump_addr_t *idx)
+{
+	struct kdump_shared *shared = bmp->priv;
+
+	rwlock_rdlock(&shared->lock);
+	elf_find_clear(err, shared, idx);
 	rwlock_unlock(&shared->lock);
 	return KDUMP_OK;
 }
@@ -462,9 +480,9 @@ elf_bmp_cleanup(const kdump_bmp_t *bmp)
 }
 
 static const struct kdump_bmp_ops elf_bmp_ops = {
-	.get_bits = elf_get_bits,
-	.find_set = elf_find_set,
-	.find_clear = elf_find_clear,
+	.get_bits = elf_file_get_bits,
+	.find_set = elf_file_find_set,
+	.find_clear = elf_file_find_clear,
 	.cleanup = elf_bmp_cleanup,
 };
 
