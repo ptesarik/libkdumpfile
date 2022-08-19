@@ -325,6 +325,18 @@ struct sadump_priv {
 	/** Dumpable page mapping. */
 	struct pfn_file_map pfm;
 
+	/** Overridden methods for memory.bitmap attribute. */
+	struct attr_override mem_pagemap_override;
+
+	/** File offset of memory bitmap. */
+	off_t mem_pagemap_off;
+
+	/** Size of the memory bitmap. */
+	size_t mem_pagemap_size;
+
+	/** Memory region mapping. */
+	struct pfn_file_map mem_pagemap;
+
 	/** Disk extents. Indexed by disk number. */
 	struct sadump_disk_extents ext[];
 };
@@ -370,6 +382,20 @@ sadump_get_bits(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 }
 
 static kdump_status
+sadump_mem_get_bits(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
+		    kdump_addr_t first, kdump_addr_t last, unsigned char *bits)
+{
+	struct kdump_shared *shared = bmp->priv;
+	struct sadump_priv *sp;
+
+	rwlock_rdlock(&shared->lock);
+	sp = shared->fmtdata;
+	get_pfn_map_bits(&sp->mem_pagemap, 1, first, last, bits);
+	rwlock_unlock(&shared->lock);
+	return KDUMP_OK;
+}
+
+static kdump_status
 sadump_find_set(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 		kdump_addr_t *idx)
 {
@@ -380,6 +406,23 @@ sadump_find_set(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 	rwlock_rdlock(&shared->lock);
 	sp = shared->fmtdata;
 	ret = find_mapped_pfn(&sp->pfm, 1, idx)
+		? KDUMP_OK
+		: status_err(err, KDUMP_ERR_NODATA, "No such bit found");
+	rwlock_unlock(&shared->lock);
+	return ret;
+}
+
+static kdump_status
+sadump_mem_find_set(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
+		    kdump_addr_t *idx)
+{
+	struct kdump_shared *shared = bmp->priv;
+	struct sadump_priv *sp;
+	kdump_status ret;
+
+	rwlock_rdlock(&shared->lock);
+	sp = shared->fmtdata;
+	ret = find_mapped_pfn(&sp->mem_pagemap, 1, idx)
 		? KDUMP_OK
 		: status_err(err, KDUMP_ERR_NODATA, "No such bit found");
 	rwlock_unlock(&shared->lock);
@@ -400,6 +443,20 @@ sadump_find_clear(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
 	return KDUMP_OK;
 }
 
+static kdump_status
+sadump_mem_find_clear(kdump_errmsg_t *err, const kdump_bmp_t *bmp,
+		      kdump_addr_t *idx)
+{
+	struct kdump_shared *shared = bmp->priv;
+	struct sadump_priv *sp;
+
+	rwlock_rdlock(&shared->lock);
+	sp = shared->fmtdata;
+	*idx = find_unmapped_pfn(&sp->mem_pagemap, 1, *idx);
+	rwlock_unlock(&shared->lock);
+	return KDUMP_OK;
+}
+
 static void
 sadump_bmp_cleanup(const kdump_bmp_t *bmp)
 {
@@ -413,6 +470,75 @@ static const struct kdump_bmp_ops sadump_bmp_ops = {
 	.find_clear = sadump_find_clear,
 	.cleanup = sadump_bmp_cleanup,
 };
+
+static const struct kdump_bmp_ops mem_pagemap_ops = {
+	.get_bits = sadump_mem_get_bits,
+	.find_set = sadump_mem_find_set,
+	.find_clear = sadump_mem_find_clear,
+	.cleanup = sadump_bmp_cleanup,
+};
+
+
+static kdump_status
+mem_pagemap_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
+{
+	struct sadump_priv *sp = ctx->shared->fmtdata;
+	attr_revalidate_fn *parent_revalidate;
+	const struct attr_ops *parent_ops;
+	kdump_pfn_t max_bmp_pfn;
+	struct fcache_chunk fch;
+	kdump_status ret;
+
+	max_bmp_pfn = (kdump_pfn_t)sp->mem_pagemap_size * 8;
+	if (get_max_pfn(ctx) > max_bmp_pfn)
+		set_max_pfn(ctx, max_bmp_pfn);
+
+	ret = fcache_get_chunk(ctx->shared->fcache, &fch,
+			       sp->mem_pagemap_size, sp->ext[0].fidx,
+			       sp->mem_pagemap_off);
+	if (ret != KDUMP_OK)
+		return set_error(ctx, ret,
+				 "Cannot read %zu bytes of memory bitmap"
+				 " at %llu",
+				 sp->mem_pagemap_size,
+				 (unsigned long long) sp->mem_pagemap_off);
+
+	sp->mem_pagemap.start_pfn = 0;
+	sp->mem_pagemap.end_pfn = max_bmp_pfn;
+	ret = pfn_regions_from_bitmap(&ctx->err, &sp->mem_pagemap,
+				      fch.data, true, 0, max_bmp_pfn,
+				      0, get_page_size(ctx));
+	fcache_put_chunk(&fch);
+
+	parent_ops = sp->mem_pagemap_override.template.parent->ops;
+	parent_revalidate = parent_ops ? parent_ops->revalidate : NULL;
+	if (ret == KDUMP_OK && parent_revalidate)
+		ret = parent_revalidate(ctx, attr);
+	if (ret == KDUMP_OK) {
+		sp->mem_pagemap_override.ops.revalidate = parent_revalidate;
+		attr->flags.invalid = 0;
+	}
+	return ret;
+}
+
+static kdump_status
+init_mem_pagemap(kdump_ctx_t *ctx)
+{
+	struct sadump_priv *sp = ctx->shared->fmtdata;
+	struct attr_data *attr = gattr(ctx, GKI_memory_pagemap);
+	kdump_attr_value_t val;
+
+	val.bitmap = kdump_bmp_new(&mem_pagemap_ops);
+	if (!val.bitmap)
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot allocate memory pagemap");
+	val.bitmap->priv = ctx->shared;
+	shared_incref_locked(ctx->shared);
+
+	attr_add_override(attr, &sp->mem_pagemap_override);
+	sp->mem_pagemap_override.ops.revalidate = mem_pagemap_revalidate;
+	return set_attr(ctx, attr, ATTR_INVALID, &val);
+}
 
 /** Read SADUMP dumped page bitmap.
  * @param ctx       Dump file object.
@@ -912,10 +1038,12 @@ open_common(kdump_ctx_t *ctx, unsigned fidx,
 	else
 		set_max_pfn(ctx, dump64toh(ctx, sh.max_mapnr_64));
 
-	dsi->bmp_pos = hdr_pos + sp->block_size * (
+	sp->mem_pagemap_off = hdr_pos + sp->block_size * (
 		1 +				   /* SADUMP header itself */
-		dump32toh(ctx, sh.sub_hdr_size) +  /* arch-dependent header */
-		dump32toh(ctx, sh.bitmap_blocks)); /* memory bitmap */
+		dump32toh(ctx, sh.sub_hdr_size));  /* arch-dependent header */
+	sp->mem_pagemap_size =
+		sp->block_size * dump32toh(ctx, sh.bitmap_blocks);
+	dsi->bmp_pos = sp->mem_pagemap_off + sp->mem_pagemap_size;
 	sp->ext[0].data_pos = dsi->bmp_pos +
 		sp->block_size * dump32toh(ctx, sh.dumpable_bitmap_blocks);
 	sp->ext[0].data_len = used_device - sp->ext[0].data_pos;
@@ -1010,7 +1138,22 @@ sadump_probe(kdump_ctx_t *ctx)
 	shared_incref_locked(ctx->shared);
 	set_file_pagemap(ctx, bmp);
 
+	status = init_mem_pagemap(ctx);
+	if (status != KDUMP_OK) {
+		sadump_cleanup(ctx->shared);
+		return status;
+	}
+
 	return KDUMP_OK;
+}
+
+static void
+sadump_attr_cleanup(struct attr_dict *dict)
+{
+	struct sadump_priv *sp = dict->shared->fmtdata;
+
+	attr_remove_override(dgattr(dict, GKI_memory_pagemap),
+			     &sp->mem_pagemap_override);
 }
 
 static void
@@ -1031,5 +1174,6 @@ const struct format_ops sadump_ops = {
 	.get_page = sadump_get_page,
 	.put_page = cache_put_page,
 	.realloc_caches = def_realloc_caches,
+	.attr_cleanup = sadump_attr_cleanup,
 	.cleanup = sadump_cleanup,
 };
