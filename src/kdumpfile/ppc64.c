@@ -1,7 +1,8 @@
 /** @internal @file src/kdumpfile/ppc64.c
  * @brief Functions for the ppc64 architecture.
  */
-/* Copyright (C) 2015 Free Software Foundation, Inc.
+/* Copyright (C) 2015 Ales Novak <alnovak@suse.com>
+   Copyright (C) 2015-2022 Petr Tesarik <ptesarik@suse.com>
 
    This file is free software; you can redistribute it and/or modify
    it under the terms of either
