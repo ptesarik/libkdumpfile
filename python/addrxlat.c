@@ -5286,9 +5286,12 @@ cb_op(void *data, const addrxlat_fulladdr_t *addr)
 
 	result = PyObject_CallMethod((PyObject*)self, "callback",
 				     "O", addrobj);
-	if (!result)
-		return ctx_error_status((ctx_object*)self->ctx);
 	Py_XDECREF(self->result);
+	if (!result) {
+		Py_INCREF(Py_None);
+		self->result = Py_None;
+		return ctx_error_status((ctx_object*)self->ctx);
+	}
 	self->result = result;
 
 	return ADDRXLAT_OK;
