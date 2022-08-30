@@ -3,19 +3,17 @@
 #
 
 totalrc=0
-for tst in $list; do
-    input="${tst%:*}"
-    expect="${tst#*:}"
+for input in $list; do
     echo -n "Checking $input... "
-    output=$( ./addrxlat -p -f $pf -r MACHPHYSADDR:0 $ptes $input )
+    output=$( ./addrxlat -p -f $pf -r MACHPHYSADDR:0 $ptes $input 2>&1 )
     rc=$?
     if [ $rc -gt 1 ]; then
         echo ERROR
-        echo "Cannot translate $input" >&2
+        echo "Cannot translate $input: $output" >&2
         exit $rc
     elif [ $rc -ne 1 ]; then
         echo FAILED
-	echo "Expected error, got $output"
+	echo "Expected error for $input, got $output" >&2
         totalrc=1
     else
         echo OK
