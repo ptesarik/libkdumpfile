@@ -14,8 +14,10 @@ ptes="$ptes -e 0x1010:0x3c0000790" # PGD[0] -> PUD[2] -> INVALID
 ptes="$ptes -e 0x2000:0x3003"	# PGD[0] -> PUD[0] -> PMD[0] -> 3000
 ptes="$ptes -e 0x2010:0xe00790"	# PGD[0] -> PUD[0] -> PMD[2] -> INVALID
 ptes="$ptes -e 0x3000:0xa792"	# PGD[0] -> PUD[0] -> PMD[0] -> PTE[0] -> INVALID
+ptes="$ptes -e 0x3008:0xb791"	# PGD[0] -> PUD[0] -> PMD[0] -> PTE[1] -> RESERVED
 
 list="0x123"			# PGD[0] -> PUD[0] -> PMD[0] -> PTE[0]
+list="0x1234"			# PGD[0] -> PUD[0] -> PMD[0] -> PTE[1]
 list="$list 0x523456"		# PGD[0] -> PUD[0] -> PMD[2]
 list="$list 0xa1234567"		# PGD[0] -> PUD[2]
 list="$list 0x808060489a"	# PGD[1]

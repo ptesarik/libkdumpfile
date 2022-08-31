@@ -131,7 +131,8 @@ pgt_aarch64(addrxlat_step_t *step)
 	step->base.as = step->meth->target_as;
 
 	if (PTE_TYPE(pte) == PTE_TYPE_BLOCK) {
-		if (step->remain > 4 ||
+		if (step->remain == 1 ||
+		    step->remain > 4 ||
 		    (step->remain > 3 &&
 		     step->meth->param.pgt.pf.fieldsz[0] != 9))
 			return pte_invalid(step);
