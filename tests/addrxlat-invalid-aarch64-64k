@@ -1,0 +1,19 @@
+#! /bin/sh
+
+#
+# Check invalid VTOP translation for AArch64 with 64k pages.
+#
+
+pf="aarch64:16,13,13,6"
+
+ptes="-e 0x00000:0x20003"	# PUD[0] -> 20000
+ptes="$ptes -e 0x00008:0xd0002"	# PUD[1] -> INVALID
+ptes="$ptes -e 0x20000:0x30003"	# PUD[0] -> PMD[0] -> 30000
+ptes="$ptes -e 0x20010:0xe0000790" # PUD[0] -> PMD[2] -> INVALID
+ptes="$ptes -e 0x30000:0xa0792"	# PUD[0] -> PMD[0] -> PTE[0] -> INVALID
+
+list="0x1234"			# PUD[0] -> PMD[0] -> PTE[0]
+list="$list 0x41234567"		# PUD[0] -> PMD[2]
+list="$list 0x400400389ab"	# PUD[1]
+
+. "$srcdir"/addrxlat-invalid
