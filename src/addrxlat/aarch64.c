@@ -123,7 +123,7 @@ pte_invalid(addrxlat_step_t *step)
 {
 	return set_error(step->ctx, ADDRXLAT_ERR_INVALID,
 			 "Invalid %s entry: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
-			 pgt_full_name[step->remain - 1],
+			 pgt_full_name[step->remain],
 			 pte_name[step->remain - 1],
 			 (unsigned) step->idx[step->remain],
 			 step->raw.pte);
