@@ -4,23 +4,24 @@
 # Check invalid VTOP translation for AArch64 with 4k pages.
 #
 
-pf="aarch64:12,9,9,9,9"
+pf="aarch64:12,9,9,9,9,4"
 
 ptes="-e 0x0000:0x1003"		# PGD[0] -> 1000
-ptes="$ptes -e 0x0008:0x4000"	# PGD[1] -> INVALID
-ptes="$ptes -e 0x0010:0x5001"	# PGD[2] -> BLOCK (not allowed here)
-ptes="$ptes -e 0x1000:0x2003"	# PGD[0] -> PUD[0] -> 2000
-ptes="$ptes -e 0x1010:0x3c0000790" # PGD[0] -> PUD[2] -> INVALID
-ptes="$ptes -e 0x2000:0x3003"	# PGD[0] -> PUD[0] -> PMD[0] -> 3000
-ptes="$ptes -e 0x2010:0xe00790"	# PGD[0] -> PUD[0] -> PMD[2] -> INVALID
-ptes="$ptes -e 0x3000:0xa792"	# PGD[0] -> PUD[0] -> PMD[0] -> PTE[0] -> INVALID
-ptes="$ptes -e 0x3008:0xb791"	# PGD[0] -> PUD[0] -> PMD[0] -> PTE[1] -> RESERVED
+ptes="$ptes -e 0x0008:0xd000000000001"	# PGD[1] -> BLOCK (not allowed here)
+ptes="$ptes -e 0x1000:0x2003"	# PGD[0] -> P4D[0] -> 2000
+ptes="$ptes -e 0x1008:0x6000"	# PGD[0] -> P4D[1] -> INVALID
+ptes="$ptes -e 0x2000:0x3003"	# PGD[0] -> P4D[0] -> PUD[0] -> 3000
+ptes="$ptes -e 0x2010:0x3c0000790" # PGD[0] -> P4D[0] -> PUD[2] -> INVALID
+ptes="$ptes -e 0x3000:0x4003"	# PGD[0] -> P4D[0] -> PUD[0] -> PMD[0] -> 4000
+ptes="$ptes -e 0x3010:0xe00790"	# PGD[0] -> P4D[0] -> PUD[0] -> PMD[2] -> INVALID
+ptes="$ptes -e 0x4000:0xa792"	# PGD[0] -> P4D[0] -> PUD[0] -> PMD[0] -> PTE[0] -> INVALID
+ptes="$ptes -e 0x4008:0xb791"	# PGD[0] -> P4D[0] -> PUD[0] -> PMD[0] -> PTE[1] -> RESERVED
 
-list="0x123"			# PGD[0] -> PUD[0] -> PMD[0] -> PTE[0]
-list="0x1234"			# PGD[0] -> PUD[0] -> PMD[0] -> PTE[1]
-list="$list 0x523456"		# PGD[0] -> PUD[0] -> PMD[2]
-list="$list 0xa1234567"		# PGD[0] -> PUD[2]
-list="$list 0x808060489a"	# PGD[1]
-list="$list 0x123456789ab"	# PGD[2]
+list="0x123"			# PGD[0] -> P4D[0] -> PUD[0] -> PMD[0] -> PTE[0]
+list="$list 0x1234"		# PGD[0] -> P4D[0] -> PUD[0] -> PMD[0] -> PTE[1]
+list="$list 0x523456"		# PGD[0] -> P4D[0] -> PUD[0] -> PMD[2]
+list="$list 0xa1234567"		# PGD[0] -> P4D[0] -> PUD[2]
+list="$list 0x808060489a"	# PGD[0] -> P4D[1]
+list="$list 0x123456789abcd"	# PGD[1]
 
 . "$srcdir"/addrxlat-invalid

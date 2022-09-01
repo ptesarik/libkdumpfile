@@ -41,6 +41,25 @@
 #define PA_MAX_BITS	48
 #define PA_MASK		ADDR_MASK(PA_MAX_BITS)
 
+/** Mask of the maximum region size.
+ * Largest region size depends on the translation granule size. This
+ * mask corresponds to the maximum value, i.e. a 4 TiB region in level
+ * one translation table for a 64 KiB granule.
+ *
+ * Note that this maximum can be used to check whether a block descriptor
+ * is valid in a given translation lookup level, because a region that
+ * would be defined by a (hypothetical) block descriptor in a translation
+ * table where block descriptors are not supported would be larger:
+ * - For a 4 KiB granule, a block descriptor in level -1 table would
+ *   correspond to a 256 TiB region.
+ * - For a 16 KiB granule, a block descriptor in level 0 table would
+ *   correspond to a 128 TiB region.
+ *
+ * The Answer to the Great Question of Life, the Universe, and Everything
+ * is thus Forty-two.
+ */
+#define MAX_REGION_MASK	ADDR_MASK(42)
+
 #define PTE_MASK(bits)		(((uint64_t)1<<bits) - 1)
 #define PTE_VAL(x, shift, bits)	(((x) >> (shift)) & PTE_MASK(bits))
 
@@ -131,13 +150,12 @@ pgt_aarch64(addrxlat_step_t *step)
 	step->base.as = step->meth->target_as;
 
 	if (PTE_TYPE(pte) == PTE_TYPE_BLOCK) {
-		if (step->remain == 1 ||
-		    step->remain > 4 ||
-		    (step->remain > 3 &&
-		     step->meth->param.pgt.pf.fieldsz[0] != 9))
-			return pte_invalid(step);
-		step->base.addr &= ~pf_table_mask(
+		addrxlat_addr_t mask = pf_table_mask(
 			&step->meth->param.pgt.pf, step->remain);
+		if (step->remain == 1 ||
+		    mask > MAX_REGION_MASK)
+			return pte_invalid(step);
+		step->base.addr &= ~mask;
 		return pgt_huge_page(step);
 	}
 
