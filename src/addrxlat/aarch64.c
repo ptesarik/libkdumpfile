@@ -34,31 +34,46 @@
 #include "addrxlat-priv.h"
 #include <linux/version.h>
 
-/* Maximum virtual address bits (architectural limit) */
+/** Maximum virtual address bits (architectural limit). */
 #define VA_MAX_BITS	52
 
-/* Maximum physical address bits (architectural limit) */
+/** Maximum physical address bits (architectural limit).
+ * This limit applies only to the original VMSA64 without LPA/LPA2.
+ */
 #define PA_MAX_BITS	48
 #define PA_MASK		ADDR_MASK(PA_MAX_BITS)
 
-/** Mask of the maximum region size.
+/** Mask of the maximum region size without LPA/LPA2.
  * Largest region size depends on the translation granule size. This
- * mask corresponds to the maximum value, i.e. a 4 TiB region in level
- * one translation table for a 64 KiB granule.
+ * mask corresponds to the maximum value, i.e. a 1 GiB region in level
+ * one translation table for a 4 KiB granule.
  *
  * Note that this maximum can be used to check whether a block descriptor
  * is valid in a given translation lookup level, because a region that
  * would be defined by a (hypothetical) block descriptor in a translation
  * table where block descriptors are not supported would be larger:
- * - For a 4 KiB granule, a block descriptor in level -1 table would
- *   correspond to a 256 TiB region.
- * - For a 16 KiB granule, a block descriptor in level 0 table would
- *   correspond to a 128 TiB region.
- *
- * The Answer to the Great Question of Life, the Universe, and Everything
- * is thus Forty-two.
+ * - For a 16 KiB granule, a block descriptor in level 1 table would
+ *   correspond to a 64 GiB region.
+ * - For a 64 KiB granule, a block descriptor in level 0 table would
+ *   correspond to a 4 TiB region.
  */
-#define MAX_REGION_MASK	ADDR_MASK(42)
+#define MAX_REGION_MASK	ADDR_MASK(30)
+
+/** Mask of the maximum region size with LPA.
+ * The LPA descriptor format is used only for a 64 KiB translation
+ * granule, which supports block descriptors in level 0 tables. The
+ * size of that region is 4 TiB.
+ */
+#define MAX_REGION_MASK_LPA	ADDR_MASK(42)
+
+/** Mask of the maximum region size with LPA2.
+ * The LPA2 descriptor format is used for 4 KiB and a 16 KiB
+ * translation granule. The maximum region size is 512 GiB (a block
+ * descriptor in a level 0 table with 4 KiB granules). A (hypothetical)
+ * block descriptor in a level 0 table with 16 KiB granules would
+ * correspond to a 128 TiB region.
+ */
+#define MAX_REGION_MASK_LPA2	ADDR_MASK(39)
 
 #define PTE_MASK(bits)		(((uint64_t)1<<bits) - 1)
 #define PTE_VAL(x, shift, bits)	(((x) >> (shift)) & PTE_MASK(bits))
@@ -129,7 +144,7 @@ pte_invalid(addrxlat_step_t *step)
 			 step->raw.pte);
 }
 
-/** ARM AArch64 page table step function.
+/** Arm AArch64 page table step function.
  * @param step  Current step state.
  * @returns     Error status.
  */
@@ -154,6 +169,80 @@ pgt_aarch64(addrxlat_step_t *step)
 			&step->meth->param.pgt.pf, step->remain);
 		if (step->remain == 1 ||
 		    mask > MAX_REGION_MASK)
+			return pte_invalid(step);
+		step->base.addr &= ~mask;
+		return pgt_huge_page(step);
+	}
+
+	step->base.addr &= ~pf_page_mask(&step->meth->param.pgt.pf);
+	if (step->remain == 1)
+		step->elemsz = 1;
+
+	return ADDRXLAT_OK;
+}
+
+/** Arm AArch64 with LPA page table step function.
+ * @param step  Current step state.
+ * @returns     Error status.
+ */
+addrxlat_status
+pgt_aarch64_lpa(addrxlat_step_t *step)
+{
+	addrxlat_pte_t pte;
+	addrxlat_status status;
+
+	status = read_pte64(step, &pte);
+	if (status != ADDRXLAT_OK)
+		return status;
+
+	if (!PTE_VALID(pte))
+		return pte_not_present(step);
+
+	step->base.addr = PTE_VAL(pte, 0, 47) | (PTE_VAL(pte, 12, 4) << 48);
+	step->base.as = step->meth->target_as;
+
+	if (PTE_TYPE(pte) == PTE_TYPE_BLOCK) {
+		addrxlat_addr_t mask = pf_table_mask(
+			&step->meth->param.pgt.pf, step->remain);
+		if (step->remain == 1 ||
+		    mask > MAX_REGION_MASK_LPA)
+			return pte_invalid(step);
+		step->base.addr &= ~mask;
+		return pgt_huge_page(step);
+	}
+
+	step->base.addr &= ~pf_page_mask(&step->meth->param.pgt.pf);
+	if (step->remain == 1)
+		step->elemsz = 1;
+
+	return ADDRXLAT_OK;
+}
+
+/** Arm AArch64 with LPA2 page table step function.
+ * @param step  Current step state.
+ * @returns     Error status.
+ */
+addrxlat_status
+pgt_aarch64_lpa2(addrxlat_step_t *step)
+{
+	addrxlat_pte_t pte;
+	addrxlat_status status;
+
+	status = read_pte64(step, &pte);
+	if (status != ADDRXLAT_OK)
+		return status;
+
+	if (!PTE_VALID(pte))
+		return pte_not_present(step);
+
+	step->base.addr = PTE_VAL(pte, 0, 49) | (PTE_VAL(pte, 8, 2) << 50);
+	step->base.as = step->meth->target_as;
+
+	if (PTE_TYPE(pte) == PTE_TYPE_BLOCK) {
+		addrxlat_addr_t mask = pf_table_mask(
+			&step->meth->param.pgt.pf, step->remain);
+		if (step->remain == 1 ||
+		    mask > MAX_REGION_MASK_LPA2)
 			return pte_invalid(step);
 		step->base.addr &= ~mask;
 		return pgt_huge_page(step);
@@ -376,20 +465,23 @@ init_pgt_meth(struct os_init_data *ctl)
 {
 	addrxlat_meth_t *meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
 	addrxlat_param_pgt_t *pgt = &meth->param.pgt;
+	unsigned page_bits = ctl->popt.page_shift;
+	unsigned num_bits = ctl->popt.virt_bits;
 	unsigned field_bits;
-	unsigned page_bits;
-	unsigned num_bits;
 
 	meth->kind = ADDRXLAT_PGT;
 	meth->target_as = ADDRXLAT_MACHPHYSADDR;
 
 	pgt->root.as = ADDRXLAT_NOADDR;
 	pgt->pte_mask = 0;
-	pgt->pf.pte_format = ADDRXLAT_PTE_AARCH64;
+	pgt->pf.pte_format = num_bits <= 48
+		? ADDRXLAT_PTE_AARCH64
+		: (page_bits == 16
+		   ? ADDRXLAT_PTE_AARCH64_LPA
+		   : ADDRXLAT_PTE_AARCH64_LPA2);
 
 	pgt->pf.nfields = 0;
-	field_bits = page_bits = ctl->popt.page_shift;
-	num_bits = ctl->popt.virt_bits;
+	field_bits = page_bits;
 	while (num_bits) {
 		pgt->pf.fieldsz[pgt->pf.nfields++] = field_bits;
 		num_bits -= field_bits;

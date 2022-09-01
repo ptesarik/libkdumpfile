@@ -8,7 +8,6 @@ pf="aarch64:16,13,13,6"
 
 ptes="-e 0x00000:0x20003"	# PUD[0] -> 20000
 ptes="$ptes -e 0x00008:0xd0003"	# PUD[1] -> d0000
-ptes="$ptes -e 0x00010:0xc0000000791" # PUD[2] -> c0000000000 (4T)
 ptes="$ptes -e 0x00020:0xf0003" # PUD[4] -> f0000
 ptes="$ptes -e 0x20000:0x30003"	# PUD[0] -> PMD[0] -> 30000
 ptes="$ptes -e 0x20008:0x40003"	# PUD[0] -> PMD[1] -> 40000
@@ -26,6 +25,5 @@ list="$list 0x30005678:0xc5678"	# PUD[0] -> PMD[1] -> PTE[4096]
 list="$list 0x400400389ab:0xd89ab" # PUD[1] -> PMD[2] -> PTE[3]
 list="$list 0x41234567:0xe1234567" # PUD[0] -> PMD[2] (512M)
 list="$list 0xffff123456789abc:0x123456789abc" # PUD[1] -> PMD[4514] (512M)
-list="$list 0x8123456789a:0xc123456789a" # PUD[2] (4T)
 
 . "$srcdir"/addrxlat-common

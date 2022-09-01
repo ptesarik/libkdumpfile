@@ -42,6 +42,8 @@ print_pgt(const addrxlat_meth_t *meth)
 		[ADDRXLAT_PTE_PFN32] = "pfn32",
 		[ADDRXLAT_PTE_PFN64] = "pfn64",
 		[ADDRXLAT_PTE_AARCH64] = "aarch64",
+		[ADDRXLAT_PTE_AARCH64_LPA] = "aarch64_lpa",
+		[ADDRXLAT_PTE_AARCH64_LPA2] = "aarch64_lpa2",
 		[ADDRXLAT_PTE_IA32] = "ia32",
 		[ADDRXLAT_PTE_IA32_PAE] = "ia32_pae",
 		[ADDRXLAT_PTE_X86_64] = "x86_64",

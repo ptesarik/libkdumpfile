@@ -1,16 +1,16 @@
 #! /bin/sh
 
 #
-# Check invalid VTOP translation for AArch64 with 16k pages.
+# Check invalid VTOP translation for AArch64 with LPA2 and 16k pages.
 #
 
-pf="aarch64:14,11,11,11,1"
+pf="aarch64_lpa2:14,11,11,11,5"
 
 ptes="-e 0x0000:0x4003"		# PGD[0] -> 4000
 ptes="$ptes -e 0x0008:0x20000"	# PGD[1] -> INVALID
+ptes="$ptes -e 0x0010:0x800000000791" # PGD[2] -> BLOCK (not allowed here)
 ptes="$ptes -e 0x4000:0x8003"	# PGD[0] -> PUD[0] -> 8000
 ptes="$ptes -e 0x4008:0x18002"	# PGD[0] -> PUD[1] -> INVALID
-ptes="$ptes -e 0x4010:0xb000000001" # PGD[0] -> PUD[2] -> BLOCK (not allowed here)
 ptes="$ptes -e 0x8000:0xc003"	# PGD[0] -> PUD[0] -> PMD[0] -> c000
 ptes="$ptes -e 0x8008:0x10002"	# PGD[0] -> PUD[0] -> PMD[1] -> INVALID
 ptes="$ptes -e 0xc000:0x28792"	# PGD[0] -> PUD[0] -> PMD[0] -> PTE[0] -> INVALID
@@ -19,21 +19,7 @@ ptes="$ptes -e 0xc008:0x30791"	# PGD[0] -> PUD[0] -> PMD[0] -> PTE[1] -> RESERVE
 list="0x123"			# PGD[0] -> PUD[0] -> PMD[0] -> PTE[0]
 list="$list 0x4567"		# PGD[0] -> PUD[0] -> PMD[0] -> PTE[1]
 list="$list 0x2123456"		# PGD[0] -> PUD[0] -> PMD[1]
-list="$list 0x1000005678"	# PGD[0] -> PUD[1]
-list="$list 0x2000006789"	# PGD[0] -> PUD[2]
 list="$list 0x80200601089a"	# PGD[1]
+list="$list 0x1002006010789"	# PGD[2]
 
-( . "$srcdir"/addrxlat-invalid )
-totalrc=$?
-
-# Level 1 table has only two entries, so test the 3rd case separately
-
-ptes="-e 0x0000:0x800000000791"	# PGD[0] -> BLOCK (not allowed here)
-list="0x789"			# PGD[0]
-
-( . "$srcdir"/addrxlat-invalid )
-rc=$?
-test $rc -gt 1 && exit $rc
-test $rc -eq 0 || totalrc=$rc
-
-exit $totalrc
+. "$srcdir"/addrxlat-invalid

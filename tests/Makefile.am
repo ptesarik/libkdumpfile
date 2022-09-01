@@ -155,8 +155,11 @@ test_scripts = \
 	addrxlat-pfn32 \
 	addrxlat-pfn64 \
 	addrxlat-aarch64-4k \
+	addrxlat-aarch64-lpa2-4k \
 	addrxlat-aarch64-16k \
+	addrxlat-aarch64-lpa2-16k \
 	addrxlat-aarch64-64k \
+	addrxlat-aarch64-lpa-64k \
 	addrxlat-ia32 \
 	addrxlat-ia32-pae \
 	addrxlat-ppc64-64k \
@@ -168,8 +171,11 @@ test_scripts = \
 	addrxlat-x86_64-5l \
 	addrxlat-x86_64-sme \
 	addrxlat-invalid-aarch64-4k \
+	addrxlat-invalid-aarch64-lpa2-4k \
 	addrxlat-invalid-aarch64-16k \
+	addrxlat-invalid-aarch64-lpa2-16k \
 	addrxlat-invalid-aarch64-64k \
+	addrxlat-invalid-aarch64-lpa-64k \
 	addrxlat-invalid-pfn32 \
 	addrxlat-invalid-pfn64 \
 	addrxlat-invalid-ia32 \

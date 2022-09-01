@@ -503,7 +503,7 @@ typedef enum _addrxlat_pte_format {
 	ADDRXLAT_PTE_NONE,	/**< Undefined. */
 	ADDRXLAT_PTE_PFN32,	/**< 32-bit page frame number. */
 	ADDRXLAT_PTE_PFN64,	/**< 64-bit page frame number. */
-	ADDRXLAT_PTE_AARCH64,	/**< ARM AArch64. */
+	ADDRXLAT_PTE_AARCH64,	/**< Arm AArch64. */
 	ADDRXLAT_PTE_IA32,	/**< Original 32-bit Intel. */
 	ADDRXLAT_PTE_IA32_PAE,	/**< Intel IA32 with PAE. */
 	ADDRXLAT_PTE_X86_64,	/**< AMD64 (Intel 64).  */
@@ -511,6 +511,12 @@ typedef enum _addrxlat_pte_format {
 
 	/** IBM POWER (64-bit) running Linux with RPN shift 30 (64k pages). */
 	ADDRXLAT_PTE_PPC64_LINUX_RPN30,
+
+	/** Arm AArch64 with LPA (64k pages). */
+	ADDRXLAT_PTE_AARCH64_LPA,
+
+	/** Arm AArch64 with LPA2 (4k or 16k pages). */
+	ADDRXLAT_PTE_AARCH64_LPA2,
 } addrxlat_pte_format_t;
 
 /** Get the pteval shift for a PTE format.
@@ -527,6 +533,8 @@ addrxlat_pteval_shift(addrxlat_pte_format_t fmt)
 
 	case ADDRXLAT_PTE_PFN64:
 	case ADDRXLAT_PTE_AARCH64:
+	case ADDRXLAT_PTE_AARCH64_LPA:
+	case ADDRXLAT_PTE_AARCH64_LPA2:
 	case ADDRXLAT_PTE_IA32_PAE:
 	case ADDRXLAT_PTE_X86_64:
 	case ADDRXLAT_PTE_S390X:

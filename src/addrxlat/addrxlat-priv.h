@@ -275,6 +275,8 @@ read_pte64(addrxlat_step_t *step, addrxlat_pte_t *pte)
 INTERNAL_DECL(addrxlat_status, pgt_huge_page, (addrxlat_step_t *state));
 
 INTERNAL_DECL(addrxlat_next_step_fn, pgt_aarch64, );
+INTERNAL_DECL(addrxlat_next_step_fn, pgt_aarch64_lpa, );
+INTERNAL_DECL(addrxlat_next_step_fn, pgt_aarch64_lpa2, );
 
 INTERNAL_DECL(addrxlat_next_step_fn, pgt_ia32, );
 

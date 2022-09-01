@@ -1,13 +1,14 @@
 #! /bin/sh
 
 #
-# Check VTOP translation for AArch64 with 4k pages.
+# Check VTOP translation for AArch64 with LPA2 and 4k pages.
 #
 
-pf="aarch64:12,9,9,9,9"
+pf="aarch64_lpa2:12,9,9,9,9"
 
 ptes="-e 0x0000:0x1003"		# PGD[0] -> 1000
 ptes="$ptes -e 0x0008:0x5003"	# PGD[1] -> 5000
+ptes="$ptes -e 0x0010:0x60000000791"	# PGD[2] -> 600000000000 (512G)
 ptes="$ptes -e 0x0120:0xf003"	# PGD[36] -> f000
 ptes="$ptes -e 0x1000:0x2003"	# PGD[0] -> PUD[0] -> 2000
 ptes="$ptes -e 0x1010:0x3c0000791" # PGD[0] -> PUD[2] -> 0x3c0000000 (1G)
@@ -16,19 +17,21 @@ ptes="$ptes -e 0x2008:0x4003"	# PGD[0] -> PUD[0] -> PMD[1] -> 4000
 ptes="$ptes -e 0x2010:0xe00791"	# PGD[0] -> PUD[0] -> PMD[2] -> e00000 (2M)
 ptes="$ptes -e 0x3000:0xa793"	# PGD[0] -> PUD[0] -> PMD[0] -> PTE[0] -> a000
 ptes="$ptes -e 0x3008:0xb793"	# PGD[0] -> PUD[0] -> PMD[0] -> PTE[1] -> b000
+ptes="$ptes -e 0x3008:0xb793"	# PGD[0] -> PUD[0] -> PMD[0] -> PTE[2] -> b000
 ptes="$ptes -e 0x4800:0xc793"	# PGD[0] -> PUD[0] -> PMD[1] -> PTE[256] -> c000
 ptes="$ptes -e 0x5010:0x6003"	# PGD[1] -> PUD[2] -> 6000
 ptes="$ptes -e 0x6018:0x7003"	# PGD[1] -> PUD[2] -> PMD[3] -> 7000
 ptes="$ptes -e 0x7020:0xd793"	# PGD[1] -> PUD[2] -> PMD[3] -> PTE[4] -> d000
 ptes="$ptes -e 0xf688:0x123440000791" # PGD[36] -> PUD[209] -> directmap (1G)
 
-list="0x123:0xa123"		# PGD[0] -> PUD[0] -> PMD[0] -> PTE[0]
-list="$list 0x1234:0xb234"	# PGD[0] -> PUD[0] -> PMD[0] -> PTE[1]
-list="$list 0x300567:0xc567"	# PGD[0] -> PUD[0] -> PMD[1] -> PTE[256]
-list="$list 0x808060489a:0xd89a" # PGD[1] -> PUD[2] -> PMD[3] -> PTE[4]
-list="$list 0x523456:0xf23456"	# PGD[0] -> PUD[0] -> PMD[2] (2M)
-list="$list 0xa1234567:0x3e1234567" # PGD[0] -> PUD[2] (1G)
-list="$list 0xffff123456789abc:0x123456789abc" # PGD[36] -> PUD[209] (1G)
-list="$list 0x808060489a:0xd89a" # PGD[1] -> PUD[2] -> PMD[3] -> PTE[4]
+list="0x123:0xc00000000a123"		# PGD[0] -> PUD[0] -> PMD[0] -> PTE[0]
+list="$list 0x1234:0xc00000000b234"	# PGD[0] -> PUD[0] -> PMD[0] -> PTE[1]
+list="$list 0x300567:0xc00000000c567"	# PGD[0] -> PUD[0] -> PMD[1] -> PTE[256]
+list="$list 0x808060489a:0xc00000000d89a" # PGD[1] -> PUD[2] -> PMD[3] -> PTE[4]
+list="$list 0x523456:0xc000000f23456"	# PGD[0] -> PUD[0] -> PMD[2] (2M)
+list="$list 0xa1234567:0xc0003e1234567" # PGD[0] -> PUD[2] (1G)
+list="$list 0xffff123456789abc:0xc123456789abc" # PGD[36] -> PUD[209] (1G)
+list="$list 0x808060489a:0xc00000000d89a" # PGD[1] -> PUD[2] -> PMD[3] -> PTE[4]
+list="$list 0x123456789ab:0xc0623456789ab" # PGD[2] (512G)
 
 . "$srcdir"/addrxlat-common
