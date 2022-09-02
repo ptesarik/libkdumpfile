@@ -37,6 +37,7 @@ LIBADDRXLAT_0 {
 
     addrxlat_strerror;
     addrxlat_addrspace_name;
+    addrxlat_pteval_shift;
 
   local:
     *;

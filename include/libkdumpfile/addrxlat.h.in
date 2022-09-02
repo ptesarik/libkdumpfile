@@ -523,29 +523,7 @@ typedef enum _addrxlat_pte_format {
  * @param fmt  PTE format.
  * @returns    Log2 value of the PTE size, or -1 if unknown / invalid.
  */
-static inline int
-addrxlat_pteval_shift(addrxlat_pte_format_t fmt)
-{
-	switch (fmt) {
-	case ADDRXLAT_PTE_PFN32:
-	case ADDRXLAT_PTE_IA32:
-		return 2;
-
-	case ADDRXLAT_PTE_PFN64:
-	case ADDRXLAT_PTE_AARCH64:
-	case ADDRXLAT_PTE_AARCH64_LPA:
-	case ADDRXLAT_PTE_AARCH64_LPA2:
-	case ADDRXLAT_PTE_IA32_PAE:
-	case ADDRXLAT_PTE_X86_64:
-	case ADDRXLAT_PTE_S390X:
-	case ADDRXLAT_PTE_PPC64_LINUX_RPN30:
-		return 3;
-
-	case ADDRXLAT_PTE_NONE:
-	default:
-		return -1;
-	}
-}
+int addrxlat_pteval_shift(addrxlat_pte_format_t fmt);
 
 /** Maximum number of bit fields in the source address.
  * This is a theoretical limit, with enough reserve for future enhancements.

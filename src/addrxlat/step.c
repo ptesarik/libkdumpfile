@@ -32,6 +32,12 @@
 
 #include "addrxlat-priv.h"
 
+int
+addrxlat_pteval_shift(addrxlat_pte_format_t fmt)
+{
+	return pteval_shift(fmt);
+}
+
 /** Count total size of all address bitfields.
  * @param pf  Paging form.
  * @returns   Number of significant bits in the source address.
@@ -123,7 +129,7 @@ first_step_pgt_generic(addrxlat_step_t *step, addrxlat_addr_t addr)
 	step->base = pgt->root;
 	step->remain = pgt->pf.nfields;
 	step->elemsz = step->remain > 1
-		? 1 << addrxlat_pteval_shift(pgt->pf.pte_format)
+		? 1 << pteval_shift(pgt->pf.pte_format)
 		: 1;
 	for (i = 0; i < pgt->pf.nfields; ++i) {
 		unsigned short bits = pgt->pf.fieldsz[i];

@@ -230,6 +230,34 @@ struct _addrxlat_sys {
 
 /* vtop */
 
+/** Get the pteval shift for a PTE format.
+ * @param fmt  PTE format.
+ * @returns    Log2 value of the PTE size, or -1 if unknown / invalid.
+ */
+static inline int
+pteval_shift(addrxlat_pte_format_t fmt)
+{
+	switch (fmt) {
+	case ADDRXLAT_PTE_PFN32:
+	case ADDRXLAT_PTE_IA32:
+		return 2;
+
+	case ADDRXLAT_PTE_PFN64:
+	case ADDRXLAT_PTE_AARCH64:
+	case ADDRXLAT_PTE_AARCH64_LPA:
+	case ADDRXLAT_PTE_AARCH64_LPA2:
+	case ADDRXLAT_PTE_IA32_PAE:
+	case ADDRXLAT_PTE_X86_64:
+	case ADDRXLAT_PTE_S390X:
+	case ADDRXLAT_PTE_PPC64_LINUX_RPN30:
+		return 3;
+
+	case ADDRXLAT_PTE_NONE:
+	default:
+		return -1;
+	}
+}
+
 /** Read raw 32-bit PTE value.
  * @param step  Current step state.
  * @param pte   Set to the (masked) PTE value on success.
