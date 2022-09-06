@@ -78,12 +78,36 @@ exception_map(kdump_status status)
 	};
 }
 
+static int kdumpfile_init_common(kdumpfile_object *self)
+{
+	kdump_status status;
+	kdump_attr_ref_t rootref;
+
+	status = kdump_attr_ref(self->ctx, NULL, &rootref);
+	if (status != KDUMP_OK) {
+		PyErr_Format(exception_map(status),
+			     "Cannot reference root attribute: %s",
+			     kdump_get_err(self->ctx));
+		return -1;
+	}
+
+	self->attr = attr_dir_new(self, &rootref);
+	if (!self->attr) {
+		kdump_attr_unref(self->ctx, &rootref);
+		return -1;
+	}
+
+	Py_INCREF(addrxlat_API->convert);
+	self->addrxlat_convert = addrxlat_API->convert;
+
+	return 0;
+}
+
 static PyObject *
 kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 {
 	kdumpfile_object *self = NULL;
 	static char *keywords[] = {"file", NULL};
-	kdump_attr_ref_t rootref;
 	kdump_status status;
 	const char *filepath;
 
@@ -115,27 +139,12 @@ kdumpfile_new (PyTypeObject *type, PyObject *args, PyObject *kw)
 		goto fail;
 	}
 
-	status = kdump_attr_ref(self->ctx, NULL, &rootref);
-	if (status != KDUMP_OK) {
-		PyErr_Format(exception_map(status),
-			     "Cannot reference root attribute: %s",
-			     kdump_get_err(self->ctx));
+	if (kdumpfile_init_common(self))
 		goto fail;
-	}
-
-	self->attr = attr_dir_new(self, &rootref);
-	if (!self->attr) {
-		kdump_attr_unref(self->ctx, &rootref);
-		goto fail;
-	}
-
-	Py_INCREF(addrxlat_API->convert);
-	self->addrxlat_convert = addrxlat_API->convert;
 
 	return (PyObject*)self;
 
 fail:
-	Py_XDECREF(self->attr);
 	Py_XDECREF(self);
 	close(self->fd);
 	return NULL;
@@ -154,6 +163,50 @@ kdumpfile_dealloc(PyObject *_self)
 	if (self->fd) close(self->fd);
 	Py_XDECREF(self->addrxlat_convert);
 	Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+PyDoc_STRVAR(kdumpfile_from_pointer__doc__,
+"from_pointer (address) -> kdumpfile\naddress must be valid pointer to kdump_ctx.");
+
+static PyObject *kdumpfile_from_pointer (PyObject *_type, PyObject *args, PyObject *kwargs)
+{
+	PyTypeObject *type = (PyTypeObject *)_type;
+	kdumpfile_object *self = NULL;
+	unsigned long addr = 0;
+	static char *keywords[] = { "address", NULL };
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "k:from_pointer",
+					 keywords, &addr))
+		return NULL;
+
+	if (addr == 0) {
+		PyErr_SetString(PyExc_ValueError,
+				"Cannot instantiate object with NULL pointer.");
+		return NULL;
+	}
+
+	self = (kdumpfile_object*) type->tp_alloc(type, 0);
+	if (!self)
+		return NULL;
+
+	self->ctx = kdump_clone((kdump_ctx_t *)addr, 0);
+	if (!self->ctx) {
+		PyErr_SetString(PyExc_MemoryError,
+				"Couldn't allocate kdump context");
+		Py_XDECREF(self);
+		goto fail;
+	}
+
+	self->fd = 0;
+	if (kdumpfile_init_common(self))
+		goto fail;
+
+	return (PyObject *)self;
+
+fail:
+	Py_XDECREF(self);
+	return NULL;
+
 }
 
 PyDoc_STRVAR(read__doc__,
@@ -260,6 +313,9 @@ get_addrxlat_sys(PyObject *_self, PyObject *args)
 }
 
 static PyMethodDef kdumpfile_object_methods[] = {
+	{ "from_pointer", (PyCFunction)kdumpfile_from_pointer,
+		METH_VARARGS | METH_KEYWORDS | METH_CLASS,
+		kdumpfile_from_pointer__doc__ },
 	{"read",      (PyCFunction) kdumpfile_read, METH_VARARGS | METH_KEYWORDS,
 		read__doc__},
 	{ "get_addrxlat_ctx", get_addrxlat_ctx, METH_NOARGS,
