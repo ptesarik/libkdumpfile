@@ -345,21 +345,8 @@ print_linear(const addrxlat_meth_t *meth)
 static void
 print_pgt(const addrxlat_meth_t *meth)
 {
-	static const char *pte_formats[] = {
-		[ADDRXLAT_PTE_NONE] = "none",
-		[ADDRXLAT_PTE_PFN32] = "pfn32",
-		[ADDRXLAT_PTE_PFN64] = "pfn64",
-		[ADDRXLAT_PTE_AARCH64] = "aarch64",
-		[ADDRXLAT_PTE_AARCH64_LPA] = "aarch64_lpa",
-		[ADDRXLAT_PTE_AARCH64_LPA2] = "aarch64_lpa2",
-		[ADDRXLAT_PTE_IA32] = "ia32",
-		[ADDRXLAT_PTE_IA32_PAE] = "ia32_pae",
-		[ADDRXLAT_PTE_X86_64] = "x86_64",
-		[ADDRXLAT_PTE_S390X] = "s390x",
-		[ADDRXLAT_PTE_PPC64_LINUX_RPN30] = "ppc64_linux_rpn30",
-	};
-
 	const addrxlat_paging_form_t *pf = &meth->param.pgt.pf;
+	const char *pte_fmt;
 	unsigned i;
 
 	puts("PGT");
@@ -370,9 +357,9 @@ print_pgt(const addrxlat_meth_t *meth)
 	printf("  pte_mask=0x%"ADDRXLAT_PRIxPTE"\n",
 	       meth->param.pgt.pte_mask);
 	fputs("  pte_format=", stdout);
-	if (pf->pte_format < ARRAY_SIZE(pte_formats) &&
-	    pte_formats[pf->pte_format])
-		printf("%s", pte_formats[pf->pte_format]);
+	pte_fmt = addrxlat_pte_format_name(pf->pte_format);
+	if (pte_fmt)
+		printf("%s", pte_fmt);
 	else
 		printf("%u", pf->pte_format);
 	printf("\n  fields=");

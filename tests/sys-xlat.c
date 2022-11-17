@@ -120,18 +120,6 @@ static const kw_pair_t map_names[] = {
 	{NULL}
 };
 
-static const kw_pair_t pte_formats[] = {
-	{ "none", ADDRXLAT_PTE_NONE },
-	{ "pfn32", ADDRXLAT_PTE_PFN32 },
-	{ "pfn64", ADDRXLAT_PTE_PFN64 },
-	{ "ia32", ADDRXLAT_PTE_IA32 },
-	{ "ia32_pae", ADDRXLAT_PTE_IA32_PAE },
-	{ "x86_64", ADDRXLAT_PTE_X86_64 },
-	{ "s390x", ADDRXLAT_PTE_S390X },
-	{ "ppc64_linux_rpn30", ADDRXLAT_PTE_PPC64_LINUX_RPN30 },
-	{NULL}
-};
-
 enum param_index {
 	/* Generic */
 	param_kind,
@@ -251,11 +239,12 @@ parse_kind(const char *spec, addrxlat_kind_t *kind)
 static int
 parse_pte_format(const char *spec, addrxlat_pte_format_t *fmt)
 {
-	long i = match_keyword_verb("PTE format", spec, strlen(spec),
-				    pte_formats);
-	if (i == NOTFOUND)
+	addrxlat_pte_format_t res = addrxlat_pte_format(spec);
+	if (res == ADDRXLAT_PTE_INVALID) {
+		fprintf(stderr, "Unknown PTE format: %s\n", spec);
 		return TEST_ERR;
-	*fmt = i;
+	}
+	*fmt = res;
 	return TEST_OK;
 }
 

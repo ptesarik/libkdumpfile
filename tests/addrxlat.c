@@ -117,6 +117,8 @@ entries_htole64(void)
 static int
 set_paging_form(addrxlat_paging_form_t *pf, const char *spec)
 {
+	addrxlat_pte_format_t fmt;
+	char *fmt_spec;
 	char *endp;
 
 	endp = strchr(spec, ':');
@@ -125,32 +127,16 @@ set_paging_form(addrxlat_paging_form_t *pf, const char *spec)
 		return TEST_ERR;
 	}
 
-	if (!strncasecmp(spec, "none:", endp - spec + 1))
-		pf->pte_format = ADDRXLAT_PTE_NONE;
-	else if (!strncasecmp(spec, "pfn32:", endp - spec + 1))
-		pf->pte_format = ADDRXLAT_PTE_PFN32;
-	else if (!strncasecmp(spec, "pfn64:", endp - spec + 1))
-		pf->pte_format = ADDRXLAT_PTE_PFN64;
-	else if (!strncasecmp(spec, "aarch64:", endp - spec + 1))
-		pf->pte_format = ADDRXLAT_PTE_AARCH64;
-	else if (!strncasecmp(spec, "aarch64_lpa:", endp - spec + 1))
-		pf->pte_format = ADDRXLAT_PTE_AARCH64_LPA;
-	else if (!strncasecmp(spec, "aarch64_lpa2:", endp - spec + 1))
-		pf->pte_format = ADDRXLAT_PTE_AARCH64_LPA2;
-	else if (!strncasecmp(spec, "ia32:", endp - spec + 1))
-		pf->pte_format = ADDRXLAT_PTE_IA32;
-	else if (!strncasecmp(spec, "ia32_pae:", endp - spec + 1))
-		pf->pte_format = ADDRXLAT_PTE_IA32_PAE;
-	else if (!strncasecmp(spec, "x86_64:", endp - spec + 1))
-		pf->pte_format = ADDRXLAT_PTE_X86_64;
-	else if (!strncasecmp(spec, "s390x:", endp - spec + 1))
-		pf->pte_format = ADDRXLAT_PTE_S390X;
-	else if (!strncasecmp(spec, "ppc64_linux_rpn30:", endp - spec + 1))
-		pf->pte_format = ADDRXLAT_PTE_PPC64_LINUX_RPN30;
-	else {
+	fmt_spec = alloca(endp - spec + 1);
+	memcpy(fmt_spec, spec, endp - spec);
+	fmt_spec[endp - spec] = '\0';
+
+	fmt = addrxlat_pte_format(fmt_spec);
+	if (fmt == ADDRXLAT_PTE_INVALID) {
 		fprintf(stderr, "Unknown PTE format: %s\n", spec);
 		return TEST_ERR;
 	}
+	pf->pte_format = fmt;
 
 	pf->nfields = 0;
 	while (isdigit(*++endp)) {
