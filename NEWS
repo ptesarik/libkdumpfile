@@ -1,6 +1,8 @@
 next
 ----
   * Bitmap of all RAM in the memory.pagemap attribute.
+  * Enhance the API with conversions between numeric and string PTE format:
+    addrxlat_pte_format(), addrxlat_pte_format_name().
 
 0.5.0
 -----

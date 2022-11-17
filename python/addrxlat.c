@@ -5722,6 +5722,54 @@ _addrxlat_VER_XEN(PyObject *self, PyObject *args, PyObject *kwargs)
 	return PyLong_FromUnsignedLong(ADDRXLAT_VER_XEN(major, minor));
 }
 
+PyDoc_STRVAR(_addrxlat_pte_format_name__doc__,
+"pte_format_name(fmt) -> name\n\
+\n\
+Return the name of a page table entry format constant.");
+
+/** Wrapper for @ref addrxlat_pte_format_name
+ * @param self    module object
+ * @param args    positional arguments
+ * @param kwargs  keyword arguments
+ * @returns       error message string (or @c NULL on failure)
+ */
+static PyObject *
+_addrxlat_pte_format_name(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+	static char *keywords[] = {"fmt", NULL};
+	long fmt;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "l",
+					 keywords, &fmt))
+		return NULL;
+
+	return Text_FromUTF8(addrxlat_pte_format_name(fmt));
+}
+
+PyDoc_STRVAR(_addrxlat_pte_format__doc__,
+"pte_format(name) -> fmt\n\
+\n\
+Return the page table entry format constant with the given name.");
+
+/** Wrapper for @ref addrxlat_pte_format
+ * @param self    module object
+ * @param args    positional arguments
+ * @param kwargs  keyword arguments
+ * @returns       error message string (or @c NULL on failure)
+ */
+static PyObject *
+_addrxlat_pte_format(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+	static char *keywords[] = {"name", NULL};
+	const char *name;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s",
+					 keywords, &name))
+		return NULL;
+
+	return PyInt_FromLong(addrxlat_pte_format(name));
+}
+
 PyDoc_STRVAR(_addrxlat_pteval_shift__doc__,
 "pteval_shift(fmt) -> capability bitmask\n\
 \n\
@@ -5762,6 +5810,12 @@ static PyMethodDef addrxlat_methods[] = {
 	{ "VER_XEN", (PyCFunction)_addrxlat_VER_XEN,
 	  METH_VARARGS | METH_KEYWORDS,
 	  _addrxlat_VER_XEN__doc__ },
+	{ "pte_format_name", (PyCFunction)_addrxlat_pte_format_name,
+	  METH_VARARGS | METH_KEYWORDS,
+	  _addrxlat_pte_format_name__doc__ },
+	{ "pte_format", (PyCFunction)_addrxlat_pte_format,
+	  METH_VARARGS | METH_KEYWORDS,
+	  _addrxlat_pte_format__doc__ },
 	{ "pteval_shift", (PyCFunction)_addrxlat_pteval_shift,
 	  METH_VARARGS | METH_KEYWORDS,
 	  _addrxlat_pteval_shift__doc__ },

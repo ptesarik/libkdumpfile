@@ -38,6 +38,40 @@ addrxlat_pteval_shift(addrxlat_pte_format_t fmt)
 	return pteval_shift(fmt);
 }
 
+static const char pte_format_names[][24] = {
+	[ADDRXLAT_PTE_NONE] = "none",
+
+	[ADDRXLAT_PTE_PFN32] = "pfn32",
+	[ADDRXLAT_PTE_PFN64] = "pfn64",
+
+	[ADDRXLAT_PTE_AARCH64] = "aarch64",
+	[ADDRXLAT_PTE_AARCH64_LPA] = "aarch64_lpa",
+	[ADDRXLAT_PTE_AARCH64_LPA2] = "aarch64_lpa2",
+	[ADDRXLAT_PTE_IA32] = "ia32",
+	[ADDRXLAT_PTE_IA32_PAE] = "ia32_pae",
+	[ADDRXLAT_PTE_PPC64_LINUX_RPN30] = "ppc64_linux_rpn30",
+	[ADDRXLAT_PTE_S390X] = "s390x",
+	[ADDRXLAT_PTE_X86_64] = "x86_64",
+};
+
+const char *
+addrxlat_pte_format_name(addrxlat_pte_format_t fmt)
+{
+	return (unsigned)fmt < ARRAY_SIZE(pte_format_names)
+		? pte_format_names[fmt]
+		: NULL;
+}
+
+addrxlat_pte_format_t
+addrxlat_pte_format(const char *name)
+{
+	unsigned i;
+	for (i = 0; i < ARRAY_SIZE(pte_format_names); ++i)
+		if (!strcasecmp(name, pte_format_names[i]))
+			return i;
+	return ADDRXLAT_PTE_INVALID;
+}
+
 /** Count total size of all address bitfields.
  * @param pf  Paging form.
  * @returns   Number of significant bits in the source address.
