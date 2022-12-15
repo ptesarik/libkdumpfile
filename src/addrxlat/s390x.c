@@ -31,14 +31,16 @@
 #include "addrxlat-priv.h"
 
 /* Use IBM's official bit numbering to match spec... */
-#define PTE_MASK(bits)		(((uint64_t)1<<bits) - 1)
-#define PTE_VAL(x, shift, bits)	(((x) >> (64-(shift)-(bits))) & PTE_MASK(bits))
+#define TE_MASK(bits)		(((uint64_t)1<<bits) - 1)
+#define TE_VAL(x, shift, bits)	(((x) >> (64-(shift)-(bits))) & TE_MASK(bits))
 
-#define PTE_FC(x)	PTE_VAL(x, 53, 1)
-#define PTE_I(x)	PTE_VAL(x, 58, 1)
-#define PTE_TF(x)	PTE_VAL(x, 56, 2)
-#define PTE_TT(x)	PTE_VAL(x, 60, 2)
-#define PTE_TL(x)	PTE_VAL(x, 62, 2)
+#define RSTE_FC(x)	TE_VAL(x, 53, 1)
+#define RSTE_I(x)	TE_VAL(x, 58, 1)
+#define RSTE_TF(x)	TE_VAL(x, 56, 2)
+#define RSTE_TT(x)	TE_VAL(x, 60, 2)
+#define RSTE_TL(x)	TE_VAL(x, 62, 2)
+
+#define PTE_I(x)	TE_VAL(x, 53, 1)
 
 /** Page shift (log2 4K). */
 #define PAGE_SHIFT		12
@@ -94,7 +96,8 @@ pgt_s390x(addrxlat_step_t *step)
 	if (status != ADDRXLAT_OK)
 		return status;
 
-	if (PTE_I(pte))
+	if ((step->remain > 1 && RSTE_I(pte)) ||
+	    (step->remain == 1 && PTE_I(pte)))
 		return !step->ctx->noerr.notpresent
 			? set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 				    "%s not present: %s[%u] = 0x%" ADDRXLAT_PRIxPTE,
@@ -104,21 +107,21 @@ pgt_s390x(addrxlat_step_t *step)
 				    step->raw.pte)
 			: ADDRXLAT_ERR_NOTPRESENT;
 
-	if (step->remain >= 2 && PTE_TT(pte) != step->remain - 2)
+	if (step->remain >= 2 && RSTE_TT(pte) != step->remain - 2)
 		return set_error(step->ctx, ADDRXLAT_ERR_INVALID,
 				 "Table type field %u in %s",
-				 (unsigned) PTE_TT(pte),
+				 (unsigned) RSTE_TT(pte),
 				 pgt_full_name[step->remain]);
 
 	step->base.addr = pte;
 	step->base.as = step->meth->target_as;
 
-	if (step->remain == 3 && PTE_FC(pte)) {
+	if (step->remain == 3 && RSTE_FC(pte)) {
 		step->base.addr &= ~RFAA_MASK;
 		return pgt_huge_page(step);
 	}
 
-	if (step->remain == 2 && PTE_FC(pte)) {
+	if (step->remain == 2 && RSTE_FC(pte)) {
 		step->base.addr &= ~SFAA_MASK;
 		return pgt_huge_page(step);
 	}
@@ -126,14 +129,14 @@ pgt_s390x(addrxlat_step_t *step)
 	if (step->remain >= 3) {
 		unsigned pgidx = step->idx[step->remain - 1] >>
 			(pf->fieldsz[step->remain - 1] - pf->fieldsz[0]);
-		if (pgidx < PTE_TF(pte) || pgidx > PTE_TL(pte))
+		if (pgidx < RSTE_TF(pte) || pgidx > RSTE_TL(pte))
 			return !step->ctx->noerr.notpresent
 				? set_error(step->ctx, ADDRXLAT_ERR_NOTPRESENT,
 					    "%s index %u not within %u and %u",
 					    pgt_full_name[step->remain-1],
 					    (unsigned) step->idx[step->remain-1],
-					    (unsigned) PTE_TF(pte),
-					    (unsigned) PTE_TL(pte))
+					    (unsigned) RSTE_TF(pte),
+					    (unsigned) RSTE_TL(pte))
 				: ADDRXLAT_ERR_NOTPRESENT;
 	}
 
@@ -197,9 +200,9 @@ get_virt_bits_from_pgt(struct os_init_data *ctl)
 		status = read64(&step, &ptr, &entry, "page table");
 		if (status != ADDRXLAT_OK)
 			return status;
-		if (!PTE_I(entry)) {
+		if (!RSTE_I(entry)) {
 			ctl->popt.virt_bits =
-				SFAA_BITS + REGTBL_BITS * (PTE_TT(entry) + 1);
+				SFAA_BITS + REGTBL_BITS * (RSTE_TT(entry) + 1);
 			return ADDRXLAT_OK;
 		}
 		ptr.addr += sizeof(uint64_t);
