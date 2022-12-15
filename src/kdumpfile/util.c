@@ -659,15 +659,18 @@ set_uts(kdump_ctx_t *ctx, const struct new_utsname *src)
 {
 	static const struct {
 		unsigned idx, off;
+		bool empty_ok;
 	} defs[] = {
-#define DEF(name) \
-		{ GKI_linux_uts_ ## name, offsetof(struct new_utsname, name) }
-		DEF(sysname),
-		DEF(nodename),
-		DEF(release),
-		DEF(version),
-		DEF(machine),
-		DEF(domainname)
+#define DEF(name, empty_ok)						\
+		{ GKI_linux_uts_ ## name,				\
+		  offsetof(struct new_utsname, name),			\
+		  empty_ok }
+		DEF(sysname, false),
+		DEF(nodename, true),
+		DEF(release, false),
+		DEF(version, false),
+		DEF(machine, false),
+		DEF(domainname, true)
 #undef DEF
 	};
 
@@ -677,7 +680,7 @@ set_uts(kdump_ctx_t *ctx, const struct new_utsname *src)
 	for (i = 0; i < ARRAY_SIZE(defs); ++i) {
 		struct attr_data *d = gattr(ctx, defs[i].idx);
 		const char *s = (const char*)src + defs[i].off;
-		if (*s || !attr_isset(d)) {
+		if (*s || defs[i].empty_ok) {
 			res = set_uts_string(ctx, d, s);
 			if (res != KDUMP_OK)
 				return res;
