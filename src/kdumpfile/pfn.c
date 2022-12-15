@@ -121,7 +121,7 @@ skip_clear_lsb0(const unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
 			return pfn + ctz(*bp);
 	for (; endp - bp >= 4; pfn += 32, bp += 4)
 		if (*(uint32_t*)bp)
-			return pfn + ctz(*(uint32_t*)bp);
+			return pfn + ctz(le32toh(*(uint32_t*)bp));
 	for (; endp - bp >= 1; pfn += 8, ++bp)
 		if (*bp)
 			return pfn + ctz(*bp);
@@ -197,7 +197,7 @@ skip_set_lsb0(const unsigned char *bitmap, size_t size, kdump_pfn_t pfn)
 			return pfn + ctz(~*(signed char*)bp);
 	for (; endp - bp >= 4; pfn += 32, bp += 4)
 		if (~*(uint32_t*)bp)
-			return pfn + ctz(~*(uint32_t*)bp);
+			return pfn + ctz(~le32toh(*(uint32_t*)bp));
 	for (; endp - bp >= 1; pfn += 8, ++bp)
 		if (~*(signed char*)bp)
 			return pfn + ctz(~*(signed char*)bp);
