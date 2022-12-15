@@ -21,7 +21,7 @@ ptes="$ptes -e 0x2018:0x3046"	# RFX0 -> RSX0 -> RTX0 (TF = 1, TL = 2)
 ptes="$ptes -e 0x3000:0x4000"	# RFX0 -> RSX0 -> RTX0 -> SX0 -> 4000
 ptes="$ptes -e 0x3008:0x4020"	# RFX0 -> RSX0 -> RTX0 -> SX0 (invalid)
 ptes="$ptes -e 0x3010:0x4004"	# RFX0 -> RSX0 -> RTX0 -> SX0 (wrong TT = 1)
-ptes="$ptes -e 0x4008:0x5020"	# RFX0 -> RSX0 -> RTX0 -> SX0 -> PX0 (invalid)
+ptes="$ptes -e 0x4008:0x5400"	# RFX0 -> RSX0 -> RTX0 -> SX0 -> PX0 (invalid)
 
 list="0x20000000000000"		# RFX1
 list="$list 0x40000000000000"	# RFX2
