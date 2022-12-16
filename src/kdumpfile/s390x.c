@@ -230,7 +230,119 @@ s390x_init(kdump_ctx_t *ctx)
 	return KDUMP_OK;
 }
 
+struct elf_siginfo
+{
+	int32_t si_signo;	/* signal number */
+	int32_t si_code;	/* extra code */
+	int32_t si_errno;	/* errno */
+} __attribute__((packed));
+
+struct psw {
+	uint64_t mask;
+	uint64_t addr;
+} __attribute__((packed));
+
+struct elf_s390_regs {
+	struct psw psw;
+	uint64_t gprs[16];
+	uint32_t acrs[16];
+	uint64_t orig_gpr2;
+} __attribute__((packed));
+
+struct elf_prstatus
+{
+	struct elf_siginfo pr_info;	/* UNUSED in kernel cores */
+	int16_t	pr_cursig;		/* UNUSED in kernel cores */
+	char	_pad1[2];		/* alignment */
+	uint64_t pr_sigpend;		/* UNUSED in kernel cores */
+	uint64_t pr_sighold;		/* UNUSED in kernel cores */
+	int32_t	pr_pid;			/* PID of crashing task */
+	int32_t	pr_ppid;		/* UNUSED in kernel cores */
+	int32_t	pr_pgrp;		/* UNUSED in kernel cores */
+	int32_t	pr_sid;			/* UNUSED in kernel cores */
+	struct timeval_64 pr_utime;	/* UNUSED in kernel cores */
+	struct timeval_64 pr_stime;	/* UNUSED in kernel cores */
+	struct timeval_64 pr_cutime;	/* UNUSED in kernel cores */
+	struct timeval_64 pr_cstime;	/* UNUSED in kernel cores */
+	struct elf_s390_regs pr_reg;	/* GP/ACR registers */
+	/* optional UNUSED fields may follow */
+} __attribute__((packed));
+
+#define PRINFO(name, field, bits) \
+	{ { #name, { .depth = 0 }, KDUMP_NUMBER },	\
+	  offsetof(struct elf_prstatus, field), \
+	  (bits) / BITS_PER_BYTE }
+
+#define REG(name, field, bits) \
+	{ { #name, { .depth = 1 }, KDUMP_NUMBER },	\
+	  offsetof(struct elf_prstatus, field), \
+	  (bits) / BITS_PER_BYTE }
+
+static struct derived_attr_def s390x_reg_attrs[] = {
+	REG(pswm, pr_reg.psw.mask, 64),
+	REG(pswa, pr_reg.psw.addr, 64),
+	REG(r0, pr_reg.gprs[0], 64),
+	REG(r1, pr_reg.gprs[1], 64),
+	REG(r2, pr_reg.gprs[2], 64),
+	REG(r3, pr_reg.gprs[3], 64),
+	REG(r4, pr_reg.gprs[4], 64),
+	REG(r5, pr_reg.gprs[5], 64),
+	REG(r6, pr_reg.gprs[6], 64),
+	REG(r7, pr_reg.gprs[7], 64),
+	REG(r8, pr_reg.gprs[8], 64),
+	REG(r9, pr_reg.gprs[9], 64),
+	REG(r10, pr_reg.gprs[10], 64),
+	REG(r11, pr_reg.gprs[11], 64),
+	REG(r12, pr_reg.gprs[12], 64),
+	REG(r13, pr_reg.gprs[13], 64),
+	REG(r14, pr_reg.gprs[14], 64),
+	REG(r15, pr_reg.gprs[15], 64),
+	REG(a0, pr_reg.acrs[0], 32),
+	REG(a1, pr_reg.acrs[1], 32),
+	REG(a2, pr_reg.acrs[2], 32),
+	REG(a3, pr_reg.acrs[3], 32),
+	REG(a4, pr_reg.acrs[4], 32),
+	REG(a5, pr_reg.acrs[5], 32),
+	REG(a6, pr_reg.acrs[6], 32),
+	REG(a7, pr_reg.acrs[7], 32),
+	REG(a8, pr_reg.acrs[8], 32),
+	REG(a9, pr_reg.acrs[9], 32),
+	REG(a10, pr_reg.acrs[10], 32),
+	REG(a11, pr_reg.acrs[11], 32),
+	REG(a12, pr_reg.acrs[12], 32),
+	REG(a13, pr_reg.acrs[13], 32),
+	REG(a14, pr_reg.acrs[14], 32),
+	REG(a15, pr_reg.acrs[15], 32),
+	REG(orig_gpr2, pr_reg.orig_gpr2, 64),
+	PRINFO(pid, pr_pid, 32),
+};
+
+static kdump_status
+s390x_process_prstatus(kdump_ctx_t *ctx, const void *data, size_t size)
+{
+	unsigned cpu;
+	kdump_status status;
+
+	cpu = get_num_cpus(ctx);
+	set_num_cpus(ctx, get_num_cpus(ctx) + 1);
+
+	status = init_cpu_prstatus(ctx, cpu, data, size);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Cannot set CPU %u %s",
+				 cpu, "PRSTATUS");
+
+	if (size < sizeof(struct elf_prstatus))
+		return set_error(ctx, KDUMP_ERR_CORRUPT,
+				 "Wrong PRSTATUS size: %zu", size);
+
+	status = create_cpu_regs(
+		ctx, cpu, s390x_reg_attrs, ARRAY_SIZE(s390x_reg_attrs));
+
+	return status;
+}
+
 const struct arch_ops s390x_ops = {
 	.init = s390x_init,
 	.post_ostype = s390x_post_ostype,
+	.process_prstatus = s390x_process_prstatus,
 };
