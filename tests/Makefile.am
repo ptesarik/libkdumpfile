@@ -210,6 +210,7 @@ test_scripts = \
 	elf-prstatus-aarch64 \
 	elf-prstatus-i386 \
 	elf-prstatus-ppc64 \
+	elf-prstatus-s390x \
 	elf-prstatus-x86_64 \
 	elf-basic \
         elf-be \
@@ -325,6 +326,7 @@ dist_check_DATA = \
 	elf-prstatus-aarch64.data \
 	elf-prstatus-i386.data \
 	elf-prstatus-ppc64.data \
+	elf-prstatus-s390x.data \
 	elf-prstatus-x86_64.data \
         elf-endian.data \
         elf-be16.expect \
