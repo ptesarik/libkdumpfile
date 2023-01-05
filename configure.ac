@@ -24,7 +24,7 @@ m4_define([pkg_micro_version], [0])
 m4_define([pkg_version],
           [pkg_major_version.pkg_minor_version.pkg_micro_version])
 
-AC_INIT([libkdumpfile],[pkg_version],[ptesarik@suse.com])
+AC_INIT([libkdumpfile],[pkg_version],[petr@tesarici.cz])
 
 AC_CONFIG_SRCDIR([src/kdumpfile/diskdump.c])
 AC_CONFIG_MACRO_DIR([m4])
