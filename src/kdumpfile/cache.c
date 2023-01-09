@@ -78,7 +78,7 @@ struct cache {
 	unsigned ngprec;	 /**< Number of ghost precious entries */
 	unsigned nprobe;	 /**< Number of cached probe entries */
 	unsigned ngprobe;	 /**< Number of ghost probe entries */
-	unsigned dprobe;	 /**< Desired nubmer of cached probe entries */
+	unsigned dprobe;	 /**< Desired number of cached probe entries */
 	unsigned nprobetotal;	 /**< Total number of probe list entries,
 				  *   including ghost and in-flight entries */
 	unsigned cap;		 /**< Total cache capacity */
@@ -394,13 +394,13 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
  * @param cs     Cache search info.
  * @returns      Ghost entry, or @c NULL if not found.
  *
- * If no entry is found (function returns @c NULL), the @c epreca and
+ * If no entry is found (function returns @c NULL), the @c eprec and
  * @c eprobe fields in @ref cs are updated. Otherwise (if an entry is
  * found), their values are undefined.
  */
 static struct cache_entry *
-get_ghost_entry(struct cache *cache, cache_key_t key,
-		struct cache_search *cs)
+get_ghost_or_missed_entry(struct cache *cache, cache_key_t key,
+			  struct cache_search *cs)
 {
 	struct cache_entry *entry;
 	unsigned n, idx;
@@ -446,7 +446,7 @@ get_ghost_entry(struct cache *cache, cache_key_t key,
 	}
 	cs->eprobe = idx;
 
-	return NULL;
+	return get_missed_entry(cache, key, cs);
 }
 
 /**  Get the in-flight entry for a given key.
@@ -532,12 +532,9 @@ cache_get_entry_noref(struct cache *cache, cache_key_t key)
 			cache->ninflight;
 		if (inuse >= cache->cap)
 			return NULL;
-	}
 
-	if (!entry)
-		entry = get_ghost_entry(cache, key, &cs);
-	if (!entry)
-		entry = get_missed_entry(cache, key, &cs);
+		entry = get_ghost_or_missed_entry(cache, key, &cs);
+	}
 
 	++cache->misses.number;
 
