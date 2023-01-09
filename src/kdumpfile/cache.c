@@ -646,13 +646,12 @@ cache_discard(struct cache *cache, struct cache_entry *entry)
 		return;
 	if (entry->state == cs_probe)
 		--cache->nprobetotal;
+	--cache->ninflight;
 
 	idx = entry - cache->ce;
-	if (cache->ninflight--) {
-		if (cache->inflight == idx)
-			cache->inflight = entry->next;
-		remove_entry(cache, entry);
-	}
+	if (cache->inflight == idx)
+		cache->inflight = entry->next;
+	remove_entry(cache, entry);
 
 	eprobe = cache->split;
 	n = cache->nprobe + cache->ngprobe;
