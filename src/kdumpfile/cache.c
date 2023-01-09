@@ -204,10 +204,11 @@ make_precious(struct cache *cache, struct cache_entry *entry)
  * @param cache  Cache object.
  * @param entry  Cache entry to be moved.
  * @param idx    Index of @ref entry.
+ * @returns      The value of @p entry.
  *
  * Move a cache entry to the MRU position of the precious list.
  */
-static void
+static struct cache_entry *
 reuse_cached_entry(struct cache *cache, struct cache_entry *entry,
 		   unsigned idx)
 {
@@ -219,6 +220,7 @@ reuse_cached_entry(struct cache *cache, struct cache_entry *entry,
 	cache->split = entry->prev;
 
 	++cache->hits.number;
+	return entry;
 }
 
 /**  Evict an entry from the probe list.
@@ -346,6 +348,7 @@ get_missed_entry(struct cache *cache, cache_key_t key,
  * @param entry  Ghost entry to be reused.
  * @param idx    Index of @ref entry.
  * @param cs     Cache search info.
+ * @returns      The value of @p entry.
  *
  * Same as @ref reinit_entry, but designed for ghost entries.
  * This function is used for pages that will be added to the precious list,
@@ -353,7 +356,7 @@ get_missed_entry(struct cache *cache, cache_key_t key,
  *
  * @sa reinit_entry
  */
-static void
+static struct cache_entry *
 reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
 		  unsigned idx, struct cache_search *cs)
 {
@@ -381,6 +384,7 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
 	remove_entry(cache, entry);
 	add_inflight(cache, entry, idx);
 	entry->state = cs_precious;
+	return entry;
 }
 
 /**  Get the ghost entry for a given key.
@@ -415,8 +419,7 @@ get_ghost_entry(struct cache *cache, cache_key_t key,
 			else
 				cache->dprobe = 0;
 			--cache->ngprec;
-			reuse_ghost_entry(cache, entry, idx, cs);
-			return entry;
+			return reuse_ghost_entry(cache, entry, idx, cs);
 		}
 		idx = entry->next;
 	}
@@ -437,8 +440,7 @@ get_ghost_entry(struct cache *cache, cache_key_t key,
 				cache->dprobe = cache->cap;
 			--cache->ngprobe;
 			--cache->nprobetotal;
-			reuse_ghost_entry(cache, entry, idx, cs);
-			return entry;
+			return reuse_ghost_entry(cache, entry, idx, cs);
 		}
 		idx = entry->prev;
 	}
@@ -493,10 +495,8 @@ cache_get_entry_noref(struct cache *cache, cache_key_t key)
 	idx = cache->ce[cache->split].next;
 	while (n--) {
 		entry = &cache->ce[idx];
-		if (entry->key == key) {
-			reuse_cached_entry(cache, entry, idx);
-			return entry;
-		}
+		if (entry->key == key)
+			return reuse_cached_entry(cache, entry, idx);
 		if (entry->refcnt == 0) {
 			cs.uprec = idx;
 			++cs.nuprec;
@@ -514,8 +514,7 @@ cache_get_entry_noref(struct cache *cache, cache_key_t key)
 			--cache->nprobe;
 			++cache->nprec;
 			--cache->nprobetotal;
-			reuse_cached_entry(cache, entry, idx);
-			return entry;
+			return reuse_cached_entry(cache, entry, idx);
 		}
 		if (entry->refcnt == 0) {
 			cs.uprobe = idx;
