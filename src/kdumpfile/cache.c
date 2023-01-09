@@ -654,13 +654,12 @@ cache_discard(struct cache *cache, struct cache_entry *entry)
 		remove_entry(cache, entry);
 	}
 
-	n = cache->nprobe + cache->ngprobe;
 	eprobe = cache->split;
-	while (n--)
-		eprobe = cache->ce[eprobe].prev;
-
-	if (eprobe == cache->split)
+	n = cache->nprobe + cache->ngprobe;
+	if (!n)
 		cache->split = idx;
+	else while (n--)
+		eprobe = cache->ce[eprobe].prev;
 
 	add_entry_after(cache, entry, idx, eprobe);
 }
