@@ -188,19 +188,6 @@ add_inflight(struct cache *cache, struct cache_entry *entry, unsigned idx)
 		cache->inflight = entry->next = entry->prev = idx;
 }
 
-/**  Ensure that a locked in-flight entry goes to the precious list.
- *
- * @param cache  Cache object (locked).
- * @param entry  Cache entry.
- */
-static void
-make_precious(struct cache *cache, struct cache_entry *entry)
-{
-	if (entry->state == cs_probe) {
-		entry->state = cs_precious;
-	}
-}
-
 /**  Reuse a cached entry.
  *
  * @param cache  Cache object.
@@ -444,7 +431,7 @@ get_inflight_entry(struct cache *cache, cache_key_t key)
 	for (n = cache->ninflight; n; --n) {
 		entry = &cache->ce[idx];
 		if (entry->key == key) {
-			make_precious(cache, entry);
+			entry->state = cs_precious;
 			return entry;
 		}
 		idx = entry->next;
