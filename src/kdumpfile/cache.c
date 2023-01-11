@@ -1,7 +1,7 @@
 /** @internal @file src/kdumpfile/cache.c
  * @brief Data caching.
  */
-/* Copyright (C) 2016 Petr Tesarik <ptesarik@suse.com>
+/* Copyright (C) Petr Tesarik <ptesarik@suse.com>
 
    This file is free software; you can redistribute it and/or modify
    it under the terms of either
@@ -37,12 +37,12 @@
 
 /**  Simple cache.
  *
- * The cache is divided into five sections:
- *   1. probed list: cached entries that have been hit only once
- *   2. precious list: cached entries that have been hit more than once
- *   3. ghost probe list: evicted entries from the probed list
- *   4. ghost precious list: evicted entries from the precious list
- *   5. unused pool: entries that haven't been used yet
+ * The cache is divided into five partitions:
+ *   1. probed: cached entries that have been hit only once
+ *   2. precious: cached entries that have been hit more than once
+ *   3. ghost probe: evicted entries from the probed list
+ *   4. ghost precious: evicted entries from the precious list
+ *   5. unused: entries that haven't been used yet
  *
  * Cached entries have a non-NULL data pointer. Ghost entries do not have
  * any data, so their data pointer is NULL.
@@ -59,17 +59,21 @@
  *             eprobe          gprobe     split       gprec            eprec
  *
  *
- * Only the @ref split index and the four sizes are stored in the structure.
- * During a search, the remaining pointers are found as a side effect, and
- * they are stored in @ref cache_search.
+ * Only the @ref split index and the four sizes are stored in the data
+ * structure. The remaining pointers are found as a side effect of searching
+ * the cache, and they are stored in @ref cache_search.
  *
- * Note that any section may be empty; some pointers will share the same
- * value in such case.
+ * Any partition may be empty; some pointers will share the same value in
+ * that case.
  *
- * Also note that since the list is circular, unused entries are in fact
- * between ghost probed and ghost precious lists. This part of the cache
- * is usually empty; it's used only after a flush or when an entry is
- * discarded.
+ * Note that since the list is circular, the unused partition is between
+ * the ghost probed and ghost precious partitions. This part of the cache is
+ * usually empty after it has been used for some time.
+ *
+ * Entries that have been allocated for I/O but not yet committed back,
+ * are removed from the main list and added to an in-flight list.
+ * They are returned back to the list later when the user calls
+ * @ref cache_insert or @ref cache_discard on the in-flight entry.
  */
 struct cache {
 	unsigned split;		 /**< Split point between probed and precious
@@ -79,7 +83,7 @@ struct cache {
 	unsigned nprobe;	 /**< Number of cached probe entries */
 	unsigned ngprobe;	 /**< Number of ghost probe entries */
 	unsigned dprobe;	 /**< Desired number of cached probe entries */
-	unsigned nprobetotal;	 /**< Total number of probe list entries,
+	unsigned nprobetotal;	 /**< Total number of probed entries,
 				  *   including ghost and in-flight entries */
 	unsigned cap;		 /**< Total cache capacity */
 	unsigned inflight;	 /**< Index of first in-flight entry */
@@ -94,6 +98,7 @@ struct cache {
 	/** Cache entry destructor. */
 	cache_entry_cleanup_fn *entry_cleanup;
 	void *cleanup_data;	 /**< User-supplied data for the destructor. */
+
 	struct cache_entry ce[]; /**< Cache entries */
 };
 
@@ -114,13 +119,13 @@ struct cache_search {
 	unsigned nuprobe;	/**< Number of unused probed entries. */
 };
 
-/**  Add an entry to the list after a given point.
+/**  Insert an entry to the list after a given position.
  * @param cache   Cache object.
  * @param entry   Cache entry to be added.
- * @param idx     Index of @ref entry.
+ * @param idx     Index of @p entry.
  * @param insidx  Insertion point.
  *
- * The entry is added just after @ref insidx.
+ * The entry is added just after @p insidx.
  */
 static void
 add_entry_after(struct cache *cache, struct cache_entry *entry, unsigned idx,
@@ -134,13 +139,13 @@ add_entry_after(struct cache *cache, struct cache_entry *entry, unsigned idx,
 	next->prev = idx;
 }
 
-/**  Add an entry to the list before a given point.
+/**  Insert an entry to the list before a given poisition.
  * @param cache   Cache object.
  * @param entry   Cache entry to be added.
- * @param idx     Index of @ref entry.
+ * @param idx     Index of @p entry.
  * @param insidx  Insertion point.
  *
- * The entry is added just before @ref insidx.
+ * The entry is added just before @p insidx.
  */
 static void
 add_entry_before(struct cache *cache, struct cache_entry *entry, unsigned idx,
@@ -203,7 +208,7 @@ make_precious(struct cache *cache, struct cache_entry *entry)
  *
  * @param cache  Cache object.
  * @param entry  Cache entry to be moved.
- * @param idx    Index of @ref entry.
+ * @param idx    Index of @p entry.
  * @returns      The value of @p entry.
  *
  * Move a cache entry to the MRU position of the precious list.
@@ -223,7 +228,7 @@ reuse_cached_entry(struct cache *cache, struct cache_entry *entry,
 	return entry;
 }
 
-/**  Evict an entry from the probe list.
+/**  Evict an entry from the probe partition.
  * @param cache  Cache object.
  * @param cs     Cache search info.
  * @returns      The evicted entry.
@@ -243,7 +248,7 @@ evict_probe(struct cache *cache, struct cache_search *cs)
 	return entry;
 }
 
-/**  Evict an entry from the precious list.
+/**  Evict an entry from the precious partition.
  * @param cache  Cache object.
  * @param cs     Cache search info.
  * @returns      The evicted entry.
@@ -267,11 +272,11 @@ evict_prec(struct cache *cache, struct cache_search *cs)
  * @param entry  Entry to be reinitialized.
  * @param cs     Cache search info.
  *
- * Evict an entry from the cache and use its data pointer for @ref entry.
- * The evicted entry is taken either from the probe list or from the
- * precious list, depending on the value of @c dprobe.
- * This function is used for pages that will be added to the probe list,
- * so it has bias towards the probe list.
+ * Evict an entry from the cache and use its data pointer for @p entry.
+ * The evicted entry is taken either from the probe partition or from the
+ * precious partition, depending on the value of @c dprobe.
+ * This function is used for newly allocated entries, so it has bias
+ * towards the probe partition.
  *
  * @sa reuse_ghost_entry
  */
@@ -346,13 +351,13 @@ get_missed_entry(struct cache *cache, cache_key_t key,
  *
  * @param cache  Cache object.
  * @param entry  Ghost entry to be reused.
- * @param idx    Index of @ref entry.
+ * @param idx    Index of @p entry.
  * @param cs     Cache search info.
  * @returns      The value of @p entry.
  *
  * Same as @ref reinit_entry, but designed for ghost entries.
- * This function is used for pages that will be added to the precious list,
- * so it has bias towards the precious list.
+ * This function is used for entries that have already been seen, so it
+ * has bias towards the precious partition.
  *
  * @sa reinit_entry
  */
@@ -387,16 +392,12 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
 	return entry;
 }
 
-/**  Get the ghost entry for a given key.
+/**  Get an entry for a given non-cached key.
  *
  * @param cache  Cache object.
  * @param key    Key to be searched.
  * @param cs     Cache search info.
- * @returns      Ghost entry, or @c NULL if not found.
- *
- * If no entry is found (function returns @c NULL), the @c eprec and
- * @c eprobe fields in @ref cs are updated. Otherwise (if an entry is
- * found), their values are undefined.
+ * @returns      An in-flight entry.
  */
 static struct cache_entry *
 get_ghost_or_missed_entry(struct cache *cache, cache_key_t key,
