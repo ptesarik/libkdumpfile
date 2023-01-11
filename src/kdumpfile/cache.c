@@ -271,29 +271,25 @@ evict_prec(struct cache *cache, struct cache_search *cs)
  * @param cache  Cache object.
  * @param entry  Entry to be reinitialized.
  * @param cs     Cache search info.
+ * @param bias   Bias towards the probed partition.
  *
  * Evict an entry from the cache and use its data pointer for @p entry.
  * The evicted entry is taken either from the probe partition or from the
  * precious partition, depending on the value of @c dprobe.
- * This function is used for newly allocated entries, so it has bias
- * towards the probe partition.
- *
- * @sa reuse_ghost_entry
  */
 static void
 reinit_entry(struct cache *cache, struct cache_entry *entry,
-	     struct cache_search *cs)
+	     struct cache_search *cs, unsigned bias)
 {
 	struct cache_entry *evict;
 
 	if (cs->nuprobe != 0 &&
-	    (cs->nuprec == 0 || cache->nprobe >= cache->dprobe))
+	    (cs->nuprec == 0 || cache->nprobe + bias > cache->dprobe))
 		evict = evict_probe(cache, cs);
 	else
 		evict = evict_prec(cache, cs);
 	if (cache->entry_cleanup)
 		cache->entry_cleanup(cache->cleanup_data, evict);
-
 	entry->data = evict->data;
 	evict->data = NULL;
 }
@@ -329,7 +325,7 @@ get_missed_entry(struct cache *cache, cache_key_t key,
 	}
 
 	if (!entry->data)
-		reinit_entry(cache, entry, cs);
+		reinit_entry(cache, entry, cs, 1);
 
 	if (cache->split == idx)
 		cache->split = entry->prev;
@@ -349,29 +345,12 @@ get_missed_entry(struct cache *cache, cache_key_t key,
  * @param idx    Index of @p entry.
  * @param cs     Cache search info.
  * @returns      The value of @p entry.
- *
- * Same as @ref reinit_entry, but designed for ghost entries.
- * This function is used for entries that have already been seen, so it
- * has bias towards the precious partition.
- *
- * @sa reinit_entry
  */
 static struct cache_entry *
 reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
 		  unsigned idx, struct cache_search *cs)
 {
-	struct cache_entry *evict;
-
-	if (cs->nuprobe != 0 &&
-	    (cs->nuprec == 0 || cache->nprobe > cache->dprobe))
-		evict = evict_probe(cache, cs);
-	else
-		evict = evict_prec(cache, cs);
-	if (cache->entry_cleanup)
-		cache->entry_cleanup(cache->cleanup_data, evict);
-
-	entry->data = evict->data;
-	evict->data = NULL;
+	reinit_entry(cache, entry, cs, 0);
 
 	if (cache->split == idx)
 		cache->split = entry->prev;
