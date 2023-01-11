@@ -285,14 +285,9 @@ reinit_entry(struct cache *cache, struct cache_entry *entry,
 	     struct cache_search *cs)
 {
 	struct cache_entry *evict;
-	int delta = cache->dprobe - cache->nprobe;
 
-	if (delta <= 0 && cs->nuprobe == 0)
-		delta = 1;
-	else if (delta > 0 && cs->nuprec == 0)
-		delta = 0;
-
-	if (delta <= 0)
+	if (cs->nuprobe != 0 &&
+	    (cs->nuprec == 0 || cache->nprobe >= cache->dprobe))
 		evict = evict_probe(cache, cs);
 	else
 		evict = evict_prec(cache, cs);
@@ -366,14 +361,9 @@ reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
 		  unsigned idx, struct cache_search *cs)
 {
 	struct cache_entry *evict;
-	int delta = cache->dprobe - cache->nprobe;
 
-	if (delta < 0 && cs->nuprobe == 0)
-		delta = 0;
-	else if (delta >= 0 && cs->nuprec == 0)
-		delta = -1;
-
-	if (delta < 0)
+	if (cs->nuprobe != 0 &&
+	    (cs->nuprec == 0 || cache->nprobe > cache->dprobe))
 		evict = evict_probe(cache, cs);
 	else
 		evict = evict_prec(cache, cs);
