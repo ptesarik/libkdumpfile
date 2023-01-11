@@ -83,8 +83,6 @@ struct cache {
 	unsigned nprobe;	 /**< Number of cached probe entries */
 	unsigned ngprobe;	 /**< Number of ghost probe entries */
 	unsigned dprobe;	 /**< Desired number of cached probe entries */
-	unsigned nprobetotal;	 /**< Total number of probed entries,
-				  *   including ghost and in-flight entries */
 	unsigned cap;		 /**< Total cache capacity */
 	unsigned inflight;	 /**< Index of first in-flight entry */
 	unsigned ninflight;	 /**< Number of in-flight entries */
@@ -199,7 +197,6 @@ static void
 make_precious(struct cache *cache, struct cache_entry *entry)
 {
 	if (entry->state == cs_probe) {
-		--cache->nprobetotal;
 		entry->state = cs_precious;
 	}
 }
@@ -314,7 +311,6 @@ get_missed_entry(struct cache *cache, cache_key_t key,
 	struct cache_entry *entry;
 	unsigned idx;
 
-	++cache->nprobetotal;
 	idx = cs->eprobe;
 	entry = &cache->ce[idx];
 	if (entry->next == cs->eprec) {
@@ -423,7 +419,6 @@ get_ghost_or_missed_entry(struct cache *cache, cache_key_t key,
 			else
 				cache->dprobe = cache->cap;
 			--cache->ngprobe;
-			--cache->nprobetotal;
 			return reuse_ghost_entry(cache, entry, idx, cs);
 		}
 		idx = entry->prev;
@@ -497,7 +492,6 @@ cache_get_entry_noref(struct cache *cache, cache_key_t key)
 		if (entry->key == key) {
 			--cache->nprobe;
 			++cache->nprec;
-			--cache->nprobetotal;
 			return reuse_cached_entry(cache, entry, idx);
 		}
 		if (entry->refcnt == 0) {
@@ -624,8 +618,6 @@ cache_discard(struct cache *cache, struct cache_entry *entry)
 		return;
 	if (cache_entry_valid(entry))
 		return;
-	if (entry->state == cs_probe)
-		--cache->nprobetotal;
 	--cache->ninflight;
 
 	idx = entry - cache->ce;
@@ -705,7 +697,6 @@ cache_flush(struct cache *cache)
 	cache->nprobe = 0;
 	cache->ngprobe = 0;
 	cache->dprobe = 0;
-	cache->nprobetotal = 0;
 	cache->ninflight = 0;
 }
 
