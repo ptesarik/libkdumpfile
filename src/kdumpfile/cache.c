@@ -306,14 +306,14 @@ get_missed_entry(struct cache *cache, cache_key_t key,
 	entry = &cache->ce[idx];
 	if (entry->next == cs->eprec) {
 		if (cache->ngprobe) {
-			/* Full and non-empty ghost probe partition.
+			/* Full cache and non-empty ghost probe partition.
 			 * Use an entry from that partition instead.
 			 */
 			idx = entry->next;
 			entry = &cache->ce[idx];
 			--cache->ngprobe;
 		} else if (cache->ngprec) {
-			/* Full and empty ghost probe partition.
+			/* Full cache and empty ghost probe partition.
 			 * Entry is from the ghost precious partition,
 			 * so its size must be adjusted.
 			 */
