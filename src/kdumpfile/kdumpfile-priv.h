@@ -835,6 +835,19 @@ INTERNAL_DECL(kdump_status, create_xen_cpu_regs,
 	      (kdump_ctx_t *ctx, unsigned cpu,
 	       struct derived_attr_def *def, unsigned ndef));
 
+/* unaligned access */
+struct unaligned_long
+{
+	unsigned long val;
+} __attribute__((packed));
+
+static inline unsigned long
+get_unaligned_long(const unsigned char *p)
+{
+	return ((struct unaligned_long*)p)->val;
+}
+
+
 /* hashing */
 INTERNAL_DECL(unsigned long, mem_hash, (const char *s, size_t len));
 
@@ -845,12 +858,8 @@ INTERNAL_DECL(unsigned long, mem_hash, (const char *s, size_t len));
 struct phash {
 	unsigned long val;	/**< Current hash value. */
 	unsigned idx;		/**< Index in @ref part. */
-	union {
-		/** Partial data as bytes. */
-		unsigned char bytes[sizeof(unsigned long)];
-		/** Partial data as an unsigned long number. */
-		unsigned long num;
-	} part;			/**< Partial data. */
+	/** Partial data as bytes. */
+	unsigned char part[sizeof(unsigned long)];
 };
 
 /**  Initialize a partial hash.
@@ -906,7 +915,7 @@ phash_value(const struct phash *ph)
 {
 	unsigned long hash = ph->val;
 	if (ph->idx)
-		hash += (belongtoh(ph->part.num) >>
+		hash += (belongtoh(get_unaligned_long(ph->part)) >>
 			 (BITS_PER_BYTE * (sizeof(ph->part) - ph->idx)));
 	return hash;
 }

@@ -155,7 +155,7 @@ mem_hash(const char *s, size_t len)
 	unsigned long hash = 0;
 
 	while (len >= sizeof(unsigned long)) {
-		add_to_hash(&hash, *(unsigned long*)s);
+		add_to_hash(&hash, get_unaligned_long((unsigned char *)s));
 		s += sizeof(unsigned long);
 		len -= sizeof(unsigned long);
 	}
@@ -174,23 +174,23 @@ phash_update(struct phash *ph, const char *s, size_t len)
 {
 	if (ph->idx) {
 		while (len && ph->idx < sizeof(unsigned long)) {
-			ph->part.bytes[ph->idx] = *s++;
+			ph->part[ph->idx] = *s++;
 			--len;
 			++ph->idx;
 		}
 		if (ph->idx >= sizeof(unsigned long)) {
-			add_to_hash(&ph->val, ph->part.num);
+			add_to_hash(&ph->val, get_unaligned_long(ph->part));
 			ph->idx = 0;
 		}
 	}
 
 	while (len >= sizeof(unsigned long)) {
-		add_to_hash(&ph->val, *(unsigned long*)s);
+		add_to_hash(&ph->val, get_unaligned_long((unsigned char*)s));
 		s += sizeof(unsigned long);
 		len -= sizeof(unsigned long);
 	}
 	while (len--)
-		ph->part.bytes[ph->idx++] = *s++;
+		ph->part[ph->idx++] = *s++;
 }
 
 static size_t
