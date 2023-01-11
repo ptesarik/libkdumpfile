@@ -283,13 +283,19 @@ reinit_entry(struct cache *cache, struct cache_entry *entry,
 {
 	struct cache_entry *evict;
 
-	if (cs->nuprobe != 0 &&
-	    (cs->nuprec == 0 || cache->nprobe + bias > cache->dprobe))
-		evict = evict_probe(cache, cs);
-	else
-		evict = evict_prec(cache, cs);
-	if (cache->entry_cleanup)
-		cache->entry_cleanup(cache->cleanup_data, evict);
+	if (cache->nprec + cache->nprobe + cache->ninflight < cache->cap) {
+		/* Get an entry from the unused partition. */
+		evict = &cache->ce[cs->eprobe];
+	} else {
+		/* Get an unused cached entry. */
+		if (cs->nuprobe != 0 &&
+		    (cs->nuprec == 0 || cache->nprobe + bias > cache->dprobe))
+			evict = evict_probe(cache, cs);
+		else
+			evict = evict_prec(cache, cs);
+		if (cache->entry_cleanup)
+			cache->entry_cleanup(cache->cleanup_data, evict);
+	}
 	entry->data = evict->data;
 	evict->data = NULL;
 }

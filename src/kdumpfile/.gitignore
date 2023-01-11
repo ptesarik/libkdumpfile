@@ -2,6 +2,7 @@
 test-blob
 test-clone-attr
 test-fcache
+test-cache
 
 # Test results
 *.log

@@ -83,8 +83,10 @@ libcheck_la_LIBADD = $(libkdumpfile_la_LIBADD)
 check_PROGRAMS = \
 	test-blob \
 	test-clone-attr \
+	test-cache \
 	test-fcache
 
+test_cache_LDADD = libcheck.la
 test_fcache_LDADD = libcheck.la -ldl
 test_blob_LDADD = libcheck.la
 test_clone_attr_LDADD = libcheck.la
@@ -92,6 +94,7 @@ test_clone_attr_LDADD = libcheck.la
 TESTS = \
 	test-blob \
 	test-clone-attr \
+	test-cache \
 	test-fcache
 
 clean-local:
