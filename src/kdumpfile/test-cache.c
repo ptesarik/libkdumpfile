@@ -40,6 +40,17 @@
 
 #define CACHE_SIZE  8
 
+static void
+poison_stack(void)
+{
+	unsigned short largearray[2048];
+	unsigned i;
+	for (i = 0; i < ARRAY_SIZE(largearray); ++i)
+		largearray[i] = 0xDEAD;
+	/* Do not let the compiler optimize it out. */
+	__asm__ volatile("" :: "g" (largearray) : "memory");
+}
+
 int
 main(int argc, char **argv)
 {
@@ -98,6 +109,7 @@ main(int argc, char **argv)
 	}
 	/* Put the newly allocated entry into the unused partition. */
 	cache_discard(cache, entry);
+	poison_stack();
 
 	/* Re-allocate the evicted entry. */
 	entry = cache_get_entry(cache, CACHE_SIZE - 1);
@@ -120,6 +132,7 @@ main(int argc, char **argv)
 	}
 	cache_insert(cache, entry);
 	cache_put_entry(cache, entry);
+	poison_stack();
 
 	/* Re-initialize from ghost list. */
 	entry = cache_get_entry(cache, CACHE_SIZE - 1);

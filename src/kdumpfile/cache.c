@@ -269,7 +269,11 @@ reinit_entry(struct cache *cache, struct cache_entry *entry,
 
 	if (cache->nprec + cache->nprobe + cache->ninflight < cache->cap) {
 		/* Get an entry from the unused partition. */
-		evict = &cache->ce[cs->eprobe];
+		unsigned eprobe = cs->gprobe;
+		unsigned n = cache->ngprobe;
+		while (n--)
+			eprobe = cache->ce[eprobe].prev;
+		evict = &cache->ce[eprobe];
 	} else {
 		/* Get an unused cached entry. */
 		if (cs->nuprobe != 0 &&
