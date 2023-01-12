@@ -50,7 +50,7 @@ struct xen_elfnote_header {
 	uint64_t xch_nr_vcpus;
 	uint64_t xch_nr_pages;
 	uint64_t xch_page_size;
-};
+} __attribute__((packed));
 
 struct xen_crash_info_32 {
 	uint32_t xen_major_version;
@@ -62,7 +62,7 @@ struct xen_crash_info_32 {
 	uint32_t xen_compile_time;
 	uint32_t tainted;
 	/* Additional arch-dependent and version-dependent fields  */
-};
+} __attribute__((packed));
 
 struct xen_crash_info_64 {
 	uint64_t xen_major_version;
@@ -74,19 +74,19 @@ struct xen_crash_info_64 {
 	uint64_t xen_compile_time;
 	uint64_t tainted;
 	/* Additional arch-dependent and version-dependent fields  */
-};
+} __attribute__((packed));
 
 struct xen_crash_info_x86 {
 	struct xen_crash_info_32 base;
 	uint32_t xen_phys_start;
 	uint32_t dom0_pfn_to_mfn_frame_list_list;
-};
+} __attribute__((packed));
 
 struct xen_crash_info_x86_64 {
 	struct xen_crash_info_64 base;
 	uint64_t xen_phys_start;
 	uint64_t dom0_pfn_to_mfn_frame_list_list;
-};
+} __attribute__((packed));
 
 #define XEN_EXTRA_VERSION_SZ	16
 #define XEN_COMPILER_SZ		64
@@ -112,7 +112,7 @@ struct xen_dumpcore_elfnote_xen_version_32 {
 		uint32_t virt_start;
 	} platform_parameters;
 	uint64_t pagesize;
-};
+} __attribute__((packed));
 
 struct xen_dumpcore_elfnote_xen_version_64 {
 	uint64_t major_version;
@@ -130,7 +130,7 @@ struct xen_dumpcore_elfnote_xen_version_64 {
 		uint64_t virt_start;
 	} platform_parameters;
 	uint64_t pagesize;
-};
+} __attribute__((packed));
 
 typedef kdump_status do_note_fn(kdump_ctx_t *ctx, Elf32_Word type,
 				const char *name, size_t namesz,
