@@ -148,9 +148,9 @@ class TestMethod(unittest.TestCase):
         self.assertEqual(meth.target_as, addrxlat.MACHPHYSADDR)
         ctx = addrxlat.Context()
         step = addrxlat.Step(ctx=ctx, meth=meth)
-        with self.assertRaisesRegexp(BaseException, "NULL callback"):
+        with self.assertRaisesRegex(BaseException, "NULL callback"):
             meth.cb_first_step(step, 0x1234)
-        with self.assertRaisesRegexp(BaseException, "NULL callback"):
+        with self.assertRaisesRegex(BaseException, "NULL callback"):
             meth.cb_next_step(step)
 
     def test_linear_defaults(self):
@@ -237,9 +237,9 @@ class TestMethod(unittest.TestCase):
 
         meth.fields = (4, 5, 6)
         self.assertEqual(meth.fields, (4, 5, 6))
-        with self.assertRaisesRegexp(TypeError, 'not a sequence'):
+        with self.assertRaisesRegex(TypeError, 'not a sequence'):
             meth.fields = None
-        with self.assertRaisesRegexp(ValueError,
+        with self.assertRaisesRegex(ValueError,
                                      'more than [0-9]+ address fields'):
             meth.fields = (0,) * (addrxlat.FIELDS_MAX + 1)
 
@@ -276,25 +276,25 @@ class TestMethod(unittest.TestCase):
         self.assertEqual(meth.endoff, 0)
         self.assertEqual(meth.tbl, ((0, 100), (200, 300)))
 
-        with self.assertRaisesRegexp(TypeError, 'not a sequence'):
+        with self.assertRaisesRegex(TypeError, 'not a sequence'):
             meth.tbl = None
-        with self.assertRaisesRegexp(TypeError, 'not a sequence'):
+        with self.assertRaisesRegex(TypeError, 'not a sequence'):
             meth.tbl = (None,)
-        with self.assertRaisesRegexp(TypeError, 'not a sequence'):
+        with self.assertRaisesRegex(TypeError, 'not a sequence'):
             meth.tbl = 1
-        with self.assertRaisesRegexp(TypeError, 'not a sequence'):
+        with self.assertRaisesRegex(TypeError, 'not a sequence'):
             meth.tbl = (1,)
-        with self.assertRaisesRegexp(ValueError, 'must be integer pairs'):
+        with self.assertRaisesRegex(ValueError, 'must be integer pairs'):
             meth.tbl = ((),)
-        with self.assertRaisesRegexp(ValueError, 'must be integer pairs'):
+        with self.assertRaisesRegex(ValueError, 'must be integer pairs'):
             meth.tbl = ((1,),)
-        with self.assertRaisesRegexp(ValueError, 'must be integer pairs'):
+        with self.assertRaisesRegex(ValueError, 'must be integer pairs'):
             meth.tbl = ((1, 2, 3),)
-        with self.assertRaisesRegexp(TypeError, 'must be.* a .*number'):
+        with self.assertRaisesRegex(TypeError, 'must be.* a .*number'):
             meth.tbl = ((None, None),)
-        with self.assertRaisesRegexp(TypeError, 'must be.* a .*number'):
+        with self.assertRaisesRegex(TypeError, 'must be.* a .*number'):
             meth.tbl = ((1, None),)
-        with self.assertRaisesRegexp(TypeError, 'must be.* a .*number'):
+        with self.assertRaisesRegex(TypeError, 'must be.* a .*number'):
             meth.tbl = ((None, 1),)
 
     def test_memarr_defaults(self):
@@ -415,7 +415,7 @@ class TestSystem(unittest.TestCase):
             self.assertIs(map, None)
         for i in xrange(addrxlat.SYS_METH_NUM):
             meth = sys.get_meth(i)
-            self.assertEquals(meth.kind, addrxlat.NOMETH)
+            self.assertEqual(meth.kind, addrxlat.NOMETH)
 
     def test_sys_map(self):
         sys = addrxlat.System()
@@ -430,7 +430,7 @@ class TestSystem(unittest.TestCase):
                 self.assertIs(map, None)
         for i in xrange(addrxlat.SYS_METH_NUM):
             meth = sys.get_meth(i)
-            self.assertEquals(meth.kind, addrxlat.NOMETH)
+            self.assertEqual(meth.kind, addrxlat.NOMETH)
 
     def test_sys_meth(self):
         sys = addrxlat.System()
@@ -445,7 +445,7 @@ class TestSystem(unittest.TestCase):
                 self.assertEqual(meth, newdesc)
             for i in xrange(methidx + 1, addrxlat.SYS_METH_NUM):
                 meth = sys.get_meth(i)
-                self.assertEquals(meth.kind, addrxlat.NOMETH)
+                self.assertEqual(meth.kind, addrxlat.NOMETH)
 
 class TestStep(unittest.TestCase):
     def setUp(self):
@@ -559,7 +559,7 @@ class TestStep(unittest.TestCase):
 
     def test_step_raw(self):
         step = addrxlat.Step(self.ctx)
-        with self.assertRaisesRegexp(TypeError, 'cannot be changed'):
+        with self.assertRaisesRegex(TypeError, 'cannot be changed'):
             step.raw = 0xabcd
         meth = addrxlat.PageTableMethod()
         step.meth = meth
@@ -588,11 +588,11 @@ class TestStep(unittest.TestCase):
         idx = idx + (0,) * (addrxlat.FIELDS_MAX + 1 - len(idx))
         self.assertEqual(step.idx, idx)
 
-        with self.assertRaisesRegexp(TypeError, 'not a sequence'):
+        with self.assertRaisesRegex(TypeError, 'not a sequence'):
             step.idx = None
-        with self.assertRaisesRegexp(ValueError, 'more than [0-9]+ indices'):
+        with self.assertRaisesRegex(ValueError, 'more than [0-9]+ indices'):
             step.idx = (0,) * (addrxlat.FIELDS_MAX + 2)
-        with self.assertRaisesRegexp(TypeError, 'must be.* a .*number'):
+        with self.assertRaisesRegex(TypeError, 'must be.* a .*number'):
             step.idx = (None,)
 
 class TestOperator(unittest.TestCase):
@@ -729,7 +729,7 @@ class TestTranslation(unittest.TestCase):
     def test_fulladdr_fail_kphys_machphys(self):
         "KPHYS -> MACHPHYS out of bounds"
         addr = addrxlat.FullAddress(addrxlat.KPHYSADDR, 0xf4255)
-        with self.assertRaisesRegexp(addrxlat.NoMethodError, 'No way to translate'):
+        with self.assertRaisesRegex(addrxlat.NoMethodError, 'No way to translate'):
             addr.conv(addrxlat.MACHPHYSADDR, self.ctx, self.sys)
 
     def test_fulladdr_conv_machphys_kphys(self):
@@ -741,7 +741,7 @@ class TestTranslation(unittest.TestCase):
     def test_fulladdr_fail_machphys_kphys(self):
         "MACHPHYS -> KPHYS out of bounds"
         addr = addrxlat.FullAddress(addrxlat.MACHPHYSADDR, 0xabcd)
-        with self.assertRaisesRegexp(addrxlat.NoMethodError, 'No way to translate'):
+        with self.assertRaisesRegex(addrxlat.NoMethodError, 'No way to translate'):
             addr.conv(addrxlat.KPHYSADDR, self.ctx, self.sys)
 
     def test_fulladdr_conv_direct(self):
@@ -771,7 +771,7 @@ class TestTranslation(unittest.TestCase):
     def test_fulladdr_fail_memarr(self):
         "KV -> KPHYS using memory array returns None"
         addr = addrxlat.FullAddress(addrxlat.KVADDR, 0x4255)
-        with self.assertRaisesRegexp(addrxlat.NoMethodError, 'Callback returned None'):
+        with self.assertRaisesRegex(addrxlat.NoMethodError, 'Callback returned None'):
             addr.conv(addrxlat.KPHYSADDR, self.ctx, self.sys)
 
     def test_fulladdr_conv_pgt(self):
