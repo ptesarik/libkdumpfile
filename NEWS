@@ -1,3 +1,6 @@
+next
+----
+
 0.5.1
 -----
   * Bitmap of all RAM in the memory.pagemap attribute.
