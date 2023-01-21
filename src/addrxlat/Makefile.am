@@ -34,7 +34,7 @@ libaddrxlat_la_SOURCES = \
 	s390x.c \
 	x86_64.c
 
-libaddrxlat_la_LDFLAGS = -version-info 4:0:1
+libaddrxlat_la_LDFLAGS = -version-info 4:1:1
 
 if HAVE_LD_VERSION_SCRIPT
 libaddrxlat_la_LDFLAGS += -Wl,--version-script=$(srcdir)/libaddrxlat.map
