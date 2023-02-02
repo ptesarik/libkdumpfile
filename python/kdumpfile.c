@@ -1446,7 +1446,7 @@ static PyTypeObject attr_dir_object_type =
 	sizeof(char),			/* tp_itemsize*/
 	/* methods */
 	attr_dir_dealloc,		/* tp_dealloc*/
-	attr_dir_print,			/* tp_print*/
+	0,				/* tp_print*/
 	0,				/* tp_getattr*/
 	0,				/* tp_setattr*/
 	0,				/* tp_compare*/
