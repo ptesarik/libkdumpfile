@@ -8,6 +8,8 @@ name=xlatmap
 resultfile="out/${name}.result"
 expectfile="$srcdir/$name.expect"
 
+mkdir -p out
+
 echo -n "Checking... "
 ./xlatmap >"$resultfile"
 rc=$?
