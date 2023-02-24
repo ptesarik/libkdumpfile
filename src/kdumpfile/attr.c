@@ -751,12 +751,12 @@ instantiate_path(struct attr_data *attr)
 void
 attr_dict_free(struct attr_dict *dict)
 {
-	dealloc_attr(dgattr(dict, GKI_dir_root));
-
 	if (dict->shared->arch_ops && dict->shared->arch_ops->attr_cleanup)
 		dict->shared->arch_ops->attr_cleanup(dict);
 	if (dict->shared->ops && dict->shared->ops->attr_cleanup)
 		dict->shared->ops->attr_cleanup(dict);
+
+	dealloc_attr(dgattr(dict, GKI_dir_root));
 
 	if (dict->fallback)
 		attr_dict_decref(dict->fallback);
