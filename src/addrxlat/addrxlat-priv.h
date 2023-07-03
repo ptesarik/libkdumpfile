@@ -240,6 +240,7 @@ pteval_shift(addrxlat_pte_format_t fmt)
 	switch (fmt) {
 	case ADDRXLAT_PTE_PFN32:
 	case ADDRXLAT_PTE_IA32:
+	case ADDRXLAT_PTE_AARCH32:
 		return 2;
 
 	case ADDRXLAT_PTE_PFN64:
@@ -301,6 +302,8 @@ read_pte64(addrxlat_step_t *step, addrxlat_pte_t *pte)
 }
 
 INTERNAL_DECL(addrxlat_status, pgt_huge_page, (addrxlat_step_t *state));
+
+INTERNAL_DECL(addrxlat_next_step_fn, pgt_aarch32, );
 
 INTERNAL_DECL(addrxlat_next_step_fn, pgt_aarch64, );
 INTERNAL_DECL(addrxlat_next_step_fn, pgt_aarch64_lpa, );

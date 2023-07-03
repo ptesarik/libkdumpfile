@@ -1,0 +1,74 @@
+#! /bin/sh
+
+#
+# Check VTOP translation for AArch32 with short descriptors.
+#
+
+pf="aarch32:12,8,12"
+
+ptes="-e 0x0000:0x4001"		# PGD[0] -> 4000
+ptes="$ptes -e 0x0004:0x5001"	# PGD[1] -> 5000
+ptes="$ptes -e 0x0008:0x100002"	# PGD[2] -> 100000 (section)
+ptes="$ptes -e 0x0040:0xf040002" # PGD[16] -> f000000 (supersection)
+ptes="$ptes -e 0x0044:0xf040002" # PGD[17] -> f000000 (supersection)
+ptes="$ptes -e 0x0048:0xf040002" # PGD[18] -> f000000 (supersection)
+ptes="$ptes -e 0x004c:0xf040002" # PGD[19] -> f000000 (supersection)
+ptes="$ptes -e 0x0050:0xf040002" # PGD[20] -> f000000 (supersection)
+ptes="$ptes -e 0x0054:0xf040002" # PGD[21] -> f000000 (supersection)
+ptes="$ptes -e 0x0058:0xf040002" # PGD[22] -> f000000 (supersection)
+ptes="$ptes -e 0x005c:0xf040002" # PGD[23] -> f000000 (supersection)
+ptes="$ptes -e 0x0060:0xf040002" # PGD[24] -> f000000 (supersection)
+ptes="$ptes -e 0x0064:0xf040002" # PGD[25] -> f000000 (supersection)
+ptes="$ptes -e 0x0068:0xf040002" # PGD[26] -> f000000 (supersection)
+ptes="$ptes -e 0x006c:0xf040002" # PGD[27] -> f000000 (supersection)
+ptes="$ptes -e 0x0070:0xf040002" # PGD[28] -> f000000 (supersection)
+ptes="$ptes -e 0x0074:0xf040002" # PGD[29] -> f000000 (supersection)
+ptes="$ptes -e 0x0078:0xf040002" # PGD[30] -> f000000 (supersection)
+ptes="$ptes -e 0x007c:0xf040002" # PGD[31] -> f000000 (supersection)
+ptes="$ptes -e 0x0080:0xdce401e2" # PGD[32] -> fedc000000 (supersection)
+ptes="$ptes -e 0x0084:0xdce401e2" # PGD[33] -> fedc000000 (supersection)
+ptes="$ptes -e 0x0088:0xdce401e2" # PGD[34] -> fedc000000 (supersection)
+ptes="$ptes -e 0x008c:0xdce401e2" # PGD[35] -> fedc000000 (supersection)
+ptes="$ptes -e 0x0090:0xdce401e2" # PGD[36] -> fedc000000 (supersection)
+ptes="$ptes -e 0x0094:0xdce401e2" # PGD[37] -> fedc000000 (supersection)
+ptes="$ptes -e 0x0098:0xdce401e2" # PGD[38] -> fedc000000 (supersection)
+ptes="$ptes -e 0x009c:0xdce401e2" # PGD[39] -> fedc000000 (supersection)
+ptes="$ptes -e 0x00a0:0xdce401e2" # PGD[40] -> fedc000000 (supersection)
+ptes="$ptes -e 0x00a4:0xdce401e2" # PGD[41] -> fedc000000 (supersection)
+ptes="$ptes -e 0x00a8:0xdce401e2" # PGD[42] -> fedc000000 (supersection)
+ptes="$ptes -e 0x00ac:0xdce401e2" # PGD[43] -> fedc000000 (supersection)
+ptes="$ptes -e 0x00b0:0xdce401e2" # PGD[44] -> fedc000000 (supersection)
+ptes="$ptes -e 0x00b4:0xdce401e2" # PGD[45] -> fedc000000 (supersection)
+ptes="$ptes -e 0x00b8:0xdce401e2" # PGD[46] -> fedc000000 (supersection)
+ptes="$ptes -e 0x00bc:0xdce401e2" # PGD[47] -> fedc000000 (supersection)
+ptes="$ptes -e 0x4000:0xa012"	# PGD[0] -> PTE[0] -> a000
+ptes="$ptes -e 0x5000:0x10011"	# PGD[1] -> PTE[0] -> 10000 (large)
+ptes="$ptes -e 0x5004:0x10011"	# PGD[1] -> PTE[1] -> 10000 (large)
+ptes="$ptes -e 0x5008:0x10011"	# PGD[1] -> PTE[2] -> 10000 (large)
+ptes="$ptes -e 0x500c:0x10011"	# PGD[1] -> PTE[3] -> 10000 (large)
+ptes="$ptes -e 0x5010:0x10011"	# PGD[1] -> PTE[4] -> 10000 (large)
+ptes="$ptes -e 0x5014:0x10011"	# PGD[1] -> PTE[5] -> 10000 (large)
+ptes="$ptes -e 0x5018:0x10011"	# PGD[1] -> PTE[6] -> 10000 (large)
+ptes="$ptes -e 0x501c:0x10011"	# PGD[1] -> PTE[7] -> 10000 (large)
+ptes="$ptes -e 0x5020:0x10011"	# PGD[1] -> PTE[8] -> 10000 (large)
+ptes="$ptes -e 0x5024:0x10011"	# PGD[1] -> PTE[9] -> 10000 (large)
+ptes="$ptes -e 0x5028:0x10011"	# PGD[1] -> PTE[10] -> 10000 (large)
+ptes="$ptes -e 0x502c:0x10011"	# PGD[1] -> PTE[11] -> 10000 (large)
+ptes="$ptes -e 0x5030:0x10011"	# PGD[1] -> PTE[12] -> 10000 (large)
+ptes="$ptes -e 0x5034:0x10011"	# PGD[1] -> PTE[13] -> 10000 (large)
+ptes="$ptes -e 0x5038:0x10011"	# PGD[1] -> PTE[14] -> 10000 (large)
+ptes="$ptes -e 0x503c:0x10011"	# PGD[1] -> PTE[15] -> 10000 (large)
+
+list="0x123:0xa123"		# PGD[0] -> PTE[0]
+list="$list 0x100123:0x10123"	# PGD[1] -> PTE[0]
+list="$list 0x107123:0x17123"	# PGD[1] -> PTE[7]
+list="$list 0x10f123:0x1f123"	# PGD[1] -> PTE[15]
+list="$list 0x234567:0x134567"	# PGD[2]
+list="$list 0x10dcba9:0xf0dcba9" # PGD[16]
+list="$list 0x17dcba9:0xf7dcba9" # PGD[23]
+list="$list 0x1edcba9:0xfedcba9" # PGD[30]
+list="$list 0x20a9876:0xfedc0a9876" # PGD[32]
+list="$list 0x2ba9876:0xfedcba9876" # PGD[43]
+list="$list 0x2fa9876:0xfedcfa9876" # PGD[47]
+
+. "$srcdir"/addrxlat-common

@@ -44,6 +44,7 @@ static const char pte_format_names[][24] = {
 	[ADDRXLAT_PTE_PFN32] = "pfn32",
 	[ADDRXLAT_PTE_PFN64] = "pfn64",
 
+	[ADDRXLAT_PTE_AARCH32] = "aarch32",
 	[ADDRXLAT_PTE_AARCH64] = "aarch64",
 	[ADDRXLAT_PTE_AARCH64_LPA] = "aarch64_lpa",
 	[ADDRXLAT_PTE_AARCH64_LPA2] = "aarch64_lpa2",
@@ -316,6 +317,7 @@ first_step_pgt(addrxlat_step_t *step, addrxlat_addr_t addr)
 {
 	switch (step->meth->param.pgt.pf.pte_format) {
 	case ADDRXLAT_PTE_NONE:
+	case ADDRXLAT_PTE_AARCH32:
 	case ADDRXLAT_PTE_AARCH64:
 	case ADDRXLAT_PTE_AARCH64_LPA:
 	case ADDRXLAT_PTE_AARCH64_LPA2:
@@ -355,6 +357,9 @@ next_step_pgt(addrxlat_step_t *step)
 
 	case ADDRXLAT_PTE_PFN64:
 		return next_step_pfn64(step);
+
+	case ADDRXLAT_PTE_AARCH32:
+		return pgt_aarch32(step);
 
 	case ADDRXLAT_PTE_AARCH64:
 		return pgt_aarch64(step);

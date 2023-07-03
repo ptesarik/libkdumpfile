@@ -523,6 +523,8 @@ typedef enum _addrxlat_pte_format {
 
 	/** Arm AArch64 with LPA2 (4k or 16k pages). */
 	ADDRXLAT_PTE_AARCH64_LPA2,
+
+	ADDRXLAT_PTE_AARCH32,	/**< Arm AArch32 with short descriptors. */
 } addrxlat_pte_format_t;
 
 /** Get the (string) name of a PTE format.

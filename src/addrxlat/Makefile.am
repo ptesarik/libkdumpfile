@@ -28,6 +28,7 @@ libaddrxlat_la_SOURCES = \
 	map.c \
 	step.c \
 	sys.c \
+	aarch32.c \
 	aarch64.c \
 	ia32.c \
 	ppc64.c \
