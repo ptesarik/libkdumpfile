@@ -43,6 +43,7 @@ pte_formats = {
     addrxlat.PTE_NONE: 'none',
     addrxlat.PTE_PFN32: 'pfn32',
     addrxlat.PTE_PFN64: 'pfn64',
+    addrxlat.PTE_AARCH32: 'aarch32',
     addrxlat.PTE_AARCH64: 'aarch64',
     addrxlat.PTE_AARCH64_LPA: 'aarch64_lpa',
     addrxlat.PTE_AARCH64_LPA2: 'aarch64_lpa2',
