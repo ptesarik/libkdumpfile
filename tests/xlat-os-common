@@ -35,7 +35,6 @@ echo -n "Checking... "
 rc=$?
 if [ $rc -gt 1 ]; then
     echo ERROR
-    echo "Cannot set $input" >&2
     exit $rc
 elif [ $rc -ne 0 ]; then
     echo FAILED
