@@ -22,7 +22,7 @@ e_phoff = 64
 DATA = $srcdir/early-version-code.data
 EOF
 
-../examples/showxlat "$dumpfile" linux > "$resultfile"
+../examples/showxlat "$dumpfile" --ostype linux > "$resultfile"
 
 if ! diff "$expectfile" "$resultfile"; then
     echo "Results do not match" >&2
