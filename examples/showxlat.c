@@ -254,13 +254,13 @@ set_attr(kdump_ctx_t *ctx, const char *base, char *opt)
 
 	if (kdump_attr_ref(ctx, base, &dirattr) != KDUMP_OK) {
 		fprintf(stderr, "Cannot reference %s: %s\n",
-			base, kdump_get_err(ctx));
+			base ?: "root attribute", kdump_get_err(ctx));
 		return 2;
 	}
 
 	if (kdump_sub_attr_ref(ctx, &dirattr, opt, &subattr) != KDUMP_OK) {
-		fprintf(stderr, "Cannot reference %s.%s: %s\n",
-			base, opt, kdump_get_err(ctx));
+		fprintf(stderr, "Cannot reference %s%s%s: %s\n",
+			base ?: "", base ? "." : "", opt, kdump_get_err(ctx));
 		return 2;
 	}
 
@@ -293,8 +293,8 @@ set_attr(kdump_ctx_t *ctx, const char *base, char *opt)
 	}
 
 	if (kdump_attr_ref_set(ctx, &subattr, &attr) != KDUMP_OK) {
-		fprintf(stderr, "Cannot set %s.%s: %s\n",
-			base, opt, kdump_get_err(ctx));
+		fprintf(stderr, "Cannot set %s%s%s: %s\n",
+			base ?: "", base ? "." : "", opt, kdump_get_err(ctx));
 		return 2;
 	}
 
@@ -344,7 +344,8 @@ usage(FILE *out, const char *progname)
 	      "  -a, --arch val\n\tSet architecture\n"
 	      "  -d, --default opt=val\n\tSet default addrxlat option\n"
 	      "  -f, --force opt=val\n\tForce addrxlat option\n"
-	      "  -o, --ostype val\n\tSet OS type\n",
+	      "  -o, --ostype val\n\tSet OS type\n"
+	      "  -s, --set attr=val\n\tSet an arbitrary attribute\n",
 	      out);
 }
 
@@ -354,6 +355,7 @@ static const struct option opts[] = {
 	{ "default", required_argument, NULL, 'd' },
 	{ "force", required_argument, NULL, 'f' },
 	{ "ostype", required_argument, NULL, 'o' },
+	{ "set", required_argument, NULL, 's' },
 	{ },
 };
 
@@ -391,6 +393,11 @@ main(int argc, char **argv)
 
 		case 'o':
 			if (set_ostype(ctx, optarg))
+				return 1;
+			break;
+
+		case 's':
+			if (set_attr(ctx, NULL, optarg))
 				return 1;
 			break;
 
