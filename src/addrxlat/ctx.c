@@ -503,6 +503,28 @@ addrxlat_addrspace_name(addrxlat_addrspace_t as)
 	}
 }
 
+/** Verify that an address can be read without translation.
+ * @param      ctx  Address translation context.
+ * @param[in] addr  Full address of the data.
+ * @returns         @c true if readable.
+ */
+bool
+direct_read_ok(addrxlat_ctx_t *ctx, const addrxlat_fulladdr_t *addr)
+{
+	unsigned long read_caps = ctx->cb->read_caps(ctx->cb);
+	addrxlat_buffer_t *buffer;
+
+	if (! (read_caps & ADDRXLAT_CAPS(addr->as)))
+		return false;
+
+	if (get_cache_buf(ctx, addr, &buffer) != ADDRXLAT_OK) {
+		clear_error(ctx);
+		return false;
+	}
+
+	return true;
+}
+
 /** Common format string for read callback failures. */
 static const char read_err_fmt[] =
 	"Cannot read %d-bit %s at %s:0x%"ADDRXLAT_PRIxADDR;

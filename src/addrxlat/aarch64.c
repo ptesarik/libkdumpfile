@@ -264,26 +264,17 @@ static addrxlat_status
 get_linux_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 {
 	addrxlat_addr_t kimage_voffset;
-	unsigned long read_caps;
 	addrxlat_status status;
 
 	status = get_symval(ctl->ctx, "swapper_pg_dir", &root->addr);
 	if (status != ADDRXLAT_OK)
 		return set_error(ctl->ctx, status,
 				 "Cannot determine page table virtual address");
+	root->as = ADDRXLAT_KVADDR;
 
 	/* If the read callback can handle virtual addresses, we're done. */
-	read_caps = ctl->ctx->cb->read_caps(ctl->ctx->cb);
-	if (read_caps & ADDRXLAT_CAPS(ADDRXLAT_KVADDR)) {
-		addrxlat_buffer_t *buffer;
-
-		root->as = ADDRXLAT_KVADDR;
-		status = get_cache_buf(ctl->ctx, root, &buffer);
-		if (status == ADDRXLAT_OK)
-			return ADDRXLAT_OK;
-
-		clear_error(ctl->ctx);
-	}
+	if (direct_read_ok(ctl->ctx, root))
+		return ADDRXLAT_OK;
 
 	status = get_number(ctl->ctx, "kimage_voffset", &kimage_voffset);
 	if (status != ADDRXLAT_OK)
