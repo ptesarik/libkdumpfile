@@ -18,11 +18,14 @@
   off=0x0
 
 KV -> HW:
+0-ffffffff: @rootpgt
+100000000-ffffffffffffffff: NONE
 
 KV -> PHYS:
-0-c0203fff: NONE
+0-c0203fff: @rootpgt
 c0204000-c0207fff: @ktext
-c0208000-ffffffffffffffff: NONE
+c0208000-ffffffff: @rootpgt
+100000000-ffffffffffffffff: NONE
 
 KPHYS -> DIRECT:
 

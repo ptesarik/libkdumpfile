@@ -28,11 +28,16 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <stdint.h>
+
 #include "addrxlat-priv.h"
 
 /* Maximum physical address bits (architectural limit) */
 #define PHYSADDR_BITS_MAX	40
 #define PHYSADDR_MASK		ADDR_MASK(PHYSADDR_BITS_MAX)
+
+/* Maximum virtual address (architecture limit) */
+#define VIRTADDR_MAX		UINT32_MAX
 
 /* This value corresponds to kexec-tools' KVBASE_MASK defined in
  * kexec/arch/arm/crashdump-arm.h, which was in turn taken from the
@@ -295,11 +300,31 @@ map_linux_arm(struct os_init_data *ctl)
 addrxlat_status
 sys_arm(struct os_init_data *ctl)
 {
+	addrxlat_range_t range;
+	addrxlat_map_t *newmap;
 	addrxlat_status status;
 
 	status = sys_set_physmaps(ctl, PHYSADDR_MASK);
 	if (status != ADDRXLAT_OK)
 		return status;
+
+	range.meth = ADDRXLAT_SYS_METH_PGT;
+	range.endoff = VIRTADDR_MAX;
+	newmap = internal_map_new();
+	if (!newmap)
+		return set_error(ctl->ctx, ADDRXLAT_ERR_NOMEM,
+				 "Cannot set up hardware mapping");
+	ctl->sys->map[ADDRXLAT_SYS_MAP_HW] = newmap;
+	status = internal_map_set(newmap, 0, &range);
+	if (status != ADDRXLAT_OK)
+		return set_error(ctl->ctx, status,
+				 "Cannot set up hardware mapping");
+
+	newmap = internal_map_copy(newmap);
+	if (!newmap)
+		return set_error(ctl->ctx, ADDRXLAT_ERR_NOMEM,
+				 "Cannot set up virt-to-phys mapping");
+	ctl->sys->map[ADDRXLAT_SYS_MAP_KV_PHYS] = newmap;
 
 	switch (ctl->os_type) {
 	case OS_LINUX:
