@@ -154,13 +154,13 @@ test_scripts = \
 	addrxlat-identity \
 	addrxlat-pfn32 \
 	addrxlat-pfn64 \
-	addrxlat-aarch32-short \
 	addrxlat-aarch64-4k \
 	addrxlat-aarch64-lpa2-4k \
 	addrxlat-aarch64-16k \
 	addrxlat-aarch64-lpa2-16k \
 	addrxlat-aarch64-64k \
 	addrxlat-aarch64-lpa-64k \
+	addrxlat-arm-short \
 	addrxlat-ia32 \
 	addrxlat-ia32-pae \
 	addrxlat-ppc64-64k \
@@ -259,12 +259,12 @@ test_scripts = \
 	xlat-os-s390x-4l \
 	xlat-os-s390x-5l \
 	xlat-os-x86_64-none \
-	xlat-linux-aarch32-2.6.24 \
 	xlat-linux-aarch64-5.2-va39 \
 	xlat-linux-aarch64-5.8-va39 \
 	xlat-linux-aarch64-5.8-va48 \
 	xlat-linux-aarch64-5.8-va48-nover \
 	xlat-linux-aarch64-5.16-64k \
+	xlat-linux-arm-2.6.24 \
 	xlat-linux-ia32 \
 	xlat-linux-ia32-pae \
 	xlat-linux-ppc64-64k \
@@ -371,8 +371,6 @@ dist_check_DATA = \
 	xlat-os-s390x-5l.data \
 	xlat-os-s390x-5l.expect \
 	xlat-os-x86_64-none.expect \
-	xlat-linux-aarch32-2.6.24.expect \
-	xlat-linux-aarch32-2.6.24.sym \
 	xlat-linux-aarch64-5.2-va39.data \
 	xlat-linux-aarch64-5.2-va39.expect \
 	xlat-linux-aarch64-5.2-va39.sym \
@@ -388,6 +386,8 @@ dist_check_DATA = \
 	xlat-linux-aarch64-5.16-64k.data \
 	xlat-linux-aarch64-5.16-64k.expect \
 	xlat-linux-aarch64-5.16-64k.sym \
+	xlat-linux-arm-2.6.24.expect \
+	xlat-linux-arm-2.6.24.sym \
 	xlat-linux-ia32.data \
 	xlat-linux-ia32.expect \
 	xlat-linux-ia32-pae.data \

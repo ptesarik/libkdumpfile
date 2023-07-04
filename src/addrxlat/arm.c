@@ -1,4 +1,4 @@
-/** @internal @file src/addrxlat/aarch32.c
+/** @internal @file src/addrxlat/arm.c
  * @brief Routines specific to 32-bit Arm with short descriptors.
  */
 /* Copyright (C) 2023 Petr Tesarik <petr@tesarici.cz>
@@ -128,7 +128,7 @@ add_overlap(addrxlat_step_t *step, unsigned bits)
  * @returns     Error status.
  */
 addrxlat_status
-pgt_aarch32(addrxlat_step_t *step)
+pgt_arm(addrxlat_step_t *step)
 {
 	addrxlat_pte_t pte;
 	unsigned char type;
@@ -181,8 +181,8 @@ pgt_aarch32(addrxlat_step_t *step)
 static void
 init_pgt_meth(struct os_init_data *ctl, unsigned ttbcr_n)
 {
-	static const addrxlat_paging_form_t aarch32_pf = {
-		.pte_format = ADDRXLAT_PTE_AARCH32,
+	static const addrxlat_paging_form_t arm_pf = {
+		.pte_format = ADDRXLAT_PTE_ARM,
 		.nfields = 3,
 		.fieldsz = { 12, 8, 12 }
 	};
@@ -197,7 +197,7 @@ init_pgt_meth(struct os_init_data *ctl, unsigned ttbcr_n)
 	else
 		meth->param.pgt.root.as = ADDRXLAT_NOADDR;
 	meth->param.pgt.pte_mask = 0;
-	meth->param.pgt.pf = aarch32_pf;
+	meth->param.pgt.pf = arm_pf;
 	meth->param.pgt.pf.fieldsz[2] -= ttbcr_n;
 }
 
@@ -256,7 +256,7 @@ get_linux_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 
 		pf = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT].param.pgt.pf;
 		pgd_size = pf_table_size(pf, pf->nfields - 1) <<
-			pteval_shift(ADDRXLAT_PTE_AARCH32);
+			pteval_shift(ADDRXLAT_PTE_ARM);
 		return map_ktext_linear(ctl, root->addr,
 					root->addr + pgd_size - 1,
 					ctl->popt.phys_base - page_base);
@@ -266,12 +266,12 @@ get_linux_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 			 "No way to determine kernel physical location");
 }
 
-/** Initialize a translation map for Linux/aarch32.
+/** Initialize a translation map for Linux/arm.
  * @param ctl  Initialization data.
  * @returns	  Error status.
  */
 static addrxlat_status
-map_linux_aarch32(struct os_init_data *ctl)
+map_linux_arm(struct os_init_data *ctl)
 {
 	addrxlat_meth_t *meth;
 	addrxlat_status status;
@@ -288,12 +288,12 @@ map_linux_aarch32(struct os_init_data *ctl)
 	return ADDRXLAT_OK;
 }
 
-/** Initialize a translation map for an aarch32 OS.
+/** Initialize a translation map for an arm OS.
  * @param ctl  Initialization data.
  * @returns    Error status.
  */
 addrxlat_status
-sys_aarch32(struct os_init_data *ctl)
+sys_arm(struct os_init_data *ctl)
 {
 	addrxlat_status status;
 
@@ -303,7 +303,7 @@ sys_aarch32(struct os_init_data *ctl)
 
 	switch (ctl->os_type) {
 	case OS_LINUX:
-		return map_linux_aarch32(ctl);
+		return map_linux_arm(ctl);
 
 	default:
 		return set_error(ctl->ctx, ADDRXLAT_ERR_NOTIMPL,

@@ -4,7 +4,7 @@
 # Check VTOP translation for AArch32 with short descriptors.
 #
 
-pf="aarch32:12,8,12"
+pf="arm:12,8,12"
 
 ptes="-e 0x0000:0x4001"		# PGD[0] -> 4000
 ptes="$ptes -e 0x0004:0x5001"	# PGD[1] -> 5000

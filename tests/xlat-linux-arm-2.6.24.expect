@@ -2,7 +2,7 @@
   target_as=MACHPHYSADDR
   root=KVADDR:0xc0204000
   pte_mask=0x0
-  pte_format=aarch32
+  pte_format=arm
   fields=12,8,12
 
 @ktext: LINEAR
