@@ -1,0 +1,14 @@
+#! /bin/bash
+
+#
+# Check Linux 2.6.24+ 32-bit Arm translation using symbols from VMCOREINFO.
+# No explicit version.
+#
+
+opts=(
+    arch=arm
+    ostype=linux
+    phys_base=0x40000000
+)
+
+. "$srcdir"/xlat-os-common

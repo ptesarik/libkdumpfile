@@ -453,14 +453,11 @@ struct os_init_data {
  */
 typedef addrxlat_status sys_arch_fn(struct os_init_data *ctl);
 
+INTERNAL_DECL(sys_arch_fn, sys_aarch32, );
 INTERNAL_DECL(sys_arch_fn, sys_aarch64, );
-
 INTERNAL_DECL(sys_arch_fn, sys_ia32, );
-
 INTERNAL_DECL(sys_arch_fn, sys_ppc64, );
-
 INTERNAL_DECL(sys_arch_fn, sys_s390x, );
-
 INTERNAL_DECL(sys_arch_fn, sys_x86_64, );
 
 /** Optional action associated with a translation system region. */

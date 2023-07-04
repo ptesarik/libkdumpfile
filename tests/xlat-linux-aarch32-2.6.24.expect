@@ -1,0 +1,35 @@
+@rootpgt: PGT
+  target_as=MACHPHYSADDR
+  root=KVADDR:0xc0204000
+  pte_mask=0x0
+  pte_format=aarch32
+  fields=12,8,12
+
+@ktext: LINEAR
+  target_as=KPHYSADDR
+  off=0xffffffff80000000
+
+@machphys_kphys: LINEAR
+  target_as=KPHYSADDR
+  off=0x0
+
+@kphys_machphys: LINEAR
+  target_as=MACHPHYSADDR
+  off=0x0
+
+KV -> HW:
+
+KV -> PHYS:
+0-c0203fff: NONE
+c0204000-c0207fff: @ktext
+c0208000-ffffffffffffffff: NONE
+
+KPHYS -> DIRECT:
+
+MACHPHYS -> KPHYS:
+0-ffffffffff: @machphys_kphys
+10000000000-ffffffffffffffff: NONE
+
+KPHYS -> MACHPHYS:
+0-ffffffffff: @kphys_machphys
+10000000000-ffffffffffffffff: NONE
