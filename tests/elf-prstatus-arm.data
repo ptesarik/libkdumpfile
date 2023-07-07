@@ -1,0 +1,36 @@
+@phdr type=NOTE offset=0x1800
+00000005 00000094 00000001 "CORE" 00 00 00 00
+00000003 00000004 00000005
+000b 0000
+"pend"
+"hold"
+"_pid"
+"ppid"
+"pgrp"
+"_sid"
+"pr_utime"
+"pr_stime"
+"pr_cutim"
+"pr_cstim"
+"  r0"
+"  r1"
+"  r2"
+"  r3"
+"  r4"
+"  r5"
+"  r6"
+"  r7"
+"  r8"
+"  r9"
+" r10"
+"  fp"
+"  ip"
+"  sp"
+"  lr"
+"  pc"
+"cpsr"
+"orig"
+00000000
+
+@phdr type=LOAD offset=0x2000 paddr=0x2000000 vaddr=0xffff880002000000 memsz=0x1000
+41 42 43 44 45 46 47 48

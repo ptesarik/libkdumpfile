@@ -29,6 +29,7 @@ AM_CFLAGS = -fvisibility=hidden \
 lib_LTLIBRARIES = libkdumpfile.la
 libkdumpfile_la_SOURCES = \
 	aarch64.c \
+	arm.c \
 	attr.c \
 	bitmap.c \
 	blob.c \

@@ -739,6 +739,7 @@ INTERNAL_DECL(kdump_status, linux_iomem_kcode,
 /* Architectures */
 
 INTERNAL_DECL(extern const struct arch_ops, aarch64_ops, );
+INTERNAL_DECL(extern const struct arch_ops, arm_ops, );
 INTERNAL_DECL(extern const struct arch_ops, ia32_ops, );
 INTERNAL_DECL(extern const struct arch_ops, s390x_ops, );
 INTERNAL_DECL(extern const struct arch_ops, x86_64_ops, );

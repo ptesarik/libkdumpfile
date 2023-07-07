@@ -1,0 +1,74 @@
+#! /bin/sh
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+datafile="$srcdir/${name}.data"
+dumpfile="out/${name}.dump"
+resultfile="out/${name}.result"
+expectfile="$srcdir/${name}.expect"
+
+./mkelf "$dumpfile" <<EOF
+ei_class = 2
+ei_data = 1
+e_machine = 40
+e_phoff = 0x1000
+
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create ELF file" >&2
+    exit $rc
+fi
+echo "Created ELF dump: $dumpfile"
+
+./checkattr "$dumpfile" <<EOF
+file = directory:
+file.set.number = number:1
+file.set.0 = directory:
+file.set.0.fd = number
+file.format = string: elf
+
+cpu = directory:
+cpu.number = number:1
+cpu.0 = directory:
+cpu.0.PRSTATUS = blob:\
+0300000004000000050000000b000000\
+70656e64686f6c645f70696470706964\
+706772705f73696470725f7574696d65\
+70725f7374696d6570725f637574696d\
+70725f637374696d2020723020207231\
+20207232202072332020723420207235\
+20207236202072372020723820207239\
+20723130202066702020697020207370\
+20206c7220207063637073726f726967\
+00000000
+cpu.0.reg = directory:
+cpu.0.reg.r0  = number:0x30722020
+cpu.0.reg.r1  = number:0x31722020
+cpu.0.reg.r2  = number:0x32722020
+cpu.0.reg.r3  = number:0x33722020
+cpu.0.reg.r4  = number:0x34722020
+cpu.0.reg.r5  = number:0x35722020
+cpu.0.reg.r6  = number:0x36722020
+cpu.0.reg.r7  = number:0x37722020
+cpu.0.reg.r8  = number:0x38722020
+cpu.0.reg.r9  = number:0x39722020
+cpu.0.reg.r10 = number:0x30317220
+cpu.0.reg.fp  = number:0x70662020
+cpu.0.reg.ip  = number:0x70692020
+cpu.0.reg.sp  = number:0x70732020
+cpu.0.reg.lr  = number:0x726c2020
+cpu.0.reg.pc  = number:0x63702020
+cpu.0.reg.cpsr = number:0x72737063
+cpu.0.reg.orig_r0 = number:0x6769726f
+cpu.0.pid = number:0x6469705f
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Attribute check failed" >&2
+    exit $rc
+fi
+
+exit 0

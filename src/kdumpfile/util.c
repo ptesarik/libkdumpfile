@@ -280,7 +280,6 @@ arch_ops(enum kdump_arch arch)
 {
 	switch (arch) {
 	case ARCH_ALPHA:
-	case ARCH_ARM:
 	case ARCH_IA64:
 	case ARCH_MIPS:
 	case ARCH_PPC:
@@ -289,6 +288,7 @@ arch_ops(enum kdump_arch arch)
 		break;
 
 	case ARCH_AARCH64:	return &aarch64_ops;
+	case ARCH_ARM:		return &arm_ops;
 	case ARCH_IA32:		return &ia32_ops;
 	case ARCH_PPC64:	return &ppc64_ops;
 	case ARCH_S390X:	return &s390x_ops;
