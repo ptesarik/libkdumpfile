@@ -212,19 +212,29 @@ map_direct(struct os_init_data *ctl, addrxlat_addr_t first,
 {
 	addrxlat_meth_t *meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_DIRECT];
 	struct sys_region layout[2];
+	addrxlat_status status;
 
 	meth->kind = ADDRXLAT_LINEAR;
 	meth->target_as = ADDRXLAT_KPHYSADDR;
 	meth->param.linear.off = off;
+
+	layout[1].meth = ADDRXLAT_SYS_METH_NUM;
 
 	layout[0].first = first;
 	layout[0].last = last;
 	layout[0].meth = ADDRXLAT_SYS_METH_DIRECT;
 	layout[0].act = SYS_ACT_NONE;
 
-	layout[1].meth = ADDRXLAT_SYS_METH_NUM;
+	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, layout);
+	if (status != ADDRXLAT_OK)
+		return status;
 
-	return sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, layout);
+	layout[0].first += off;
+	layout[0].last += off;
+	layout[0].meth = ADDRXLAT_SYS_METH_RDIRECT;
+	layout[0].act = SYS_ACT_RDIRECT;
+
+	return sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KPHYS_DIRECT, layout);
 }
 
 /** Determine Linux page table root.
@@ -271,7 +281,7 @@ map_linux_arm(struct os_init_data *ctl)
 
 	if (!direct_read_ok(ctl->ctx, &pgt->root) &&
 	    opt_isset(ctl->popt, phys_base)) {
-		addrxlat_addr_t page_base, pgd_size;
+		addrxlat_addr_t page_base, pgd_size, pgtvaddr;
 
 		status = get_symval(ctl->ctx, "_stext", &page_base);
 		if (status != ADDRXLAT_OK)
@@ -279,10 +289,14 @@ map_linux_arm(struct os_init_data *ctl)
 					 "Cannot determine PAGE_BASE");
 		page_base &= ~LINUX_KVBASE_MASK;
 
+		pgtvaddr = pgt->root.addr;
+		if (pgt->root.as == ADDRXLAT_MACHPHYSADDR)
+			pgtvaddr += page_base - ctl->popt.phys_base;
+
 		pgd_size = pf_table_size(&pgt->pf, pgt->pf.nfields - 1) <<
 			pteval_shift(ADDRXLAT_PTE_ARM);
-		status = map_direct(ctl, pgt->root.addr,
-				    pgt->root.addr + pgd_size - 1,
+		status = map_direct(ctl, pgtvaddr,
+				    pgtvaddr + pgd_size - 1,
 				    ctl->popt.phys_base - page_base);
 		if (status != ADDRXLAT_OK)
 			return status;

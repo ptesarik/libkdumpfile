@@ -1,6 +1,6 @@
 @rootpgt: PGT
   target_as=MACHPHYSADDR
-  root=KVADDR:0xc0204000
+  root=MACHPHYSADDR:0x40204000
   pte_mask=0x0
   pte_format=arm
   fields=12,8,12

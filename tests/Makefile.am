@@ -265,6 +265,7 @@ test_scripts = \
 	xlat-linux-aarch64-5.8-va48-nover \
 	xlat-linux-aarch64-5.16-64k \
 	xlat-linux-arm-2.6.24 \
+	xlat-linux-arm-2.6.24-kvaddr \
 	xlat-linux-ia32 \
 	xlat-linux-ia32-pae \
 	xlat-linux-ppc64-64k \
@@ -388,6 +389,8 @@ dist_check_DATA = \
 	xlat-linux-aarch64-5.16-64k.sym \
 	xlat-linux-arm-2.6.24.expect \
 	xlat-linux-arm-2.6.24.sym \
+	xlat-linux-arm-2.6.24-kvaddr.expect \
+	xlat-linux-arm-2.6.24-kvaddr.sym \
 	xlat-linux-ia32.data \
 	xlat-linux-ia32.expect \
 	xlat-linux-ia32-pae.data \

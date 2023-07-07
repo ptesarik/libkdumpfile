@@ -1,0 +1,17 @@
+#! /bin/bash
+
+#
+# Check Linux 2.6.24+ 32-bit Arm translation using symbols from VMCOREINFO and
+# data available only through kernel virtual addresses.
+# No explicit version.
+#
+
+opts=(
+    arch=arm
+    ostype=linux
+    rootpgt=MACHPHYSADDR:0x40204000
+    phys_base=0x40000000
+    data_as=2
+)
+
+. "$srcdir"/xlat-os-common
