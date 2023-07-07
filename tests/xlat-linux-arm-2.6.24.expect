@@ -5,7 +5,7 @@
   pte_format=arm
   fields=12,8,12
 
-@ktext: LINEAR
+@direct: LINEAR
   target_as=KPHYSADDR
   off=0xffffffff80000000
 
@@ -23,7 +23,7 @@ KV -> HW:
 
 KV -> PHYS:
 0-c0203fff: @rootpgt
-c0204000-c0207fff: @ktext
+c0204000-c0207fff: @direct
 c0208000-ffffffff: @rootpgt
 100000000-ffffffffffffffff: NONE
 

@@ -207,10 +207,10 @@ init_pgt_meth(struct os_init_data *ctl, unsigned ttbcr_n)
 }
 
 static addrxlat_status
-map_ktext_linear(struct os_init_data *ctl, addrxlat_addr_t first,
-		 addrxlat_addr_t last, addrxlat_off_t off)
+map_direct(struct os_init_data *ctl, addrxlat_addr_t first,
+	   addrxlat_addr_t last, addrxlat_off_t off)
 {
-	addrxlat_meth_t *meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT];
+	addrxlat_meth_t *meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_DIRECT];
 	struct sys_region layout[2];
 
 	meth->kind = ADDRXLAT_LINEAR;
@@ -219,7 +219,7 @@ map_ktext_linear(struct os_init_data *ctl, addrxlat_addr_t first,
 
 	layout[0].first = first;
 	layout[0].last = last;
-	layout[0].meth = ADDRXLAT_SYS_METH_KTEXT;
+	layout[0].meth = ADDRXLAT_SYS_METH_DIRECT;
 	layout[0].act = SYS_ACT_NONE;
 
 	layout[1].meth = ADDRXLAT_SYS_METH_NUM;
@@ -281,9 +281,9 @@ map_linux_arm(struct os_init_data *ctl)
 
 		pgd_size = pf_table_size(&pgt->pf, pgt->pf.nfields - 1) <<
 			pteval_shift(ADDRXLAT_PTE_ARM);
-		status = map_ktext_linear(ctl, pgt->root.addr,
-					  pgt->root.addr + pgd_size - 1,
-					  ctl->popt.phys_base - page_base);
+		status = map_direct(ctl, pgt->root.addr,
+				    pgt->root.addr + pgd_size - 1,
+				    ctl->popt.phys_base - page_base);
 		if (status != ADDRXLAT_OK)
 			return status;
 	}
