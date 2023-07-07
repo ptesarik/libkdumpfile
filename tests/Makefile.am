@@ -387,6 +387,7 @@ dist_check_DATA = \
 	xlat-linux-aarch64-5.16-64k.data \
 	xlat-linux-aarch64-5.16-64k.expect \
 	xlat-linux-aarch64-5.16-64k.sym \
+	xlat-linux-arm-2.6.24.data \
 	xlat-linux-arm-2.6.24.expect \
 	xlat-linux-arm-2.6.24.sym \
 	xlat-linux-arm-2.6.24-kvaddr.expect \

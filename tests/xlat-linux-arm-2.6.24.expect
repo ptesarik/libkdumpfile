@@ -26,15 +26,15 @@ KV -> HW:
 100000000-ffffffffffffffff: NONE
 
 KV -> PHYS:
-0-c0203fff: @rootpgt
-c0204000-c0207fff: @direct
-c0208000-ffffffff: @rootpgt
+0-bfffffff: @rootpgt
+c0000000-efffffff: @direct
+f0000000-ffffffff: @rootpgt
 100000000-ffffffffffffffff: NONE
 
 KPHYS -> DIRECT:
-0-40203fff: NONE
-40204000-40207fff: @rdirect
-40208000-ffffffffffffffff: NONE
+0-3fffffff: NONE
+40000000-6fffffff: @rdirect
+70000000-ffffffffffffffff: NONE
 
 MACHPHYS -> KPHYS:
 0-ffffffffff: @machphys_kphys

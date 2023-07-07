@@ -206,6 +206,13 @@ init_pgt_meth(struct os_init_data *ctl, unsigned ttbcr_n)
 	meth->param.pgt.pf.fieldsz[2] -= ttbcr_n;
 }
 
+/** Set up direct and reverse direct mappings for an address range.
+ * @param ctl    Initialization data.
+ * @param first  First virtual address in range.
+ * @param last   Last virtual address in range.
+ * @param off    Offset from virtual to physical address.
+ * @returns	 Error status.
+ */
 static addrxlat_status
 map_direct(struct os_init_data *ctl, addrxlat_addr_t first,
 	   addrxlat_addr_t last, addrxlat_off_t off)
@@ -235,6 +242,40 @@ map_direct(struct os_init_data *ctl, addrxlat_addr_t first,
 	layout[0].act = SYS_ACT_RDIRECT;
 
 	return sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KPHYS_DIRECT, layout);
+}
+
+/** Determine and set up the complete direct mapping.
+ * @param ctl   Initialization data.
+ * @parma base  First virtual address in the direct mapping.
+ */
+static addrxlat_status
+set_linux_direct(struct os_init_data *ctl, addrxlat_addr_t base)
+{
+	addrxlat_addr_t last;
+	addrxlat_addr_t phys_base;
+	addrxlat_step_t step;
+	addrxlat_status status;
+
+	step.ctx = ctl->ctx;
+	step.sys = ctl->sys;
+	step.meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+
+	if (opt_isset(ctl->popt, phys_base)) {
+		phys_base = ctl->popt.phys_base;
+	} else {
+		step.base.addr = base;
+		status = internal_walk(&step);
+		if (status != ADDRXLAT_OK)
+			return status;
+		phys_base = step.base.addr;
+	}
+
+	last = base;
+	status = highest_linear(&step, &last, VIRTADDR_MAX, phys_base - base);
+	if (status != ADDRXLAT_OK)
+		return status;
+
+	return map_direct(ctl, base, last, phys_base - base);
 }
 
 /** Determine Linux page table root.
@@ -267,6 +308,7 @@ map_linux_arm(struct os_init_data *ctl)
 {
 	addrxlat_meth_t *meth;
 	addrxlat_param_pgt_t *pgt;
+	addrxlat_fulladdr_t page_base;
 	addrxlat_status status;
 
 	init_pgt_meth(ctl, 0);
@@ -279,27 +321,38 @@ map_linux_arm(struct os_init_data *ctl)
 			return status;
 	}
 
+	page_base.as = ADDRXLAT_NOADDR;
+	status = get_symval(ctl->ctx, "_stext", &page_base.addr);
+	if (status == ADDRXLAT_OK) {
+		page_base.addr &= ~LINUX_KVBASE_MASK;
+		page_base.as = ADDRXLAT_KVADDR;
+	}
+
 	if (!direct_read_ok(ctl->ctx, &pgt->root) &&
 	    opt_isset(ctl->popt, phys_base)) {
-		addrxlat_addr_t page_base, pgd_size, pgtvaddr;
+		addrxlat_addr_t pgd_size, pgtvaddr;
 
-		status = get_symval(ctl->ctx, "_stext", &page_base);
-		if (status != ADDRXLAT_OK)
+		if (page_base.as != ADDRXLAT_KVADDR)
 			return set_error(ctl->ctx, status,
 					 "Cannot determine PAGE_BASE");
-		page_base &= ~LINUX_KVBASE_MASK;
 
 		pgtvaddr = pgt->root.addr;
 		if (pgt->root.as == ADDRXLAT_MACHPHYSADDR)
-			pgtvaddr += page_base - ctl->popt.phys_base;
+			pgtvaddr += page_base.addr - ctl->popt.phys_base;
 
 		pgd_size = pf_table_size(&pgt->pf, pgt->pf.nfields - 1) <<
 			pteval_shift(ADDRXLAT_PTE_ARM);
 		status = map_direct(ctl, pgtvaddr,
 				    pgtvaddr + pgd_size - 1,
-				    ctl->popt.phys_base - page_base);
+				    ctl->popt.phys_base - page_base.addr);
 		if (status != ADDRXLAT_OK)
 			return status;
+	}
+
+	if (page_base.as == ADDRXLAT_KVADDR) {
+		status = set_linux_direct(ctl, page_base.addr);
+		if (status != ADDRXLAT_OK)
+			clear_error(ctl->ctx);
 	}
 
 	return ADDRXLAT_OK;
