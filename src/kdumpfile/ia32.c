@@ -70,29 +70,27 @@ struct elf_prstatus
 
 /** @endcond */
 
-#define REG(name, field, bits) \
-	{ { #name, { .depth = 1 }, KDUMP_NUMBER },	\
-	  offsetof(struct elf_prstatus, field), \
-	  (bits) / BITS_PER_BYTE }
+#define REG(name, field) \
+	DERIVED_NUMBER(#name, 1, struct elf_prstatus, field)
 
 static struct derived_attr_def ia32_reg_attrs[] = {
-	REG(ebx, pr_reg[0], 32),
-	REG(ecx, pr_reg[1], 32),
-	REG(edx, pr_reg[2], 32),
-	REG(esi, pr_reg[3], 32),
-	REG(edi, pr_reg[4], 32),
-	REG(ebp, pr_reg[5], 32),
-	REG(eax, pr_reg[6], 32),
-	REG(ds,  pr_reg[7], 32),
-	REG(es,  pr_reg[8], 32),
-	REG(fs,  pr_reg[9], 32),
-	REG(gs,  pr_reg[10], 32),
-	REG(orig_eax, pr_reg[11], 32),
-	REG(eip, pr_reg[12], 32),
-	REG(cs,  pr_reg[13], 32),
-	REG(eflags, pr_reg[14], 32),
-	REG(esp, pr_reg[15], 32),
-	REG(ss,  pr_reg[16], 32),
+	REG(ebx, pr_reg[0]),
+	REG(ecx, pr_reg[1]),
+	REG(edx, pr_reg[2]),
+	REG(esi, pr_reg[3]),
+	REG(edi, pr_reg[4]),
+	REG(ebp, pr_reg[5]),
+	REG(eax, pr_reg[6]),
+	REG(ds,  pr_reg[7]),
+	REG(es,  pr_reg[8]),
+	REG(fs,  pr_reg[9]),
+	REG(gs,  pr_reg[10]),
+	REG(orig_eax, pr_reg[11]),
+	REG(eip, pr_reg[12]),
+	REG(cs,  pr_reg[13]),
+	REG(eflags, pr_reg[14]),
+	REG(esp, pr_reg[15]),
+	REG(ss,  pr_reg[16]),
 	DERIVED_NUMBER("pid", 0, struct elf_prstatus, pr_pid),
 };
 

@@ -210,39 +210,37 @@ x86_64_post_addrxlat(kdump_ctx_t *ctx)
 	return revalidate_xlat(ctx);
 }
 
-#define REG(name, field, bits) \
-	{ { #name, { .depth = 1 }, KDUMP_NUMBER },	\
-	  offsetof(struct elf_prstatus, field), \
-	  (bits) / BITS_PER_BYTE }
+#define REG(name, field) \
+	DERIVED_NUMBER(#name, 1, struct elf_prstatus, field)
 
 static struct derived_attr_def x86_64_reg_attrs[] = {
-	REG(r15, pr_reg[0], 64),
-	REG(r14, pr_reg[1], 64),
-	REG(r13, pr_reg[2], 64),
-	REG(r12, pr_reg[3], 64),
-	REG(rbp, pr_reg[4], 64),
-	REG(rbx, pr_reg[5], 64),
-	REG(r11, pr_reg[6], 64),
-	REG(r10, pr_reg[7], 64),
-	REG(r9,  pr_reg[8], 64),
-	REG(r8,  pr_reg[9], 64),
-	REG(rax, pr_reg[10], 64),
-	REG(rcx, pr_reg[11], 64),
-	REG(rdx, pr_reg[12], 64),
-	REG(rsi, pr_reg[13], 64),
-	REG(rdi, pr_reg[14], 64),
-	REG(orig_rax, pr_reg[15], 64),
-	REG(rip, pr_reg[16], 64),
-	REG(cs,  pr_reg[17], 64),
-	REG(rflags, pr_reg[18], 64),
-	REG(rsp, pr_reg[19], 64),
-	REG(ss,  pr_reg[20], 64),
-	REG(fs_base, pr_reg[21], 64),
-	REG(gs_base, pr_reg[22], 64),
-	REG(ds, pr_reg[23], 64),
-	REG(es, pr_reg[24], 64),
-	REG(fs, pr_reg[25], 64),
-	REG(gs, pr_reg[26], 64),
+	REG(r15, pr_reg[0]),
+	REG(r14, pr_reg[1]),
+	REG(r13, pr_reg[2]),
+	REG(r12, pr_reg[3]),
+	REG(rbp, pr_reg[4]),
+	REG(rbx, pr_reg[5]),
+	REG(r11, pr_reg[6]),
+	REG(r10, pr_reg[7]),
+	REG(r9,  pr_reg[8]),
+	REG(r8,  pr_reg[9]),
+	REG(rax, pr_reg[10]),
+	REG(rcx, pr_reg[11]),
+	REG(rdx, pr_reg[12]),
+	REG(rsi, pr_reg[13]),
+	REG(rdi, pr_reg[14]),
+	REG(orig_rax, pr_reg[15]),
+	REG(rip, pr_reg[16]),
+	REG(cs,  pr_reg[17]),
+	REG(rflags, pr_reg[18]),
+	REG(rsp, pr_reg[19]),
+	REG(ss,  pr_reg[20]),
+	REG(fs_base, pr_reg[21]),
+	REG(gs_base, pr_reg[22]),
+	REG(ds, pr_reg[23]),
+	REG(es, pr_reg[24]),
+	REG(fs, pr_reg[25]),
+	REG(gs, pr_reg[26]),
 	DERIVED_NUMBER("pid", 0, struct elf_prstatus, pr_pid),
 };
 
