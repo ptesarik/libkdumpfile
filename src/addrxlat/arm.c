@@ -228,7 +228,7 @@ map_ktext_linear(struct os_init_data *ctl, addrxlat_addr_t first,
 }
 
 /** Determine Linux page table root.
- * @param ctl	     Initialization data.
+ * @param      ctx   Address translation context.
  * @param[out] root  Page table root address (set on successful return).
  * @returns	     Error status.
  *
@@ -236,39 +236,16 @@ map_ktext_linear(struct os_init_data *ctl, addrxlat_addr_t first,
  * determined; it merely stays uninitialized.
  */
 static addrxlat_status
-get_linux_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
+get_linux_pgtroot(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *root)
 {
 	addrxlat_status status;
 
-	status = get_symval(ctl->ctx, "swapper_pg_dir", &root->addr);
+	status = get_symval(ctx, "swapper_pg_dir", &root->addr);
 	if (status != ADDRXLAT_OK)
-		return set_error(ctl->ctx, status,
+		return set_error(ctx, status,
 				 "Cannot determine page table virtual address");
 	root->as = ADDRXLAT_KVADDR;
-
-	/* If the read callback can handle virtual addresses, we're done. */
-	if (direct_read_ok(ctl->ctx, root))
-		return ADDRXLAT_OK;
-
-	if (opt_isset(ctl->popt, phys_base)) {
-		addrxlat_addr_t page_base, pgd_size;
-		const addrxlat_paging_form_t *pf;
-
-		status = get_symval(ctl->ctx, "_stext", &page_base);
-		if (status != ADDRXLAT_OK)
-			return status;
-		page_base &= ~LINUX_KVBASE_MASK;
-
-		pf = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT].param.pgt.pf;
-		pgd_size = pf_table_size(pf, pf->nfields - 1) <<
-			pteval_shift(ADDRXLAT_PTE_ARM);
-		return map_ktext_linear(ctl, root->addr,
-					root->addr + pgd_size - 1,
-					ctl->popt.phys_base - page_base);
-	}
-
-	return set_error(ctl->ctx, ADDRXLAT_ERR_NOMETH,
-			 "No way to determine kernel physical location");
+	return ADDRXLAT_OK;
 }
 
 /** Initialize a translation map for Linux/arm.
@@ -279,13 +256,34 @@ static addrxlat_status
 map_linux_arm(struct os_init_data *ctl)
 {
 	addrxlat_meth_t *meth;
+	addrxlat_param_pgt_t *pgt;
 	addrxlat_status status;
 
 	init_pgt_meth(ctl, 0);
 
 	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
-	if (meth->param.pgt.root.as == ADDRXLAT_NOADDR) {
-		status = get_linux_pgtroot(ctl, &meth->param.pgt.root);
+	pgt = &meth->param.pgt;
+	if (pgt->root.as == ADDRXLAT_NOADDR) {
+		status = get_linux_pgtroot(ctl->ctx, &pgt->root);
+		if (status != ADDRXLAT_OK)
+			return status;
+	}
+
+	if (!direct_read_ok(ctl->ctx, &pgt->root) &&
+	    opt_isset(ctl->popt, phys_base)) {
+		addrxlat_addr_t page_base, pgd_size;
+
+		status = get_symval(ctl->ctx, "_stext", &page_base);
+		if (status != ADDRXLAT_OK)
+			return set_error(ctl->ctx, status,
+					 "Cannot determine PAGE_BASE");
+		page_base &= ~LINUX_KVBASE_MASK;
+
+		pgd_size = pf_table_size(&pgt->pf, pgt->pf.nfields - 1) <<
+			pteval_shift(ADDRXLAT_PTE_ARM);
+		status = map_ktext_linear(ctl, pgt->root.addr,
+					  pgt->root.addr + pgd_size - 1,
+					  ctl->popt.phys_base - page_base);
 		if (status != ADDRXLAT_OK)
 			return status;
 	}
