@@ -70,11 +70,6 @@ struct elf_prstatus
 
 /** @endcond */
 
-#define PRINFO(name, field, bits) \
-	{ { #name, { .depth = 0 }, KDUMP_NUMBER },	\
-	  offsetof(struct elf_prstatus, field), \
-	  (bits) / BITS_PER_BYTE }
-
 #define REG(name, field, bits) \
 	{ { #name, { .depth = 1 }, KDUMP_NUMBER },	\
 	  offsetof(struct elf_prstatus, field), \
@@ -98,7 +93,7 @@ static struct derived_attr_def ia32_reg_attrs[] = {
 	REG(eflags, pr_reg[14], 32),
 	REG(esp, pr_reg[15], 32),
 	REG(ss,  pr_reg[16], 32),
-	PRINFO(pid, pr_pid, 32),
+	DERIVED_NUMBER("pid", 0, struct elf_prstatus, pr_pid),
 };
 
 static kdump_status

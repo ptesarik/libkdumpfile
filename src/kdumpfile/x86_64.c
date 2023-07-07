@@ -210,11 +210,6 @@ x86_64_post_addrxlat(kdump_ctx_t *ctx)
 	return revalidate_xlat(ctx);
 }
 
-#define PRINFO(name, field, bits) \
-	{ { #name, { .depth = 0 }, KDUMP_NUMBER },	\
-	  offsetof(struct elf_prstatus, field), \
-	  (bits) / BITS_PER_BYTE }
-
 #define REG(name, field, bits) \
 	{ { #name, { .depth = 1 }, KDUMP_NUMBER },	\
 	  offsetof(struct elf_prstatus, field), \
@@ -248,7 +243,7 @@ static struct derived_attr_def x86_64_reg_attrs[] = {
 	REG(es, pr_reg[24], 64),
 	REG(fs, pr_reg[25], 64),
 	REG(gs, pr_reg[26], 64),
-	PRINFO(pid, pr_pid, 32),
+	DERIVED_NUMBER("pid", 0, struct elf_prstatus, pr_pid),
 };
 
 static kdump_status

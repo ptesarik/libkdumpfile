@@ -96,6 +96,7 @@
 
 /* General macros */
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+#define sizeof_field(type, member) sizeof((((type *)0)->member))
 
 /** Bits per byte.
  * Use this instead of a magic constant to illustrate why something
@@ -813,6 +814,15 @@ struct derived_attr_def {
 	/** Length in bytes. */
 	unsigned short length;
 };
+
+#define DERIVED_NUMBER(k, d, t, f) {	\
+	{ .key = k,			\
+	  { .depth = d },		\
+	  .type = KDUMP_NUMBER		\
+	},				\
+	.offset = offsetof(t, f),	\
+	.length = sizeof_field(t, f)	\
+}
 
 /** Get pointer to the definition of a derived attribute.
  *

@@ -268,11 +268,6 @@ struct elf_prstatus
 	/* optional UNUSED fields may follow */
 } __attribute__((packed));
 
-#define PRINFO(name, field, bits) \
-	{ { #name, { .depth = 0 }, KDUMP_NUMBER },	\
-	  offsetof(struct elf_prstatus, field), \
-	  (bits) / BITS_PER_BYTE }
-
 #define REG(name, field, bits) \
 	{ { #name, { .depth = 1 }, KDUMP_NUMBER },	\
 	  offsetof(struct elf_prstatus, field), \
@@ -314,7 +309,7 @@ static struct derived_attr_def s390x_reg_attrs[] = {
 	REG(a14, pr_reg.acrs[14], 32),
 	REG(a15, pr_reg.acrs[15], 32),
 	REG(orig_gpr2, pr_reg.orig_gpr2, 64),
-	PRINFO(pid, pr_pid, 32),
+	DERIVED_NUMBER("pid", 0, struct elf_prstatus, pr_pid),
 };
 
 static kdump_status
