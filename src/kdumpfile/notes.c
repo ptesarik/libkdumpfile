@@ -162,7 +162,6 @@ static kdump_status
 process_xen_crash_info(kdump_ctx_t *ctx, void *data, size_t len)
 {
 	size_t ptr_size = get_ptr_size(ctx);
-	unsigned words = len / ptr_size;
 	int version;
 	unsigned long major, minor;
 	kdump_vaddr_t extra;
@@ -180,7 +179,8 @@ process_xen_crash_info(kdump_ctx_t *ctx, void *data, size_t len)
 		minor = dump64toh(ctx, info->xen_minor_version);
 		extra = dump64toh(ctx, info->xen_extra_version);
 		if (len > sizeof(struct xen_crash_info_64)) {
-			p2m_mfn = dump64toh(ctx, ((uint64_t*)data)[words-1]);
+			void *p = data + ((len - 8) & ~7UL);
+			p2m_mfn = dump64toh(ctx, get_unaligned_uint64_t(p));
 			version = 1;
 		}
 		if (ctx->shared->arch_ops == &x86_64_ops &&
@@ -196,8 +196,9 @@ process_xen_crash_info(kdump_ctx_t *ctx, void *data, size_t len)
 		minor = dump32toh(ctx, info->xen_minor_version);
 		extra = dump32toh(ctx, info->xen_extra_version);
 		if (len > sizeof(struct xen_crash_info_64)) {
+			void *p = data + ((len - 4) & ~3UL);
+			p2m_mfn = dump32toh(ctx, *(uint32_t*)p);
 			version = 1;
-			p2m_mfn = dump32toh(ctx, ((uint32_t*)data)[words-1]);
 		}
 		if (ctx->shared->arch_ops == &ia32_ops &&
 		    len >= sizeof(struct xen_crash_info_x86)) {

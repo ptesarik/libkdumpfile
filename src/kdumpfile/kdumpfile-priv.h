@@ -847,8 +847,7 @@ INTERNAL_DECL(kdump_status, create_xen_cpu_regs,
 	       struct derived_attr_def *def, unsigned ndef));
 
 /* unaligned access */
-struct unaligned_long
-{
+struct unaligned_long {
 	unsigned long val;
 } __attribute__((packed));
 
@@ -858,6 +857,15 @@ get_unaligned_long(const unsigned char *p)
 	return ((struct unaligned_long*)p)->val;
 }
 
+struct unaligned_uint64_t {
+	uint64_t val;
+} __attribute__((packed));
+
+static inline uint64_t
+get_unaligned_uint64_t(const unsigned char *p)
+{
+	return ((struct unaligned_uint64_t*)p)->val;
+}
 
 /* hashing */
 INTERNAL_DECL(unsigned long, mem_hash, (const char *s, size_t len));
