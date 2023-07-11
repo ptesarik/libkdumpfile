@@ -98,8 +98,10 @@ struct disk_dump_header_64 {
 	uint64_t		tasks[0];	/* "struct task_struct *" */
 } __attribute__((packed));
 
-/* Sub header for KDUMP */
-struct kdump_sub_header_32 {
+/* Sub header for KDUMP on 32-bit architectures with 64-bit entities aligned
+ * to 32 bits (e.g. Intel IA-32).
+ */
+struct kdump_sub_header_32pack {
 	uint32_t	phys_base;
 	int32_t		dump_level;	   /* header_version 1 and later */
 	int32_t		split;		   /* header_version 2 and later */
@@ -115,6 +117,34 @@ struct kdump_sub_header_32 {
 	uint32_t	size_note;	   /* header_version 4 and later */
 	uint64_t	offset_eraseinfo;  /* header_version 5 and later */
 	uint32_t	size_eraseinfo;	   /* header_version 5 and later */
+	uint64_t	start_pfn_64;	   /* header_version 6 and later */
+	uint64_t	end_pfn_64;	   /* header_version 6 and later */
+	uint64_t	max_mapnr_64;	   /* header_version 6 and later */
+} __attribute__((packed));
+
+/* Sub header for KDUMP on 32-bit architectures with 64-bit entities aligned
+ * to 64 bits (e.g. AArch32).
+ */
+struct kdump_sub_header_32pad {
+	uint32_t	phys_base;
+	int32_t		dump_level;	   /* header_version 1 and later */
+	int32_t		split;		   /* header_version 2 and later */
+	uint32_t	start_pfn;	   /* header_version 2 and later,
+					      OBSOLETE! 32bit only, full
+					      64bit in start_pfn_64. */
+	uint32_t	end_pfn;	   /* header_version 2 and later,
+					      OBSOLETE! 32bit only, full
+					      64bit in end_pfn_64. */
+	char		_pad1[4];	   /* alignment */
+	uint64_t	offset_vmcoreinfo; /* header_version 3 and later */
+	uint32_t	size_vmcoreinfo;   /* header_version 3 and later */
+	char		_pad2[4];	   /* alignment */
+	uint64_t	offset_note;	   /* header_version 4 and later */
+	uint32_t	size_note;	   /* header_version 4 and later */
+	char		_pad3[4];	   /* alignment */
+	uint64_t	offset_eraseinfo;  /* header_version 5 and later */
+	uint32_t	size_eraseinfo;	   /* header_version 5 and later */
+	char		_pad4[4];	   /* alignment */
 	uint64_t	start_pfn_64;	   /* header_version 6 and later */
 	uint64_t	end_pfn_64;	   /* header_version 6 and later */
 	uint64_t	max_mapnr_64;	   /* header_version 6 and later */
@@ -177,6 +207,7 @@ struct setup_data {
 	off_t note_off;
 	size_t note_sz;
 	int_fast32_t header_version;
+	int_fast32_t sub_hdr_blocks;
 };
 
 /* flags */
@@ -635,10 +666,89 @@ try_header(kdump_ctx_t *ctx, int32_t block_size,
 }
 
 static kdump_status
+parse_sub_hdr_32pack(struct setup_data *sdp, struct pfn_file_map *pdmap,
+		     const struct kdump_sub_header_32pack *sh)
+{
+	kdump_ctx_t *ctx = sdp->ctx;
+	kdump_status ret;
+
+	set_phys_base(ctx, dump32toh(ctx, sh->phys_base));
+
+	if (sdp->header_version >= 4) {
+		sdp->note_off = dump64toh(ctx, sh->offset_note);
+		sdp->note_sz = dump32toh(ctx, sh->size_note);
+	} else if (sdp->header_version >= 3) {
+		ret = read_vmcoreinfo(ctx,
+				      dump64toh(ctx, sh->offset_vmcoreinfo),
+				      dump32toh(ctx, sh->size_vmcoreinfo));
+		if (ret != KDUMP_OK)
+			return ret;
+	}
+
+	pdmap->start_pfn = 0;
+	pdmap->end_pfn = KDUMP_PFN_MAX;
+	if (sdp->header_version >= 2 && sh->split) {
+		pdmap->start_pfn = dump32toh(ctx, sh->start_pfn);
+		pdmap->end_pfn = dump32toh(ctx, sh->end_pfn);
+	}
+	if (sdp->header_version >= 6) {
+		if (sh->split) {
+			pdmap->start_pfn = dump64toh(ctx, sh->start_pfn_64);
+			pdmap->end_pfn = dump64toh(ctx, sh->end_pfn_64);
+		}
+		set_max_pfn(ctx, dump64toh(ctx, sh->max_mapnr_64));
+	}
+
+	return KDUMP_OK;
+}
+
+static kdump_status
+parse_sub_hdr_32pad(struct setup_data *sdp, struct pfn_file_map *pdmap,
+		    const struct kdump_sub_header_32pad *sh)
+{
+	kdump_ctx_t *ctx = sdp->ctx;
+	kdump_status ret;
+
+	set_phys_base(ctx, dump32toh(ctx, sh->phys_base));
+
+	if (sdp->header_version >= 4) {
+		sdp->note_off = dump64toh(ctx, sh->offset_note);
+		sdp->note_sz = dump32toh(ctx, sh->size_note);
+	} else if (sdp->header_version >= 3) {
+		ret = read_vmcoreinfo(ctx,
+				      dump64toh(ctx, sh->offset_vmcoreinfo),
+				      dump32toh(ctx, sh->size_vmcoreinfo));
+		if (ret != KDUMP_OK)
+			return ret;
+	}
+
+	pdmap->start_pfn = 0;
+	pdmap->end_pfn = KDUMP_PFN_MAX;
+	if (sdp->header_version >= 2 && sh->split) {
+		pdmap->start_pfn = dump32toh(ctx, sh->start_pfn);
+		pdmap->end_pfn = dump32toh(ctx, sh->end_pfn);
+	}
+	if (sdp->header_version >= 6) {
+		if (sh->split) {
+			pdmap->start_pfn = dump64toh(ctx, sh->start_pfn_64);
+			pdmap->end_pfn = dump64toh(ctx, sh->end_pfn_64);
+		}
+		set_max_pfn(ctx, dump64toh(ctx, sh->max_mapnr_64));
+	}
+
+	return KDUMP_OK;
+}
+
+static kdump_status
 read_sub_hdr_32(struct setup_data *sdp, struct pfn_file_map *pdmap)
 {
 	kdump_ctx_t *ctx = sdp->ctx;
-	struct kdump_sub_header_32 subhdr;
+	union {
+		struct kdump_sub_header_32pack pack;
+		struct kdump_sub_header_32pad pad;
+	} subhdr;
+	uint_fast64_t off_payload, off_vmci;
+	uint_fast32_t sz_vmci;
 	kdump_status ret;
 
 	if (sdp->header_version < 0)
@@ -655,34 +765,19 @@ read_sub_hdr_32(struct setup_data *sdp, struct pfn_file_map *pdmap)
 		return set_error(ctx, ret,
 				 "Cannot read subheader");
 
-	set_phys_base(ctx, dump32toh(ctx, subhdr.phys_base));
+	/* No differences in layout up to version 2 */
+	if (sdp->header_version < 3)
+		return parse_sub_hdr_32pack(sdp, pdmap, &subhdr.pack);
 
-	if (sdp->header_version >= 4) {
-		sdp->note_off = dump64toh(ctx, subhdr.offset_note);
-		sdp->note_sz = dump32toh(ctx, subhdr.size_note);
-	} else if (sdp->header_version >= 3) {
-		ret = read_vmcoreinfo(ctx,
-				      dump64toh(ctx, subhdr.offset_vmcoreinfo),
-				      dump32toh(ctx, subhdr.size_vmcoreinfo));
-		if (ret != KDUMP_OK)
-			return ret;
-	}
-
-	pdmap->start_pfn = 0;
-	pdmap->end_pfn = KDUMP_PFN_MAX;
-	if (sdp->header_version >= 2 && subhdr.split) {
-		pdmap->start_pfn = dump32toh(ctx, subhdr.start_pfn);
-		pdmap->end_pfn = dump32toh(ctx, subhdr.end_pfn);
-	}
-	if (sdp->header_version >= 6) {
-		if (subhdr.split) {
-			pdmap->start_pfn = dump64toh(ctx, subhdr.start_pfn_64);
-			pdmap->end_pfn = dump64toh(ctx, subhdr.end_pfn_64);
-		}
-		set_max_pfn(ctx, dump64toh(ctx, subhdr.max_mapnr_64));
-	}
-
-	return KDUMP_OK;
+	off_payload = get_page_size(ctx) * (1 + sdp->sub_hdr_blocks);
+	off_vmci = dump64toh(ctx, subhdr.pack.offset_vmcoreinfo);
+	sz_vmci = dump32toh(ctx, subhdr.pack.size_vmcoreinfo);
+	if ((!off_vmci && !sz_vmci) ||
+	    (off_vmci > get_page_size(ctx) &&
+	     off_vmci + sz_vmci <= off_payload))
+		return parse_sub_hdr_32pack(sdp, pdmap, &subhdr.pack);
+	else
+		return parse_sub_hdr_32pad(sdp, pdmap, &subhdr.pad);
 }
 
 static kdump_status
@@ -716,11 +811,12 @@ do_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh,
 		if (ret != KDUMP_OK)
 			break;
 
+		sdp->sub_hdr_blocks = dump32toh(ctx, dh->sub_hdr_size);
 		ret = read_sub_hdr_32(sdp, pdmap);
 		if (ret != KDUMP_OK)
 			break;
 
-		ret = read_bitmap(ctx, pdmap, dump32toh(ctx, dh->sub_hdr_size),
+		ret = read_bitmap(ctx, pdmap, sdp->sub_hdr_blocks,
 				  dump32toh(ctx, dh->bitmap_blocks));
 		if (ret != KDUMP_OK)
 			break;
@@ -836,11 +932,12 @@ do_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh,
 		if (ret != KDUMP_OK)
 			break;
 
+		sdp->sub_hdr_blocks = dump32toh(ctx, dh->sub_hdr_size);
 		ret = read_sub_hdr_64(sdp, pdmap);
 		if (ret != KDUMP_OK)
 			break;
 
-		ret = read_bitmap(ctx, pdmap, dump32toh(ctx, dh->sub_hdr_size),
+		ret = read_bitmap(ctx, pdmap, sdp->sub_hdr_blocks,
 				  dump32toh(ctx, dh->bitmap_blocks));
 		if (ret != KDUMP_OK)
 			break;

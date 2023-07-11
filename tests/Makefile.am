@@ -199,6 +199,8 @@ test_scripts = \
 	diskdump-multiread \
 	diskdump-excluded \
 	diskdump-split \
+	diskdump-v6-arm \
+	diskdump-v6-ia32 \
 	early-version-code \
 	elf-empty-aarch64 \
 	elf-empty-i386 \

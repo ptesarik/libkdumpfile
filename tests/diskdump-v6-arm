@@ -1,0 +1,55 @@
+#! /bin/sh
+
+#
+# diskdump-v6-arm
+#
+# Check ELF notes and VMCOREINFO in a sample 32-bit Arm diskdump.
+#
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+dumpfile="$srcdir/binary/${name}"
+resultfile="out/${name}.result"
+expectfile="$srcdir/basic.expect"
+
+./checkattr "$dumpfile" <<EOF
+max_pfn = number: 1
+linux.phys_base = address: 0
+linux.vmcoreinfo.lines.OSRELEASE = string: 6.4.3-1-default
+linux.vmcoreinfo.lines.PAGESIZE = string: 4096
+linux.vmcoreinfo.lines.CRASHTIME = string: 1689103980
+linux.uts.domainname = string:
+linux.uts.machine = string: armv7l
+linux.uts.version = string: #1 SMP Tue Jul 11 11:43:43 UTC 2023
+linux.uts.release = string: 6.4.3-1-default
+linux.uts.nodename = string: kdump
+linux.uts.sysname = string: Linux
+linux.version_code = number: 394243
+file.pagemap = bitmap: 1
+file.set.number = number: 1
+file.format = string: diskdump
+cpu.number = number: 2
+cpu.0.pid = number: 5752
+cpu.0.reg.pc = number: 0xc0437054
+cpu.1.pid = number: 0
+cpu.1.reg.pc = number: 0xc0fb3de4
+memory.pagemap = bitmap: 1
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Attribute check failed" >&2
+    exit $rc
+fi
+
+./dumpdata "$dumpfile" 0 4096 >"$resultfile"
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot dump DISKDUMP data" >&2
+    exit $rc
+fi
+
+if ! diff "$expectfile" "$resultfile"; then
+    echo "Results do not match" >&2
+    exit 1
+fi

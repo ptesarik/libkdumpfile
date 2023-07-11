@@ -1,0 +1,53 @@
+#! /bin/sh
+
+#
+# diskdump-v6-ia32
+#
+# Check ELF notes and VMCOREINFO in a sample Intel IA-32 diskdump.
+#
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+dumpfile="$srcdir/binary/${name}"
+resultfile="out/${name}.result"
+expectfile="$srcdir/basic.expect"
+
+./checkattr "$dumpfile" <<EOF
+max_pfn = number: 1
+linux.phys_base = address: 0
+linux.vmcoreinfo.lines.OSRELEASE = string: 6.4.3-1-pae
+linux.vmcoreinfo.lines.PAGESIZE = string: 4096
+linux.vmcoreinfo.lines.CRASHTIME = string: 1689098337
+linux.uts.domainname = string:
+linux.uts.machine = string: i686
+linux.uts.version = string: #1 SMP Tue Jul 11 11:31:04 UTC 2023
+linux.uts.release = string: 6.4.3-1-pae
+linux.uts.nodename = string: kdump
+linux.uts.sysname = string: Linux
+linux.version_code = number: 394243
+file.pagemap = bitmap: 1
+file.set.number = number: 1
+file.format = string: diskdump
+cpu.number = number: 1
+cpu.0.pid = number: 3539
+cpu.0.reg.eip = number: 0xc04b0b5f
+memory.pagemap = bitmap: 1
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Attribute check failed" >&2
+    exit $rc
+fi
+
+./dumpdata "$dumpfile" 0 4096 >"$resultfile"
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot dump DISKDUMP data" >&2
+    exit $rc
+fi
+
+if ! diff "$expectfile" "$resultfile"; then
+    echo "Results do not match" >&2
+    exit 1
+fi
