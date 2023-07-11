@@ -176,6 +176,7 @@ struct setup_data {
 	kdump_ctx_t *ctx;
 	off_t note_off;
 	size_t note_sz;
+	int_fast32_t header_version;
 };
 
 /* flags */
@@ -634,19 +635,18 @@ try_header(kdump_ctx_t *ctx, int32_t block_size,
 }
 
 static kdump_status
-read_sub_hdr_32(struct setup_data *sdp, struct pfn_file_map *pdmap,
-		int32_t header_version)
+read_sub_hdr_32(struct setup_data *sdp, struct pfn_file_map *pdmap)
 {
 	kdump_ctx_t *ctx = sdp->ctx;
 	struct kdump_sub_header_32 subhdr;
 	kdump_status ret;
 
-	if (header_version < 0)
+	if (sdp->header_version < 0)
 		return set_error(ctx, KDUMP_ERR_CORRUPT,
-				 "Invalid header version: %lu",
-				 (unsigned long) header_version);
+				 "Invalid header version: %ld",
+				 (long) sdp->header_version);
 
-	if (header_version < 1)
+	if (sdp->header_version < 1)
 		return KDUMP_OK;
 
 	ret = fcache_pread(ctx->shared->fcache, &subhdr, sizeof subhdr,
@@ -657,10 +657,10 @@ read_sub_hdr_32(struct setup_data *sdp, struct pfn_file_map *pdmap,
 
 	set_phys_base(ctx, dump32toh(ctx, subhdr.phys_base));
 
-	if (header_version >= 4) {
+	if (sdp->header_version >= 4) {
 		sdp->note_off = dump64toh(ctx, subhdr.offset_note);
 		sdp->note_sz = dump32toh(ctx, subhdr.size_note);
-	} else if (header_version >= 3) {
+	} else if (sdp->header_version >= 3) {
 		ret = read_vmcoreinfo(ctx,
 				      dump64toh(ctx, subhdr.offset_vmcoreinfo),
 				      dump32toh(ctx, subhdr.size_vmcoreinfo));
@@ -670,11 +670,11 @@ read_sub_hdr_32(struct setup_data *sdp, struct pfn_file_map *pdmap,
 
 	pdmap->start_pfn = 0;
 	pdmap->end_pfn = KDUMP_PFN_MAX;
-	if (header_version >= 2 && subhdr.split) {
+	if (sdp->header_version >= 2 && subhdr.split) {
 		pdmap->start_pfn = dump32toh(ctx, subhdr.start_pfn);
 		pdmap->end_pfn = dump32toh(ctx, subhdr.end_pfn);
 	}
-	if (header_version >= 6) {
+	if (sdp->header_version >= 6) {
 		if (subhdr.split) {
 			pdmap->start_pfn = dump64toh(ctx, subhdr.start_pfn_64);
 			pdmap->end_pfn = dump64toh(ctx, subhdr.end_pfn_64);
@@ -696,6 +696,7 @@ do_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh,
 
 	set_byte_order(ctx, byte_order);
 	set_ptr_size(ctx, 4);
+	sdp->header_version = dump32toh(ctx, dh->header_version);
 
 	ret = KDUMP_OK;
 	for (fidx = 0; fidx < get_num_files(ctx); ++fidx) {
@@ -715,8 +716,7 @@ do_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh,
 		if (ret != KDUMP_OK)
 			break;
 
-		ret = read_sub_hdr_32(sdp, pdmap,
-				      dump32toh(ctx, dh->header_version));
+		ret = read_sub_hdr_32(sdp, pdmap);
 		if (ret != KDUMP_OK)
 			break;
 
@@ -755,19 +755,18 @@ try_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh)
 }
 
 static kdump_status
-read_sub_hdr_64(struct setup_data *sdp, struct pfn_file_map *pdmap,
-		int32_t header_version)
+read_sub_hdr_64(struct setup_data *sdp, struct pfn_file_map *pdmap)
 {
 	kdump_ctx_t *ctx = sdp->ctx;
 	struct kdump_sub_header_64 subhdr;
 	kdump_status ret;
 
-	if (header_version < 0)
+	if (sdp->header_version < 0)
 		return set_error(ctx, KDUMP_ERR_CORRUPT,
-				 "Invalid header version: %lu",
-				 (unsigned long) header_version);
+				 "Invalid header version: %ld",
+				 (long) sdp->header_version);
 
-	if (header_version < 1)
+	if (sdp->header_version < 1)
 		return KDUMP_OK;
 
 	ret = fcache_pread(ctx->shared->fcache, &subhdr, sizeof subhdr,
@@ -778,10 +777,10 @@ read_sub_hdr_64(struct setup_data *sdp, struct pfn_file_map *pdmap,
 
 	set_phys_base(ctx, dump64toh(ctx, subhdr.phys_base));
 
-	if (header_version >= 4) {
+	if (sdp->header_version >= 4) {
 		sdp->note_off = dump64toh(ctx, subhdr.offset_note);
 		sdp->note_sz = dump64toh(ctx, subhdr.size_note);
-	} else if (header_version >= 3) {
+	} else if (sdp->header_version >= 3) {
 		ret = read_vmcoreinfo(ctx,
 				      dump64toh(ctx, subhdr.offset_vmcoreinfo),
 				      dump64toh(ctx, subhdr.size_vmcoreinfo));
@@ -791,11 +790,11 @@ read_sub_hdr_64(struct setup_data *sdp, struct pfn_file_map *pdmap,
 
 	pdmap->start_pfn = 0;
 	pdmap->end_pfn = KDUMP_PFN_MAX;
-	if (header_version >= 2 && subhdr.split) {
+	if (sdp->header_version >= 2 && subhdr.split) {
 		pdmap->start_pfn = dump64toh(ctx, subhdr.start_pfn);
 		pdmap->end_pfn = dump64toh(ctx, subhdr.end_pfn);
 	}
-	if (header_version >= 6) {
+	if (sdp->header_version >= 6) {
 		if (subhdr.split) {
 			pdmap->start_pfn = dump64toh(ctx, subhdr.start_pfn_64);
 			pdmap->end_pfn = dump64toh(ctx, subhdr.end_pfn_64);
@@ -817,6 +816,7 @@ do_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh,
 
 	set_byte_order(ctx, byte_order);
 	set_ptr_size(ctx, 8);
+	sdp->header_version = dump32toh(ctx, dh->header_version);
 
 	ret = KDUMP_OK;
 	for (fidx = 0; fidx < get_num_files(ctx); ++fidx) {
@@ -836,8 +836,7 @@ do_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh,
 		if (ret != KDUMP_OK)
 			break;
 
-		ret = read_sub_hdr_64(sdp, pdmap,
-				      dump32toh(ctx, dh->header_version));
+		ret = read_sub_hdr_64(sdp, pdmap);
 		if (ret != KDUMP_OK)
 			break;
 
