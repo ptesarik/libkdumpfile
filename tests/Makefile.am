@@ -123,6 +123,7 @@ check_PROGRAMS = \
 	elf-prstatus-mod-x86_64 \
 	err-addrxlat \
 	fdset \
+	mkbinary \
 	mkdiskdump \
 	mksadump \
 	mkelf \
@@ -326,6 +327,8 @@ dist_check_DATA = \
 	addrmap-overlap-begin.expect \
 	addrmap-overlap-end.expect \
 	addrmap-reduce.expect \
+	diskdump-v6-arm.data \
+	diskdump-v6-ia32.data \
 	early-version-code.data \
 	early-version-code.expect \
 	elf-empty.data \

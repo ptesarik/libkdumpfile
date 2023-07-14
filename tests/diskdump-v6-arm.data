@@ -1,0 +1,179 @@
+##################################################################
+###
+### FILE HEADER
+###
+@0x0000
+"KDUMP   "	# signature
+00000006	# header version
+
+# utsname:
+  "Linux" 00*60		# sysname
+  "kdump" 00*60		# nodename
+  "6.4.3-1-default" 00*50 # release
+  "#1 SMP Tue Jul 11 11:43:43 UTC 2023" 00*30 # version
+  "armv7l" 00*59	# machine
+  00*65			# domainname
+
+00*2		# 2-byte hole
+64adae6c	# timestamp.tv_sec
+00000000	# timestamp.tv_usec
+00000000	# status
+00001000	# block_size
+00000001	# sub_hdr_size
+00000002	# bitmap_blocks
+00000001	# max_mapnr
+00000000	# total_ram_blocks
+00000000	# device_blocks (unused)
+00000000	# written_blocks (unused)
+00000000	# current_cpu
+00000002	# nr_cpus
+# tasks[] (unused)
+
+##################################################################
+###
+### SUB-HEADER
+###
+@0x1000
+00000000		# phys_base
+00000000		# dump_level
+00000000		# split
+00000000		# start_pfn
+00000000		# end_pfn
+00*4			# 4-byte hole
+0000000000001368	# offset_vmcoreinfo
+0000003d		# size_vmcoreinfo
+00*4			# 4-byte hole
+0000000000001200	# offset_note
+000001a8		# size_note
+00*4			# 4-byte hole
+0000000000000000	# offset_eraseinfo
+00000000		# size_eraseinfo
+00*4			# 4-byte hole
+0000000000000000	# start_pfn_64
+0000000000000000	# end_pfn_64
+0000000000000001	# max_mapnr_64
+
+##################################################################
+###
+### ELF NOTES
+###
+@0x1200
+
+# PRSTATUS #0:
+00000005	# n_namesz
+00000094	# n_descsz
+00000001	# n_type (NT_PRSTATUS)
+"CORE" 00*4	# note name
+00000000	# pr_info.si_signo
+00000000	# pr_info.si_code
+00000000	# pr_info.si_errno
+0000		# pr_cursig
+00*2		# 2-byte hole
+00000000	# pr_sigpend
+00000000	# pr_sighold
+00001678	# pr_pid
+00000000	# pr_ppid
+00000000	# pr_pgrp
+00000000	# pr_sid
+00000000	# pr_utime.tv_sec
+00000000	# pr_utime.tv_usec
+00000000	# pr_stime.tv_sec
+00000000	# pr_stime.tv_usec
+00000000	# pr_cutime.tv_sec
+00000000	# pr_cutime.tv_usec
+00000000	# pr_cstime.tv_sec
+00000000	# pr_cstime.tv_usec
+00000000        # pr_reg[0] (r0)
+c2156748        # pr_reg[1] (r1)
+00000001        # pr_reg[2] (r2)
+d95ffa00        # pr_reg[3] (r3)
+c219c1c8        # pr_reg[4] (r4)
+f09a1db4        # pr_reg[5] (r5)
+c1f27df0        # pr_reg[6] (r6)
+c162446c        # pr_reg[7] (r7)
+00000000        # pr_reg[8] (r8)
+00000007        # pr_reg[9] (r9)
+c1195fe8        # pr_reg[10] (r10)
+f09a1e14        # pr_reg[11] (fp)
+00000000        # pr_reg[12] (ip)
+f09a1db0        # pr_reg[13] (sp)
+00000000        # pr_reg[14] (lr)
+c0437054        # pr_reg[15] (pc)
+60000093        # pr_reg[16] (cpsr)
+f09a1e14	# pr_reg[17] (orig_r0)
+00000000	# pr_fpvalid
+
+# PRSTATUS #1:
+00000005	# n_namesz
+00000094	# n_descsz
+00000001	# n_type (NT_PRSTATUS)
+"CORE" 00*4	# note name
+00000000	# pr_info.si_signo
+00000000	# pr_info.si_code
+00000000	# pr_info.si_errno
+0000		# pr_cursig
+00*2		# 2-byte hole
+00000000	# pr_sigpend
+00000000	# pr_sighold
+00000000	# pr_pid
+00000000	# pr_ppid
+00000000	# pr_pgrp
+00000000	# pr_sid
+00000000	# pr_utime.tv_sec
+00000000	# pr_utime.tv_usec
+00000000	# pr_stime.tv_sec
+00000000	# pr_stime.tv_usec
+00000000	# pr_cutime.tv_sec
+00000000	# pr_cutime.tv_usec
+00000000	# pr_cstime.tv_sec
+00000000	# pr_cstime.tv_usec
+00000003        # pr_reg[0] (r0)
+00000001        # pr_reg[1] (r1)
+00000001        # pr_reg[2] (r2)
+40000000        # pr_reg[3] (r3)
+c258c080        # pr_reg[4] (r4)
+00000001        # pr_reg[5] (r5)
+c1f0b094        # pr_reg[6] (r6)
+00000000        # pr_reg[7] (r7)
+00000000        # pr_reg[8] (r8)
+c1f0b114        # pr_reg[9] (r9)
+c1f0b0f4        # pr_reg[10] (r10)
+f087df7c        # pr_reg[11] (fp)
+0028b74c        # pr_reg[12] (ip)
+f087df68        # pr_reg[13] (sp)
+c0fb26d8        # pr_reg[14] (lr)
+c0fb3de4        # pr_reg[15] (pc)
+600f0013        # pr_reg[16] (cpsr)
+ffffffff        # pr_reg[17] (orig_r0)
+00000000	# pr_fpvalid
+
+# VMCOREINFO:
+0000000b        # n_namesz
+0000003d        # n_descsz
+00000000	# t_type (zero)
+"VMCOREINFO" 00*2	# note name
+"OSRELEASE=6.4.3-1-default\n"
+"PAGESIZE=4096\n"
+"CRASHTIME=1689103980\n"
+
+##################################################################
+###
+### BITMAP BLOCKS
+###
+@0x2000
+01
+@0x3000
+01
+
+##################################################################
+###
+### PAGE DATA
+###
+@0x4000
+0000000000004018	# offset
+00001000		# size
+00000000		# flags (uncompressed)
+0000000000000000	# page_flags
+
+@0x4018
+# data to be appended here..

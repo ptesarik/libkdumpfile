@@ -9,9 +9,18 @@
 mkdir -p out || exit 99
 
 name=$( basename "$0" )
-dumpfile="$srcdir/binary/${name}"
+datafile="$srcdir/${name}.data"
+dumpfile="out/${name}.dump"
 resultfile="out/${name}.result"
 expectfile="$srcdir/basic.expect"
+
+cat "$datafile" "$expectfile" | ./mkbinary "$dumpfile"
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create DISKDUMP file" >&2
+    exit $rc
+fi
+echo "Created DISKDUMP: $dumpfile"
 
 ./checkattr "$dumpfile" <<EOF
 max_pfn = number: 1
