@@ -85,7 +85,6 @@ static struct derived_attr_def arm_reg_attrs[] = {
 	REG(lr, pr_reg[14]),
 	REG(pc,  pr_reg[15]),
 	REG(cpsr, pr_reg[16]),
-	REG(cpsr, pr_reg[16]),
 	REG(orig_r0, pr_reg[17]),
 	DERIVED_NUMBER("pid", 0, struct elf_prstatus, pr_pid),
 };
