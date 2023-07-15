@@ -376,8 +376,7 @@ kdump_open_fdset(kdump_ctx_t *ctx, unsigned nfds, const int *fds)
 					 fds[dir->template->fidx]);
 		if (status != KDUMP_OK)
 			return set_error(ctx, status,
-					 "Cannot set file.set.%zu.fd",
-					 dir->template->fidx);
+					 "File #%zu", dir->template->fidx);
 	}
 
 	return KDUMP_OK;
