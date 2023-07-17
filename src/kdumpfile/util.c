@@ -1288,3 +1288,37 @@ set_file_description(kdump_ctx_t *ctx, const char *name)
 	return set_attr_static_string(ctx, gattr(ctx, GKI_file_description),
 				      ATTR_DEFAULT, name);
 }
+
+/** Read a blob attribute from file.
+ * @param ctx   Dump file object.
+ * @param fidx  File index.
+ * @param off   File offset.
+ * @param size  Size of the blob.
+ * @param attr  Global attribute key index.
+ * @param desc  Human-readable name of the blbo.
+ */
+kdump_status
+read_blob_attr(kdump_ctx_t *ctx, unsigned fidx, off_t off, size_t size,
+	       enum global_keyidx attr, const char *desc)
+{
+	struct fcache_chunk fch;
+	kdump_attr_value_t val;
+	kdump_status ret;
+
+	ret = fcache_get_chunk(ctx->shared->fcache, &fch, size, fidx, off);
+	if (ret != KDUMP_OK)
+		return set_error(ctx, ret,
+				 "Cannot read %s (%zu bytes at %llu in file #%u)",
+				 desc, size, (unsigned long long) off, fidx);
+
+	val.blob = internal_blob_new_dup(fch.data, size);
+	if (!val.blob)
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot allocate %s blob", desc);
+	ret = set_attr(ctx, gattr(ctx, attr), ATTR_DEFAULT, &val);
+	if (ret != KDUMP_OK)
+		ret = set_error(ctx, ret, "Cannot set %s", desc);
+
+	fcache_put_chunk(&fch);
+	return ret;
+}
