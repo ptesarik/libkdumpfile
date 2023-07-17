@@ -1,5 +1,5 @@
-next
-----
+0.5.2
+-----
   * Full support for 32-bit Arm.
   * ERASEINFO in the file.eraseinfo.raw attribute.
 
