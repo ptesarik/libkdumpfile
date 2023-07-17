@@ -1289,13 +1289,38 @@ set_file_description(kdump_ctx_t *ctx, const char *name)
 				      ATTR_DEFAULT, name);
 }
 
+/** Set a blob attribute.
+ * @param ctx   Dump file object.
+ * @param attr  Global key idx.
+ * @param data  Raw data.
+ * @param size  Size of raw data.
+ * @param desc  Human-readable name of the blob (for error messages).
+ */
+kdump_status
+set_blob_attr(kdump_ctx_t *ctx, enum global_keyidx attr,
+	       void *data, size_t size, const char *desc)
+{
+	kdump_attr_value_t val;
+	kdump_status res;
+
+	val.blob = internal_blob_new_dup(data, size);
+	if (!val.blob)
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot allocate %s", desc);
+	res = set_attr(ctx, gattr(ctx, attr), ATTR_DEFAULT, &val);
+	if (res != KDUMP_OK)
+		return set_error(ctx, res, "Cannot set %s", desc);
+
+	return KDUMP_OK;
+}
+
 /** Read a blob attribute from file.
  * @param ctx   Dump file object.
  * @param fidx  File index.
  * @param off   File offset.
  * @param size  Size of the blob.
  * @param attr  Global attribute key index.
- * @param desc  Human-readable name of the blbo.
+ * @param desc  Human-readable name of the blob.
  */
 kdump_status
 read_blob_attr(kdump_ctx_t *ctx, unsigned fidx, off_t off, size_t size,
@@ -1311,13 +1336,7 @@ read_blob_attr(kdump_ctx_t *ctx, unsigned fidx, off_t off, size_t size,
 				 "Cannot read %s (%zu bytes at %llu in file #%u)",
 				 desc, size, (unsigned long long) off, fidx);
 
-	val.blob = internal_blob_new_dup(fch.data, size);
-	if (!val.blob)
-		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot allocate %s blob", desc);
-	ret = set_attr(ctx, gattr(ctx, attr), ATTR_DEFAULT, &val);
-	if (ret != KDUMP_OK)
-		ret = set_error(ctx, ret, "Cannot set %s", desc);
+	ret = set_blob_attr(ctx, attr, fch.data, size, desc);
 
 	fcache_put_chunk(&fch);
 	return ret;

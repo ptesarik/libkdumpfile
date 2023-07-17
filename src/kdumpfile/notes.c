@@ -338,41 +338,16 @@ note_equal(const char *name, const char *notename, size_t notenamesz)
 	return 0;
 }
 
-/** Set linux.vmcoreinfo or xen.vmcoreinfo.
- * @param ctx   Dump file object.
- * @param key   Global key idx of the vmcoreinfo.raw attribute.
- * @param data  VMCOREINFO raw data.
- * @param sz    Size of VMCOREINFO raw data.
- * @param what  Description for error messages.
- */
-static kdump_status
-set_vmcoreinfo(kdump_ctx_t *ctx, enum global_keyidx key,
-	       void *data, size_t sz, const char *what)
-{
-	kdump_attr_value_t val;
-	kdump_status res;
-
-	val.blob = internal_blob_new_dup(data, sz);
-	if (!val.blob)
-		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot allocate %s", what);
-	res = set_attr(ctx, gattr(ctx, key), ATTR_DEFAULT, &val);
-	if (res != KDUMP_OK)
-		return set_error(ctx, res, "Cannot set %s", what);
-
-	return KDUMP_OK;
-}
-
 static kdump_status
 do_noarch_note(kdump_ctx_t *ctx, Elf32_Word type,
 	       const char *name, size_t namesz, void *desc, size_t descsz)
 {
 	if (note_equal("VMCOREINFO", name, namesz))
-		return set_vmcoreinfo(ctx, GKI_linux_vmcoreinfo_raw,
-				      desc, descsz, "VMCOREINFO");
+		return set_blob_attr(ctx, GKI_linux_vmcoreinfo_raw,
+				     desc, descsz, "VMCOREINFO");
 	else if (note_equal("VMCOREINFO_XEN", name, namesz))
-		return set_vmcoreinfo(ctx, GKI_xen_vmcoreinfo_raw,
-				      desc, descsz, "VMCOREINFO_XEN");
+		return set_blob_attr(ctx, GKI_xen_vmcoreinfo_raw,
+				     desc, descsz, "VMCOREINFO_XEN");
 
 	return KDUMP_OK;
 }
