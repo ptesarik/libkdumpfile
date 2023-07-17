@@ -521,14 +521,20 @@ diskdump_realloc_compressed(kdump_ctx_t *ctx, struct attr_data *attr)
 		: KDUMP_OK;
 }
 
+/** Read VMCOREINFO into its blob attribute.
+ * @param ctx   Dump file object.
+ * @param fidx  File index.
+ * @param off   VMCOREINFO file offset.
+ * @param size  VMCOREINFO size in bytes.
+ */
 static kdump_status
-read_vmcoreinfo(kdump_ctx_t *ctx, off_t off, size_t size)
+read_vmcoreinfo(kdump_ctx_t *ctx, unsigned fidx, off_t off, size_t size)
 {
 	struct fcache_chunk fch;
 	kdump_attr_value_t val;
 	kdump_status ret;
 
-	ret = fcache_get_chunk(ctx->shared->fcache, &fch, size, 0, off);
+	ret = fcache_get_chunk(ctx->shared->fcache, &fch, size, fidx, off);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read %zu VMCOREINFO bytes at %llu",
@@ -678,7 +684,7 @@ parse_sub_hdr_32pack(struct setup_data *sdp, struct pfn_file_map *pdmap,
 		sdp->note_off = dump64toh(ctx, sh->offset_note);
 		sdp->note_sz = dump32toh(ctx, sh->size_note);
 	} else if (sdp->header_version >= 3) {
-		ret = read_vmcoreinfo(ctx,
+		ret = read_vmcoreinfo(ctx, pdmap->fidx,
 				      dump64toh(ctx, sh->offset_vmcoreinfo),
 				      dump32toh(ctx, sh->size_vmcoreinfo));
 		if (ret != KDUMP_OK)
@@ -715,7 +721,7 @@ parse_sub_hdr_32pad(struct setup_data *sdp, struct pfn_file_map *pdmap,
 		sdp->note_off = dump64toh(ctx, sh->offset_note);
 		sdp->note_sz = dump32toh(ctx, sh->size_note);
 	} else if (sdp->header_version >= 3) {
-		ret = read_vmcoreinfo(ctx,
+		ret = read_vmcoreinfo(ctx, pdmap->fidx,
 				      dump64toh(ctx, sh->offset_vmcoreinfo),
 				      dump32toh(ctx, sh->size_vmcoreinfo));
 		if (ret != KDUMP_OK)
@@ -877,7 +883,7 @@ read_sub_hdr_64(struct setup_data *sdp, struct pfn_file_map *pdmap)
 		sdp->note_off = dump64toh(ctx, subhdr.offset_note);
 		sdp->note_sz = dump64toh(ctx, subhdr.size_note);
 	} else if (sdp->header_version >= 3) {
-		ret = read_vmcoreinfo(ctx,
+		ret = read_vmcoreinfo(ctx, pdmap->fidx,
 				      dump64toh(ctx, subhdr.offset_vmcoreinfo),
 				      dump64toh(ctx, subhdr.size_vmcoreinfo));
 		if (ret != KDUMP_OK)
