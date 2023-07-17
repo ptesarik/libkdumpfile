@@ -43,8 +43,8 @@
 00000039		# size_vmcoreinfo
 0000000000001200	# offset_note
 000000f8		# size_note
-0000000000000000	# offset_eraseinfo
-00000000		# size_eraseinfo
+0000000000005018	# offset_eraseinfo
+00000015		# size_eraseinfo
 0000000000000000	# start_pfn_64
 0000000000000000	# end_pfn_64
 0000000000000001	# max_mapnr_64
@@ -106,6 +106,13 @@ d15eff34	# pr_reg[15] (esp)
 "OSRELEASE=6.4.3-1-pae\n"
 "PAGESIZE=4096\n"
 "CRASHTIME=1689098337\n"
+
+##################################################################
+###
+### ERASEINFO
+###
+@0x5018
+"erase modules size 8\n"
 
 ##################################################################
 ###

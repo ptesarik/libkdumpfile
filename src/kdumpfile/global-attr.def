@@ -63,6 +63,10 @@ ATTR(file, "fd", file_fd, number, int, .ops = &file_fd_ops)
 /* mmap policy */
 ATTR(file, "mmap_policy", file_mmap_policy, number, kdump_mmap_policy_t)
 
+/* eraseinfo */
+ATTR(file, "eraseinfo", dir_file_eraseinfo, directory, struct attr data *)
+ATTR(file_eraseinfo, "raw", file_eraseinfo_raw, blob, kdump_blob_t *)
+
 /* Linux */
 ATTR(root, "linux", dir_linux, directory, struct attr_data *)
 ATTR(linux, "version_code", linux_version_code, number, unsigned,

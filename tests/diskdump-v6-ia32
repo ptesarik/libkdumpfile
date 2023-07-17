@@ -3,7 +3,7 @@
 #
 # diskdump-v6-ia32
 #
-# Check ELF notes and VMCOREINFO in a sample Intel IA-32 diskdump.
+# Check ELF notes, VMCOREINFO and ERASEINFO in a sample Intel IA-32 diskdump.
 #
 
 mkdir -p out || exit 99
@@ -38,6 +38,7 @@ linux.version_code = number: 394243
 file.pagemap = bitmap: 1
 file.set.number = number: 1
 file.format = string: diskdump
+file.eraseinfo.raw = blob:6572617365206d6f64756c65732073697a6520380a
 cpu.number = number: 1
 cpu.0.pid = number: 3539
 cpu.0.reg.eip = number: 0xc04b0b5f

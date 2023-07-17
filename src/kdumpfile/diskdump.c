@@ -534,6 +534,13 @@ read_vmcoreinfo(kdump_ctx_t *ctx, unsigned fidx, off_t off, size_t size)
 			      GKI_linux_vmcoreinfo_raw, "VMCOREINFO");
 }
 
+static kdump_status
+read_eraseinfo(kdump_ctx_t *ctx, unsigned fidx, off_t off, size_t size)
+{
+	return read_blob_attr(ctx, fidx, off, size,
+			      GKI_file_eraseinfo_raw, "ERASEINFO");
+}
+
 /* This function also sets architecture */
 static kdump_status
 read_notes(kdump_ctx_t *ctx, off_t off, size_t size)
@@ -672,6 +679,14 @@ parse_sub_hdr_32pack(struct setup_data *sdp, struct pfn_file_map *pdmap,
 			return ret;
 	}
 
+	if (sdp->header_version >= 4) {
+		ret = read_eraseinfo(ctx, pdmap->fidx,
+				     dump64toh(ctx, sh->offset_eraseinfo),
+				     dump32toh(ctx, sh->size_eraseinfo));
+		if (ret != KDUMP_OK)
+			return ret;
+	}
+
 	pdmap->start_pfn = 0;
 	pdmap->end_pfn = KDUMP_PFN_MAX;
 	if (sdp->header_version >= 2 && sh->split) {
@@ -705,6 +720,14 @@ parse_sub_hdr_32pad(struct setup_data *sdp, struct pfn_file_map *pdmap,
 		ret = read_vmcoreinfo(ctx, pdmap->fidx,
 				      dump64toh(ctx, sh->offset_vmcoreinfo),
 				      dump32toh(ctx, sh->size_vmcoreinfo));
+		if (ret != KDUMP_OK)
+			return ret;
+	}
+
+	if (sdp->header_version >= 4) {
+		ret = read_eraseinfo(ctx, pdmap->fidx,
+				     dump64toh(ctx, sh->offset_eraseinfo),
+				     dump32toh(ctx, sh->size_eraseinfo));
 		if (ret != KDUMP_OK)
 			return ret;
 	}
@@ -867,6 +890,14 @@ read_sub_hdr_64(struct setup_data *sdp, struct pfn_file_map *pdmap)
 		ret = read_vmcoreinfo(ctx, pdmap->fidx,
 				      dump64toh(ctx, subhdr.offset_vmcoreinfo),
 				      dump64toh(ctx, subhdr.size_vmcoreinfo));
+		if (ret != KDUMP_OK)
+			return ret;
+	}
+
+	if (sdp->header_version >= 4) {
+		ret = read_eraseinfo(ctx, pdmap->fidx,
+				     dump64toh(ctx, subhdr.offset_eraseinfo),
+				     dump64toh(ctx, subhdr.size_eraseinfo));
 		if (ret != KDUMP_OK)
 			return ret;
 	}

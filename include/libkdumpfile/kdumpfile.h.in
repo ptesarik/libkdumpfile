@@ -1054,6 +1054,10 @@ void kdump_attr_iter_end(kdump_ctx_t *ctx, kdump_attr_iter_t *iter);
  */
 #define KDUMP_ATTR_FILE_MMAP_POLICY	"file.mmap_policy"
 
+/** Raw content of makedumpfile ERASEINFO
+ */
+#define KDUMP_ATTR_ERASEINFO		"file.eraseinfo.raw"
+
 /**  Get VMCOREINFO raw data.
  * @param ctx  Dump file object.
  * @param raw  Filled with a copy of the raw VMCOREINFO string on success.
