@@ -1,6 +1,7 @@
 next
 ----
   * Full support for 32-bit Arm.
+  * ERASEINFO in the file.eraseinfo.raw attribute.
 
 0.5.1
 -----
