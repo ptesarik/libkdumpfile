@@ -211,6 +211,7 @@ test_scripts = \
 	elf-empty-s390 \
 	elf-empty-s390x \
 	elf-empty-x86_64 \
+	elf-eraseinfo \
 	elf-prstatus-aarch64 \
 	elf-prstatus-arm \
 	elf-prstatus-i386 \
@@ -332,6 +333,7 @@ dist_check_DATA = \
 	early-version-code.data \
 	early-version-code.expect \
 	elf-empty.data \
+	elf-eraseinfo.data \
 	elf-prstatus-aarch64.data \
 	elf-prstatus-arm.data \
 	elf-prstatus-i386.data \

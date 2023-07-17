@@ -348,6 +348,9 @@ do_noarch_note(kdump_ctx_t *ctx, Elf32_Word type,
 	else if (note_equal("VMCOREINFO_XEN", name, namesz))
 		return set_blob_attr(ctx, GKI_xen_vmcoreinfo_raw,
 				     desc, descsz, "VMCOREINFO_XEN");
+	else if (note_equal("ERASEINFO", name, namesz))
+		return set_blob_attr(ctx, GKI_file_eraseinfo_raw,
+				     desc, descsz, "ERASEINFO");
 
 	return KDUMP_OK;
 }

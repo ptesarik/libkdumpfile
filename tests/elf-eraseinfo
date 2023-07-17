@@ -1,0 +1,35 @@
+#! /bin/sh
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+datafile="$srcdir/${name}.data"
+dumpfile="out/${name}.dump"
+resultfile="out/${name}.result"
+expectfile="$srcdir/${name}.expect"
+
+./mkelf "$dumpfile" <<EOF
+ei_class = 2
+ei_data = 1
+e_machine = 62
+e_phoff = 0x1000
+
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create ELF file" >&2
+    exit $rc
+fi
+echo "Created ELF dump: $dumpfile"
+
+./checkattr "$dumpfile" <<EOF
+file.set.number = number: 1
+file.format = string: elf
+file.eraseinfo.raw = blob:6572617365206d6f64756c65732073697a652031360a
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Attribute check failed" >&2
+    exit $rc
+fi

@@ -1,0 +1,6 @@
+@phdr type=NOTE offset=0x1800
+0000000a 00000016 00000000 "ERASEINFO" 00*3
+"erase modules size 16\n" 00*2
+
+@phdr type=LOAD offset=0x9000 paddr=0x3000000 vaddr=0xffff880003000000 memsz=0x1000
+41 42 43 44 45 46 47 48
