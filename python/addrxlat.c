@@ -1899,7 +1899,7 @@ ctx_next_cb_read_caps(PyObject *_self, PyObject *args)
 	if (PyErr_Occurred())
 		return NULL;
 
-	result = Py_BuildValue("(k)", caps);
+	result = Py_BuildValue("k", caps);
 	if (!result)
 		return NULL;
 	return result;
