@@ -1655,6 +1655,8 @@ ctx_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 
 		if (copy_attr((PyObject*)self, "next_cb_get_page", "cb_get_page"))
 			goto err;
+		if (copy_attr((PyObject*)self, "next_read_caps", "cb_read_caps"))
+			goto err;
 		if (copy_attr((PyObject*)self, "next_cb_reg_value", "cb_reg_value"))
 			goto err;
 		if (copy_attr((PyObject*)self, "next_cb_sym_value", "cb_sym_value"))
