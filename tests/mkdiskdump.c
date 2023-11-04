@@ -68,8 +68,6 @@ struct page_data_kdump {
 #if USE_LZO
 	lzo_bytep lzo_wrkmem;
 #endif
-
-	unsigned long skip;
 };
 
 static endian_t be;
@@ -409,23 +407,10 @@ parseheader(struct page_data *pg, char *p)
 
 	pgkdump->flags = 0;
 	pgkdump->compress = compress_auto;
-	pgkdump->skip = 0;
 
 	p = endp;
 	while (*p && isspace(*p))
 		++p;
-
-	if (!strncmp(p, "skip=", 5)) {
-		p += 5;
-		pgkdump->skip = strtoul(p, &endp, 0);
-		if (*endp && !isspace(*endp)) {
-			fprintf(stderr, "Invalid skip: %s\n", p);
-			return TEST_FAIL;
-		}
-		p = endp;
-		while (*p && isspace(*p))
-			++p;
-	}
 
 	if (!*p)
 		return TEST_OK;
@@ -682,7 +667,7 @@ writepage(struct page_data *pg)
 		buf = pg->buf;
 	}
 	pd.offset = htodump64(be, dataoff);
-	pd.size = htodump32(be, buflen + pgkdump->skip);
+	pd.size = htodump32(be, buflen);
 	pd.flags = htodump32(be, flags);
 	pd.page_flags = htodump64(be, 0);
 
@@ -705,12 +690,6 @@ writepage(struct page_data *pg)
 		return TEST_ERR;
 	}
 	dataoff += buflen;
-
-	if (pgkdump->skip &&
-	    fseek(pgkdump->f, pgkdump->skip, SEEK_CUR) != 0) {
-		perror("skip page data");
-		return TEST_ERR;
-	}
 
 	return TEST_OK;
 }
