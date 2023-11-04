@@ -696,7 +696,7 @@ writedata(FILE *f)
 	int rc;
 
 	if (!data_file)
-		return TEST_OK;
+		return writeheader(f);
 
 	pgkdump.f = f;
 	pgkdump.addr = 0;
@@ -748,6 +748,10 @@ writedata(FILE *f)
 	pg.write_page = markpage;
 
 	rc = process_data(&pg, data_file);
+	if (rc != TEST_OK)
+		goto out_bitmap2;
+
+	rc = writeheader(f);
 	if (rc != TEST_OK)
 		goto out_bitmap2;
 
@@ -816,10 +820,6 @@ writedump(FILE *f)
 	}
 
 	rc = writedata(f);
-	if (rc != 0)
-		return rc;
-
-	rc = writeheader(f);
 	if (rc != 0)
 		return rc;
 
