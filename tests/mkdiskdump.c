@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <errno.h>
 
 #include "config.h"
 #include "testutil.h"
@@ -216,6 +217,20 @@ set_default_params(void)
 }
 
 static int
+write_chunk(FILE *f, off_t off, const void *ptr, size_t sz, const char *what)
+{
+	if (fseek(f, off, SEEK_SET) != 0) {
+		fprintf(stderr, "seek %s: %s\n", what, strerror(errno));
+		return -1;
+	}
+	if (fwrite(ptr, sz, 1, f) != 1) {
+		fprintf(stderr, "write %s: %s\n", what, strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
+static int
 writeheader_32(FILE *f)
 {
 	struct timeval tv;
@@ -257,15 +272,8 @@ writeheader_32(FILE *f)
 	hdr.current_cpu = htodump32(be, current_cpu);
 	hdr.nr_cpus = htodump32(be, nr_cpus);
 
-	if (fseek(f, 0, SEEK_SET) != 0) {
-		perror("seek header");
+	if (write_chunk(f, 0, &hdr, sizeof hdr, "header"))
 		return -1;
-	}
-
-	if (fwrite(&hdr, sizeof hdr, 1, f) != 1) {
-		perror("write header");
-		return -1;
-	}
 
 	subhdr.phys_base = htodump32(be, phys_base);
 	subhdr.dump_level = htodump32(be, dump_level);
@@ -288,15 +296,9 @@ writeheader_32(FILE *f)
 	subhdr.end_pfn_64 = htodump64(be, end_pfn);
 	subhdr.max_mapnr_64 = htodump64(be, max_mapnr);
 
-	if (fseek(f, DISKDUMP_HEADER_BLOCKS * block_size, SEEK_SET) != 0) {
-		perror("seek subheader");
+	if (write_chunk(f, DISKDUMP_HEADER_BLOCKS * block_size,
+			&subhdr, sizeof subhdr, "subheader"))
 		return -1;
-	}
-
-	if (fwrite(&subhdr, sizeof subhdr, 1, f) != 1) {
-		perror("write subheader");
-		return -1;
-	}
 
 	return 0;
 }
@@ -343,15 +345,8 @@ writeheader_64(FILE *f)
 	hdr.current_cpu = htodump32(be, current_cpu);
 	hdr.nr_cpus = htodump32(be, nr_cpus);
 
-	if (fseek(f, 0, SEEK_SET) != 0) {
-		perror("seek header");
+	if (write_chunk(f, 0, &hdr, sizeof hdr, "header"))
 		return -1;
-	}
-
-	if (fwrite(&hdr, sizeof hdr, 1, f) != 1) {
-		perror("write header");
-		return -1;
-	}
 
 	subhdr.phys_base = htodump64(be, phys_base);
 	subhdr.dump_level = htodump32(be, dump_level);
@@ -374,15 +369,9 @@ writeheader_64(FILE *f)
 	subhdr.end_pfn_64 = htodump64(be, end_pfn);
 	subhdr.max_mapnr_64 = htodump64(be, max_mapnr);
 
-	if (fseek(f, DISKDUMP_HEADER_BLOCKS * block_size, SEEK_SET) != 0) {
-		perror("seek subheader");
+	if (write_chunk(f, DISKDUMP_HEADER_BLOCKS * block_size,
+			&subhdr, sizeof subhdr, "subheader"))
 		return -1;
-	}
-
-	if (fwrite(&subhdr, sizeof subhdr, 1, f) != 1) {
-		perror("write subheader");
-		return -1;
-	}
 
 	return 0;
 }
@@ -672,23 +661,12 @@ writepage(struct page_data *pg)
 	pd.page_flags = htodump64(be, 0);
 
 	pdidx = bitmap_index(bitmap2, pfn) - start_pdidx;
-	if (fseek(pgkdump->f, pdoff + pdidx * sizeof pd, SEEK_SET) != 0) {
-		perror("seek page desc");
+	if (write_chunk(pgkdump->f, pdoff + pdidx * sizeof pd,
+			&pd, sizeof pd, "page desc"))
 		return TEST_ERR;
-	}
-	if (fwrite(&pd, sizeof pd, 1, pgkdump->f) != 1) {
-		perror("write page desc");
-		return TEST_ERR;
-	}
 
-	if (fseek(pgkdump->f, dataoff, SEEK_SET) != 0) {
-		perror("seek page data");
+	if (write_chunk(pgkdump->f, dataoff, buf, buflen, "page data"))
 		return TEST_ERR;
-	}
-	if (fwrite(buf, 1, buflen, pgkdump->f) != buflen) {
-		perror("write page data");
-		return TEST_ERR;
-	}
 	dataoff += buflen;
 
 	return TEST_OK;
@@ -758,18 +736,13 @@ writedata(FILE *f)
 	if (rc != TEST_OK)
 		goto out_bitmap2;
 
-	if (fseek(f, (1 + sub_hdr_size) * block_size, SEEK_SET) != 0) {
-		perror("seek bitmap");
+	if (write_chunk(f, (1 + sub_hdr_size) * block_size,
+			bitmap1, block_size * bmp_blocks1, "1st bitmap")) {
 		rc = TEST_ERR;
 		goto out_bitmap2;
 	}
-	if (fwrite(bitmap1, block_size, bmp_blocks1, f) != bmp_blocks1) {
-		perror("write 1st bitmap");
-		rc = TEST_ERR;
-		goto out_bitmap2;
-	}
-	if (fwrite(bitmap2, block_size, bmp_blocks1, f) != bmp_blocks1) {
-		perror("write 2nd bitmap");
+	if (write_chunk(f, (1 + sub_hdr_size + bmp_blocks1) * block_size,
+			bitmap2, block_size * bmp_blocks1, "2nd bitmap")) {
 		rc = TEST_ERR;
 		goto out_bitmap2;
 	}
