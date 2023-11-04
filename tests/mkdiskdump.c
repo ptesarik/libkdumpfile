@@ -90,6 +90,9 @@ struct data_block {
 	struct blob *blob;
 };
 
+static bool flattened;
+static unsigned long long flattened_type = MDF_TYPE_FLAT_HEADER;
+static unsigned long long flattened_version = MDF_VERSION_FLAT_HEADER;
 static char *arch_name;
 static unsigned long long compression;
 static char *signature;
@@ -133,6 +136,9 @@ static unsigned long start_pdidx;
 
 static const struct param param_array[] = {
 	/* meta-data */
+	PARAM_YESNO("flattened", flattened),
+	PARAM_NUMBER("flattened.type", flattened_type),
+	PARAM_NUMBER("flattened.version", flattened_version),
 	PARAM_STRING("arch_name", arch_name),
 	PARAM_NUMBER("compression", compression),
 
@@ -219,7 +225,16 @@ set_default_params(void)
 static int
 write_chunk(FILE *f, off_t off, const void *ptr, size_t sz, const char *what)
 {
-	if (fseek(f, off, SEEK_SET) != 0) {
+	if (flattened) {
+		struct makedumpfile_data_header hdr = {
+			.offset = htobe64(off),
+			.buf_size = htobe64(sz),
+		};
+		if (fwrite(&hdr, sizeof hdr, 1, f) != 1) {
+			perror("flattened segment header");
+			return -1;
+		}
+	} else if (fseek(f, off, SEEK_SET) != 0) {
 		fprintf(stderr, "seek %s: %s\n", what, strerror(errno));
 		return -1;
 	}
@@ -779,6 +794,27 @@ writedump(FILE *f)
 {
 	int rc;
 
+	if (flattened) {
+		struct makedumpfile_header hdr = {
+			.signature = MDF_SIGNATURE,
+			.type = htobe64(flattened_type),
+			.version = htobe64(flattened_version),
+		};
+		size_t remain;
+
+		if (fwrite(&hdr, sizeof hdr, 1, f) != 1) {
+			perror("flattened header");
+			return TEST_ERR;
+		}
+		remain = MDF_HEADER_SIZE - sizeof hdr;
+		while (remain--) {
+			if (putc(0, f) != 0) {
+				perror("flattened header padding");
+				return TEST_ERR;
+			}
+		}
+	}
+
 	rc = writedata(f);
 	if (rc != 0)
 		return rc;
@@ -786,6 +822,17 @@ writedump(FILE *f)
 	rc = writeheader(f);
 	if (rc != 0)
 		return rc;
+
+	if (flattened) {
+		struct makedumpfile_data_header hdr = {
+			.offset = htobe64(MDF_OFFSET_END_FLAG),
+			.buf_size = htobe64(MDF_OFFSET_END_FLAG),
+		};
+		if (fwrite(&hdr, sizeof hdr, 1, f) != 1) {
+			perror("end segment header");
+			return TEST_ERR;
+		}
+	}
 
 	return 0;
 }

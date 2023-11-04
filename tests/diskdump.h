@@ -31,6 +31,27 @@
 
 #include <stdint.h>
 
+#define MDF_SIGNATURE		"makedumpfile"
+#define MDF_SIG_LEN		16
+#define MDF_TYPE_FLAT_HEADER	1
+#define MDF_VERSION_FLAT_HEADER	1
+#define MDF_HEADER_SIZE		4096
+
+/* Flattened format header. */
+struct makedumpfile_header {
+	char	signature[MDF_SIG_LEN];
+	int64_t	type;
+	int64_t	version;
+} __attribute__((packed));
+
+/* Flattened segment header */
+struct makedumpfile_data_header {
+        int64_t offset;
+        int64_t buf_size;
+} __attribute__((packed));
+
+#define MDF_OFFSET_END_FLAG	(-(int64_t)1)
+
 #define DISKDUMP_SIGNATURE		"DISKDUMP"
 #define KDUMP_SIGNATURE			"KDUMP   "
 #define SIGNATURE_LEN			8
