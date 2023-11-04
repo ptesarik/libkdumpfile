@@ -254,7 +254,7 @@ writeheader_32(FILE *f)
 
 	if (gettimeofday(&tv, NULL) != 0) {
 		perror("gettimeofday");
-		return -1;
+		return TEST_ERR;
 	}
 
 	/* initialize dump header to zero */
@@ -288,7 +288,7 @@ writeheader_32(FILE *f)
 	hdr.nr_cpus = htodump32(be, nr_cpus);
 
 	if (write_chunk(f, 0, &hdr, sizeof hdr, "header"))
-		return -1;
+		return TEST_ERR;
 
 	subhdr.phys_base = htodump32(be, phys_base);
 	subhdr.dump_level = htodump32(be, dump_level);
@@ -313,9 +313,9 @@ writeheader_32(FILE *f)
 
 	if (write_chunk(f, DISKDUMP_HEADER_BLOCKS * block_size,
 			&subhdr, sizeof subhdr, "subheader"))
-		return -1;
+		return TEST_ERR;
 
-	return 0;
+	return TEST_OK;
 }
 
 static int
@@ -327,7 +327,7 @@ writeheader_64(FILE *f)
 
 	if (gettimeofday(&tv, NULL) != 0) {
 		perror("gettimeofday");
-		return -1;
+		return TEST_ERR;
 	}
 
 	/* initialize dump header to zero */
@@ -361,7 +361,7 @@ writeheader_64(FILE *f)
 	hdr.nr_cpus = htodump32(be, nr_cpus);
 
 	if (write_chunk(f, 0, &hdr, sizeof hdr, "header"))
-		return -1;
+		return TEST_ERR;
 
 	subhdr.phys_base = htodump64(be, phys_base);
 	subhdr.dump_level = htodump32(be, dump_level);
@@ -386,9 +386,9 @@ writeheader_64(FILE *f)
 
 	if (write_chunk(f, DISKDUMP_HEADER_BLOCKS * block_size,
 			&subhdr, sizeof subhdr, "subheader"))
-		return -1;
+		return TEST_ERR;
 
-	return 0;
+	return TEST_OK;
 }
 
 static int
