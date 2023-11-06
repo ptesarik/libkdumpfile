@@ -547,8 +547,8 @@ diskdump_read_page(struct page_io *pio)
 	} else {
 		if (pd.size != get_page_size(ctx))
 			return set_error(ctx, KDUMP_ERR_CORRUPT,
-					 "Wrong page size: %lu",
-					 (unsigned long)pd.size);
+					 "Wrong page size: %"PRIu32,
+					 pd.size);
 		mutex_lock(&ctx->shared->cache_lock);
 		ret = diskdump_pread(ctx, pio->chunk.data, pd.size,
 				     pdmap->fidx, pd.offset);
