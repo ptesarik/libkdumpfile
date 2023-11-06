@@ -1,0 +1,5 @@
+#! /bin/sh
+extraparam="flattened = yes"
+pageflags=raw
+. "$srcdir"/diskdump-basic
+exit 0

@@ -197,6 +197,7 @@ test_scripts = \
 	diskdump-basic-lzo \
 	diskdump-basic-snappy \
 	diskdump-basic-zstd \
+	diskdump-flat-raw \
 	diskdump-multiread \
 	diskdump-excluded \
 	diskdump-split \

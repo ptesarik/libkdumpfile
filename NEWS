@@ -1,5 +1,6 @@
 next
 ----
+  * Support flattened KDUMP format.
 
 0.5.2
 -----

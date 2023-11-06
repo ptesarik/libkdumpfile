@@ -14,6 +14,7 @@ echo "@0 $pageflags" > "$datafile"
 cat "$expectfile" >> "$datafile"
 
 ./mkdiskdump "$dumpfile" <<EOF
+$extraparam
 version = 6
 arch_name = x86_64
 block_size = 4096
