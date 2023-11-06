@@ -1327,7 +1327,6 @@ read_blob_attr(kdump_ctx_t *ctx, unsigned fidx, off_t off, size_t size,
 	       enum global_keyidx attr, const char *desc)
 {
 	struct fcache_chunk fch;
-	kdump_attr_value_t val;
 	kdump_status ret;
 
 	ret = fcache_get_chunk(ctx->shared->fcache, &fch, size, fidx, off);
