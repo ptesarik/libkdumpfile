@@ -1046,18 +1046,17 @@ init_mem_pagemap(kdump_ctx_t *ctx)
 	return set_attr(ctx, attr, ATTR_INVALID, &val);
 }
 
+/** Initialize diskdump private data.
+ * @param ctx  Dump file object.
+ * @returns    Error status.
+ *
+ * Allocate and initialize diskdump format private data. The private data
+ * should be eventually cleaned up by @ref diskdump_cleanup().
+ */
 static kdump_status
-open_common(kdump_ctx_t *ctx, void *hdr)
+init_private(kdump_ctx_t *ctx)
 {
-	struct disk_dump_header_32 *dh32 = hdr;
-	struct disk_dump_header_64 *dh64 = hdr;
 	struct disk_dump_priv *ddp;
-	struct setup_data sd;
-	kdump_bmp_t *bmp;
-	kdump_status ret;
-
-	memset(&sd, 0, sizeof sd);
-	sd.ctx = ctx;
 
 	ddp = calloc(1, sizeof(*ddp) +
 		     get_num_files(ctx) * sizeof(ddp->pdmap[0]));
@@ -1072,6 +1071,21 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 	ddp->cbuf_slot = -1;
 
 	ctx->shared->fmtdata = ddp;
+	return KDUMP_OK;
+}
+
+static kdump_status
+open_common(kdump_ctx_t *ctx, void *hdr)
+{
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;;
+	struct disk_dump_header_32 *dh32 = hdr;
+	struct disk_dump_header_64 *dh64 = hdr;
+	struct setup_data sd;
+	kdump_bmp_t *bmp;
+	kdump_status ret;
+
+	memset(&sd, 0, sizeof sd);
+	sd.ctx = ctx;
 
 	set_addrspace_caps(ctx->xlat, ADDRXLAT_CAPS(ADDRXLAT_MACHPHYSADDR));
 
@@ -1144,6 +1158,10 @@ diskdump_probe(kdump_ctx_t *ctx)
 	else
 		return set_error(ctx, KDUMP_NOPROBE,
 				 "Unrecognized diskdump signature");
+
+	status = init_private(ctx);
+	if (status != KDUMP_OK)
+		return status;
 
 	return open_common(ctx, hdr);
 }
