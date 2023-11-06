@@ -202,7 +202,6 @@ struct page_desc {
 struct disk_dump_priv {
 	/** Overridden methods for arch.page_size attribute. */
 	struct attr_override page_size_override;
-	int cbuf_slot;		/**< Compressed data per-context slot. */
 
 	/** Number of split files in this dump. */
 	unsigned num_files;
@@ -507,9 +506,9 @@ diskdump_read_page(struct page_io *pio)
 	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	kdump_pfn_t pfn;
 	const struct pfn_file_map *pdmap;
+	struct fcache_chunk fch;
 	struct page_desc pd;
 	off_t pd_pos;
-	void *buf;
 	kdump_status ret;
 
 	pfn = pio->addr.addr >> get_page_shift(ctx);
@@ -542,41 +541,46 @@ diskdump_read_page(struct page_io *pio)
 	pd.flags = dump32toh(ctx, pd.flags);
 	pd.page_flags = dump64toh(ctx, pd.page_flags);
 
+	/* read page data */
 	if (pd.flags & DUMP_DH_COMPRESSED) {
 		if (pd.size > MAX_PAGE_SIZE)
 			return set_error(ctx, KDUMP_ERR_CORRUPT,
 					 "Wrong compressed size: %lu",
 					 (unsigned long)pd.size);
-		buf = ctx->data[ddp->cbuf_slot];
+		mutex_lock(&ctx->shared->cache_lock);
+		ret = diskdump_get_chunk(ctx, &fch, pd.size,
+					 pdmap->fidx, pd.offset);
+		mutex_unlock(&ctx->shared->cache_lock);
 	} else {
 		if (pd.size != get_page_size(ctx))
 			return set_error(ctx, KDUMP_ERR_CORRUPT,
 					 "Wrong page size: %lu",
 					 (unsigned long)pd.size);
-		buf = pio->chunk.data;
+		mutex_lock(&ctx->shared->cache_lock);
+		ret = diskdump_pread(ctx, pio->chunk.data, pd.size,
+				     pdmap->fidx, pd.offset);
+		mutex_unlock(&ctx->shared->cache_lock);
 	}
 
-	/* read page data */
-	mutex_lock(&ctx->shared->cache_lock);
-	ret = diskdump_pread(ctx, buf, pd.size,
-			     pdmap->fidx, pd.offset);
-	mutex_unlock(&ctx->shared->cache_lock);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read page data at %llu",
 				 (unsigned long long) pd.offset);
 
 	if (pd.flags & DUMP_DH_COMPRESSED_ZLIB) {
-		ret = uncompress_page_gzip(ctx, pio->chunk.data, buf, pd.size);
+		ret = uncompress_page_gzip(ctx, pio->chunk.data,
+					   fch.data, pd.size);
+		fcache_put_chunk(&fch);
 		if (ret != KDUMP_OK)
 			return ret;
 	} else if (pd.flags & DUMP_DH_COMPRESSED_LZO) {
 #if USE_LZO
 		lzo_uint retlen = get_page_size(ctx);
-		int ret = lzo1x_decompress_safe((lzo_bytep)buf, pd.size,
-						(lzo_bytep)pio->chunk.data,
+		int ret = lzo1x_decompress_safe(fch.data, pd.size,
+						pio->chunk.data,
 						&retlen,
 						LZO1X_MEM_DECOMPRESS);
+		fcache_put_chunk(&fch);
 		if (ret != LZO_E_OK)
 			return set_error(ctx, KDUMP_ERR_CORRUPT,
 					 "Decompression failed: %d", ret);
@@ -593,8 +597,9 @@ diskdump_read_page(struct page_io *pio)
 #if USE_SNAPPY
 		size_t retlen = get_page_size(ctx);
 		snappy_status ret;
-		ret = snappy_uncompress((char *)buf, pd.size,
-					(char *)pio->chunk.data, &retlen);
+		ret = snappy_uncompress(fch.data, pd.size,
+					pio->chunk.data, &retlen);
+		fcache_put_chunk(&fch);
 		if (ret != SNAPPY_OK)
 			return set_error(ctx, KDUMP_ERR_CORRUPT,
 					 "Decompression failed: %d",
@@ -612,7 +617,8 @@ diskdump_read_page(struct page_io *pio)
 #if USE_ZSTD
 		size_t ret;
 		ret = ZSTD_decompress(pio->chunk.data, get_page_size(ctx),
-				      buf, pd.size);
+				      fch.data, pd.size);
+		fcache_put_chunk(&fch);
 		if (ZSTD_isError(ret))
 			return set_error(ctx, KDUMP_ERR_CORRUPT,
 					 "Decompression failed: %s",
@@ -650,17 +656,8 @@ diskdump_realloc_compressed(kdump_ctx_t *ctx, struct attr_data *attr)
 {
 	const struct attr_ops *parent_ops;
 	struct disk_dump_priv *ddp;
-	int newslot;
-
-	newslot = per_ctx_alloc(ctx->shared, attr_value(attr)->number);
-	if (newslot < 0)
-		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot allocate buffer for compressed data");
 
 	ddp = ctx->shared->fmtdata;
-	if (ddp->cbuf_slot >= 0)
-		per_ctx_free(ctx->shared, ddp->cbuf_slot);
-	ddp->cbuf_slot = newslot;
 
 	parent_ops = ddp->page_size_override.template.parent->ops;
 	return (parent_ops && parent_ops->post_set)
@@ -1213,7 +1210,6 @@ init_private(kdump_ctx_t *ctx)
 	attr_add_override(gattr(ctx, GKI_page_size),
 			  &ddp->page_size_override);
 	ddp->page_size_override.ops.post_set = diskdump_realloc_compressed;
-	ddp->cbuf_slot = -1;
 
 	ctx->shared->fmtdata = ddp;
 	return KDUMP_OK;
@@ -1480,8 +1476,6 @@ diskdump_cleanup(struct kdump_shared *shared)
 			if (pdmap->regions)
 				free(pdmap->regions);
 		}
-		if (ddp->cbuf_slot >= 0)
-			per_ctx_free(shared, ddp->cbuf_slot);
 		if (ddp->flatmap) {
 			for (fidx = 0; fidx < ddp->num_files; ++fidx) {
 				addrxlat_map_t *flatmap = ddp->flatmap[fidx];
