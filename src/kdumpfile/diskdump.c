@@ -540,10 +540,6 @@ diskdump_read_page(struct page_io *pio)
 
 	/* read page data */
 	if (pd.flags & DUMP_DH_COMPRESSED) {
-		if (pd.size > MAX_PAGE_SIZE)
-			return set_error(ctx, KDUMP_ERR_CORRUPT,
-					 "Wrong compressed size: %lu",
-					 (unsigned long)pd.size);
 		mutex_lock(&ctx->shared->cache_lock);
 		ret = diskdump_get_chunk(ctx, &fch, pd.size,
 					 pdmap->fidx, pd.offset);
