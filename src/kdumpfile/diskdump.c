@@ -220,10 +220,10 @@ struct disk_dump_priv {
 	struct pfn_file_map mem_pagemap;
 
 	/** File offset mapping for flattened files. */
-	addrxlat_map_t *flatmap;
+	addrxlat_map_t **flatmap;
 
 	/** Differences between flattened and rearranged file offsets. */
-	off_t *flatoffs;
+	off_t **flatoffs;
 
 	/** Page descriptor mapping. */
 	struct pfn_file_map pdmap[];
@@ -272,8 +272,8 @@ flattened_pread(kdump_ctx_t *ctx, void *buf, size_t len,
 	const addrxlat_range_t *range, *end;
 	off_t off;
 
-	range = addrxlat_map_ranges(ddp->flatmap);
-	end = range + addrxlat_map_len(ddp->flatmap);
+	range = addrxlat_map_ranges(ddp->flatmap[fidx]);
+	end = range + addrxlat_map_len(ddp->flatmap[fidx]);
 	for (off = pos; range < end && off > range->endoff; ++range)
 		off -= range->endoff + 1;
 	while (range < end && len) {
@@ -284,11 +284,11 @@ flattened_pread(kdump_ctx_t *ctx, void *buf, size_t len,
 			seglen = len;
 
 		if (range->meth != ADDRXLAT_SYS_METH_NONE) {
-			unsigned segidx = range->meth;
+			off_t *flatoffs = ddp->flatoffs[fidx];
 			kdump_status ret;
 
 			ret = fcache_pread(ctx->shared->fcache, buf, seglen,
-					   fidx, pos + ddp->flatoffs[segidx]);
+					   fidx, pos + flatoffs[range->meth]);
 			if (ret != KDUMP_OK)
 				return ret;
 		} else
@@ -1296,16 +1296,19 @@ init_flattened_file(kdump_ctx_t *ctx, unsigned fidx)
 {
 	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	struct makedumpfile_data_header hdr;
+	addrxlat_map_t *flatmap;
+	off_t *flatoffs = NULL;
 	addrxlat_range_t range;
 	int64_t pos, size;
 	unsigned segidx;
 	off_t flatpos;
 	kdump_status status;
 
-	ddp->flatmap = addrxlat_map_new();
-	if (!ddp->flatmap)
+	flatmap = addrxlat_map_new();
+	if (!flatmap)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate %s", "flattened map");
+	ddp->flatmap[fidx] = flatmap;
 
 	segidx = 0;
 	flatpos = MDF_HEADER_SIZE;
@@ -1333,22 +1336,21 @@ init_flattened_file(kdump_ctx_t *ctx, unsigned fidx)
 
 		if ((segidx % FLATOFFS_ALLOC_INC) == 0) {
 			unsigned newlen = segidx + FLATOFFS_ALLOC_INC;
-			off_t *newbuf;
 
-			newbuf = realloc(ddp->flatoffs,
-					 sizeof(*ddp->flatoffs) * newlen);
-			if (!newbuf)
+			flatoffs = realloc(flatoffs,
+					 sizeof(*flatoffs) * newlen);
+			if (!flatoffs)
 				return set_error(ctx, KDUMP_ERR_SYSTEM,
 						 "Cannot allocate %s",
 						 "flattened offset array");
-			ddp->flatoffs = newbuf;
+			ddp->flatoffs[fidx] = flatoffs;
 		}
 		flatpos += sizeof(hdr);
-		ddp->flatoffs[segidx] = flatpos - pos;
+		flatoffs[segidx] = flatpos - pos;
 
 		range.endoff = size - 1;
 		range.meth = segidx;
-		if (addrxlat_map_set(ddp->flatmap, pos, &range) != ADDRXLAT_OK)
+		if (addrxlat_map_set(flatmap, pos, &range) != ADDRXLAT_OK)
 			return set_error(ctx, KDUMP_ERR_SYSTEM,
 					 "Cannot allocate %s",
 					 "flattened map entry");
@@ -1368,8 +1370,18 @@ init_flattened_file(kdump_ctx_t *ctx, unsigned fidx)
 static kdump_status
 init_flattened_maps(kdump_ctx_t *ctx)
 {
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	unsigned fidx;
 	kdump_status status;
+
+	ddp->flatmap = calloc(ddp->num_files, sizeof(addrxlat_map_t *));
+	if (!ddp->flatmap)
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot allocate %s", "flatmap array");
+	ddp->flatoffs = calloc(ddp->num_files, sizeof(off_t *));
+	if (!ddp->flatoffs)
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot allocate %s", "flatoffs array");
 
 	for (fidx = 0; fidx < get_num_files(ctx); ++fidx) {
 		status = init_flattened_file(ctx, fidx);
@@ -1470,10 +1482,22 @@ diskdump_cleanup(struct kdump_shared *shared)
 		}
 		if (ddp->cbuf_slot >= 0)
 			per_ctx_free(shared, ddp->cbuf_slot);
-		if (ddp->flatmap)
-			addrxlat_map_decref(ddp->flatmap);
-		if (ddp->flatoffs)
+		if (ddp->flatmap) {
+			for (fidx = 0; fidx < ddp->num_files; ++fidx) {
+				addrxlat_map_t *flatmap = ddp->flatmap[fidx];
+				if (flatmap)
+					addrxlat_map_decref(flatmap);
+			}
+			free(ddp->flatmap);
+		}
+		if (ddp->flatoffs) {
+			for (fidx = 0; fidx < ddp->num_files; ++fidx) {
+				off_t *flatoffs = ddp->flatoffs[fidx];
+				if (flatoffs)
+					free(flatoffs);
+			}
 			free(ddp->flatoffs);
+		}
 		free(ddp);
 		shared->fmtdata = NULL;
 	}
