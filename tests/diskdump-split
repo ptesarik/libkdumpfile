@@ -1,3 +1,5 @@
+#! /bin/sh
+
 #
 # Check reading data from a split dump file
 #
