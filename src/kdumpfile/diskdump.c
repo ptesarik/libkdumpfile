@@ -332,14 +332,26 @@ diskdump_pread(kdump_ctx_t *ctx, void *buf, size_t len,
  * @param pos   File position.
  * @returns     Error status.
  *
- * Get a contiguous data chunk from a flattened dump file. Currently, this is
- * implemented using a dynamically allocated buffer, even if the underlying
- * file cache buffer might be used.
+ * Get a contiguous data chunk from a flattened dump file.
  */
 static inline kdump_status
 flattened_get_chunk(kdump_ctx_t *ctx, struct fcache_chunk *fch,
 		    size_t len, unsigned fidx, off_t pos)
 {
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
+	const addrxlat_range_t *range, *end;
+	off_t off;
+
+	range = addrxlat_map_ranges(ddp->flatmap[fidx]);
+	end = range + addrxlat_map_len(ddp->flatmap[fidx]);
+	for (off = pos; range < end && off > range->endoff; ++range)
+		off -= range->endoff + 1;
+	if (len <= range->endoff + 1 - off) {
+		pos += ddp->flatoffs[fidx][range->meth];
+		return fcache_get_chunk(ctx->shared->fcache, fch, len,
+					fidx, pos);
+	}
+
 	fch->data = malloc(len);
 	if (!fch->data)
 		return KDUMP_ERR_SYSTEM;
