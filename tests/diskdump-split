@@ -144,7 +144,7 @@ fi
 echo "Check combined page map"
 ./checkattr "$dumpfile.1" "$dumpfile.2" "$dumpfile.3" <<EOF
 file.pagemap = bitmap: 0x1e
-memory.pagemap = bitmap: 0x1f
+memory.pagemap = bitmap: 0x3f
 EOF
 rc=$?
 if [ $rc -ne 0 ]; then
@@ -155,7 +155,7 @@ fi
 echo "Check combined page map with files out of order"
 ./checkattr "$dumpfile.2" "$dumpfile.3" "$dumpfile.1" <<EOF
 file.pagemap = bitmap: 0x1e
-memory.pagemap = bitmap: 0x1f
+memory.pagemap = bitmap: 0x3f
 EOF
 rc=$?
 if [ $rc -ne 0 ]; then
@@ -166,7 +166,7 @@ fi
 echo "Check combined page map with one file missing"
 ./checkattr "$dumpfile.3" "$dumpfile.1" <<EOF
 file.pagemap = bitmap: 0x1a
-memory.pagemap = bitmap: 0x1f
+memory.pagemap = bitmap: 0x3f
 EOF
 rc=$?
 if [ $rc -ne 0 ]; then
