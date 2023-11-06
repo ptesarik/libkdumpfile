@@ -200,9 +200,6 @@ struct page_desc {
 };
 
 struct disk_dump_priv {
-	/** Overridden methods for arch.page_size attribute. */
-	struct attr_override page_size_override;
-
 	/** Number of split files in this dump. */
 	unsigned num_files;
 
@@ -640,29 +637,6 @@ static kdump_status
 diskdump_get_page(struct page_io *pio)
 {
 	return cache_get_page(pio, diskdump_read_page);
-}
-
-/** Reallocate buffer for compressed data.
- * @param ctx   Dump file object.
- * @param attr  "arch.page_size" attribute.
- * @returns     Error status.
- *
- * This function is used as a post-set handler for @c arch.page_size
- * to ensure that there is always a sufficiently large buffer for
- * compressed pages.
- */
-static kdump_status
-diskdump_realloc_compressed(kdump_ctx_t *ctx, struct attr_data *attr)
-{
-	const struct attr_ops *parent_ops;
-	struct disk_dump_priv *ddp;
-
-	ddp = ctx->shared->fmtdata;
-
-	parent_ops = ddp->page_size_override.template.parent->ops;
-	return (parent_ops && parent_ops->post_set)
-		? parent_ops->post_set(ctx, attr)
-		: KDUMP_OK;
 }
 
 /** Read VMCOREINFO into its blob attribute.
@@ -1207,10 +1181,6 @@ init_private(kdump_ctx_t *ctx)
 				 "Cannot allocate diskdump private data");
 	ddp->num_files = get_num_files(ctx);
 
-	attr_add_override(gattr(ctx, GKI_page_size),
-			  &ddp->page_size_override);
-	ddp->page_size_override.ops.post_set = diskdump_realloc_compressed;
-
 	ctx->shared->fmtdata = ddp;
 	return KDUMP_OK;
 }
@@ -1458,8 +1428,6 @@ diskdump_attr_cleanup(struct attr_dict *dict)
 {
 	struct disk_dump_priv *ddp = dict->shared->fmtdata;
 
-	attr_remove_override(dgattr(dict, GKI_page_size),
-			     &ddp->page_size_override);
 	attr_remove_override(dgattr(dict, GKI_memory_pagemap),
 			     &ddp->mem_pagemap_override);
 }
