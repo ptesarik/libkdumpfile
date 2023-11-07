@@ -750,7 +750,7 @@ sym_offsetof_locked(const addrxlat_cb_t *cb, const char *obj, const char *elem,
 	if (!attr)
 		return ADDRXLAT_ERR_NODATA;
 
-	attr = sub_attr_xlat(ctx, attr, obj, "Field");
+	attr = sub_attr_xlat(ctx, attr, elem, "Field");
 	if (!attr)
 		return ADDRXLAT_ERR_NODATA;
 
