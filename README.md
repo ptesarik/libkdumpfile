@@ -47,6 +47,13 @@ To generate the `configure` script, run
 
 	autoreconf -fi
 
+Python
+------
+
+This repository contains some manually written Python bindings. These are now
+deprecated in favour of a fresh rewrite using CFFI. See
+[pykdumpfile](https://github.com/ptesarik/pykdumpfile).
+
 Making Releases
 ---------------
 
