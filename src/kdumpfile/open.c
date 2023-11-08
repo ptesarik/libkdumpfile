@@ -357,6 +357,8 @@ kdump_open_fdset(kdump_ctx_t *ctx, unsigned nfds, const int *fds)
 	struct attr_data *dir;
 	kdump_status status;
 
+	clear_error(ctx);
+
 	/* Make sure we do not use a stale file descriptor value. */
 	clear_attr(ctx, gattr(ctx, GKI_num_files));
 
