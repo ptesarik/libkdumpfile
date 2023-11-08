@@ -75,6 +75,8 @@ kdump_err(kdump_ctx_t *ctx, kdump_status status, const char *msgfmt, ...)
 	if (status != KDUMP_OK) {
 		va_list ap;
 
+		if (status == KDUMP_ERR_SYSTEM && !err_str(&ctx->err))
+			err_add(&ctx->err, "%s", strerror(errno));
 		va_start(ap, msgfmt);
 		err_vadd(&ctx->err, msgfmt, ap);
 		va_end(ap);
