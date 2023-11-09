@@ -694,14 +694,6 @@ get_linux_pgt_root(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *addr)
 	if (addr->as != ADDRXLAT_NOADDR)
 		return ADDRXLAT_OK;
 
-	status = get_reg(ctx, "cr3", &addr->addr);
-	if (status == ADDRXLAT_OK) {
-		addr->as = ADDRXLAT_MACHPHYSADDR;
-		return status;
-	} else if (status != ADDRXLAT_ERR_NODATA)
-		return set_error(ctx, status, err_fmt, "cr3");
-	clear_error(ctx);
-
 	status = get_symval(ctx, "init_top_pgt", &addr->addr);
 	if (status == ADDRXLAT_OK) {
 		addr->as = ADDRXLAT_KVADDR;
@@ -716,6 +708,14 @@ get_linux_pgt_root(addrxlat_ctx_t *ctx, addrxlat_fulladdr_t *addr)
 		return status;
 	} else if (status != ADDRXLAT_ERR_NODATA)
 		return set_error(ctx, status, err_fmt, "init_level4_pgt");
+	clear_error(ctx);
+
+	status = get_reg(ctx, "cr3", &addr->addr);
+	if (status == ADDRXLAT_OK) {
+		addr->as = ADDRXLAT_MACHPHYSADDR;
+		return status;
+	} else if (status != ADDRXLAT_ERR_NODATA)
+		return set_error(ctx, status, err_fmt, "cr3");
 	clear_error(ctx);
 
 	return ADDRXLAT_OK;
