@@ -928,6 +928,8 @@ void kdump_attr_iter_end(kdump_ctx_t *ctx, kdump_attr_iter_t *iter);
  *     sub-attributes 0 to n-1.
  *   - Set 0.fd, 1.fd, ... $n_1.fd to the file descriptors (in any
  *     order).
+ *   - Optionally, you may store the file name in 0.name, 1.name,
+ *     ... $n_1.fd.
  *   - When all file descriptors are set, the dump file gets
  *     initialized automatically.
  */

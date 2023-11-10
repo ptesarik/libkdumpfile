@@ -152,6 +152,10 @@ num_files_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
 		.type = KDUMP_NUMBER,
 		.ops = &fdset_ops,
 	};
+	static const struct attr_template name_tmpl = {
+		.key = "name",
+		.type = KDUMP_STRING,
+	};
 
 	struct attr_template dir_tmpl = {
 		.type = KDUMP_DIRECTORY,
@@ -170,24 +174,27 @@ num_files_pre_hook(kdump_ctx_t *ctx, struct attr_data *attr,
 	/* Allocate new attributes */
 	ret = KDUMP_OK;
 	for (i = attr_value(attr)->number; i < n; ++i) {
-		struct attr_data *dir, *child;
+		struct attr_data *dir, *fdattr, *nameattr;
 
 		keylen = sprintf(fdkey, "%zd", i);
 		dir_tmpl.fidx = i;
 		dir = create_attr_path(ctx->dict, parent,
 				       fdkey, keylen, &dir_tmpl);
-		child = dir
+		fdattr = dir
 			? new_attr(ctx->dict, dir, &tmpl)
 			: NULL;
-		if (!child) {
+		nameattr = fdattr
+			? new_attr(ctx->dict, dir, &name_tmpl)
+			: NULL;
+		if (!nameattr) {
 			ret = set_error(ctx, KDUMP_ERR_SYSTEM,
 					"Cannot allocate file.set attributes");
 			n = attr_value(attr)->number;
 			break;
 		}
 		if (i == 0) {
-			child->flags.indirect = 1;
-			child->pval = attr_mut_value(gattr(ctx, GKI_file_fd));
+			fdattr->flags.indirect = 1;
+			fdattr->pval = attr_mut_value(gattr(ctx, GKI_file_fd));
 		}
 	}
 

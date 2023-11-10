@@ -28,9 +28,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <libkdumpfile/kdumpfile.h>
 
 #include "testutil.h"
+
+#define FILENAME_0	"fileA"
+#define FILENAME_1	"fileB"
 
 /** Check that file.set.key does not exist.
  */
@@ -57,10 +61,11 @@ check_not_exist(kdump_ctx_t *ctx, kdump_attr_ref_t *fileset, const char *key)
 	return ret;
 }
 
-/** Check that file.set.key exists but has no value.
+/** Check that file.set.key exists and has the expected type but no value.
  */
 static int
-check_unset_file(kdump_ctx_t *ctx, kdump_attr_ref_t *fileset, const char *key)
+check_unset_file(kdump_ctx_t *ctx, kdump_attr_ref_t *fileset, const char *key,
+		 kdump_attr_type_t exp_type)
 {
 	kdump_attr_ref_t tmpref;
 	kdump_status status;
@@ -76,7 +81,7 @@ check_unset_file(kdump_ctx_t *ctx, kdump_attr_ref_t *fileset, const char *key)
 		ret = TEST_FAIL;
 	} else {
 		kdump_attr_type_t type = kdump_attr_ref_type(&tmpref);
-		if (type != KDUMP_NUMBER) {
+		if (type != exp_type) {
 			fprintf(stderr, "Wrong file.set.%s type: %d\n",
 				key, type);
 			ret = TEST_FAIL;
@@ -156,6 +161,42 @@ check_fileset_zero(kdump_ctx_t *ctx, kdump_attr_ref_t *fileset, int fd)
 	return ret;
 }
 
+static int
+check_filename(kdump_ctx_t *ctx, kdump_attr_ref_t *fileset,
+	       const char *subkey, const char *name)
+{
+	kdump_attr_ref_t tmpref;
+	kdump_attr_t attr;
+	kdump_status status;
+	int ret;
+
+	ret = TEST_OK;
+
+	status = kdump_sub_attr_ref(ctx, fileset, subkey, &tmpref);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot reference attribute %s.%s: %s\n",
+			KDUMP_ATTR_FILE_SET, subkey, kdump_get_err(ctx));
+		return TEST_ERR;
+	}
+	status = kdump_attr_ref_get(ctx, &tmpref, &attr);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot get %s.%s: %s\n",
+			KDUMP_ATTR_FILE_SET, subkey, kdump_get_err(ctx));
+		ret = TEST_FAIL;
+	} else if (attr.type != KDUMP_STRING) {
+		fprintf(stderr, "Wrong %s.%s attribute type: %d\n",
+			KDUMP_ATTR_FILE_SET, subkey, (int)attr.type);
+		ret = TEST_FAIL;
+	} else if (strcmp(attr.val.string, name)) {
+		fprintf(stderr, "Wrong %s.%s value: %s != %s\n",
+			KDUMP_ATTR_FILE_SET, subkey, attr.val.string, name);
+		ret = TEST_FAIL;
+	}
+	kdump_attr_unref(ctx, &tmpref);
+
+	return ret;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -219,6 +260,13 @@ main(int argc, char **argv)
 	else if (rc != TEST_OK)
 		ret = rc;
 
+	/* Check that file.set.0.name does not exist. */
+	rc = check_not_exist(ctx, &fileset, "0.name");
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+
 	/*************************************************************
 	 * File set with one file.
 	 */
@@ -232,7 +280,14 @@ main(int argc, char **argv)
 	}
 
 	/* Check that file.set.0.fd exists now but has no value. */
-	rc = check_unset_file(ctx, &fileset, "0.fd");
+	rc = check_unset_file(ctx, &fileset, "0.fd", KDUMP_NUMBER);
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+
+	/* Check that file.set.0.name also exists. */
+	rc = check_unset_file(ctx, &fileset, "0.name", KDUMP_STRING);
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
@@ -240,6 +295,13 @@ main(int argc, char **argv)
 
 	/* Check that file.set.1.fd does not exist. */
 	rc = check_not_exist(ctx, &fileset, "1.fd");
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+
+	/* Neither does file.set.1.name. */
+	rc = check_not_exist(ctx, &fileset, "1.name");
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
@@ -257,22 +319,78 @@ main(int argc, char **argv)
 		ret = TEST_FAIL;
 	}
 
-	/* Check that file.set.1.fd exists now but has no value. */
-	rc = check_unset_file(ctx, &fileset, "1.fd");
+	/* Check that file.set.1.fd and file.set.1.name exist now but
+	 * have no value. */
+	rc = check_unset_file(ctx, &fileset, "1.fd", KDUMP_NUMBER);
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+	rc = check_unset_file(ctx, &fileset, "1.name", KDUMP_STRING);
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
 		ret = rc;
 
-	/* Check that file.set.2.fd also exists and has no value. */
-	rc = check_unset_file(ctx, &fileset, "2.fd");
+	/* Check that file.set.2.fd and file.set.2.name also exist and
+	 * have no value. */
+	rc = check_unset_file(ctx, &fileset, "2.fd", KDUMP_NUMBER);
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+	rc = check_unset_file(ctx, &fileset, "2.name", KDUMP_STRING);
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
 		ret = rc;
 
-	/* Check that file.set.3.fd does not exist. */
+	/* Check that file.set.3.fd and file.set.3.name do not exist. */
 	rc = check_not_exist(ctx, &fileset, "3.fd");
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+	rc = check_not_exist(ctx, &fileset, "3.name");
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+
+	/*************************************************************
+	 * Store a file name in the attribute.
+	 */
+
+	/* Set file.set.0.name. */
+	attr.type = KDUMP_STRING;
+	attr.val.string = FILENAME_0;
+	status = kdump_set_sub_attr(ctx, &fileset, "0.name", &attr);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot set %s.0.name: %s\n",
+			KDUMP_ATTR_FILE_SET, kdump_get_err(ctx));
+		ret = TEST_FAIL;
+	}
+
+
+	/* Set file.set.1.name. */
+	attr.type = KDUMP_STRING;
+	attr.val.string = FILENAME_1;
+	status = kdump_set_sub_attr(ctx, &fileset, "1.name", &attr);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot set %s.1.name: %s\n",
+			KDUMP_ATTR_FILE_SET, kdump_get_err(ctx));
+		ret = TEST_FAIL;
+	}
+
+	/* Verify file.set.0.name. */
+	rc = check_filename(ctx, &fileset, "0.name", FILENAME_0);
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+
+	/* Verify file.set.1.name. */
+	rc = check_filename(ctx, &fileset, "1.name", FILENAME_1);
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
@@ -290,15 +408,25 @@ main(int argc, char **argv)
 		ret = TEST_FAIL;
 	}
 
-	/* Check that file.set.2.fd no longer exists. */
+	/* Check that file.set.2.fd and file.set.2.name no longer exist. */
 	rc = check_not_exist(ctx, &fileset, "2.fd");
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
 		ret = rc;
+	rc = check_not_exist(ctx, &fileset, "2.name");
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
 
-	/* But file.set.1.fd still exists. */
-	rc = check_unset_file(ctx, &fileset, "1.fd");
+	/* But file.set.1.fd and file.set.1.name still exist. */
+	rc = check_unset_file(ctx, &fileset, "1.fd", KDUMP_NUMBER);
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+	rc = check_filename(ctx, &fileset, "1.name", FILENAME_1);
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
@@ -316,15 +444,25 @@ main(int argc, char **argv)
 		ret = TEST_FAIL;
 	}
 
-	/* Check that file.set.1.fd no longer exists. */
+	/* Check that file.set.1.fd and file.set.1.name no longer exist. */
 	rc = check_not_exist(ctx, &fileset, "1.fd");
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
 		ret = rc;
+	rc = check_not_exist(ctx, &fileset, "1.name");
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
 
-	/* Neither does file.set.0.fd. */
+	/* Neither does file.set.0.fd or file.set.0.name. */
 	rc = check_not_exist(ctx, &fileset, "0.fd");
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+	rc = check_not_exist(ctx, &fileset, "0.name");
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
