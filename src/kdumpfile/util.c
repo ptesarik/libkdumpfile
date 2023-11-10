@@ -1356,6 +1356,17 @@ read_blob_attr(kdump_ctx_t *ctx, unsigned fidx, off_t off, size_t size,
 const char *
 err_filename(kdump_ctx_t *ctx, unsigned fidx)
 {
+	struct attr_data *attr;
+	const char *numstr;
+
 	sprintf(ctx->err_filename, "file #%u", fidx);
+	numstr = ctx->err_filename + sizeof("file #") - 1;
+	attr = lookup_dir_attr(ctx->dict, gattr(ctx, GKI_dir_file_set),
+			       numstr, strlen(numstr));
+	if (attr) {
+		attr = lookup_dir_attr(ctx->dict, attr, "name", 4);
+		if (attr && attr_isset(attr))
+			return attr_value(attr)->string;
+	}
 	return ctx->err_filename;
 }
