@@ -1416,9 +1416,11 @@ diskdump_probe(kdump_ctx_t *ctx)
 		strcat(desc, "Diskdump");
 	else if (!memcmp(hdr, magic_kdump, sizeof magic_kdump))
 		strcat(desc, "Compressed KDUMP");
-	else
+	else {
+		diskdump_cleanup(ctx->shared);
 		return set_error(ctx, KDUMP_NOPROBE,
 				 "Unrecognized diskdump signature");
+	}
 
 	set_file_description(ctx, desc);
 
