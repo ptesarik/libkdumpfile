@@ -1116,7 +1116,8 @@ sadump_probe(kdump_ctx_t *ctx)
 		status = probe_file(ctx, fidx, &dsi, dmap);
 		if (status != KDUMP_OK) {
 			sadump_cleanup(ctx->shared);
-			return set_error(ctx, status, "File #%u", fidx);
+			return set_error(ctx, status, "%s",
+					 err_filename(ctx, fidx));
 		}
 	}
 	sp = ctx->shared->fmtdata;

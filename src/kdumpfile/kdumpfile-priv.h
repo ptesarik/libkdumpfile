@@ -710,6 +710,9 @@ struct _kdump_ctx {
 	/** Per-context data. */
 	void *data[PER_CTX_SLOTS];
 
+	/** Temporary buffer for file names in error messages. */
+	char err_filename[sizeof("File #") + 20];
+
 	/** Error message buffer.
 	 * This must be the last member. */
 	kdump_errmsg_t err;
@@ -771,6 +774,9 @@ INTERNAL_DECL(kdump_status, read_locked,
 INTERNAL_DECL(kdump_status, set_error,
 	      (kdump_ctx_t *ctx, kdump_status ret, const char *msgfmt, ...))
 	__attribute__ ((format (printf, 3, 4)));
+
+INTERNAL_DECL(const char *, err_filename,
+	      (kdump_ctx_t *ctx, unsigned fidx));
 
 INTERNAL_DECL(kdump_status, addrxlat2kdump,
 	      (kdump_ctx_t *ctx, addrxlat_status status));

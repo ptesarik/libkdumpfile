@@ -378,8 +378,8 @@ kdump_open_fdset(kdump_ctx_t *ctx, unsigned nfds, const int *fds)
 		status = set_attr_number(ctx, child, ATTR_PERSIST,
 					 fds[dir->template->fidx]);
 		if (status != KDUMP_OK)
-			return set_error(ctx, status,
-					 "File #%zu", dir->template->fidx);
+			return set_error(ctx, status, "%s",
+					 err_filename(ctx, dir->template->fidx));
 	}
 
 	return KDUMP_OK;

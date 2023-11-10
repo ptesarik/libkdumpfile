@@ -957,7 +957,7 @@ do_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh,
 			break;
 	}
 
-	return set_error(ctx, ret, "File #%u", fidx);
+	return set_error(ctx, ret, "%s", err_filename(ctx, fidx));
 }
 
 static kdump_status
@@ -1086,7 +1086,7 @@ do_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh,
 			break;
 	}
 
-	return set_error(ctx, ret, "File #%u", fidx);
+	return set_error(ctx, ret, "%s", err_filename(ctx, fidx));
 }
 
 static kdump_status
@@ -1361,7 +1361,8 @@ init_flattened_maps(kdump_ctx_t *ctx)
 		status = init_flattened_file(ctx, fidx);
 		if (status != KDUMP_OK)
 			return set_error(ctx, status,
-					 "Cannot rearrange file #%u", fidx);
+					 "Cannot rearrange %s",
+					 err_filename(ctx, fidx));
 	}
 
 	return KDUMP_OK;

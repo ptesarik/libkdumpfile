@@ -1334,11 +1334,28 @@ read_blob_attr(kdump_ctx_t *ctx, unsigned fidx, off_t off, size_t size,
 	ret = fcache_get_chunk(ctx->shared->fcache, &fch, size, fidx, off);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
-				 "Cannot read %s (%zu bytes at %llu in file #%u)",
-				 desc, size, (unsigned long long) off, fidx);
+				 "Cannot read %s (%zu bytes at %llu in %s)",
+				 desc, size, (unsigned long long) off,
+				 err_filename(ctx, fidx));
 
 	ret = set_blob_attr(ctx, attr, fch.data, size, desc);
 
 	fcache_put_chunk(&fch);
 	return ret;
+}
+
+/** Get file name for error messages.
+ * @param ctx   Dump file object.
+ * @param fidx  File index.
+ * @returns     Error status.
+ *
+ * The file name buffer is pre-allocated in @p ctx, so the returned
+ * string stays valid as long as @p ctx stays valid, or until the
+ * next call to this function.
+ */
+const char *
+err_filename(kdump_ctx_t *ctx, unsigned fidx)
+{
+	sprintf(ctx->err_filename, "file #%u", fidx);
+	return ctx->err_filename;
 }
