@@ -329,6 +329,19 @@ uint_fast64_t kdump_d64toh(kdump_ctx_t *ctx, uint_fast64_t val);
 kdump_status kdump_set_filenames(kdump_ctx_t *ctx, unsigned n,
 				 const char *const *names);
 
+/** Set a file name.
+ * @param ctx   Dump file object.
+ * @param name  File name.
+ * @returns     Error status.
+ *
+ * This is a shortcut for naming a single-file dump.
+ */
+static inline kdump_status
+kdump_set_filename(kdump_ctx_t *ctx, const char *name)
+{
+	return kdump_set_filenames(ctx, 1, &name);
+}
+
 /** Open a set of dump files.
  * @param ctx   Dump file object.
  * @param nfds  Number of file descriptors in @p fds.
