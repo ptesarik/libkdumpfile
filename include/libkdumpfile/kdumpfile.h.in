@@ -317,6 +317,18 @@ uint_fast32_t kdump_d32toh(kdump_ctx_t *ctx, uint_fast32_t val);
  */
 uint_fast64_t kdump_d64toh(kdump_ctx_t *ctx, uint_fast64_t val);
 
+/** Set descriptive file names.
+ * @param ctx    Dump file object.
+ * @param n      Number of names in @p names.
+ * @param names  Names. @c NULL means clear the name.
+ * @returns      Error status.
+ *
+ * Set the optional file names. These names are used in error messages to give
+ * humans a clue which file of a multi-file dump the error is related.
+ */
+kdump_status kdump_set_filenames(kdump_ctx_t *ctx, unsigned n,
+				 const char *const *names);
+
 /** Open a set of dump files.
  * @param ctx   Dump file object.
  * @param nfds  Number of file descriptors in @p fds.

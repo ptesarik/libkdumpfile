@@ -205,6 +205,7 @@ main(int argc, char **argv)
 	kdump_attr_t attr;
 	kdump_ctx_t *ctx;
 	kdump_status status;
+	const char *names[2];
 	int fd;
 	int ret;
 	int rc;
@@ -550,6 +551,102 @@ main(int argc, char **argv)
 
 	/* Check that the file descriptor is also found as file.set.0.fd. */
 	rc = check_fileset_zero(ctx, &fileset, fd);
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+
+	/*************************************************************
+	 * RESET.
+	 */
+	attr.type = KDUMP_NUMBER;
+	attr.val.number = 0;
+	status = kdump_attr_ref_set(ctx, &number, &attr);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot clean up the file set: %s\n",
+			kdump_get_err(ctx));
+		rc = TEST_FAIL;
+	}
+
+	/*************************************************************
+	 * Unset file names.
+	 */
+	names[0] = NULL;
+	names[1] = NULL;
+	status = kdump_set_filenames(ctx, 2, names);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot set file names: %s\n",
+			kdump_get_err(ctx));
+		rc = TEST_FAIL;
+	}
+
+	/* Check that fdset size is two. */
+	rc = check_fileset_size(ctx, 2);
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+
+	/* Check that file.set.0.name and file.set.1.name are unset */
+	rc = check_unset_file(ctx, &fileset, "0.name", KDUMP_STRING);
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+	rc = check_unset_file(ctx, &fileset, "1.name", KDUMP_STRING);
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+
+	/*************************************************************
+	 * Real file names.
+	 */
+	names[0] = FILENAME_0;
+	names[1] = FILENAME_1;
+	status = kdump_set_filenames(ctx, 2, names);
+	if (status != KDUMP_OK) {
+		fprintf(stderr, "Cannot set file names: %s\n",
+			kdump_get_err(ctx));
+		rc = TEST_FAIL;
+	}
+
+	/* Check that fdset size is two. */
+	rc = check_fileset_size(ctx, 2);
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+
+	/* Verify file.set.0.name and file.set.1.name. */
+	rc = check_filename(ctx, &fileset, "0.name", FILENAME_0);
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+	rc = check_filename(ctx, &fileset, "1.name", FILENAME_1);
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+
+	/* Set the file descriptor and reduce the set to one file. */
+	status = kdump_open_fd(ctx, fd);
+	if (status != KDUMP_OK && status != KDUMP_ERR_NOTIMPL) {
+		fprintf(stderr, "Cannot set dump file descriptor: %s\n",
+			kdump_get_err(ctx));
+		return TEST_ERR;
+	}
+
+	/* Verify file.set.0.name is still set. */
+	rc = check_filename(ctx, &fileset, "0.name", FILENAME_0);
+	if (rc == TEST_ERR)
+		return rc;
+	else if (rc != TEST_OK)
+		ret = rc;
+
+	/* But file.set.1.name no longer exists. */
+	rc = check_not_exist(ctx, &fileset, "1.name");
 	if (rc == TEST_ERR)
 		return rc;
 	else if (rc != TEST_OK)
