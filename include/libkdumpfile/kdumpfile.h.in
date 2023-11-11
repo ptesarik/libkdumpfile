@@ -324,6 +324,12 @@ uint_fast64_t kdump_d64toh(kdump_ctx_t *ctx, uint_fast64_t val);
  * @returns     Error status.
  *
  * Set up file.fdset attribute subtree to open a set of dump files.
+ *
+ * Note: Only file descriptors are replaced by this call; if file name
+ * attributes were set before the call, they are not changed. However, this
+ * function sets file.set.number to @p nfds, which discards file.set.x
+ * sub-directories for x greater than or equal to @p nfds, INCLUDING any
+ * respective file.set.x.name attributes.
  */
 kdump_status kdump_open_fdset(kdump_ctx_t *ctx, unsigned nfds, const int *fds);
 
