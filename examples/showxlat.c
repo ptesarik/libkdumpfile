@@ -422,6 +422,11 @@ main(int argc, char **argv)
 		return 2;
 	}
 
+	status = kdump_set_filename(ctx, argv[optind]);
+	if (status != KDUMP_OK)
+		fprintf(stderr, "Warning: Cannot set file name: %s\n",
+			kdump_get_err(ctx));
+
 	status = kdump_open_fd(ctx, fd);
 	if (status != KDUMP_OK) {
 		fprintf(stderr, "File initialization failed: %s\n",
