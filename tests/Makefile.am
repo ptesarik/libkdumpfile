@@ -165,6 +165,9 @@ test_scripts = \
 	addrxlat-ia32 \
 	addrxlat-ia32-pae \
 	addrxlat-ppc64-64k \
+	addrxlat-riscv-sv39 \
+	addrxlat-riscv-sv48 \
+	addrxlat-riscv-sv57 \
 	addrxlat-s390x-2l \
 	addrxlat-s390x-3l \
 	addrxlat-s390x-4l \

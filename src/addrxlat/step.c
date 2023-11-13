@@ -333,6 +333,7 @@ first_step_pgt(addrxlat_step_t *step, addrxlat_addr_t addr)
 	case ADDRXLAT_PTE_S390X:
 		return first_step_uaddr(step, addr);
 
+	case ADDRXLAT_PTE_RISCV64:
 	case ADDRXLAT_PTE_X86_64:
 		return first_step_saddr(step, addr);
 
@@ -377,6 +378,9 @@ next_step_pgt(addrxlat_step_t *step)
 
 	case ADDRXLAT_PTE_IA32_PAE:
 		return pgt_ia32_pae(step);
+
+	case ADDRXLAT_PTE_RISCV64:
+		return pgt_riscv64(step);
 
 	case ADDRXLAT_PTE_X86_64:
 		return pgt_x86_64(step);

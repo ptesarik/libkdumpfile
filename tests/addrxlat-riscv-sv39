@@ -1,0 +1,28 @@
+#! /bin/sh
+
+#
+# Check VTOP translation for RISC-V Sv39 (3-level paging).
+#
+
+pf="riscv64:12,9,9,9"
+
+ptes="-e 0x0000:0x401"		# level2[0] -> 1000
+ptes="$ptes -e 0x0008:0x1001"	# level2[1] -> 4000
+ptes="$ptes -e 0x0010:0xf000000f" # level2[2] -> 3c0000000 (1G)
+ptes="$ptes -e 0x1000:0x801"	# level2[0] -> level1[0] -> 2000
+ptes="$ptes -e 0x1008:0xc01"	# level2[0] -> level1[1] -> 3000
+ptes="$ptes -e 0x1010:0x38000f"	# level2[0] -> level1[2] -> e00000 (2M)
+ptes="$ptes -e 0x2000:0x280f"	# level2[0] -> level1[0] -> level0[0] -> a000
+ptes="$ptes -e 0x2008:0x2c0f"	# level2[0] -> level1[0] -> level0[1] -> b000
+ptes="$ptes -e 0x3800:0x300f"	# level2[0] -> level1[1] -> level0[256] -> c000
+ptes="$ptes -e 0x4010:0x1401"	# level2[1] -> level1[2] -> 5000
+ptes="$ptes -e 0x5018:0x2000000000340f"	# level2[1] -> level1[2] -> level0[3] -> 8000000000d000
+
+list="0x123:0xa123"		# VPN[2]=0 VPN[1]=0 VPN[0]=0
+list="$list 0x1234:0xb234"	# VPN[2]=0 VPN[1]=0 VPN[0]=1
+list="$list 0x300567:0xc567"	# VPN[2]=0 VPN[1]=1 VPN[0]=256
+list="$list 0x4040389a:0x8000000000d89a" # VPN[2]=1 VPN[1]=2 VPN[2]=3
+list="$list 0x523456:0xf23456"	# VPN[2]=0 VPN[1]=2 (2M)
+list="$list 0xa1234567:0x3e1234567" # VPN[2]=2 (1G)
+
+. "$srcdir"/addrxlat-common

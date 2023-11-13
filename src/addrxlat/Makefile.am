@@ -32,6 +32,7 @@ libaddrxlat_la_SOURCES = \
 	arm.c \
 	ia32.c \
 	ppc64.c \
+	riscv64.c \
 	s390x.c \
 	x86_64.c
 

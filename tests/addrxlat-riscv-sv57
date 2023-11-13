@@ -1,0 +1,37 @@
+#! /bin/sh
+
+#
+# Check VTOP translation for RISC-V Sv57 (5-level paging).
+#
+
+pf="riscv64:12,9,9,9,9,9"
+
+ptes="-e 0x0000:0x401"		# level4[0] -> 1000
+ptes="$ptes -e 0x0008:0x1801"	# level4[1] -> 6000
+ptes="$ptes -e 0x0010:0x380000000000f" # level4[2] -> e000000000000 (256T)
+ptes="$ptes -e 0x1000:0x801"	# level4[0] -> level3[0] -> 2000
+ptes="$ptes -e 0x1010:0x600000000f" # level4[0] -> level3[2] -> 18000000000 (512G)
+ptes="$ptes -e 0x2000:0xc01"	# level4[0] -> level3[0] -> level2[0] -> 3000
+ptes="$ptes -e 0x2010:0xf000000f" # level4[0] -> level3[0] -> level2[2] -> 3c0000000 (1G)
+ptes="$ptes -e 0x3000:0x1001"	# level4[0] -> level3[0] -> level2[0] -> level1[0] -> 4000
+ptes="$ptes -e 0x3008:0x1401"	# level4[0] -> level3[0] -> level2[0] -> level1[1] -> 5000
+ptes="$ptes -e 0x3010:0x38000f"	# level4[0] -> level3[0] -> level2[0] -> level1[2] -> e00000 (2M)
+ptes="$ptes -e 0x4000:0x280f"	# level4[0] -> level3[0] -> level2[0] -> level1[0] -> level0[0] -> a000
+ptes="$ptes -e 0x4008:0x2c0f"	# level4[0] -> level3[0] -> level2[0] -> level1[0] -> level0[1] -> b000
+ptes="$ptes -e 0x5800:0x300f"	# level4[0] -> level3[0] -> level2[0] -> level1[1] -> level0[256] -> c000
+ptes="$ptes -e 0x6010:0x1c01"	# level4[1] -> level3[2] -> 7000
+ptes="$ptes -e 0x7018:0x2001"	# level4[1] -> level3[2] -> level2[3] -> 8000
+ptes="$ptes -e 0x8020:0x2401"	# level4[1] -> level3[2] -> level2[3] -> level1[4] -> 9000
+ptes="$ptes -e 0x9028:0x2000000000340f"	# level4[1] -> level3[2] -> level2[3] -> level1[4] -> level0[5] -> 8000000000d000
+
+list="0x123:0xa123"		# VPN[4]=0 VPN[3]=0 VPN[2]=0 VPN[1]=0 VPN[0]=0
+list="$list 0x1234:0xb234"	# VPN[4]=0 VPN[3]=0 VPN[2]=0 VPN[1]=0 VPN[0]=1
+list="$list 0x300567:0xc567"	# VPN[4]=0 VPN[3]=0 VPN[2]=0 VPN[1]=1 VPN[0]=256
+list="$list 0x10100c080589a:0x8000000000d89a" # VPN[4]=1 VPN[3]=2 VNP[2]=3 VPN[1]=4 VPN[0]=5
+list="$list 0x523456:0xf23456"	# VPN[3]=0 VPN[2]=0 VPN[1]=2 (2M)
+list="$list 0xa1234567:0x3e1234567" # VPN[3]=0 VPN[2]=2 (1G)
+
+list="$list 0x123456789ab:0x1a3456789ab" # VPN[4]=0 VPN[3]=2 (512G)
+list="$list 0x2468ace02468a:0xe468ace02468a" # VPN[4]=2 (256T)
+
+. "$srcdir"/addrxlat-common

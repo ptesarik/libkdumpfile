@@ -252,6 +252,7 @@ pteval_shift(addrxlat_pte_format_t fmt)
 	case ADDRXLAT_PTE_AARCH64_LPA2:
 	case ADDRXLAT_PTE_IA32_PAE:
 	case ADDRXLAT_PTE_X86_64:
+	case ADDRXLAT_PTE_RISCV64:
 	case ADDRXLAT_PTE_S390X:
 	case ADDRXLAT_PTE_PPC64_LINUX_RPN30:
 		return 3;
@@ -317,6 +318,8 @@ INTERNAL_DECL(addrxlat_next_step_fn, pgt_ia32, );
 INTERNAL_DECL(addrxlat_next_step_fn, pgt_ia32_pae, );
 
 INTERNAL_DECL(addrxlat_next_step_fn, pgt_x86_64, );
+
+INTERNAL_DECL(addrxlat_next_step_fn, pgt_riscv64, );
 
 INTERNAL_DECL(addrxlat_next_step_fn, pgt_s390x, );
 
