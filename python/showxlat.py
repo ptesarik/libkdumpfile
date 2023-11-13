@@ -50,6 +50,8 @@ pte_formats = {
     addrxlat.PTE_IA32: 'ia32',
     addrxlat.PTE_IA32_PAE: 'ia32_pae',
     addrxlat.PTE_X86_64: 'x86_64',
+    addrxlat.PTE_RISCV32: 'riscv32',
+    addrxlat.PTE_RISCV64: 'riscv64',
     addrxlat.PTE_S390X: 's390x',
     addrxlat.PTE_PPC64_LINUX_RPN30: 'ppc64_linux_rpn30',
 }

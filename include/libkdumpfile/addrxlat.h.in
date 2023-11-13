@@ -525,6 +525,12 @@ typedef enum _addrxlat_pte_format {
 	ADDRXLAT_PTE_AARCH64_LPA2,
 
 	ADDRXLAT_PTE_ARM,	/**< Arm AArch32 with short descriptors. */
+
+	/** RISC-V Sv32 (32-bit virtual address) */
+	ADDRXLAT_PTE_RISCV32,
+
+	/** RISC-V Sv39, Sv48, Sv57 (64-bit virtual address) */
+	ADDRXLAT_PTE_RISCV64,
 } addrxlat_pte_format_t;
 
 /** Get the (string) name of a PTE format.

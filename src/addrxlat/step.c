@@ -51,6 +51,8 @@ static const char pte_format_names[][24] = {
 	[ADDRXLAT_PTE_IA32] = "ia32",
 	[ADDRXLAT_PTE_IA32_PAE] = "ia32_pae",
 	[ADDRXLAT_PTE_PPC64_LINUX_RPN30] = "ppc64_linux_rpn30",
+	[ADDRXLAT_PTE_RISCV32] = "riscv32",
+	[ADDRXLAT_PTE_RISCV64] = "riscv64",
 	[ADDRXLAT_PTE_S390X] = "s390x",
 	[ADDRXLAT_PTE_X86_64] = "x86_64",
 };
