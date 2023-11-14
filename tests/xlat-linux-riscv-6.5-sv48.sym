@@ -1,0 +1,6 @@
+@VALUE(swapper_pg_dir)
+ffffffff81e8e000
+@NUMBER(VA_BITS)
+30 # = decimal 48
+@NUMBER(va_kernel_pa_offset)
+fffffffeffe00000

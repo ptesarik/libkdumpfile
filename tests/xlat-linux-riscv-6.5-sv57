@@ -1,0 +1,12 @@
+#! /bin/bash
+
+#
+# Check Linux 6.5 RISC-V translation with 39-bit virtual addresses
+# using data from VMCOREINFO.
+#
+
+opts=(
+    arch=riscv64
+    ostype=linux
+)
+. "$srcdir"/xlat-os-common

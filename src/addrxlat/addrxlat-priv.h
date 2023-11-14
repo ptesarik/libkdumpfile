@@ -460,6 +460,7 @@ INTERNAL_DECL(sys_arch_fn, sys_aarch64, );
 INTERNAL_DECL(sys_arch_fn, sys_arm, );
 INTERNAL_DECL(sys_arch_fn, sys_ia32, );
 INTERNAL_DECL(sys_arch_fn, sys_ppc64, );
+INTERNAL_DECL(sys_arch_fn, sys_riscv64, );
 INTERNAL_DECL(sys_arch_fn, sys_s390x, );
 INTERNAL_DECL(sys_arch_fn, sys_x86_64, );
 
