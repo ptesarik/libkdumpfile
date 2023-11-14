@@ -1423,7 +1423,11 @@ diskdump_probe(kdump_ctx_t *ctx)
 				 "Unrecognized diskdump signature");
 	}
 
-	set_file_description(ctx, desc);
+	status = set_attr_string(ctx, gattr(ctx, GKI_file_description),
+				 ATTR_DEFAULT, desc);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Cannot set %s",
+				 "file.description");
 
 	if (!ctx->shared->fmtdata) {
 		status = init_private(ctx);
