@@ -203,6 +203,7 @@ arch_ptr_size(enum kdump_arch arch)
 	case ARCH_ALPHA:
 	case ARCH_IA64:
 	case ARCH_PPC64:
+	case ARCH_RISCV64:
 	case ARCH_S390X:
 	case ARCH_X86_64:
 		return 8;	/* 64 bits */
@@ -211,6 +212,7 @@ arch_ptr_size(enum kdump_arch arch)
 	case ARCH_IA32:
 	case ARCH_MIPS:
 	case ARCH_PPC:
+	case ARCH_RISCV32:
 	case ARCH_S390:
 	default:
 		return 4;	/* 32 bits */
@@ -236,6 +238,10 @@ machine_arch_name(const char *machine)
 	else if (!strcmp(machine, "ppc64") ||
 		 !strcmp(machine, "ppc64le"))
 		return KDUMP_ARCH_PPC64;
+	else if (!strcmp(machine, "riscv32"))
+		return KDUMP_ARCH_RISCV32;
+	else if (!strcmp(machine, "riscv64"))
+		return KDUMP_ARCH_RISCV64;
 	else if (!strcmp(machine, "s390"))
 		return KDUMP_ARCH_S390;
 	else if (!strcmp(machine, "s390x"))
@@ -266,6 +272,8 @@ default_page_shift(enum kdump_arch arch)
 		[ARCH_MIPS] = 12,
 		[ARCH_PPC] = 0,
 		[ARCH_PPC64] = 0,
+		[ARCH_RISCV32] = 12,
+		[ARCH_RISCV64] = 12,
 		[ARCH_S390] = 12,
 		[ARCH_S390X] = 12,
 		[ARCH_IA32] = 12,
@@ -285,6 +293,8 @@ arch_ops(enum kdump_arch arch)
 	case ARCH_IA64:
 	case ARCH_MIPS:
 	case ARCH_PPC:
+	case ARCH_RISCV32:
+	case ARCH_RISCV64:
 	case ARCH_S390:
 		/* TODO */
 		break;
@@ -317,6 +327,8 @@ static const char canon_arch_names[][MAX_ARCH_NAME_LEN] =
 	DEF_ARCH(MIPS),
 	DEF_ARCH(PPC),
 	DEF_ARCH(PPC64),
+	DEF_ARCH(RISCV32),
+	DEF_ARCH(RISCV64),
 	DEF_ARCH(S390),
 	DEF_ARCH(S390X),
 	DEF_ARCH(X86_64),

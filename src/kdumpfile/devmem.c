@@ -342,6 +342,14 @@ devmem_probe(kdump_ctx_t *ctx)
 	ret = set_arch_name(ctx, KDUMP_ARCH_PPC64);
 #elif defined(__powerpc__)
 	ret = set_arch_name(ctx, KDUMP_ARCH_PPC);
+#elif defined(__riscv)
+# if __riscv_xlen == 32
+	ret = set_arch_name(ctx, KDUMP_ARCH_RISCV32);
+# elif __riscv_xlen == 64
+	ret = set_arch_name(ctx, KDUMP_ARCH_RISCV64);
+# else
+#  error "Unsupported __riscv_xlen"
+# endif
 #elif defined(__s390x__)
 	ret = set_arch_name(ctx, KDUMP_ARCH_S390X);
 #elif defined(__s390__)

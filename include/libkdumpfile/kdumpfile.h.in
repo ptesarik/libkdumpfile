@@ -1010,6 +1010,8 @@ void kdump_attr_iter_end(kdump_ctx_t *ctx, kdump_attr_iter_t *iter);
 #define KDUMP_ARCH_MIPS		"mips"	  /**< MIPS, 32-bit */
 #define KDUMP_ARCH_PPC		"ppc"	  /**< Power ISA, 32-bit */
 #define KDUMP_ARCH_PPC64	"ppc64"	  /**< Power ISA, 64-bit */
+#define KDUMP_ARCH_RISCV32	"riscv32" /**< RISC-V, 32-bit */
+#define KDUMP_ARCH_RISCV64	"riscv64" /**< RISC-V, 64-bit */
 #define KDUMP_ARCH_S390		"s390"	  /**< IBM z/Architecture, 31-bit */
 #define KDUMP_ARCH_S390X	"s390x"	  /**< IBM z/Architecture, 64-bit */
 #define KDUMP_ARCH_X86_64	"x86_64"  /**< AMD64, Intel 64 */

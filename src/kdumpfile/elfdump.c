@@ -174,6 +174,9 @@ mach2arch(unsigned mach, int elfclass)
 	case EM_MIPS:	return KDUMP_ARCH_MIPS;
 	case EM_PPC:	return KDUMP_ARCH_PPC;
 	case EM_PPC64:	return KDUMP_ARCH_PPC64;
+	case EM_RISCV:	return (elfclass == ELFCLASS64
+				? KDUMP_ARCH_RISCV64
+				: KDUMP_ARCH_RISCV32);
 	case EM_S390:	return (elfclass == ELFCLASS64
 				? KDUMP_ARCH_S390X
 				: KDUMP_ARCH_S390);
