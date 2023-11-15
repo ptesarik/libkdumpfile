@@ -5,6 +5,14 @@
   pte_format=riscv64
   fields=12,9,9,9,9
 
+@direct: LINEAR
+  target_as=KPHYSADDR
+  off=0x508080000000
+
+@rdirect: LINEAR
+  target_as=KVADDR
+  off=0xffffaf7f80000000
+
 @machphys_kphys: LINEAR
   target_as=KPHYSADDR
   off=0x0
@@ -21,9 +29,14 @@ ffff800000000000-ffffffffffffffff: @rootpgt
 KV -> PHYS:
 0-7fffffffffff: @rootpgt
 800000000000-ffff7fffffffffff: NONE
-ffff800000000000-ffffffffffffffff: @rootpgt
+ffff800000000000-ffffaf800005ffff: @rootpgt
+ffffaf8000060000-ffffaf807fffffff: @direct
+ffffaf8080000000-ffffffffffffffff: @rootpgt
 
 KPHYS -> DIRECT:
+0-8005ffff: NONE
+80060000-ffffffff: @rdirect
+100000000-ffffffffffffffff: NONE
 
 MACHPHYS -> KPHYS:
 0-ffffffffffffff: @machphys_kphys

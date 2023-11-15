@@ -416,10 +416,13 @@ dist_check_DATA = \
 	xlat-linux-ppc64-64k.data \
 	xlat-linux-ppc64-64k.expect \
 	xlat-linux-ppc64-64k.sym \
+	xlat-linux-riscv-6.5-sv39.data \
 	xlat-linux-riscv-6.5-sv39.expect \
 	xlat-linux-riscv-6.5-sv39.sym \
+	xlat-linux-riscv-6.5-sv48.data \
 	xlat-linux-riscv-6.5-sv48.expect \
 	xlat-linux-riscv-6.5-sv48.sym \
+	xlat-linux-riscv-6.5-sv57.data \
 	xlat-linux-riscv-6.5-sv57.expect \
 	xlat-linux-riscv-6.5-sv57.sym \
 	xlat-linux-s390x-2l.data \

@@ -187,6 +187,57 @@ get_linux_pgtroot(struct os_init_data *ctl, addrxlat_fulladdr_t *root)
 	return ADDRXLAT_OK;
 }
 
+/** Set up a linear mapping region.
+ * @param ctl      Initialization data.
+ * @returns        @c ADDRXLAT_OK if the mapping was added.
+ */
+static addrxlat_status
+add_linux_linear_map(struct os_init_data *ctl)
+{
+	struct sys_region layout[2];
+	addrxlat_step_t step;
+	addrxlat_addr_t off;
+	addrxlat_meth_t *meth;
+	addrxlat_status status;
+
+	status = get_number(ctl->ctx, "PAGE_OFFSET", &layout[0].first);
+	if (status != ADDRXLAT_OK)
+		return status;
+
+	step.ctx = ctl->ctx;
+	step.sys = ctl->sys;
+	step.meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_PGT];
+
+	status = lowest_mapped(&step, &layout[0].first, UINT64_MAX);
+	if (status != ADDRXLAT_OK)
+		return status;
+	layout[0].last = layout[0].first;
+	off = step.base.addr - layout[0].first;
+	status = highest_linear(&step, &layout[0].last, UINT64_MAX, off);
+	if (status != ADDRXLAT_OK)
+		return status;
+
+	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_DIRECT];
+	meth->kind = ADDRXLAT_LINEAR;
+	meth->target_as = ADDRXLAT_KPHYSADDR;
+	meth->param.linear.off = off;
+
+	/* End marker */
+	layout[1].meth = ADDRXLAT_SYS_METH_NUM;
+
+	layout[0].meth = ADDRXLAT_SYS_METH_DIRECT;
+	layout[0].act = SYS_ACT_NONE;
+	status = sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KV_PHYS, layout);
+	if (status != ADDRXLAT_OK)
+		return status;
+
+	layout[0].meth = ADDRXLAT_SYS_METH_RDIRECT;
+	layout[0].first += off;
+	layout[0].last += off;
+	layout[0].act = SYS_ACT_RDIRECT;
+	return sys_set_layout(ctl, ADDRXLAT_SYS_MAP_KPHYS_DIRECT, layout);
+}
+
 /** Initialize a translation map for Linux/riscv64.
  * @param ctl  Initialization data.
  * @returns    Error status.
@@ -205,6 +256,9 @@ map_linux_riscv64(struct os_init_data *ctl)
 		if (status != ADDRXLAT_OK)
 			return status;
 	}
+
+	add_linux_linear_map(ctl);
+	clear_error(ctl->ctx);
 
 	return ADDRXLAT_OK;
 }
