@@ -42,6 +42,11 @@
 # define EM_AARCH64      183
 #endif
 
+/* This definition is also missing from older version of <elf.h> */
+#ifndef EM_RISCV
+# define EM_RISCV        243
+#endif
+
 static const struct format_ops xc_core_elf_ops;
 
 /** Invalid Xen page index.
