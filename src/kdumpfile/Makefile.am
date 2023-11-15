@@ -45,6 +45,7 @@ libkdumpfile_la_SOURCES = \
 	open.c \
 	pfn.c \
 	read.c \
+	riscv64.c \
 	sadump.c \
 	s390x.c \
 	s390dump.c \

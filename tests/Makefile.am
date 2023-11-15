@@ -221,6 +221,7 @@ test_scripts = \
 	elf-prstatus-arm \
 	elf-prstatus-i386 \
 	elf-prstatus-ppc64 \
+	elf-prstatus-riscv64 \
 	elf-prstatus-s390x \
 	elf-prstatus-x86_64 \
 	elf-basic \
@@ -346,6 +347,7 @@ dist_check_DATA = \
 	elf-prstatus-arm.data \
 	elf-prstatus-i386.data \
 	elf-prstatus-ppc64.data \
+	elf-prstatus-riscv64.data \
 	elf-prstatus-s390x.data \
 	elf-prstatus-x86_64.data \
         elf-endian.data \
