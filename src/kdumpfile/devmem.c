@@ -199,7 +199,7 @@ linux_iomem_kcode(kdump_ctx_t *ctx, kdump_paddr_t *paddr)
 		return errno == ENOENT
 			? KDUMP_ERR_NODATA
 			: set_error(ctx, KDUMP_ERR_SYSTEM,
-				    "Cannot open %s", FN_VMCOREINFO);
+				    "Cannot open %s", FN_IOMEM);
 
 	line = NULL;
 	linealloc = 0;
