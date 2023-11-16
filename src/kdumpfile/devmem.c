@@ -42,7 +42,6 @@
 #include <endian.h>
 #include <sys/sysmacros.h>
 
-#define FN_VMCOREINFO	"/sys/kernel/vmcoreinfo"
 #define FN_IOMEM	"/proc/iomem"
 #define FN_XEN		"/proc/xen"
 #define FN_XEN_CAPS	FN_XEN "/capabilities"
@@ -110,47 +109,6 @@ check_xen(kdump_ctx_t *ctx)
 	set_xen_type(ctx, xen_type);
 	set_xen_xlat(ctx, is_xen_pv ? KDUMP_XEN_NONAUTO : KDUMP_XEN_AUTO);
 	return KDUMP_OK;
-}
-
-static kdump_status
-get_vmcoreinfo(kdump_ctx_t *ctx)
-{
-	FILE *f;
-	unsigned long long addr;
-	size_t length;
-	void *info;
-	kdump_status ret;
-
-	f = fopen(FN_VMCOREINFO, "r");
-	if (!f)
-		return errno == ENOENT
-			? KDUMP_OK
-			: set_error(ctx, KDUMP_ERR_SYSTEM,
-				    "Cannot open %s", FN_VMCOREINFO);
-
-	if (fscanf(f, "%llx %zx", &addr, &length) == 2)
-		ret = KDUMP_OK;
-	else if (ferror(f))
-		ret = set_error(ctx, KDUMP_ERR_SYSTEM,
-				"Error reading %s", FN_VMCOREINFO);
-	else
-		ret = set_error(ctx, KDUMP_ERR_CORRUPT,
-				"Error parsing %s: Wrong file format",
-				FN_VMCOREINFO);
-	fclose(f);
-	if (ret != KDUMP_OK)
-		return ret;
-
-	info = ctx_malloc(length, ctx, "VMCOREINFO buffer");
-	if (!info)
-		return KDUMP_ERR_SYSTEM;
-
-	ret = read_locked(ctx, KDUMP_MACHPHYSADDR, addr, info, &length);
-	if (ret == KDUMP_OK)
-		ret = process_notes(ctx, info, length);
-
-	free(info);
-	return ret;
 }
 
 static kdump_status
@@ -370,7 +328,7 @@ devmem_probe(kdump_ctx_t *ctx)
 	if (ret != KDUMP_OK)
 		return ret;
 
-	get_vmcoreinfo(ctx);
+	read_current_vmcoreinfo(ctx);
 	clear_error(ctx);
 
 	return KDUMP_OK;

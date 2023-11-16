@@ -44,6 +44,8 @@
 # include <zlib.h>
 #endif
 
+#define FN_VMCOREINFO	"/sys/kernel/vmcoreinfo"
+
 /** Set an error message, returning @c kdump_status.
  * @arg err     Error message object.
  * @arg status  Status code.
@@ -1353,6 +1355,54 @@ read_blob_attr(kdump_ctx_t *ctx, unsigned fidx, off_t off, size_t size,
 	ret = set_blob_attr(ctx, attr, fch.data, size, desc);
 
 	fcache_put_chunk(&fch);
+	return ret;
+}
+
+/** Read running kernel's VMCOREINFO from
+ * @param ctx   Dump file object.
+ * @returns     Error status.
+ *
+ * Get VMCOREINFO location from /sys/kernel/vmcoreinfo and parse it
+ * using the currently opened dump file (which should be a live dump).
+ */
+kdump_status
+read_current_vmcoreinfo(kdump_ctx_t *ctx)
+{
+	FILE *f;
+	unsigned long long addr;
+	size_t length;
+	void *info;
+	kdump_status ret;
+
+	f = fopen(FN_VMCOREINFO, "r");
+	if (!f)
+		return errno == ENOENT
+			? KDUMP_OK
+			: set_error(ctx, KDUMP_ERR_SYSTEM,
+				    "Cannot open %s", FN_VMCOREINFO);
+
+	if (fscanf(f, "%llx %zx", &addr, &length) == 2)
+		ret = KDUMP_OK;
+	else if (ferror(f))
+		ret = set_error(ctx, KDUMP_ERR_SYSTEM,
+				"Error reading %s", FN_VMCOREINFO);
+	else
+		ret = set_error(ctx, KDUMP_ERR_CORRUPT,
+				"Error parsing %s: Wrong file format",
+				FN_VMCOREINFO);
+	fclose(f);
+	if (ret != KDUMP_OK)
+		return ret;
+
+	info = ctx_malloc(length, ctx, "VMCOREINFO buffer");
+	if (!info)
+		return KDUMP_ERR_SYSTEM;
+
+	ret = read_locked(ctx, KDUMP_MACHPHYSADDR, addr, info, &length);
+	if (ret == KDUMP_OK)
+		ret = process_notes(ctx, info, length);
+
+	free(info);
 	return ret;
 }
 

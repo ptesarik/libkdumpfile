@@ -815,6 +815,9 @@ INTERNAL_DECL(kdump_status, read_blob_attr,
 	      (kdump_ctx_t *ctx, unsigned fidx, off_t off, size_t size,
 	       enum global_keyidx attr, const char *desc));
 
+INTERNAL_DECL(kdump_status, read_current_vmcoreinfo,
+	      (kdump_ctx_t *ctx));
+
 /**  Definition of a derived attribute.
  *
  * This structure is used to translate raw binary data to an attribute
