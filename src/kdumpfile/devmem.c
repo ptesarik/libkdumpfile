@@ -371,6 +371,7 @@ devmem_probe(kdump_ctx_t *ctx)
 		return ret;
 
 	get_vmcoreinfo(ctx);
+	clear_error(ctx);
 
 	return KDUMP_OK;
 }
