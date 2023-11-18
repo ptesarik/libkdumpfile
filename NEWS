@@ -1,7 +1,8 @@
-next
-----
+0.5.4
+-----
   * Full support for 64-bit RISC-V.
   * Improve error messages (detailed OS error, optional file names)
+  * Bug fixes and minor performance tweaks.
 
 0.5.3
 -----
