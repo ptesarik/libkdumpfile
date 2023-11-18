@@ -37,6 +37,9 @@
 #include <unistd.h>
 #include <elf.h>
 
+#include <sys/statfs.h>
+#include <linux/magic.h>
+
 /* This definition is missing from older version of <elf.h> */
 #ifndef EM_AARCH64
 # define EM_AARCH64      183
@@ -1564,6 +1567,19 @@ open_common(kdump_ctx_t *ctx)
 	}
 
 	set_addrspace_caps(ctx->xlat, as_caps);
+
+	if (!attr_isset(gattr(ctx, GKI_linux_vmcoreinfo_raw)) &&
+	    attr_isset(gattr(ctx, GKI_linux_task_struct))) {
+		struct statfs stfs;
+
+		if (fstatfs(ctx->shared->fcache->info[0].fd, &stfs) < 0)
+			return set_error(ctx, KDUMP_ERR_SYSTEM,
+					 "Cannot determine filesystem");
+		if (stfs.f_type == PROC_SUPER_MAGIC) {
+			read_current_vmcoreinfo(ctx);
+			clear_error(ctx);
+		}
+	}
 
 	return KDUMP_OK;
 }
