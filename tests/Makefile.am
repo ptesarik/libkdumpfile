@@ -232,6 +232,7 @@ test_scripts = \
 	elf-partial \
 	elf-fractional \
 	elf-multiread \
+	elf-overlap \
 	elf-virt-phys-clash \
 	elf-vmcoreinfo \
 	elf-dom0-no-phys_base \

@@ -462,9 +462,10 @@ elf_get_bits(struct kdump_shared *shared,
 			set_bits(bits, cur - first, last - first);
 			return;
 		}
-		set_bits(bits, cur - first, next - first);
-
-		cur = next + 1;
+		if (cur <= next) {
+			set_bits(bits, cur - first, next - first);
+			cur = next + 1;
+		}
 		++pls;
 	} while (pls < &edp->load_sorted[edp->num_load_sorted]);
 
@@ -560,8 +561,9 @@ elf_find_clear(kdump_errmsg_t *err, struct kdump_shared *shared,
 	while (pls < &edp->load_sorted[edp->num_load_sorted] &&
 	       *idx >= addr_to_pfn(shared, pls->phys)) {
 		kdump_paddr_t size = ismem ? pls->memsz : pls->filesz;
-		*idx = addr_to_pfn(shared, pls->phys + size - 1);
-		++(*idx);
+		kdump_paddr_t pfn = addr_to_pfn(shared, pls->phys + size - 1);
+		if (pfn >= *idx)
+			*idx = pfn + 1;
 		++pls;
 	}
 }

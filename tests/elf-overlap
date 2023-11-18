@@ -1,0 +1,66 @@
+#! /bin/sh
+
+#
+# Create an ELF file with overlapping LOAD segments and verify that
+# the page map is merged correctly
+#
+
+mkdir -p out || exit 99
+
+name=$( basename "$0" )
+datafile="out/${name}.data"
+dumpfile="out/${name}.dump"
+
+cat >"$datafile" <<EOF
+# first LOAD  |####|
+# second LOAD   |####|
+@phdr type=LOAD offset=0x1000 vaddr=0x1000 paddr=0x1000 memsz=0x4000
+55*0x1000
+@phdr type=LOAD vaddr=0x3000 paddr=0x3000 memsz=0x4000
+
+# first LOAD  |########|
+# second LOAD   |####|
+@phdr type=LOAD vaddr=0xa000 paddr=0xa000 memsz=0x8000
+55*0x2000
+@phdr type=LOAD vaddr=0xc000 paddr=0xc000 memsz=0x4000
+aa*0x2000
+
+# first LOAD  |####|
+# second LOAD      |##|
+@phdr type=LOAD vaddr=0x18000 paddr=0x18000 memsz=0x4000
+@phdr type=LOAD vaddr=0x1c000 paddr=0x1c000 memsz=0x2000
+aa*0x1000
+EOF
+
+./mkelf "$dumpfile" <<EOF
+ei_class = 2
+ei_data = 1
+e_machine = 62
+e_phoff = 64
+
+DATA = $datafile
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Cannot create ELF file" >&2
+    exit $rc
+fi
+echo "Created ELF dump: $dumpfile"
+
+./checkattr "$dumpfile" <<EOF
+file = directory:
+file.set.number = number:1
+file.set.0 = directory:
+file.set.0.fd = number
+file.format = string: elf
+
+file.pagemap = bitmap:0x02 0x3c 0x00 0x10
+memory.pagemap = bitmap:0x7e 0xfc 0x03 0x3f
+EOF
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo "Attribute check failed" >&2
+    exit $rc
+fi
+
+exit 0
