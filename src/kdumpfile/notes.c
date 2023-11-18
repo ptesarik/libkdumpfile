@@ -136,6 +136,34 @@ typedef kdump_status do_note_fn(kdump_ctx_t *ctx, Elf32_Word type,
 				const char *name, size_t namesz,
 				void *desc, size_t descsz);
 
+/** Process a NT_TASKSTRUCT note.
+ * @ctx      Dump file context.
+ * @data     NT_TASKSTRUCT payload.
+ * @size     Size of @p data.
+ * @returns  Error status.
+ */
+static kdump_status
+process_task_struct(kdump_ctx_t *ctx, void *data, size_t size)
+{
+	kdump_attr_value_t val;
+	kdump_status status;
+
+	val.blob = internal_blob_new_dup(data, size);
+	if (!val.blob)
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Blob allocation failed");
+
+	status = set_attr(ctx, gattr(ctx, GKI_linux_task_struct),
+			  ATTR_DEFAULT, &val);
+	if (status != KDUMP_OK) {
+		internal_blob_decref(val.blob);
+		return set_error(ctx, status,
+				 "Cannot set attribute");
+	}
+
+	return status;
+}
+
 /* These fields in kdump_ctx_t must be initialised:
  *
  *   arch_ops
@@ -148,6 +176,8 @@ process_core_note(kdump_ctx_t *ctx, uint32_t type,
 		if (ctx->shared->arch_ops && ctx->shared->arch_ops->process_prstatus)
 			return ctx->shared->arch_ops->process_prstatus(
 				ctx, desc, descsz);
+	} else if (type == NT_TASKSTRUCT) {
+		return process_task_struct(ctx, desc, descsz);
 	}
 
 	return KDUMP_OK;

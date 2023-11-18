@@ -224,6 +224,7 @@ test_scripts = \
 	elf-prstatus-riscv64 \
 	elf-prstatus-s390x \
 	elf-prstatus-x86_64 \
+	elf-task_struct \
 	elf-basic \
         elf-be \
         elf-le \
@@ -350,6 +351,7 @@ dist_check_DATA = \
 	elf-prstatus-riscv64.data \
 	elf-prstatus-s390x.data \
 	elf-prstatus-x86_64.data \
+	elf-task_struct.data \
         elf-endian.data \
         elf-be16.expect \
         elf-be32.expect \

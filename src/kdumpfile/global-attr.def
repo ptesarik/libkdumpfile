@@ -72,6 +72,9 @@ ATTR(root, "linux", dir_linux, directory, struct attr_data *)
 ATTR(linux, "version_code", linux_version_code, number, unsigned,
 	.ops = &linux_version_code_ops)
 
+/* NT_TASKSTRUCT */
+ATTR(linux, "task_struct", linux_task_struct, blob, kdump_blob_t *)
+
 /* utsname */
 ATTR(linux, "uts", dir_linux_uts, directory, struct attr_data *)
 ATTR(linux_uts, "sysname", linux_uts_sysname, string, const char *)
