@@ -1,0 +1,5 @@
+@phdr type=NOTE offset=0x1800
+00000005 00000018 00000004 "CORE" 00 00 00 00
+"struct task_struct data" 00
+
+@phdr type=LOAD
