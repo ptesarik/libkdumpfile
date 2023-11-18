@@ -198,6 +198,12 @@ check_attr_bmp(kdump_ctx_t *ctx, char *key, const struct number_array *expect)
 			return TEST_FAIL;
 
 		}
+		if (clear < bit) {
+			puts("FAILED");
+			fprintf(stderr, "Invalid %s bit: %" KDUMP_PRIuADDR
+				" < %" KDUMP_PRIuADDR "\n", "clear", clear, bit);
+			return TEST_FAIL;
+		}
 
 		status = kdump_bmp_find_set(attr.val.bitmap, &set);
 		if (status == KDUMP_ERR_NODATA) {
@@ -208,6 +214,19 @@ check_attr_bmp(kdump_ctx_t *ctx, char *key, const struct number_array *expect)
 				"set", bit, kdump_bmp_get_err(attr.val.bitmap));
 			return TEST_FAIL;
 
+		}
+		if (set < bit) {
+			puts("FAILED");
+			fprintf(stderr, "Invalid %s bit: %" KDUMP_PRIuADDR
+				" < %" KDUMP_PRIuADDR "\n", "set", set, bit);
+			return TEST_FAIL;
+		}
+
+		if (set == clear) {
+			puts("FAILED");
+			fprintf(stderr, "Bit %" KDUMP_PRIuADDR " both %s and %s\n",
+				set, "clear", "set");
+			return TEST_FAIL;
 		}
 
 		for (next = bit; next < clear; ++next)
