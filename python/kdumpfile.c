@@ -1143,7 +1143,6 @@ attr_dir_repr(PyObject *_self)
 	Py_XDECREF(colon);
 	return result;
 }
-#endif
 
 static int
 attr_dir_print(PyObject *_self, FILE *fp, int flags)
@@ -1214,6 +1213,7 @@ attr_dir_print(PyObject *_self, FILE *fp, int flags)
 	kdump_attr_iter_end(ctx, &iter);
 	return -1;
 }
+#endif
 
 static PyObject *
 attr_iterkey_new(PyObject *_self)
@@ -1446,7 +1446,11 @@ static PyTypeObject attr_dir_object_type =
 	sizeof(char),			/* tp_itemsize*/
 	/* methods */
 	attr_dir_dealloc,		/* tp_dealloc*/
+#if PY_MAJOR_VERSION < 3
 	attr_dir_print,			/* tp_print*/
+#else
+	0,
+#endif
 	0,				/* tp_getattr*/
 	0,				/* tp_setattr*/
 	0,				/* tp_compare*/
