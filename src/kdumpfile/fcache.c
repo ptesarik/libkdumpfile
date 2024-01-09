@@ -81,12 +81,12 @@ fcache_new(unsigned nfds, const int *fd, unsigned n, unsigned order)
 	fc->pgsz = pgsz;
 	fc->mmapsz = fc->pgsz << order;
 
-	fc->cache = cache_alloc(1 << order, 0);
+	fc->cache = cache_alloc(n, 0);
 	if (!fc->cache)
 		goto err;
 	set_cache_entry_cleanup(fc->cache, unmap_entry, fc);
 
-	fc->fbcache = cache_alloc(1 << order, fc->pgsz);
+	fc->fbcache = cache_alloc(n, fc->pgsz);
 	if (!fc->fbcache)
 		goto err_cache;
 
