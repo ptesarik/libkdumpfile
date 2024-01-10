@@ -254,6 +254,32 @@ evict_prec(struct cache *cache, struct cache_search *cs)
 	return entry;
 }
 
+/** Evict a cached entry.
+ *
+ * @param cache  Cache object.
+ * @param cs     Cache search info.
+ * @param bias   Bias towards the probed partition.
+ * @returns      The evicted entry.
+ *
+ * The evicted entry is taken either from the probe partition or from the
+ * precious partition. If both are non-empty, make a choice based on the
+ * value of @c dprobe.
+ */
+static struct cache_entry *
+evict_entry(struct cache *cache, struct cache_search *cs, unsigned bias)
+{
+	struct cache_entry *entry;
+
+	if (cs->nzprobe != 0 &&
+	    (cs->nzprec == 0 || cache->nprobe + bias > cache->dprobe))
+		entry = evict_probe(cache, cs);
+	else
+		entry = evict_prec(cache, cs);
+	if (cache->entry_cleanup)
+		cache->entry_cleanup(cache->cleanup_data, entry);
+	return entry;
+}
+
 /**  Re-initialize an entry for different data.
  *
  * @param cache  Cache object.
@@ -262,10 +288,7 @@ evict_prec(struct cache *cache, struct cache_search *cs)
  * @param bias   Bias towards the probed partition.
  *
  * Take the data pointer from an unused cache entry. If there are no
- * entries in the unused partition, evict an existing entry. The evicted
- * entry is taken either from the probe partition or from the precious
- * partition. If both are non-empty, make a choice based on the value of
- * @c dprobe.
+ * entries in the unused partition, evict an existing entry.
  */
 static void
 reinit_entry(struct cache *cache, struct cache_entry *entry,
@@ -281,14 +304,7 @@ reinit_entry(struct cache *cache, struct cache_entry *entry,
 			eprobe = cache->ce[eprobe].prev;
 		evict = &cache->ce[eprobe];
 	} else {
-		/* Evict a cached entry. */
-		if (cs->nzprobe != 0 &&
-		    (cs->nzprec == 0 || cache->nprobe + bias > cache->dprobe))
-			evict = evict_probe(cache, cs);
-		else
-			evict = evict_prec(cache, cs);
-		if (cache->entry_cleanup)
-			cache->entry_cleanup(cache->cleanup_data, evict);
+		evict = evict_entry(cache, cs, bias);
 	}
 	entry->data = evict->data;
 	evict->data = NULL;
