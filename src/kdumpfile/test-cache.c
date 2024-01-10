@@ -147,6 +147,59 @@ main(int argc, char **argv)
 	cache_insert(cache, entry);
 	cache_put_entry(cache, entry);
 
+	/*******************************************************************
+	 * Check NULL-pointer dereference reported by Stephen Brennan.
+	 */
+
+	/* Put something onto the probe list. */
+	entry = cache_get_entry(cache, CACHE_SIZE + 1);
+	if (!entry) {
+		fprintf(stderr, "Cannot allocate for probe\n");
+		return TEST_FAIL;
+	}
+	cache_insert(cache, entry);
+	cache_put_entry(cache, entry);
+
+	/* Evict the probe entry to the ghost probe partition. */
+	for (i = 0; i < CACHE_SIZE; ++i) {
+		poison_stack();
+		entry = cache_get_entry(cache, i);
+		if (!entry) {
+			fprintf(stderr, "Cannot find cached entry %u\n", i);
+			return TEST_FAIL;
+		}
+		if (!cache_entry_valid(entry))
+			cache_insert(cache, entry);
+		cache_put_entry(cache, entry);
+	}
+
+	/* Move an entry into the unused partition. */
+	entry = cache_get_entry(cache, CACHE_SIZE + 2);
+	if (!entry) {
+		fprintf(stderr, "Cannot allocate after reinit\n");
+		return TEST_FAIL;
+	}
+	if (!entry->data) {
+		fprintf(stderr, "NULL data for entry %u\n", CACHE_SIZE);
+		return TEST_FAIL;
+	}
+	cache_discard(cache, entry);
+	poison_stack();
+
+	/* Reuse the ghost probe entry. */
+	entry = cache_get_entry(cache, CACHE_SIZE + 1);
+	if (!entry) {
+		fprintf(stderr, "Cannot reuse ghost probe entry\n");
+		return TEST_FAIL;
+	}
+	if (!entry->data) {
+		fprintf(stderr, "NULL data for reused ghost probe entry %u\n",
+			CACHE_SIZE + 1);
+		return TEST_FAIL;
+	}
+	cache_insert(cache, entry);
+	cache_put_entry(cache, entry);
+
 	cache_free(cache);
 	return TEST_OK;
 }

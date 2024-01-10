@@ -369,15 +369,12 @@ get_missed_entry(struct cache *cache, cache_key_t key,
  * @param cache  Cache object.
  * @param entry  Ghost entry to be reused.
  * @param idx    Index of @p entry.
- * @param cs     Cache search info.
  * @returns      The value of @p entry.
  */
 static struct cache_entry *
 reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
-		  unsigned idx, struct cache_search *cs)
+		  unsigned idx)
 {
-	entry->data = reclaim_data(cache, cs, 0);
-
 	if (cache->split == idx)
 		cache->split = entry->prev;
 
@@ -414,8 +411,9 @@ get_ghost_or_missed_entry(struct cache *cache, cache_key_t key,
 				cache->dprobe -= delta;
 			else
 				cache->dprobe = 0;
+			entry->data = reclaim_data(cache, cs, 0);
 			--cache->ngprec;
-			return reuse_ghost_entry(cache, entry, idx, cs);
+			return reuse_ghost_entry(cache, entry, idx);
 		}
 		idx = entry->next;
 	}
@@ -434,8 +432,9 @@ get_ghost_or_missed_entry(struct cache *cache, cache_key_t key,
 				cache->dprobe += delta;
 			else
 				cache->dprobe = cache->cap;
+			entry->data = reclaim_data(cache, cs, 0);
 			--cache->ngprobe;
-			return reuse_ghost_entry(cache, entry, idx, cs);
+			return reuse_ghost_entry(cache, entry, idx);
 		}
 		idx = entry->prev;
 	}
