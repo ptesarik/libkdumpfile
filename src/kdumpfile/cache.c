@@ -350,8 +350,11 @@ get_missed_entry(struct cache *cache, cache_key_t key,
 	 * so entry must be from the unused partition in between.
 	 */
 
-	if (!entry->data)
-		entry->data = reclaim_data(cache, cs, 1);
+	if (!entry->data) {
+		struct cache_entry *evict = evict_entry(cache, cs, 1);
+		entry->data = evict->data;
+		evict->data = NULL;
+	}
 
 	if (cache->split == idx)
 		cache->split = entry->prev;
