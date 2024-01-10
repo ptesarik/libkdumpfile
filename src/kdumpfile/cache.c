@@ -108,13 +108,17 @@ struct cache_search {
 	unsigned gprec;		/**< Index of MRU precious ghost entry */
 	unsigned eprec;		/**< End of precious entries; this is the
 				 *   index of the first unused entry. */
-	unsigned uprec;		/**< Index of LRU unused precious entry. */
-	unsigned nuprec;	/**< Number of unused precious entries. */
+	unsigned zprec;		/**< Index of the least recently used precious
+				 *   entry with zero reference count. */
+	unsigned nzprec;	/**< Number of precious entries with zero
+				 *   reference count. */
 	unsigned gprobe;	/**< Index of MRU probed ghost entry */
 	unsigned eprobe;	/**< End of probed entries; this is the
-				 *   index of the first unused entry. */
-	unsigned uprobe;	/**< Index of LRU unused probed entry. */
-	unsigned nuprobe;	/**< Number of unused probed entries. */
+				 *   index of the last unused entry. */
+	unsigned zprobe;	/**< Index of the least recently used probed
+				 *   entry with zero reference count. */
+	unsigned nzprobe;	/**< Number of probed entries with zero
+				 *   reference count. */
 };
 
 /**  Insert an entry to the list after a given position.
@@ -220,12 +224,12 @@ reuse_cached_entry(struct cache *cache, struct cache_entry *entry,
 static struct cache_entry *
 evict_probe(struct cache *cache, struct cache_search *cs)
 {
-	struct cache_entry *entry = &cache->ce[cs->uprobe];
+	struct cache_entry *entry = &cache->ce[cs->zprobe];
 	if (entry->prev != cs->gprobe) {
-		if (cs->uprobe == cache->split)
+		if (cs->zprobe == cache->split)
 			cache->split = entry->prev;
 		remove_entry(cache, entry);
-		add_entry_after(cache, entry, cs->uprobe, cs->gprobe);
+		add_entry_after(cache, entry, cs->zprobe, cs->gprobe);
 	}
 	--cache->nprobe;
 	++cache->ngprobe;
@@ -240,10 +244,10 @@ evict_probe(struct cache *cache, struct cache_search *cs)
 static struct cache_entry *
 evict_prec(struct cache *cache, struct cache_search *cs)
 {
-	struct cache_entry *entry = &cache->ce[cs->uprec];
+	struct cache_entry *entry = &cache->ce[cs->zprec];
 	if (entry->next != cs->gprec) {
 		remove_entry(cache, entry);
-		add_entry_before(cache, entry, cs->uprec, cs->gprec);
+		add_entry_before(cache, entry, cs->zprec, cs->gprec);
 	}
 	--cache->nprec;
 	++cache->ngprec;
@@ -257,9 +261,11 @@ evict_prec(struct cache *cache, struct cache_search *cs)
  * @param cs     Cache search info.
  * @param bias   Bias towards the probed partition.
  *
- * Evict an entry from the cache and use its data pointer for @p entry.
- * The evicted entry is taken either from the probe partition or from the
- * precious partition, depending on the value of @c dprobe.
+ * Take the data pointer from an unused cache entry. If there are no
+ * entries in the unused partition, evict an existing entry. The evicted
+ * entry is taken either from the probe partition or from the precious
+ * partition. If both are non-empty, make a choice based on the value of
+ * @c dprobe.
  */
 static void
 reinit_entry(struct cache *cache, struct cache_entry *entry,
@@ -275,9 +281,9 @@ reinit_entry(struct cache *cache, struct cache_entry *entry,
 			eprobe = cache->ce[eprobe].prev;
 		evict = &cache->ce[eprobe];
 	} else {
-		/* Get an unused cached entry. */
-		if (cs->nuprobe != 0 &&
-		    (cs->nuprec == 0 || cache->nprobe + bias > cache->dprobe))
+		/* Evict a cached entry. */
+		if (cs->nzprobe != 0 &&
+		    (cs->nzprec == 0 || cache->nprobe + bias > cache->dprobe))
 			evict = evict_probe(cache, cs);
 		else
 			evict = evict_prec(cache, cs);
@@ -457,8 +463,8 @@ cache_get_entry_noref(struct cache *cache, cache_key_t key)
 	struct cache_entry *entry;
 	unsigned n, idx;
 
-	cs.nuprec = 0;
-	cs.nuprobe = 0;
+	cs.nzprec = 0;
+	cs.nzprobe = 0;
 
 	/* Search precious entries */
 	n = cache->nprec;
@@ -468,8 +474,8 @@ cache_get_entry_noref(struct cache *cache, cache_key_t key)
 		if (entry->key == key)
 			return reuse_cached_entry(cache, entry, idx);
 		if (entry->refcnt == 0) {
-			cs.uprec = idx;
-			++cs.nuprec;
+			cs.zprec = idx;
+			++cs.nzprec;
 		}
 		idx = entry->next;
 	}
@@ -486,8 +492,8 @@ cache_get_entry_noref(struct cache *cache, cache_key_t key)
 			return reuse_cached_entry(cache, entry, idx);
 		}
 		if (entry->refcnt == 0) {
-			cs.uprobe = idx;
-			++cs.nuprobe;
+			cs.zprobe = idx;
+			++cs.nzprobe;
 		}
 		idx = entry->prev;
 	}
@@ -496,8 +502,8 @@ cache_get_entry_noref(struct cache *cache, cache_key_t key)
 	entry = get_inflight_entry(cache, key);
 
 	if (!entry) {
-		unsigned inuse = (cache->nprec - cs.nuprec) +
-			(cache->nprobe - cs.nuprobe) +
+		unsigned inuse = (cache->nprec - cs.nzprec) +
+			(cache->nprobe - cs.nzprobe) +
 			cache->ninflight;
 		if (inuse >= cache->cap)
 			return NULL;
