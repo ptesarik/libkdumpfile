@@ -280,21 +280,23 @@ evict_entry(struct cache *cache, struct cache_search *cs, unsigned bias)
 	return entry;
 }
 
-/**  Re-initialize an entry for different data.
+/** Reclaim a data buffer.
  *
  * @param cache  Cache object.
- * @param entry  Entry to be reinitialized.
  * @param cs     Cache search info.
  * @param bias   Bias towards the probed partition.
+ * @returns      New data buffer.
  *
- * Take the data pointer from an unused cache entry. If there are no
- * entries in the unused partition, evict an existing entry.
+ * Find an unused cache entry with non-NULL data and reclaim that data
+ * buffer from it. If there are no entries in the unused partition, evict
+ * an existing entry.
  */
-static void
-reinit_entry(struct cache *cache, struct cache_entry *entry,
-	     struct cache_search *cs, unsigned bias)
+static void *
+reclaim_data(struct cache *cache, struct cache_search *cs,
+	     unsigned bias)
 {
-	struct cache_entry *evict;
+	struct cache_entry *entry;
+	void *data;
 
 	if (cache->nprec + cache->nprobe + cache->ninflight < cache->cap) {
 		/* Get an entry from the unused partition. */
@@ -302,12 +304,13 @@ reinit_entry(struct cache *cache, struct cache_entry *entry,
 		unsigned n = cache->ngprobe;
 		while (n--)
 			eprobe = cache->ce[eprobe].prev;
-		evict = &cache->ce[eprobe];
+		entry = &cache->ce[eprobe];
 	} else {
-		evict = evict_entry(cache, cs, bias);
+		entry = evict_entry(cache, cs, bias);
 	}
-	entry->data = evict->data;
-	evict->data = NULL;
+	data = entry->data;
+	entry->data = NULL;
+	return data;
 }
 
 /**  Get a cache entry for a given missed key.
@@ -348,7 +351,7 @@ get_missed_entry(struct cache *cache, cache_key_t key,
 	 */
 
 	if (!entry->data)
-		reinit_entry(cache, entry, cs, 1);
+		entry->data = reclaim_data(cache, cs, 1);
 
 	if (cache->split == idx)
 		cache->split = entry->prev;
@@ -373,7 +376,7 @@ static struct cache_entry *
 reuse_ghost_entry(struct cache *cache, struct cache_entry *entry,
 		  unsigned idx, struct cache_search *cs)
 {
-	reinit_entry(cache, entry, cs, 0);
+	entry->data = reclaim_data(cache, cs, 0);
 
 	if (cache->split == idx)
 		cache->split = entry->prev;
