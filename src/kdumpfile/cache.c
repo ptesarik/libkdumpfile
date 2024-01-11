@@ -141,7 +141,7 @@ add_entry_after(struct cache *cache, struct cache_entry *entry, unsigned idx,
 	next->prev = idx;
 }
 
-/**  Insert an entry to the list before a given poisition.
+/**  Insert an entry to the list before a given position.
  * @param cache   Cache object.
  * @param entry   Cache entry to be added.
  * @param idx     Index of @p entry.
@@ -177,7 +177,7 @@ remove_entry(struct cache *cache, struct cache_entry *entry)
 	prev->next = entry->next;
 }
 
-/**  Add an entry to the inflight list.
+/**  Add an entry to the in-flight list.
  *
  * @param cache  Cache object.
  * @param entry  Cache entry to be removed.
