@@ -1,5 +1,6 @@
 next
 ----
+  * Minor cache improvements and a NULL-pointer dereference fix.
 
 0.5.4
 -----
