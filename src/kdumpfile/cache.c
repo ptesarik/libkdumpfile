@@ -284,7 +284,6 @@ evict_entry(struct cache *cache, struct cache_search *cs, unsigned bias)
  *
  * @param cache  Cache object.
  * @param cs     Cache search info.
- * @param bias   Bias towards the probed partition.
  * @returns      New data buffer.
  *
  * Find an unused cache entry with non-NULL data and reclaim that data
@@ -292,8 +291,7 @@ evict_entry(struct cache *cache, struct cache_search *cs, unsigned bias)
  * an existing entry.
  */
 static void *
-reclaim_data(struct cache *cache, struct cache_search *cs,
-	     unsigned bias)
+reclaim_data(struct cache *cache, struct cache_search *cs)
 {
 	struct cache_entry *entry;
 	void *data;
@@ -306,7 +304,7 @@ reclaim_data(struct cache *cache, struct cache_search *cs,
 			eprobe = cache->ce[eprobe].prev;
 		entry = &cache->ce[eprobe];
 	} else {
-		entry = evict_entry(cache, cs, bias);
+		entry = evict_entry(cache, cs, 0);
 	}
 	data = entry->data;
 	entry->data = NULL;
@@ -414,7 +412,7 @@ get_ghost_or_missed_entry(struct cache *cache, cache_key_t key,
 				cache->dprobe -= delta;
 			else
 				cache->dprobe = 0;
-			entry->data = reclaim_data(cache, cs, 0);
+			entry->data = reclaim_data(cache, cs);
 			--cache->ngprec;
 			return reuse_ghost_entry(cache, entry, idx);
 		}
@@ -435,7 +433,7 @@ get_ghost_or_missed_entry(struct cache *cache, cache_key_t key,
 				cache->dprobe += delta;
 			else
 				cache->dprobe = cache->cap;
-			entry->data = reclaim_data(cache, cs, 0);
+			entry->data = reclaim_data(cache, cs);
 			--cache->ngprobe;
 			return reuse_ghost_entry(cache, entry, idx);
 		}
