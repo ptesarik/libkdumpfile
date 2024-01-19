@@ -196,10 +196,6 @@ test_scripts = \
 	diskdump-empty-s390x \
 	diskdump-empty-x86_64 \
 	diskdump-basic-raw \
-	diskdump-basic-zlib \
-	diskdump-basic-lzo \
-	diskdump-basic-snappy \
-	diskdump-basic-zstd \
 	diskdump-flat-raw \
 	diskdump-multiread \
 	diskdump-excluded \
@@ -330,6 +326,19 @@ test_scripts = \
 	xlat-xen-x86_64-4.4-nover \
 	xlat-xen-x86_64-4.6-bigmem \
 	zero-size
+
+if HAVE_ZSTD
+test_scripts += diskdump-basic-zstd
+endif
+if HAVE_ZLIB
+test_scripts += diskdump-basic-zlib
+endif
+if HAVE_LZO
+test_scripts += diskdump-basic-lzo
+endif
+if HAVE_SNAPPY
+test_scripts += diskdump-basic-snappy
+endif
 
 dist_check_DATA = \
 	addrmap-single-begin.expect \
