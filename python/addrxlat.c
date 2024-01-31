@@ -4312,13 +4312,14 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 		"page_shift",
 		"phys_base",
 		"rootpgt",
+		"user_rootpgt",
 		"xen_p2m_mfn",
 		"xen_xlat",
 		NULL
 	};
 	PyObject *ctxobj;
 	PyObject *arch, *type, *ver, *page_shift, *phys_base,
-		*rootpgt, *xen_p2m_mfn, *xen_xlat, *phys_bits, *virt_bits;
+		*rootpgt, *user_rootpgt, *xen_p2m_mfn, *xen_xlat, *phys_bits, *virt_bits;
 	addrxlat_ctx_t *ctx;
 	addrxlat_opt_t opts[ADDRXLAT_OPT_NUM], *p;
 	addrxlat_status status;
@@ -4326,9 +4327,9 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 	arch = type = ver = page_shift = phys_base = rootpgt =
 		xen_p2m_mfn = xen_xlat = phys_bits = virt_bits = Py_None;
 	if (!PyArg_ParseTupleAndKeywords(
-		    args, kwargs, "O|OOOOOOOOOO:os_init", keywords,
+		    args, kwargs, "O|OOOOOOOOOOO:os_init", keywords,
 		    &ctxobj, &arch, &type, &ver, &phys_bits, &virt_bits,
-		    &page_shift, &phys_base, &rootpgt, &xen_p2m_mfn,
+		    &page_shift, &phys_base, &rootpgt, &user_rootpgt, &xen_p2m_mfn,
 		    &xen_xlat))
 		return NULL;
 
@@ -4392,6 +4393,13 @@ sys_os_init(PyObject *_self, PyObject *args, PyObject *kwargs)
 		if (!faddr)
 			return NULL;
 		addrxlat_opt_rootpgt(p, faddr);
+		++p;
+	}
+	if (user_rootpgt != Py_None) {
+		addrxlat_fulladdr_t *faddr = fulladdr_AsPointer(user_rootpgt);
+		if (!faddr)
+			return NULL;
+		addrxlat_opt_user_rootpgt(p, faddr);
 		++p;
 	}
 	if (xen_p2m_mfn != Py_None) {

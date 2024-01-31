@@ -417,6 +417,7 @@ struct parsed_opts {
 	unsigned long page_shift;	/**< Value of OPT_page_shift. */
 	addrxlat_addr_t phys_base;	/**< Value of OPT_phys_base. */
 	addrxlat_fulladdr_t rootpgt;	/**< Value of OPT_rootpgt. */
+	addrxlat_fulladdr_t user_rootpgt;	/**< Value of OPT_user_rootpgt. */
 	unsigned long xen_p2m_mfn;	/**< Value of OPT_xen_p2m_mfn. */
 	bool xen_xlat;			/**< Value of OPT_xen_xlat. */
 };
