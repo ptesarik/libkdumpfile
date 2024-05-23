@@ -64,8 +64,19 @@ static char *mmapbuf;
 
 static int failmmap;
 
+#ifdef HAVE_MMAP64
+
+#define STR_MMAP	XSTRINGIFY(mmap64)
+static void* (*orig_mmap)(void *addr, size_t length, int prot, int flags,
+			  int fd, off64_t offset);
+
+#else
+
+#define STR_MMAP	XSTRINGIFY(mmap)
 static void* (*orig_mmap)(void *addr, size_t length, int prot, int flags,
 			  int fd, off_t offset);
+
+#endif
 
 void *
 mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
@@ -445,7 +456,7 @@ main(int argc, char **argv)
 		return TEST_ERR;
 	}
 
-	orig_mmap = dlsym(RTLD_NEXT, "mmap");
+	orig_mmap = dlsym(RTLD_NEXT, STR_MMAP);
 	if (!orig_mmap) {
 		fprintf(stderr, "Cannot get original mmap() address: %s\n",
 			dlerror());

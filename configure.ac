@@ -61,6 +61,8 @@ AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(off_t)
 AC_SUBST(SIZEOF_OFF_T, $ac_cv_sizeof_off_t)
 
+AC_CHECK_FUNCS(mmap64)
+
 dnl This makes sure pkg.m4 is available.
 m4_pattern_forbid([^_?PKG_[A-Z_]+$],[*** pkg.m4 missing, please install pkg-config])
 

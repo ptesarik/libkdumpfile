@@ -1,6 +1,7 @@
 next
 ----
   * Minor cache improvements and a NULL-pointer dereference fix.
+  * Fix test suite for 32-bit architectures.
 
 0.5.4
 -----
