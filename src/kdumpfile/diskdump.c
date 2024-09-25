@@ -199,6 +199,15 @@ struct page_desc {
 	uint64_t	page_flags;	/**< Page flags. */
 };
 
+/** Offset mapping for a file in the flattened format. */
+struct flattened_file_map {
+	/** Map (rearranged) offset to an index in the offset arrray. */
+	addrxlat_map_t *map;
+
+	/** Differences between flattened and rearranged file offsets. */
+	off_t *offs;
+};
+
 struct disk_dump_priv {
 	/** Number of split files in this dump. */
 	unsigned num_files;
@@ -215,11 +224,8 @@ struct disk_dump_priv {
 	/** Memory region mapping. */
 	struct pfn_file_map mem_pagemap;
 
-	/** File offset mapping for flattened files. */
-	addrxlat_map_t **flatmap;
-
-	/** Differences between flattened and rearranged file offsets. */
-	off_t **flatoffs;
+	/** File offset mappings for flattened files. */
+	struct flattened_file_map *flatmap;
 
 	/** Page descriptor mapping. */
 	struct pfn_file_map pdmap[];
@@ -268,8 +274,8 @@ flattened_pread(kdump_ctx_t *ctx, void *buf, size_t len,
 	const addrxlat_range_t *range, *end;
 	off_t off;
 
-	range = addrxlat_map_ranges(ddp->flatmap[fidx]);
-	end = range + addrxlat_map_len(ddp->flatmap[fidx]);
+	range = addrxlat_map_ranges(ddp->flatmap[fidx].map);
+	end = range + addrxlat_map_len(ddp->flatmap[fidx].map);
 	for (off = pos; range < end && off > range->endoff; ++range)
 		off -= range->endoff + 1;
 	while (range < end && len) {
@@ -280,7 +286,7 @@ flattened_pread(kdump_ctx_t *ctx, void *buf, size_t len,
 			seglen = len;
 
 		if (range->meth != ADDRXLAT_SYS_METH_NONE) {
-			off_t *flatoffs = ddp->flatoffs[fidx];
+			off_t *flatoffs = ddp->flatmap[fidx].offs;
 			kdump_status ret;
 
 			ret = fcache_pread(ctx->shared->fcache, buf, seglen,
@@ -342,12 +348,12 @@ flattened_get_chunk(kdump_ctx_t *ctx, struct fcache_chunk *fch,
 	const addrxlat_range_t *range, *end;
 	off_t off;
 
-	range = addrxlat_map_ranges(ddp->flatmap[fidx]);
-	end = range + addrxlat_map_len(ddp->flatmap[fidx]);
+	range = addrxlat_map_ranges(ddp->flatmap[fidx].map);
+	end = range + addrxlat_map_len(ddp->flatmap[fidx].map);
 	for (off = pos; range < end && off > range->endoff; ++range)
 		off -= range->endoff + 1;
 	if (len <= range->endoff + 1 - off) {
-		pos += ddp->flatoffs[fidx][range->meth];
+		pos += ddp->flatmap[fidx].offs[range->meth];
 		return fcache_get_chunk(ctx->shared->fcache, fch, len,
 					fidx, pos);
 	}
@@ -1282,7 +1288,7 @@ init_flattened_file(kdump_ctx_t *ctx, unsigned fidx)
 	if (!flatmap)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate %s", "flattened map");
-	ddp->flatmap[fidx] = flatmap;
+	ddp->flatmap[fidx].map = flatmap;
 
 	segidx = 0;
 	flatpos = MDF_HEADER_SIZE;
@@ -1317,7 +1323,7 @@ init_flattened_file(kdump_ctx_t *ctx, unsigned fidx)
 				return set_error(ctx, KDUMP_ERR_SYSTEM,
 						 "Cannot allocate %s",
 						 "flattened offset array");
-			ddp->flatoffs[fidx] = flatoffs;
+			ddp->flatmap[fidx].offs = flatoffs;
 		}
 		flatpos += sizeof(hdr);
 		flatoffs[segidx] = flatpos - pos;
@@ -1348,14 +1354,10 @@ init_flattened_maps(kdump_ctx_t *ctx)
 	unsigned fidx;
 	kdump_status status;
 
-	ddp->flatmap = calloc(ddp->num_files, sizeof(addrxlat_map_t *));
+	ddp->flatmap = calloc(ddp->num_files, sizeof(*ddp->flatmap));
 	if (!ddp->flatmap)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate %s", "flatmap array");
-	ddp->flatoffs = calloc(ddp->num_files, sizeof(off_t *));
-	if (!ddp->flatoffs)
-		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot allocate %s", "flatoffs array");
 
 	for (fidx = 0; fidx < get_num_files(ctx); ++fidx) {
 		status = init_flattened_file(ctx, fidx);
@@ -1461,19 +1463,15 @@ diskdump_cleanup(struct kdump_shared *shared)
 		}
 		if (ddp->flatmap) {
 			for (fidx = 0; fidx < ddp->num_files; ++fidx) {
-				addrxlat_map_t *flatmap = ddp->flatmap[fidx];
-				if (flatmap)
-					addrxlat_map_decref(flatmap);
+				struct flattened_file_map *flatmap =
+					&ddp->flatmap[fidx];
+
+				if (flatmap->map)
+					addrxlat_map_decref(flatmap->map);
+				if (flatmap->offs)
+					free(flatmap->offs);
 			}
 			free(ddp->flatmap);
-		}
-		if (ddp->flatoffs) {
-			for (fidx = 0; fidx < ddp->num_files; ++fidx) {
-				off_t *flatoffs = ddp->flatoffs[fidx];
-				if (flatoffs)
-					free(flatoffs);
-			}
-			free(ddp->flatoffs);
 		}
 		free(ddp);
 		shared->fmtdata = NULL;
