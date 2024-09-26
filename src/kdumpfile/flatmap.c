@@ -34,8 +34,20 @@
 
 #include <stdlib.h>
 
+#define MDF_SIGNATURE		"makedumpfile"
+#define MDF_SIG_LEN		16
+#define MDF_TYPE_FLAT_HEADER	1
+#define MDF_VERSION_FLAT_HEADER	1
+
 #define MDF_HEADER_SIZE		4096
 #define MDF_OFFSET_END_FLAG	(-(int64_t)1)
+
+/* Flattened format header. */
+struct makedumpfile_header {
+	char	signature[MDF_SIG_LEN];
+	int64_t	type;
+	int64_t	version;
+} __attribute__((packed));
 
 /* Flattened segment header */
 struct makedumpfile_data_header {
@@ -153,6 +165,13 @@ flatmap_alloc(unsigned nfiles)
 	return map;
 }
 
+static inline kdump_status
+err_notimpl(kdump_ctx_t *ctx, const char *what, int_fast64_t value)
+{
+	return set_error(ctx, KDUMP_ERR_NOTIMPL,
+			 "Unknown flattened %s: %" PRId64 "\n", what, value);
+}
+
 /** Initialize flattened dump maps for all files.
  * @param map  Flattened offset map.
  * @param ctx  Dump file object.
@@ -163,6 +182,9 @@ flatmap_alloc(unsigned nfiles)
 kdump_status
 flatmap_init(struct flattened_map *map, kdump_ctx_t *ctx)
 {
+	static const char magic[MDF_SIG_LEN] = MDF_SIGNATURE;
+
+	struct makedumpfile_header hdr;
 	unsigned fidx;
 	kdump_status status;
 
@@ -170,6 +192,21 @@ flatmap_init(struct flattened_map *map, kdump_ctx_t *ctx)
 	fcache_incref(map->fcache);
 
 	for (fidx = 0; fidx < get_num_files(ctx); ++fidx) {
+		status = fcache_pread(map->fcache, &hdr, sizeof(hdr), fidx, 0);
+		if (status != KDUMP_OK)
+			return set_error(ctx, status, "Cannot read %s",
+					 err_filename(ctx, fidx));
+
+		if (memcmp(hdr.signature, magic, sizeof magic))
+			continue;
+
+		if (be64toh(hdr.type) != MDF_TYPE_FLAT_HEADER)
+			return err_notimpl(ctx, "type",
+					   be64toh(hdr.type));
+		if (be64toh(hdr.version) != MDF_VERSION_FLAT_HEADER)
+			return err_notimpl(ctx, "version",
+					   be64toh(hdr.version));
+
 		status = flatmap_file_init(&map->fmap[fidx], ctx, fidx);
 		if (status != KDUMP_OK)
 			return set_error(ctx, status,

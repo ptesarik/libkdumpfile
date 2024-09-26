@@ -201,6 +201,7 @@ test_scripts = \
 	diskdump-excluded \
 	diskdump-split \
 	diskdump-split-flat \
+	diskdump-split-mixed \
 	diskdump-v6-arm \
 	diskdump-v6-ia32 \
 	early-version-code \

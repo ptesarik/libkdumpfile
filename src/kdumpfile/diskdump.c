@@ -50,18 +50,6 @@
 
 /** @cond TARGET_ABI */
 
-#define MDF_SIGNATURE		"makedumpfile"
-#define MDF_SIG_LEN		16
-#define MDF_TYPE_FLAT_HEADER	1
-#define MDF_VERSION_FLAT_HEADER	1
-
-/* Flattened format header. */
-struct makedumpfile_header {
-	char	signature[MDF_SIG_LEN];
-	int64_t	type;
-	int64_t	version;
-} __attribute__((packed));
-
 /* The header is architecture-dependent, unfortunately */
 struct disk_dump_header_32 {
 	char			signature[SIG_LEN];	/* = "DISKDUMP" */
@@ -1096,7 +1084,7 @@ init_private(kdump_ctx_t *ctx)
 				 "Cannot allocate %s",
 				 "flattened dump maps");
 
-	return KDUMP_OK;
+	return flatmap_init(ddp->flatmap, ctx);
 }
 
 static kdump_status
@@ -1161,10 +1149,27 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 	return ret;
 }
 
+static void
+init_desc(kdump_ctx_t *ctx, char *desc)
+{
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
+	unsigned fidx, nflat;
+
+	for (nflat = fidx = 0; fidx < ddp->num_files; ++fidx)
+		if (flatmap_isflattened(ddp->flatmap, fidx))
+			++nflat;
+
+	if (nflat == ddp->num_files)
+		strcpy(desc, "Flattened ");
+	else if (nflat)
+		strcpy(desc, "Mixed ");
+	else
+		desc[0] = '\0';
+}
+
 static kdump_status
 diskdump_probe(kdump_ctx_t *ctx)
 {
-	static const char magic_flattened[MDF_SIG_LEN] = MDF_SIGNATURE;
 	static const char magic_diskdump[] =
 		{ 'D', 'I', 'S', 'K', 'D', 'U', 'M', 'P' };
 	static const char magic_kdump[] =
@@ -1174,39 +1179,15 @@ diskdump_probe(kdump_ctx_t *ctx)
 	char desc[32];
 	kdump_status status;
 
-	status = fcache_pread(ctx->shared->fcache, hdr, sizeof hdr, 0, 0);
-	if (status != KDUMP_OK)
-		return set_error(ctx, status, "Cannot read dump header");
-
 	status = init_private(ctx);
 	if (status != KDUMP_OK)
 		return status;
 
-	if (!memcmp(hdr, magic_flattened, sizeof magic_flattened)) {
-		struct makedumpfile_header *flathdr =
-			(struct makedumpfile_header*) hdr;
-		struct disk_dump_priv *ddp;
+	status = diskdump_pread(ctx, hdr, sizeof hdr, 0, 0);
+	if (status != KDUMP_OK)
+		return set_error(ctx, status, "Cannot read dump header");
 
-		if (be64toh(flathdr->type) != MDF_TYPE_FLAT_HEADER)
-			return set_error(ctx, KDUMP_ERR_NOTIMPL,
-					 "Unknown flattened %s: %" PRId64 "\n",
-					 "type", be64toh(flathdr->type));
-		if (be64toh(flathdr->version) != MDF_VERSION_FLAT_HEADER)
-			return set_error(ctx, KDUMP_ERR_NOTIMPL,
-					 "Unknown flattened %s: %" PRId64 "\n",
-					 "version", be64toh(flathdr->version));
-
-		ddp = ctx->shared->fmtdata;
-		status = flatmap_init(ddp->flatmap, ctx);
-		if (status != KDUMP_OK)
-			return status;
-
-		status = flatmap_pread(ddp->flatmap, &hdr, sizeof hdr, 0, 0);
-		if (status != KDUMP_OK)
-			return set_error(ctx, status, "Cannot read dump header");
-		strcpy(desc, "Flattened ");
-	} else
-		desc[0] = '\0';
+	init_desc(ctx, desc);
 
 	if (!memcmp(hdr, magic_diskdump, sizeof magic_diskdump))
 		strcat(desc, "Diskdump");
