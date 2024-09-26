@@ -39,6 +39,7 @@ libkdumpfile_la_SOURCES = \
 	diskdump.c \
 	elfdump.c \
 	fcache.c \
+	flatmap.c \
 	ia32.c \
 	lkcd.c \
 	notes.c \

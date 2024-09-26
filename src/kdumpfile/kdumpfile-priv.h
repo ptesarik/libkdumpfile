@@ -1737,6 +1737,42 @@ find_pfn_file_map(const struct pfn_file_map *maps, size_t nmaps,
 	return NULL;
 }
 
+/* Flattened files. */
+
+/** Offset mapping for a file in the flattened format. */
+struct flattened_file_map {
+	/** Map (rearranged) offset to an index in the offset arrray. */
+	addrxlat_map_t *map;
+
+	/** Differences between flattened and rearranged file offsets. */
+	off_t *offs;
+};
+
+/** Offset mappings for a set of flattened files. */
+struct flattened_map {
+	/** File cache. */
+	struct fcache *fcache;
+
+	/** Number of mapped files. */
+	unsigned nfiles;
+
+	/** Mappings for individual files. */
+	struct flattened_file_map fmap[];
+};
+
+INTERNAL_DECL(struct flattened_map *, flatmap_alloc,
+	      (unsigned nfiles));
+INTERNAL_DECL(kdump_status, flatmap_init,
+	      (struct flattened_map *map, kdump_ctx_t *ctx));
+INTERNAL_DECL(void, flatmap_free,
+	      (struct flattened_map *map));
+INTERNAL_DECL(kdump_status, flatmap_pread,
+	      (struct flattened_map *map, void *buf, size_t len,
+	       unsigned fidx, off_t pos));
+INTERNAL_DECL(kdump_status, flatmap_get_chunk,
+	      (struct flattened_map *map, struct fcache_chunk *fch,
+	       size_t len, unsigned fidx, off_t pos));
+
 /** Check if a character is a POSIX white space.
  * @param c  Character to check.
  *
