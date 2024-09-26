@@ -254,7 +254,7 @@ diskdump_pread(kdump_ctx_t *ctx, void *buf, size_t len,
 {
 	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 
-	return ddp->flatmap
+	return flatmap_isflattened(ddp->flatmap, fidx)
 		? flatmap_pread(ddp->flatmap, buf, len, fidx, pos)
 		: fcache_pread(ctx->shared->fcache, buf, len, fidx, pos);
 }
@@ -276,7 +276,7 @@ diskdump_get_chunk(kdump_ctx_t *ctx, struct fcache_chunk *fch,
 {
 	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 
-	return ddp->flatmap
+	return flatmap_isflattened(ddp->flatmap, fidx)
 		? flatmap_get_chunk(ddp->flatmap, fch, len, fidx, pos)
 		: fcache_get_chunk(ctx->shared->fcache, fch, len, fidx, pos);
 }
@@ -1087,9 +1087,15 @@ init_private(kdump_ctx_t *ctx)
 	if (!ddp)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate diskdump private data");
+	ctx->shared->fmtdata = ddp;
 	ddp->num_files = get_num_files(ctx);
 
-	ctx->shared->fmtdata = ddp;
+	ddp->flatmap = flatmap_alloc(ddp->num_files);
+	if (!ddp->flatmap)
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot allocate %s",
+				 "flattened dump maps");
+
 	return KDUMP_OK;
 }
 
@@ -1172,6 +1178,10 @@ diskdump_probe(kdump_ctx_t *ctx)
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot read dump header");
 
+	status = init_private(ctx);
+	if (status != KDUMP_OK)
+		return status;
+
 	if (!memcmp(hdr, magic_flattened, sizeof magic_flattened)) {
 		struct makedumpfile_header *flathdr =
 			(struct makedumpfile_header*) hdr;
@@ -1186,17 +1196,7 @@ diskdump_probe(kdump_ctx_t *ctx)
 					 "Unknown flattened %s: %" PRId64 "\n",
 					 "version", be64toh(flathdr->version));
 
-		status = init_private(ctx);
-		if (status != KDUMP_OK)
-			return status;
-
 		ddp = ctx->shared->fmtdata;
-		ddp->flatmap = flatmap_alloc(ddp->num_files);
-		if (!ddp->flatmap)
-			return set_error(ctx, KDUMP_ERR_SYSTEM,
-					 "Cannot allocate %s",
-					 "flattened dump maps");
-
 		status = flatmap_init(ddp->flatmap, ctx);
 		if (status != KDUMP_OK)
 			return status;
@@ -1223,12 +1223,6 @@ diskdump_probe(kdump_ctx_t *ctx)
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot set %s",
 				 "file.description");
-
-	if (!ctx->shared->fmtdata) {
-		status = init_private(ctx);
-		if (status != KDUMP_OK)
-			return status;
-	}
 
 	return open_common(ctx, hdr);
 }

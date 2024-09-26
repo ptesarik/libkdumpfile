@@ -1773,6 +1773,17 @@ INTERNAL_DECL(kdump_status, flatmap_get_chunk,
 	      (struct flattened_map *map, struct fcache_chunk *fch,
 	       size_t len, unsigned fidx, off_t pos));
 
+/** Check whether a given file in a set is flattened.
+ * @param map   Flattened offset map.
+ * @param fidx  Index of the file to read from.
+ * @returns     @c true if file is flattened, @c false otherwise.
+ */
+static inline bool
+flatmap_isflattened(struct flattened_map *map, unsigned fidx)
+{
+	return fidx < map->nfiles && map->fmap[fidx].map;
+}
+
 /** Check if a character is a POSIX white space.
  * @param c  Character to check.
  *
