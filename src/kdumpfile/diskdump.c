@@ -208,6 +208,18 @@ struct flattened_file_map {
 	off_t *offs;
 };
 
+/** Offset mappings for a set of flattened files. */
+struct flattened_map {
+	/** File cache. */
+	struct fcache *fcache;
+
+	/** Number of mapped files. */
+	unsigned nfiles;
+
+	/** Mappings for individual files. */
+	struct flattened_file_map fmap[];
+};
+
 struct disk_dump_priv {
 	/** Number of split files in this dump. */
 	unsigned num_files;
@@ -225,7 +237,7 @@ struct disk_dump_priv {
 	struct pfn_file_map mem_pagemap;
 
 	/** File offset mappings for flattened files. */
-	struct flattened_file_map *flatmap;
+	struct flattened_map *flatmap;
 
 	/** Page descriptor mapping. */
 	struct pfn_file_map pdmap[];
@@ -256,7 +268,7 @@ struct setup_data {
 static void diskdump_cleanup(struct kdump_shared *shared);
 
 /** Read buffer from a flattened dump file.
- * @param ctx   Dump file object.
+ * @param map   Flattened format mapping to be initialized.
  * @param buf   Target I/O buffer.
  * @param len   Length of data.
  * @param fidx  Index of the file to read from.
@@ -267,15 +279,15 @@ static void diskdump_cleanup(struct kdump_shared *shared);
  * at position @p pos after rearrangement.
  */
 static kdump_status
-flattened_pread(kdump_ctx_t *ctx, void *buf, size_t len,
-		unsigned fidx, off_t pos)
+flatmap_pread(struct flattened_map *map, void *buf, size_t len,
+	      unsigned fidx, off_t pos)
 {
-	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
+	struct flattened_file_map *fmap = &map->fmap[fidx];
 	const addrxlat_range_t *range, *end;
 	off_t off;
 
-	range = addrxlat_map_ranges(ddp->flatmap[fidx].map);
-	end = range + addrxlat_map_len(ddp->flatmap[fidx].map);
+	range = addrxlat_map_ranges(fmap->map);
+	end = range + addrxlat_map_len(fmap->map);
 	for (off = pos; range < end && off > range->endoff; ++range)
 		off -= range->endoff + 1;
 	while (range < end && len) {
@@ -286,10 +298,10 @@ flattened_pread(kdump_ctx_t *ctx, void *buf, size_t len,
 			seglen = len;
 
 		if (range->meth != ADDRXLAT_SYS_METH_NONE) {
-			off_t *flatoffs = ddp->flatmap[fidx].offs;
+			off_t *flatoffs = fmap->offs;
 			kdump_status ret;
 
-			ret = fcache_pread(ctx->shared->fcache, buf, seglen,
+			ret = fcache_pread(map->fcache, buf, seglen,
 					   fidx, pos + flatoffs[range->meth]);
 			if (ret != KDUMP_OK)
 				return ret;
@@ -326,12 +338,12 @@ diskdump_pread(kdump_ctx_t *ctx, void *buf, size_t len,
 	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 
 	return ddp->flatmap
-		? flattened_pread(ctx, buf, len, fidx, pos)
+		? flatmap_pread(ddp->flatmap, buf, len, fidx, pos)
 		: fcache_pread(ctx->shared->fcache, buf, len, fidx, pos);
 }
 
 /** Get a contiguous data chunk from a flattened dump file.
- * @param ctx   Dump file object.
+ * @param map   Flattened format mapping to be initialized.
  * @param fch   File cache chunk, updated on success.
  * @param len   Length of data.
  * @param fidx  Index of the file to read from.
@@ -341,28 +353,27 @@ diskdump_pread(kdump_ctx_t *ctx, void *buf, size_t len,
  * Get a contiguous data chunk from a flattened dump file.
  */
 static inline kdump_status
-flattened_get_chunk(kdump_ctx_t *ctx, struct fcache_chunk *fch,
-		    size_t len, unsigned fidx, off_t pos)
+flatmap_get_chunk(struct flattened_map *map, struct fcache_chunk *fch,
+		  size_t len, unsigned fidx, off_t pos)
 {
-	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
+	struct flattened_file_map *fmap = &map->fmap[fidx];
 	const addrxlat_range_t *range, *end;
 	off_t off;
 
-	range = addrxlat_map_ranges(ddp->flatmap[fidx].map);
-	end = range + addrxlat_map_len(ddp->flatmap[fidx].map);
+	range = addrxlat_map_ranges(fmap->map);
+	end = range + addrxlat_map_len(fmap->map);
 	for (off = pos; range < end && off > range->endoff; ++range)
 		off -= range->endoff + 1;
 	if (len <= range->endoff + 1 - off) {
-		pos += ddp->flatmap[fidx].offs[range->meth];
-		return fcache_get_chunk(ctx->shared->fcache, fch, len,
-					fidx, pos);
+		pos += fmap->offs[range->meth];
+		return fcache_get_chunk(map->fcache, fch, len, fidx, pos);
 	}
 
 	fch->data = malloc(len);
 	if (!fch->data)
 		return KDUMP_ERR_SYSTEM;
 	fch->nent = 0;
-	return flattened_pread(ctx, fch->data, len, fidx, pos);
+	return flatmap_pread(map, fch->data, len, fidx, pos);
 }
 
 /** Get a contiguous data chunk from a diskdump file.
@@ -383,7 +394,7 @@ diskdump_get_chunk(kdump_ctx_t *ctx, struct fcache_chunk *fch,
 	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 
 	return ddp->flatmap
-		? flattened_get_chunk(ctx, fch, len, fidx, pos)
+		? flatmap_get_chunk(ddp->flatmap, fch, len, fidx, pos)
 		: fcache_get_chunk(ctx->shared->fcache, fch, len, fidx, pos);
 }
 
@@ -1264,19 +1275,25 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 #define FLATOFFS_ALLOC_INC	32
 
 /** Initialize flattened dump maps for one file.
+ * @param fmap  Flattened format mapping to be initialized.
  * @param ctx   Dump file object.
  * @param fidx  File index.
  * @returns     Error status.
  *
  * Read all flattened segment headers from file @p fidx and initialize
- * @p flatmap and @p flatoffs.
+ * @p fmap.
+ *
+ * Note that the mapping may be already partially initialized when this
+ * function fails with an error status, so you should always release the
+ * associated resources with @ref flatmap_file_cleanup(). As a consequence,
+ * the mapping must be initialized to all zeroes prior to calling
+ * flatmap_file_init().
  */
 static kdump_status
-init_flattened_file(kdump_ctx_t *ctx, unsigned fidx)
+flatmap_file_init(struct flattened_file_map *fmap, kdump_ctx_t *ctx,
+		  unsigned fidx)
 {
-	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	struct makedumpfile_data_header hdr;
-	addrxlat_map_t *flatmap;
 	off_t *flatoffs = NULL;
 	addrxlat_range_t range;
 	int64_t pos, size;
@@ -1284,11 +1301,10 @@ init_flattened_file(kdump_ctx_t *ctx, unsigned fidx)
 	off_t flatpos;
 	kdump_status status;
 
-	flatmap = addrxlat_map_new();
-	if (!flatmap)
+	fmap->map = addrxlat_map_new();
+	if (!fmap->map)
 		return set_error(ctx, KDUMP_ERR_SYSTEM,
 				 "Cannot allocate %s", "flattened map");
-	ddp->flatmap[fidx].map = flatmap;
 
 	segidx = 0;
 	flatpos = MDF_HEADER_SIZE;
@@ -1323,14 +1339,14 @@ init_flattened_file(kdump_ctx_t *ctx, unsigned fidx)
 				return set_error(ctx, KDUMP_ERR_SYSTEM,
 						 "Cannot allocate %s",
 						 "flattened offset array");
-			ddp->flatmap[fidx].offs = flatoffs;
+			fmap->offs = flatoffs;
 		}
 		flatpos += sizeof(hdr);
 		flatoffs[segidx] = flatpos - pos;
 
 		range.endoff = size - 1;
 		range.meth = segidx;
-		if (addrxlat_map_set(flatmap, pos, &range) != ADDRXLAT_OK)
+		if (addrxlat_map_set(fmap->map, pos, &range) != ADDRXLAT_OK)
 			return set_error(ctx, KDUMP_ERR_SYSTEM,
 					 "Cannot allocate %s",
 					 "flattened map entry");
@@ -1341,26 +1357,49 @@ init_flattened_file(kdump_ctx_t *ctx, unsigned fidx)
 	return KDUMP_OK;
 }
 
+static void
+flatmap_file_cleanup(struct flattened_file_map *fmap)
+{
+	if (fmap->map)
+		addrxlat_map_decref(fmap->map);
+	if (fmap->offs)
+		free(fmap->offs);
+}
+
+/** Allocate a flattened dump map.
+ * @param nfiles  Number of mapped files.
+ * @returns       Flattened offset map, or @c NULL on error.
+ */
+static struct flattened_map*
+flatmap_alloc(unsigned nfiles)
+{
+	struct flattened_map *map;
+
+	map = calloc(1, sizeof(*map) +
+		     nfiles * sizeof(map->fmap[0]));
+	if (map)
+		map->nfiles = nfiles;
+	return map;
+}
+
 /** Initialize flattened dump maps for all files.
+ * @param map  Flattened offset map.
  * @param ctx  Dump file object.
  * @returns    Error status.
  *
  * Initialize flattened dump maps for all files.
  */
 static kdump_status
-init_flattened_maps(kdump_ctx_t *ctx)
+flatmap_init(struct flattened_map *map, kdump_ctx_t *ctx)
 {
-	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	unsigned fidx;
 	kdump_status status;
 
-	ddp->flatmap = calloc(ddp->num_files, sizeof(*ddp->flatmap));
-	if (!ddp->flatmap)
-		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot allocate %s", "flatmap array");
+	map->fcache = ctx->shared->fcache;
+	fcache_incref(map->fcache);
 
 	for (fidx = 0; fidx < get_num_files(ctx); ++fidx) {
-		status = init_flattened_file(ctx, fidx);
+		status = flatmap_file_init(&map->fmap[fidx], ctx, fidx);
 		if (status != KDUMP_OK)
 			return set_error(ctx, status,
 					 "Cannot rearrange %s",
@@ -1368,6 +1407,20 @@ init_flattened_maps(kdump_ctx_t *ctx)
 	}
 
 	return KDUMP_OK;
+}
+
+static void
+flatmap_free(struct flattened_map *map)
+{
+	unsigned fidx;
+
+	if (!map)
+		return;
+	for (fidx = 0; fidx < map->nfiles; ++fidx)
+		flatmap_file_cleanup(&map->fmap[fidx]);
+	if (map->fcache)
+		fcache_decref(map->fcache);
+	free(map);
 }
 
 static kdump_status
@@ -1390,6 +1443,7 @@ diskdump_probe(kdump_ctx_t *ctx)
 	if (!memcmp(hdr, magic_flattened, sizeof magic_flattened)) {
 		struct makedumpfile_header *flathdr =
 			(struct makedumpfile_header*) hdr;
+		struct disk_dump_priv *ddp;
 
 		if (be64toh(flathdr->type) != MDF_TYPE_FLAT_HEADER)
 			return set_error(ctx, KDUMP_ERR_NOTIMPL,
@@ -1404,11 +1458,18 @@ diskdump_probe(kdump_ctx_t *ctx)
 		if (status != KDUMP_OK)
 			return status;
 
-		status = init_flattened_maps(ctx);
+		ddp = ctx->shared->fmtdata;
+		ddp->flatmap = flatmap_alloc(ddp->num_files);
+		if (!ddp->flatmap)
+			return set_error(ctx, KDUMP_ERR_SYSTEM,
+					 "Cannot allocate %s",
+					 "flattened dump maps");
+
+		status = flatmap_init(ddp->flatmap, ctx);
 		if (status != KDUMP_OK)
 			return status;
 
-		status = flattened_pread(ctx, &hdr, sizeof hdr, 0, 0);
+		status = flatmap_pread(ddp->flatmap, &hdr, sizeof hdr, 0, 0);
 		if (status != KDUMP_OK)
 			return set_error(ctx, status, "Cannot read dump header");
 		strcpy(desc, "Flattened ");
@@ -1461,18 +1522,7 @@ diskdump_cleanup(struct kdump_shared *shared)
 			if (pdmap->regions)
 				free(pdmap->regions);
 		}
-		if (ddp->flatmap) {
-			for (fidx = 0; fidx < ddp->num_files; ++fidx) {
-				struct flattened_file_map *flatmap =
-					&ddp->flatmap[fidx];
-
-				if (flatmap->map)
-					addrxlat_map_decref(flatmap->map);
-				if (flatmap->offs)
-					free(flatmap->offs);
-			}
-			free(ddp->flatmap);
-		}
+		flatmap_free(ddp->flatmap);
 		free(ddp);
 		shared->fmtdata = NULL;
 	}
