@@ -30,6 +30,7 @@
 #include <endian.h>
 #include <sys/time.h>
 #include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <limits.h>
 #include <ctype.h>
@@ -37,6 +38,7 @@
 
 #include "config.h"
 #include "testutil.h"
+#include "diskdump.h"
 
 typedef int write_fn(FILE *);
 
@@ -78,6 +80,10 @@ struct page_data_elf {
 
 static endian_t be;
 
+static bool flattened;
+static unsigned long long flattened_type = MDF_TYPE_FLAT_HEADER;
+static unsigned long long flattened_version = MDF_VERSION_FLAT_HEADER;
+
 static char *ei_mag;
 static unsigned long long ei_class = ELFCLASS64;
 static unsigned long long ei_data = ELFDATA2LSB;
@@ -102,6 +108,11 @@ static unsigned long long e_shstrndx;
 static char *data_file;
 
 static const struct param param_array[] = {
+	/* meta-data */
+	PARAM_YESNO("flattened", flattened),
+	PARAM_NUMBER("flattened.type", flattened_type),
+	PARAM_NUMBER("flattened.version", flattened_version),
+
 	/* ELF file header */
 	PARAM_STRING("ei_mag", ei_mag),
 	PARAM_NUMBER("ei_class", ei_class),
@@ -133,6 +144,29 @@ static const struct params params = {
 };
 
 static int
+write_chunk(FILE *f, off_t off, const void *ptr, size_t sz, const char *what)
+{
+	if (flattened) {
+		struct makedumpfile_data_header hdr = {
+			.offset = htobe64(off),
+			.buf_size = htobe64(sz),
+		};
+		if (fwrite(&hdr, sizeof hdr, 1, f) != 1) {
+			perror("flattened segment header");
+			return -1;
+		}
+	} else if (fseek(f, off, SEEK_SET) != 0) {
+		fprintf(stderr, "seek %s: %s\n", what, strerror(errno));
+		return -1;
+	}
+	if (fwrite(ptr, 1, sz, f) != sz) {
+		fprintf(stderr, "write %s: %s\n", what, strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
+static int
 writeheader32(FILE *f)
 {
 	Elf32_Ehdr ehdr;
@@ -161,15 +195,8 @@ writeheader32(FILE *f)
 	ehdr.e_shnum = htodump16(be, e_shnum);
 	ehdr.e_shstrndx = htodump16(be, e_shstrndx);
 
-	if (fseek(f, 0, SEEK_SET) != 0) {
-		perror("seek header");
-		return -1;
-	}
-
-	if (fwrite(&ehdr, sizeof ehdr, 1, f) != 1) {
-		perror("write header");
-		return -1;
-	}
+	if (write_chunk(f, 0, &ehdr, sizeof ehdr, "header"))
+		return TEST_ERR;
 
 	return TEST_OK;
 }
@@ -203,15 +230,8 @@ writeheader64(FILE *f)
 	ehdr.e_shnum = htodump16(be, e_shnum);
 	ehdr.e_shstrndx = htodump16(be, e_shstrndx);
 
-	if (fseek(f, 0, SEEK_SET) != 0) {
-		perror("seek header");
-		return -1;
-	}
-
-	if (fwrite(&ehdr, sizeof ehdr, 1, f) != 1) {
-		perror("write header");
-		return -1;
-	}
+	if (write_chunk(f, 0, &ehdr, sizeof ehdr, "header"))
+		return TEST_ERR;
 
 	return TEST_OK;
 }
@@ -441,15 +461,8 @@ finshdr32(struct page_data *pg)
 	shdr.sh_entsize = htodump32(be, pgelf->shdr.sh_entsize);
 
 	off = e_shoff + pgelf->shnum * sizeof shdr;
-	if (fseek(pgelf->f, off, SEEK_SET) != 0) {
-		perror("seek section header");
-		return -1;
-	}
-
-	if (fwrite(&shdr, sizeof shdr, 1, pgelf->f) != 1) {
-		perror("write section header");
+	if (write_chunk(pgelf->f, off, &shdr, sizeof shdr, "section header"))
 		return TEST_ERR;
-	}
 
 	++pgelf->shnum;
 	return TEST_OK;
@@ -474,15 +487,8 @@ finshdr64(struct page_data *pg)
 	shdr.sh_entsize = htodump64(be, pgelf->shdr.sh_entsize);
 
 	off = e_shoff + pgelf->shnum * sizeof shdr;
-	if (fseek(pgelf->f, off, SEEK_SET) != 0) {
-		perror("seek section header");
-		return -1;
-	}
-
-	if (fwrite(&shdr, sizeof shdr, 1, pgelf->f) != 1) {
-		perror("write section header");
+	if (write_chunk(pgelf->f, off, &shdr, sizeof shdr, "section header"))
 		return TEST_ERR;
-	}
 
 	++pgelf->shnum;
 	return TEST_OK;
@@ -508,15 +514,8 @@ finphdr32(struct page_data *pg)
 	phdr.p_align = htodump32(be, pgelf->phdr.p_align);
 
 	off = e_phoff + pgelf->phnum * sizeof phdr;
-	if (fseek(pgelf->f, off, SEEK_SET) != 0) {
-		perror("seek program header");
-		return -1;
-	}
-
-	if (fwrite(&phdr, sizeof phdr, 1, pgelf->f) != 1) {
-		perror("write program header");
+	if (write_chunk(pgelf->f, off, &phdr, sizeof phdr, "program header"))
 		return TEST_ERR;
-	}
 
 	++pgelf->phnum;
 	return TEST_OK;
@@ -542,15 +541,8 @@ finphdr64(struct page_data *pg)
 	phdr.p_align = htodump64(be, pgelf->phdr.p_align);
 
 	off = e_phoff + pgelf->phnum * sizeof phdr;
-	if (fseek(pgelf->f, off, SEEK_SET) != 0) {
-		perror("seek program header");
-		return -1;
-	}
-
-	if (fwrite(&phdr, sizeof phdr, 1, pgelf->f) != 1) {
-		perror("write program header");
+	if (write_chunk(pgelf->f, off, &phdr, sizeof phdr, "program header"))
 		return TEST_ERR;
-	}
 
 	++pgelf->phnum;
 	return TEST_OK;
@@ -561,16 +553,9 @@ writepage(struct page_data *pg)
 {
 	struct page_data_elf *pgelf = pg->priv;
 
-	if (fseek(pgelf->f, pgelf->filepos, SEEK_SET) != 0) {
-		perror("seek data");
-		return TEST_ERR;
-	}
-
 	pgelf->filesz += pg->len;
-	if (fwrite(pg->buf, 1, pg->len, pgelf->f) != pg->len) {
-		perror("write data");
+	if (write_chunk(pgelf->f, pgelf->filepos, pg->buf, pg->len, "data"))
 		return TEST_ERR;
-	}
 
 	return TEST_OK;
 }
@@ -627,6 +612,27 @@ writedump(FILE *f)
 {
 	int rc;
 
+	if (flattened) {
+		struct makedumpfile_header hdr = {
+			.signature = MDF_SIGNATURE,
+			.type = htobe64(flattened_type),
+			.version = htobe64(flattened_version),
+		};
+		size_t remain;
+
+		if (fwrite(&hdr, sizeof hdr, 1, f) != 1) {
+			perror("flattened header");
+			return TEST_ERR;
+		}
+		remain = MDF_HEADER_SIZE - sizeof hdr;
+		while (remain--) {
+			if (putc(0, f) != 0) {
+				perror("flattened header padding");
+				return TEST_ERR;
+			}
+		}
+	}
+
 	if (ei_data == ELFDATA2LSB)
 		be = data_le;
 	else if (ei_data == ELFDATA2MSB)
@@ -643,6 +649,17 @@ writedump(FILE *f)
 	rc = writeheader(f);
 	if (rc != TEST_OK)
 		return rc;
+
+	if (flattened) {
+		struct makedumpfile_data_header hdr = {
+			.offset = htobe64(MDF_OFFSET_END_FLAG),
+			.buf_size = htobe64(MDF_OFFSET_END_FLAG),
+		};
+		if (fwrite(&hdr, sizeof hdr, 1, f) != 1) {
+			perror("end segment header");
+			return TEST_ERR;
+		}
+	}
 
 	return TEST_OK;
 }
