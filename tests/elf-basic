@@ -18,6 +18,7 @@ echo "@phdr type=LOAD offset=$page_size memsz=$page_size" >"$datafile"
 cat "$expectfile" >> "$datafile"
 
 ./mkelf "$dumpfile" <<EOF
+$extraparam
 ei_class = $ei_class
 ei_data = $ei_data
 e_machine = $e_machine

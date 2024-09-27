@@ -223,6 +223,7 @@ test_scripts = \
 	elf-prstatus-x86_64 \
 	elf-task_struct \
 	elf-basic \
+	elf-basic-flat \
         elf-be \
         elf-le \
 	elf-nonexistent \
