@@ -191,7 +191,7 @@ flatmap_init(struct flattened_map *map, kdump_ctx_t *ctx)
 	map->fcache = ctx->shared->fcache;
 	fcache_incref(map->fcache);
 
-	for (fidx = 0; fidx < get_num_files(ctx); ++fidx) {
+	for (fidx = 0; fidx < map->nfiles; ++fidx) {
 		status = fcache_pread(map->fcache, &hdr, sizeof(hdr), fidx, 0);
 		if (status != KDUMP_OK)
 			return set_error(ctx, status, "Cannot read %s",
