@@ -1766,10 +1766,10 @@ INTERNAL_DECL(kdump_status, flatmap_init,
 	      (struct flattened_map *map, kdump_ctx_t *ctx));
 INTERNAL_DECL(void, flatmap_free,
 	      (struct flattened_map *map));
-INTERNAL_DECL(kdump_status, flatmap_pread,
+INTERNAL_DECL(kdump_status, flatmap_pread_flat,
 	      (struct flattened_map *map, void *buf, size_t len,
 	       unsigned fidx, off_t pos));
-INTERNAL_DECL(kdump_status, flatmap_get_chunk,
+INTERNAL_DECL(kdump_status, flatmap_get_chunk_flat,
 	      (struct flattened_map *map, struct fcache_chunk *fch,
 	       size_t len, unsigned fidx, off_t pos));
 
@@ -1783,6 +1783,47 @@ flatmap_isflattened(struct flattened_map *map, unsigned fidx)
 {
 	return fidx < map->nfiles && map->fmap[fidx].map;
 }
+
+/** Read buffer from a possibly flattened dump file.
+ * @param flatmap  Flattened offset map.
+ * @param buf      Target I/O buffer.
+ * @param len      Length of data.
+ * @param fidx     Index of the file to read from.
+ * @param pos      File position.
+ * @returns        Error status.
+ *
+ * Read data from an ELF dump file. If the file is flattened, interpret
+ * @p pos as if it was already rearranged.
+ */
+static inline kdump_status
+flatmap_pread(struct flattened_map *flatmap, void *buf, size_t len,
+	      unsigned fidx, off_t pos)
+{
+	return flatmap_isflattened(flatmap, fidx)
+		? flatmap_pread_flat(flatmap, buf, len, fidx, pos)
+		: fcache_pread(flatmap->fcache, buf, len, fidx, pos);
+}
+
+/** Get a contiguous data chunk from a possibly flattend dump file.
+ * @param flatmap  Flattened offset map.
+ * @param fch      File cache chunk, updated on success.
+ * @param len      Length of data.
+ * @param fidx     Index of the file to read from.
+ * @param pos      File position.
+ * @returns        Error status.
+ *
+ * Get a contiguous data chunk from an ELF dump file. If the file is
+ * flattened, interpret @p pos as if it was already rearranged.
+ */
+static inline kdump_status
+flatmap_get_chunk(struct flattened_map *flatmap, struct fcache_chunk *fch,
+		  size_t len, unsigned fidx, off_t pos)
+{
+	return flatmap_isflattened(flatmap, fidx)
+		? flatmap_get_chunk_flat(flatmap, fch, len, fidx, pos)
+		: fcache_get_chunk(flatmap->fcache, fch, len, fidx, pos);
+}
+
 
 /** Check if a character is a POSIX white space.
  * @param c  Character to check.

@@ -225,50 +225,6 @@ struct setup_data {
 
 static void diskdump_cleanup(struct kdump_shared *shared);
 
-/** Read buffer from a diskdump file.
- * @param ctx   Dump file object.
- * @param buf   Target I/O buffer.
- * @param len   Length of data.
- * @param fidx  Index of the file to read from.
- * @param pos   File position.
- * @returns     Error status.
- *
- * Read data from a diskdump file. If the file is flattened, interpret
- * @p pos as if it was already rearranged.
- */
-static inline kdump_status
-diskdump_pread(kdump_ctx_t *ctx, void *buf, size_t len,
-	       unsigned fidx, off_t pos)
-{
-	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
-
-	return flatmap_isflattened(ddp->flatmap, fidx)
-		? flatmap_pread(ddp->flatmap, buf, len, fidx, pos)
-		: fcache_pread(ctx->shared->fcache, buf, len, fidx, pos);
-}
-
-/** Get a contiguous data chunk from a diskdump file.
- * @param ctx   Dump file object.
- * @param fch   File cache chunk, updated on success.
- * @param len   Length of data.
- * @param fidx  Index of the file to read from.
- * @param pos   File position.
- * @returns     Error status.
- *
- * Get a contiguous data chunk from a diskdump file. If the file is
- * flattened, interpret @p pos as if it was already rearranged.
- */
-static inline kdump_status
-diskdump_get_chunk(kdump_ctx_t *ctx, struct fcache_chunk *fch,
-		   size_t len, unsigned fidx, off_t pos)
-{
-	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
-
-	return flatmap_isflattened(ddp->flatmap, fidx)
-		? flatmap_get_chunk(ddp->flatmap, fch, len, fidx, pos)
-		: fcache_get_chunk(ctx->shared->fcache, fch, len, fidx, pos);
-}
-
 /** Convert a PFN to a page descriptor file offset.
  * @param pdmap  Page descriptor mapping.
  * @param pfn    Page frame number.
@@ -425,8 +381,8 @@ diskdump_read_page(struct page_io *pio)
 	}
 
 	mutex_lock(&ctx->shared->cache_lock);
-	ret = diskdump_pread(ctx, &pd, sizeof pd,
-			     pdmap->fidx, pd_pos);
+	ret = flatmap_pread(ddp->flatmap, &pd, sizeof pd,
+			    pdmap->fidx, pd_pos);
 	mutex_unlock(&ctx->shared->cache_lock);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
@@ -441,8 +397,8 @@ diskdump_read_page(struct page_io *pio)
 	/* read page data */
 	if (pd.flags & DUMP_DH_COMPRESSED) {
 		mutex_lock(&ctx->shared->cache_lock);
-		ret = diskdump_get_chunk(ctx, &fch, pd.size,
-					 pdmap->fidx, pd.offset);
+		ret = flatmap_get_chunk(ddp->flatmap, &fch, pd.size,
+					pdmap->fidx, pd.offset);
 		mutex_unlock(&ctx->shared->cache_lock);
 	} else {
 		if (pd.size != get_page_size(ctx))
@@ -450,8 +406,8 @@ diskdump_read_page(struct page_io *pio)
 					 "Wrong page size: %"PRIu32,
 					 pd.size);
 		mutex_lock(&ctx->shared->cache_lock);
-		ret = diskdump_pread(ctx, pio->chunk.data, pd.size,
-				     pdmap->fidx, pd.offset);
+		ret = flatmap_pread(ddp->flatmap, pio->chunk.data, pd.size,
+				    pdmap->fidx, pd.offset);
 		mutex_unlock(&ctx->shared->cache_lock);
 	}
 
@@ -559,10 +515,11 @@ read_eraseinfo(kdump_ctx_t *ctx, unsigned fidx, off_t off, size_t size)
 static kdump_status
 read_notes(kdump_ctx_t *ctx, off_t off, size_t size)
 {
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	struct fcache_chunk fch;
 	kdump_status ret;
 
-	ret = diskdump_get_chunk(ctx, &fch, size, 0, off);
+	ret = flatmap_get_chunk(ddp->flatmap, &fch, size, 0, off);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read %zu note bytes at %llu",
@@ -623,7 +580,8 @@ read_bitmap(kdump_ctx_t *ctx, struct pfn_file_map *pdmap,
 	if (get_max_pfn(ctx) > max_bitmap_pfn)
 		set_max_pfn(ctx, max_bitmap_pfn);
 
-	ret = diskdump_get_chunk(ctx, &fch, bitmapsize, pdmap->fidx, off);
+	ret = flatmap_get_chunk(ddp->flatmap, &fch, bitmapsize,
+				pdmap->fidx, off);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read %zu bytes of page bitmap"
@@ -766,6 +724,7 @@ static kdump_status
 read_sub_hdr_32(struct setup_data *sdp, struct pfn_file_map *pdmap)
 {
 	kdump_ctx_t *ctx = sdp->ctx;
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	union {
 		struct kdump_sub_header_32pack pack;
 		struct kdump_sub_header_32pad pad;
@@ -782,8 +741,8 @@ read_sub_hdr_32(struct setup_data *sdp, struct pfn_file_map *pdmap)
 	if (sdp->header_version < 1)
 		return KDUMP_OK;
 
-	ret = diskdump_pread(ctx, &subhdr, sizeof subhdr,
-			     pdmap->fidx, get_page_size(ctx));
+	ret = flatmap_pread(ddp->flatmap, &subhdr, sizeof subhdr,
+			    pdmap->fidx, get_page_size(ctx));
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read subheader");
@@ -821,8 +780,8 @@ do_header_32(struct setup_data *sdp, struct disk_dump_header_32 *dh,
 		struct pfn_file_map *pdmap = &ddp->pdmap[fidx];
 		pdmap->fidx = fidx;
 
-		ret = diskdump_pread(ctx, dh, sizeof *dh,
-				     fidx, 0);
+		ret = flatmap_pread(ddp->flatmap, dh, sizeof *dh,
+				    fidx, 0);
 		if (ret != KDUMP_OK) {
 			ret = set_error(ctx, ret, "Cannot read header");
 			break;
@@ -877,6 +836,7 @@ static kdump_status
 read_sub_hdr_64(struct setup_data *sdp, struct pfn_file_map *pdmap)
 {
 	kdump_ctx_t *ctx = sdp->ctx;
+	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	struct kdump_sub_header_64 subhdr;
 	kdump_status ret;
 
@@ -888,8 +848,8 @@ read_sub_hdr_64(struct setup_data *sdp, struct pfn_file_map *pdmap)
 	if (sdp->header_version < 1)
 		return KDUMP_OK;
 
-	ret = diskdump_pread(ctx, &subhdr, sizeof subhdr,
-			     pdmap->fidx, get_page_size(ctx));
+	ret = flatmap_pread(ddp->flatmap, &subhdr, sizeof subhdr,
+			    pdmap->fidx, get_page_size(ctx));
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read subheader");
@@ -950,8 +910,8 @@ do_header_64(struct setup_data *sdp, struct disk_dump_header_64 *dh,
 		struct pfn_file_map *pdmap = &ddp->pdmap[fidx];
 		pdmap->fidx = fidx;
 
-		ret = diskdump_pread(ctx, dh, sizeof *dh,
-				     fidx, 0);
+		ret = flatmap_pread(ddp->flatmap, dh, sizeof *dh,
+				    fidx, 0);
 		if (ret != KDUMP_OK) {
 			ret = set_error(ctx, ret, "Cannot read header");
 			break;
@@ -1012,8 +972,8 @@ mem_pagemap_revalidate(kdump_ctx_t *ctx, struct attr_data *attr)
 	kdump_pfn_t maxpfn;
 	kdump_status status;
 
-	status = diskdump_get_chunk(ctx, &fch, ddp->mem_pagemap_size,
-				    0, ddp->mem_pagemap_off);
+	status = flatmap_get_chunk(ddp->flatmap, &fch, ddp->mem_pagemap_size,
+				   0, ddp->mem_pagemap_off);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status,
 				 "Cannot read %zu bytes of page bitmap"
@@ -1176,6 +1136,7 @@ diskdump_probe(kdump_ctx_t *ctx)
 		{ 'K', 'D', 'U', 'M', 'P', ' ', ' ', ' ' };
 
 	char hdr[sizeof(struct disk_dump_header_64)];
+	struct disk_dump_priv *ddp;
 	char desc[32];
 	kdump_status status;
 
@@ -1183,7 +1144,8 @@ diskdump_probe(kdump_ctx_t *ctx)
 	if (status != KDUMP_OK)
 		return status;
 
-	status = diskdump_pread(ctx, hdr, sizeof hdr, 0, 0);
+	ddp = ctx->shared->fmtdata;
+	status = flatmap_pread(ddp->flatmap, hdr, sizeof hdr, 0, 0);
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot read dump header");
 

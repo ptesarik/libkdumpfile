@@ -246,8 +246,8 @@ flatmap_free(struct flattened_map *map)
  * at position @p pos after rearrangement.
  */
 kdump_status
-flatmap_pread(struct flattened_map *map, void *buf, size_t len,
-	      unsigned fidx, off_t pos)
+flatmap_pread_flat(struct flattened_map *map, void *buf, size_t len,
+		   unsigned fidx, off_t pos)
 {
 	struct flattened_file_map *fmap = &map->fmap[fidx];
 	const addrxlat_range_t *range, *end;
@@ -298,8 +298,8 @@ flatmap_pread(struct flattened_map *map, void *buf, size_t len,
  * Get a contiguous data chunk from a flattened dump file.
  */
 kdump_status
-flatmap_get_chunk(struct flattened_map *map, struct fcache_chunk *fch,
-		  size_t len, unsigned fidx, off_t pos)
+flatmap_get_chunk_flat(struct flattened_map *map, struct fcache_chunk *fch,
+		       size_t len, unsigned fidx, off_t pos)
 {
 	struct flattened_file_map *fmap = &map->fmap[fidx];
 	const addrxlat_range_t *range, *end;
