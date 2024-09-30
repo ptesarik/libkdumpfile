@@ -1101,14 +1101,13 @@ open_common(kdump_ctx_t *ctx, void *hdr)
 static void
 init_desc(kdump_ctx_t *ctx, char *desc)
 {
-	struct disk_dump_priv *ddp = ctx->shared->fmtdata;
 	unsigned fidx, nflat;
 
-	for (nflat = fidx = 0; fidx < ddp->num_files; ++fidx)
+	for (nflat = fidx = 0; fidx < get_num_files(ctx); ++fidx)
 		if (flatmap_isflattened(ctx->shared->flatmap, fidx))
 			++nflat;
 
-	if (nflat == ddp->num_files)
+	if (nflat == fidx)
 		strcpy(desc, "Flattened ");
 	else if (nflat)
 		strcpy(desc, "Mixed ");
@@ -1127,10 +1126,6 @@ diskdump_probe(kdump_ctx_t *ctx)
 	char hdr[sizeof(struct disk_dump_header_64)];
 	char desc[32];
 	kdump_status status;
-
-	status = init_private(ctx);
-	if (status != KDUMP_OK)
-		return status;
 
 	status = flatmap_pread(ctx->shared->flatmap, hdr, sizeof hdr, 0, 0);
 	if (status != KDUMP_OK)
@@ -1153,6 +1148,10 @@ diskdump_probe(kdump_ctx_t *ctx)
 	if (status != KDUMP_OK)
 		return set_error(ctx, status, "Cannot set %s",
 				 "file.description");
+
+	status = init_private(ctx);
+	if (status != KDUMP_OK)
+		return status;
 
 	return open_common(ctx, hdr);
 }
