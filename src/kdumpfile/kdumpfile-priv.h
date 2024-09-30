@@ -580,6 +580,9 @@ struct kdump_shared {
 	struct fcache *fcache;	/**< File cache. */
 	mutex_t cache_lock;	/**< Cache access lock. */
 
+	/** File offset mappings for flattened files. */
+	struct flattened_map *flatmap;
+
 	/** Static attributes. */
 #define ATTR(dir, key, field, type, ctype, ...)	\
 	kdump_attr_value_t field;

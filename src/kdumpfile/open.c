@@ -290,6 +290,7 @@ open_dump(kdump_ctx_t *ctx)
 	int fdset[nfiles];
 	int i;
 
+	flatmap_free(ctx->shared->flatmap);
 	if (ctx->shared->fcache) {
 		for (i = 0; i < ARRAY_SIZE(fcache_attrs); ++i)
 			attr_embed_value(gattr(ctx, fcache_attrs[i]));
@@ -320,6 +321,15 @@ open_dump(kdump_ctx_t *ctx)
 	cache_set_attrs(ctx->shared->fcache->fbcache, ctx,
 			gattr(ctx, GKI_read_cache_hits),
 			gattr(ctx, GKI_read_cache_misses));
+
+	ctx->shared->flatmap = flatmap_alloc(nfiles);
+	if (!ctx->shared->flatmap)
+		return set_error(ctx, KDUMP_ERR_SYSTEM,
+				 "Cannot allocate %s", "flattened dump maps");
+
+	ret = flatmap_init(ctx->shared->flatmap, ctx);
+	if (ret != KDUMP_OK)
+		return ret;
 
 	ctx->xlat->dirty = true;
 

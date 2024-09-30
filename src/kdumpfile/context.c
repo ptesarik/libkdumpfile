@@ -102,6 +102,7 @@ shared_free(struct kdump_shared *shared)
 		shared->arch_ops->cleanup(shared);
 	if (shared->cache)
 		cache_free(shared->cache);
+	flatmap_free(shared->flatmap);
 	if (shared->fcache)
 		fcache_decref(shared->fcache);
 	mutex_destroy(&shared->cache_lock);

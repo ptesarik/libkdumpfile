@@ -146,9 +146,6 @@ struct elfdump_priv {
 
 	/** File offset of Xen page map (xc_core) */
 	off_t xen_map_offset;
-
-	/** File offset mappings for flattened files. */
-	struct flattened_map *flatmap;
 };
 
 static void elf_cleanup(struct kdump_shared *shared);
@@ -351,7 +348,8 @@ elf_read_page(struct page_io *pio)
 			if (size > loadaddr + pls->filesz - addr)
 				size = loadaddr + pls->filesz - addr;
 
-			status = flatmap_pread(edp->flatmap, p, size, 0, pos);
+			status = flatmap_pread(ctx->shared->flatmap, p, size,
+					       0, pos);
 			if (status != KDUMP_OK)
 				goto err_read;
 			p += size;
@@ -422,7 +420,7 @@ elf_get_page(struct page_io *pio)
 		return cache_get_page(pio, elf_read_page);
 
 	mutex_lock(&ctx->shared->cache_lock);
-	status = flatmap_get_chunk(edp->flatmap, &pio->chunk, sz,
+	status = flatmap_get_chunk(ctx->shared->flatmap, &pio->chunk, sz,
 				   0, pls->file_offset + addr - loadaddr);
 	mutex_unlock(&ctx->shared->cache_lock);
 	return status;
@@ -917,7 +915,7 @@ xc_p2m_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 
 	pos = edp->xen_map_offset + idx * sizeof(struct xen_p2m);
 	mutex_lock(&shared->cache_lock);
-	status = flatmap_pread(edp->flatmap, &p2m, sizeof p2m, 0, pos);
+	status = flatmap_pread(shared->flatmap, &p2m, sizeof p2m, 0, pos);
 	mutex_unlock(&shared->cache_lock);
 	if (status != KDUMP_OK)
 		return addrxlat_read_error(step->ctx, "p2m entry", pos);
@@ -953,7 +951,7 @@ xc_m2p_first_step(addrxlat_step_t *step, addrxlat_addr_t addr)
 
 	pos = edp->xen_map_offset + idx * sizeof(struct xen_p2m);
 	mutex_lock(&shared->cache_lock);
-	status = flatmap_pread(edp->flatmap, &p2m, sizeof p2m, 0, pos);
+	status = flatmap_pread(shared->flatmap, &p2m, sizeof p2m, 0, pos);
 	mutex_unlock(&shared->cache_lock);
 	if (status != KDUMP_OK)
 		return addrxlat_read_error(step->ctx, "m2p entry", pos);
@@ -1056,7 +1054,7 @@ xc_get_page(struct page_io *pio)
 	offset = edp->xen_pages_offset + ((off_t)idx << get_page_shift(ctx));
 
 	mutex_lock(&ctx->shared->cache_lock);
-	status = flatmap_get_chunk(edp->flatmap, &pio->chunk,
+	status = flatmap_get_chunk(ctx->shared->flatmap, &pio->chunk,
 				   get_page_size(ctx), 0, offset);
 	mutex_unlock(&ctx->shared->cache_lock);
 	return status;
@@ -1157,7 +1155,7 @@ init_strtab(kdump_ctx_t *ctx, unsigned strtabidx)
 	if (!edp->strtab)
 		return KDUMP_ERR_SYSTEM;
 
-	status = flatmap_pread(edp->flatmap, edp->strtab, ps->size,
+	status = flatmap_pread(ctx->shared->flatmap, edp->strtab, ps->size,
 			       0, ps->file_offset);
 	if (status != KDUMP_OK) {
 		free(edp->strtab);
@@ -1195,7 +1193,7 @@ init_elf32(kdump_ctx_t *ctx, Elf32_Ehdr *ehdr)
 	if (offset != 0 && (shnum == 0 || phnum == PN_XNUM)) {
 		Elf32_Shdr *sect;
 
-		ret = flatmap_get_chunk(edp->flatmap, &fch,
+		ret = flatmap_get_chunk(ctx->shared->flatmap, &fch,
 					dump16toh(ctx, ehdr->e_shentsize),
 					0, offset);
 		if (ret != KDUMP_OK)
@@ -1224,7 +1222,8 @@ init_elf32(kdump_ctx_t *ctx, Elf32_Ehdr *ehdr)
 		Elf32_Phdr *prog;
 		struct load_segment *pls;
 
-		ret = flatmap_get_chunk(edp->flatmap, &fch, entsz, 0, offset);
+		ret = flatmap_get_chunk(ctx->shared->flatmap, &fch, entsz,
+					0, offset);
 		if (ret != KDUMP_OK)
 			return set_hdr_error(ctx, ret, "program", i, offset);
 		offset += entsz;
@@ -1248,7 +1247,8 @@ init_elf32(kdump_ctx_t *ctx, Elf32_Ehdr *ehdr)
 	for (i = 0; i < shnum; ++i) {
 		Elf32_Shdr *sect;
 
-		ret = flatmap_get_chunk(edp->flatmap, &fch, entsz, 0, offset);
+		ret = flatmap_get_chunk(ctx->shared->flatmap, &fch, entsz,
+					0, offset);
 		if (ret != KDUMP_OK)
 			return set_hdr_error(ctx, ret, "section", i, offset);
 		offset += entsz;
@@ -1286,7 +1286,7 @@ init_elf64(kdump_ctx_t *ctx, Elf64_Ehdr *ehdr)
 	if (offset != 0 && (shnum == 0 || phnum == PN_XNUM)) {
 		Elf64_Shdr *sect;
 
-		ret = flatmap_get_chunk(edp->flatmap, &fch,
+		ret = flatmap_get_chunk(ctx->shared->flatmap, &fch,
 					dump16toh(ctx, ehdr->e_shentsize),
 					0, offset);
 		if (ret != KDUMP_OK)
@@ -1315,7 +1315,8 @@ init_elf64(kdump_ctx_t *ctx, Elf64_Ehdr *ehdr)
 		Elf64_Phdr *prog;
 		struct load_segment *pls;
 
-		ret = flatmap_get_chunk(edp->flatmap, &fch, entsz, 0, offset);
+		ret = flatmap_get_chunk(ctx->shared->flatmap, &fch, entsz,
+					0, offset);
 		if (ret != KDUMP_OK)
 			return set_hdr_error(ctx, ret, "program", i, offset);
 		offset += entsz;
@@ -1339,7 +1340,8 @@ init_elf64(kdump_ctx_t *ctx, Elf64_Ehdr *ehdr)
 	for (i = 0; i < shnum; ++i) {
 		Elf64_Shdr *sect;
 
-		ret = flatmap_get_chunk(edp->flatmap, &fch, entsz, 0, offset);
+		ret = flatmap_get_chunk(ctx->shared->flatmap, &fch, entsz,
+					0, offset);
 		if (ret != KDUMP_OK)
 			return set_hdr_error(ctx, ret, "section", i, offset);
 		offset += entsz;
@@ -1372,8 +1374,8 @@ walk_elf_notes(kdump_ctx_t *ctx, walk_notes_fn *fn)
 	for (i = 0; i < edp->num_note_segments; ++i) {
 		struct load_segment *seg = edp->note_segments + i;
 
-		ret = flatmap_get_chunk(edp->flatmap, &fch, seg->filesz, 0,
-					seg->file_offset);
+		ret = flatmap_get_chunk(ctx->shared->flatmap, &fch,
+					seg->filesz, 0, seg->file_offset);
 		if (ret != KDUMP_OK)
 			return set_read_error(ctx, ret, "ELF notes",
 					      seg->file_offset);
@@ -1530,8 +1532,9 @@ open_common(kdump_ctx_t *ctx)
 				return set_error(ctx, ret,
 						 "Cannot create Xen PFN map");
 		} else if (!strcmp(name, ".note.Xen")) {
-			ret = flatmap_get_chunk(edp->flatmap, &fch, sect->size,
-						0, sect->file_offset);
+			ret = flatmap_get_chunk(ctx->shared->flatmap, &fch,
+						sect->size, 0,
+						sect->file_offset);
 			if (ret != KDUMP_OK)
 				return set_error(ctx, ret,
 						 "Cannot read '%s'", name);
@@ -1541,8 +1544,9 @@ open_common(kdump_ctx_t *ctx)
 				return set_error(ctx, ret,
 						 "Cannot process Xen notes");
 		} else if (!strcmp(name, ".xen_prstatus")) {
-			ret = flatmap_get_chunk(edp->flatmap, &fch, sect->size,
-						0, sect->file_offset);
+			ret = flatmap_get_chunk(ctx->shared->flatmap, &fch,
+						sect->size, 0,
+						sect->file_offset);
 			if (ret != KDUMP_OK)
 				return set_error(ctx, ret,
 						 "Cannot read '%s'", name);
@@ -1640,17 +1644,8 @@ elf_probe(kdump_ctx_t *ctx)
 				 "Cannot allocate ELF dump private data");
 	ctx->shared->fmtdata = edp;
 
-	edp->flatmap = flatmap_alloc(1);
-	if (!edp->flatmap)
-		return set_error(ctx, KDUMP_ERR_SYSTEM,
-				 "Cannot allocate %s",
-				 "flattened dump maps");
-
-	ret = flatmap_init(edp->flatmap, ctx);
-	if (ret != KDUMP_OK)
-		return ret;
-
-	ret = flatmap_get_chunk(edp->flatmap, &fch, sizeof(Elf64_Ehdr), 0, 0);
+	ret = flatmap_get_chunk(ctx->shared->flatmap, &fch, sizeof(Elf64_Ehdr),
+				0, 0);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret, "Cannot read dump header");
 
@@ -1682,7 +1677,6 @@ elf_cleanup(struct kdump_shared *shared)
 			free(edp->strtab);
 		pfn2idx_map_free(&edp->xen_pfnmap);
 		pfn2idx_map_free(&edp->xen_mfnmap);
-		flatmap_free(edp->flatmap);
 		free(edp);
 		shared->fmtdata = NULL;
 	}
