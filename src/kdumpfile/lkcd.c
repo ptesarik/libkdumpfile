@@ -1070,6 +1070,9 @@ lkcd_cleanup(struct kdump_shared *shared)
 {
 	struct lkcd_priv *lkcdp = shared->fmtdata;
 
+	if (!lkcdp)
+		return;
+
 	free_level1(lkcdp->pfn_level1, lkcdp->l1_size);
 	mutex_destroy(&lkcdp->pfn_block_mutex);
 	if (lkcdp->cbuf_slot >= 0)

@@ -338,6 +338,8 @@ open_dump(kdump_ctx_t *ctx)
 		ret = ctx->shared->ops->probe(ctx);
 		if (ret == KDUMP_OK)
 			return finish_open_dump(ctx);
+		if (ctx->shared->ops->cleanup)
+			ctx->shared->ops->cleanup(ctx->shared);
 		if (ret != KDUMP_NOPROBE)
 			return ret;
 

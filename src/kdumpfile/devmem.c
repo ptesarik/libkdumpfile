@@ -339,6 +339,9 @@ devmem_cleanup(struct kdump_shared *shared)
 {
 	struct devmem_priv *dmp = shared->fmtdata;
 
+	if (!dmp)
+		return;
+
 	if (dmp->ce) {
 		free(dmp->ce[0].data);
 		free(dmp->ce);
