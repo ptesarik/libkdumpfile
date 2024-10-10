@@ -394,6 +394,7 @@ dist_check_DATA = \
 	diskdump-split.expect.3 \
 	sys-xlat-x86_64-linux.expect \
 	sys-xlat-x86_64-linux-xen.expect \
+	vmcoreinfo.data \
 	xlatmap.expect \
 	xlat-os-aarch64-none.expect \
 	xlat-os-ia32-none.expect \
