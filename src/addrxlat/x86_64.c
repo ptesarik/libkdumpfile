@@ -541,9 +541,10 @@ linux_ktext_extents(struct os_init_data *ctl,
 
 	linearoff = ctl->sys->meth[ADDRXLAT_SYS_METH_KTEXT].param.linear.off;
 	*high = *low;
-	status = highest_linear(&step, high, LINUX_KTEXT_END_NOKASLR,
-				linearoff);
-	if (status == ADDRXLAT_OK && *high == LINUX_KTEXT_END_NOKASLR) {
+	if (*high <= LINUX_KTEXT_END_NOKASLR)
+		status = highest_linear(&step, high, LINUX_KTEXT_END_NOKASLR,
+					linearoff);
+	if (status == ADDRXLAT_OK && *high >= LINUX_KTEXT_END_NOKASLR) {
 		++*high;
 		status = highest_linear(&step, high, LINUX_KTEXT_END,
 					linearoff);

@@ -1,0 +1,14 @@
+#! /bin/bash
+
+#
+# Check Linux X86_64 translation with a 54M kASLR ktext mapping starting
+# above the fixed (non-kASLR) virtual address region.
+#
+
+opts=(
+    arch=x86_64
+    ostype=linux
+    phys_base=0x23c00000
+)
+
+. "$srcdir"/xlat-os-common
