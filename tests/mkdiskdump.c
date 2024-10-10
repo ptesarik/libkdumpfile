@@ -85,11 +85,6 @@ enum compress_method {
 	COMPRESS_ZSTD,
 };
 
-struct data_block {
-	off_t filepos;
-	struct blob *blob;
-};
-
 static bool flattened;
 static unsigned long long flattened_type = MDF_TYPE_FLAT_HEADER;
 static unsigned long long flattened_version = MDF_VERSION_FLAT_HEADER;
@@ -123,9 +118,9 @@ static unsigned long long split;
 static unsigned long long start_pfn;
 static unsigned long long end_pfn;
 
-static struct data_block vmcoreinfo;
-static struct data_block notes;
-static struct data_block eraseinfo;
+static struct blob *vmcoreinfo;
+static struct blob *notes;
+static struct blob *eraseinfo;
 
 static char *vmcoreinfo_file;
 static char *note_file;
@@ -251,6 +246,7 @@ writeheader_32(FILE *f)
 	struct timeval tv;
 	struct disk_dump_header_32 hdr;
 	struct kdump_sub_header_32 subhdr;
+	off_t pos;
 
 	if (gettimeofday(&tv, NULL) != 0) {
 		perror("gettimeofday");
@@ -290,23 +286,45 @@ writeheader_32(FILE *f)
 	if (write_chunk(f, 0, &hdr, sizeof hdr, "header"))
 		return TEST_ERR;
 
+	pos = DISKDUMP_HEADER_BLOCKS * block_size + sizeof(subhdr);
 	subhdr.phys_base = htodump32(be, phys_base);
 	subhdr.dump_level = htodump32(be, dump_level);
 	subhdr.split = htodump32(be, split);
 	subhdr.start_pfn = htodump32(be, start_pfn);
 	subhdr.end_pfn = htodump32(be, end_pfn);
-	subhdr.offset_vmcoreinfo = htodump64(be, vmcoreinfo.filepos);
-	subhdr.size_vmcoreinfo = htodump32(be, (vmcoreinfo.blob
-						? vmcoreinfo.blob->length
-						: 0));
-	subhdr.offset_note = htodump64(be, notes.filepos);
-	subhdr.size_note = htodump32(be, (notes.blob
-					  ? notes.blob->length
-					  : 0));
-	subhdr.offset_eraseinfo = htodump64(be, eraseinfo.filepos);
-	subhdr.size_eraseinfo = htodump32(be, (eraseinfo.blob
-					       ? eraseinfo.blob->length
-					       : 0));
+	if (vmcoreinfo) {
+		subhdr.offset_vmcoreinfo = htodump64(be, pos);
+		subhdr.size_vmcoreinfo = htodump32(be, vmcoreinfo->length);
+		if (write_chunk(f, pos, vmcoreinfo->data, vmcoreinfo->length,
+				"VMCOREINFO"))
+			return TEST_ERR;
+		pos += vmcoreinfo->length;
+	} else {
+		subhdr.offset_vmcoreinfo = htodump64(be, 0);
+		subhdr.size_vmcoreinfo = htodump32(be, 0);
+	}
+	if (notes) {
+		subhdr.offset_note = htodump64(be, pos);
+		subhdr.size_note = htodump32(be, notes->length);
+		if (write_chunk(f, pos, notes->data, notes->length,
+				"ELF notes"))
+			return TEST_ERR;
+		pos += notes->length;
+	} else {
+		subhdr.offset_note = htodump64(be, 0);
+		subhdr.size_note = htodump32(be, 0);
+	}
+	if (eraseinfo) {
+		subhdr.offset_eraseinfo = htodump64(be, pos);
+		subhdr.size_eraseinfo = htodump32(be, eraseinfo->length);
+		if (write_chunk(f, pos, notes->data, notes->length,
+				"eraseinfo"))
+			return TEST_ERR;
+		pos += eraseinfo->length;
+	} else {
+		subhdr.offset_eraseinfo = htodump64(be, 0);
+		subhdr.size_eraseinfo = htodump32(be, 0);
+	}
 	subhdr.start_pfn_64 = htodump64(be, start_pfn);
 	subhdr.end_pfn_64 = htodump64(be, end_pfn);
 	subhdr.max_mapnr_64 = htodump64(be, max_mapnr);
@@ -324,6 +342,7 @@ writeheader_64(FILE *f)
 	struct timeval tv;
 	struct disk_dump_header_64 hdr;
 	struct kdump_sub_header_64 subhdr;
+	off_t pos;
 
 	if (gettimeofday(&tv, NULL) != 0) {
 		perror("gettimeofday");
@@ -363,23 +382,45 @@ writeheader_64(FILE *f)
 	if (write_chunk(f, 0, &hdr, sizeof hdr, "header"))
 		return TEST_ERR;
 
+	pos = DISKDUMP_HEADER_BLOCKS * block_size + sizeof(subhdr);
 	subhdr.phys_base = htodump64(be, phys_base);
 	subhdr.dump_level = htodump32(be, dump_level);
 	subhdr.split = htodump32(be, split);
 	subhdr.start_pfn = htodump64(be, start_pfn);
 	subhdr.end_pfn = htodump64(be, end_pfn);
-	subhdr.offset_vmcoreinfo = htodump64(be, vmcoreinfo.filepos);
-	subhdr.size_vmcoreinfo = htodump64(be, (vmcoreinfo.blob
-						? vmcoreinfo.blob->length
-						: 0));
-	subhdr.offset_note = htodump64(be, notes.filepos);
-	subhdr.size_note = htodump64(be, (notes.blob
-					  ? notes.blob->length
-					  : 0));
-	subhdr.offset_eraseinfo = htodump64(be, eraseinfo.filepos);
-	subhdr.size_eraseinfo = htodump64(be, (eraseinfo.blob
-					       ? eraseinfo.blob->length
-					       : 0));
+	if (vmcoreinfo) {
+		subhdr.offset_vmcoreinfo = htodump64(be, pos);
+		subhdr.size_vmcoreinfo = htodump64(be, vmcoreinfo->length);
+		if (write_chunk(f, pos, vmcoreinfo->data, vmcoreinfo->length,
+				"VMCOREINFO"))
+			return TEST_ERR;
+		pos += vmcoreinfo->length;
+	} else {
+		subhdr.offset_vmcoreinfo = htodump64(be, 0);
+		subhdr.size_vmcoreinfo = htodump64(be, 0);
+	}
+	if (notes) {
+		subhdr.offset_note = htodump64(be, pos);
+		subhdr.size_note = htodump64(be, notes->length);
+		if (write_chunk(f, pos, notes->data, notes->length,
+				"ELF notes"))
+			return TEST_ERR;
+		pos += notes->length;
+	} else {
+		subhdr.offset_note = htodump64(be, 0);
+		subhdr.size_note = htodump64(be, 0);
+	}
+	if (eraseinfo) {
+		subhdr.offset_eraseinfo = htodump64(be, pos);
+		subhdr.size_eraseinfo = htodump64(be, eraseinfo->length);
+		if (write_chunk(f, pos, notes->data, notes->length,
+				"eraseinfo"))
+			return TEST_ERR;
+		pos += eraseinfo->length;
+	} else {
+		subhdr.offset_eraseinfo = htodump64(be, 0);
+		subhdr.size_eraseinfo = htodump64(be, 0);
+	}
 	subhdr.start_pfn_64 = htodump64(be, start_pfn);
 	subhdr.end_pfn_64 = htodump64(be, end_pfn);
 	subhdr.max_mapnr_64 = htodump64(be, max_mapnr);
@@ -904,20 +945,20 @@ main(int argc, char **argv)
 		return rc;
 
 	if (vmcoreinfo_file) {
-		vmcoreinfo.blob = slurp(vmcoreinfo_file);
-		if (vmcoreinfo.blob == NULL)
+		vmcoreinfo = slurp(vmcoreinfo_file);
+		if (vmcoreinfo == NULL)
 			return TEST_ERR;
 	}
 
 	if (note_file) {
-		notes.blob = slurp(note_file);
-		if (notes.blob == NULL)
+		notes = slurp(note_file);
+		if (notes == NULL)
 			return TEST_ERR;
 	}
 
 	if (eraseinfo_file) {
-		eraseinfo.blob = slurp(eraseinfo_file);
-		if (eraseinfo.blob == NULL)
+		eraseinfo = slurp(eraseinfo_file);
+		if (eraseinfo == NULL)
 			return TEST_ERR;
 	}
 
