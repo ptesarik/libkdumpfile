@@ -14,7 +14,6 @@ echo "@0 $pageflags" > "$datafile"
 cat "$expectfile" >> "$datafile"
 
 ./mkdiskdump "$dumpfile" <<EOF
-$extraparam
 version = 6
 arch_name = x86_64
 block_size = 4096
@@ -32,6 +31,7 @@ uts.domainname = (none)
 nr_cpus = 1
 
 DATA = $datafile
+$extraparam
 EOF
 rc=$?
 if [ $rc -ne 0 ]; then
@@ -43,6 +43,7 @@ echo "Created DISKDUMP dump: $dumpfile"
 ./checkattr "$dumpfile" <<EOF
 file.pagemap = bitmap: 1
 memory.pagemap = bitmap: 1
+$extracheckattr
 EOF
 rc=$?
 if [ $rc -ne 0 ]; then

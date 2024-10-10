@@ -196,6 +196,7 @@ test_scripts = \
 	diskdump-empty-s390x \
 	diskdump-empty-x86_64 \
 	diskdump-basic-raw \
+	diskdump-basic-vmcoreinfo \
 	diskdump-flat-raw \
 	diskdump-multiread \
 	diskdump-excluded \
