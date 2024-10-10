@@ -198,6 +198,7 @@ test_scripts = \
 	diskdump-basic-raw \
 	diskdump-basic-vmcoreinfo \
 	diskdump-flat-raw \
+	diskdump-flat-vmcoreinfo \
 	diskdump-multiread \
 	diskdump-excluded \
 	diskdump-split \

@@ -1345,7 +1345,7 @@ read_blob_attr(kdump_ctx_t *ctx, unsigned fidx, off_t off, size_t size,
 	struct fcache_chunk fch;
 	kdump_status ret;
 
-	ret = fcache_get_chunk(ctx->shared->fcache, &fch, size, fidx, off);
+	ret = flatmap_get_chunk(ctx->shared->flatmap, &fch, size, fidx, off);
 	if (ret != KDUMP_OK)
 		return set_error(ctx, ret,
 				 "Cannot read %s (%zu bytes at %llu in %s)",

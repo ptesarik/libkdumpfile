@@ -1,0 +1,20 @@
+#! /bin/sh
+
+#
+# Create a flattened diskdump file with VMCOREINFO data.
+# See also diskdump-basic-vmcoreinfo.
+#
+
+pageflags=raw
+extraparam="
+flattened = yes
+version = 3
+VMCOREINFO = vmcoreinfo.data
+"
+extracheckattr="
+linux.vmcoreinfo.lines.OSRELEASE = string:6.4.3-1-default
+linux.vmcoreinfo.lines.PAGESIZE = string:4096
+linux.vmcoreinfo.lines.CRASHTIME = string:1689103980
+"
+. "$srcdir"/diskdump-basic
+exit 0
