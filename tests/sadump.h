@@ -29,6 +29,8 @@
 #ifndef _SADUMP_H
 #define _SADUMP_H 1
 
+#include "config.h"
+
 #include <stdint.h>
 
 /** Standard EFI time specification. */

@@ -29,6 +29,8 @@
 #ifndef _LKCD_H
 #define _LKCD_H 1
 
+#include "config.h"
+
 #include <stdint.h>
 
 #define DUMP_MAGIC_NUMBER  0xa8190173618f23edULL

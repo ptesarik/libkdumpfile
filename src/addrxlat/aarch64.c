@@ -28,10 +28,11 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "addrxlat-priv.h"
+
 #include <stdlib.h>
 #include <string.h>
 
-#include "addrxlat-priv.h"
 #include <linux/version.h>
 
 /** Maximum virtual address bits (architectural limit). */

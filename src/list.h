@@ -31,6 +31,8 @@
 #ifndef _LIST_H
 #define _LIST_H	1
 
+#include "config.h"
+
 #include <stddef.h>
 
 /**  Cast a structure field out to the containing structure.

@@ -29,6 +29,8 @@
 #ifndef _DISKDUMP_H
 #define _DISKDUMP_H 1
 
+#include "config.h"
+
 #include <stdint.h>
 
 #define MDF_SIGNATURE		"makedumpfile"

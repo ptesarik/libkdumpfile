@@ -28,10 +28,10 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "addrxlat-priv.h"
+
 #include <stdlib.h>
 #include <string.h>
-
-#include "addrxlat-priv.h"
 
 DEFINE_ALIAS(map_new);
 

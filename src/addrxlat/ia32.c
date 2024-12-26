@@ -28,11 +28,11 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "addrxlat-priv.h"
+
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
-
-#include "addrxlat-priv.h"
 
 #define PGD_PSE_HIGH_SHIFT	13
 #define PGD_PSE_HIGH_BITS	8
