@@ -28,11 +28,11 @@
 
 #define _GNU_SOURCE
 
+#include "testutil.h"
+
 #include <stdio.h>
 
 #include <libkdumpfile/addrxlat.h>
-
-#include "testutil.h"
 
 #define STEPS		2
 #define XOR_VALUE	0xabcd

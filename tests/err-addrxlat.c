@@ -26,6 +26,8 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "testutil.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -34,8 +36,6 @@
 #include <sys/resource.h>
 
 #include <libkdumpfile/addrxlat.h>
-
-#include "testutil.h"
 
 /* To test all corner cases, this string should be bigger than
  * the internal fallback buffer (ERRBUF in addrxlat-priv.h)

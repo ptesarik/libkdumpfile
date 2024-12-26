@@ -26,12 +26,12 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "testutil.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <libkdumpfile/kdumpfile.h>
-
-#include "testutil.h"
 
 static const char vmcore1[] =
 	"DIR.SUB.VAL=test1\n";

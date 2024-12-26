@@ -26,6 +26,8 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "testutil.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -34,8 +36,6 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <libkdumpfile/kdumpfile.h>
-
-#include "testutil.h"
 
 static pthread_mutex_t attr_mutex = PTHREAD_MUTEX_INITIALIZER;
 

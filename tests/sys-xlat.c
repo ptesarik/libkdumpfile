@@ -28,6 +28,8 @@
 
 #define _GNU_SOURCE
 
+#include "testutil.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -35,8 +37,6 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <libkdumpfile/addrxlat.h>
-
-#include "testutil.h"
 
 static char *data_file;
 static char *cfg_file;

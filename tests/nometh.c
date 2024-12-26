@@ -28,11 +28,11 @@
 
 #define _GNU_SOURCE
 
+#include "testutil.h"
+
 #include <stdio.h>
 
 #include <libkdumpfile/addrxlat.h>
-
-#include "testutil.h"
 
 static int
 setup_pgt(addrxlat_ctx_t *ctx, addrxlat_sys_t *sys)

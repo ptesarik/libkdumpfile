@@ -26,12 +26,12 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "testutil.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <libkdumpfile/kdumpfile.h>
-
-#include "testutil.h"
 
 #define FILENAME_0	"fileA"
 #define FILENAME_1	"fileB"

@@ -26,6 +26,9 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "config.h"
+#include "testutil.h"
+
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,8 +36,6 @@
 #include <ctype.h>
 #include <time.h>
 
-#include "config.h"
-#include "testutil.h"
 #include "sadump.h"
 
 #define WS_CHARS	" \f\n\r\t\v"
