@@ -404,6 +404,10 @@ map_linux_aarch64(struct os_init_data *ctl)
 			return status;
 	}
 
+	meth = &ctl->sys->meth[ADDRXLAT_SYS_METH_UPGT];
+	if (opt_isset(ctl->popt, user_rootpgt))
+		meth->param.pgt.root = ctl->popt.user_rootpgt;
+
 	status = sys_set_physmaps(ctl, PHYSADDR_MASK);
 	if (status != ADDRXLAT_OK)
 		return status;

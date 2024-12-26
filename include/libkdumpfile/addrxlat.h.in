@@ -835,6 +835,11 @@ typedef enum _addrxlat_optidx {
 	 */
 	ADDRXLAT_OPT_rootpgt,
 
+	/** User land root page table address. Used *only* in aarch64 case.
+	 * Type: full address
+	 */
+	ADDRXLAT_OPT_user_rootpgt,
+
 	/** Xen p2m root machine frame number.
 	 * Type: address
 	 */
@@ -931,6 +936,14 @@ static inline void
 addrxlat_opt_rootpgt(addrxlat_opt_t *opt, const addrxlat_fulladdr_t *val)
 {
 	opt->idx = ADDRXLAT_OPT_rootpgt;
+	opt->val.fulladdr = *val;
+}
+
+/** Helper to set @xref ADDRXLAT_OPT_user_rootpgt in a type-safe manner. */
+static inline void
+addrxlat_opt_user_rootpgt(addrxlat_opt_t *opt, const addrxlat_fulladdr_t *val)
+{
+	opt->idx = ADDRXLAT_OPT_user_rootpgt;
 	opt->val.fulladdr = *val;
 }
 

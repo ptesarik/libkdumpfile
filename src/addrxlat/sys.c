@@ -121,6 +121,10 @@ parse_opt(struct parsed_opts *popt, const addrxlat_opt_t *opt)
 		popt->rootpgt = opt->val.fulladdr;
 		break;
 
+	case ADDRXLAT_OPT_user_rootpgt:
+		popt->user_rootpgt = opt->val.fulladdr;
+		break;
+
 	case ADDRXLAT_OPT_xen_p2m_mfn:
 		popt->xen_p2m_mfn = opt->val.num;
 		break;
