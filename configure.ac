@@ -105,9 +105,6 @@ AC_ARG_ENABLE(debug,
 AS_IF([test "x$enable_debug" = xyes],
     [AC_DEFINE(ENABLE_DEBUG, 1, Define to enable extra debugging features)])
 
-dnl check for Python
-kdump_PYTHON([2.7.0])
-
 dnl check whether to build optional tools
 AC_SUBST(KDUMPID_VER_MAJOR, kdumpid_major_version)
 AC_SUBST(KDUMPID_VER_MINOR, kdumpid_minor_version)
@@ -121,7 +118,6 @@ AC_CONFIG_FILES([
 	src/Makefile
 	src/addrxlat/Makefile
 	src/kdumpfile/Makefile
-	python/Makefile
 	tests/Makefile
 	tools/Makefile
 	tools/kdumpid/Makefile

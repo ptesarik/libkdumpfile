@@ -22,9 +22,6 @@
 ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = include src tests tools examples
-if BUILD_PYTHON_EXT
-SUBDIRS += python
-endif
 
 dist_noinst_DATA = \
 	COPYING.GPLv2 \
