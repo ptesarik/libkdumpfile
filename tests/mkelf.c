@@ -26,6 +26,9 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "config.h"
+#include "testutil.h"
+
 #include <string.h>
 #include <endian.h>
 #include <sys/time.h>
@@ -36,8 +39,6 @@
 #include <ctype.h>
 #include <elf.h>
 
-#include "config.h"
-#include "testutil.h"
 #include "diskdump.h"
 
 typedef int write_fn(FILE *);

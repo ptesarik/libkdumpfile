@@ -28,13 +28,13 @@
 
 #define _GNU_SOURCE
 
+#include "testutil.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <dlfcn.h>
 #include <libkdumpfile/addrxlat.h>
-
-#include "testutil.h"
 
 #define NMAPS 15
 static addrxlat_map_t *map[NMAPS];

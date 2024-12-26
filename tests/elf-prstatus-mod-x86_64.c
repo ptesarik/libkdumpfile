@@ -26,6 +26,8 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "testutil.h"
+
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -34,8 +36,6 @@
 #include <getopt.h>
 #include <endian.h>
 #include <libkdumpfile/kdumpfile.h>
-
-#include "testutil.h"
 
 struct timeval_64 {
 	int64_t tv_sec;

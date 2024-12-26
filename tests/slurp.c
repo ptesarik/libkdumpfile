@@ -26,12 +26,12 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "testutil.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-
-#include "testutil.h"
 
 #define WATERMARK_LOW	256
 #define WATERMARK_HIGH	1024

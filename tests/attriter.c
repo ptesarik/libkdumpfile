@@ -26,11 +26,11 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "testutil.h"
+
 #include <string.h>
 #include <stdio.h>
 #include <libkdumpfile/kdumpfile.h>
-
-#include "testutil.h"
 
 struct attrdef {
 	const char *name;

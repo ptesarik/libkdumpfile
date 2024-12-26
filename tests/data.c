@@ -26,12 +26,12 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "testutil.h"
+
 #include <string.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "testutil.h"
 
 #define ALLOC_INC	4096
 

@@ -26,11 +26,11 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "testutil.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <libkdumpfile/kdumpfile.h>
-
-#include "testutil.h"
 
 #define xstr(s)	#s
 #define str(s)	xstr(s)

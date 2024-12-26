@@ -28,6 +28,8 @@
 
 #define _GNU_SOURCE
 
+#include "testutil.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,8 +38,6 @@
 #include <limits.h>
 
 #include <libkdumpfile/addrxlat.h>
-
-#include "testutil.h"
 
 struct cbdata {
 	addrxlat_ctx_t *ctx;

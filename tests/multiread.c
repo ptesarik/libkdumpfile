@@ -26,6 +26,8 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "testutil.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
@@ -35,8 +37,6 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <libkdumpfile/kdumpfile.h>
-
-#include "testutil.h"
 
 #define DEFITER		1000
 #define DEFTHREADS	1

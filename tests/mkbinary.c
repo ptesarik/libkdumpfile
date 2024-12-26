@@ -26,14 +26,14 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "testutil.h"
+
 #include <endian.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-
-#include "testutil.h"
 
 static int
 parseheader(struct page_data *pg, char *p)

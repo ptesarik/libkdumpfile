@@ -28,9 +28,9 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <string.h>
-
 #include "addrxlat-priv.h"
+
+#include <string.h>
 
 int
 addrxlat_pteval_shift(addrxlat_pte_format_t fmt)

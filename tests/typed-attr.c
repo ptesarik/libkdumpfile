@@ -26,9 +26,9 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <libkdumpfile/kdumpfile.h>
-
 #include "testutil.h"
+
+#include <libkdumpfile/kdumpfile.h>
 
 #define ATTR_CACHE_SIZE	"cache.size"
 #define ATTR_SYSNAME	"linux.uts.sysname"

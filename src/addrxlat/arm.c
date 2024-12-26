@@ -28,9 +28,9 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <stdint.h>
-
 #include "addrxlat-priv.h"
+
+#include <stdint.h>
 
 /* Maximum physical address bits (architectural limit) */
 #define PHYSADDR_BITS_MAX	40

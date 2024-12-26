@@ -28,10 +28,10 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "addrxlat-priv.h"
+
 #include <stdlib.h>
 #include <string.h>
-
-#include "addrxlat-priv.h"
 
 addrxlat_sys_t *
 addrxlat_sys_new(void)

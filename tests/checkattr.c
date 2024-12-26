@@ -28,6 +28,8 @@
 
 #define _GNU_SOURCE
 
+#include "testutil.h"
+
 #include <string.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -36,8 +38,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <libkdumpfile/kdumpfile.h>
-
-#include "testutil.h"
 
 static int
 check_noattr(kdump_ctx_t *ctx, char *key)

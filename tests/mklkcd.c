@@ -26,6 +26,9 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "config.h"
+#include "testutil.h"
+
 #include <string.h>
 #include <endian.h>
 #include <sys/time.h>
@@ -33,8 +36,6 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-#include "config.h"
-#include "testutil.h"
 #include "lkcd.h"
 
 #if USE_ZLIB

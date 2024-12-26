@@ -26,6 +26,9 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "config.h"
+#include "testutil.h"
+
 #include <string.h>
 #include <endian.h>
 #include <sys/time.h>
@@ -34,8 +37,6 @@
 #include <ctype.h>
 #include <errno.h>
 
-#include "config.h"
-#include "testutil.h"
 #include "diskdump.h"
 
 #if USE_ZLIB

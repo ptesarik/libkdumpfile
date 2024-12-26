@@ -26,6 +26,8 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "testutil.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
@@ -34,8 +36,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <libkdumpfile/kdumpfile.h>
-
-#include "testutil.h"
 
 #define CHUNKSZ 256
 #define BYTES_PER_LINE 16

@@ -28,11 +28,11 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "addrxlat-priv.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-
-#include "addrxlat-priv.h"
 
 /** Maximum length of the static error message. */
 #define ERRBUF	64

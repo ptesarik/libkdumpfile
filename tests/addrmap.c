@@ -26,11 +26,11 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "testutil.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <libkdumpfile/addrxlat.h>
-
-#include "testutil.h"
 
 static void
 printmap(const addrxlat_map_t *map)

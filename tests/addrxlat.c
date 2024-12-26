@@ -26,14 +26,14 @@
    not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "testutil.h"
+
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
 #include <libkdumpfile/addrxlat.h>
-
-#include "testutil.h"
 
 #define ALLOC_INC 32
 
