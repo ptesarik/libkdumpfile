@@ -4,13 +4,14 @@
 
 mkdir -p out || exit 99
 
-if [ -z "$name" ]; then
-    name=$( basename "$0" )
+name=$( basename "$0" )
+if [ -z "$srcname" ]; then
+    srcname="$name"
 fi
 resultfile="out/${name}.result"
-expectfile="$srcdir/$name.expect"
-symfile="$srcdir/$name.sym"
-datafile="$srcdir/$name.data"
+expectfile="$srcdir/$srcname.expect"
+symfile="$srcdir/$srcname.sym"
+datafile="$srcdir/$srcname.data"
 cfgfile="out/${name}.cfg"
 
 optspec=

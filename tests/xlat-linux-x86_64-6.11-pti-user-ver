@@ -14,5 +14,5 @@ opts=(
     osver=0x060b00
 )
 
-name=xlat-linux-x86_64-6.11-pti-user
+srcname=xlat-linux-x86_64-6.11-pti-user
 . "$srcdir"/xlat-os-common
