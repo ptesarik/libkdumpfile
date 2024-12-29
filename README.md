@@ -56,8 +56,7 @@ To generate the `configure` script, run
 Python
 ------
 
-This repository contains some manually written Python bindings. These are now
-deprecated in favour of a fresh rewrite using CFFI. See
+There are official Python bindings for `libkdumpfile`; see
 [pykdumpfile](https://github.com/ptesarik/pykdumpfile).
 
 Making Releases
