@@ -25,6 +25,7 @@ AM_CPPFLAGS = -I$(top_builddir)/include \
 
 LIBS = \
 	$(top_builddir)/src/kdumpfile/libkdumpfile.la \
+	$(top_builddir)/src/addrxlat/libaddrxlat.la \
 	$(DIS_ASM_LIBS)
 
 kdumpid_SOURCES = \
