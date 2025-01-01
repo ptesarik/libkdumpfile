@@ -23,9 +23,13 @@ AM_CPPFLAGS = -I$(top_builddir)/include \
 	-DVER_MAJOR=$(KDUMPID_VER_MAJOR) \
 	-DVER_MINOR=$(KDUMPID_VER_MINOR)
 
+AM_CFLAGS = \
+	$(ZLIB_CFLAGS)
+
 LIBS = \
 	$(top_builddir)/src/kdumpfile/libkdumpfile.la \
 	$(top_builddir)/src/addrxlat/libaddrxlat.la \
+	$(ZLIB_LIBS) \
 	$(DIS_ASM_LIBS)
 
 kdumpid_SOURCES = \
