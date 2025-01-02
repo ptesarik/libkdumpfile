@@ -134,7 +134,7 @@ typedef uint_fast64_t addrxlat_pte_t;
 #define ADDRXLAT_PRIuPTE	PRIuFAST64 /**< Decimal PTE */
 #define ADDRXLAT_PRIxPTE	PRIxFAST64 /**< Lowercase hex PTE */
 #define ADDRXLAT_PRIXPTE	PRIXFAST64 /**< Uppercase hex PTE */
-/* @} */
+/** @} */
 
 /**  Address spaces
  *

@@ -80,7 +80,7 @@ typedef uint_fast64_t kdump_num_t;
 #define KDUMP_PRIuNUM	PRIuFAST64 /**< Decimal @c kdump_num_t */
 #define KDUMP_PRIxNUM	PRIxFAST64 /**< Lowercase hex @c kdump_num_t */
 #define KDUMP_PRIXNUM	PRIXFAST64 /**< Uppercase hex @c kdump_num_t */
-/* @} */
+/** @} */
 
 /**  Type of a physical or virtual address.
  *
@@ -118,7 +118,7 @@ typedef kdump_addr_t kdump_vaddr_t;
 #define KDUMP_PRIuADDR	ADDRXLAT_PRIuADDR /**< Decimal address */
 #define KDUMP_PRIxADDR	ADDRXLAT_PRIxADDR /**< Lowercase hex address */
 #define KDUMP_PRIXADDR	ADDRXLAT_PRIXADDR /**< Uppercase hex address */
-/* @} */
+/** @} */
 
 /**  Representation of a dump file.
  *
@@ -217,7 +217,7 @@ enum kdump_clone_bits {
  */
 /** Do not share address translation. */
 #define KDUMP_CLONE_XLAT	(1UL << KDUMP_CLONE_BIT_XLAT)
-/* @} */
+/** @} */
 
 /**  Clone a dump file object.
  * @param orig  Original dump file object.
@@ -1034,7 +1034,7 @@ void kdump_attr_iter_end(kdump_ctx_t *ctx, kdump_attr_iter_t *iter);
 #define KDUMP_ARCH_S390		"s390"	  /**< IBM z/Architecture, 31-bit */
 #define KDUMP_ARCH_S390X	"s390x"	  /**< IBM z/Architecture, 64-bit */
 #define KDUMP_ARCH_X86_64	"x86_64"  /**< AMD64, Intel 64 */
-/* @} */
+/** @} */
 
 /** Byte order attribute.
  * @sa kdump_byte_order_t
