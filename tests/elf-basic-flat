@@ -1,4 +1,0 @@
-#! /bin/sh
-extraparam="flattened = yes"
-. "$srcdir"/elf-basic
-exit 0

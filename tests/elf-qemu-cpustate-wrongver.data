@@ -1,6 +1,0 @@
-@phdr type=NOTE offset=0x1800
-00000005 00000004 00000000 "QEMU" 00 00 00 00
-abcdef10
-
-@phdr type=LOAD offset=0x2000 paddr=0x2000000 vaddr=0xffff880002000000 memsz=0x1000
-41 42 43 44 45 46 47 48

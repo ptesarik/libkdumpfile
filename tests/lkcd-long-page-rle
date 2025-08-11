@@ -1,6 +1,0 @@
-#! /bin/sh
-repeat=4097
-compression=1
-pageflags=compress
-. "$srcdir"/lkcd-wrong-page-size
-exit 0

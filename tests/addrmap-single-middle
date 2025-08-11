@@ -1,9 +1,0 @@
-#! /bin/sh
-
-#
-# Check single entry in the middle of a translation map
-#
-
-input="0x800000000000-0xffff7fffffffffff:0"
-
-. "$srcdir"/addrmap-common

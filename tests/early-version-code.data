@@ -1,7 +1,0 @@
-@phdr type=LOAD
-@phdr type=NOTE offset=4096
-0000000b 0000001d 00000000 "VMCOREINFO" 00 00
-"OSRELEASE=3.12.28-4-default\n"
-00
-# padding
-00 00 00

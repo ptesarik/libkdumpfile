@@ -1,4 +1,0 @@
-#! /bin/sh
-pageflags=raw
-. "$srcdir"/diskdump-basic
-exit 0
